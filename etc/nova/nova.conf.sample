@@ -2549,6 +2549,9 @@
 # Options defined in nova.virt.hyperv.utilsfactory
 #
 
+# Force V1 WMI utility classes (boolean value)
+#force_hyperv_utils_v1=false
+
 # Force V1 volume utility class (boolean value)
 #force_volumeutils_v1=false
 

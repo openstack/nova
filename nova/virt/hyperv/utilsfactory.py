@@ -21,13 +21,19 @@ from nova.openstack.common import log as logging
 from nova.virt.hyperv import hostutils
 from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
+from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import pathutils
 from nova.virt.hyperv import vhdutils
+from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
+from nova.virt.hyperv import vmutilsv2
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
 
 hyper_opts = [
+    cfg.BoolOpt('force_hyperv_utils_v1',
+                default=False,
+                help='Force V1 WMI utility classes'),
     cfg.BoolOpt('force_volumeutils_v1',
                 default=False,
                 help='Force V1 volume utility class'),
@@ -52,15 +58,19 @@ def _get_class(v1_class, v2_class, force_v1_flag):
 
 
 def get_vmutils(host='.'):
-    return vmutils.VMUtils(host)
+    return _get_class(vmutils.VMUtils, vmutilsv2.VMUtilsV2,
+                      CONF.hyperv.force_hyperv_utils_v1)(host)
 
 
 def get_vhdutils():
-    return vhdutils.VHDUtils()
+    return _get_class(vhdutils.VHDUtils, vhdutilsv2.VHDUtilsV2,
+                      CONF.hyperv.force_hyperv_utils_v1)()
 
 
 def get_networkutils():
-    return networkutils.NetworkUtils()
+    return _get_class(networkutils.NetworkUtils,
+                      networkutilsv2.NetworkUtilsV2,
+                      CONF.hyperv.force_hyperv_utils_v1)()
 
 
 def get_hostutils():
