@@ -70,7 +70,7 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
         2.7 - Add select_destinations()
         2.8 - Deprecate prep_resize() -- JUST KIDDING.  It is still used
               by the compute manager for retries.
-        2.9 - Added the leagacy_bdm_in_spec parameter to run_instances
+        2.9 - Added the leagacy_bdm_in_spec parameter to run_instance()
         2.10 - Deprecated live_migration() call, moved to conductor
     '''
 
@@ -103,13 +103,18 @@ class SchedulerAPI(nova.openstack.common.rpc.proxy.RpcProxy):
     def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
             filter_properties, legacy_bdm_in_spec=True):
-        return self.cast(ctxt, self.make_msg('run_instance',
-                request_spec=request_spec, admin_password=admin_password,
-                injected_files=injected_files,
-                requested_networks=requested_networks,
-                is_first_time=is_first_time,
-                filter_properties=filter_properties,
-                legacy_bdm_in_spec=legacy_bdm_in_spec), version='2.9')
+        version = '2.0'
+        msg_kwargs = {'request_spec': request_spec,
+                      'admin_password': admin_password,
+                      'injected_files': injected_files,
+                      'requested_networks': requested_networks,
+                      'is_first_time': is_first_time,
+                      'filter_properties': filter_properties}
+        if self.can_send_version('2.9'):
+            version = '2.9'
+            msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
+        return self.cast(ctxt, self.make_msg('run_instance', **msg_kwargs),
+                         version=version)
 
     def prep_resize(self, ctxt, instance, instance_type, image,
             request_spec, filter_properties, reservations):
