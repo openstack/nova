@@ -25,6 +25,7 @@ from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
+from nova.pci import pci_request
 from nova.scheduler import driver
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
@@ -216,7 +217,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched = fakes.FakeFilterScheduler()
 
         instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
         filter_properties = {}
 
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
@@ -273,7 +275,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched = fakes.FakeFilterScheduler()
 
         instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
         filter_properties = {}
 
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
@@ -292,7 +295,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched = fakes.FakeFilterScheduler()
 
         instance_properties = {'project_id': '12345', 'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
 
         retry = dict(num_attempts=1)
         filter_properties = dict(retry=retry)
@@ -443,7 +447,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                     'vcpus': 1,
                                     'os_type': 'Linux'}
 
-        request_spec = dict(instance_properties=instance_properties)
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
         filter_properties = {}
         self.mox.ReplayAll()
         hosts = sched._schedule(self.context, request_spec,
@@ -472,7 +477,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                     'ephemeral_gb': 0,
                                     'vcpus': 1,
                                     'os_type': 'Linux'}
-        request_spec = dict(instance_properties=instance_properties)
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
         filter_properties = {}
         self.mox.ReplayAll()
         hosts = sched._schedule(self.context, request_spec,
@@ -511,7 +517,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                 'vcpus': 1,
                                 'os_type': 'Linux'}
 
-        request_spec = dict(instance_properties=instance_properties)
+        request_spec = dict(instance_properties=instance_properties,
+                            instance_type={})
 
         self.stubs.Set(weights.HostWeightHandler,
                         'get_weighed_objects', _fake_weigh_objects)
@@ -656,3 +663,19 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         sched._provision_resource(fake_context, weighted_host,
                                   request_spec, filter_properties,
                                   None, None, None, None)
+
+    def test_pci_request_in_filter_properties(self):
+        instance_type = {}
+        request_spec = {'instance_type': instance_type,
+                        'instance_properties': {'project_id': 1,
+                                                'os_type': 'Linux'}}
+        filter_properties = {}
+        requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
+        self.mox.StubOutWithMock(pci_request, 'get_pci_requests_from_flavor')
+        pci_request.get_pci_requests_from_flavor(
+            instance_type).AndReturn(requests)
+        self.mox.ReplayAll()
+        self.driver.populate_filter_properties(
+            request_spec, filter_properties)
+        self.assertEqual(filter_properties.get('pci_requests'),
+                         requests)
