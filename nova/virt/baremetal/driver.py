@@ -507,17 +507,13 @@ class BareMetalDriver(driver.ComputeDriver):
                 db.bm_node_get_all(context, service_host=CONF.host)]
 
     def dhcp_options_for_instance(self, instance):
-        # NOTE(deva): This only works for PXE driver currently.
-        try:
-            bootfile_path = pxe.get_pxe_config_file_path(instance)
-        except AttributeError as ex:
-            # NOTE: not all drivers are going to support PXE boot capability
-            LOG.exception(_("Exception no pxe bootfile-name path: %s"),
-                          unicode(ex))
-            return None
+        # NOTE(deva): This only works for PXE driver currently:
+        # If not running the PXE driver, you should not enable
+        # DHCP updates in nova.conf.
+        bootfile_name = pxe.get_pxe_bootfile_name(instance)
 
         opts = [{'opt_name': 'bootfile-name',
-                 'opt_value': bootfile_path},
+                 'opt_value': bootfile_name},
                 {'opt_name': 'server-ip-address',
                  'opt_value': CONF.my_ip},
                 {'opt_name': 'tftp-server',
