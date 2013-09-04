@@ -14,27 +14,29 @@
 
 import webob
 
-from nova.api.openstack.compute import flavors as flavors_api
+from nova.api.openstack.compute.plugins.v3 import flavors as flavors_api
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
 
+ALIAS = "flavor-manage"
 
-authorize = extensions.extension_authorizer('compute', 'flavormanage')
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class FlavorManageController(wsgi.Controller):
     """
     The Flavor Lifecycle API controller for the OpenStack API.
     """
-    _view_builder_class = flavors_view.ViewBuilder
+    _view_builder_class = flavors_view.V3ViewBuilder
 
     def __init__(self):
         super(FlavorManageController, self).__init__()
 
     @wsgi.action("delete")
+    @extensions.expected_errors((404))
     def _delete(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
@@ -42,26 +44,31 @@ class FlavorManageController(wsgi.Controller):
         try:
             flavor = flavors.get_flavor_by_flavor_id(
                     id, ctxt=context, read_deleted="no")
-        except exception.NotFound as e:
+        except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         flavors.destroy(flavor['name'])
 
-        return webob.Response(status_int=202)
+        return webob.Response(status_int=204)
 
     @wsgi.action("create")
+    @extensions.expected_errors((400, 409))
     @wsgi.serializers(xml=flavors_api.FlavorTemplate)
     def _create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
 
+        if not self.is_valid_body(body, 'flavor'):
+            raise webob.exc.HTTPBadRequest('Invalid request body ')
+
         vals = body['flavor']
-        name = vals['name']
+
+        name = vals.get('name')
         flavorid = vals.get('id')
         memory = vals.get('ram')
         vcpus = vals.get('vcpus')
         root_gb = vals.get('disk')
-        ephemeral_gb = vals.get('OS-FLV-EXT-DATA:ephemeral', 0)
+        ephemeral_gb = vals.get('ephemeral', 0)
         swap = vals.get('swap', 0)
         rxtx_factor = vals.get('rxtx_factor', 1.0)
         is_public = vals.get('os-flavor-access:is_public', True)
@@ -82,18 +89,20 @@ class FlavorManageController(wsgi.Controller):
         return self._view_builder.show(req, flavor)
 
 
-class Flavormanage(extensions.ExtensionDescriptor):
+class FlavorManage(extensions.V3APIExtensionBase):
     """
     Flavor create/delete API support
     """
 
     name = "FlavorManage"
-    alias = "os-flavor-manage"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "flavor_manage/api/v1.1")
-    updated = "2012-01-19T00:00:00+00:00"
+    alias = ALIAS
+    namespace = "http://docs.openstack.org/compute/core/%s/api/v3" % ALIAS
+    version = 1
 
     def get_controller_extensions(self):
         controller = FlavorManageController()
         extension = extensions.ControllerExtension(self, 'flavors', controller)
         return [extension]
+
+    def get_resources(self):
+        return []

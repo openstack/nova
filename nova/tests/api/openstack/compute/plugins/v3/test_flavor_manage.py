@@ -17,7 +17,7 @@ import datetime
 
 import webob
 
-from nova.api.openstack.compute.contrib import flavormanage
+from nova.api.openstack.compute.plugins.v3 import flavor_manage
 from nova.compute import flavors
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -27,7 +27,7 @@ from nova.tests.api.openstack import fakes
 
 def fake_get_flavor_by_flavor_id(flavorid, ctxt=None, read_deleted='yes'):
     if flavorid == 'failtest':
-        raise exception.NotFound("Not found sucka!")
+        raise exception.FlavorNotFound("Not found!")
     elif not str(flavorid) == '1234':
         raise Exception("This test expects flavorid 1234, not %s" % flavorid)
     if read_deleted != 'no':
@@ -85,32 +85,19 @@ class FlavorManageTest(test.TestCase):
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
         self.stubs.Set(flavors, "create", fake_create)
-        self.flags(
-            osapi_compute_extension=[
-                'nova.api.openstack.compute.contrib.select_extensions'],
-            osapi_compute_ext_list=['Flavormanage', 'Flavorextradata',
-                'Flavor_access', 'Flavor_rxtx', 'Flavor_swap'])
+        self.controller = flavor_manage.FlavorManageController()
+        self.app = fakes.wsgi_app_v3(init_only=('servers', 'flavors',
+                                                'flavor-manage',
+                                                'os-flavor-rxtx',
+                                                'os-flavor-access'))
 
-        self.controller = flavormanage.FlavorManageController()
-        self.app = fakes.wsgi_app(init_only=('flavors',))
-
-    def test_delete(self):
-        req = fakes.HTTPRequest.blank('/v2/123/flavors/1234')
-        res = self.controller._delete(req, 1234)
-        self.assertEqual(res.status_int, 202)
-
-        # subsequent delete should fail
-        self.assertRaises(webob.exc.HTTPNotFound,
-                          self.controller._delete, req, "failtest")
-
-    def test_create(self):
-        expected = {
+        self.expected_flavor = {
             "flavor": {
                 "name": "test",
                 "ram": 512,
                 "vcpus": 2,
                 "disk": 1,
-                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "ephemeral": 1,
                 "id": 1234,
                 "swap": 512,
                 "rxtx_factor": 1,
@@ -118,7 +105,18 @@ class FlavorManageTest(test.TestCase):
             }
         }
 
-        url = '/v2/fake/flavors'
+    def test_delete(self):
+        req = fakes.HTTPRequest.blank('/v3/flavors/1234')
+        res = self.controller._delete(req, 1234)
+        self.assertEqual(res.status_int, 204)
+
+        # subsequent delete should fail
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._delete, req, "failtest")
+
+    def test_create(self):
+        expected = self.expected_flavor
+        url = '/v3/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
@@ -135,29 +133,16 @@ class FlavorManageTest(test.TestCase):
                 "ram": 512,
                 "vcpus": 2,
                 "disk": 1,
-                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "ephemeral": 1,
                 "id": 1234,
                 "swap": 512,
                 "rxtx_factor": 1,
             }
         }
 
-        expected = {
-            "flavor": {
-                "name": "test",
-                "ram": 512,
-                "vcpus": 2,
-                "disk": 1,
-                "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": 1234,
-                "swap": 512,
-                "rxtx_factor": 1,
-                "os-flavor-access:is_public": True,
-            }
-        }
-
+        expected = self.expected_flavor
         self.stubs.Set(flavors, "create", fake_create)
-        url = '/v2/fake/flavors'
+        url = '/v3/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
@@ -168,26 +153,17 @@ class FlavorManageTest(test.TestCase):
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
 
     def test_create_without_flavorid(self):
-        expected = {
-            "flavor": {
-                "name": "test",
-                "ram": 512,
-                "vcpus": 2,
-                "disk": 1,
-                "OS-FLV-EXT-DATA:ephemeral": 1,
-                "swap": 512,
-                "rxtx_factor": 1,
-                "os-flavor-access:is_public": True,
-            }
-        }
+        expected = self.expected_flavor
+        del expected['flavor']['id']
 
-        url = '/v2/fake/flavors'
+        url = '/v3/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
         req.body = jsonutils.dumps(expected)
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
+
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
 
@@ -198,7 +174,7 @@ class FlavorManageTest(test.TestCase):
                 "ram": 512,
                 "vcpus": 2,
                 "disk": 1,
-                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "ephemeral": 1,
                 "id": 1235,
                 "swap": 512,
                 "rxtx_factor": 1,
@@ -211,7 +187,7 @@ class FlavorManageTest(test.TestCase):
             raise exception.InstanceTypeExists(name=name)
 
         self.stubs.Set(flavors, "create", fake_create)
-        url = '/v2/fake/flavors'
+        url = '/v3/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
         req.method = 'POST'
