@@ -56,7 +56,13 @@ hyperv_opts = [
     cfg.BoolOpt('config_drive_cdrom',
                 default=False,
                 help='Attaches the Config Drive image as a cdrom drive '
-                     'instead of a disk drive')
+                     'instead of a disk drive'),
+    cfg.BoolOpt('enable_instance_metrics_collection',
+                default=False,
+                help='Enables metrics collections for an instance by using '
+                     'Hyper-V\'s metric APIs. Collected data can by retrieved '
+                     'by other apps and services, e.g.: Ceilometer. '
+                     'Requires Hyper-V / Windows Server 2012 and above')
 ]
 
 CONF = cfg.CONF
@@ -220,6 +226,9 @@ class VMOps(object):
                                      vif['id'],
                                      vif['address'])
             self._vif_driver.plug(instance, vif)
+
+        if CONF.hyperv.enable_instance_metrics_collection:
+            self._vmutils.enable_vm_metrics_collection(instance_name)
 
     def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
