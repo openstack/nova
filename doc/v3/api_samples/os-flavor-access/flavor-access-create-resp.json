@@ -1,0 +1,23 @@
+{
+    "flavor": {
+        "disabled": false,
+        "disk": 10,
+        "ephemeral": "",
+        "id": "10",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/flavors/10",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/flavors/10",
+                "rel": "bookmark"
+            }
+        ],
+        "name": "test_flavor",
+        "os-flavor-access:is_public": false,
+        "ram": 1024,
+        "swap": "",
+        "vcpus": 2
+    }
+}
