@@ -107,7 +107,7 @@ class CellsRPCDriverTestCase(test.TestCase):
 
         call_info = {}
 
-        def _fake_make_msg(method, **kwargs):
+        def _fake_make_msg(method, namespace, **kwargs):
             call_info['rpc_method'] = method
             call_info['rpc_kwargs'] = kwargs
             return 'fake-message'
@@ -117,7 +117,7 @@ class CellsRPCDriverTestCase(test.TestCase):
             call_info['cast_kwargs'] = kwargs
 
         self.stubs.Set(rpc, 'cast_to_server', _fake_cast_to_server)
-        self.stubs.Set(self.driver.intercell_rpcapi, 'make_msg',
+        self.stubs.Set(self.driver.intercell_rpcapi, 'make_namespaced_msg',
                        _fake_make_msg)
         self.stubs.Set(self.driver.intercell_rpcapi, 'cast_to_server',
                        _fake_cast_to_server)
@@ -145,7 +145,7 @@ class CellsRPCDriverTestCase(test.TestCase):
 
         call_info = {}
 
-        def _fake_make_msg(method, **kwargs):
+        def _fake_make_msg(method, namespace, **kwargs):
             call_info['rpc_method'] = method
             call_info['rpc_kwargs'] = kwargs
             return 'fake-message'
@@ -156,7 +156,7 @@ class CellsRPCDriverTestCase(test.TestCase):
 
         self.stubs.Set(rpc, 'fanout_cast_to_server',
                        _fake_fanout_cast_to_server)
-        self.stubs.Set(self.driver.intercell_rpcapi, 'make_msg',
+        self.stubs.Set(self.driver.intercell_rpcapi, 'make_namespaced_msg',
                        _fake_make_msg)
         self.stubs.Set(self.driver.intercell_rpcapi,
                        'fanout_cast_to_server', _fake_fanout_cast_to_server)

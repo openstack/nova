@@ -20,7 +20,7 @@ Client side of the cert manager RPC API.
 
 from oslo.config import cfg
 
-import nova.openstack.common.rpc.proxy
+from nova import rpcclient
 
 rpcapi_opts = [
     cfg.StrOpt('cert_topic',
@@ -36,7 +36,7 @@ rpcapi_cap_opt = cfg.StrOpt('cert',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
+class CertAPI(rpcclient.RpcProxy):
     '''Client side of the cert rpc API.
 
     API version history:
@@ -70,34 +70,31 @@ class CertAPI(nova.openstack.common.rpc.proxy.RpcProxy):
                 topic=CONF.cert_topic,
                 default_version=self.BASE_RPC_API_VERSION,
                 version_cap=version_cap)
+        self.client = self.get_client()
 
     def revoke_certs_by_user(self, ctxt, user_id):
-        return self.call(ctxt, self.make_msg('revoke_certs_by_user',
-                                             user_id=user_id))
+        return self.client.call(ctxt, 'revoke_certs_by_user', user_id=user_id)
 
     def revoke_certs_by_project(self, ctxt, project_id):
-        return self.call(ctxt, self.make_msg('revoke_certs_by_project',
-                                             project_id=project_id))
+        return self.client.call(ctxt, 'revoke_certs_by_project',
+                                project_id=project_id)
 
     def revoke_certs_by_user_and_project(self, ctxt, user_id, project_id):
-        return self.call(ctxt,
-                self.make_msg('revoke_certs_by_user_and_project',
-                              user_id=user_id, project_id=project_id))
+        return self.client.call(ctxt, 'revoke_certs_by_user_and_project',
+                                user_id=user_id, project_id=project_id)
 
     def generate_x509_cert(self, ctxt, user_id, project_id):
-        return self.call(ctxt, self.make_msg('generate_x509_cert',
-                                             user_id=user_id,
-                                             project_id=project_id))
+        return self.client.call(ctxt, 'generate_x509_cert',
+                                user_id=user_id,
+                                project_id=project_id)
 
     def fetch_ca(self, ctxt, project_id):
-        return self.call(ctxt, self.make_msg('fetch_ca',
-                                             project_id=project_id))
+        return self.client.call(ctxt, 'fetch_ca', project_id=project_id)
 
     def fetch_crl(self, ctxt, project_id):
-        return self.call(ctxt, self.make_msg('fetch_crl',
-                                             project_id=project_id))
+        return self.client.call(ctxt, 'fetch_crl', project_id=project_id)
 
     def decrypt_text(self, ctxt, project_id, text):
-        return self.call(ctxt, self.make_msg('decrypt_text',
-                                             project_id=project_id,
-                                             text=text))
+        return self.client.call(ctxt, 'decrypt_text',
+                                project_id=project_id,
+                                text=text)

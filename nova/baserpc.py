@@ -21,8 +21,7 @@ Base RPC client and server common to all services.
 from oslo.config import cfg
 
 from nova.openstack.common import jsonutils
-from nova.openstack.common import rpc
-import nova.openstack.common.rpc.proxy as rpc_proxy
+from nova import rpcclient
 
 
 CONF = cfg.CONF
@@ -34,7 +33,7 @@ CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 _NAMESPACE = 'baseapi'
 
 
-class BaseAPI(rpc_proxy.RpcProxy):
+class BaseAPI(rpcclient.RpcProxy):
     """Client side of the base rpc API.
 
     API version history:
@@ -63,18 +62,17 @@ class BaseAPI(rpc_proxy.RpcProxy):
         super(BaseAPI, self).__init__(topic=topic,
                 default_version=self.BASE_RPC_API_VERSION,
                 version_cap=version_cap)
-        self.namespace = _NAMESPACE
+
+        self.client = self.get_client(namespace=_NAMESPACE)
 
     def ping(self, context, arg, timeout=None):
         arg_p = jsonutils.to_primitive(arg)
-        msg = self.make_namespaced_msg('ping', self.namespace, arg=arg_p)
-        return self.call(context, msg, timeout=timeout)
+        cctxt = self.client.prepare(timeout=timeout)
+        return cctxt.call(context, 'ping', arg=arg_p)
 
     def get_backdoor_port(self, context, host):
-        msg = self.make_namespaced_msg('get_backdoor_port', self.namespace)
-        return self.call(context, msg,
-                         topic=rpc.queue_get_for(context, self.topic, host),
-                         version='1.1')
+        cctxt = self.client.prepare(server=host, version='1.1')
+        return cctxt.call(context, 'get_backdoor_port')
 
 
 class BaseRPCAPI(object):
