@@ -361,7 +361,7 @@ class CellsMessageClassesTestCase(test.TestCase):
         self.assertEqual(method_kwargs, call_info['kwargs'])
         self.assertEqual(target_cell, call_info['routing_path'])
         self.assertFalse(response.failure)
-        self.assertTrue(response.value_or_raise(), 'our_fake_response')
+        self.assertEqual(response.value_or_raise(), 'our_fake_response')
 
     def test_grandchild_targeted_message_with_error(self):
         target_cell = 'api-cell!child-cell2!grandchild-cell1'

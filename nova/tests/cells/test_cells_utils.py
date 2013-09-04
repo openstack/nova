@@ -48,7 +48,7 @@ class CellsUtilsTestCase(test.TestCase):
 
         instances = cells_utils.get_instances_to_sync(fake_context)
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertTrue(len([x for x in instances]), 3)
+        self.assertEqual(len([x for x in instances]), 3)
         self.assertEqual(call_info['get_all'], 1)
         self.assertEqual(call_info['got_filters'], {})
         self.assertEqual(call_info['shuffle'], 0)
@@ -56,7 +56,7 @@ class CellsUtilsTestCase(test.TestCase):
         instances = cells_utils.get_instances_to_sync(fake_context,
                                                       shuffle=True)
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertTrue(len([x for x in instances]), 3)
+        self.assertEqual(len([x for x in instances]), 3)
         self.assertEqual(call_info['get_all'], 2)
         self.assertEqual(call_info['got_filters'], {})
         self.assertEqual(call_info['shuffle'], 1)
@@ -64,7 +64,7 @@ class CellsUtilsTestCase(test.TestCase):
         instances = cells_utils.get_instances_to_sync(fake_context,
                 updated_since='fake-updated-since')
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertTrue(len([x for x in instances]), 3)
+        self.assertEqual(len([x for x in instances]), 3)
         self.assertEqual(call_info['get_all'], 3)
         self.assertEqual(call_info['got_filters'],
                 {'changes-since': 'fake-updated-since'})
@@ -74,7 +74,7 @@ class CellsUtilsTestCase(test.TestCase):
                 project_id='fake-project',
                 updated_since='fake-updated-since', shuffle=True)
         self.assertTrue(inspect.isgenerator(instances))
-        self.assertTrue(len([x for x in instances]), 3)
+        self.assertEqual(len([x for x in instances]), 3)
         self.assertEqual(call_info['get_all'], 4)
         self.assertEqual(call_info['got_filters'],
                 {'changes-since': 'fake-updated-since',
