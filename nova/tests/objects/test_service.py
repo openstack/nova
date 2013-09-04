@@ -14,7 +14,6 @@
 
 import datetime
 
-from nova import context
 from nova import db
 from nova.objects import service
 from nova.openstack.common import timeutils
@@ -51,12 +50,12 @@ def compare(obj, db_obj):
 
 class _TestServiceObject(object):
     def _test_query(self, db_method, obj_method, *args, **kwargs):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, db_method)
-        getattr(db, db_method)(ctxt, *args, **kwargs).AndReturn(
+        getattr(db, db_method)(self.context, *args, **kwargs).AndReturn(
             fake_service)
         self.mox.ReplayAll()
-        obj = getattr(service.Service, obj_method)(ctxt, *args, **kwargs)
+        obj = getattr(service.Service, obj_method)(self.context, *args,
+                                                   **kwargs)
         compare(obj, fake_service)
 
     def test_get_by_id(self):
@@ -75,47 +74,43 @@ class _TestServiceObject(object):
                          'fake-service')
 
     def test_with_compute_node(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_get')
         self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
         _fake_service = dict(
             fake_service, compute_node=[test_compute_node.fake_compute_node])
-        db.service_get(ctxt, 123).AndReturn(_fake_service)
+        db.service_get(self.context, 123).AndReturn(_fake_service)
         self.mox.ReplayAll()
-        service_obj = service.Service.get_by_id(ctxt, 123)
+        service_obj = service.Service.get_by_id(self.context, 123)
         self.assertTrue(service_obj.obj_attr_is_set('compute_node'))
         compare(service_obj.compute_node, test_compute_node.fake_compute_node)
 
     def test_create(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_create')
-        db.service_create(ctxt, {'host': 'fake-host'}).AndReturn(
+        db.service_create(self.context, {'host': 'fake-host'}).AndReturn(
             fake_service)
         self.mox.ReplayAll()
         service_obj = service.Service()
         service_obj.host = 'fake-host'
-        service_obj.create(ctxt)
+        service_obj.create(self.context)
         self.assertEqual(fake_service['id'], service_obj.id)
 
     def test_save(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_update')
-        db.service_update(ctxt, 123, {'host': 'fake-host'}).AndReturn(
+        db.service_update(self.context, 123, {'host': 'fake-host'}).AndReturn(
             fake_service)
         self.mox.ReplayAll()
         service_obj = service.Service()
         service_obj.id = 123
         service_obj.host = 'fake-host'
-        service_obj.save(ctxt)
+        service_obj.save(self.context)
 
     def _test_destroy(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_destroy')
-        db.service_destroy(ctxt, 123)
+        db.service_destroy(self.context, 123)
         self.mox.ReplayAll()
         service_obj = service.Service()
         service_obj.id = 123
-        service_obj.destroy(ctxt)
+        service_obj.destroy(self.context)
 
     def test_destroy(self):
         # The test harness needs db.service_destroy to work,
@@ -127,56 +122,52 @@ class _TestServiceObject(object):
             db.service_destroy = orig_service_destroy
 
     def test_get_by_topic(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_get_all_by_topic')
-        db.service_get_all_by_topic(ctxt, 'fake-topic').AndReturn(
+        db.service_get_all_by_topic(self.context, 'fake-topic').AndReturn(
             [fake_service])
         self.mox.ReplayAll()
-        services = service.ServiceList.get_by_topic(ctxt, 'fake-topic')
+        services = service.ServiceList.get_by_topic(self.context, 'fake-topic')
         self.assertEqual(1, len(services))
         compare(services[0], fake_service)
 
     def test_get_by_host(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_get_all_by_host')
-        db.service_get_all_by_host(ctxt, 'fake-host').AndReturn(
+        db.service_get_all_by_host(self.context, 'fake-host').AndReturn(
             [fake_service])
         self.mox.ReplayAll()
-        services = service.ServiceList.get_by_host(ctxt, 'fake-host')
+        services = service.ServiceList.get_by_host(self.context, 'fake-host')
         self.assertEqual(1, len(services))
         compare(services[0], fake_service)
 
     def test_get_all(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_get_all')
-        db.service_get_all(ctxt, disabled=False).AndReturn([fake_service])
+        db.service_get_all(self.context, disabled=False).AndReturn(
+            [fake_service])
         self.mox.ReplayAll()
-        services = service.ServiceList.get_all(ctxt, disabled=False)
+        services = service.ServiceList.get_all(self.context, disabled=False)
         self.assertEqual(1, len(services))
         compare(services[0], fake_service)
 
     def test_get_all_with_az(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'service_get_all')
         self.mox.StubOutWithMock(db, 'aggregate_host_get_by_metadata_key')
-        db.service_get_all(ctxt, disabled=None).AndReturn(
+        db.service_get_all(self.context, disabled=None).AndReturn(
             [dict(fake_service, topic='compute')])
         db.aggregate_host_get_by_metadata_key(
-            ctxt, key='availability_zone').AndReturn(
+            self.context, key='availability_zone').AndReturn(
                 {fake_service['host']: ['test-az']})
         self.mox.ReplayAll()
-        services = service.ServiceList.get_all(ctxt, set_zones=True)
+        services = service.ServiceList.get_all(self.context, set_zones=True)
         self.assertEqual(1, len(services))
         self.assertEqual('test-az', services[0].availability_zone)
 
     def test_compute_node(self):
-        ctxt = context.get_admin_context()
         self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
-        db.compute_node_get_by_service_id(ctxt, 123).AndReturn(
+        db.compute_node_get_by_service_id(self.context, 123).AndReturn(
             test_compute_node.fake_compute_node)
         self.mox.ReplayAll()
         service_obj = service.Service()
-        service_obj._context = ctxt
+        service_obj._context = self.context
         service_obj.id = 123
         compare(service_obj.compute_node, test_compute_node.fake_compute_node)
         # Make sure it doesn't re-fetch this
