@@ -1042,7 +1042,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         def fake_vol_api_reserve(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
-            self.assertTrue(volumes[volume_id]['status'], 'available')
+            self.assertEqual(volumes[volume_id]['status'], 'available')
             volumes[volume_id]['status'] = 'attaching'
 
         def fake_vol_api_unreserve(context, volume_id):
