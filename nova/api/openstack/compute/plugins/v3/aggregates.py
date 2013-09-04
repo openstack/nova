@@ -15,6 +15,8 @@
 
 """The Aggregate admin API extension."""
 
+import datetime
+
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -58,7 +60,8 @@ class AggregateController(wsgi.Controller):
         context = _get_context(req)
         authorize(context)
         aggregates = self.api.get_aggregate_list(context)
-        return {'aggregates': aggregates}
+        return {'aggregates': [self._marshall_aggregate(a)['aggregate']
+                               for a in aggregates]}
 
     @wsgi.response(201)
     def create(self, req, body):
@@ -210,7 +213,13 @@ class AggregateController(wsgi.Controller):
         return self._marshall_aggregate(aggregate)
 
     def _marshall_aggregate(self, aggregate):
-        return {"aggregate": aggregate}
+        _aggregate = {}
+        for key, value in aggregate.items():
+            # NOTE(danms): The original API specified non-TZ-aware timestamps
+            if isinstance(value, datetime.datetime):
+                value = value.replace(tzinfo=None)
+            _aggregate[key] = value
+        return {"aggregate": _aggregate}
 
 
 class Aggregates(extensions.V3APIExtensionBase):

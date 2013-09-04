@@ -306,6 +306,7 @@ class AggregateTestCase(test.TestCase):
             self.assertEqual("1", aggregate, "aggregate")
             self.assertEqual("host1", host, "host")
             stub_remove_host_from_aggregate.called = True
+            return {}
         self.stubs.Set(self.controller.api,
                        "remove_host_from_aggregate",
                        stub_remove_host_from_aggregate)
