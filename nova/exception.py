@@ -140,16 +140,6 @@ class NovaException(Exception):
             return unicode(self)
 
 
-class EC2APIError(NovaException):
-    msg_fmt = _("Unknown")
-
-    def __init__(self, message=None, code=None):
-        self.msg = message
-        self.code = code
-        outstr = '%s' % message
-        super(EC2APIError, self).__init__(outstr)
-
-
 #TODO(bcwaldon): EOL this exception!
 class Duplicate(NovaException):
     pass
@@ -274,6 +264,7 @@ class VolumeNotCreated(NovaException):
 
 
 class InvalidKeypair(Invalid):
+    ec2_code = 'InvalidKeyPair.Format'
     msg_fmt = _("Keypair data is invalid")
 
 
@@ -536,6 +527,7 @@ class ImageNotFound(NotFound):
     msg_fmt = _("Image %(image_id)s could not be found.")
 
 
+# NOTE(jruzicka): ImageNotFound is not a valid EC2 error code.
 class ImageNotFoundEC2(ImageNotFound):
     msg_fmt = _("Image %(image_id)s could not be found. The nova EC2 API "
                 "assigns image ids dynamically when they are listed for the "
@@ -1000,6 +992,7 @@ class RotationRequiredForBackup(NovaException):
 
 
 class KeyPairExists(Duplicate):
+    ec2_code = 'InvalidKeyPair.Duplicate'
     msg_fmt = _("Key pair '%(key_name)s' already exists.")
 
 
@@ -1079,6 +1072,7 @@ class NoValidHost(NovaException):
 
 
 class QuotaError(NovaException):
+    ec2_code = 'ResourceLimitExceeded'
     msg_fmt = _("Quota exceeded") + ": code=%(code)s"
     code = 413
     headers = {'Retry-After': 0}

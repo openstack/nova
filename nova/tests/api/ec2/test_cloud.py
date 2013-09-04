@@ -1770,7 +1770,7 @@ class CloudTestCase(test.TestCase):
         f.close
         key_name = 'testimportkey'
         public_key_material = base64.b64encode(dummypub)
-        self.assertRaises(exception.EC2APIError,
+        self.assertRaises(exception.KeypairLimitExceeded,
             self.cloud.import_key_pair, self.context, key_name,
             public_key_material)
 
@@ -1798,7 +1798,7 @@ class CloudTestCase(test.TestCase):
             self.assertEqual(result['keyName'], key_name)
 
         # 11'th group should fail
-        self.assertRaises(exception.EC2APIError,
+        self.assertRaises(exception.KeypairLimitExceeded,
                           self.cloud.create_key_pair,
                           self.context,
                           'foo')

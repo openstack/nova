@@ -32,12 +32,18 @@ class TestClientExceptionEC2(Exception):
     code = 400
 
 
+class TestServerExceptionEC2(Exception):
+    ec2_code = 'ServerException.Test'
+    message = "Test Server Exception."
+    code = 500
+
+
 class Ec2ErrorResponseTestCase(test.TestCase):
     """
     Test EC2 error responses.
 
     This deals mostly with api/ec2/__init__.py code, especially
-    the ec2.ec2_error_ex helper.
+    the ec2_error_ex helper.
     """
     def setUp(self):
         super(Ec2ErrorResponseTestCase, self).setUp()
@@ -78,21 +84,57 @@ class Ec2ErrorResponseTestCase(test.TestCase):
                              'RequestID element should be present.')
         self.assertEqual(requestid_e.text, self.context.request_id)
 
-    def test_exception_ec2_client(self):
+    def test_exception_ec2_4xx(self):
         """
-        Test response to client (400) EC2 exception.
+        Test response to EC2 exception with code = 400.
         """
         msg = "Test client failure."
         err = ec2.ec2_error_ex(TestClientExceptionEC2(msg), self.req)
         self._validate_ec2_error(err, TestClientExceptionEC2.code,
                                  TestClientExceptionEC2.ec2_code, msg)
 
-    def test_unexpected_exception_ec2_client(self):
+    def test_exception_ec2_5xx(self):
         """
-        Test response to an unexpected client (400) exception.
+        Test response to EC2 exception with code = 500.
+
+        Expected errors are treated as client ones even with 5xx code.
         """
-        msg = "Test client failure."
+        msg = "Test client failure with 5xx error code."
+        err = ec2.ec2_error_ex(TestServerExceptionEC2(msg), self.req)
+        self._validate_ec2_error(err, 400, TestServerExceptionEC2.ec2_code,
+                                 msg)
+
+    def test_unexpected_exception_ec2_4xx(self):
+        """
+        Test response to unexpected EC2 exception with code = 400.
+        """
+        msg = "Test unexpected client failure."
         err = ec2.ec2_error_ex(TestClientExceptionEC2(msg), self.req,
                            unexpected=True)
         self._validate_ec2_error(err, TestClientExceptionEC2.code,
                                  TestClientExceptionEC2.ec2_code, msg)
+
+    def test_unexpected_exception_ec2_5xx(self):
+        """
+        Test response to unexpected EC2 exception with code = 500.
+
+        Server exception messages (with code >= 500 or without code) should
+        be filtered as they might contain sensitive information.
+        """
+        msg = "Test server failure."
+        err = ec2.ec2_error_ex(TestServerExceptionEC2(msg), self.req,
+                           unexpected=True)
+        self._validate_ec2_error(err, TestServerExceptionEC2.code,
+                                 TestServerExceptionEC2.ec2_code,
+                                 unknown_msg=True)
+
+    def test_unexpected_exception_builtin(self):
+        """
+        Test response to builtin unexpected exception.
+
+        Server exception messages (with code >= 500 or without code) should
+        be filtered as they might contain sensitive information.
+        """
+        msg = "Test server failure."
+        err = ec2.ec2_error_ex(RuntimeError(msg), self.req, unexpected=True)
+        self._validate_ec2_error(err, 500, 'RuntimeError', unknown_msg=True)
