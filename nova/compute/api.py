@@ -129,8 +129,6 @@ MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS
 RO_SECURITY_GROUPS = ['default']
 
-SM_IMAGE_PROP_PREFIX = "image_"
-
 
 def check_instance_state(vm_state=None, task_state=(None,),
                          must_have_launched=True):
@@ -1071,9 +1069,8 @@ class API(base.Base):
         return "Server %s" % instance_uuid
 
     def _populate_instance_for_create(self, instance, image,
-                                      index, security_groups):
+                                      index, security_groups, instance_type):
         """Build the beginning of a new instance."""
-        image_properties = image.get('properties', {})
 
         if not instance.obj_attr_is_set('uuid'):
             # Generate the instance_uuid here so we can use it
@@ -1092,20 +1089,17 @@ class API(base.Base):
         # (for notifications, etc).  Only store what we can.
         if not instance.obj_attr_is_set('system_metadata'):
             instance.system_metadata = {}
-        prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
-        for key, value in image_properties.iteritems():
-            new_value = unicode(value)[:255]
-            instance['system_metadata'][prefix_format % key] = new_value
+        # Make sure we have the dict form that we need for instance_update.
+        instance['system_metadata'] = utils.instance_sys_meta(instance)
 
-        # Keep a record of the original base image that this
-        # image's instance is derived from:
-        base_image_ref = image_properties.get('base_image_ref')
-        if not base_image_ref:
-            # base image ref property not previously set through a snapshot.
-            # default to using the image ref as the base:
-            base_image_ref = instance.image_ref
+        system_meta = utils.get_system_metadata_from_image(
+            image, instance_type)
 
-        instance.system_metadata['image_base_image_ref'] = base_image_ref
+        # In case we couldn't find any suitable base_image
+        system_meta.setdefault('image_base_image_ref', instance['image_ref'])
+
+        instance['system_metadata'].update(system_meta)
+
         self.security_group_api.populate_security_groups(instance,
                                                          security_groups)
         return instance
@@ -1123,7 +1117,7 @@ class API(base.Base):
         instance has been determined.
         """
         self._populate_instance_for_create(instance, image, index,
-                                           security_group)
+                                           security_group, instance_type)
 
         self._populate_instance_names(instance, num_instances)
 
@@ -1860,8 +1854,8 @@ class API(base.Base):
         # Now inherit image properties from the base image
         for key, value in system_meta.items():
             # Trim off the image_ prefix
-            if key.startswith(SM_IMAGE_PROP_PREFIX):
-                key = key[len(SM_IMAGE_PROP_PREFIX):]
+            if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
+                key = key[len(utils.SM_IMAGE_PROP_PREFIX):]
 
             # Skip properties that are non-inheritable
             if key in CONF.non_inheritable_image_properties:
@@ -2037,12 +2031,14 @@ class API(base.Base):
             orig_sys_metadata = dict(sys_metadata)
             # Remove the old keys
             for key in sys_metadata.keys():
-                if key.startswith(SM_IMAGE_PROP_PREFIX):
+                if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
                     del sys_metadata[key]
+
             # Add the new ones
-            for key, value in image.get('properties', {}).iteritems():
-                new_value = unicode(value)[:255]
-                sys_metadata[(SM_IMAGE_PROP_PREFIX + '%s') % key] = new_value
+            new_sys_metadata = utils.get_system_metadata_from_image(
+                image, instance_type)
+
+            sys_metadata.update(new_sys_metadata)
             self.db.instance_system_metadata_update(context,
                     instance['uuid'], sys_metadata, True)
             return orig_sys_metadata

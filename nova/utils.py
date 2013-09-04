@@ -110,6 +110,11 @@ _IS_NEUTRON = False
 
 synchronized = lockutils.synchronized_with_prefix('nova-')
 
+SM_IMAGE_PROP_PREFIX = "image_"
+SM_INHERITABLE_KEYS = (
+    'min_ram', 'min_disk', 'disk_format', 'container_format',
+)
+
 
 def vpn_ping(address, port, timeout=0.05, session_id=None):
     """Sends a vpn negotiation packet and returns the server session.
@@ -1050,6 +1055,8 @@ def instance_meta(instance):
 
 
 def instance_sys_meta(instance):
+    if not instance.get('system_metadata'):
+        return {}
     if isinstance(instance['system_metadata'], dict):
         return instance['system_metadata']
     else:
@@ -1216,3 +1223,28 @@ def get_auto_disk_config_from_instance(instance=None, sys_meta=None):
 
 def get_auto_disk_config_from_image_props(image_properties):
     return image_properties.get("auto_disk_config")
+
+
+def get_system_metadata_from_image(image_meta, instance_type=None):
+    system_meta = {}
+    prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
+
+    for key, value in image_meta.get('properties', {}).iteritems():
+        new_value = unicode(value)[:255]
+        system_meta[prefix_format % key] = new_value
+
+    for key in SM_INHERITABLE_KEYS:
+        value = image_meta.get(key)
+
+        if key == 'min_disk' and instance_type:
+            if image_meta.get('disk_format') == 'vhd':
+                value = instance_type['root_gb']
+            else:
+                value = max(value, instance_type['root_gb'])
+
+        if value is None:
+            continue
+
+        system_meta[prefix_format % key] = value
+
+    return system_meta

@@ -24,7 +24,6 @@ import uuid
 from oslo.config import cfg
 
 from nova.api.metadata import password
-from nova.compute import api as compute_api
 from nova import context
 from nova import crypto
 from nova import exception
@@ -36,11 +35,11 @@ from nova import utils
 
 
 USE_AGENT_KEY = "xenapi_use_agent"
-USE_AGENT_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX + USE_AGENT_KEY
+USE_AGENT_SM_KEY = utils.SM_IMAGE_PROP_PREFIX + USE_AGENT_KEY
 SKIP_SSH_KEY = "xenapi_skip_agent_inject_ssh"
-SKIP_SSH_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX + SKIP_SSH_KEY
+SKIP_SSH_SM_KEY = utils.SM_IMAGE_PROP_PREFIX + SKIP_SSH_KEY
 SKIP_FILES_AT_BOOT_KEY = "xenapi_skip_agent_inject_files_at_boot"
-SKIP_FILES_AT_BOOT_SM_KEY = compute_api.SM_IMAGE_PROP_PREFIX \
+SKIP_FILES_AT_BOOT_SM_KEY = utils.SM_IMAGE_PROP_PREFIX \
                                         + SKIP_FILES_AT_BOOT_KEY
 
 LOG = logging.getLogger(__name__)

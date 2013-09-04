@@ -957,3 +957,74 @@ class AutoDiskConfigUtilTestCase(test.TestCase):
 
     def test_is_auto_disk_config_disabled_false(self):
         self.assertFalse(utils.is_auto_disk_config_disabled("false"))
+
+
+class GetSystemMetadataFromImageTestCase(test.TestCase):
+    def get_image(self):
+        image_meta = {
+            "id": "fake-image",
+            "name": "fake-name",
+            "min_ram": 1,
+            "min_disk": 1,
+            "disk_format": "raw",
+            "container_format": "bare",
+        }
+
+        return image_meta
+
+    def get_instance_type(self):
+        instance_type = {
+            "id": "fake.flavor",
+            "root_gb": 10,
+        }
+
+        return instance_type
+
+    def test_base_image_properties(self):
+        image = self.get_image()
+
+        # Verify that we inherit all the needed keys
+        sys_meta = utils.get_system_metadata_from_image(image)
+        for key in utils.SM_INHERITABLE_KEYS:
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+            self.assertEqual(image[key], sys_meta.get(sys_key))
+
+        # Verify that everything else is ignored
+        self.assertEqual(len(sys_meta), len(utils.SM_INHERITABLE_KEYS))
+
+    def test_inherit_image_properties(self):
+        image = self.get_image()
+        image["properties"] = {"foo1": "bar", "foo2": "baz"}
+
+        sys_meta = utils.get_system_metadata_from_image(image)
+
+        # Verify that we inherit all the image properties
+        for key, expected in image["properties"].iteritems():
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+            self.assertEqual(sys_meta[sys_key], expected)
+
+    def test_vhd_min_disk_image(self):
+        image = self.get_image()
+        instance_type = self.get_instance_type()
+
+        image["disk_format"] = "vhd"
+
+        sys_meta = utils.get_system_metadata_from_image(image, instance_type)
+
+        # Verify that the min_disk property is taken from
+        # instance_type's root_gb when using vhd disk format
+        sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, "min_disk")
+        self.assertEqual(sys_meta[sys_key], instance_type["root_gb"])
+
+    def test_dont_inherit_empty_values(self):
+        image = self.get_image()
+
+        for key in utils.SM_INHERITABLE_KEYS:
+            image[key] = None
+
+        sys_meta = utils.get_system_metadata_from_image(image)
+
+        # Verify that the empty properties have not been inherited
+        for key in utils.SM_INHERITABLE_KEYS:
+            sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)
+            self.assertTrue(sys_key not in sys_meta)
