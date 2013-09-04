@@ -63,6 +63,8 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.network.security_group import openstack_driver
+from nova.objects import instance as instance_obj
+from nova.objects import instance_info_cache as info_cache_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -369,14 +371,25 @@ class NetworkManager(manager.Manager):
         # NOTE(francois.charlier): the instance may have been deleted already
         # thus enabling `read_deleted`
         admin_context = context.get_admin_context(read_deleted='yes')
-        if uuidutils.is_uuid_like(instance_id):
-            instance_ref = self.db.instance_get_by_uuid(admin_context,
-                                                        instance_id)
-        else:
-            instance_ref = self.db.instance_get(admin_context, instance_id)
+        instance = instance_obj.Instance.get_by_uuid(admin_context,
+                                                     instance_id)
 
-        groups = instance_ref['security_groups']
-        group_ids = [group['id'] for group in groups]
+        try:
+            # NOTE(vish): We need to make sure the instance info cache has been
+            #             updated with new ip info before we trigger the
+            #             security group refresh. This is somewhat ineffecient
+            #             but avoids doing some dangerous refactoring for a
+            #             bug fix.
+            nw_info = self.get_instance_nw_info(admin_context, instance_id,
+                                                None, None)
+            ic = info_cache_obj.InstanceInfoCache.new(admin_context,
+                                                      instance_id)
+            ic.network_info = nw_info
+            ic.save(update_cells=False)
+        except exception.InstanceInfoCacheNotFound:
+            pass
+        groups = instance.security_groups
+        group_ids = [group.id for group in groups]
 
         self.security_group_api.trigger_members_refresh(admin_context,
                                                         group_ids)
@@ -834,13 +847,13 @@ class NetworkManager(manager.Manager):
                 else:
                     address = self.db.fixed_ip_associate_pool(
                         context.elevated(), network['id'], instance_id)
-                self._do_trigger_security_group_members_refresh_for_instance(
-                    instance_id)
                 get_vif = self.db.virtual_interface_get_by_instance_and_network
                 vif = get_vif(context, instance_id, network['id'])
                 values = {'allocated': True,
                           'virtual_interface_id': vif['id']}
                 self.db.fixed_ip_update(context, address, values)
+                self._do_trigger_security_group_members_refresh_for_instance(
+                    instance_id)
 
             # NOTE(vish) This db query could be removed if we pass az and name
             #            (or the whole instance object).
@@ -1709,14 +1722,16 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 address = self.db.fixed_ip_associate_pool(context,
                                                           network['id'],
                                                           instance_id)
-            self._do_trigger_security_group_members_refresh_for_instance(
-                                                                   instance_id)
 
         vif = self.db.virtual_interface_get_by_instance_and_network(
             context, instance_id, network['id'])
         values = {'allocated': True,
                   'virtual_interface_id': vif['id']}
         self.db.fixed_ip_update(context, address, values)
+
+        if not kwargs.get('vpn', None):
+            self._do_trigger_security_group_members_refresh_for_instance(
+                                                                   instance_id)
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
