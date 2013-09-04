@@ -16,6 +16,7 @@
 """
 Test multiprocess enabled API service.
 """
+import errno
 import fixtures
 import os
 import signal
@@ -127,17 +128,38 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                      for l in f.readlines()]
         return [p for p, pp in processes if pp == self.pid]
 
+    def wait_on_process_until_end(self, worker_pid):
+        # NOTE: the testing framework itself has a
+        # built in test timeout function so a test
+        # stuck in an infinite loop will eventually
+        # be killed by the test framework.
+        status = -1
+        try:
+            pid, status = os.waitpid(worker_pid, 0)
+        except OSError as err:
+            # if the kill command is too fast...
+            if err.errno == errno.ESRCH:
+                # the process is already dead... or...
+                return status
+            elif err.errno == errno.ECHILD:
+                # the child may have exited early!
+                return status
+            else:
+                # the unexpected may still happen
+                raise
+        return status
+
     def test_killed_worker_recover(self):
         start_workers = self._spawn()
 
+        worker_pid = start_workers[0]
         # kill one worker and check if new worker can come up
-        LOG.info('pid of first child is %s' % start_workers[0])
-        os.kill(start_workers[0], signal.SIGTERM)
+        LOG.info('pid of first child is %s' % worker_pid)
 
-        # Wait at most 5 seconds to respawn a worker
-        cond = lambda: start_workers != self._get_workers()
-        timeout = 5
-        self._wait(cond, timeout)
+        # signal child
+        os.kill(worker_pid, signal.SIGTERM)
+
+        self.wait_on_process_until_end(worker_pid)
 
         # Make sure worker pids don't match
         end_workers = self._get_workers()
@@ -155,15 +177,17 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         flavors = self.api.get_flavors()
         self.assertTrue(len(flavors) > 0, 'Num of flavors > 0.')
 
+        worker_pids = self._get_workers()
+
+        LOG.info("sent launcher_process pid: %r signal: %r" % (self.pid, sig))
         os.kill(self.pid, sig)
 
-        # Wait at most 5 seconds to kill all workers
-        cond = lambda: not self._get_workers()
-        timeout = 5
-        self._wait(cond, timeout)
+        # did you know the test framework has a timeout of its own?
+        # if a test takes too long, the test will be killed.
+        for pid in worker_pids:
+            self.wait_on_process_until_end(pid)
 
         workers = self._get_workers()
-        LOG.info('workers: %r' % workers)
         self.assertFalse(workers, 'OS processes left %r' % workers)
 
     def test_terminate_sigkill(self):
