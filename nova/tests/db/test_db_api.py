@@ -196,14 +196,14 @@ class NotDbApiTestCase(DbTestCase):
     def test_instance_get_all_by_filters_regex_unsupported_db(self):
         # Ensure that the 'LIKE' operator is used for unsupported dbs.
         self.create_instance_with_args(display_name='test1')
-        self.create_instance_with_args(display_name='test.*')
+        self.create_instance_with_args(display_name='test2')
         self.create_instance_with_args(display_name='diff')
         result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': 'test.*'})
-        self.assertEqual(1, len(result))
-        result = db.instance_get_all_by_filters(self.context,
-                                                {'display_name': '%test%'})
+                                                {'display_name': 'test'})
         self.assertEqual(2, len(result))
+        result = db.instance_get_all_by_filters(self.context,
+                                                {'display_name': 'di'})
+        self.assertEqual(1, len(result))
 
     def test_instance_get_all_by_filters_paginate(self):
         test1 = self.create_instance_with_args(display_name='test1')
