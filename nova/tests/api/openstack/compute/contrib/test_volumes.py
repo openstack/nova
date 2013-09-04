@@ -1,4 +1,5 @@
 # Copyright 2013 Josh Durgin
+# Copyright 2013 Red Hat, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -20,6 +21,8 @@ from oslo.config import cfg
 import webob
 from webob import exc
 
+from nova.api.openstack.compute.contrib import assisted_volume_snapshots as \
+        assisted_snaps
 from nova.api.openstack.compute.contrib import volumes
 from nova.api.openstack import extensions
 from nova.compute import api as compute_api
@@ -76,6 +79,16 @@ def fake_create_snapshot(self, context, volume, name, description):
 
 
 def fake_delete_snapshot(self, context, snapshot_id):
+    pass
+
+
+def fake_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
+                                        delete_info):
+    pass
+
+
+def fake_compute_volume_snapshot_create(self, context, volume_id,
+                                        create_info):
     pass
 
 
@@ -793,3 +806,51 @@ class DeleteSnapshotTestCase(test.TestCase):
         self.req.method = 'DELETE'
         result = self.controller.delete(self.req, result['snapshot']['id'])
         self.assertEqual(result.status_int, 202)
+
+
+class AssistedSnapshotCreateTestCase(test.TestCase):
+    def setUp(self):
+        super(AssistedSnapshotCreateTestCase, self).setUp()
+
+        self.controller = assisted_snaps.AssistedVolumeSnapshotsController()
+        self.stubs.Set(compute_api.API, 'volume_snapshot_create',
+                       fake_compute_volume_snapshot_create)
+
+    def test_assisted_create(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        body = {'snapshot': {'volume_id': 1, 'create_info': {}}}
+        req.method = 'POST'
+        self.controller.create(req, body=body)
+
+    def test_assisted_create_missing_create_info(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        body = {'snapshot': {'volume_id': 1}}
+        req.method = 'POST'
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                req, body=body)
+
+
+class AssistedSnapshotDeleteTestCase(test.TestCase):
+    def setUp(self):
+        super(AssistedSnapshotDeleteTestCase, self).setUp()
+
+        self.controller = assisted_snaps.AssistedVolumeSnapshotsController()
+        self.stubs.Set(compute_api.API, 'volume_snapshot_delete',
+                       fake_compute_volume_snapshot_delete)
+
+    def test_assisted_delete(self):
+        params = {
+            'delete_info': jsonutils.dumps({'volume_id': 1}),
+        }
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                '&'.join(['%s=%s' % (k, v) for k, v in params.iteritems()]))
+        req.method = 'DELETE'
+        result = self.controller.delete(req, '5')
+        self.assertEqual(result.status_int, 204)
+
+    def test_assisted_delete_missing_delete_info(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
+        req.method = 'DELETE'
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
+                req, '5')
