@@ -397,6 +397,21 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hda"/>
             </disk>""")
 
+    def test_config_file_parse(self):
+        xml = """<disk type="file" device="disk">
+                   <source file="/tmp/hello"/>
+                   <target bus="ide" dev="/dev/hda"/>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'file')
+        self.assertEqual(obj.source_path, '/tmp/hello')
+        self.assertEqual(obj.target_dev, '/dev/hda')
+        self.assertEqual(obj.target_bus, 'ide')
+
     def test_config_file_serial(self):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "file"
@@ -412,6 +427,20 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hda"/>
               <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
             </disk>""")
+
+    def test_config_file_serial_parse(self):
+        xml = """<disk type="file" device="disk">
+                   <source file="/tmp/hello"/>
+                   <target bus="ide" dev="/dev/hda"/>
+                   <serial>7a97c4a3-6f59-41d4-bf47-191d7f97f8e9</serial>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'file')
+        self.assertEqual(obj.serial, '7a97c4a3-6f59-41d4-bf47-191d7f97f8e9')
 
     def test_config_block(self):
         obj = config.LibvirtConfigGuestDisk()
@@ -430,6 +459,22 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hdc"/>
             </disk>""")
 
+    def test_config_block_parse(self):
+        xml = """<disk type="block" device="cdrom">
+                   <driver name="qemu"/>
+                   <source dev="/tmp/hello"/>
+                   <target bus="ide" dev="/dev/hdc"/>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'block')
+        self.assertEqual(obj.source_path, '/tmp/hello')
+        self.assertEqual(obj.target_dev, '/dev/hdc')
+        self.assertEqual(obj.target_bus, 'ide')
+
     def test_config_network(self):
         obj = config.LibvirtConfigGuestDisk()
         obj.source_type = "network"
@@ -447,6 +492,25 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <source name="foo.bar.com" protocol="iscsi"/>
               <target bus="ide" dev="/dev/hda"/>
             </disk>""")
+
+    def test_config_network_parse(self):
+        xml = """<disk type="network" device="disk">
+                   <driver name="qemu" type="qcow2"/>
+                   <source name="foo.bar.com" protocol="iscsi"/>
+                   <target bus="ide" dev="/dev/hda"/>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'network')
+        self.assertEqual(obj.source_protocol, 'iscsi')
+        self.assertEqual(obj.source_name, 'foo.bar.com')
+        self.assertEqual(obj.driver_name, 'qemu')
+        self.assertEqual(obj.driver_format, 'qcow2')
+        self.assertEqual(obj.target_dev, '/dev/hda')
+        self.assertEqual(obj.target_bus, 'ide')
 
     def test_config_network_no_name(self):
         obj = config.LibvirtConfigGuestDisk()
@@ -562,6 +626,38 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
               <target bus="ide" dev="/dev/hda"/>
               <blockio logical_block_size="4096" physical_block_size="4096"/>
             </disk>""", xml)
+
+
+class LibvirtConfigGuestSnapshotDiskTest(LibvirtConfigBaseTest):
+
+    def test_config_file(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "file"
+        obj.source_path = "/tmp/hello"
+        obj.target_dev = "/dev/hda"
+        obj.target_bus = "ide"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <disk type="file" device="disk">
+              <source file="/tmp/hello"/>
+              <target bus="ide" dev="/dev/hda"/>
+            </disk>""")
+
+    def test_config_file_parse(self):
+        xml = """<disk type="file" device="disk">
+                   <source file="/tmp/hello"/>
+                   <target bus="ide" dev="/dev/hda"/>
+                 </disk>"""
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDisk()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'file')
+        self.assertEqual(obj.source_path, '/tmp/hello')
+        self.assertEqual(obj.target_dev, '/dev/hda')
+        self.assertEqual(obj.target_bus, 'ide')
 
 
 class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
@@ -975,6 +1071,36 @@ class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
             <domainsnapshot>
               <name>Demo</name>
+              <disks/>
+            </domainsnapshot>""")
+
+    def test_config_snapshot_with_disks(self):
+        obj = config.LibvirtConfigGuestSnapshot()
+        obj.name = "Demo"
+
+        disk = config.LibvirtConfigGuestSnapshotDisk()
+        disk.name = 'vda'
+        disk.source_path = 'source-path'
+        disk.source_type = 'file'
+        disk.snapshot = 'external'
+        disk.driver_name = 'qcow2'
+        obj.add_disk(disk)
+
+        disk2 = config.LibvirtConfigGuestSnapshotDisk()
+        disk2.name = 'vdb'
+        disk2.snapshot = 'no'
+        obj.add_disk(disk2)
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <domainsnapshot>
+              <name>Demo</name>
+              <disks>
+               <disk name='vda' snapshot='external' type='file'>
+                <source file='source-path'/>
+               </disk>
+               <disk name='vdb' snapshot='no'/>
+              </disks>
             </domainsnapshot>""")
 
 

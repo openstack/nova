@@ -287,3 +287,12 @@ class CinderApiTestCase(test.TestCase):
     def test_update_volume_metadata(self):
         self.assertRaises(NotImplementedError,
                           self.api.update_volume_metadata, self.ctx, '', '')
+
+    def test_update_snapshot_status(self):
+        cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
+        self.mox.StubOutWithMock(self.cinderclient.volume_snapshots,
+                                 'update_snapshot_status')
+        self.cinderclient.volume_snapshots.update_snapshot_status(
+            'id1', {'status': 'error', 'progress': '90%'})
+        self.mox.ReplayAll()
+        self.api.update_snapshot_status(self.ctx, 'id1', 'error')

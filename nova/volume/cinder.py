@@ -367,3 +367,19 @@ class API(base.Base):
     @translate_volume_exception
     def get_volume_metadata_value(self, volume_id, key):
         raise NotImplementedError()
+
+    @translate_snapshot_exception
+    def update_snapshot_status(self, context, snapshot_id, status):
+        vs = cinderclient(context).volume_snapshots
+
+        # '90%' here is used to tell Cinder that Nova is done
+        # with its portion of the 'creating' state. This can
+        # be removed when we are able to split the Cinder states
+        # into 'creating' and a separate state of
+        # 'creating_in_nova'. (Same for 'deleting' state.)
+
+        vs.update_snapshot_status(
+            snapshot_id,
+            {'status': status,
+             'progress': '90%'}
+        )
