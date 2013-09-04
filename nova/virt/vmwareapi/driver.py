@@ -402,7 +402,8 @@ class VMwareVCDriver(VMwareESXDriver):
                 _("Invalid Regular Expression %s")
                 % CONF.vmware.datastore_regex)
         self._volumeops = volumeops.VMwareVolumeOps(self._session,
-                                                    self._cluster)
+                                                    cluster=self._cluster,
+                                                    vc_support=True)
         self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
                                         self._volumeops, self._cluster,
                                         self._datastore_regex)

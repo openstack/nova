@@ -44,8 +44,14 @@ CONF = cfg.CONF
 CONF.register_opt(vmwareapi_wsdl_loc_opt, 'vmware')
 
 
-class VIMMessagePlugin(suds.plugin.MessagePlugin):
+def get_moref(value, type):
+    """Get managed object reference."""
+    moref = suds.sudsobject.Property(value)
+    moref._type = type
+    return moref
 
+
+class VIMMessagePlugin(suds.plugin.MessagePlugin):
     def addAttributeForValue(self, node):
         # suds does not handle AnyType properly.
         # VI SDK requires type attribute to be set when AnyType is used
