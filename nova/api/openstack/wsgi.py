@@ -179,10 +179,15 @@ class Request(webob.Request):
         return content_type
 
     def best_match_language(self):
-        """Determine language for returned response."""
+        """Determine the best available language for the request.
+
+        :returns: the best language match or None if the 'Accept-Language'
+                  header was not available in the request.
+        """
+        if not self.accept_language:
+            return None
         return self.accept_language.best_match(
-                gettextutils.get_available_languages('nova'),
-                default_match='en_US')
+                gettextutils.get_available_languages('nova'))
 
 
 class ActionDispatcher(object):
