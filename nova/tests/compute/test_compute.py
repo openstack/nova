@@ -9266,6 +9266,16 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self._rebuild(on_shared_storage=False)
 
+    def test_rebuild_on_host_instance_exists(self):
+        """Rebuild if instance exists raises an exception."""
+        db.instance_update(self.context, self.inst_ref['uuid'],
+                           {"task_state": task_states.SCHEDULING})
+        self.compute.run_instance(self.context, instance=self.inst_ref)
+
+        self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
+        self.assertRaises(exception.InstanceExists,
+                          lambda: self._rebuild(on_shared_storage=True))
+
     def test_driver_doesnt_support_recreate(self):
         with utils.temporary_mutation(self.compute.driver.capabilities,
                                       supports_recreate=False):
