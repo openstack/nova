@@ -7,12 +7,11 @@
 auto lo
 iface lo inet loopback
 
-#for $ifc in $interfaces
-auto ${ifc.name}
-iface ${ifc.name} inet dhcp
+{% for ifc in interfaces -%}
+auto {{ ifc.name }}
+iface {{ ifc.name }} inet dhcp
 
-#if $use_ipv6
-iface ${ifc.name} inet6 dhcp
-#end if
-
-#end for
+{% if use_ipv6 -%}
+iface {{ ifc.name }} inet6 dhcp
+{%- endif %}
+{%- endfor %}

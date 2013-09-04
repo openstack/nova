@@ -18,8 +18,8 @@
 
 # NOVA user connection
 # Edit the following lines to point to your cert files:
-cert $certfile
-key $keyfile
+cert {{ certfile }}
+key {{ keyfile }}
 
 ca cacert.pem
 
@@ -27,7 +27,7 @@ client
 dev tap
 proto udp
 
-remote $ip $port
+remote {{ ip }} {{ port }}
 resolv-retry infinite
 nobind
 

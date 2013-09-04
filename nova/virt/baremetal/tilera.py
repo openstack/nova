@@ -22,6 +22,7 @@ Class for Tilera bare-metal nodes.
 import base64
 import os
 
+import jinja2
 from oslo.config import cfg
 
 from nova.compute import flavors
@@ -44,28 +45,14 @@ CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('net_config_template', 'nova.virt.baremetal.pxe',
                 group='baremetal')
 
-CHEETAH = None
-
-
-def _get_cheetah():
-    global CHEETAH
-    if CHEETAH is None:
-        from Cheetah import Template
-        CHEETAH = Template.Template
-    return CHEETAH
-
 
 def build_network_config(network_info):
     interfaces = bm_utils.map_network_interfaces(network_info, CONF.use_ipv6)
-    cheetah = _get_cheetah()
-    network_config = str(cheetah(
-            open(CONF.baremetal.net_config_template).read(),
-            searchList=[
-                {'interfaces': interfaces,
-                 'use_ipv6': CONF.use_ipv6,
-                }
-            ]))
-    return network_config
+    tmpl_path, tmpl_file = os.path.split(CONF.baremetal.net_config_template)
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path))
+    template = env.get_template(tmpl_file)
+    return template.render({'interfaces': interfaces,
+                            'use_ipv6': CONF.use_ipv6})
 
 
 def get_image_dir_path(instance):

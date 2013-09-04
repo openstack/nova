@@ -2214,11 +2214,11 @@ def _prepare_injectables(inst, network_info):
     prepares the ssh key and the network configuration file to be
     injected into the disk image
     """
-    #do the import here - Cheetah.Template will be loaded
-    #only if injection is performed
-    from Cheetah import Template as t
-    template = t.Template
-    template_data = open(CONF.injected_network_template).read()
+    #do the import here - Jinja2 will be loaded only if injection is performed
+    import jinja2
+    tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
+    env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path))
+    template = env.get_template(tmpl_file)
 
     metadata = inst['metadata']
     key = str(inst['key_data'])
@@ -2301,9 +2301,8 @@ def _prepare_injectables(inst, network_info):
             interfaces_info.append(interface_info)
 
         if interfaces_info:
-            net = str(template(template_data,
-                                searchList=[{'interfaces': interfaces_info,
-                                            'use_ipv6': CONF.use_ipv6}]))
+            net = template.render({'interfaces': interfaces_info,
+                                   'use_ipv6': CONF.use_ipv6})
     return key, net, metadata
 
 
