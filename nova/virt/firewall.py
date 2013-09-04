@@ -409,6 +409,9 @@ class IptablesFirewallDriver(FirewallDriver):
                 else:
                     if rule['grantee_group']:
                         for instance in rule['grantee_group']['instances']:
+                            if instance['info_cache']['deleted']:
+                                LOG.debug('ignoring deleted cache')
+                                continue
                             nw_info = compute_utils.get_nw_info_for_instance(
                                     instance)
 
