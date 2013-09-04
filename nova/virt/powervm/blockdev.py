@@ -560,7 +560,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         error_text = stderr.strip()
         if error_text:
-            LOG.debug(_("Found error stream for command \"%(cmd)s\": "
+            LOG.warn(_("Found error stream for command \"%(cmd)s\": "
                         "%(error_text)s"),
                       {'cmd': cmd, 'error_text': error_text})
 
@@ -577,7 +577,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         error_text = stderr.read()
         if error_text:
-            LOG.debug(_("Found error stream for command \"%(command)s\":"
+            LOG.warn(_("Found error stream for command \"%(command)s\":"
                         " %(error_text)s"),
                       {'command': command, 'error_text': error_text})
 
