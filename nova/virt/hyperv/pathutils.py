@@ -18,9 +18,9 @@
 import os
 import shutil
 
-from eventlet.green import subprocess
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import utils
 from oslo.config import cfg
 
 LOG = logging.getLogger(__name__)
@@ -68,7 +68,8 @@ class PathUtils(object):
         # shutil.copy(...) but still 20% slower than a shell copy.
         # It can be replaced with Win32 API calls to avoid the process
         # spawning overhead.
-        if subprocess.call(['cmd.exe', '/C', 'copy', '/Y', src, dest]):
+        output, ret = utils.execute('cmd.exe', '/C', 'copy', '/Y', src, dest)
+        if ret:
             raise IOError(_('The file copy from %(src)s to %(dest)s failed')
                            % {'src': src, 'dest': dest})
 
