@@ -68,7 +68,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                  'expected_task_state': [task_states.SHELVING,
                     task_states.SHELVING_IMAGE_UPLOADING],
                  'system_metadata': sys_meta},
-                 update_cells=False).AndReturn((db_instance,
+                 update_cells=False,
+                 columns_to_join=['metadata', 'system_metadata'],
+                ).AndReturn((db_instance,
                                                 db_instance))
         self.compute._notify_about_instance_usage(self.context,
                                                   instance, 'shelve.end')
@@ -115,7 +117,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                  'task_state': None,
                  'expected_task_state': [task_states.SHELVING,
                     task_states.SHELVING_OFFLOADING]},
-                 update_cells=False).AndReturn((db_instance, db_instance))
+                 update_cells=False,
+                 columns_to_join=['metadata', 'system_metadata'],
+                 ).AndReturn((db_instance, db_instance))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.end')
         self.mox.ReplayAll()
@@ -163,7 +167,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'unshelve.start')
         db.instance_update_and_get_original(self.context, instance['uuid'],
                 {'task_state': task_states.SPAWNING},
-                update_cells=False).AndReturn((db_instance, db_instance))
+                update_cells=False,
+                columns_to_join=['metadata', 'system_metadata'],
+                ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
                 []).AndReturn('fake_bdm')
         db_instance['key_data'] = None
@@ -181,8 +187,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                  'auto_disk_config': False,
                  'expected_task_state': task_states.SPAWNING,
                  'launched_at': cur_time_tz},
-                 update_cells=False).AndReturn((db_instance,
-                                                db_instance))
+                 update_cells=False,
+                 columns_to_join=['metadata', 'system_metadata']
+                 ).AndReturn((db_instance, db_instance))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
         self.mox.ReplayAll()
@@ -223,7 +230,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'unshelve.start')
         db.instance_update_and_get_original(self.context, instance['uuid'],
                 {'task_state': task_states.SPAWNING},
-                update_cells=False).AndReturn((db_instance, db_instance))
+                update_cells=False,
+                columns_to_join=['metadata', 'system_metadata']
+                ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
                 []).AndReturn('fake_bdm')
         db_instance['key_data'] = None
@@ -241,8 +250,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                  'auto_disk_config': False,
                  'expected_task_state': task_states.SPAWNING,
                  'launched_at': cur_time_tz},
-                 update_cells=False).AndReturn((db_instance,
-                                                db_instance))
+                 update_cells=False,
+                 columns_to_join=['metadata', 'system_metadata']
+                 ).AndReturn((db_instance, db_instance))
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.end')
         self.mox.ReplayAll()

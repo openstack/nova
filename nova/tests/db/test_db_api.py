@@ -1703,6 +1703,24 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual('building', old_ref['vm_state'])
         self.assertEqual('needscoffee', new_ref['vm_state'])
 
+    def test_instance_update_and_get_original_metadata(self):
+        instance = self.create_instance_with_args()
+        columns_to_join = ['metadata']
+        (old_ref, new_ref) = db.instance_update_and_get_original(
+            self.ctxt, instance['uuid'], {'vm_state': 'needscoffee'},
+            columns_to_join=columns_to_join)
+        meta = utils.metadata_to_dict(new_ref['metadata'])
+        self.assertEqual(meta, self.sample_data['metadata'])
+        sys_meta = utils.metadata_to_dict(new_ref['system_metadata'])
+        self.assertEqual(sys_meta, {})
+
+    def test_instance_update_and_get_original_metadata_none_join(self):
+        instance = self.create_instance_with_args()
+        (old_ref, new_ref) = db.instance_update_and_get_original(
+            self.ctxt, instance['uuid'], {'metadata': {'mk1': 'mv3'}})
+        meta = utils.metadata_to_dict(new_ref['metadata'])
+        self.assertEqual(meta, {'mk1': 'mv3'})
+
     def test_instance_update_unique_name(self):
         context1 = context.RequestContext('user1', 'p1')
         context2 = context.RequestContext('user2', 'p2')

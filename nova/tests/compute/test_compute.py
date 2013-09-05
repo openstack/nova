@@ -1930,6 +1930,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update_and_get_original(econtext, instance['uuid'],
                                             {'power_state': fake_power_state1},
                                             update_cells=False,
+                                            columns_to_join=[],
                                             ).AndReturn((None,
                                                          updated_dbinstance1))
 
@@ -1975,6 +1976,7 @@ class ComputeTestCase(BaseTestCase):
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
+                columns_to_join=[],
                 ).AndRaise(exception.InstanceNotFound(
                     instance_id=instance['uuid']))
             self.compute._notify_about_instance_usage(
@@ -1986,6 +1988,7 @@ class ComputeTestCase(BaseTestCase):
                 econtext, updated_dbinstance1['uuid'],
                 {'vm_state': vm_states.ERROR},
                 update_cells=False,
+                columns_to_join=[],
                 ).AndRaise(exception.InstanceNotFound(
                     instance_id=instance['uuid']))
         else:
@@ -1995,6 +1998,7 @@ class ComputeTestCase(BaseTestCase):
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
+                columns_to_join=[],
                 ).AndReturn((None, updated_dbinstance2))
             self.compute._notify_about_instance_usage(
                 econtext,

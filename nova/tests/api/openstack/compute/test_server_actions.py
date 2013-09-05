@@ -45,9 +45,18 @@ def return_server_not_found(*arg, **kwarg):
     raise exception.NotFound()
 
 
+def instance_update_and_get_original(context, instance_uuid, values,
+                                     update_cells=True,
+                                     columns_to_join=None,
+                                     ):
+    inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
+    inst = dict(inst, **values)
+    return (inst, inst)
+
+
 def instance_update(context, instance_uuid, kwargs, update_cells=True):
     inst = fakes.stub_instance(INSTANCE_IDS[instance_uuid], host='fake_host')
-    return (inst, inst)
+    return inst
 
 
 class MockSetAdminPassword(object):
@@ -69,7 +78,7 @@ class ServerActionsControllerTest(test.TestCase):
                        fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
                                                host='fake_host'))
         self.stubs.Set(db, 'instance_update_and_get_original',
-                       instance_update)
+                       instance_update_and_get_original)
 
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
