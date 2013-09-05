@@ -56,20 +56,11 @@ class KeyPair(base.NovaObject):
         db.key_pair_destroy(context, self.user_id, self.name)
 
 
-def _make_list(context, list_obj, item_cls, db_list):
-    list_obj.objects = []
-    for db_item in db_list:
-        item = item_cls._from_db_object(context, item_cls(), db_item)
-        list_obj.objects.append(item)
-    list_obj.obj_reset_changes()
-    return list_obj
-
-
 class KeyPairList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_user(cls, context, user_id):
         db_keypairs = db.key_pair_get_all_by_user(context, user_id)
-        return _make_list(context, KeyPairList(), KeyPair, db_keypairs)
+        return base.obj_make_list(context, KeyPairList(), KeyPair, db_keypairs)
 
     @base.remotable_classmethod
     def get_count_by_user(cls, context, user_id):

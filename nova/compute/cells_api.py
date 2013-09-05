@@ -22,6 +22,7 @@ from nova.cells import utils as cells_utils
 from nova.compute import api as compute_api
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
+from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova import rpcclient
@@ -480,7 +481,7 @@ class HostAPI(compute_api.HostAPI):
         # NOTE(danms): Currently cells does not support objects as
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
-        return service_obj._make_list(context,
+        return obj_base.obj_make_list(context,
                                       service_obj.ServiceList(),
                                       service_obj.Service,
                                       services)

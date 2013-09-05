@@ -119,25 +119,16 @@ class Service(base.NovaObject):
         db.service_destroy(context, self.id)
 
 
-def _make_list(context, list_obj, item_cls, db_list):
-    list_obj.objects = []
-    for db_item in db_list:
-        item = item_cls._from_db_object(context, item_cls(), db_item)
-        list_obj.objects.append(item)
-    list_obj.obj_reset_changes()
-    return list_obj
-
-
 class ServiceList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_topic(cls, context, topic):
         db_services = db.service_get_all_by_topic(context, topic)
-        return _make_list(context, ServiceList(), Service, db_services)
+        return base.obj_make_list(context, ServiceList(), Service, db_services)
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host):
         db_services = db.service_get_all_by_host(context, host)
-        return _make_list(context, ServiceList(), Service, db_services)
+        return base.obj_make_list(context, ServiceList(), Service, db_services)
 
     @base.remotable_classmethod
     def get_all(cls, context, disabled=None, set_zones=False):
@@ -145,4 +136,4 @@ class ServiceList(base.ObjectListBase, base.NovaObject):
         if set_zones:
             db_services = availability_zones.set_availability_zones(
                 context, db_services)
-        return _make_list(context, ServiceList(), Service, db_services)
+        return base.obj_make_list(context, ServiceList(), Service, db_services)

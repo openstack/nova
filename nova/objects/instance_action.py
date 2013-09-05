@@ -77,20 +77,11 @@ class InstanceAction(base.NovaObject):
         self._from_db_object(context, self, db_action)
 
 
-def _make_list(context, list_obj, item_cls, db_list):
-    list_obj.objects = []
-    for db_item in db_list:
-        item = item_cls._from_db_object(context, item_cls(), db_item)
-        list_obj.objects.append(item)
-    list_obj.obj_reset_changes()
-    return list_obj
-
-
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_actions = db.actions_get(context, instance_uuid)
-        return _make_list(context, cls(), InstanceAction, db_actions)
+        return base.obj_make_list(context, cls(), InstanceAction, db_actions)
 
 
 class InstanceActionEvent(base.NovaObject):
@@ -168,4 +159,5 @@ class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_action(cls, context, action_id):
         db_events = db.action_events_get(context, action_id)
-        return _make_list(context, cls(), InstanceActionEvent, db_events)
+        return base.obj_make_list(context, cls(), InstanceActionEvent,
+                                  db_events)

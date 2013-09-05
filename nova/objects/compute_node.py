@@ -92,23 +92,16 @@ class ComputeNode(base.NovaObject):
         return self._cached_service
 
 
-def _make_list(context, list_obj, item_cls, db_list):
-    list_obj.objects = []
-    for db_item in db_list:
-        item = item_cls._from_db_object(context, item_cls(), db_item)
-        list_obj.objects.append(item)
-    list_obj.obj_reset_changes()
-    return list_obj
-
-
 class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)
-        return _make_list(context, ComputeNodeList(), ComputeNode, db_computes)
+        return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
+                                  db_computes)
 
     @base.remotable_classmethod
     def get_by_hypervisor(cls, context, hypervisor_match):
         db_computes = db.compute_node_search_by_hypervisor(context,
                                                            hypervisor_match)
-        return _make_list(context, ComputeNodeList(), ComputeNode, db_computes)
+        return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
+                                  db_computes)

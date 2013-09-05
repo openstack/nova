@@ -33,6 +33,14 @@ class MyObj(base.NovaObject):
               'missing': str,
               }
 
+    @staticmethod
+    def _from_db_object(context, obj, db_obj):
+        self = MyObj()
+        self.foo = db_obj['foo']
+        self.bar = db_obj['bar']
+        self.missing = db_obj['missing']
+        return self
+
     def obj_load_attr(self, attrname):
         setattr(self, attrname, 'loaded!')
 
@@ -233,6 +241,21 @@ class TestUtils(test.TestCase):
             value.foo = i
         self.assertEqual([{'foo': 0}, {'foo': 1}],
                          base.obj_to_primitive(mylist))
+
+    def test_obj_make_list(self):
+        class MyList(base.ObjectListBase, base.NovaObject):
+            pass
+
+        db_objs = [{'foo': 1, 'bar': 'baz', 'missing': 'banana'},
+                   {'foo': 2, 'bar': 'bat', 'missing': 'apple'},
+                   ]
+        mylist = base.obj_make_list('ctxt', MyList(), MyObj, db_objs)
+        self.assertEqual(2, len(mylist))
+        self.assertEqual('ctxt', mylist._context)
+        for index, item in enumerate(mylist):
+            self.assertEqual(db_objs[index]['foo'], item.foo)
+            self.assertEqual(db_objs[index]['bar'], item.bar)
+            self.assertEqual(db_objs[index]['missing'], item.missing)
 
 
 class _BaseTestCase(test.TestCase):
