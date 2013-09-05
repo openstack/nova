@@ -22,6 +22,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova import notifications
 from nova.objects import instance
 from nova.objects import instance_info_cache
 from nova.objects import security_group
@@ -223,6 +224,7 @@ class _TestInstanceObject(object):
                                  'instance_update_from_api')
         self.mox.StubOutWithMock(cells_rpcapi, 'CellsAPI',
                                  use_mock_anything=True)
+        self.mox.StubOutWithMock(notifications, 'send_update')
         db.instance_get_by_uuid(self.context, fake_uuid, columns_to_join=[]
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
@@ -237,6 +239,8 @@ class _TestInstanceObject(object):
         elif cell_type == 'compute':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
             cells_api_mock.instance_update_at_top(self.context, new_ref)
+        notifications.send_update(self.context, mox.IgnoreArg(),
+                                  mox.IgnoreArg())
 
         self.mox.ReplayAll()
 

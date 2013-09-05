@@ -443,6 +443,7 @@ class Instance(base.NovaObject):
             if hasattr(self, base.get_attrname(attr)):
                 expected_attrs.append(attr)
 
+        updated_keys = updates.keys()
         old_ref, inst_ref = db.instance_update_and_get_original(
                 context, self.uuid, updates, update_cells=False,
                 columns_to_join=self._attrs_to_columns(expected_attrs))
@@ -454,7 +455,7 @@ class Instance(base.NovaObject):
             cells_api.instance_update_at_top(context, inst_ref)
 
         self._from_db_object(context, self, inst_ref, expected_attrs)
-        if 'vm_state' in changes or 'task_state' in changes:
+        if 'vm_state' in updated_keys or 'task_state' in updated_keys:
             notifications.send_update(context, old_ref, inst_ref)
         self.obj_reset_changes()
 
