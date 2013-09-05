@@ -415,7 +415,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.45'
+    RPC_API_VERSION = '2.46'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2886,11 +2886,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance.task_state = task_states.RESIZE_MIGRATED
             instance.save(expected_task_state=task_states.RESIZE_MIGRATING)
 
-            migration_p = obj_base.obj_to_primitive(migration)
-            instance_p = obj_base.obj_to_primitive(instance)
-            self.compute_rpcapi.finish_resize(context, instance_p,
-                    migration_p, image, disk_info,
-                    migration.dest_compute, reservations)
+            self.compute_rpcapi.finish_resize(context, instance,
+                    migration, image, disk_info,
+                    migration.dest_compute, reservations=reservations)
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
@@ -2909,7 +2907,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         old_instance_type_id = migration['old_instance_type_id']
         new_instance_type_id = migration['new_instance_type_id']
         old_instance_type = flavors.extract_flavor(instance)
-        sys_meta = utils.instance_sys_meta(instance)
+        sys_meta = instance.system_metadata
         # NOTE(mriedem): Get the old_vm_state so we know if we should
         # power on the instance. If old_vm_sate is not set we need to default
         # to ACTIVE for backwards compatibility
@@ -2917,37 +2915,34 @@ class ComputeManager(manager.SchedulerDependentManager):
         flavors.save_flavor_info(sys_meta,
                                  old_instance_type,
                                  prefix='old_')
+
         if old_instance_type_id != new_instance_type_id:
-            instance_type = flavors.extract_flavor(instance,
-                                                                 prefix='new_')
+            instance_type = flavors.extract_flavor(instance, prefix='new_')
             flavors.save_flavor_info(sys_meta, instance_type)
-
-            instance = self._instance_update(
-                    context,
-                    instance['uuid'],
-                    instance_type_id=instance_type['id'],
-                    memory_mb=instance_type['memory_mb'],
-                    vcpus=instance_type['vcpus'],
-                    root_gb=instance_type['root_gb'],
-                    ephemeral_gb=instance_type['ephemeral_gb'],
-                    system_metadata=dict(sys_meta))
-
+            instance.instance_type_id = instance_type['id']
+            instance.memory_mb = instance_type['memory_mb']
+            instance.vcpus = instance_type['vcpus']
+            instance.root_gb = instance_type['root_gb']
+            instance.ephemeral_gb = instance_type['ephemeral_gb']
+            instance.system_metadata = sys_meta
+            instance.save()
             resize_instance = True
 
         # NOTE(tr3buchet): setup networks on destination host
         self.network_api.setup_networks_on_host(context, instance,
                                                 migration['dest_compute'])
 
+        instance_p = obj_base.obj_to_primitive(instance)
+        migration_p = obj_base.obj_to_primitive(migration)
         self.conductor_api.network_migrate_instance_finish(context,
-                                                           instance,
-                                                           migration)
+                                                           instance_p,
+                                                           migration_p)
 
         network_info = self._get_instance_nw_info(context, instance)
 
-        instance = self._instance_update(context, instance['uuid'],
-                              task_state=task_states.RESIZE_FINISH,
-                              expected_task_state=task_states.RESIZE_MIGRATED,
-                              system_metadata=sys_meta)
+        instance.task_state = task_states.RESIZE_FINISH
+        instance.system_metadata = sys_meta
+        instance.save(expected_task_state=task_states.RESIZE_MIGRATED)
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.start",
@@ -2965,21 +2960,19 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      image, resize_instance,
                                      block_device_info, power_on)
 
-        migration = self.conductor_api.migration_update(context,
-                migration, 'finished')
+        migration.status = 'finished'
+        migration.save(context.elevated())
 
-        instance = self._instance_update(context,
-                                         instance['uuid'],
-                                         vm_state=vm_states.RESIZED,
-                                         launched_at=timeutils.utcnow(),
-                                         task_state=None,
-                                         expected_task_state=task_states.
-                                             RESIZE_FINISH)
+        instance.vm_state = vm_states.RESIZED
+        instance.task_state = None
+        instance.launched_at = timeutils.utcnow()
+        instance.save(expected_task_state=task_states.RESIZE_FINISH)
 
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
             network_info=network_info)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2993,7 +2986,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if not migration:
-            migration = self.conductor_api.migration_get(context, migration_id)
+            migration = migration_obj.Migration.get_by_id(
+                    context.elevated(), migration_id)
         try:
             self._finish_resize(context, instance, migration,
                                 disk_info, image)

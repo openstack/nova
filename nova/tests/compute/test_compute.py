@@ -3244,36 +3244,6 @@ class ComputeTestCase(BaseTestCase):
         # Contrived test to ensure finish_resize doesn't raise anything and
         # also tests resize from ACTIVE or STOPPED state which determines
         # if the resized instance is powered on or not.
-        self.power_on = power_on
-        self.fake_finish_migration_called = False
-
-        def fake_finish_migration(context, migration, instance, disk_info,
-                                  network_info, image_meta, resize_instance,
-                                  block_device_info=None, power_on=True):
-            # nova.conf sets the default flavor to m1.small and the test
-            # sets the default flavor to m1.tiny so they should be different
-            # which makes this a resize
-            self.assertTrue(resize_instance)
-            # ensure the power_on value is what we expect
-            self.assertEqual(self.power_on, power_on)
-            self.fake_finish_migration_called = True
-
-        def fake_migration_update(context, id, values):
-            # Ensure instance status updates is after the migration finish
-            migration_ref = db.migration_get(context, id)
-            instance_uuid = migration_ref['instance_uuid']
-            instance = db.instance_get_by_uuid(context, instance_uuid)
-            self.assertFalse(instance['vm_state'] == vm_states.RESIZED)
-            self.assertEqual(instance['task_state'], task_states.RESIZE_FINISH)
-
-        self.stubs.Set(self.compute.driver, 'finish_migration',
-                       fake_finish_migration)
-        self.stubs.Set(db, 'migration_update', fake_migration_update)
-
-        self._stub_out_resize_network_methods()
-
-        reservations = self._ensure_quota_reservations_committed()
-
         vm_state = None
         if power_on:
             vm_state = vm_states.ACTIVE
@@ -3281,16 +3251,17 @@ class ComputeTestCase(BaseTestCase):
             vm_state = vm_states.STOPPED
         params = {'vm_state': vm_state}
         instance = self._create_fake_instance_obj(params)
+        image = 'fake-image'
+        disk_info = 'fake-disk-info'
         instance_type = flavors.get_default_flavor()
         instance.task_state = task_states.RESIZE_PREP
         instance.save()
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={})
-        migration_ref = db.migration_get_by_instance_and_status(
-                self.context.elevated(), instance['uuid'], 'pre-migrating')
         instance.task_state = task_states.RESIZE_MIGRATED
         instance.save()
+
         # NOTE(mriedem): make sure prep_resize set old_vm_state correctly
         sys_meta = instance.system_metadata
         self.assertTrue('old_vm_state' in sys_meta)
@@ -3298,12 +3269,99 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
         else:
             self.assertEqual(vm_states.STOPPED, sys_meta['old_vm_state'])
-        instance_p = obj_base.obj_to_primitive(instance)
+        migration = migration_obj.Migration.get_by_instance_and_status(
+                self.context.elevated(),
+                instance.uuid, 'pre-migrating')
+
+        orig_mig_save = migration.save
+        orig_inst_save = instance.save
+        network_api = self.compute.network_api
+        conductor_api = self.compute.conductor_api
+
+        self.mox.StubOutWithMock(network_api, 'setup_networks_on_host')
+        self.mox.StubOutWithMock(conductor_api,
+                                 'network_migrate_instance_finish')
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_notify_about_instance_usage')
+        self.mox.StubOutWithMock(self.compute.driver, 'finish_migration')
+        self.mox.StubOutWithMock(self.compute,
+                                 '_get_instance_volume_block_device_info')
+        self.mox.StubOutWithMock(migration, 'save')
+        self.mox.StubOutWithMock(instance, 'save')
+        self.mox.StubOutWithMock(self.context, 'elevated')
+
+        def _mig_save(context):
+            self.assertEqual(migration.status, 'finished')
+            self.assertEqual(vm_state, instance.vm_state)
+            self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
+            orig_mig_save()
+
+        def _instance_save1():
+            self.assertEqual(instance_type['id'],
+                             instance.instance_type_id)
+            orig_inst_save()
+
+        def _instance_save2(expected_task_state=None):
+            self.assertEqual(task_states.RESIZE_MIGRATED,
+                             expected_task_state)
+            self.assertEqual(task_states.RESIZE_FINISH, instance.task_state)
+            orig_inst_save(expected_task_state=expected_task_state)
+
+        def _instance_save3(expected_task_state=None):
+            self.assertEqual(task_states.RESIZE_FINISH,
+                             expected_task_state)
+            self.assertEqual(vm_states.RESIZED, instance.vm_state)
+            self.assertEqual(None, instance.task_state)
+            self.assertIn('launched_at', instance.obj_what_changed())
+            orig_inst_save(expected_task_state=expected_task_state)
+
+        # First save to update flavor
+        instance.save().WithSideEffects(_instance_save1)
+
+        network_api.setup_networks_on_host(self.context, instance,
+                                           'fake-mini')
+        conductor_api.network_migrate_instance_finish(self.context,
+                                                      mox.IsA(dict),
+                                                      mox.IsA(dict))
+
+        self.compute._get_instance_nw_info(
+                self.context, instance).AndReturn('fake-nwinfo1')
+
+        # 2nd save to update task state
+        exp_kwargs = dict(expected_task_state=task_states.RESIZE_MIGRATED)
+        instance.save(**exp_kwargs).WithSideEffects(_instance_save2)
+
+        self.compute._notify_about_instance_usage(
+                self.context, instance, 'finish_resize.start',
+                network_info='fake-nwinfo1')
+
+        self.compute._get_instance_volume_block_device_info(
+                self.context, instance,
+                refresh_conn_info=True).AndReturn('fake-bdminfo')
+        # nova.conf sets the default flavor to m1.small and the test
+        # sets the default flavor to m1.tiny so they should be different
+        # which makes this a resize
+        self.compute.driver.finish_migration(self.context, migration,
+                                             instance, disk_info,
+                                             'fake-nwinfo1',
+                                             image, True,
+                                             'fake-bdminfo', power_on)
+        # Ensure instance status updates is after the migration finish
+        self.context.elevated().AndReturn(self.context)
+        migration.save(self.context).WithSideEffects(_mig_save)
+        exp_kwargs = dict(expected_task_state=task_states.RESIZE_FINISH)
+        instance.save(**exp_kwargs).WithSideEffects(_instance_save3)
+        self.compute._notify_about_instance_usage(
+                self.context, instance, 'finish_resize.end',
+                network_info='fake-nwinfo1')
+        # NOTE(comstud): This actually does the mox.ReplayAll()
+        reservations = self._ensure_quota_reservations_committed()
+
         self.compute.finish_resize(self.context,
-                migration=jsonutils.to_primitive(migration_ref),
-                disk_info={}, image={}, instance=instance_p,
+                migration=migration,
+                disk_info=disk_info, image=image, instance=instance,
                 reservations=reservations)
-        self.assertTrue(self.fake_finish_migration_called)
 
     def test_finish_resize_from_active(self):
         self._test_finish_resize(power_on=True)
@@ -3430,11 +3488,9 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, "initialize_connection",
                        fake_init_conn_with_data)
 
-        instance_p = obj_base.obj_to_primitive(instance)
-        migration_p = obj_base.obj_to_primitive(migration)
         self.compute.finish_resize(self.context,
-                migration=migration_p,
-                disk_info={}, image={}, instance=instance_p,
+                migration=migration,
+                disk_info={}, image={}, instance=instance,
                 reservations=reservations)
 
         # assert volume attached correctly
@@ -3452,7 +3508,6 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cinder.API, "detach", fake_detach)
 
         # clean up
-        instance.refresh()
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_finish_resize_handles_error(self):
@@ -3476,17 +3531,18 @@ class ComputeTestCase(BaseTestCase):
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
                                  image={}, reservations=reservations)
-        migration_ref = db.migration_get_by_instance_and_status(
-                self.context.elevated(), instance.uuid, 'pre-migrating')
+
+        migration = migration_obj.Migration.get_by_instance_and_status(
+                self.context.elevated(),
+                instance.uuid, 'pre-migrating')
 
         instance.refresh()
         instance.task_state = task_states.RESIZE_MIGRATED
         instance.save()
-        instance_p = obj_base.obj_to_primitive(instance)
         self.assertRaises(test.TestingException, self.compute.finish_resize,
                           self.context,
-                          migration=jsonutils.to_primitive(migration_ref),
-                          disk_info={}, image={}, instance=instance_p,
+                          migration=migration,
+                          disk_info={}, image={}, instance=instance,
                           reservations=reservations)
         # NOTE(comstud): error path doesn't use objects, so our object
         # is not updated.  Refresh and compare against the DB.
@@ -3589,11 +3645,9 @@ class ComputeTestCase(BaseTestCase):
         timeutils.set_time_override(cur_time)
         test_notifier.NOTIFICATIONS = []
 
-        instance_p = obj_base.obj_to_primitive(instance)
-        migration_p = obj_base.obj_to_primitive(migration)
         self.compute.finish_resize(self.context,
-                migration=migration_p,
-                disk_info={}, image={}, instance=instance_p)
+                migration=migration,
+                disk_info={}, image={}, instance=instance)
 
         self.assertEquals(len(test_notifier.NOTIFICATIONS), 2)
         msg = test_notifier.NOTIFICATIONS[0]
@@ -3615,7 +3669,6 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        instance.refresh()
         self.compute.terminate_instance(self.context, instance)
 
     def test_resize_instance_notification(self):
@@ -3881,14 +3934,11 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration,
                                      image={},
                                      instance_type=new_instance_type_p)
-        instance_p = obj_base.obj_to_primitive(instance)
-        migration_p = obj_base.obj_to_primitive(migration)
         self.compute.finish_resize(self.context,
-                    migration=migration_p,
-                    disk_info={}, image={}, instance=instance_p)
+                    migration=migration,
+                    disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
-        instance.refresh()
         instance_type_ref = db.flavor_get(self.context,
                 instance.instance_type_id)
         self.assertEqual(instance_type_ref['flavorid'], '3')
@@ -3988,13 +4038,9 @@ class ComputeTestCase(BaseTestCase):
                                      migration=migration,
                                      image={},
                                      instance_type=new_instance_type_p)
-        instance_p = obj_base.obj_to_primitive(instance)
-        migration_p = obj_base.obj_to_primitive(migration)
         self.compute.finish_resize(self.context,
-                    migration=migration_p,
-                    disk_info={}, image={}, instance=instance_p)
-
-        instance.refresh()
+                    migration=migration,
+                    disk_info={}, image={}, instance=instance)
 
         # Prove that the instance size is now the new size
         instance_type_ref = db.flavor_get(self.context,
@@ -4019,6 +4065,7 @@ class ComputeTestCase(BaseTestCase):
             instance.save()
 
         instance_p = obj_base.obj_to_primitive(instance)
+        migration_p = obj_base.obj_to_primitive(migration)
         self.compute.finish_revert_resize(self.context,
                 migration=migration_p,
                 instance=instance_p, reservations=reservations)
