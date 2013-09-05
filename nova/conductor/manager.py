@@ -76,7 +76,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.57'
+    RPC_API_VERSION = '1.58'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -160,6 +160,8 @@ class ConductorManager(manager.Manager):
                                                       columns_to_join)
         return jsonutils.to_primitive(result)
 
+    # NOTE(comstud): This method is now deprecated and can be removed in
+    # version v2.0 of the RPC API
     @rpc_common.client_exceptions(exception.MigrationNotFound)
     def migration_get(self, context, migration_id):
         migration_ref = self.db.migration_get(context.elevated(),

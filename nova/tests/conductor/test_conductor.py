@@ -125,14 +125,6 @@ class _BaseTestCase(object):
             self.assertRaises(KeyError,
                               self._do_update, 'any-uuid', foobar=1)
 
-    def test_migration_get(self):
-        migration = db.migration_create(self.context.elevated(),
-                {'instance_uuid': 'fake-uuid',
-                 'status': 'migrating'})
-        self.assertEqual(jsonutils.to_primitive(migration),
-                         self.conductor.migration_get(self.context,
-                                                      migration['id']))
-
     def test_migration_get_in_progress_by_host_and_node(self):
         self.mox.StubOutWithMock(db,
                                  'migration_get_in_progress_by_host_and_node')
@@ -584,6 +576,14 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         super(ConductorTestCase, self).setUp()
         self.conductor = conductor_manager.ConductorManager()
         self.conductor_manager = self.conductor
+
+    def test_migration_get(self):
+        migration = db.migration_create(self.context.elevated(),
+                {'instance_uuid': 'fake-uuid',
+                 'status': 'migrating'})
+        self.assertEqual(jsonutils.to_primitive(migration),
+                         self.conductor.migration_get(self.context,
+                                                      migration['id']))
 
     def test_migration_get_unconfirmed_by_dest_compute(self):
         self.mox.StubOutWithMock(db,

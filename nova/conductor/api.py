@@ -110,9 +110,6 @@ class LocalAPI(object):
     def instance_fault_create(self, context, values):
         return self._manager.instance_fault_create(context, values)
 
-    def migration_get(self, context, migration_id):
-        return self._manager.migration_get(context, migration_id)
-
     def migration_get_in_progress_by_host_and_node(self, context, host, node):
         return self._manager.migration_get_in_progress_by_host_and_node(
             context, host, node)
