@@ -27,8 +27,7 @@ class TestFaults(test.NoDBTestCase):
         # Ensure the status_int is set correctly on faults.
         fault = faults.Fault(webob.exc.HTTPBadRequest(
                              explanation='test'))
-        self.assertTrue(isinstance(fault.wrapped_exc,
-                         webob.exc.HTTPBadRequest))
+        self.assertIsInstance(fault.wrapped_exc, webob.exc.HTTPBadRequest)
 
     def test_fault_exception_status_int(self):
         # Ensure the status_int is set correctly on faults.

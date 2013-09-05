@@ -496,7 +496,7 @@ class MetadataHandlerTestCase(test.TestCase):
     def test_callable(self):
 
         def verify(req, meta_data):
-            self.assertTrue(isinstance(meta_data, CallableMD))
+            self.assertIsInstance(meta_data, CallableMD)
             return "foo"
 
         class CallableMD(object):

@@ -1209,24 +1209,22 @@ class ConductorLocalAPITestCase(ConductorAPITestCase):
 class ConductorImportTest(test.TestCase):
     def test_import_conductor_local(self):
         self.flags(use_local=True, group='conductor')
-        self.assertTrue(isinstance(conductor.API(),
-                                   conductor_api.LocalAPI))
-        self.assertTrue(isinstance(conductor.ComputeTaskAPI(),
-                                   conductor_api.LocalComputeTaskAPI))
+        self.assertIsInstance(conductor.API(), conductor_api.LocalAPI)
+        self.assertIsInstance(conductor.ComputeTaskAPI(),
+                              conductor_api.LocalComputeTaskAPI)
 
     def test_import_conductor_rpc(self):
         self.flags(use_local=False, group='conductor')
-        self.assertTrue(isinstance(conductor.API(),
-                                   conductor_api.API))
-        self.assertTrue(isinstance(conductor.ComputeTaskAPI(),
-                                   conductor_api.ComputeTaskAPI))
+        self.assertIsInstance(conductor.API(), conductor_api.API)
+        self.assertIsInstance(conductor.ComputeTaskAPI(),
+                              conductor_api.ComputeTaskAPI)
 
     def test_import_conductor_override_to_local(self):
         self.flags(use_local=False, group='conductor')
-        self.assertTrue(isinstance(conductor.API(use_local=True),
-                                   conductor_api.LocalAPI))
-        self.assertTrue(isinstance(conductor.ComputeTaskAPI(use_local=True),
-                                   conductor_api.LocalComputeTaskAPI))
+        self.assertIsInstance(conductor.API(use_local=True),
+                              conductor_api.LocalAPI)
+        self.assertIsInstance(conductor.ComputeTaskAPI(use_local=True),
+                              conductor_api.LocalComputeTaskAPI)
 
 
 class ConductorPolicyTest(test.TestCase):

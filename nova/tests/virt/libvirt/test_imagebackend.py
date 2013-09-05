@@ -644,7 +644,7 @@ class BackendTestCase(test.NoDBTestCase):
             failure = ('Expected %s,' +
                        ' but got %s.') % (class_object.__name__,
                                           instance.__class__.__name__)
-            self.assertTrue(isinstance(instance, class_object), failure)
+            self.assertIsInstance(instance, class_object, msg=failure)
 
         assertIsInstance(image1, image_not_cow)
         assertIsInstance(image2, image_cow)

@@ -17,6 +17,7 @@ import datetime
 import iso8601
 
 import netaddr
+from testtools import matchers
 
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
@@ -163,13 +164,13 @@ class TestUtils(test.TestCase):
         self.assertEqual(utils.str_or_none('foo'), 'foo')
         self.assertEqual(utils.str_or_none(1), '1')
         self.assertEqual(utils.str_or_none(None), None)
-        self.assertTrue(isinstance(utils.str_or_none('foo'), unicode))
+        self.assertIsInstance(utils.str_or_none('foo'), unicode)
 
     def test_str_value(self):
         self.assertEqual('foo', utils.str_value('foo'))
         self.assertEqual('1', utils.str_value(1))
         self.assertRaises(ValueError, utils.str_value, None)
-        self.assertTrue(isinstance(utils.str_value('foo'), unicode))
+        self.assertIsInstance(utils.str_value('foo'), unicode)
 
     def test_cstring(self):
         self.assertEqual('foo', utils.cstring('foo'))
@@ -307,6 +308,17 @@ class _BaseTestCase(test.TestCase):
 
     def compare_obj(self, obj, db_obj, subs=None, allow_missing=None):
         compare_obj(self, obj, db_obj, subs=subs, allow_missing=allow_missing)
+
+    def assertNotIsInstance(self, obj, cls, msg=None):
+        """Python < v2.7 compatibility.  Assert 'not isinstance(obj, cls)."""
+        try:
+            f = super(_BaseTestCase, self).assertNotIsInstance
+        except AttributeError:
+            self.assertThat(obj,
+                            matchers.Not(matchers.IsInstance(cls)),
+                            message=msg or '')
+        else:
+            f(obj, cls, msg=msg)
 
 
 class _LocalTest(_BaseTestCase):
@@ -701,7 +713,7 @@ class TestObjectSerializer(_BaseTestCase):
         primitive = ser.serialize_entity(self.context, obj)
         self.assertTrue('nova_object.name' in primitive)
         obj2 = ser.deserialize_entity(self.context, primitive)
-        self.assertTrue(isinstance(obj2, MyObj))
+        self.assertIsInstance(obj2, MyObj)
         self.assertEqual(self.context, obj2._context)
 
     def test_object_serialization_iterables(self):
@@ -712,8 +724,8 @@ class TestObjectSerializer(_BaseTestCase):
             primitive = ser.serialize_entity(self.context, thing)
             self.assertEqual(1, len(primitive))
             for item in primitive:
-                self.assertFalse(isinstance(item, base.NovaObject))
+                self.assertNotIsInstance(item, base.NovaObject)
             thing2 = ser.deserialize_entity(self.context, primitive)
             self.assertEqual(1, len(thing2))
             for item in thing2:
-                self.assertTrue(isinstance(item, MyObj))
+                self.assertIsInstance(item, MyObj)

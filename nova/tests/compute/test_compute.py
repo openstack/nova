@@ -1035,7 +1035,7 @@ class ComputeTestCase(BaseTestCase):
 
         @compute_manager.object_compat
         def test_fn(_self, context, instance):
-            self.assertTrue(isinstance(instance, instance_obj.Instance))
+            self.assertIsInstance(instance, instance_obj.Instance)
             self.assertEqual(instance.uuid, db_inst['uuid'])
 
         test_fn(None, self.context, instance=db_inst)

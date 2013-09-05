@@ -304,7 +304,7 @@ class _TestPciDeviceListObject(object):
         self.mox.ReplayAll()
         devs = pci_device.PciDeviceList.get_by_compute_node(ctxt, 1)
         for i in range(len(fake_pci_devs)):
-            self.assertTrue(isinstance(devs[i], pci_device.PciDevice))
+            self.assertIsInstance(devs[i], pci_device.PciDevice)
             self.assertEqual(fake_pci_devs[i]['vendor_id'], devs[i].vendor_id)
         self.assertRemotes()
 
@@ -321,7 +321,7 @@ class _TestPciDeviceListObject(object):
         devs = pci_device.PciDeviceList.get_by_instance_uuid(ctxt, '1')
         self.assertEqual(len(devs), 2)
         for i in range(len(fake_pci_devs)):
-            self.assertTrue(isinstance(devs[i], pci_device.PciDevice))
+            self.assertIsInstance(devs[i], pci_device.PciDevice)
         self.assertEqual(devs[0].vendor_id, 'v')
         self.assertEqual(devs[1].vendor_id, 'v')
         self.assertRemotes()

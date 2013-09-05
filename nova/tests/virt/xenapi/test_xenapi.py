@@ -548,7 +548,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             self.fake_upload_called = True
             self.assertEqual(ctx, self.context)
             self.assertEqual(inst, instance)
-            self.assertTrue(isinstance(vdi_uuids, list))
+            self.assertIsInstance(vdi_uuids, list)
             self.assertEqual(img_id, image_id)
 
         self.stubs.Set(glance.GlanceStore, 'upload_image',

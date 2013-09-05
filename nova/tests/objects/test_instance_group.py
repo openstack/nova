@@ -192,8 +192,8 @@ class _TestInstanceGroupObjects(test.TestCase):
         self.assertEqual(len(groups), len(inst_list.objects))
         self.assertEqual(len(groups), 4)
         for i in range(0, len(groups)):
-            self.assertTrue(isinstance(inst_list.objects[i],
-                                       instance_group.InstanceGroup))
+            self.assertIsInstance(inst_list.objects[i],
+                                  instance_group.InstanceGroup)
             self.assertEqual(inst_list.objects[i].uuid, groups[i]['uuid'])
 
     def test_list_by_project_id(self):
@@ -206,8 +206,8 @@ class _TestInstanceGroupObjects(test.TestCase):
             self.assertEqual(len(groups), len(il.objects))
             self.assertEqual(len(groups), 2)
             for i in range(0, len(groups)):
-                self.assertTrue(isinstance(il.objects[i],
-                                           instance_group.InstanceGroup))
+                self.assertIsInstance(il.objects[i],
+                                      instance_group.InstanceGroup)
                 self.assertEqual(il.objects[i].uuid, groups[i]['uuid'])
                 self.assertEqual(il.objects[i].project_id, id)
 

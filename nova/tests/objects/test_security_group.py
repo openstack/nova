@@ -128,8 +128,8 @@ class _TestSecurityGroupListObject(object):
         self.mox.ReplayAll()
         secgroup_list = security_group.SecurityGroupList.get_all(self.context)
         for i in range(len(fake_secgroups)):
-            self.assertTrue(isinstance(secgroup_list[i],
-                                       security_group.SecurityGroup))
+            self.assertIsInstance(secgroup_list[i],
+                                  security_group.SecurityGroup)
             self.assertEqual(fake_secgroups[i]['id'],
                              secgroup_list[i]['id'])
             self.assertEqual(secgroup_list[i]._context, self.context)
@@ -143,8 +143,8 @@ class _TestSecurityGroupListObject(object):
         secgroup_list = security_group.SecurityGroupList.get_by_project(
             self.context, 'fake-project')
         for i in range(len(fake_secgroups)):
-            self.assertTrue(isinstance(secgroup_list[i],
-                                       security_group.SecurityGroup))
+            self.assertIsInstance(secgroup_list[i],
+                                  security_group.SecurityGroup)
             self.assertEqual(fake_secgroups[i]['id'],
                              secgroup_list[i]['id'])
 
@@ -159,8 +159,8 @@ class _TestSecurityGroupListObject(object):
         secgroup_list = security_group.SecurityGroupList.get_by_instance(
             self.context, inst)
         for i in range(len(fake_secgroups)):
-            self.assertTrue(isinstance(secgroup_list[i],
-                                       security_group.SecurityGroup))
+            self.assertIsInstance(secgroup_list[i],
+                                  security_group.SecurityGroup)
             self.assertEqual(fake_secgroups[i]['id'],
                              secgroup_list[i]['id'])
 

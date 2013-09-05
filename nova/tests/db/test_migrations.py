@@ -771,10 +771,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _check_151(self, engine, data):
         task_log = db_utils.get_table(engine, 'task_log')
         row = task_log.select(task_log.c.id == data['id']).execute().first()
-        self.assertTrue(isinstance(row['period_beginning'],
-            datetime.datetime))
-        self.assertTrue(isinstance(row['period_ending'],
-            datetime.datetime))
+        self.assertIsInstance(row['period_beginning'], datetime.datetime)
+        self.assertIsInstance(row['period_ending'], datetime.datetime)
         self.assertEqual(
             data['period_beginning'], str(row['period_beginning']))
         self.assertEqual(data['period_ending'], str(row['period_ending']))
@@ -957,8 +955,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             # NullType needs a special case.  We end up with NullType on sqlite
             # where bigint is not defined.
             if isinstance(base_column.type, sqlalchemy.types.NullType):
-                self.assertTrue(isinstance(shadow_column.type,
-                                           sqlalchemy.types.NullType))
+                self.assertIsInstance(shadow_column.type,
+                                      sqlalchemy.types.NullType)
             else:
                 # Identical types do not test equal because sqlalchemy does not
                 # override __eq__, but if we stringify them then they do.
@@ -1175,16 +1173,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 # These should not have their values changed, but should
                 # have corrected created_at stamps
                 self.assertEqual(result['value'], original['value'])
-                self.assertTrue(isinstance(result['created_at'],
-                                           datetime.datetime))
+                self.assertIsInstance(result['created_at'], datetime.datetime)
             elif key.startswith('instance_type'):
                 # Values like instance_type_% should be stamped and values
                 # converted from 'None' to None where appropriate
                 self.assertEqual(result['value'],
                                  None if original['value'] == 'None'
                                  else original['value'])
-                self.assertTrue(isinstance(result['created_at'],
-                                           datetime.datetime))
+                self.assertIsInstance(result['created_at'], datetime.datetime)
             else:
                 # None of the non-instance_type values should have
                 # been touched. Since we didn't set created_at on any
@@ -2743,13 +2739,13 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         compute_nodes = db_utils.get_table(engine, 'compute_nodes')
         if engine.name == "postgresql":
-            self.assertTrue(isinstance(compute_nodes.c.host_ip.type,
-                            sqlalchemy.dialects.postgresql.INET))
+            self.assertIsInstance(compute_nodes.c.host_ip.type,
+                                  sqlalchemy.dialects.postgresql.INET)
         else:
-            self.assertTrue(isinstance(compute_nodes.c.host_ip.type,
-                            sqlalchemy.types.String))
-        self.assertTrue(isinstance(compute_nodes.c.supported_instances.type,
-                            sqlalchemy.types.Text))
+            self.assertIsInstance(compute_nodes.c.host_ip.type,
+                                  sqlalchemy.types.String)
+        self.assertIsInstance(compute_nodes.c.supported_instances.type,
+                              sqlalchemy.types.Text)
 
     def _post_downgrade_208(self, engine):
         self.assertColumnNotExists(engine, 'compute_nodes', 'host_ip')
@@ -2966,8 +2962,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         self.assertColumnExists(engine, 'compute_nodes', 'pci_stats')
         nodes = db_utils.get_table(engine, 'compute_nodes')
-        self.assertTrue(isinstance(nodes.c.pci_stats.type,
-                                   sqlalchemy.types.Text))
+        self.assertIsInstance(nodes.c.pci_stats.type, sqlalchemy.types.Text)
 
     def _post_downgrade_213(self, engine):
         self._213(engine)

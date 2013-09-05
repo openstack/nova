@@ -1840,11 +1840,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, instance['uuid'],
             {'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
              'access_ip_v6': netaddr.IPAddress('::1')})
-        self.assertTrue(isinstance(instance['access_ip_v4'], basestring))
-        self.assertTrue(isinstance(instance['access_ip_v6'], basestring))
+        self.assertIsInstance(instance['access_ip_v4'], basestring)
+        self.assertIsInstance(instance['access_ip_v6'], basestring)
         instance = db.instance_get_by_uuid(self.ctxt, instance['uuid'])
-        self.assertTrue(isinstance(instance['access_ip_v4'], basestring))
-        self.assertTrue(isinstance(instance['access_ip_v6'], basestring))
+        self.assertIsInstance(instance['access_ip_v4'], basestring)
+        self.assertIsInstance(instance['access_ip_v6'], basestring)
 
 
 class InstanceMetadataTestCase(test.TestCase):

@@ -420,14 +420,14 @@ class QuotaEngineTestCase(test.TestCase):
         quota_obj = quota.QuotaEngine()
 
         self.assertEqual(quota_obj._resources, {})
-        self.assertTrue(isinstance(quota_obj._driver, quota.DbQuotaDriver))
+        self.assertIsInstance(quota_obj._driver, quota.DbQuotaDriver)
 
     def test_init_override_string(self):
         quota_obj = quota.QuotaEngine(
             quota_driver_class='nova.tests.test_quota.FakeDriver')
 
         self.assertEqual(quota_obj._resources, {})
-        self.assertTrue(isinstance(quota_obj._driver, FakeDriver))
+        self.assertIsInstance(quota_obj._driver, FakeDriver)
 
     def test_init_override_obj(self):
         quota_obj = quota.QuotaEngine(quota_driver_class=FakeDriver)

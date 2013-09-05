@@ -303,7 +303,7 @@ class CellsMessageClassesTestCase(test.TestCase):
         self.assertEqual(2, call_info['kwargs']['arg2'])
         # Verify we get a new object with what we expect.
         obj = call_info['kwargs']['obj']
-        self.assertTrue(isinstance(obj, CellsMsgingTestObject))
+        self.assertIsInstance(obj, CellsMsgingTestObject)
         self.assertNotEqual(id(test_obj), id(obj))
         self.assertEqual(test_obj.test, obj.test)
 
@@ -962,7 +962,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         response = self.src_msg_runner.task_log_get_all(self.ctxt,
                 self.tgt_cell_name, task_name, begin, end, host=host,
                 state=state)
-        self.assertTrue(isinstance(response, list))
+        self.assertIsInstance(response, list)
         self.assertEqual(1, len(response))
         result = response[0].value_or_raise()
         self.assertEqual(['fake_result'], result)
