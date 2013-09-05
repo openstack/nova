@@ -3249,7 +3249,7 @@
 #host_password=<None>
 
 # Name of a VMware Cluster ComputeResource. Used only if
-# compute_driver is vmwareapi.VMwareVCDriver. (string value)
+# compute_driver is vmwareapi.VMwareVCDriver. (multi valued)
 #cluster_name=<None>
 
 # Regex to match the name of a datastore. Used only if

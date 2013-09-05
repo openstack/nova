@@ -1,5 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 VMware, Inc.
 # Copyright (c) 2011 Citrix Systems, Inc.
 # Copyright 2011 OpenStack Foundation
@@ -23,7 +24,11 @@ import copy
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
+
+
+LOG = logging.getLogger(__name__)
 
 
 def build_datastore_path(datastore_name, path):
@@ -882,3 +887,128 @@ def get_vmdk_volume_disk(hardware_devices):
     for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk"):
             return device
+
+
+def get_res_pool_ref(session, cluster, node_mo_id):
+    """Get the resource pool."""
+    if cluster is None:
+        # With no cluster named, use the root resource pool.
+        results = session._call_method(vim_util, "get_objects",
+                                       "ResourcePool")
+        _cancel_retrieve_if_necessary(session, results)
+        # The 0th resource pool is always the root resource pool on both ESX
+        # and vCenter.
+        res_pool_ref = results.objects[0].obj
+    else:
+        if cluster.value == node_mo_id:
+            # Get the root resource pool of the cluster
+            res_pool_ref = session._call_method(vim_util,
+                                                  "get_dynamic_property",
+                                                  cluster,
+                                                  "ClusterComputeResource",
+                                                  "resourcePool")
+
+    return res_pool_ref
+
+
+def get_all_cluster_mors(session):
+    """Get all the clusters in the vCenter."""
+    try:
+        results = session._call_method(vim_util, "get_objects",
+                                        "ClusterComputeResource", ["name"])
+        _cancel_retrieve_if_necessary(session, results)
+        return results.objects
+
+    except Exception as excep:
+        LOG.warn(_("Failed to get cluster references %s") % excep)
+
+
+def get_all_res_pool_mors(session):
+    """Get all the resource pools in the vCenter."""
+    try:
+        results = session._call_method(vim_util, "get_objects",
+                                             "ResourcePool")
+
+        _cancel_retrieve_if_necessary(session, results)
+        return results.objects
+    except Exception as excep:
+        LOG.warn(_("Failed to get resource pool references " "%s") % excep)
+
+
+def get_dynamic_property_mor(session, mor_ref, attribute):
+    """Get the value of an attribute for a given managed object."""
+    return session._call_method(vim_util, "get_dynamic_property",
+                                mor_ref, mor_ref._type, attribute)
+
+
+def find_entity_mor(entity_list, entity_name):
+    """Returns managed object ref for given cluster or resource pool name."""
+    return [mor for mor in entity_list if mor.propSet[0].val == entity_name]
+
+
+def get_all_cluster_refs_by_name(session, path_list):
+    """Get reference to the Cluster, ResourcePool with the path specified.
+
+    The path is the display name. This can be the full path as well.
+    The input will have the list of clusters and resource pool names
+    """
+    cls = get_all_cluster_mors(session)
+    res = get_all_res_pool_mors(session)
+    path_list = [path.strip() for path in path_list]
+    list_obj = []
+    for entity_path in path_list:
+        # entity_path could be unique cluster and/or resource-pool name
+        res_mor = find_entity_mor(res, entity_path)
+        cls_mor = find_entity_mor(cls, entity_path)
+        cls_mor.extend(res_mor)
+        for mor in cls_mor:
+            list_obj.append((mor.obj, mor.propSet[0].val))
+    return get_dict_mor(session, list_obj)
+
+
+def get_dict_mor(session, list_obj):
+    """The input is a list of objects in the form
+    (manage_object,display_name)
+    The managed object will be in the form
+    { value = "domain-1002", _type = "ClusterComputeResource" }
+
+    Output data format:
+    dict_mors = {
+                  'respool-1001': { 'cluster_mor': clusterMor,
+                                    'res_pool_mor': resourcePoolMor,
+                                    'name': display_name },
+                  'domain-1002': { 'cluster_mor': clusterMor,
+                                    'res_pool_mor': resourcePoolMor,
+                                    'name': display_name },
+                }
+    """
+    dict_mors = {}
+    for obj_ref, path in list_obj:
+        if obj_ref._type == "ResourcePool":
+            # Get owner cluster-ref mor
+            cluster_ref = get_dynamic_property_mor(session, obj_ref, "owner")
+            dict_mors[obj_ref.value] = {'cluster_mor': cluster_ref,
+                                        'res_pool_mor': obj_ref,
+                                        'name': path,
+                                        }
+        else:
+            # Get default resource pool of the cluster
+            res_pool_ref = get_dynamic_property_mor(session,
+                                                    obj_ref, "resourcePool")
+            dict_mors[obj_ref.value] = {'cluster_mor': obj_ref,
+                                        'res_pool_mor': res_pool_ref,
+                                        'name': path,
+                                        }
+    return dict_mors
+
+
+def get_mo_id_from_instance(instance):
+    """Return the managed object ID from the instance.
+
+    The instance['node'] will have the hypervisor_hostname field of the
+    compute node on which the instance exists or will be provisioned.
+    This will be of the form
+    'respool-1001(MyResPoolName)'
+    'domain-1001(MyClusterName)'
+    """
+    return instance['node'].partition('(')[0]

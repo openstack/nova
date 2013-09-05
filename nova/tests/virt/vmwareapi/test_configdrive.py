@@ -35,7 +35,9 @@ class ConfigDriveTestCase(test.TestCase):
     def setUp(self):
         super(ConfigDriveTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
-        self.flags(host_ip='test_url',
+        cluster_name = 'test_cluster'
+        self.flags(cluster_name=[cluster_name],
+                   host_ip='test_url',
                    host_username='test_username',
                    host_password='test_pass',
                    use_linked_clone=False, group='vmware')
@@ -50,6 +52,8 @@ class ConfigDriveTestCase(test.TestCase):
             'disk_format': 'vhd',
             'size': 512,
         }
+        self.node_name = '%s(%s)' % (self.conn.dict_mors.keys()[0],
+                                     cluster_name)
         self.test_instance = {'node': 'test_url',
                               'vm_state': 'building',
                               'project_id': 'fake',
@@ -70,7 +74,8 @@ class ConfigDriveTestCase(test.TestCase):
                                   'scheduling',
                               'reservation_id': 'r-3t8muvr0',
                               'id': 1,
-                              'uuid': 'fake-uuid'}
+                              'uuid': 'fake-uuid',
+                              'node': self.node_name}
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None):
