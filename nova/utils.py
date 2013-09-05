@@ -52,7 +52,7 @@ from nova.openstack.common import processutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 
-notify_decorator = 'nova.openstack.common.notifier.api.notify_decorator'
+notify_decorator = 'nova.notifications.notify_decorator'
 
 monkey_patch_opts = [
     cfg.BoolOpt('monkey_patch',
@@ -723,10 +723,10 @@ def monkey_patch():
     using CONF.monkey_patch_modules.
     The format is "Module path:Decorator function".
     Example:
-      'nova.api.ec2.cloud:nova.openstack.common.notifier.api.notify_decorator'
+      'nova.api.ec2.cloud:nova.notifications.notify_decorator'
 
     Parameters of the decorator is as follows.
-    (See nova.openstack.common.notifier.api.notify_decorator)
+    (See nova.notifications.notify_decorator)
 
     name - name of the function
     function - object of the function

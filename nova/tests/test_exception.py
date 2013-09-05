@@ -22,21 +22,17 @@ from nova import test
 
 
 class FakeNotifier(object):
-    """Acts like the nova.notifier.api module."""
-    ERROR = 88
+    """Acts like messaging.Notifier."""
 
     def __init__(self):
-        self.provided_publisher = None
+        self.provided_context = None
         self.provided_event = None
-        self.provided_priority = None
         self.provided_payload = None
 
-    def notify(self, context, publisher, event, priority, payload):
-        self.provided_publisher = publisher
-        self.provided_event = event
-        self.provided_priority = priority
-        self.provided_payload = payload
+    def error(self, context, event, payload):
         self.provided_context = context
+        self.provided_event = event
+        self.provided_payload = payload
 
 
 def good_function(self, context):
@@ -49,18 +45,16 @@ def bad_function_exception(self, context, extra, blah="a", boo="b", zoo=None):
 
 class WrapExceptionTestCase(test.TestCase):
     def test_wrap_exception_good_return(self):
-        wrapped = exception.wrap_exception('foo', 'bar')
+        wrapped = exception.wrap_exception('foo')
         self.assertEquals(99, wrapped(good_function)(1, 2))
 
     def test_wrap_exception_with_notifier(self):
         notifier = FakeNotifier()
-        wrapped = exception.wrap_exception(notifier, "publisher")
+        wrapped = exception.wrap_exception(notifier)
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
-        self.assertEquals(notifier.provided_publisher, "publisher")
         self.assertEquals(notifier.provided_event, "bad_function_exception")
-        self.assertEquals(notifier.provided_priority, notifier.ERROR)
         self.assertEquals(notifier.provided_context, ctxt)
         for key in ['exception', 'args']:
             self.assertTrue(key in notifier.provided_payload.keys())

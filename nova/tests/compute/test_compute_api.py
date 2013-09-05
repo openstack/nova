@@ -422,7 +422,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         if inst.host == 'down-host':
             inst.info_cache.delete()
-            compute_utils.notify_about_instance_usage(self.context,
+            compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
+                                                      self.context,
                                                       inst,
                                                       '%s.start' % delete_type)
             if not self.is_cells:
@@ -445,6 +446,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                               reservations=None)
             db.instance_destroy(self.context, inst.uuid, constraint=None)
             compute_utils.notify_about_instance_usage(
+                mox.IgnoreArg(),
                 self.context, inst, '%s.end' % delete_type,
                 system_metadata='sys-meta')
 

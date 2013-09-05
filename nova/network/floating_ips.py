@@ -23,11 +23,11 @@ from nova import context
 from nova.db import base
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
+from nova import notifier
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import processutils
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import uuidutils
@@ -224,10 +224,8 @@ class FloatingIP(object):
             floating_ip = self.db.floating_ip_allocate_address(
                 context, project_id, pool, auto_assigned=auto_assigned)
             payload = dict(project_id=project_id, floating_ip=floating_ip)
-            notifier.notify(context,
-                            notifier.publisher_id("network"),
-                            'network.floating_ip.allocate',
-                            notifier.INFO, payload)
+            self.notifier.info(context,
+                               'network.floating_ip.allocate', payload)
 
             # Commit the reservations
             if use_quota:
@@ -263,10 +261,7 @@ class FloatingIP(object):
                                        floating_ip['address'])
         payload = dict(project_id=floating_ip['project_id'],
                        floating_ip=floating_ip['address'])
-        notifier.notify(context,
-                        notifier.publisher_id("network"),
-                        'network.floating_ip.deallocate',
-                        notifier.INFO, payload=payload)
+        self.notifier.info(context, 'network.floating_ip.deallocate', payload)
 
         # Get reservations...
         try:
@@ -375,10 +370,8 @@ class FloatingIP(object):
             payload = dict(project_id=context.project_id,
                            instance_id=instance_uuid,
                            floating_ip=floating_address)
-            notifier.notify(context,
-                            notifier.publisher_id("network"),
-                            'network.floating_ip.associate',
-                        notifier.INFO, payload=payload)
+            self.notifier.info(context,
+                               'network.floating_ip.associate', payload)
         do_associate()
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
@@ -461,10 +454,8 @@ class FloatingIP(object):
             payload = dict(project_id=context.project_id,
                            instance_id=instance_uuid,
                            floating_ip=address)
-            notifier.notify(context,
-                            notifier.publisher_id("network"),
-                            'network.floating_ip.disassociate',
-                            notifier.INFO, payload=payload)
+            self.notifier.info(context,
+                               'network.floating_ip.disassociate', payload)
         do_disassociate()
 
     @rpc_common.client_exceptions(exception.FloatingIpNotFound)
@@ -699,3 +690,4 @@ class LocalManager(base.Base, FloatingIP):
                 CONF.floating_ip_dns_manager)
         self.instance_dns_manager = importutils.import_object(
                 CONF.instance_dns_manager)
+        self.notifier = notifier.get_notifier('network', CONF.host)

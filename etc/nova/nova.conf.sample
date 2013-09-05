@@ -260,7 +260,7 @@
 #monkey_patch=false
 
 # List of modules/decorators to monkey patch (list value)
-#monkey_patch_modules=nova.api.ec2.cloud:nova.openstack.common.notifier.api.notify_decorator,nova.compute.api:nova.openstack.common.notifier.api.notify_decorator
+#monkey_patch_modules=nova.api.ec2.cloud:nova.notifications.notify_decorator,nova.compute.api:nova.notifications.notify_decorator
 
 # Length of generated instance admin passwords (integer value)
 #password_length=12

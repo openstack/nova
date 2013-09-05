@@ -60,6 +60,7 @@ from nova import manager
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
+from nova import notifier
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
@@ -67,7 +68,6 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import periodic_task
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
@@ -214,10 +214,9 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 
 LOG = logging.getLogger(__name__)
 
-
-wrap_exception = functools.partial(
-    exception.wrap_exception,
-    notifier=notifier, publisher_id=notifier.publisher_id('compute'))
+get_notifier = functools.partial(notifier.get_notifier, service='compute')
+wrap_exception = functools.partial(exception.wrap_exception,
+                                   get_notifier=get_notifier)
 
 
 def reverts_task_state(function):
@@ -1364,14 +1363,11 @@ class ComputeManager(manager.SchedulerDependentManager):
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, system_metadata=None,
                                      extra_usage_info=None):
-        # NOTE(sirp): The only thing this wrapper function does extra is handle
-        # the passing in of `self.host`. Ordinarily this will just be
-        # CONF.host`, but `Manager`'s gets a chance to override this in its
-        # `__init__`.
         compute_utils.notify_about_instance_usage(
-                context, instance, event_suffix, network_info=network_info,
-                system_metadata=system_metadata,
-                extra_usage_info=extra_usage_info, host=self.host)
+            self.notifier, context, instance, event_suffix,
+            network_info=network_info,
+            system_metadata=system_metadata,
+            extra_usage_info=extra_usage_info)
 
     def _deallocate_network(self, context, instance,
                             requested_networks=None):

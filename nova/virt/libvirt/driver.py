@@ -70,6 +70,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
+from nova import notifier
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
@@ -78,7 +79,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
-from nova.openstack.common.notifier import api as notifier
 from nova.openstack.common import processutils
 from nova.openstack.common import xmlutils
 from nova.pci import pci_manager
@@ -679,12 +679,9 @@ class LibvirtDriver(driver.ComputeDriver):
             payload = dict(ip=LibvirtDriver.get_host_ip_addr(),
                            method='_connect',
                            reason=ex)
-            notifier.notify(nova_context.get_admin_context(),
-                            notifier.publisher_id('compute'),
-                            'compute.libvirt.error',
-                            notifier.ERROR,
-                            payload)
-            pass
+            notifier.get_notifier('compute').error(
+                nova_context.get_admin_context(),
+                'compute.libvirt.error', payload)
 
     def get_num_instances(self):
         """Efficient override of base instance_exists method."""

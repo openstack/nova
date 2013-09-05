@@ -16,14 +16,17 @@
 Tests For Scheduler Utils
 """
 import mox
+from oslo.config import cfg
 
 from nova.compute import utils as compute_utils
 from nova.conductor import api as conductor_api
 from nova import db
 from nova import notifications
-from nova.openstack.common.notifier import api as notifier
+from nova import notifier as notify
 from nova.scheduler import utils as scheduler_utils
 from nova import test
+
+CONF = cfg.CONF
 
 
 class SchedulerUtilsTestCase(test.NoDBTestCase):
@@ -38,13 +41,16 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         service = 'fake-service'
         method = 'fake-method'
         exc_info = 'exc_info'
-        publisher_id = 'fake-publisher-id'
 
         self.mox.StubOutWithMock(compute_utils,
                                  'add_instance_fault_from_exc')
         self.mox.StubOutWithMock(notifications, 'send_update')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
-        self.mox.StubOutWithMock(notifier, 'publisher_id')
+
+        self.mox.StubOutWithMock(notify, 'get_notifier')
+        notifier = self.mox.CreateMockAnything()
+        notify.get_notifier('conductor', CONF.host).AndReturn(notifier)
+        notify.get_notifier(service).AndReturn(notifier)
 
         old_ref = 'old_ref'
         new_ref = 'new_ref'
@@ -61,15 +67,13 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
             payload = dict(request_spec=request_spec,
                            instance_properties=request_spec.get(
-                               'instance_properties'),
+                               'instance_properties', {}),
                            instance_id=uuid,
                            state='fake-vm-state',
                            method=method,
                            reason=exc_info)
             event_type = '%s.%s' % (service, method)
-            notifier.publisher_id(service).AndReturn(publisher_id)
-            notifier.notify(self.context, publisher_id,
-                            event_type, notifier.ERROR, payload)
+            notifier.error(self.context, event_type, payload)
 
         self.mox.ReplayAll()
 

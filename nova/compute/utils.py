@@ -27,10 +27,10 @@ from nova.compute import flavors
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
+from nova import notifier as notify
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
-from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
 from nova import utils
 from nova.virt import driver
@@ -191,11 +191,13 @@ def _get_unused_letter(used_letters):
     return letters[0]
 
 
-def notify_usage_exists(context, instance_ref, current_period=False,
+def notify_usage_exists(notifier, context, instance_ref, current_period=False,
                         ignore_missing_network_data=True,
                         system_metadata=None, extra_usage_info=None):
     """Generates 'exists' notification for an instance for usage auditing
     purposes.
+
+    :param notifier: a messaging.Notifier
 
     :param current_period: if True, this will generate a usage for the
         current usage period; if False, this will generate a usage for the
@@ -228,29 +230,24 @@ def notify_usage_exists(context, instance_ref, current_period=False,
     if extra_usage_info:
         extra_info.update(extra_usage_info)
 
-    notify_about_instance_usage(context, instance_ref, 'exists',
+    notify_about_instance_usage(notifier, context, instance_ref, 'exists',
             system_metadata=system_metadata, extra_usage_info=extra_info)
 
 
-def notify_about_instance_usage(context, instance, event_suffix,
+def notify_about_instance_usage(notifier, context, instance, event_suffix,
                                 network_info=None, system_metadata=None,
-                                extra_usage_info=None, host=None):
+                                extra_usage_info=None):
     """
     Send a notification about an instance.
 
+    :param notifier: a messaging.Notifier
     :param event_suffix: Event type like "delete.start" or "exists"
     :param network_info: Networking information, if provided.
     :param system_metadata: system_metadata DB entries for the instance,
         if provided.
     :param extra_usage_info: Dictionary containing extra values to add or
         override in the notification.
-    :param host: Compute host for the instance, if specified.  Default is
-        CONF.host
     """
-
-    if not host:
-        host = CONF.host
-
     if not extra_usage_info:
         extra_usage_info = {}
 
@@ -258,13 +255,11 @@ def notify_about_instance_usage(context, instance, event_suffix,
             network_info, system_metadata, **extra_usage_info)
 
     if event_suffix.endswith("error"):
-        level = notifier_api.ERROR
+        method = notifier.error
     else:
-        level = notifier_api.INFO
+        method = notifier.info
 
-    notifier_api.notify(context, 'compute.%s' % host,
-                        'compute.instance.%s' % event_suffix, level,
-                        usage_info)
+    method(context, 'compute.instance.%s' % event_suffix, usage_info)
 
 
 def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
@@ -282,9 +277,10 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
                         "notification and it will be ignored"))
             return
 
-    notifier_api.notify(context, 'aggregate.%s' % aggregate_identifier,
-                        'aggregate.%s' % event_suffix, notifier_api.INFO,
-                        aggregate_payload)
+    notifier = notify.get_notifier(service='aggregate',
+                                   host=aggregate_identifier)
+
+    notifier.info(context, 'aggregate.%s' % event_suffix, aggregate_payload)
 
 
 def get_nw_info_for_instance(instance):

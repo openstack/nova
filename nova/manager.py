@@ -57,6 +57,7 @@ from oslo.config import cfg
 
 from nova import baserpc
 from nova.db import base
+from nova import notifier
 from nova.objects import base as objects_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -80,6 +81,7 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         self.host = host
         self.backdoor_port = None
         self.service_name = service_name
+        self.notifier = notifier.get_notifier(self.service_name, self.host)
         super(Manager, self).__init__(db_driver)
 
     def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
