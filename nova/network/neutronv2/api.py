@@ -930,6 +930,12 @@ class API(base.Base):
             tenant_id=net['tenant_id']
             )
         network['subnets'] = subnets
+        port_profile = port.get('binding:profile')
+        if port_profile:
+            physical_network = port_profile.get('physical_network')
+            if physical_network:
+                network['physical_network'] = physical_network
+
         if should_create_bridge is not None:
             network['should_create_bridge'] = should_create_bridge
         return network, ovs_interfaceid

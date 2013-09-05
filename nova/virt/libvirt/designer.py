@@ -106,6 +106,17 @@ def set_vif_host_backend_802qbh_config(conf, devname, profileid,
         conf.target_dev = tapname
 
 
+def set_vif_host_backend_direct_config(conf, devname):
+    """Populate a LibvirtConfigGuestInterface instance
+    with direct Interface.
+    """
+
+    conf.net_type = "direct"
+    conf.source_mode = "passthrough"
+    conf.source_dev = devname
+    conf.model = "virtio"
+
+
 def set_vif_bandwidth_config(conf, inst_type):
     """Config vif inbound/outbound bandwidth limit. parameters are
     set in instance_type_extra_specs table, key is in  the format

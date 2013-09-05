@@ -157,6 +157,19 @@ class LibvirtVifTestCase(test.TestCase):
                                     typeidversion="1",
                                     instanceid="ddd-eee-fff"))
 
+    network_mlnx = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                         label=None,
+                                         bridge=None,
+                                         subnets=[subnet_bridge_4,
+                                                  subnet_bridge_6],
+                                         interface='eth0')
+
+    vif_mlnx = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                 address='ca:fe:de:ad:be:ef',
+                                 network=network_mlnx,
+                                 type=network_model.VIF_TYPE_MLNX_DIRECT,
+                                 devname='tap-xxx-yyy-zzz')
+
     instance = {
         'name': 'instance-name',
         'uuid': 'instance-uuid'
@@ -487,6 +500,19 @@ class LibvirtVifTestCase(test.TestCase):
         self._check_neutron_hybrid_driver(d,
                                           self.vif_ivs,
                                           br_want)
+
+    def test_mlnx_direct_vif_driver(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn())
+        xml = self._get_instance_xml(d,
+                                     self.vif_mlnx)
+        node = self._get_node(xml)
+        self.assertEqual(node.get("type"), "direct")
+        self._assertTypeEquals(node, "direct", "source",
+                               "dev", "eth-xxx-yyy-zzz")
+        self._assertTypeEquals(node, "direct", "source",
+                               "mode", "passthrough")
+        self._assertMacEquals(node, self.vif_mlnx)
+        self._assertModel(xml, "virtio")
 
     def test_generic_8021qbh_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
