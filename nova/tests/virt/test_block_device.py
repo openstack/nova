@@ -208,11 +208,30 @@ class TestDriverBlockDevice(test.TestCase):
                               cls,
                               getattr(self, '%s_bdm' % name))
 
+    def _test_driver_default_size(self, name):
+        size = 'swap_size' if name == 'swap' else 'size'
+        no_size_bdm = getattr(self, "%s_bdm" % name).copy()
+        no_size_bdm['volume_size'] = None
+
+        driver_bdm = self.driver_classes[name](no_size_bdm)
+        self.assertEqual(driver_bdm[size], 0)
+
+        del no_size_bdm['volume_size']
+
+        driver_bdm = self.driver_classes[name](no_size_bdm)
+        self.assertEqual(driver_bdm[size], 0)
+
     def test_driver_swap_block_device(self):
         self._test_driver_device("swap")
 
+    def test_driver_swap_default_size(self):
+        self._test_driver_default_size('swap')
+
     def test_driver_ephemeral_block_device(self):
         self._test_driver_device("ephemeral")
+
+    def test_driver_ephemeral_default_size(self):
+        self._test_driver_default_size('ephemeral')
 
     def test_driver_volume_block_device(self):
         self._test_driver_device("volume")

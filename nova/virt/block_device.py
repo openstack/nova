@@ -80,7 +80,7 @@ class DriverSwapBlockDevice(DriverBlockDevice):
             raise _InvalidType
         self.update({
             'device_name': bdm.get('device_name'),
-            'swap_size': bdm.get('volume_size', 0),
+            'swap_size': bdm.get('volume_size') or 0,
             'disk_bus': bdm.get('disk_bus')
         })
 
@@ -96,7 +96,7 @@ class DriverEphemeralBlockDevice(DriverBlockDevice):
             raise _InvalidType
         self.update({
             'device_name': bdm.get('device_name'),
-            'size': bdm.get('volume_size', 0),
+            'size': bdm.get('volume_size') or 0,
             'disk_bus': bdm.get('disk_bus'),
             'device_type': bdm.get('device_type'),
             'guest_format': bdm.get('guest_format')
