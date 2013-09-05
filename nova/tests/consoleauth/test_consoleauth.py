@@ -125,8 +125,8 @@ class ConsoleauthTestCase(test.TestCase):
         stored_tokens = self.manager._get_tokens_for_instance(
                 self.instance['uuid'])
         # when trying to store token1, expired token is removed fist.
-        self.assertTrue(len(stored_tokens), 1)
-        self.assertTrue(stored_tokens[0], token1)
+        self.assertEqual(len(stored_tokens), 1)
+        self.assertEqual(stored_tokens[0], token1)
 
 
 class ControlauthMemcacheEncodingTestCase(test.TestCase):

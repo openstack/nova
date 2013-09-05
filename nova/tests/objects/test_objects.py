@@ -588,7 +588,7 @@ class TestObjectListBase(test.TestCase):
         objlist = Foo()
         objlist._context = 'foo'
         objlist.objects = [1, 2, 3]
-        self.assertTrue(list(objlist), objlist.objects)
+        self.assertEqual(list(objlist), objlist.objects)
         self.assertEqual(len(objlist), 3)
         self.assertIn(2, objlist)
         self.assertEqual(list(objlist[:1]), [1])

@@ -185,7 +185,7 @@ class TestS3ImageService(test.TestCase):
         self._assertEqualList(mappings, expected_mappings,
             ['device', 'virtual'])
 
-        self.assertTrue('block_device_mapping', properties)
+        self.assertIn('block_device_mapping', properties)
         block_device_mapping = properties['block_device_mapping']
         expected_bdm = [
             {'device_name': '/dev/sda1',
