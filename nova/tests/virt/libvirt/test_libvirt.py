@@ -1455,8 +1455,8 @@ class LibvirtConnTestCase(test.TestCase):
     def test_xml_disk_bus_ide_and_virtio(self):
         swap = {'device_name': '/dev/vdc',
                 'swap_size': 1}
-        ephemerals = [{'num': 0,
-                       'virtual_name': 'ephemeral0',
+        ephemerals = [{'device_type': 'disk',
+                       'disk_bus': 'virtio',
                        'device_name': '/dev/vdb',
                        'size': 1}]
         block_device_info = {
@@ -3359,7 +3359,10 @@ class LibvirtConnTestCase(test.TestCase):
 
         block_device_info = {'root_device_name': '/dev/vda',
                              'block_device_mapping': [
-                                {'mount_device': 'vda'}]}
+                                {'mount_device': 'vda',
+                                 'boot_index': 0}
+                                ]
+                            }
 
         # Volume-backed instance created without image
         instance_ref = self.test_instance
@@ -5070,6 +5073,54 @@ class LibvirtConnTestCase(test.TestCase):
         detach_interface().
         """
         self._test_attach_detach_interface_get_config("detach_interface")
+
+    def test_default_root_device_name(self):
+        instance = {'uuid': 'fake_instance'}
+        image_meta = {'id': 'fake'}
+        root_bdm = {'source_type': 'image',
+                    'detination_type': 'volume',
+                    'image_id': 'fake_id'}
+        self.flags(libvirt_type='fake_libvirt_type')
+
+        self.mox.StubOutWithMock(blockinfo, 'get_disk_bus_for_device_type')
+        self.mox.StubOutWithMock(blockinfo, 'get_root_info')
+
+        blockinfo.get_disk_bus_for_device_type('fake_libvirt_type',
+                                               image_meta,
+                                               'disk').InAnyOrder().\
+                                                AndReturn('virtio')
+        blockinfo.get_disk_bus_for_device_type('fake_libvirt_type',
+                                               image_meta,
+                                               'cdrom').InAnyOrder().\
+                                                AndReturn('ide')
+        blockinfo.get_root_info('fake_libvirt_type',
+                                image_meta, root_bdm,
+                                'virtio', 'ide').AndReturn({'dev': 'vda'})
+        self.mox.ReplayAll()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual(conn.default_root_device_name(instance, image_meta,
+                                                       root_bdm), '/dev/vda')
+
+    def test_default_device_names_for_instance(self):
+        instance = {'uuid': 'fake_instance'}
+        root_device_name = '/dev/vda'
+        ephemerals = [{'device_name': 'vdb'}]
+        swap = [{'device_name': 'vdc'}]
+        block_device_mapping = [{'device_name': 'vdc'}]
+        self.flags(libvirt_type='fake_libvirt_type')
+
+        self.mox.StubOutWithMock(blockinfo, 'default_device_names')
+
+        blockinfo.default_device_names('fake_libvirt_type', instance,
+                                       root_device_name, mox.IgnoreArg(),
+                                       ephemerals, swap, block_device_mapping)
+        self.mox.ReplayAll()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn.default_device_names_for_instance(instance, root_device_name,
+                                               ephemerals, swap,
+                                               block_device_mapping)
 
 
 class HostStateTestCase(test.TestCase):

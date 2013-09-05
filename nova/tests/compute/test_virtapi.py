@@ -79,6 +79,10 @@ class VirtAPIBaseTest(test.TestCase, test.APICoverage):
         self.assertExpected('block_device_mapping_get_all_by_instance',
                             {'uuid': 'fake_uuid'}, legacy=False)
 
+    def test_block_device_mapping_update(self):
+        self.assertExpected('block_device_mapping_update',
+                            'fake_bdm', 'fake_values')
+
 
 class FakeVirtAPITest(VirtAPIBaseTest):
 

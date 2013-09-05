@@ -15,6 +15,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
+import mock
+
 from nova import block_device
 from nova.compute import flavors
 from nova import context
@@ -22,6 +26,7 @@ from nova import db
 from nova import exception
 from nova import test
 import nova.tests.image.fake
+from nova.tests import matchers
 from nova.virt.libvirt import blockinfo
 
 
@@ -53,14 +58,10 @@ class LibvirtBlockInfoTest(test.TestCase):
     def test_volume_in_mapping(self):
         swap = {'device_name': '/dev/sdb',
                 'swap_size': 1}
-        ephemerals = [{'num': 0,
-                       'virtual_name': 'ephemeral0',
-                       'device_name': '/dev/sdc1',
-                       'size': 1},
-                      {'num': 2,
-                       'virtual_name': 'ephemeral2',
-                       'device_name': '/dev/sdd',
-                       'size': 1}]
+        ephemerals = [{'device_type': 'disk', 'guest_format': 'ext3',
+                       'device_name': '/dev/sdc1', 'size': 10},
+                      {'disk_bus': 'ide', 'guest_format': None,
+                       'device_name': '/dev/sdd', 'size': 10}]
         block_device_mapping = [{'mount_device': '/dev/sde',
                                  'device_path': 'fake_device'},
                                 {'mount_device': '/dev/sdf',
@@ -301,11 +302,11 @@ class LibvirtBlockInfoTest(test.TestCase):
 
         block_device_info = {
             'ephemerals': [
-                {'num': 0, 'virtual_name': 'ephemeral0',
+                {'device_type': 'disk', 'guest_format': 'ext3',
                  'device_name': '/dev/vdb', 'size': 10},
-                {'num': 1, 'virtual_name': 'ephemeral1',
+                {'disk_bus': 'ide', 'guest_format': None,
                  'device_name': '/dev/vdc', 'size': 10},
-                {'num': 2, 'virtual_name': 'ephemeral2',
+                {'device_type': 'floppy',
                  'device_name': '/dev/vdd', 'size': 10},
                 ]
             }
@@ -315,9 +316,10 @@ class LibvirtBlockInfoTest(test.TestCase):
 
         expect = {
             'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
-            'disk.eph0': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'disk.eph1': {'bus': 'virtio', 'dev': 'vdc', 'type': 'disk'},
-            'disk.eph2': {'bus': 'virtio', 'dev': 'vdd', 'type': 'disk'},
+            'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
+                          'type': 'disk', 'format': 'ext3'},
+            'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
+            'disk.eph2': {'bus': 'virtio', 'dev': 'vdd', 'type': 'floppy'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vde', 'type': 'disk'},
             'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
             }
@@ -353,6 +355,8 @@ class LibvirtBlockInfoTest(test.TestCase):
             'block_device_mapping': [
                 {'connection_info': "fake",
                  'mount_device': "/dev/vda",
+                 'boot_index': 0,
+                 'device_type': 'disk',
                  'delete_on_termination': True},
                 ]
             }
@@ -376,6 +380,7 @@ class LibvirtBlockInfoTest(test.TestCase):
             'block_device_mapping': [
                 {'connection_info': "fake",
                  'mount_device': "/dev/vdb",
+                 'boot_index': -1,
                  'delete_on_termination': True},
                 ]
             }
@@ -399,12 +404,17 @@ class LibvirtBlockInfoTest(test.TestCase):
             'block_device_mapping': [
                 {'connection_info': "fake",
                  'mount_device': "/dev/vda",
+                 'boot_index': 0,
+                 'disk_bus': 'scsi',
                  'delete_on_termination': True},
                 {'connection_info': "fake",
                  'mount_device': "/dev/vdb",
+                 'boot_index': -1,
                  'delete_on_termination': True},
                 {'connection_info': "fake",
                  'mount_device': "/dev/vdc",
+                 'boot_index': -1,
+                 'device_type': 'cdrom',
                  'delete_on_termination': True},
                 ]
             }
@@ -413,10 +423,10 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            '/dev/vda': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            '/dev/vda': {'bus': 'scsi', 'dev': 'vda', 'type': 'disk'},
             '/dev/vdb': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            '/dev/vdc': {'bus': 'virtio', 'dev': 'vdc', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            '/dev/vdc': {'bus': 'virtio', 'dev': 'vdc', 'type': 'cdrom'},
+            'root': {'bus': 'scsi', 'dev': 'vda', 'type': 'disk'}
             }
         self.assertEqual(mapping, expect)
 
@@ -430,9 +440,9 @@ class LibvirtBlockInfoTest(test.TestCase):
             'swap': {'device_name': '/dev/vdy',
                      'swap_size': 10},
             'ephemerals': [
-                {'num': 0, 'virtual_name': 'ephemeral0',
+                {'device_type': 'disk', 'guest_format': 'ext3',
                  'device_name': '/dev/vdb', 'size': 10},
-                {'num': 1, 'virtual_name': 'ephemeral1',
+                {'disk_bus': 'ide', 'guest_format': None,
                  'device_name': '/dev/vdc', 'size': 10},
                 ],
             'block_device_mapping': [
@@ -448,12 +458,51 @@ class LibvirtBlockInfoTest(test.TestCase):
         expect = {
             'disk': {'bus': 'virtio', 'dev': 'vdf', 'type': 'disk'},
             '/dev/vda': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
-            'disk.eph0': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'disk.eph1': {'bus': 'virtio', 'dev': 'vdc', 'type': 'disk'},
+            'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
+                          'type': 'disk', 'format': 'ext3'},
+            'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vdy', 'type': 'disk'},
             'root': {'bus': 'virtio', 'dev': 'vdf', 'type': 'disk'}
             }
         self.assertEqual(mapping, expect)
+
+    def test_get_disk_mapping_updates_original(self):
+        user_context = context.RequestContext(self.user_id, self.project_id)
+        instance_ref = db.instance_create(user_context, self.test_instance)
+
+        block_device_info = {
+            'root_device_name': '/dev/vda',
+            'swap': {'device_name': '/dev/vdb',
+                     'device_type': 'really_lame_type',
+                     'swap_size': 10},
+            'ephemerals': [{'disk_bus': 'no_such_bus',
+                            'device_type': 'yeah_right',
+                            'device_name': '/dev/vdc', 'size': 10}],
+            'block_device_mapping': [
+                {'connection_info': "fake",
+                 'mount_device': None,
+                 'device_type': 'lawnmower',
+                 'delete_on_termination': True}]
+            }
+        expected_swap = {'device_name': '/dev/vdb', 'disk_bus': 'virtio',
+                         'device_type': 'disk', 'swap_size': 10}
+        expected_ephemeral = {'disk_bus': 'virtio',
+                              'device_type': 'disk',
+                              'device_name': '/dev/vdc', 'size': 10}
+        expected_bdm = {'connection_info': "fake",
+                        'mount_device': '/dev/vdd',
+                        'device_type': 'disk',
+                        'disk_bus': 'virtio',
+                        'delete_on_termination': True}
+
+        blockinfo.get_disk_mapping("kvm", instance_ref,
+                                   "virtio", "ide", block_device_info)
+
+        self.assertEqual(expected_swap, block_device_info['swap'])
+        self.assertEqual(expected_ephemeral,
+                         block_device_info['ephemerals'][0])
+        self.assertEqual(expected_bdm,
+                         block_device_info['block_device_mapping'][0])
 
     def test_get_disk_bus(self):
         bus = blockinfo.get_disk_bus_for_device_type('kvm')
@@ -503,3 +552,240 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.flags(config_drive_format='test')
         self.assertRaises(exception.ConfigDriveUnknownFormat,
                           blockinfo.get_config_drive_type)
+
+    def test_get_info_from_bdm(self):
+        bdms = [{'device_name': '/dev/vds', 'device_type': 'disk',
+                 'disk_bus': 'usb', 'swap_size': 4},
+                {'device_type': 'disk', 'guest_format': 'ext3',
+                 'device_name': '/dev/vdb', 'size': 2},
+                {'disk_bus': 'ide', 'guest_format': None,
+                 'device_name': '/dev/vdc', 'size': 3},
+                {'connection_info': "fake",
+                 'mount_device': "/dev/sdr",
+                 'disk_bus': 'lame_bus',
+                 'device_type': 'cdrom',
+                 'delete_on_termination': True},
+                {'connection_info': "fake",
+                 'mount_device': "/dev/vdo",
+                 'disk_bus': 'scsi',
+                 'device_type': 'lame_type',
+                 'delete_on_termination': True}]
+        expected = [{'dev': 'vds', 'type': 'disk', 'bus': 'usb'},
+                    {'dev': 'vdb', 'type': 'disk',
+                     'bus': 'virtio', 'format': 'ext3'},
+                    {'dev': 'vdc', 'type': 'disk', 'bus': 'ide'},
+                    {'dev': 'sdr', 'type': 'cdrom', 'bus': 'scsi'},
+                    {'dev': 'vdo', 'type': 'disk', 'bus': 'scsi'}]
+
+        for bdm, expected in zip(bdms, expected):
+            self.assertEqual(expected,
+                             blockinfo.get_info_from_bdm('kvm', bdm, {}))
+
+        # Test that passed bus and type are considered
+        bdm = {'device_name': '/dev/vda'}
+        expected = {'dev': 'vda', 'type': 'disk', 'bus': 'ide'}
+        self.assertEqual(
+            expected, blockinfo.get_info_from_bdm('kvm', bdm, {},
+                                                  disk_bus='ide',
+                                                  dev_type='disk'))
+
+        # Test that lame bus values are defaulted properly
+        bdm = {'disk_bus': 'lame_bus', 'device_type': 'cdrom'}
+        with mock.patch.object(blockinfo,
+                               'get_disk_bus_for_device_type',
+                               return_value='ide') as get_bus:
+            blockinfo.get_info_from_bdm('kvm', bdm, {})
+            get_bus.assert_called_once_with('kvm', None, 'cdrom')
+
+        # Test that missing device is defaulted as expected
+        bdm = {'disk_bus': 'ide', 'device_type': 'cdrom'}
+        expected = {'dev': 'vdd', 'type': 'cdrom', 'bus': 'ide'}
+        mapping = {'root': {'dev': 'vda'}}
+        with mock.patch.object(blockinfo,
+                               'find_disk_dev_for_disk_bus',
+                               return_value='vdd') as find_dev:
+            got = blockinfo.get_info_from_bdm(
+                'kvm', bdm, mapping, assigned_devices=['vdb', 'vdc'])
+            find_dev.assert_called_once_with(
+                {'root': {'dev': 'vda'},
+                 'vdb': {'dev': 'vdb'},
+                 'vdc': {'dev': 'vdc'}}, 'ide')
+            self.assertEqual(expected, got)
+
+    @mock.patch('nova.virt.libvirt.blockinfo.find_disk_dev_for_disk_bus',
+                return_value='vda')
+    @mock.patch('nova.virt.libvirt.blockinfo.get_disk_bus_for_disk_dev',
+                return_value='virtio')
+    def test_get_root_info_no_bdm(self, mock_get_bus, mock_find_dev):
+        blockinfo.get_root_info('kvm', None, None, 'virtio', 'ide')
+        mock_find_dev.assert_called_once_with({}, 'virtio')
+
+        blockinfo.get_root_info('kvm', None, None, 'virtio', 'ide',
+                                 root_device_name='/dev/vda')
+        mock_get_bus.assert_called_once_with('kvm', '/dev/vda')
+
+    @mock.patch('nova.virt.libvirt.blockinfo.get_info_from_bdm')
+    def test_get_root_info_bdm(self, mock_get_info):
+        root_bdm = {'mount_device': '/dev/vda',
+                    'disk_bus': 'scsi',
+                    'device_type': 'disk'}
+        # No root_device_name
+        blockinfo.get_root_info('kvm', None, root_bdm, 'virtio', 'ide')
+        mock_get_info.assert_called_once_with('kvm', root_bdm, {})
+        mock_get_info.reset_mock()
+        # Both device names
+        blockinfo.get_root_info('kvm', None, root_bdm, 'virtio', 'ide',
+                                root_device_name='sda')
+        mock_get_info.assert_called_once_with('kvm', root_bdm, {})
+        mock_get_info.reset_mock()
+        # Missing device names
+        del root_bdm['mount_device']
+        blockinfo.get_root_info('kvm', None, root_bdm, 'virtio', 'ide',
+                                root_device_name='sda')
+        mock_get_info.assert_called_once_with('kvm',
+                                              {'device_name': 'sda',
+                                               'disk_bus': 'scsi',
+                                               'device_type': 'disk'}, {})
+
+
+class DefaultDeviceNamesTestCase(test.TestCase):
+    def setUp(self):
+        super(DefaultDeviceNamesTestCase, self).setUp()
+        self.instance = {
+                'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
+                'memory_kb': '1024000',
+                'basepath': '/some/path',
+                'bridge_name': 'br100',
+                'vcpus': 2,
+                'project_id': 'fake',
+                'bridge': 'br101',
+                'image_ref': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'root_gb': 10,
+                'ephemeral_gb': 20,
+                'instance_type_id': 2}
+        self.root_device_name = '/dev/vda'
+        self.libvirt_type = 'kvm'
+        self.instance_type = {'swap': 4}
+        self.patcher = mock.patch('nova.compute.flavors.extract_flavor',
+                                  return_value=self.instance_type)
+        self.patcher.start()
+
+        self.ephemerals = [
+                {'id': 1, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vdb',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'device_type': 'disk',
+                 'disk_bus': 'virtio',
+                 'delete_on_termination': True,
+                 'guest_format': None,
+                 'volume_size': 1,
+                 'boot_index': -1}]
+
+        self.swap = [
+                {'id': 2, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vdc',
+                 'source_type': 'blank',
+                 'destination_type': 'local',
+                 'device_type': 'disk',
+                 'disk_bus': 'virtio',
+                 'delete_on_termination': True,
+                 'guest_format': 'swap',
+                 'volume_size': 1,
+                 'boot_index': -1}]
+
+        self.block_device_mapping = [
+                {'id': 3, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vda',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_type': 'disk',
+                 'disk_bus': 'virtio',
+                 'volume_id': 'fake-volume-id-1',
+                 'boot_index': 0},
+                {'id': 4, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vdd',
+                 'source_type': 'snapshot',
+                 'device_type': 'disk',
+                 'disk_bus': 'virtio',
+                 'destination_type': 'volume',
+                 'snapshot_id': 'fake-snapshot-id-1',
+                 'boot_index': -1}]
+
+    def tearDown(self):
+        super(DefaultDeviceNamesTestCase, self).tearDown()
+        self.patcher.stop()
+
+    def _test_default_device_names(self, update_function, *block_device_lists):
+        blockinfo.default_device_names(self.libvirt_type, self.instance,
+                                       self.root_device_name,
+                                       update_function, *block_device_lists)
+
+    def test_only_block_device_mapping(self):
+        # Test no-op
+        original_bdm = copy.deepcopy(self.block_device_mapping)
+        self._test_default_device_names(None, [], [],
+                                        self.block_device_mapping)
+        self.assertThat(original_bdm,
+                        matchers.DictListMatches(self.block_device_mapping))
+
+        # Asser it defaults the missing one as expected
+        self.block_device_mapping[1]['device_name'] = None
+        self._test_default_device_names(None, [], [],
+                                        self.block_device_mapping)
+        self.assertEquals(self.block_device_mapping[1]['device_name'],
+                          '/dev/vdd')
+
+    def test_with_ephemerals(self):
+        # Test ephemeral gets assigned
+        self.ephemerals[0]['device_name'] = None
+        self._test_default_device_names(None, self.ephemerals, [],
+                                        self.block_device_mapping)
+        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
+
+        self.block_device_mapping[1]['device_name'] = None
+        self._test_default_device_names(None, self.ephemerals, [],
+                                        self.block_device_mapping)
+        self.assertEquals(self.block_device_mapping[1]['device_name'],
+                          '/dev/vdd')
+
+    def test_with_swap(self):
+        # Test swap only
+        self.swap[0]['device_name'] = None
+        self._test_default_device_names(None, [], self.swap, [])
+        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+
+        # Test swap and block_device_mapping
+        self.swap[0]['device_name'] = None
+        self.block_device_mapping[1]['device_name'] = None
+        self._test_default_device_names(None, [], self.swap,
+                                        self.block_device_mapping)
+        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEquals(self.block_device_mapping[1]['device_name'],
+                          '/dev/vdd')
+
+    def test_all_together(self):
+        # Test swap missing
+        self.swap[0]['device_name'] = None
+        self._test_default_device_names(None, self.ephemerals,
+                                        self.swap, self.block_device_mapping)
+        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+
+        # Test swap and eph missing
+        self.swap[0]['device_name'] = None
+        self.ephemerals[0]['device_name'] = None
+        self._test_default_device_names(None, self.ephemerals,
+                                        self.swap, self.block_device_mapping)
+        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+
+        # Test all missing
+        self.swap[0]['device_name'] = None
+        self.ephemerals[0]['device_name'] = None
+        self.block_device_mapping[1]['device_name'] = None
+        self._test_default_device_names(None, self.ephemerals,
+                                        self.swap, self.block_device_mapping)
+        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEquals(self.block_device_mapping[1]['device_name'],
+                          '/dev/vdd')

@@ -406,6 +406,11 @@ def strip_dev(device_name):
     return _dev.sub('', device_name) if device_name else device_name
 
 
+def prepend_dev(device_name):
+    """Make sure there is a leading '/dev/'."""
+    return device_name and '/dev/' + strip_dev(device_name)
+
+
 _pref = re.compile('^((x?v|s)d)')
 
 
