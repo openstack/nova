@@ -120,18 +120,29 @@ class PathUtils(object):
         return self._get_instances_sub_dir(instance_name, remote_server,
                                            create_dir, remove_dir)
 
-    def lookup_root_vhd_path(self, instance_name):
+    def _lookup_vhd_path(self, instance_name, vhd_path_func):
         vhd_path = None
         for format_ext in ['vhd', 'vhdx']:
-            test_path = self.get_root_vhd_path(instance_name, format_ext)
+            test_path = vhd_path_func(instance_name, format_ext)
             if self.exists(test_path):
                 vhd_path = test_path
                 break
         return vhd_path
 
+    def lookup_root_vhd_path(self, instance_name):
+        return self._lookup_vhd_path(instance_name, self.get_root_vhd_path)
+
+    def lookup_ephemeral_vhd_path(self, instance_name):
+        return self._lookup_vhd_path(instance_name,
+                                     self.get_ephemeral_vhd_path)
+
     def get_root_vhd_path(self, instance_name, format_ext):
         instance_path = self.get_instance_dir(instance_name)
         return os.path.join(instance_path, 'root.' + format_ext.lower())
+
+    def get_ephemeral_vhd_path(self, instance_name, format_ext):
+        instance_path = self.get_instance_dir(instance_name)
+        return os.path.join(instance_path, 'ephemeral.' + format_ext.lower())
 
     def get_base_vhd_dir(self):
         return self._get_instances_sub_dir('_base')

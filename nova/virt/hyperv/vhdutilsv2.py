@@ -25,29 +25,55 @@ import sys
 if sys.platform == 'win32':
     import wmi
 
+from nova.openstack.common.gettextutils import _
+from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutils
+from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import vmutilsv2
 from xml.etree import ElementTree
 
 
 class VHDUtilsV2(vhdutils.VHDUtils):
 
+    _VHD_TYPE_DYNAMIC = 3
     _VHD_TYPE_DIFFERENCING = 4
+
+    _vhd_format_map = {
+        constants.DISK_FORMAT_VHD: 2,
+        constants.DISK_FORMAT_VHDX: 3,
+    }
 
     def __init__(self):
         self._vmutils = vmutilsv2.VMUtilsV2()
         if sys.platform == 'win32':
             self._conn = wmi.WMI(moniker='//./root/virtualization/v2')
 
+    def create_dynamic_vhd(self, path, max_internal_size, format):
+        vhd_format = self._vhd_format_map.get(format)
+        if not vhd_format:
+            raise vmutils.HyperVException(_("Unsupported disk format: %s") %
+                                          format)
+
+        self._create_vhd(self._VHD_TYPE_DYNAMIC, vhd_format, path,
+                         max_internal_size=max_internal_size)
+
     def create_differencing_vhd(self, path, parent_path):
         parent_vhd_info = self.get_vhd_info(parent_path)
+        self._create_vhd(self._VHD_TYPE_DIFFERENCING,
+                         parent_vhd_info["Format"],
+                         path, parent_path=parent_path)
 
+    def _create_vhd(self, vhd_type, format, path, max_internal_size=None,
+                    parent_path=None):
         vhd_info = self._conn.Msvm_VirtualHardDiskSettingData.new()
 
-        vhd_info.Type = self._VHD_TYPE_DIFFERENCING
-        vhd_info.Format = parent_vhd_info["Format"]
+        vhd_info.Type = vhd_type
+        vhd_info.Format = format
         vhd_info.Path = path
         vhd_info.ParentPath = parent_path
+
+        if max_internal_size:
+            vhd_info.MaxInternalSize = max_internal_size
 
         image_man_svc = self._conn.Msvm_ImageManagementService()[0]
         (job_path, ret_val) = image_man_svc.CreateVirtualHardDisk(
@@ -108,3 +134,6 @@ class VHDUtilsV2(vhdutils.VHDUtils):
                 vhd_info_dict[name] = int(value_text)
 
         return vhd_info_dict
+
+    def get_best_supported_vhd_format(self):
+        return constants.DISK_FORMAT_VHDX

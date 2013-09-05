@@ -18,6 +18,7 @@ import mock
 
 from nova import test
 
+from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutilsv2
 
 
@@ -97,6 +98,20 @@ class VHDUtilsV2TestCase(test.TestCase):
         self.assertEquals(self._FAKE_MAK_INTERNAL_SIZE,
                           vhd_info['MaxInternalSize'])
         self.assertEquals(self._FAKE_TYPE, vhd_info['Type'])
+
+    def test_create_dynamic_vhd(self):
+        self._vhdutils.get_vhd_info = mock.MagicMock(
+            return_value={'Format': self._FAKE_FORMAT})
+
+        mock_img_svc = self._vhdutils._conn.Msvm_ImageManagementService()[0]
+        mock_img_svc.CreateVirtualHardDisk.return_value = (self._FAKE_JOB_PATH,
+                                                           self._FAKE_RET_VAL)
+
+        self._vhdutils.create_dynamic_vhd(self._FAKE_VHD_PATH,
+                                          self._FAKE_MAK_INTERNAL_SIZE,
+                                          constants.DISK_FORMAT_VHDX)
+
+        self.assertTrue(mock_img_svc.CreateVirtualHardDisk.called)
 
     def test_create_differencing_vhd(self):
         self._vhdutils.get_vhd_info = mock.MagicMock(
