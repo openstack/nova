@@ -1250,6 +1250,18 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, self.body)
 
+    def test_rebuild_instance_name_all_blank(self):
+        def fake_get_image(self, context, image_href):
+            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                        name='public image', is_public=True, status='active')
+
+        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
+        self.body['rebuild']['name'] = '     '
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, self.body)
+
     def test_rebuild_instance_with_deleted_image(self):
         def fake_get_image(self, context, image_href):
             return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
@@ -1393,6 +1405,17 @@ class ServersControllerUpdateTest(ControllerTest):
         req = self._get_request(body, {'name': 'server_test'})
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                             req, FAKE_UUID, body)
+
+    def test_update_server_name_all_blank_spaces(self):
+        self.stubs.Set(db, 'instance_get',
+                fakes.fake_instance_get(name='server_test'))
+        req = fakes.HTTPRequest.blank('/v3/servers/%s' % FAKE_UUID)
+        req.method = 'PUT'
+        req.content_type = 'application/json'
+        body = {'server': {'name': ' ' * 64}}
+        req.body = jsonutils.dumps(body)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, FAKE_UUID, body)
 
     def test_update_server_access_ipv4(self):
         body = {'server': {'access_ip_v4': '0.0.0.0'}}
@@ -1979,6 +2002,37 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           self.req, self.body)
+
+    def test_create_instance_name_all_blank_spaces(self):
+        # proper local hrefs must start with 'http://localhost/v2/'
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v3/images/%s' % image_uuid
+        flavor_ref = 'http://localhost/flavors/3'
+        body = {
+            'server': {
+                'name': ' ' * 64,
+                'imageRef': image_href,
+                'flavorRef': flavor_ref,
+                'metadata': {
+                    'hello': 'world',
+                    'open': 'stack',
+                },
+                'personality': [
+                    {
+                        "path": "/etc/banner.txt",
+                        "contents": "MQ==",
+                    },
+
+                ],
+            },
+        }
+
+        req = fakes.HTTPRequest.blank('/v3/servers')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, body)
 
     def test_create_instance(self):
         # proper local hrefs must start with 'http://localhost/v3/'
