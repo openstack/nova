@@ -46,7 +46,7 @@ INSTANCE_DEFAULT_FIELDS = (INSTANCE_OPTIONAL_COMMON_FIELDS +
                            INSTANCE_IMPLIED_FIELDS)
 
 
-class Instance(base.NovaObject):
+class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added info_cache
     # Version 1.2: Added security_groups

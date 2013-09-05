@@ -26,7 +26,7 @@ from nova.openstack.common import timeutils
 from nova import test
 
 
-class MyObj(base.NovaObject):
+class MyObj(base.NovaPersistentObject, base.NovaObject):
     version = '1.5'
     fields = {'foo': int,
               'bar': str,
@@ -547,7 +547,7 @@ class _TestObject(object):
         self.assertRaises(AttributeError, obj.get, 'nothing', 3)
 
     def test_object_inheritance(self):
-        base_fields = base.NovaObject.fields.keys()
+        base_fields = base.NovaPersistentObject.fields.keys()
         myobj_fields = ['foo', 'bar', 'missing'] + base_fields
         myobj3_fields = ['new_field']
         self.assertTrue(issubclass(TestSubclassedObject, MyObj))

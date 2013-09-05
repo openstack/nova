@@ -20,7 +20,7 @@ from nova.objects import base
 from nova.objects import utils as obj_utils
 
 
-class InstanceGroup(base.NovaObject):
+class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     VERSION = '1.0'
 

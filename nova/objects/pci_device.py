@@ -52,7 +52,7 @@ def check_device_status(dev_status=None):
     return outer
 
 
-class PciDevice(base.NovaObject):
+class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     """Object to represent a PCI device on a compute node.
 

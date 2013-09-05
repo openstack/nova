@@ -17,7 +17,7 @@ from nova.objects import base
 from nova.objects import utils as obj_utils
 
 
-class InstanceFault(base.NovaObject):
+class InstanceFault(base.NovaPersistentObject, base.NovaObject):
     fields = {
         'id': int,
         'instance_uuid': str,

@@ -17,7 +17,7 @@ from nova.objects import base
 from nova.objects import utils
 
 
-class ComputeNode(base.NovaObject):
+class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_service_id()
     VERSION = '1.1'
