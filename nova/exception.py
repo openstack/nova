@@ -1463,3 +1463,16 @@ class PciTrackerInvalidNodeId(NovaException):
 class InternalError(NovaException):
     ec2_code = 'InternalError'
     msg_fmt = "%(err)s"
+
+
+class PciDevicePrepareFailed(NovaException):
+    msg_fmt = _("Failed to prepare PCI device %(id)s for instance "
+                "%(instance_uuid)s: %(reason)s")
+
+
+class PciDeviceDetachFailed(NovaException):
+    msg_fmt = _("Failed to detach PCI device %(dev)s: %(reason)s")
+
+
+class PciDeviceUnsupportedHypervisor(NovaException):
+    msg_fmt = _("%(type)s hypervisor does not support PCI devices")

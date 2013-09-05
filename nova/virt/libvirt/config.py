@@ -895,6 +895,64 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestHostdev, self).\
+                __init__(root_name="hostdev", **kwargs)
+        self.mode = kwargs.get('mode')
+        self.type = kwargs.get('type')
+        self.managed = 'yes'
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestHostdev, self).format_dom()
+        dev.set("mode", self.mode)
+        dev.set("type", self.type)
+        dev.set("managed", self.managed)
+        return dev
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestHostdev, self).parse_dom(xmldoc)
+        self.mode = xmldoc.get('mode')
+        self.type = xmldoc.get('type')
+        self.managed = xmldoc.get('managed')
+        return xmldoc.getchildren()
+
+
+class LibvirtConfigGuestHostdevPCI(LibvirtConfigGuestHostdev):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestHostdevPCI, self).\
+                __init__(mode='subsystem', type='pci',
+                         **kwargs)
+        self.domain = None
+        self.bus = None
+        self.slot = None
+        self.function = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestHostdevPCI, self).format_dom()
+
+        address = etree.Element("address",
+                                domain='0x' + self.domain,
+                                bus='0x' + self.bus,
+                                slot='0x' + self.slot,
+                                function='0x' + self.function)
+        source = etree.Element("source")
+        source.append(address)
+        dev.append(source)
+        return dev
+
+    def parse_dom(self, xmldoc):
+        childs = super(LibvirtConfigGuestHostdevPCI, self).parse_dom(xmldoc)
+        for c in childs:
+            if c.tag == "source":
+                for sub in c.getchildren():
+                    if sub.tag == 'address':
+                        self.domain = sub.get('domain')
+                        self.bus = sub.get('bus')
+                        self.slot = sub.get('slot')
+                        self.function = sub.get('function')
+
+
 class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
@@ -1082,12 +1140,17 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         return root
 
     def parse_dom(self, xmldoc):
-        # Note: This does not cover anything but LibvirtConfigGuestDisks
+        # Note: This cover only for: LibvirtConfigGuestDisks
+        #                            LibvirtConfigGuestHostdevPCI
         for c in xmldoc.getchildren():
             if c.tag == 'devices':
                 for d in c.getchildren():
                     if d.tag == 'disk':
                         obj = LibvirtConfigGuestDisk()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
+                    elif d.tag == 'hostdev' and d.get('type') == 'pci':
+                        obj = LibvirtConfigGuestHostdevPCI()
                         obj.parse_dom(d)
                         self.devices.append(obj)
 

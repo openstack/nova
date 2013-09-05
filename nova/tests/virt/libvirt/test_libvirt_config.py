@@ -701,6 +701,79 @@ class LibvirtConfigGuestGraphicsTest(LibvirtConfigBaseTest):
                             """)
 
 
+class LibvirtConfigGuestHostdev(LibvirtConfigBaseTest):
+
+    def test_config_pci_guest_host_dev(self):
+        obj = config.LibvirtConfigGuestHostdev(mode='subsystem', type='pci')
+        xml = obj.to_xml()
+        expected = """
+            <hostdev mode="subsystem" type="pci" managed="yes"/>
+            """
+        self.assertXmlEqual(xml, expected)
+
+    def test_parse_GuestHostdev(self):
+        xmldoc = """<hostdev mode="subsystem" type="pci" managed="yes"/>"""
+        obj = config.LibvirtConfigGuestHostdev()
+        obj.parse_str(xmldoc)
+        self.assertEqual(obj.mode, 'subsystem')
+        self.assertEqual(obj.type, 'pci')
+        self.assertEqual(obj.managed, 'yes')
+
+    def test_parse_GuestHostdev_non_pci(self):
+        xmldoc = """<hostdev mode="subsystem" type="usb" managed="no"/>"""
+        obj = config.LibvirtConfigGuestHostdev()
+        obj.parse_str(xmldoc)
+        self.assertEqual(obj.mode, 'subsystem')
+        self.assertEqual(obj.type, 'usb')
+        self.assertEqual(obj.managed, 'no')
+
+
+class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
+
+    expected = """
+            <hostdev mode="subsystem" type="pci" managed="yes">
+                <source>
+                    <address bus="0x11" domain="0x1234" function="0x3"
+                             slot="0x22" />
+                </source>
+            </hostdev>
+            """
+
+    def test_config_guest_hosdev_pci(self):
+        hostdev = config.LibvirtConfigGuestHostdevPCI()
+        hostdev.domain = "1234"
+        hostdev.bus = "11"
+        hostdev.slot = "22"
+        hostdev.function = "3"
+        xml = hostdev.to_xml()
+        self.assertXmlEqual(self.expected, xml)
+
+    def test_parse_guest_hosdev_pci(self):
+        xmldoc = self.expected
+        obj = config.LibvirtConfigGuestHostdevPCI()
+        obj.parse_str(xmldoc)
+        self.assertEqual(obj.mode, 'subsystem')
+        self.assertEqual(obj.type, 'pci')
+        self.assertEqual(obj.managed, 'yes')
+        self.assertEqual(obj.domain, '0x1234')
+        self.assertEqual(obj.bus, '0x11')
+        self.assertEqual(obj.slot, '0x22')
+        self.assertEqual(obj.function, '0x3')
+
+    def test_parse_guest_hosdev_usb(self):
+        xmldoc = """<hostdev mode='subsystem' type='usb'>
+                      <source startupPolicy='optional'>
+                          <vendor id='0x1234'/>
+                          <product id='0xbeef'/>
+                      </source>
+                      <boot order='2'/>
+                    </hostdev>"""
+        obj = config.LibvirtConfigGuestHostdevPCI()
+        obj.parse_str(xmldoc)
+        self.assertEqual(obj.mode, 'subsystem')
+        self.assertEqual(obj.type, 'usb')
+
+
 class LibvirtConfigGuestSerialTest(LibvirtConfigBaseTest):
 
     def test_config_file(self):
@@ -1059,6 +1132,34 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 </disk>
               </devices>
             </domain>""")
+
+    def test_ConfigGuest_parse_devices(self):
+        xmldoc = """ <domain type="kvm">
+                      <devices>
+                        <hostdev mode="subsystem" type="pci" managed="no">
+                        </hostdev>
+                      </devices>
+                     </domain>
+                 """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xmldoc)
+        self.assertEqual(len(obj.devices), 1)
+        self.assertEqual(type(obj.devices[0]),
+                         config.LibvirtConfigGuestHostdevPCI)
+        self.assertEqual(obj.devices[0].mode, 'subsystem')
+        self.assertEqual(obj.devices[0].managed, 'no')
+
+    def test_ConfigGuest_parse_devices_wrong_type(self):
+        xmldoc = """ <domain type="kvm">
+                      <devices>
+                        <hostdev mode="subsystem" type="xxxx" managed="no">
+                        </hostdev>
+                      </devices>
+                     </domain>
+                 """
+        obj = config.LibvirtConfigGuest()
+        obj.parse_str(xmldoc)
+        self.assertEqual(len(obj.devices), 0)
 
 
 class LibvirtConfigGuestSnapshotTest(LibvirtConfigBaseTest):

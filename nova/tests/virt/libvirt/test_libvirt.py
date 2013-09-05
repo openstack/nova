@@ -403,6 +403,9 @@ class LibvirtConnTestCase(test.TestCase):
             def nwfilterDefineXML(self, *args, **kwargs):
                 pass
 
+            def nodeDeviceLookupByName(self, x):
+                pass
+
         self.conn = FakeConn()
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
                        lambda *a, **k: self.conn)
@@ -424,7 +427,8 @@ class LibvirtConnTestCase(test.TestCase):
                 'ephemeral_gb': 20,
                 'instance_type_id': '5',  # m1.small
                 'extra_specs': {},
-                'system_metadata': sys_meta}
+                'system_metadata': sys_meta,
+                "pci_devices": []}
 
     def relpath(self, path):
         return os.path.relpath(path, CONF.instances_path)
@@ -468,6 +472,152 @@ class LibvirtConnTestCase(test.TestCase):
                        'report_count': 0}
 
         return db.service_create(context.get_admin_context(), service_ref)
+
+    def test_prepare_pci_device(self):
+
+        pci_devices = [dict(hypervisor_name='xxx')]
+
+        self.flags(libvirt_type='xen')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        class FakeDev():
+            def attach(self):
+                pass
+
+            def dettach(self):
+                pass
+
+            def reset(self):
+                pass
+
+        self.mox.StubOutWithMock(self.conn, 'nodeDeviceLookupByName')
+        self.conn.nodeDeviceLookupByName('xxx').AndReturn(FakeDev())
+        self.conn.nodeDeviceLookupByName('xxx').AndReturn(FakeDev())
+        self.mox.ReplayAll()
+        conn._prepare_pci_devices_for_use(pci_devices)
+
+    def test_prepare_pci_device_exception(self):
+
+        pci_devices = [dict(hypervisor_name='xxx',
+                            id='id1',
+                            instance_uuid='uuid')]
+
+        self.flags(libvirt_type='xen')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        class FakeDev():
+
+            def attach(self):
+                pass
+
+            def dettach(self):
+                raise libvirt.libvirtError("xxxxx")
+
+            def reset(self):
+                pass
+
+        self.stubs.Set(self.conn, 'nodeDeviceLookupByName',
+                       lambda x: FakeDev())
+        self.assertRaises(exception.PciDevicePrepareFailed,
+                         conn._prepare_pci_devices_for_use, pci_devices)
+
+    def test_detach_pci_devices_exception(self):
+
+        pci_devices = [dict(hypervisor_name='xxx',
+                            id='id1',
+                            instance_uuid='uuid')]
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 'has_min_version')
+        libvirt_driver.LibvirtDriver.has_min_version = lambda x, y: False
+
+        self.assertRaises(exception.PciDeviceDetachFailed,
+                          conn._detach_pci_devices, None, pci_devices)
+
+    def test_detach_pci_devices(self):
+
+        fake_domXML1 =\
+            """<domain> <devices>
+              <hostdev mode="subsystem" type="pci" managed="yes">
+                <source>
+            <address function="0x1" slot="0x10" domain="0x0000" bus="0x04"/>
+                </source>
+            </hostdev></devices></domain>"""
+
+        pci_devices = [dict(hypervisor_name='xxx',
+                            id='id1',
+                            instance_uuid='uuid',
+                            address="0001:04:10:1")]
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 'has_min_version')
+        libvirt_driver.LibvirtDriver.has_min_version = lambda x, y: True
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 'get_guest_pci_device')
+
+        class FakeDev():
+            def to_xml(self):
+                pass
+
+        libvirt_driver.LibvirtDriver.get_guest_pci_device =\
+            lambda x, y: FakeDev()
+
+        class FakeDomain():
+            def detachDeviceFlags(self, xml, flag):
+                pci_devices[0]['hypervisor_name'] = 'marked'
+                pass
+
+            def XMLDesc(self, flag):
+                return fake_domXML1
+
+        conn._detach_pci_devices(FakeDomain(), pci_devices)
+        self.assertEqual(pci_devices[0]['hypervisor_name'], 'marked')
+
+    def test_detach_pci_devices_timeout(self):
+
+        fake_domXML1 =\
+            """<domain>
+                <devices>
+                  <hostdev mode="subsystem" type="pci" managed="yes">
+                    <source>
+            <address function="0x1" slot="0x10" domain="0x0000" bus="0x04"/>
+                    </source>
+                  </hostdev>
+                </devices>
+            </domain>"""
+
+        pci_devices = [dict(hypervisor_name='xxx',
+                            id='id1',
+                            instance_uuid='uuid',
+                            address="0000:04:10:1")]
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 'has_min_version')
+        libvirt_driver.LibvirtDriver.has_min_version = lambda x, y: True
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 'get_guest_pci_device')
+
+        class FakeDev():
+            def to_xml(self):
+                pass
+
+        libvirt_driver.LibvirtDriver.get_guest_pci_device =\
+            lambda x, y: FakeDev()
+
+        class FakeDomain():
+            def detachDeviceFlags(self, xml, flag):
+                pass
+
+            def XMLDesc(self, flag):
+                return fake_domXML1
+        self.assertRaises(exception.PciDeviceDetachFailed,
+                          conn._detach_pci_devices, FakeDomain(), pci_devices)
 
     def test_get_connector(self):
         initiator = 'fake.initiator.iqn'
@@ -897,6 +1047,109 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].type, "vnc")
+
+    def _create_fake_service_compute(self):
+        service_info = {
+            'host': 'fake',
+            'report_count': 0
+        }
+        service_ref = db.service_create(self.context, service_info)
+
+        compute_info = {
+            'vcpus': 2,
+            'memory_mb': 1024,
+            'local_gb': 2048,
+            'vcpus_used': 0,
+            'memory_mb_used': 0,
+            'local_gb_used': 0,
+            'free_ram_mb': 1024,
+            'free_disk_gb': 2048,
+            'hypervisor_type': 'xen',
+            'hypervisor_version': 1,
+            'running_vms': 0,
+            'cpu_info': '',
+            'current_workload': 0,
+            'service_id': service_ref['id']
+        }
+        compute_ref = db.compute_node_create(self.context, compute_info)
+        return (service_ref, compute_ref)
+
+    def test_get_guest_config_with_pci_passthrough_kvm(self):
+        self.flags(libvirt_type='kvm')
+        service_ref, compute_ref = self._create_fake_service_compute()
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        pci_device_info = {
+            'compute_node_id': 1,
+            'label': 'fake',
+            'status': 'allocated',
+            'address': '0000:00:00.1',
+            'compute_id': compute_ref['id'],
+            'instance_uuid': instance_ref['uuid'],
+            'extra_info': jsonutils.dumps({}),
+        }
+        db.pci_device_update(self.context, pci_device_info['compute_node_id'],
+                             pci_device_info['address'], pci_device_info)
+
+        instance_ref = db.instance_get(self.context, instance_ref['id'])
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance_ref)
+        cfg = conn.get_guest_config(instance_ref, [], None, disk_info)
+
+        had_pci = 0
+        # care only about the PCI devices
+        for dev in cfg.devices:
+            if type(dev) == vconfig.LibvirtConfigGuestHostdevPCI:
+                had_pci += 1
+                self.assertEqual(dev.type, 'pci')
+                self.assertEqual(dev.managed, 'yes')
+                self.assertEqual(dev.mode, 'subsystem')
+
+                self.assertEqual(dev.domain, "0000")
+                self.assertEqual(dev.bus, "00")
+                self.assertEqual(dev.slot, "00")
+                self.assertEqual(dev.function, "1")
+        self.assertEqual(had_pci, 1)
+
+    def test_get_guest_config_with_pci_passthrough_xen(self):
+        self.flags(libvirt_type='xen')
+        service_ref, compute_ref = self._create_fake_service_compute()
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        pci_device_info = {
+            'compute_node_id': 1,
+            'label': 'fake',
+            'status': 'allocated',
+            'address': '0000:00:00.2',
+            'compute_id': compute_ref['id'],
+            'instance_uuid': instance_ref['uuid'],
+            'extra_info': jsonutils.dumps({}),
+        }
+        db.pci_device_update(self.context, pci_device_info['compute_node_id'],
+                             pci_device_info['address'], pci_device_info)
+
+        instance_ref = db.instance_get(self.context, instance_ref['id'])
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance_ref)
+        cfg = conn.get_guest_config(instance_ref, [], None, disk_info)
+        had_pci = 0
+        # care only about the PCI devices
+        for dev in cfg.devices:
+            if type(dev) == vconfig.LibvirtConfigGuestHostdevPCI:
+                had_pci += 1
+                self.assertEqual(dev.type, 'pci')
+                self.assertEqual(dev.managed, 'no')
+                self.assertEqual(dev.mode, 'subsystem')
+
+                self.assertEqual(dev.domain, "0000")
+                self.assertEqual(dev.bus, "00")
+                self.assertEqual(dev.slot, "00")
+                self.assertEqual(dev.function, "2")
+        self.assertEqual(had_pci, 1)
 
     def test_get_guest_cpu_config_none(self):
         self.flags(libvirt_cpu_mode="none")
@@ -3140,6 +3393,45 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(self.cache_called_for_disk)
         db.instance_destroy(self.context, instance['uuid'])
 
+    def test_spawn_with_pci_devices(self):
+        def fake_none(*args, **kwargs):
+            return None
+
+        def fake_get_info(instance):
+            return {'state': power_state.RUNNING}
+
+        class FakeLibvirtPciDevice():
+            def dettach(self):
+                return None
+
+            def reset(self):
+                return None
+
+        def fake_node_device_lookup_by_name(address):
+            pattern = ("pci_%(hex)s{4}_%(hex)s{2}_%(hex)s{2}_%(oct)s{1}"
+                       % dict(hex='[\da-f]', oct='[0-8]'))
+            pattern = re.compile(pattern)
+            if pattern.match(address) is None:
+                raise libvirt.libvirtError()
+            return FakeLibvirtPciDevice()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'to_xml', fake_none)
+        self.stubs.Set(conn, '_create_image', fake_none)
+        self.stubs.Set(conn, '_create_domain_and_network', fake_none)
+        self.stubs.Set(conn, 'get_info', fake_get_info)
+
+        conn._conn.nodeDeviceLookupByName = \
+                    fake_node_device_lookup_by_name
+
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 'my_fake_image'
+        instance = db.instance_create(self.context, instance_ref)
+        instance = dict(instance.iteritems())
+        instance['pci_devices'] = [{'address': '0000:00:00.0'}]
+
+        conn.spawn(self.context, instance, None, [], None)
+
     def test_create_image_plain(self):
         gotFiles = []
 
@@ -3554,7 +3846,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
+                    "pci_devices": []}
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(conn, '_create_domain', fake_create_domain)
         self.stubs.Set(loopingcall, 'FixedIntervalLoopingCall',
@@ -3597,7 +3890,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
+                    "pci_devices": []}
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(greenthread, 'sleep', fake_sleep)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
