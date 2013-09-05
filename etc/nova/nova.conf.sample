@@ -977,7 +977,7 @@
 
 # The full class name of the key manager API class (string
 # value)
-#keymgr_api_class=nova.keymgr.key_mgr.KeyManager
+#keymgr_api_class=nova.keymgr.not_implemented_key_mgr.NotImplementedKeyManager
 
 
 #

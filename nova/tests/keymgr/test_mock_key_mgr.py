@@ -22,7 +22,7 @@ import array
 
 from nova import context
 from nova import exception
-from nova.keymgr import key
+from nova.keymgr import key as keymgr_key
 from nova.tests.keymgr import mock_key_mgr
 from nova.tests.keymgr import test_key_mgr
 
@@ -54,8 +54,8 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
                           self.key_mgr.create_key, None)
 
     def test_store_key(self):
-        _key = key.SymmetricKey('AES',
-                        array.array('B', ('0' * 64).decode('hex')).tolist())
+        secret_key = array.array('B', ('0' * 64).decode('hex')).tolist()
+        _key = keymgr_key.SymmetricKey('AES', secret_key)
         key_id = self.key_mgr.store_key(self.ctxt, _key)
 
         actual_key = self.key_mgr.get_key(self.ctxt, key_id)
@@ -64,6 +64,20 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
     def test_store_null_context(self):
         self.assertRaises(exception.NotAuthorized,
                           self.key_mgr.store_key, None, None)
+
+    def test_copy_key(self):
+        key_id = self.key_mgr.create_key(self.ctxt)
+        key = self.key_mgr.get_key(self.ctxt, key_id)
+
+        copied_key_id = self.key_mgr.copy_key(self.ctxt, key_id)
+        copied_key = self.key_mgr.get_key(self.ctxt, copied_key_id)
+
+        self.assertNotEqual(key_id, copied_key_id)
+        self.assertEqual(key, copied_key)
+
+    def test_copy_null_context(self):
+        self.assertRaises(exception.NotAuthorized,
+                          self.key_mgr.copy_key, None, None)
 
     def test_get_key(self):
         pass
