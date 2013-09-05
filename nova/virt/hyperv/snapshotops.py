@@ -59,7 +59,7 @@ class SnapshotOps(object):
         export_dir = None
 
         try:
-            src_vhd_path = self._pathutils.get_vhd_path(instance_name)
+            src_vhd_path = self._pathutils.lookup_root_vhd_path(instance_name)
 
             LOG.debug(_("Getting info for VHD %s"), src_vhd_path)
             src_base_disk_path = self._vhdutils.get_vhd_parent_path(

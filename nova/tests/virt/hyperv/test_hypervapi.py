@@ -179,6 +179,7 @@ class HyperVAPITestCase(test.TestCase):
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_info')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'resize_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'validate_vhd')
+        self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_format')
 
         self._mox.StubOutWithMock(hostutils.HostUtils, 'get_cpus_info')
         self._mox.StubOutWithMock(hostutils.HostUtils,
@@ -360,12 +361,18 @@ class HyperVAPITestCase(test.TestCase):
     def test_spawn_cow_image(self):
         self._test_spawn_instance(True)
 
+    def test_spawn_cow_image_vhdx(self):
+        self._test_spawn_instance(True, vhd_format=constants.DISK_FORMAT_VHDX)
+
     def test_spawn_no_cow_image(self):
         self._test_spawn_instance(False)
 
     def test_spawn_dynamic_memory(self):
         CONF.set_override('dynamic_memory_ratio', 2.0, 'hyperv')
         self._test_spawn_instance()
+
+    def test_spawn_no_cow_image_vhdx(self):
+        self._test_spawn_instance(False, vhd_format=constants.DISK_FORMAT_VHDX)
 
     def _setup_spawn_config_drive_mocks(self, use_cdrom):
         im = instance_metadata.InstanceMetadata(mox.IgnoreArg(),
@@ -700,11 +707,7 @@ class HyperVAPITestCase(test.TestCase):
                                                                   None)
             m.AndReturn(False)
 
-            m = vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
-            m.AndReturn({'MaxInternalSize': 1024})
-
-            fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
-            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+            self._setup_get_cached_image_mocks(cow)
 
         if with_volumes:
             block_device_info = db_fakes.get_fake_block_device_info(
@@ -926,13 +929,34 @@ class HyperVAPITestCase(test.TestCase):
             m.AndRaise(vmutils.HyperVAuthorizationException(_(
                                                 'Simulated failure')))
 
+    def _setup_get_cached_image_mocks(self, cow=True,
+                                      vhd_format=constants.DISK_FORMAT_VHD):
+        m = vhdutils.VHDUtils.get_vhd_format(
+            mox.Func(self._check_img_path))
+        m.AndReturn(vhd_format)
+
+        def check_img_path_with_ext(image_path):
+            return image_path == self._fetched_image + '.' + vhd_format.lower()
+
+        fake.PathUtils.rename(mox.Func(self._check_img_path),
+                              mox.Func(check_img_path_with_ext))
+
+        if cow and vhd_format == constants.DISK_FORMAT_VHD:
+            m = vhdutils.VHDUtils.get_vhd_info(
+                mox.Func(check_img_path_with_ext))
+            m.AndReturn({'MaxInternalSize': 1024})
+
+            fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+
     def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
                                     with_exception=False,
                                     block_device_info=None,
                                     boot_from_volume=False,
                                     config_drive=False,
                                     use_cdrom=False,
-                                    admin_permissions=True):
+                                    admin_permissions=True,
+                                    vhd_format=constants.DISK_FORMAT_VHD):
         m = vmutils.VMUtils.vm_exists(mox.IsA(str))
         m.WithSideEffects(self._set_vm_name).AndReturn(False)
 
@@ -949,17 +973,16 @@ class HyperVAPITestCase(test.TestCase):
             m = fake.PathUtils.get_instance_dir(mox.Func(self._check_vm_name))
             m.AndReturn(self._test_instance_dir)
 
-            m = vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
-            m.AndReturn({'MaxInternalSize': 1024})
+            self._setup_get_cached_image_mocks(cow, vhd_format)
 
             if cow:
-                fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
-                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
                 vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
                                                           mox.IsA(str))
             else:
-                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+                m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
+                m.AndReturn({'MaxInternalSize': 1024})
+                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
 
         self._setup_check_admin_permissions_mocks(
                                           admin_permissions=admin_permissions)
@@ -986,14 +1009,15 @@ class HyperVAPITestCase(test.TestCase):
                              with_exception=False,
                              config_drive=False,
                              use_cdrom=False,
-                             admin_permissions=True):
+                             admin_permissions=True,
+                             vhd_format=constants.DISK_FORMAT_VHD):
         self._setup_spawn_instance_mocks(cow,
                                          setup_vif_mocks_func,
                                          with_exception,
                                          config_drive=config_drive,
                                          use_cdrom=use_cdrom,
-                                         admin_permissions=admin_permissions)
-
+                                         admin_permissions=admin_permissions,
+                                         vhd_format=vhd_format)
         self._mox.ReplayAll()
         self._spawn_instance(cow)
         self._mox.VerifyAll()
@@ -1001,7 +1025,8 @@ class HyperVAPITestCase(test.TestCase):
         self.assertEquals(len(self._instance_ide_disks), expected_ide_disks)
         self.assertEquals(len(self._instance_ide_dvds), expected_ide_dvds)
 
-        vhd_path = os.path.join(self._test_instance_dir, 'root.vhd')
+        vhd_path = os.path.join(self._test_instance_dir, 'root.' +
+                                vhd_format.lower())
         self.assertEquals(vhd_path, self._instance_ide_disks[0])
 
     def _mock_get_mounted_disk_from_lun(self, target_iqn, target_lun,
@@ -1377,9 +1402,6 @@ class HyperVAPITestCase(test.TestCase):
         m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
         m.AndReturn({'ParentPath': fake_parent_vhd_path,
                      'MaxInternalSize': 1})
-
-        m = fake.PathUtils.exists(mox.IsA(str))
-        m.AndReturn(True)
 
         vhdutils.VHDUtils.reconnect_parent_vhd(mox.IsA(str), mox.IsA(str))
 
