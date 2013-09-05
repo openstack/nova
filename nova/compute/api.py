@@ -599,9 +599,12 @@ class API(base.Base):
     def _check_and_transform_bdm(self, base_options, min_count, max_count,
                                  block_device_mapping, legacy_bdm):
         if legacy_bdm:
+            # NOTE (ndipanov): Assume root dev name is 'vda' if not supplied.
+            #                  It's needed for legacy conversion to work.
+            root_device_name = (base_options.get('root_device_name') or 'vda')
             block_device_mapping = block_device.from_legacy_mapping(
                 block_device_mapping, base_options.get('image_ref', ''),
-                base_options.get('root_device_name'))
+                root_device_name)
 
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: bdm['source_type'] == 'volume',

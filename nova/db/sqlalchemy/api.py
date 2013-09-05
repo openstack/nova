@@ -3451,32 +3451,35 @@ def block_device_mapping_update(context, bdm_id, values, legacy=True):
 
 def block_device_mapping_update_or_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
+    values = _from_legacy_values(values, legacy, allow_updates=True)
+
     session = get_session()
     with session.begin():
-        result = _block_device_mapping_get_query(context, session=session).\
-                 filter_by(instance_uuid=values['instance_uuid']).\
-                 filter_by(device_name=values['device_name']).\
-                 first()
-        if not result:
-            values = _from_legacy_values(values, legacy)
-            bdm_ref = models.BlockDeviceMapping()
-            bdm_ref.update(values)
-            bdm_ref.save(session=session)
-            result = bdm_ref
-        else:
-            values = _from_legacy_values(values, legacy, allow_updates=True)
-            result.update(values)
+        result = None
+        # NOTE(xqueralt): Only update a BDM when device_name was provided. We
+        # allow empty device names so they will be set later by the manager.
+        if values['device_name']:
+            query = _block_device_mapping_get_query(context, session=session)
+            result = query.filter_by(instance_uuid=values['instance_uuid'],
+                                     device_name=values['device_name']).first()
 
-        # NOTE(xqueralt): prevent from having multiple swap devices for the
-        # same instance. So delete the existing ones.
+        if result:
+            result.update(values)
+        else:
+            # Either the device_name doesn't exist in the database yet, or no
+            # device_name was provided. Both cases mean creating a new BDM.
+            result = models.BlockDeviceMapping(**values)
+            result.save(session=session)
+
+        # NOTE(xqueralt): Prevent from having multiple swap devices for the
+        # same instance. This will delete all the existing ones.
         if block_device.new_format_is_swap(values):
-            query = (_block_device_mapping_get_query(context, session=session).
-                filter_by(instance_uuid=values['instance_uuid']).
-                filter_by(source_type='blank').
-                filter(models.BlockDeviceMapping.device_name !=
-                       values['device_name']).
-                filter_by(guest_format='swap'))
+            query = _block_device_mapping_get_query(context, session=session)
+            query = query.filter_by(instance_uuid=values['instance_uuid'],
+                                    source_type='blank', guest_format='swap')
+            query = query.filter(models.BlockDeviceMapping.id != result.id)
             query.soft_delete()
+
         return result
 
 

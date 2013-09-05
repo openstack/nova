@@ -327,3 +327,18 @@ def get_swap(transformed_list):
         return transformed_list.pop()
     except IndexError:
         return None
+
+
+_IMPLEMENTED_CLASSES = (DriverSwapBlockDevice, DriverEphemeralBlockDevice,
+                        DriverVolumeBlockDevice, DriverSnapshotBlockDevice,
+                        DriverImageBlockDevice)
+
+
+def is_implemented(bdm):
+    for cls in _IMPLEMENTED_CLASSES:
+        try:
+            cls(bdm)
+            return True
+        except _NotTransformable:
+            pass
+    return False
