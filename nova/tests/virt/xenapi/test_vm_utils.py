@@ -425,7 +425,7 @@ class ResizeHelpersTestCase(test.TestCase):
         self.mox.StubOutWithMock(vm_utils.LOG, "debug")
         vm_utils.LOG.debug(_("Sparse copy in progress, "
                              "%(complete_pct).2f%% complete. "
-                             "%(left) bytes left to copy"),
+                             "%(left)s bytes left to copy"),
                            {"complete_pct": 50.0, "left": 1})
         current = timeutils.utcnow()
         timeutils.set_time_override(current)

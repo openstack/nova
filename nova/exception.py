@@ -1456,7 +1456,7 @@ class PciConfigInvalidWhitelist(Invalid):
 
 
 class PciTrackerInvalidNodeId(NovaException):
-    mst_fmt = _("Cannot change %(node_id)s to %(new_node_id)")
+    mst_fmt = _("Cannot change %(node_id)s to %(new_node_id)s")
 
 
 # Cannot be templated, msg needs to be constructed when raised.

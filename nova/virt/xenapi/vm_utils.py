@@ -2094,7 +2094,7 @@ def _log_progress_if_required(left, last_log_time, virtual_size):
         complete_pct = float(virtual_size - left) / virtual_size * 100
         LOG.debug(_("Sparse copy in progress, "
                     "%(complete_pct).2f%% complete. "
-                    "%(left) bytes left to copy"),
+                    "%(left)s bytes left to copy"),
             {"complete_pct": complete_pct, "left": left})
     return last_log_time
 
