@@ -5166,8 +5166,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(ComputeNodeTestCase, self).setUp()
         self.ctxt = context.get_admin_context()
-        self.service_dict = dict(host='host1', binary='binary1',
-                            topic='compute', report_count=1,
+        self.service_dict = dict(host='host1', binary='nova-compute',
+                            topic=CONF.compute_topic, report_count=1,
                             disabled=False)
         self.service = db.service_create(self.ctxt, self.service_dict)
         self.compute_node_dict = dict(vcpus=2, memory_mb=1024, local_gb=2048,
@@ -5208,13 +5208,22 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._stats_equal(self.stats, new_stats)
 
     def test_compute_node_get_all(self):
-        nodes = db.compute_node_get_all(self.ctxt)
-        self.assertEqual(1, len(nodes))
-        node = nodes[0]
-        self._assertEqualObjects(self.compute_node_dict, node,
-                        ignored_keys=self._ignored_keys + ['stats', 'service'])
-        new_stats = self._stats_as_dict(node['stats'])
-        self._stats_equal(self.stats, new_stats)
+        date_fields = set(['created_at', 'updated_at',
+                           'deleted_at', 'deleted'])
+        for no_date_fields in [False, True]:
+            nodes = db.compute_node_get_all(self.ctxt, no_date_fields)
+            self.assertEqual(1, len(nodes))
+            node = nodes[0]
+            self._assertEqualObjects(self.compute_node_dict, node,
+                                     ignored_keys=self._ignored_keys +
+                                                  ['stats', 'service'])
+            node_fields = set(node.keys())
+            if no_date_fields:
+                self.assertFalse(date_fields & node_fields)
+            else:
+                self.assertTrue(date_fields <= node_fields)
+            new_stats = self._stats_as_dict(node['stats'])
+            self._stats_equal(self.stats, new_stats)
 
     def test_compute_node_get(self):
         compute_node_id = self.item['id']

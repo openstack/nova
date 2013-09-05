@@ -23,6 +23,7 @@ import collections
 import copy
 import datetime
 import functools
+import itertools
 import sys
 import time
 import uuid
@@ -516,11 +517,68 @@ def compute_node_get_by_service_id(context, service_id):
 
 
 @require_admin_context
-def compute_node_get_all(context):
-    return model_query(context, models.ComputeNode).\
-            options(joinedload('service')).\
-            options(joinedload('stats')).\
-            all()
+def compute_node_get_all(context, no_date_fields):
+
+    # NOTE(msdubov): Using lower-level 'select' queries and joining the tables
+    #                manually here allows to gain 3x speed-up and to have 5x
+    #                less network load / memory usage compared to the sqla ORM.
+
+    engine = get_engine()
+
+    # Retrieve ComputeNode, Service, Stat.
+    compute_node = models.ComputeNode.__table__
+    service = models.Service.__table__
+    stat = models.ComputeNodeStat.__table__
+
+    with engine.begin() as conn:
+        redundant_columns = set(['deleted_at', 'created_at', 'updated_at',
+                                 'deleted']) if no_date_fields else set([])
+
+        def filter_columns(table):
+            return [c for c in table.c if c.name not in redundant_columns]
+
+        compute_node_query = select(filter_columns(compute_node)).\
+                                where(compute_node.c.deleted == 0).\
+                                order_by(compute_node.c.service_id)
+        compute_node_rows = conn.execute(compute_node_query).fetchall()
+
+        service_query = select(filter_columns(service)).\
+                            where((service.c.deleted == 0) &
+                                  (service.c.binary == 'nova-compute')).\
+                            order_by(service.c.id)
+        service_rows = conn.execute(service_query).fetchall()
+
+        stat_query = select(filter_columns(stat)).\
+                        where(stat.c.deleted == 0).\
+                        order_by(stat.c.compute_node_id)
+        stat_rows = conn.execute(stat_query).fetchall()
+
+    # NOTE(msdubov): Transferring sqla.RowProxy objects to dicts.
+    compute_nodes = [dict(proxy.items()) for proxy in compute_node_rows]
+    services = [dict(proxy.items()) for proxy in service_rows]
+    stats = [dict(proxy.items()) for proxy in stat_rows]
+
+    # Join ComputeNode & Service manually.
+    # NOTE(msdubov): ComputeNodes and Services map 1-to-1.
+    for node, service in itertools.izip(compute_nodes, services):
+        node['service'] = service
+
+    # Join ComputeNode & ComputeNodeStat manually.
+    # NOTE(msdubov): ComputeNode and ComputeNodeStat map 1-to-Many.
+    #                Running time is (asymptotically) optimal due to the use
+    #                of iterators (itertools.groupby() for ComputeNodeStat and
+    #                iter() for ComputeNode) - we handle each record only once.
+    compute_nodes.sort(key=lambda node: node['id'])
+    compute_nodes_iter = iter(compute_nodes)
+    for nid, nsts in itertools.groupby(stats, lambda s: s['compute_node_id']):
+        for node in compute_nodes_iter:
+            if node['id'] == nid:
+                node['stats'] = list(nsts)
+                break
+            else:
+                node['stats'] = []
+
+    return compute_nodes
 
 
 @require_admin_context
