@@ -166,17 +166,21 @@ def vpn_ping(address, port, timeout=0.05, session_id=None):
         return server_sess
 
 
+def get_root_helper():
+    return 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+
+
 def execute(*cmd, **kwargs):
     """Convenience wrapper around oslo's execute() method."""
     if 'run_as_root' in kwargs and not 'root_helper' in kwargs:
-        kwargs['root_helper'] = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+        kwargs['root_helper'] = get_root_helper()
     return processutils.execute(*cmd, **kwargs)
 
 
 def trycmd(*args, **kwargs):
     """Convenience wrapper around oslo's trycmd() method."""
     if 'run_as_root' in kwargs and not 'root_helper' in kwargs:
-        kwargs['root_helper'] = 'sudo nova-rootwrap %s' % CONF.rootwrap_config
+        kwargs['root_helper'] = get_root_helper()
     return processutils.trycmd(*args, **kwargs)
 
 
