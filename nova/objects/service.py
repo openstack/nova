@@ -99,17 +99,13 @@ class Service(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
         db_service = db.service_create(context, updates)
         self._from_db_object(context, self, db_service)
 
     @base.remotable
     def save(self, context):
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
         updates.pop('id', None)
         db_service = db.service_update(context, self.id, updates)
         self._from_db_object(context, self, db_service)

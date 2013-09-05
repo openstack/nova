@@ -62,17 +62,13 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
         db_compute = db.compute_node_create(context, updates)
         self._from_db_object(context, self, db_compute)
 
     @base.remotable
     def save(self, context, prune_stats=False):
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
         updates.pop('id', None)
         db_compute = db.compute_node_update(context, self.id, updates,
                                             prune_stats=prune_stats)

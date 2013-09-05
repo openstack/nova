@@ -55,9 +55,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
     @base.remotable
     def create(self, context):
         self._assert_no_hosts('create')
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
         payload = dict(updates)
         if 'metadata' in updates:
             # NOTE(danms): For some reason the notification format is weird
@@ -76,9 +74,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
     @base.remotable
     def save(self, context):
         self._assert_no_hosts('save')
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
 
         payload = {'aggregate_id': self.id}
         if 'metadata' in updates:

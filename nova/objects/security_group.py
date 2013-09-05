@@ -51,9 +51,7 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def save(self, context):
-        updates = {}
-        for field in self.obj_what_changed():
-            updates[field] = self[field]
+        updates = self.obj_get_changes()
         if updates:
             db_secgroup = db.security_group_update(context, self.id, updates)
             SecurityGroup._from_db_object(self, db_secgroup)
