@@ -3984,7 +3984,7 @@ class ComputeTestCase(BaseTestCase):
         def fake_finish_revert_migration_driver(*args, **kwargs):
             # Confirm the instance uses the old type in finish_revert_resize
             inst = args[0]
-            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
+            sys_meta = inst.system_metadata
             self.assertEqual(sys_meta['instance_type_flavorid'], '1')
 
         old_vm_state = None
@@ -4064,13 +4064,10 @@ class ComputeTestCase(BaseTestCase):
             instance.system_metadata = sys_meta
             instance.save()
 
-        instance_p = obj_base.obj_to_primitive(instance)
-        migration_p = obj_base.obj_to_primitive(migration)
         self.compute.finish_revert_resize(self.context,
-                migration=migration_p,
-                instance=instance_p, reservations=reservations)
+                migration=migration,
+                instance=instance, reservations=reservations)
 
-        instance.refresh()
         self.assertEqual(instance.task_state, None)
 
         instance_type_ref = db.flavor_get(self.context,
@@ -4096,12 +4093,11 @@ class ComputeTestCase(BaseTestCase):
                                         remove_old_vm_state=True)
 
     def _test_cleanup_stored_instance_types(self, old, new, revert=False):
+        instance = self._create_fake_instance_obj()
         migration = dict(old_instance_type_id=old,
                          new_instance_type_id=new)
-        instance = dict(system_metadata=list())
-        instance['system_metadata'].append(dict(key='instance_type_id',
-                                                value=old))
-        sys_meta = dict(instance_type_id=old)
+        instance.system_metadata = dict(instance_type_id=old)
+        sys_meta = dict(instance.system_metadata)
         self.mox.StubOutWithMock(flavors, 'extract_flavor')
         self.mox.StubOutWithMock(flavors, 'delete_flavor_info')
         self.mox.StubOutWithMock(flavors, 'save_flavor_info')

@@ -415,7 +415,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.46'
+    RPC_API_VERSION = '2.47'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2491,7 +2491,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         Returns the updated system_metadata as a dict, as well as the
         post-cleanup current instance type.
         """
-        sys_meta = utils.instance_sys_meta(instance)
+        sys_meta = instance.system_metadata
         if restore_old:
             instance_type = flavors.extract_flavor(instance, 'old_')
             sys_meta = flavors.save_flavor_info(sys_meta, instance_type)
@@ -2616,11 +2616,11 @@ class ComputeManager(manager.SchedulerDependentManager):
             rt = self._get_resource_tracker(instance.node)
             rt.drop_resize_claim(instance)
 
-            migration_p = obj_base.obj_to_primitive(migration)
-            self.compute_rpcapi.finish_revert_resize(context, instance_p,
-                    migration_p, migration.source_compute,
-                    reservations)
+            self.compute_rpcapi.finish_revert_resize(context, instance,
+                    migration, migration.source_compute,
+                    reservations=reservations)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2634,9 +2634,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         """
         if not migration:
-            migration = self.conductor_api.migration_get(context, migration_id)
+            migration = migration_obj.Migration.get_by_id(
+                    context.elevated(), migration_id)
 
-        with self._error_out_instance_on_exception(context, instance['uuid'],
+        with self._error_out_instance_on_exception(context, instance.uuid,
                                                    reservations):
             network_info = self._get_instance_nw_info(context, instance)
 
@@ -2651,16 +2652,16 @@ class ComputeManager(manager.SchedulerDependentManager):
             # not set
             old_vm_state = sys_meta.pop('old_vm_state', vm_states.ACTIVE)
 
-            instance = self._instance_update(context,
-                                  instance['uuid'],
-                                  memory_mb=instance_type['memory_mb'],
-                                  vcpus=instance_type['vcpus'],
-                                  root_gb=instance_type['root_gb'],
-                                  ephemeral_gb=instance_type['ephemeral_gb'],
-                                  instance_type_id=instance_type['id'],
-                                  host=migration['source_compute'],
-                                  node=migration['source_node'],
-                                  system_metadata=sys_meta)
+            instance.system_metadata = sys_meta
+            instance.memory_mb = instance_type['memory_mb']
+            instance.vcpus = instance_type['vcpus']
+            instance.root_gb = instance_type['root_gb']
+            instance.ephemeral_gb = instance_type['ephemeral_gb']
+            instance.instance_type_id = instance_type['id']
+            instance.host = migration['source_compute']
+            instance.node = migration['source_node']
+            instance.save()
+
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
@@ -2672,26 +2673,25 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        network_info,
                                        block_device_info, power_on)
 
-            # Just roll back the record. There's no need to resize down since
-            # the 'old' VM already has the preferred attributes
-            instance = self._instance_update(context,
-                    instance['uuid'], launched_at=timeutils.utcnow(),
-                    expected_task_state=task_states.RESIZE_REVERTING)
+            instance.launched_at = timeutils.utcnow()
+            instance.save(expected_task_state=task_states.RESIZE_REVERTING)
 
+            instance_p = obj_base.obj_to_primitive(instance)
+            migration_p = obj_base.obj_to_primitive(migration)
             self.conductor_api.network_migrate_instance_finish(context,
-                                                               instance,
-                                                               migration)
+                                                               instance_p,
+                                                               migration_p)
 
             # if the original vm state was STOPPED, set it back to STOPPED
             LOG.info(_("Updating instance to original state: '%s'") %
                      old_vm_state)
             if power_on:
-                instance = self._instance_update(context, instance['uuid'],
-                        vm_state=vm_states.ACTIVE, task_state=None)
+                instance.vm_state = vm_states.ACTIVE
+                instance.task_state = None
+                instance.save()
             else:
-                instance = self._instance_update(
-                        context, instance['uuid'],
-                        task_state=task_states.STOPPING)
+                instance.task_state = task_states.STOPPING
+                instance.save()
                 self.stop_instance(context, instance=instance)
 
             self._notify_about_instance_usage(
