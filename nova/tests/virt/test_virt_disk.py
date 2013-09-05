@@ -77,7 +77,7 @@ class VirtDiskTest(test.NoDBTestCase):
 
         self.assertIn("/root/.ssh", vfs.handle.files)
         self.assertEqual(vfs.handle.files["/root/.ssh"],
-                          {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0o700})
+                         {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0o700})
         self.assertIn("/root/.ssh/authorized_keys", vfs.handle.files)
         self.assertEqual(vfs.handle.files["/root/.ssh/authorized_keys"],
                          {'isdir': False,

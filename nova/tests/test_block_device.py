@@ -118,7 +118,7 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         def _assert_volume_in_mapping(device_name, true_or_false):
             in_mapping = block_device.volume_in_mapping(
                     device_name, block_device_info)
-            self.assertEquals(in_mapping, true_or_false)
+            self.assertEqual(in_mapping, true_or_false)
 
         _assert_volume_in_mapping('sda', False)
         _assert_volume_in_mapping('sdb', True)
@@ -327,7 +327,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         cool_volume_size_bdm['volume_size'] = '42'
         cool_volume_size_bdm = block_device.BlockDeviceDict(
             cool_volume_size_bdm)
-        self.assertEquals(cool_volume_size_bdm['volume_size'], 42)
+        self.assertEqual(cool_volume_size_bdm['volume_size'], 42)
 
         lame_volume_size_bdm = dict(self.new_mapping[2])
         lame_volume_size_bdm['volume_size'] = 'some_non_int_string'
@@ -338,7 +338,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         truthy_bdm = dict(self.new_mapping[2])
         truthy_bdm['delete_on_termination'] = '1'
         truthy_bdm = block_device.BlockDeviceDict(truthy_bdm)
-        self.assertEquals(truthy_bdm['delete_on_termination'], True)
+        self.assertEqual(truthy_bdm['delete_on_termination'], True)
 
         verbose_bdm = dict(self.new_mapping[2])
         verbose_bdm['boot_index'] = 'first'
@@ -360,7 +360,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             return [bdm for bdm in bdms if bdm['boot_index'] >= 0]
 
         new_no_img = block_device.from_legacy_mapping(self.legacy_mapping)
-        self.assertEquals(len(_get_image_bdms(new_no_img)), 0)
+        self.assertEqual(len(_get_image_bdms(new_no_img)), 0)
 
         for new, expected in zip(new_no_img, self.new_mapping):
             self.assertThat(new, matchers.IsSubDictOf(expected))
@@ -369,19 +369,19 @@ class TestBlockDeviceDict(test.NoDBTestCase):
             self.legacy_mapping, 'fake_image_ref')
         image_bdms = _get_image_bdms(new_with_img)
         boot_bdms = _get_bootable_bdms(new_with_img)
-        self.assertEquals(len(image_bdms), 1)
-        self.assertEquals(len(boot_bdms), 1)
-        self.assertEquals(image_bdms[0]['boot_index'], 0)
-        self.assertEquals(boot_bdms[0]['source_type'], 'image')
+        self.assertEqual(len(image_bdms), 1)
+        self.assertEqual(len(boot_bdms), 1)
+        self.assertEqual(image_bdms[0]['boot_index'], 0)
+        self.assertEqual(boot_bdms[0]['source_type'], 'image')
 
         new_with_img_and_root = block_device.from_legacy_mapping(
             self.legacy_mapping, 'fake_image_ref', 'sda1')
         image_bdms = _get_image_bdms(new_with_img_and_root)
         boot_bdms = _get_bootable_bdms(new_with_img_and_root)
-        self.assertEquals(len(image_bdms), 0)
-        self.assertEquals(len(boot_bdms), 1)
-        self.assertEquals(boot_bdms[0]['boot_index'], 0)
-        self.assertEquals(boot_bdms[0]['source_type'], 'volume')
+        self.assertEqual(len(image_bdms), 0)
+        self.assertEqual(len(boot_bdms), 1)
+        self.assertEqual(boot_bdms[0]['boot_index'], 0)
+        self.assertEqual(boot_bdms[0]['source_type'], 'volume')
 
     def test_from_api(self):
         for api, new in zip(self.api_mapping, self.new_mapping):
