@@ -211,6 +211,9 @@ class VMOps(object):
                                                instance, vm_ref)
         raise exception.NovaException(_("Error: Agent is disabled"))
 
+    def instance_exists(self, name_label):
+        return vm_utils.lookup(self._session, name_label) is not None
+
     def list_instances(self):
         """List VM instances."""
         # TODO(justinsb): Should we just always use the details method?
