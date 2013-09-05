@@ -163,6 +163,19 @@ class XenAPIDriver(driver.ComputeDriver):
         except Exception:
             LOG.exception(_('Failure while cleaning up attached VDIs'))
 
+    def instance_exists(self, instance_name):
+        """Checks existence of an instance on the host.
+
+        :param instance_name: The name of the instance to lookup
+
+        Returns True if an instance with the supplied name exists on
+        the host, False otherwise.
+
+        NOTE(belliott): This is an override of the base method for
+        efficiency.
+        """
+        return self._vmops.instance_exists(instance_name)
+
     def list_instances(self):
         """List VM instances."""
         return self._vmops.list_instances()
