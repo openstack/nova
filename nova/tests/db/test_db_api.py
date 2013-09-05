@@ -439,7 +439,7 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(0, len(expected))
         aggregate = db.aggregate_get(ctxt.elevated(read_deleted='yes'),
                                      result['id'])
-        self.assertEqual(aggregate['deleted'], True)
+        self.assertEqual(aggregate['deleted'], result['id'])
 
     def test_aggregate_update(self):
         ctxt = context.get_admin_context()
@@ -448,7 +448,7 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(result['availability_zone'], 'fake_avail_zone')
         new_values = _get_fake_aggr_values()
         new_values['availability_zone'] = 'different_avail_zone'
-        updated = db.aggregate_update(ctxt, 1, new_values)
+        updated = db.aggregate_update(ctxt, result['id'], new_values)
         self.assertNotEqual(result['availability_zone'],
                             updated['availability_zone'])
 
@@ -458,7 +458,7 @@ class AggregateDBApiTestCase(test.TestCase):
         values = _get_fake_aggr_values()
         values['metadata'] = _get_fake_aggr_metadata()
         values['availability_zone'] = 'different_avail_zone'
-        db.aggregate_update(ctxt, 1, values)
+        db.aggregate_update(ctxt, result['id'], values)
         expected = db.aggregate_metadata_get(ctxt, result['id'])
         updated = db.aggregate_get(ctxt, result['id'])
         self.assertThat(values['metadata'],
@@ -472,7 +472,7 @@ class AggregateDBApiTestCase(test.TestCase):
         values = _get_fake_aggr_values()
         values['metadata'] = _get_fake_aggr_metadata()
         values['metadata']['fake_key1'] = 'foo'
-        db.aggregate_update(ctxt, 1, values)
+        db.aggregate_update(ctxt, result['id'], values)
         expected = db.aggregate_metadata_get(ctxt, result['id'])
         self.assertThat(values['metadata'], matchers.DictMatches(expected))
 
