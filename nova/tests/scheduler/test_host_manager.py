@@ -488,7 +488,7 @@ class HostStateTestCase(test.NoDBTestCase):
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
-        self.assertEqual(None, host.pci_stats)
+        self.assertIsNone(host.pci_stats)
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     def test_stat_consumption_from_instance(self):

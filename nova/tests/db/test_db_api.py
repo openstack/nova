@@ -574,7 +574,7 @@ class AggregateDBApiTestCase(test.TestCase):
         db.aggregate_metadata_delete(ctxt, result['id'], 'availability_zone')
         expected = db.aggregate_metadata_get(ctxt, result['id'])
         aggregate = db.aggregate_get(ctxt, result['id'])
-        self.assertEquals(aggregate['availability_zone'], None)
+        self.assertIsNone(aggregate['availability_zone'])
         self.assertThat({}, matchers.DictMatches(expected))
 
     def test_aggregate_metadata_delete_raise_not_found(self):
@@ -1137,7 +1137,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_security_group_create(self):
         security_group = self._create_security_group({})
-        self.assertFalse(security_group['id'] is None)
+        self.assertIsNotNone(security_group['id'])
         for key, value in self._get_base_values().iteritems():
             self.assertEqual(value, security_group[key])
 
@@ -1966,7 +1966,7 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_service_create(self):
         service = self._create_service({})
-        self.assertFalse(service['id'] is None)
+        self.assertIsNotNone(service['id'])
         for key, value in self._get_base_values().iteritems():
             self.assertEqual(value, service[key])
 
@@ -2499,7 +2499,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
                         'created_at', 'extra_specs']
 
-        self.assertFalse(inst_type['id'] is None)
+        self.assertIsNotNone(inst_type['id'])
         self._assertEqualObjects(inst_type, self._get_base_values(),
                                  ignored_keys)
 
@@ -2877,7 +2877,7 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
         # NOTE(boris-42): Check that instance_type_access_add doesn't fail and
         #                 returns correct value. This is enough because other
         #                 logic is checked by other methods.
-        self.assertFalse(access['id'] is None)
+        self.assertIsNotNone(access['id'])
         self.assertEqual(access['instance_type_id'], inst_type['id'])
         self.assertEqual(access['project_id'], project_id)
 
@@ -3610,7 +3610,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
                         'created_at']
 
-        self.assertFalse(floating_ip['id'] is None)
+        self.assertIsNotNone(floating_ip['id'])
         self._assertEqualObjects(floating_ip, self._get_base_values(),
                                  ignored_keys)
 
@@ -3647,7 +3647,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.floating_ip_fixed_ip_associate(self.ctxt,
                                                    float_addresses[0],
                                                    fixed_addresses[0], 'host')
-        self.assertTrue(result is None)
+        self.assertIsNone(result)
 
     def test_floating_ip_fixed_ip_associate_float_ip_not_found(self):
         self.assertRaises(exception.FloatingIpNotFoundForAddress,
@@ -3660,8 +3660,8 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.floating_ip_deallocate(self.ctxt, float_ip.address)
 
         updated_float_ip = db.floating_ip_get(self.ctxt, float_ip.id)
-        self.assertTrue(updated_float_ip.project_id is None)
-        self.assertTrue(updated_float_ip.host is None)
+        self.assertIsNone(updated_float_ip.project_id)
+        self.assertIsNone(updated_float_ip.host)
         self.assertFalse(updated_float_ip.auto_assigned)
 
     def test_floating_ip_destroy(self):
@@ -3700,8 +3700,8 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
             fixed = db.floating_ip_disassociate(self.ctxt, float_ip.address)
             self.assertEqual(fixed.address, fixed_addr)
             updated_float_ip = db.floating_ip_get(self.ctxt, float_ip.id)
-            self.assertTrue(updated_float_ip.fixed_ip_id is None)
-            self.assertTrue(updated_float_ip.host is None)
+            self.assertIsNone(updated_float_ip.fixed_ip_id)
+            self.assertIsNone(updated_float_ip.host)
 
     def test_floating_ip_disassociate_not_found(self):
         self.assertRaises(exception.FloatingIpNotFoundForAddress,
@@ -4267,7 +4267,7 @@ class BlockDeviceMappingTestCase(test.TestCase):
 
     def test_block_device_mapping_create(self):
         bdm = self._create_bdm({})
-        self.assertFalse(bdm is None)
+        self.assertIsNotNone(bdm)
 
     def test_block_device_mapping_update(self):
         bdm = self._create_bdm({})
@@ -4313,7 +4313,7 @@ class BlockDeviceMappingTestCase(test.TestCase):
         bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
         self.assertEqual(len(bdm_real), 2)
         bdm_real = bdm_real[1]
-        self.assertEqual(bdm_real['device_name'], None)
+        self.assertIsNone(bdm_real['device_name'])
 
         # check create multiple devices without device_name
         bdm2 = dict(values)
@@ -4322,7 +4322,7 @@ class BlockDeviceMappingTestCase(test.TestCase):
         bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
         self.assertEqual(len(bdm_real), 3)
         bdm_real = bdm_real[2]
-        self.assertEqual(bdm_real['device_name'], None)
+        self.assertIsNone(bdm_real['device_name'])
 
     def test_block_device_mapping_update_or_create_multiple_ephemeral(self):
         uuid = self.instance['uuid']
@@ -4532,7 +4532,7 @@ class VirtualInterfaceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_virtual_interface_create(self):
         vif = self._create_virt_interface({})
-        self.assertFalse(vif['id'] is None)
+        self.assertIsNotNone(vif['id'])
         ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
                         'created_at', 'uuid']
         self._assertEqualObjects(vif, self._get_base_values(), ignored_keys)
@@ -4891,7 +4891,7 @@ class KeyPairTestCase(test.TestCase, ModelsObjectComparatorMixin):
         }
         key_pair = self._create_key_pair(param)
 
-        self.assertTrue(key_pair['id'] is not None)
+        self.assertIsNotNone(key_pair['id'])
         ignored_keys = ['deleted', 'created_at', 'updated_at',
                         'deleted_at', 'id']
         self._assertEqualObjects(key_pair, param, ignored_keys)
@@ -5359,7 +5359,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 if n['id'] == node['id']:
                     found = n
                     break
-            self.assertNotEqual(None, found)
+            self.assertIsNotNone(found)
             # Now ensure the match has stats!
             self.assertNotEqual(self._stats_as_dict(found['stats']), {})
 
@@ -5734,7 +5734,7 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_cell_create(self):
         cell = db.cell_create(self.ctxt, self._get_cell_base_values())
-        self.assertFalse(cell['id'] is None)
+        self.assertIsNotNone(cell['id'])
         self._assertEqualObjects(cell, self._get_cell_base_values(),
                                  ignored_keys=self._ignored_keys)
 
@@ -5829,7 +5829,7 @@ class ConsolePoolTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_console_pool_create(self):
         console_pool = db.console_pool_create(
             self.ctxt, self.test_console_pool_1)
-        self.assertTrue(console_pool.get('id') is not None)
+        self.assertIsNotNone(console_pool.get('id'))
         ignored_keys = ['deleted', 'created_at', 'updated_at',
                         'deleted_at', 'id']
         self._assertEqualObjects(

@@ -57,7 +57,7 @@ class CertRpcAPITestCase(test.NoDBTestCase):
         self.assertEqual(self.call_ctxt, ctxt)
         self.assertEqual(self.call_topic, CONF.cert_topic)
         self.assertEqual(self.call_msg, expected_msg)
-        self.assertEqual(self.call_timeout, None)
+        self.assertIsNone(self.call_timeout)
 
     def test_revoke_certs_by_user(self):
         self._test_cert_api('revoke_certs_by_user', user_id='fake_user_id')

@@ -1544,13 +1544,13 @@ class TestNeutronv2(TestNeutronv2Base):
         net, iid = self._test_nw_info_build_network(model.VIF_TYPE_BRIDGE)
         self.assertEqual(net['bridge'], 'brqnet-id')
         self.assertTrue(net['should_create_bridge'])
-        self.assertEqual(iid, None)
+        self.assertIsNone(iid)
 
     def test_nw_info_build_network_other(self):
         net, iid = self._test_nw_info_build_network(None)
-        self.assertEqual(net['bridge'], None)
+        self.assertIsNone(net['bridge'])
         self.assertNotIn('should_create_bridge', net)
-        self.assertEqual(iid, None)
+        self.assertIsNone(iid)
 
     def test_build_network_info_model(self):
         api = neutronapi.API()
@@ -1595,7 +1595,7 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(nw_info[0]['id'], 'port0')
         self.assertEqual(nw_info[0]['address'], 'de:ad:be:ef:00:01')
         self.assertEqual(nw_info[0]['devname'], 'tapport0')
-        self.assertEqual(nw_info[0]['ovs_interfaceid'], None)
+        self.assertIsNone(nw_info[0]['ovs_interfaceid'])
         self.assertEqual(nw_info[0]['type'], model.VIF_TYPE_BRIDGE)
         self.assertEqual(nw_info[0]['network']['bridge'], 'brqnet-id')
 

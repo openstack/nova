@@ -200,10 +200,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEquals(2, len(dests))
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
         self.assertEquals('host3', host)
-        self.assertEquals(None, node)
+        self.assertIsNone(node)
         (host, node) = (dests[1]['host'], dests[1]['nodename'])
         self.assertEquals('host2', host)
-        self.assertEquals(None, node)
+        self.assertIsNone(node)
 
     def test_select_destinations_no_valid_host(self):
 

@@ -228,7 +228,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         num_images = len(self.service.detail(self.context))
         image_id = self.service.create(self.context, fixture)['id']
 
-        self.assertNotEquals(None, image_id)
+        self.assertIsNotNone(image_id)
         self.assertEquals(num_images + 1,
                           len(self.service.detail(self.context)))
 
@@ -236,7 +236,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         fixture = self._make_fixture(name='test image')
         image_id = self.service.create(self.context, fixture)['id']
 
-        self.assertNotEquals(None, image_id)
+        self.assertIsNotNone(image_id)
         self.assertRaises(exception.ImageNotFound,
                           self.service.show,
                           self.context,
@@ -796,15 +796,14 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
         def _get_fake_glanceclient(version, endpoint, **params):
             fake_client = glance_stubs.StubGlanceClient(version,
                                        endpoint, **params)
-            self.assertTrue(fake_client.auth_token is not None)
-            self.assertTrue(fake_client.identity_headers is not None)
+            self.assertIsNotNone(fake_client.auth_token)
+            self.assertIsNotNone(fake_client.identity_headers)
             self.assertEquals(fake_client.identity_header['X-Auth_Token'],
                               auth_token)
             self.assertEquals(fake_client.identity_header['X-User-Id'], 'fake')
-            self.assertEquals(fake_client.identity_header['X-Roles'], None)
-            self.assertEquals(fake_client.identity_header['X-Tenant-Id'], None)
-            self.assertEquals(fake_client.
-                              identity_header['X-Service-Catalog'], None)
+            self.assertIsNone(fake_client.identity_header['X-Roles'])
+            self.assertIsNone(fake_client.identity_header['X-Tenant-Id'])
+            self.assertIsNone(fake_client.identity_header['X-Service-Catalog'])
             self.assertEquals(fake_client.
                               identity_header['X-Identity-Status'],
                               'Confirmed')

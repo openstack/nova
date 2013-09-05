@@ -441,7 +441,7 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
                                              ['info_cache'])
-        self.assertEqual(None, inst.info_cache)
+        self.assertIsNone(inst.info_cache)
 
     def test_with_security_groups(self):
         fake_inst = dict(self.fake_instance)
@@ -845,7 +845,7 @@ class _TestInstanceListObject(object):
         self.assertEqual(2, len(instances))
         self.assertEqual(fake_faults['fake-uuid'][0],
                          dict(instances[0].fault.iteritems()))
-        self.assertEqual(None, instances[1].fault)
+        self.assertIsNone(instances[1].fault)
 
     def test_fill_faults(self):
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
@@ -880,7 +880,7 @@ class _TestInstanceListObject(object):
         self.assertEqual(faulty, ['uuid1'])
         self.assertEqual(inst_list[0].fault.message,
                          db_faults['uuid1'][0]['message'])
-        self.assertEqual(inst_list[1].fault, None)
+        self.assertIsNone(inst_list[1].fault)
         for inst in inst_list:
             self.assertEqual(inst.obj_what_changed(), set())
 
@@ -919,4 +919,4 @@ class TestInstanceObjectMisc(test.NoDBTestCase):
     def test_expected_cols(self):
         self.stubs.Set(instance, '_INSTANCE_OPTIONAL_JOINED_FIELDS', ['bar'])
         self.assertEqual(['bar'], instance._expected_cols(['foo', 'bar']))
-        self.assertEqual(None, instance._expected_cols(None))
+        self.assertIsNone(instance._expected_cols(None))

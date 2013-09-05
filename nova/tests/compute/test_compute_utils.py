@@ -703,12 +703,12 @@ class ComputeUtilsGetNWInfo(test.TestCase):
     def test_instance_object_none_info_cache(self):
         inst = fake_instance.fake_instance_obj('fake-context',
                                                expected_attrs=['info_cache'])
-        self.assertEqual(None, inst.info_cache)
+        self.assertIsNone(inst.info_cache)
         result = compute_utils.get_nw_info_for_instance(inst)
         self.assertEqual(jsonutils.dumps([]), result.json())
 
     def test_instance_dict_none_info_cache(self):
         inst = fake_instance.fake_db_instance(info_cache=None)
-        self.assertEqual(None, inst['info_cache'])
+        self.assertIsNone(inst['info_cache'])
         result = compute_utils.get_nw_info_for_instance(inst)
         self.assertEqual(jsonutils.dumps([]), result.json())

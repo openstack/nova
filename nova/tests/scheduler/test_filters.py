@@ -203,4 +203,4 @@ class FiltersTestCase(test.NoDBTestCase):
         result = filter_handler.get_filtered_objects(filter_classes,
                                                      filter_objs_initial,
                                                      filter_properties)
-        self.assertEqual(None, result)
+        self.assertIsNone(result)

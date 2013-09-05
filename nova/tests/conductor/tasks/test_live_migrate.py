@@ -70,7 +70,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_execute_without_destination(self):
         self.destination = None
         self._generate_task()
-        self.assertEqual(None, self.task.destination)
+        self.assertIsNone(self.task.destination)
 
         self.mox.StubOutWithMock(self.task, '_check_host_is_up')
         self.mox.StubOutWithMock(self.task, '_find_destination')

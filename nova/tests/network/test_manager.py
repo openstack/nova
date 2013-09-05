@@ -512,21 +512,20 @@ class FlatNetworkTestCase(test.TestCase):
         self.assertEqual(addresses[0], fixedip)
 
     def test_allocate_floating_ip(self):
-        self.assertEqual(self.network.allocate_floating_ip(self.context,
-                                                           1, None), None)
+        self.assertIsNone(self.network.allocate_floating_ip(self.context,
+                                                            1, None))
 
     def test_deallocate_floating_ip(self):
-        self.assertEqual(self.network.deallocate_floating_ip(self.context,
-                                                             1, None), None)
+        self.assertIsNone(self.network.deallocate_floating_ip(self.context,
+                                                              1, None))
 
     def test_associate_floating_ip(self):
-        self.assertEqual(self.network.associate_floating_ip(self.context,
-                                                            None, None), None)
+        self.assertIsNone(self.network.associate_floating_ip(self.context,
+                                                             None, None))
 
     def test_disassociate_floating_ip(self):
-        self.assertEqual(self.network.disassociate_floating_ip(self.context,
-                                                               None, None),
-                         None)
+        self.assertIsNone(self.network.disassociate_floating_ip(self.context,
+                                                                None, None))
 
     def test_get_networks_by_uuids_ordering(self):
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')

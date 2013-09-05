@@ -633,7 +633,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEquals(30, payload['read_bytes'])
         self.assertEquals(1, payload['writes'])
         self.assertEquals(20, payload['write_bytes'])
-        self.assertEquals(None, payload['availability_zone'])
+        self.assertIsNone(payload['availability_zone'])
         msg = fake_notifier.NOTIFICATIONS[3]
         self.assertEquals('compute.instance.volume.detach', msg.event_type)
 
@@ -1466,7 +1466,7 @@ class ComputeTestCase(BaseTestCase):
         instance = db.instance_get_by_uuid(admin_deleted_context,
                                            instance['uuid'])
         self.assertEqual(instance['vm_state'], vm_states.DELETED)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
     def test_run_terminate_with_vol_attached(self):
         """Make sure it is possible to  run and terminate instance with volume
@@ -1580,13 +1580,13 @@ class ComputeTestCase(BaseTestCase):
         # Make sure timestamps are set for launched and destroyed.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance['launched_at'] = None
-        self.assertEqual(instance['launched_at'], None)
-        self.assertEqual(instance['deleted_at'], None)
+        self.assertIsNone(instance['launched_at'])
+        self.assertIsNone(instance['deleted_at'])
         launch = timeutils.utcnow()
         self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertTrue(instance['launched_at'] > launch)
-        self.assertEqual(instance['deleted_at'], None)
+        self.assertIsNone(instance['deleted_at'])
         terminate = timeutils.utcnow()
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
@@ -2221,7 +2221,7 @@ class ComputeTestCase(BaseTestCase):
 
         inst_ref = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertIsNone(inst_ref['task_state'])
 
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
@@ -3257,7 +3257,7 @@ class ComputeTestCase(BaseTestCase):
 
         # Fetch the instance's task_state and make sure it reverted to None.
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertEqual(instance["task_state"], None)
+        self.assertIsNone(instance["task_state"])
 
     def test_state_revert(self):
         # ensure that task_state is reverted after a failed operation.
@@ -3470,7 +3470,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(task_states.RESIZE_FINISH,
                              expected_task_state)
             self.assertEqual(vm_states.RESIZED, instance.vm_state)
-            self.assertEqual(None, instance.task_state)
+            self.assertIsNone(instance.task_state)
             self.assertIn('launched_at', instance.obj_what_changed())
             orig_inst_save(expected_task_state=expected_task_state)
 
@@ -3628,7 +3628,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertEquals(cached_connection_info['data'],
                               orig_connection_data)
         # but connection was terminated
-        self.assertEquals(connection_info['data'], None)
+        self.assertIsNone(connection_info['data'])
 
         # stub out virt driver finish_migration
         def fake(*args, **kwargs):
@@ -4003,7 +4003,7 @@ class ComputeTestCase(BaseTestCase):
         # is not updated.  Refresh and compare against the DB.
         instance.refresh()
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
-        self.assertEqual(instance.task_state, None)
+        self.assertIsNone(instance.task_state)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_resize_instance(self):
@@ -4126,7 +4126,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(instance_type_ref['flavorid'], '3')
         self.assertEqual('fake-mini', migration.source_compute)
         self.assertEqual(old_vm_state, instance.vm_state)
-        self.assertEqual(None, instance.task_state)
+        self.assertIsNone(instance.task_state)
         self.assertEqual(p_state, instance.power_state)
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -4237,7 +4237,7 @@ class ComputeTestCase(BaseTestCase):
                 migration=migration,
                 instance=instance, reservations=reservations)
 
-        self.assertEqual(instance.task_state, None)
+        self.assertIsNone(instance.task_state)
 
         instance_type_ref = db.flavor_get(self.context,
                 instance['instance_type_id'])
@@ -4408,7 +4408,7 @@ class ComputeTestCase(BaseTestCase):
         ret = self.compute.pre_live_migration(c, instance=instance,
                                               block_migration=False,
                                               migrate_data=migrate_data)
-        self.assertEqual(ret, None)
+        self.assertIsNone(ret)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -4515,7 +4515,7 @@ class ComputeTestCase(BaseTestCase):
         ret = self.compute.live_migration(c, dest=dest,
                                           instance=instance,
                                           migrate_data=migrate_data)
-        self.assertEqual(ret, None)
+        self.assertIsNone(ret)
 
         # cleanup
         db.instance_destroy(c, inst_uuid)
@@ -4718,7 +4718,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         ret = self.compute.rollback_live_migration_at_destination(c,
                                           instance=instance)
-        self.assertEqual(ret, None)
+        self.assertIsNone(ret)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -4750,7 +4750,7 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(self.context)
         LOG.info(_("After force-killing instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-        self.assertEqual(instances[0]['task_state'], None)
+        self.assertIsNone(instances[0]['task_state'])
 
     def test_add_instance_fault(self):
         instance = self._create_fake_instance()
@@ -5158,7 +5158,7 @@ class ComputeTestCase(BaseTestCase):
             # does not get set to 'error' on confirm_resize failure.
             if instance['uuid'] == 'fake_uuid4':
                 raise test.TestingException('bomb')
-            self.assertNotEqual(migration, None)
+            self.assertIsNotNone(migration)
             for migration2 in migrations:
                 if (migration2['instance_uuid'] ==
                         migration['instance_uuid']):
@@ -5875,7 +5875,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
         return instance, instance_uuid
 
     def test_create_with_too_little_ram(self):
@@ -5990,7 +5990,7 @@ class ComputeAPITestCase(BaseTestCase):
                 flavors.get_default_flavor(),
                 'fake-image-uuid', **instance)
             try:
-                self.assertNotEqual(ref[0]['display_name'], None)
+                self.assertIsNotNone(ref[0]['display_name'])
             finally:
                 db.instance_destroy(self.context, ref[0]['uuid'])
 
@@ -6224,7 +6224,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
         # Set some image metadata that should get wiped out and reset
         # as well as some other metadata that should be preserved.
         db.instance_system_metadata_update(self.context, instance_uuid,
@@ -6444,7 +6444,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(inst_ref['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(inst_ref['task_state'], None)
+        self.assertIsNone(inst_ref['task_state'])
 
         def fake_rpc_method(context, topic, msg, do_cast=True):
             self.assertFalse(do_cast)
@@ -6468,7 +6468,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
         self.compute_api.rescue(self.context, instance)
 
@@ -7283,7 +7283,7 @@ class ComputeAPITestCase(BaseTestCase):
                 min_count=2, max_count=2)
         try:
             self.assertEqual(len(refs), 2)
-            self.assertNotEqual(resv_id, None)
+            self.assertIsNotNone(resv_id)
         finally:
             for instance in refs:
                 self.assertEqual(instance['reservation_id'], resv_id)
@@ -8041,7 +8041,7 @@ class ComputeAPITestCase(BaseTestCase):
                                           services=True))
         instance_uuid = instance['uuid']
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
         def fake_service_is_up(*args, **kwargs):
             return False
@@ -8090,7 +8090,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                              inst))
         instance_uuid = instance['uuid']
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
         self.assertRaises(exception.ComputeHostNotFound,
                 self.compute_api.evacuate, self.context.elevated(), instance,
@@ -8104,7 +8104,7 @@ class ComputeAPITestCase(BaseTestCase):
                                           services=True))
         instance_uuid = instance['uuid']
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
         def fake_service_is_up(*args, **kwargs):
             return True
@@ -8239,7 +8239,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         aggr = self.api.update_aggregate(self.context, aggr['id'],
                                          {'name': 'new_fake_aggregate'})
-        self.assertEqual(availability_zones._get_cache().get('cache'), None)
+        self.assertIsNone(availability_zones._get_cache().get('cache'))
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,

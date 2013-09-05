@@ -323,7 +323,7 @@ class BaseResourceTestCase(test.TestCase):
         resource = quota.BaseResource('test_resource')
 
         self.assertEqual(resource.name, 'test_resource')
-        self.assertEqual(resource.flag, None)
+        self.assertIsNone(resource.flag)
         self.assertEqual(resource.default, -1)
 
     def test_with_flag(self):

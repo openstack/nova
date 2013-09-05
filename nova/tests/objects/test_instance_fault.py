@@ -47,7 +47,7 @@ class _TestInstanceFault(object):
         self.mox.ReplayAll()
         fault = instance_fault.InstanceFault.get_latest_for_instance(
             self.context, 'fake-uuid')
-        self.assertEqual(None, fault)
+        self.assertIsNone(fault)
 
     def test_get_by_instance(self):
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')

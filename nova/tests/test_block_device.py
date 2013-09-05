@@ -36,7 +36,7 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         properties1 = {'mappings': mappings,
                        'root_device_name': root_device1}
 
-        self.assertEqual(block_device.properties_root_device_name({}), None)
+        self.assertIsNone(block_device.properties_root_device_name({}))
         self.assertEqual(
             block_device.properties_root_device_name(properties0),
             root_device0)
@@ -137,10 +137,10 @@ class BlockDeviceTestCase(test.NoDBTestCase):
                 {'device_name': 'vdd'}]
         self.assertEqual(root_bdm, block_device.get_root_bdm(bdms))
         self.assertEqual(root_bdm, block_device.get_root_bdm([bdms[0]]))
-        self.assertEqual(None, block_device.get_root_bdm(bdms[1:]))
-        self.assertEqual(None, block_device.get_root_bdm(bdms[2:]))
-        self.assertEqual(None, block_device.get_root_bdm(bdms[3:]))
-        self.assertEqual(None, block_device.get_root_bdm([]))
+        self.assertIsNone(block_device.get_root_bdm(bdms[1:]))
+        self.assertIsNone(block_device.get_root_bdm(bdms[2:]))
+        self.assertIsNone(block_device.get_root_bdm(bdms[3:]))
+        self.assertIsNone(block_device.get_root_bdm([]))
 
 
 class TestBlockDeviceDict(test.NoDBTestCase):
@@ -286,7 +286,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         dev_dict = block_device.BlockDeviceDict({'field1': 'foo'})
         self.assertIn('field1', dev_dict)
         self.assertIn('field2', dev_dict)
-        self.assertTrue(dev_dict['field2'] is None)
+        self.assertIsNone(dev_dict['field2'])
         self.assertNotIn('db_field1', dev_dict)
         self.assertFalse('db_field2'in dev_dict)
 

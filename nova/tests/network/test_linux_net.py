@@ -876,7 +876,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         manager._apply()
         self.mox.ReplayAll()
         empty_ret = manager.apply()
-        self.assertEqual(empty_ret, None)
+        self.assertIsNone(empty_ret)
 
     def test_apply_not_run(self):
         manager = linux_net.IptablesManager()
