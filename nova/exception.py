@@ -1118,6 +1118,10 @@ class SecurityGroupLimitExceeded(QuotaError):
     msg_fmt = _("Maximum number of security groups or rules exceeded")
 
 
+class PortLimitExceeded(QuotaError):
+    msg_fmt = _("Maximum number of ports exceeded")
+
+
 class AggregateError(NovaException):
     msg_fmt = _("Aggregate %(aggregate_id)s: action '%(action)s' "
                 "caused an error: %(reason)s.")
