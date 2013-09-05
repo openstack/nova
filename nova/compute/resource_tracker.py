@@ -23,6 +23,7 @@ from oslo.config import cfg
 
 from nova.compute import claims
 from nova.compute import flavors
+from nova.compute import monitors
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
@@ -35,6 +36,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.notifier import api as notifier
 from nova.pci import pci_manager
 from nova import utils
 
@@ -72,6 +74,8 @@ class ResourceTracker(object):
         self.tracked_instances = {}
         self.tracked_migrations = {}
         self.conductor_api = conductor.API()
+        monitor_handler = monitors.ResourceMonitorHandler()
+        self.monitors = monitor_handler.choose_monitors(self)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance_ref, limits=None):
@@ -262,6 +266,27 @@ class ResourceTracker(object):
     def disabled(self):
         return self.compute_node is None
 
+    def _get_host_metrics(self, context, nodename):
+        """Get the metrics from monitors and
+        notify information to message bus.
+        """
+        metrics = []
+        metrics_info = {}
+        for monitor in self.monitors:
+            try:
+                metrics += monitor.get_metrics(nodename=nodename)
+            except Exception:
+                LOG.warn(_("Cannot get the metrics from %s."), monitors)
+        if metrics:
+            metrics_info['nodename'] = nodename
+            metrics_info['metrics'] = metrics
+            metrics_info['host'] = self.host
+            metrics_info['host_ip'] = CONF.my_ip
+            notifier.notify(context, 'compute.%s' % nodename,
+                            'compute.metrics.update', notifier.INFO,
+                            metrics_info)
+        return metrics
+
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def update_available_resource(self, context):
         """Override in-memory calculations of compute node resource usage based
@@ -323,6 +348,8 @@ class ResourceTracker(object):
 
         self._report_final_resource_view(resources)
 
+        metrics = self._get_host_metrics(context, self.nodename)
+        resources['metrics'] = jsonutils.dumps(metrics)
         self._sync_compute_node(context, resources)
 
     def _sync_compute_node(self, context, resources):

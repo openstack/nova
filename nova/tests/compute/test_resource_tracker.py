@@ -17,6 +17,7 @@
 
 """Tests for compute resource tracking."""
 
+import mock
 import re
 import uuid
 
@@ -31,8 +32,10 @@ from nova import db
 from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
+from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common import timeutils
 from nova import test
+from nova.tests.compute.monitors import test_monitors
 from nova.tests.objects import test_migration
 from nova.virt import driver
 
@@ -1029,3 +1032,60 @@ class OrphanTestCase(BaseTrackerTestCase):
         orphans = self.tracker._find_orphaned_instances()
 
         self.assertEqual(2, len(orphans))
+
+
+class ComputeMonitorTestCase(BaseTestCase):
+    def setUp(self):
+        super(ComputeMonitorTestCase, self).setUp()
+        fake_monitors = [
+            'nova.tests.compute.monitors.test_monitors.FakeMonitorClass1',
+            'nova.tests.compute.monitors.test_monitors.FakeMonitorClass2']
+        self.flags(compute_available_monitors=fake_monitors)
+        self.tracker = self._tracker()
+        self.node_name = 'nodename'
+        self.user_id = 'fake'
+        self.project_id = 'fake'
+        self.info = {}
+        self.context = context.RequestContext(self.user_id,
+                                              self.project_id)
+
+    def test_get_host_metrics_none(self):
+        self.flags(compute_monitors=['FakeMontorClass1', 'FakeMonitorClass4'])
+        self.tracker.monitors = []
+        metrics = self.tracker._get_host_metrics(self.context,
+                                                 self.node_name)
+        self.assertEqual(len(metrics), 0)
+
+    def test_get_host_metrics_one_failed(self):
+        self.flags(compute_monitors=['FakeMonitorClass1', 'FakeMonitorClass4'])
+        class1 = test_monitors.FakeMonitorClass1(self.tracker)
+        class4 = test_monitors.FakeMonitorClass4(self.tracker)
+        self.tracker.monitors = [class1, class4]
+        metrics = self.tracker._get_host_metrics(self.context,
+                                                 self.node_name)
+        self.assertTrue(len(metrics) > 0)
+
+    def test_get_host_metrics(self):
+        self.flags(compute_monitors=['FakeMonitorClass1', 'FakeMonitorClass2'])
+        class1 = test_monitors.FakeMonitorClass1(self.tracker)
+        class2 = test_monitors.FakeMonitorClass2(self.tracker)
+        self.tracker.monitors = [class1, class2]
+
+        def fake_notify(context, publisher, event, priority, payload):
+            self.info['publisher'] = publisher
+            self.info['event'] = event
+            self.info['payload'] = payload
+
+        with mock.patch.object(notifier_api, 'notify',
+                               side_effect=fake_notify):
+            metrics = self.tracker._get_host_metrics(self.context,
+                                                     self.node_name)
+        self.assertEqual(metrics, [{'timestamp': 1232,
+                                    'name': 'key1',
+                                    'value': 2600,
+                                    'source': 'libvirt'},
+                                   {'name': 'key2',
+                                    'source': 'libvirt',
+                                    'timestamp': 123,
+                                    'value': 1600}])
+        self.assertTrue(len(self.info) > 0)
