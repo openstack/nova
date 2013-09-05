@@ -229,6 +229,11 @@ class VirtualLsiLogicController(DataObject):
     pass
 
 
+class VirtualLsiLogicSASController(DataObject):
+    """VirtualLsiLogicSASController class."""
+    pass
+
+
 class VirtualPCNet32(DataObject):
     """VirtualPCNet32 class."""
 
