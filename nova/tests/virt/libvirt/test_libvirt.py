@@ -228,7 +228,7 @@ class CacheConcurrencyTestCase(test.TestCase):
         def fake_execute(*args, **kwargs):
             pass
 
-        def fake_extend(image, size):
+        def fake_extend(image, size, use_cow=False):
             pass
 
         self.stubs.Set(os.path, 'exists', fake_exists)
@@ -379,7 +379,7 @@ class LibvirtConnTestCase(test.TestCase):
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
 
-        def fake_extend(image, size):
+        def fake_extend(image, size, use_cow=False):
             pass
 
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
@@ -5974,7 +5974,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_can_resize_fs(path, size, use_cow=False):
             return False
 
-        def fake_extend(path, size):
+        def fake_extend(path, size, use_cow=False):
             pass
 
         def fake_to_xml(instance, network_info, disk_info,

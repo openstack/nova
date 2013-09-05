@@ -224,7 +224,9 @@ class Raw(Image):
         def copy_raw_image(base, target, size):
             libvirt_utils.copy_image(base, target)
             if size:
-                disk.extend(target, size)
+                # class Raw is misnamed, format may not be 'raw' in all cases
+                use_cow = self.driver_format == 'qcow2'
+                disk.extend(target, size, use_cow=use_cow)
 
         generating = 'image_id' not in kwargs
         if generating:
@@ -266,7 +268,7 @@ class Qcow2(Image):
             # This would be keyed on a 'preallocate_images' setting.
             libvirt_utils.create_cow_image(base, target)
             if size:
-                disk.extend(target, size)
+                disk.extend(target, size, use_cow=True)
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
@@ -294,7 +296,7 @@ class Qcow2(Image):
             if not os.path.exists(legacy_base):
                 with fileutils.remove_path_on_error(legacy_base):
                     libvirt_utils.copy_image(base, legacy_base)
-                    disk.extend(legacy_base, legacy_backing_size)
+                    disk.extend(legacy_base, legacy_backing_size, use_cow=True)
 
         # NOTE(cfb): Having a flavor that sets the root size to 0 and having
         #            nova effectively ignore that size and use the size of the

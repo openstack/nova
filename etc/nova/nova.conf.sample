@@ -1889,6 +1889,13 @@
 #virt_mkfs=linux=mkfs.ext3 -L %(fs_label)s -F %(target)s
 #virt_mkfs=windows=mkfs.ntfs --force --fast --label %(fs_label)s %(target)s
 
+# Attempt to resize the filesystem by accessing the image over
+# a block device. This is done by the host and may not be
+# necessary if the image contains a recent version of cloud-
+# init. Possible mechanisms require the nbd driver (for qcow
+# and raw), or loop (for raw). (boolean value)
+#resize_fs_using_block_device=true
+
 
 #
 # Options defined in nova.virt.disk.mount.nbd

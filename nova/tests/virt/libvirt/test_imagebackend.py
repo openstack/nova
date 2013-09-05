@@ -192,7 +192,7 @@ class RawTestCase(_ImageTestCase, test.TestCase):
         fn = self.prepare_mocks()
         fn(target=self.TEMPLATE_PATH, image_id=None)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH, self.PATH)
-        imagebackend.disk.extend(self.PATH, self.SIZE)
+        imagebackend.disk.extend(self.PATH, self.SIZE, use_cow=False)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -264,7 +264,7 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         os.path.exists(self.PATH).AndReturn(False)
         imagebackend.libvirt_utils.create_cow_image(self.TEMPLATE_PATH,
                                                     self.PATH)
-        imagebackend.disk.extend(self.PATH, self.SIZE)
+        imagebackend.disk.extend(self.PATH, self.SIZE, use_cow=True)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -307,7 +307,7 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         os.path.exists(self.QCOW2_BASE).AndReturn(False)
         imagebackend.libvirt_utils.copy_image(self.TEMPLATE_PATH,
                                               self.QCOW2_BASE)
-        imagebackend.disk.extend(self.QCOW2_BASE, self.SIZE)
+        imagebackend.disk.extend(self.QCOW2_BASE, self.SIZE, use_cow=True)
 
         imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
                                        ).AndReturn(self.SIZE)
