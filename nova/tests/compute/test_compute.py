@@ -1401,6 +1401,13 @@ class ComputeTestCase(BaseTestCase):
         LOG.info(_("After terminating instances: %s"), instances)
         self.assertEqual(len(instances), 0)
 
+        admin_deleted_context = context.get_admin_context(
+                read_deleted="only")
+        instance = db.instance_get_by_uuid(admin_deleted_context,
+                                           instance['uuid'])
+        self.assertEqual(instance['vm_state'], vm_states.DELETED)
+        self.assertEqual(instance['task_state'], None)
+
     def test_run_terminate_with_vol_attached(self):
         """Make sure it is possible to  run and terminate instance with volume
         attached
@@ -1521,7 +1528,8 @@ class ComputeTestCase(BaseTestCase):
         self.assert_(instance['launched_at'] > launch)
         self.assertEqual(instance['deleted_at'], None)
         terminate = timeutils.utcnow()
-        self.compute.terminate_instance(self.context, instance=instance)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
         with utils.temporary_mutation(self.context, read_deleted='only'):
             instance = db.instance_get_by_uuid(self.context,
                     instance['uuid'])
@@ -1745,7 +1753,8 @@ class ComputeTestCase(BaseTestCase):
                           instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ERROR)
-        self.compute.terminate_instance(self.context, instance=instance)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_suspend_not_implemented(self):
         # Ensure expected exception is raised and the vm_state of instance
@@ -1764,7 +1773,8 @@ class ComputeTestCase(BaseTestCase):
                           instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
         self.assertEqual(instance_state, instance['vm_state'])
-        self.compute.terminate_instance(self.context, instance=instance)
+        self.compute.terminate_instance(self.context,
+                instance=jsonutils.to_primitive(instance))
 
     def test_rebuild(self):
         # Ensure instance can be rebuilt.
@@ -6776,7 +6786,8 @@ class ComputeAPITestCase(BaseTestCase):
                 self.context, instance['uuid']):
             db.block_device_mapping_destroy(self.context, bdm['id'])
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.compute.terminate_instance(self.context, instance)
+        self.compute.terminate_instance(self.context,
+                                        jsonutils.to_primitive(instance))
 
     def test_check_and_transform_bdm(self):
         base_options = {'root_device_name': 'vdb',

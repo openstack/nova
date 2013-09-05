@@ -29,6 +29,7 @@ from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common.notifier import api as notifier_api
 from nova.openstack.common.notifier import test_notifier
 from nova import test
@@ -305,7 +306,8 @@ class UsageInfoTestCase(test.TestCase):
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance)
+        self.compute.terminate_instance(self.context,
+                                        jsonutils.to_primitive(instance))
 
     def test_notify_usage_exists_deleted_instance(self):
         # Ensure 'exists' notification generates appropriate usage data.
@@ -317,7 +319,8 @@ class UsageInfoTestCase(test.TestCase):
                         'other_data': 'meow'}
         db.instance_system_metadata_update(self.context, instance['uuid'],
                 sys_metadata, False)
-        self.compute.terminate_instance(self.context, instance)
+        self.compute.terminate_instance(self.context,
+                                        jsonutils.to_primitive(instance))
         instance = db.instance_get(self.context.elevated(read_deleted='yes'),
                                    instance_id)
         compute_utils.notify_usage_exists(self.context, instance)
@@ -346,7 +349,8 @@ class UsageInfoTestCase(test.TestCase):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)
-        self.compute.terminate_instance(self.context, instance)
+        self.compute.terminate_instance(self.context,
+                                        jsonutils.to_primitive(instance))
         compute_utils.notify_usage_exists(self.context, instance)
         msg = test_notifier.NOTIFICATIONS[-1]
         self.assertEquals(msg['priority'], 'INFO')
@@ -403,7 +407,8 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['image_name'], 'fake_name')
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance)
+        self.compute.terminate_instance(self.context,
+                                        jsonutils.to_primitive(instance))
 
     def test_notify_about_aggregate_update_with_id(self):
         # Set aggregate payload
