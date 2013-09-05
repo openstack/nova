@@ -125,6 +125,41 @@ class _ComputeAPIUnitTestMixIn(object):
         instance.obj_reset_changes()
         return instance
 
+    def test_create_quota_exceeded_messages(self):
+        image_href = "image_href"
+        image_id = 0
+        instance_type = self._create_flavor()
+
+        self.mox.StubOutWithMock(self.compute_api, "_get_image")
+        self.mox.StubOutWithMock(quota.QUOTAS, "limit_check")
+        self.mox.StubOutWithMock(quota.QUOTAS, "reserve")
+
+        quota_exception = exception.OverQuota(
+            quotas={'instances': 1, 'cores': 1, 'ram': 1},
+            usages=dict((r, {'in_use': 1, 'reserved': 1}) for r in
+                        ['instances', 'cores', 'ram']),
+            overs=['instances'])
+
+        for _unused in range(2):
+            self.compute_api._get_image(self.context, image_href).AndReturn(
+                (image_id, {}))
+            quota.QUOTAS.limit_check(self.context, metadata_items=mox.IsA(int))
+            quota.QUOTAS.reserve(self.context, instances=40,
+                                 cores=mox.IsA(int),
+                                 ram=mox.IsA(int)).AndRaise(quota_exception)
+
+        self.mox.ReplayAll()
+
+        for min_count, message in [(20, '20-40'), (40, '40')]:
+            try:
+                self.compute_api.create(self.context, instance_type,
+                                        "image_href", min_count=min_count,
+                                        max_count=40)
+            except exception.TooManyInstances as e:
+                self.assertEqual(message, e.kwargs['req'])
+            else:
+                self.fail("Exception not raised")
+
     def test_suspend(self):
         # Ensure instance can be suspended.
         instance = self._create_instance_obj()
