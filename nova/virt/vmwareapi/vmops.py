@@ -440,8 +440,8 @@ class VMwareVMOps(object):
             root_disk = driver.block_device_info_get_mapping(
                            block_device_info)[0]
             connection_info = root_disk['connection_info']
-            self._volumeops.attach_volume(connection_info, instance['uuid'],
-                                          self._default_root_device)
+            self._volumeops.attach_root_volume(connection_info, instance,
+                                               self._default_root_device)
 
         def _power_on_vm():
             """Power on the VM."""
