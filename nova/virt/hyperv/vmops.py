@@ -62,7 +62,15 @@ hyperv_opts = [
                 help='Enables metrics collections for an instance by using '
                      'Hyper-V\'s metric APIs. Collected data can by retrieved '
                      'by other apps and services, e.g.: Ceilometer. '
-                     'Requires Hyper-V / Windows Server 2012 and above')
+                     'Requires Hyper-V / Windows Server 2012 and above'),
+    cfg.FloatOpt('dynamic_memory_ratio',
+                 default=1.0,
+                 help='Enables dynamic memory allocation (ballooning) when '
+                      'set to a value greater than 1. The value expresses '
+                      'the ratio between the total RAM assigned to an '
+                      'instance and its startup RAM amount. For example a '
+                      'ratio of 2.0 for an instance with 1024MB of RAM '
+                      'implies 512MB of RAM allocated at startup')
 ]
 
 CONF = cfg.CONF
@@ -205,7 +213,8 @@ class VMOps(object):
         self._vmutils.create_vm(instance_name,
                                 instance['memory_mb'],
                                 instance['vcpus'],
-                                CONF.hyperv.limit_cpu_features)
+                                CONF.hyperv.limit_cpu_features,
+                                CONF.hyperv.dynamic_memory_ratio)
 
         if root_vhd_path:
             self._vmutils.attach_ide_drive(instance_name,
