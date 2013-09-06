@@ -122,8 +122,6 @@ class InstanceMetadata():
         self.availability_zone = ec2utils.get_availability_zone_by_host(
                 instance['host'], capi)
 
-        self.ip_info = ec2utils.get_ip_info_for_instance(ctxt, instance)
-
         self.security_groups = capi.security_group_get_by_instance(ctxt,
                                                               instance)
 
@@ -152,6 +150,9 @@ class InstanceMetadata():
         if network_info is None:
             network_info = network.API().get_instance_nw_info(ctxt,
                                                               instance)
+
+        self.ip_info = \
+                ec2utils.get_ip_info_for_instance_from_nw_info(network_info)
 
         self.network_config = None
         cfg = netutils.get_injected_network_template(network_info)

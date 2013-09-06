@@ -151,10 +151,11 @@ class GenerateConfigDriveTestCase(test.NoDBTestCase):
                 contextified('mounted_dev'))
 
         class FakeInstanceMetadata(object):
-            def __init__(self, instance, content=None, extra_md=None):
-                pass
+            def __init__(_self, instance, content=None, extra_md=None,
+                         network_info=None):
+                self.assertEqual(network_info, "nw_info")
 
-            def metadata_for_config_drive(self):
+            def metadata_for_config_drive(_self):
                 return []
 
         self.useFixture(fixtures.MonkeyPatch(
@@ -178,7 +179,7 @@ class GenerateConfigDriveTestCase(test.NoDBTestCase):
 
         # And the actual call we're testing
         vm_utils.generate_configdrive('session', instance, 'vm_ref',
-                                      'userdevice')
+                                      'userdevice', "nw_info")
 
 
 class XenAPIGetUUID(test.NoDBTestCase):
