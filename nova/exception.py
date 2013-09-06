@@ -1457,11 +1457,11 @@ class MissingParameter(NovaException):
 
 
 class PciConfigInvalidWhitelist(Invalid):
-    mst_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
+    msg_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
 
 
 class PciTrackerInvalidNodeId(NovaException):
-    mst_fmt = _("Cannot change %(node_id)s to %(new_node_id)s")
+    msg_fmt = _("Cannot change %(node_id)s to %(new_node_id)s")
 
 
 # Cannot be templated, msg needs to be constructed when raised.
