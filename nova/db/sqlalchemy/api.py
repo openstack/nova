@@ -554,14 +554,19 @@ def compute_node_get_all(context, no_date_fields):
         stat_rows = conn.execute(stat_query).fetchall()
 
     # NOTE(msdubov): Transferring sqla.RowProxy objects to dicts.
-    compute_nodes = [dict(proxy.items()) for proxy in compute_node_rows]
-    services = [dict(proxy.items()) for proxy in service_rows]
     stats = [dict(proxy.items()) for proxy in stat_rows]
 
     # Join ComputeNode & Service manually.
-    # NOTE(msdubov): ComputeNodes and Services map 1-to-1.
-    for node, service in itertools.izip(compute_nodes, services):
-        node['service'] = service
+    services = {}
+    for proxy in service_rows:
+        services[proxy['id']] = dict(proxy.items())
+
+    compute_nodes = []
+    for proxy in compute_node_rows:
+        node = dict(proxy.items())
+        node['service'] = services.get(proxy['service_id'])
+
+        compute_nodes.append(node)
 
     # Join ComputeNode & ComputeNodeStat manually.
     # NOTE(msdubov): ComputeNode and ComputeNodeStat map 1-to-Many.
