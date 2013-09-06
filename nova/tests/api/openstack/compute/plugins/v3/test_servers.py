@@ -4425,3 +4425,30 @@ class ServersUnprocessableEntityTestCase(test.TestCase):
     def test_create_update_malformed_entity(self):
         body = {'server': 'string'}
         self._unprocessable_server_update(body=body)
+
+
+class TestServerRebuildXMLDeserializer(test.TestCase):
+
+    def setUp(self):
+        super(TestServerRebuildXMLDeserializer, self).setUp()
+        self.deserializer = servers.ActionDeserializer(None)
+
+    def test_rebuild_with_access_ip(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test"
+                    image_ref="http://localhost/images/1"
+                    access_ip_v4="1.2.3.4"
+                    access_ip_v6="fe80::">
+                </rebuild>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "name": "new-server-test",
+                "image_ref": "http://localhost/images/1",
+                'access_ip_v4': '1.2.3.4',
+                'access_ip_v6': 'fe80::'
+            },
+        }
+        self.assertThat(request['body'], matchers.DictMatches(expected))
