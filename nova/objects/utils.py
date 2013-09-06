@@ -20,7 +20,6 @@ import netaddr
 
 from nova.network import model as network_model
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 
 
@@ -59,8 +58,6 @@ def str_or_none(val):
     """Attempt to stringify a value, or None."""
     if val is None:
         return val
-    elif isinstance(val, basestring):
-        return strutils.safe_encode(val)
     else:
         return str(val)
 
