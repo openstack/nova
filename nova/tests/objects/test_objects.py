@@ -257,11 +257,43 @@ class TestUtils(test.TestCase):
             self.assertEqual(db_objs[index]['missing'], item.missing)
 
 
+def compare_obj(test, obj, db_obj, subs=None, allow_missing=None):
+    """Compare a NovaObject and a dict-like database object.
+
+    This automatically converts TZ-aware datetimes and iterates over
+    the fields of the object.
+
+    :param:test: The TestCase doing the comparison
+    :param:obj: The NovaObject to examine
+    :param:db_obj: The dict-like database object to use as reference
+    :param:subs: A dict of objkey=dbkey field substitutions
+    :param:allow_missing: A list of fields that may not be in db_obj
+    """
+
+    if subs is None:
+        subs = {}
+    if allow_missing is None:
+        allow_missing = []
+
+    for key in obj.fields:
+        if key in allow_missing and not obj.obj_attr_is_set(key):
+            continue
+        obj_val = obj[key]
+        db_key = subs.get(key, key)
+        db_val = db_obj[db_key]
+        if isinstance(obj_val, datetime.datetime):
+            obj_val = obj_val.replace(tzinfo=None)
+        test.assertEqual(db_val, obj_val)
+
+
 class _BaseTestCase(test.TestCase):
     def setUp(self):
         super(_BaseTestCase, self).setUp()
         self.remote_object_calls = list()
         self.context = context.RequestContext('fake-user', 'fake-project')
+
+    def compare_obj(self, obj, db_obj, subs=None, allow_missing=None):
+        compare_obj(self, obj, db_obj, subs=subs, allow_missing=allow_missing)
 
 
 class _LocalTest(_BaseTestCase):

@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from nova import db
 from nova import exception
 from nova.objects import aggregate
@@ -33,16 +31,7 @@ fake_aggregate = {
     'metadetails': {'this': 'that'},
     }
 
-
-def compare(obj, db_obj):
-    for key in obj.fields:
-        obj_val = obj[key]
-        if isinstance(obj_val, datetime.datetime):
-            obj_val = obj_val.replace(tzinfo=None)
-        if key == 'metadata':
-            key = 'metadetails'
-        db_val = db_obj[key]
-        assert db_val == obj_val, '%s != %s' % (db_val, obj_val)
+SUBS = {'metadata': 'metadetails'}
 
 
 class _TestAggregateObject(object):
@@ -51,7 +40,7 @@ class _TestAggregateObject(object):
         db.aggregate_get(self.context, 123).AndReturn(fake_aggregate)
         self.mox.ReplayAll()
         agg = aggregate.Aggregate.get_by_id(self.context, 123)
-        compare(agg, fake_aggregate)
+        self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'aggregate_create')
@@ -62,7 +51,7 @@ class _TestAggregateObject(object):
         agg.name = 'foo'
         agg.metadata = {'one': 'two'}
         agg.create(self.context)
-        compare(agg, fake_aggregate)
+        self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'aggregate_update')
@@ -73,7 +62,7 @@ class _TestAggregateObject(object):
         agg.id = 123
         agg.name = 'baz'
         agg.save(self.context)
-        compare(agg, fake_aggregate)
+        self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
     def test_save_and_create_no_hosts(self):
         agg = aggregate.Aggregate()
@@ -140,7 +129,7 @@ class _TestAggregateObject(object):
         self.mox.ReplayAll()
         aggs = aggregate.AggregateList.get_all(self.context)
         self.assertEqual(1, len(aggs))
-        compare(aggs[0], fake_aggregate)
+        self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
     def test_by_host(self):
         self.mox.StubOutWithMock(db, 'aggregate_get_by_host')
@@ -149,7 +138,7 @@ class _TestAggregateObject(object):
         self.mox.ReplayAll()
         aggs = aggregate.AggregateList.get_by_host(self.context, 'fake-host')
         self.assertEqual(1, len(aggs))
-        compare(aggs[0], fake_aggregate)
+        self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
 
 class TestAggregateObject(test_objects._LocalTest,

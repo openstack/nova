@@ -20,6 +20,7 @@ from nova import context
 from nova import exception
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests.objects import test_objects
 from nova.tests.objects import test_service
 
 
@@ -30,11 +31,12 @@ class ComputeHostAPITestCase(test.TestCase):
         self.ctxt = context.get_admin_context()
 
     def _compare_obj(self, obj, db_obj):
-        test_service.compare(obj, db_obj)
+        test_objects.compare_obj(self, obj, db_obj,
+                                 allow_missing=test_service.OPTIONAL)
 
     def _compare_objs(self, obj_list, db_obj_list):
         for index, obj in enumerate(obj_list):
-            test_service.compare(obj, db_obj_list[index])
+            self._compare_obj(obj, db_obj_list[index])
 
     def _mock_rpc_call(self, expected_message, result=None):
         if result is None:
