@@ -2337,6 +2337,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             # Quickly bail out of here
             msg = _("Instance disappeared during snapshot")
             LOG.debug(msg, instance=instance)
+        except exception.ImageNotFound:
+            msg = _("Image not found")
+            LOG.debug(msg, instance=instance)
         except exception.UnexpectedTaskStateError as e:
             actual_task_state = e.kwargs.get('actual', None)
             if actual_task_state == 'deleting':
