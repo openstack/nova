@@ -193,6 +193,9 @@ class InstanceMetadata():
         floating_ips = self.ip_info['floating_ips']
         floating_ip = floating_ips and floating_ips[0] or ''
 
+        fixed_ips = self.ip_info['fixed_ips']
+        fixed_ip = fixed_ips and fixed_ips[0] or ''
+
         fmt_sgroups = [x['name'] for x in self.security_groups]
 
         meta_data = {
@@ -201,7 +204,7 @@ class InstanceMetadata():
             'ami-manifest-path': 'FIXME',
             'instance-id': self.ec2_ids['instance-id'],
             'hostname': hostname,
-            'local-ipv4': self.address,
+            'local-ipv4': self.address or fixed_ip,
             'reservation-id': self.instance['reservation_id'],
             'security-groups': fmt_sgroups}
 

@@ -308,6 +308,30 @@ class MetadataTestCase(test.TestCase):
 
         base.InstanceMetadata(INSTANCES[0])
 
+    def test_local_ipv4_from_nw_info(self):
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                         num_networks=2)
+        expected_local = "192.168.1.100"
+        md = fake_InstanceMetadata(self.stubs, self.instance,
+                                   network_info=nw_info)
+        data = md.get_ec2_metadata(version='2009-04-04')
+        self.assertEqual(data['meta-data']['local-ipv4'], expected_local)
+
+    def test_local_ipv4_from_address(self):
+        nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
+                                                         num_networks=2)
+        expected_local = "fake"
+        md = fake_InstanceMetadata(self.stubs, self.instance,
+                                   network_info=nw_info, address="fake")
+        data = md.get_ec2_metadata(version='2009-04-04')
+        self.assertEqual(data['meta-data']['local-ipv4'], expected_local)
+
+    def test_local_ipv4_from_nw_none(self):
+        md = fake_InstanceMetadata(self.stubs, self.instance,
+                                   network_info=[])
+        data = md.get_ec2_metadata(version='2009-04-04')
+        self.assertEqual(data['meta-data']['local-ipv4'], '')
+
 
 class OpenStackMetadataTestCase(test.TestCase):
     def setUp(self):
