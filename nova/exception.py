@@ -504,7 +504,7 @@ class ISCSITargetNotFoundForVolume(NotFound):
 
 
 class ISERTargetNotFoundForVolume(NotFound):
-    message = _("No target id found for volume %(volume_id)s.")
+    msg_fmt = _("No target id found for volume %(volume_id)s.")
 
 
 class DiskNotFound(NotFound):
@@ -773,7 +773,7 @@ class QuotaResourceUnknown(QuotaNotFound):
 
 
 class ProjectUserQuotaNotFound(QuotaNotFound):
-    message = _("Quota for user %(user_id)s in project %(project_id)s "
+    msg_fmt = _("Quota for user %(user_id)s in project %(project_id)s "
                 "could not be found.")
 
 
@@ -888,7 +888,7 @@ class ConsoleTypeInvalid(Invalid):
 
 
 class ConsoleTypeUnavailable(Invalid):
-    message = _("Unavailable console type %(console_type)s")
+    msg_fmt = _("Unavailable console type %(console_type)s.")
 
 
 class InstanceTypeNotFound(NotFound):
