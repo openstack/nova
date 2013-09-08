@@ -103,10 +103,6 @@ class GroupAntiAffinityFilter(AffinityFilter):
     hosts.
     """
 
-    # The hosts the instances in the group are running on doesn't change
-    # within a request
-    run_filter_once_per_request = True
-
     def host_passes(self, host_state, filter_properties):
         group_hosts = filter_properties.get('group_hosts') or []
         LOG.debug(_("Group anti affinity: check if %(host)s not "
