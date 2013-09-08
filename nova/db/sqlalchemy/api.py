@@ -240,7 +240,7 @@ def exact_filter(query, model, filters, legal_keys):
         # OK, filtering on this key; what value do we search for?
         value = filters.pop(key)
 
-        if key == 'metadata':
+        if key == 'metadata' or key == 'system_metadata':
             column_attr = getattr(model, key)
             if isinstance(value, list):
                 for item in value:
@@ -1691,7 +1691,8 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     # For other filters that don't match this, we will do regexp matching
     exact_match_filter_names = ['project_id', 'user_id', 'image_ref',
                                 'vm_state', 'instance_type_id', 'uuid',
-                                'metadata', 'task_state']
+                                'metadata', 'host', 'task_state',
+                                'system_metadata']
 
     # Filter the query
     query_prefix = exact_filter(query_prefix, models.Instance,
