@@ -880,8 +880,16 @@ class NetworkManager(manager.Manager):
         instance_uuid = fixed_ip_ref['instance_uuid']
         vif_id = fixed_ip_ref['virtual_interface_id']
 
+        # NOTE(vish) This db query could be removed if we pass az and name
+        #            (or the whole instance object).
+        instance = self.db.instance_get_by_uuid(
+                context.elevated(read_deleted='yes'),
+                instance_uuid)
+        project_id = instance.project_id
         try:
-            reservations = self.quotas.reserve(context, fixed_ips=-1)
+            reservations = self.quotas.reserve(context,
+                                               project_id=project_id,
+                                               fixed_ips=-1)
         except Exception:
             reservations = None
             LOG.exception(_("Failed to update usages deallocating "
@@ -889,12 +897,6 @@ class NetworkManager(manager.Manager):
 
         self._do_trigger_security_group_members_refresh_for_instance(
             instance_uuid)
-
-        # NOTE(vish) This db query could be removed if we pass az and name
-        #            (or the whole instance object).
-        instance = self.db.instance_get_by_uuid(
-                context.elevated(read_deleted='yes'),
-                instance_uuid)
 
         if self._validate_instance_zone_for_dns_domain(context, instance):
             for n in self.instance_dns_manager.get_entries_by_address(address,
@@ -951,7 +953,7 @@ class NetworkManager(manager.Manager):
 
         # Commit the reservations
         if reservations:
-            self.quotas.commit(context, reservations)
+            self.quotas.commit(context, reservations, project_id=project_id)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
