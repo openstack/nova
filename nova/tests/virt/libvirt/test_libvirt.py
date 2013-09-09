@@ -53,6 +53,7 @@ from nova import test
 from nova.tests import fake_network
 import nova.tests.image.fake
 from nova.tests import matchers
+from nova.tests.objects import test_pci_device
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova import utils
 from nova import version
@@ -1080,15 +1081,14 @@ class LibvirtConnTestCase(test.TestCase):
         service_ref, compute_ref = self._create_fake_service_compute()
 
         instance_ref = db.instance_create(self.context, self.test_instance)
-        pci_device_info = {
-            'compute_node_id': 1,
-            'label': 'fake',
-            'status': 'allocated',
-            'address': '0000:00:00.1',
-            'compute_id': compute_ref['id'],
-            'instance_uuid': instance_ref['uuid'],
-            'extra_info': jsonutils.dumps({}),
-        }
+        pci_device_info = dict(test_pci_device.fake_db_dev)
+        pci_device_info.update(compute_node_id=1,
+                               label='fake',
+                               status='allocated',
+                               address='0000:00:00.1',
+                               compute_id=compute_ref['id'],
+                               instance_uuid=instance_ref['uuid'],
+                               extra_info=jsonutils.dumps({}))
         db.pci_device_update(self.context, pci_device_info['compute_node_id'],
                              pci_device_info['address'], pci_device_info)
 
@@ -1119,15 +1119,14 @@ class LibvirtConnTestCase(test.TestCase):
         service_ref, compute_ref = self._create_fake_service_compute()
 
         instance_ref = db.instance_create(self.context, self.test_instance)
-        pci_device_info = {
-            'compute_node_id': 1,
-            'label': 'fake',
-            'status': 'allocated',
-            'address': '0000:00:00.2',
-            'compute_id': compute_ref['id'],
-            'instance_uuid': instance_ref['uuid'],
-            'extra_info': jsonutils.dumps({}),
-        }
+        pci_device_info = dict(test_pci_device.fake_db_dev)
+        pci_device_info.update(compute_node_id=1,
+                               label='fake',
+                               status='allocated',
+                               address='0000:00:00.2',
+                               compute_id=compute_ref['id'],
+                               instance_uuid=instance_ref['uuid'],
+                               extra_info=jsonutils.dumps({}))
         db.pci_device_update(self.context, pci_device_info['compute_node_id'],
                              pci_device_info['address'], pci_device_info)
 

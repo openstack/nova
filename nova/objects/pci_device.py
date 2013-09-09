@@ -143,7 +143,7 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     def _from_db_object(context, pci_device, db_dev):
         for key in pci_device.fields:
             if key != 'extra_info':
-                pci_device[key] = db_dev.get(key)
+                pci_device[key] = db_dev[key]
             else:
                 extra_info = db_dev.get("extra_info")
                 pci_device.extra_info = jsonutils.loads(extra_info)

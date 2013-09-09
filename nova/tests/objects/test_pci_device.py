@@ -40,9 +40,13 @@ fake_db_dev = {
     'id': 1,
     'compute_node_id': 1,
     'address': 'a',
-    'product_id': 'p',
     'vendor_id': 'v',
+    'product_id': 'p',
+    'dev_type': 't',
     'status': 'available',
+    'dev_id': 'i',
+    'label': 'l',
+    'instance_uuid': None,
     'extra_info': '{}',
     }
 
@@ -55,9 +59,13 @@ fake_db_dev_1 = {
     'id': 2,
     'compute_node_id': 1,
     'address': 'a1',
-    'product_id': 'p1',
     'vendor_id': 'v1',
+    'product_id': 'p1',
+    'dev_type': 't',
     'status': 'available',
+    'dev_id': 'i',
+    'label': 'l',
+    'instance_uuid': None,
     'extra_info': '{}',
     }
 
