@@ -1221,7 +1221,9 @@
 #force_dhcp_release=true
 
 # If True in multi_host mode, all compute hosts share the same
-# dhcp address. (boolean value)
+# dhcp address. The same IP address used for DHCP will be
+# added on each nova-network node which is only visible to the
+# vms on the same host. (boolean value)
 #share_dhcp_address=false
 
 # If True, when a DNS entry must be updated, it sends a fanout
