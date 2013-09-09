@@ -312,18 +312,18 @@ class TestNeutronv2Base(test.TestCase):
             return api
         search_ids = [net['id'] for net in nets if net['id'] in req_net_ids]
 
-        mox_list_network_params = dict(tenant_id=self.instance['project_id'],
-                                       shared=False)
         if search_ids:
-            mox_list_network_params['id'] = mox.SameElementsAs(search_ids)
-        self.moxed_client.list_networks(
-            **mox_list_network_params).AndReturn({'networks': nets})
-
-        mox_list_network_params = dict(shared=True)
-        if search_ids:
-            mox_list_network_params['id'] = mox.SameElementsAs(search_ids)
-        self.moxed_client.list_networks(
-            **mox_list_network_params).AndReturn({'networks': []})
+            mox_list_params = {'id': mox.SameElementsAs(search_ids)}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': nets})
+        else:
+            mox_list_params = {'tenant_id': self.instance['project_id'],
+                               'shared': False}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': nets})
+            mox_list_params = {'shared': True}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': []})
         for net_id in expected_network_order:
             port_req_body = {
                 'port': {
@@ -889,31 +889,19 @@ class TestNeutronv2(TestNeutronv2Base):
     def test_validate_networks(self):
         requested_networks = [('my_netid1', 'test', None),
                               ('my_netid2', 'test2', None)]
+        ids = ['my_netid1', 'my_netid2']
         self.moxed_client.list_networks(
-            id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
-            tenant_id=self.context.project_id,
-            shared=False).AndReturn(
+            id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets2})
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
-            shared=True).AndReturn(
-                {'networks': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
         api.validate_networks(self.context, requested_networks)
 
     def test_validate_networks_ex_1(self):
-        requested_networks = [('my_netid1', 'test', None),
-                              ('my_netid2', 'test2', None)]
+        requested_networks = [('my_netid1', 'test', None)]
         self.moxed_client.list_networks(
-            id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
-            tenant_id=self.context.project_id,
-            shared=False).AndReturn(
+            id=mox.SameElementsAs(['my_netid1'])).AndReturn(
                 {'networks': self.nets1})
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(['my_netid1', 'my_netid2']),
-            shared=True).AndReturn(
-                {'networks': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
         try:
@@ -925,15 +913,10 @@ class TestNeutronv2(TestNeutronv2Base):
         requested_networks = [('my_netid1', 'test', None),
                               ('my_netid2', 'test2', None),
                               ('my_netid3', 'test3', None)]
+        ids = ['my_netid1', 'my_netid2', 'my_netid3']
         self.moxed_client.list_networks(
-            id=mox.SameElementsAs(['my_netid1', 'my_netid2', 'my_netid3']),
-            tenant_id=self.context.project_id,
-            shared=False).AndReturn(
+            id=mox.SameElementsAs(ids)).AndReturn(
                 {'networks': self.nets1})
-        self.moxed_client.list_networks(
-            id=mox.SameElementsAs(['my_netid1', 'my_netid2', 'my_netid3']),
-            shared=True).AndReturn(
-                {'networks': []})
         self.mox.ReplayAll()
         api = neutronapi.API()
         try:
@@ -1033,16 +1016,9 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
         self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
 
-        search_opts = dict(id=[port_a['network_id'], port_b['network_id']],
-                           tenant_id=self.context.project_id,
-                           shared=False)
+        search_opts = {'id': [port_a['network_id'], port_b['network_id']]}
         self.moxed_client.list_networks(
             **search_opts).AndReturn({'networks': self.nets2})
-
-        search_opts = dict(id=[port_a['network_id'], port_b['network_id']],
-                           shared=True)
-        self.moxed_client.list_networks(
-            **search_opts).AndReturn({'networks': []})
 
         self.mox.ReplayAll()
 
@@ -1090,17 +1066,18 @@ class TestNeutronv2(TestNeutronv2Base):
     def _get_available_networks(self, prv_nets, pub_nets, req_ids=None):
         api = neutronapi.API()
         nets = prv_nets + pub_nets
-        mox_list_network_params = dict(tenant_id=self.instance['project_id'],
-                                       shared=False)
         if req_ids:
-            mox_list_network_params['id'] = req_ids
-        self.moxed_client.list_networks(
-            **mox_list_network_params).AndReturn({'networks': prv_nets})
-        mox_list_network_params = dict(shared=True)
-        if req_ids:
-            mox_list_network_params['id'] = req_ids
-        self.moxed_client.list_networks(
-            **mox_list_network_params).AndReturn({'networks': pub_nets})
+            mox_list_params = {'id': req_ids}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': nets})
+        else:
+            mox_list_params = {'tenant_id': self.instance['project_id'],
+                               'shared': False}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': prv_nets})
+            mox_list_params = {'shared': True}
+            self.moxed_client.list_networks(
+                **mox_list_params).AndReturn({'networks': pub_nets})
 
         self.mox.ReplayAll()
         rets = api._get_available_networks(self.context,

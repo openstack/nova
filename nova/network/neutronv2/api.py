@@ -124,18 +124,19 @@ class API(base.Base):
         """
         neutron = neutronv2.get_client(context)
 
-        # If user has specified to attach instance only to specific
-        # networks, add them to **search_opts
-        # (1) Retrieve non-public network list owned by the tenant.
-        search_opts = {"tenant_id": project_id, 'shared': False}
         if net_ids:
-            search_opts['id'] = net_ids
-        nets = neutron.list_networks(**search_opts).get('networks', [])
-        # (2) Retrieve public network list.
-        search_opts = {'shared': True}
-        if net_ids:
-            search_opts['id'] = net_ids
-        nets += neutron.list_networks(**search_opts).get('networks', [])
+            # If user has specified to attach instance only to specific
+            # networks then only add these to **search_opts. This search will
+            # also include 'shared' networks.
+            search_opts = {'id': net_ids}
+            nets = neutron.list_networks(**search_opts).get('networks', [])
+        else:
+            # (1) Retrieve non-public network list owned by the tenant.
+            search_opts = {'tenant_id': project_id, 'shared': False}
+            nets = neutron.list_networks(**search_opts).get('networks', [])
+            # (2) Retrieve public network list.
+            search_opts = {'shared': True}
+            nets += neutron.list_networks(**search_opts).get('networks', [])
 
         _ensure_requested_network_ordering(
             lambda x: x['id'],
