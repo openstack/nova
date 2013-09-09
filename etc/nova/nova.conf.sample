@@ -2997,6 +2997,10 @@
 # initramfs via cmdline. (boolean value)
 #pxe_network_config=false
 
+# This gets passed to Neutron as the bootfile dhcp parameter
+# when the dhcp_options_enabled is set. (string value)
+#pxe_bootfile_name=pxelinux.0
+
 
 #
 # Options defined in nova.virt.baremetal.tilera_pdu

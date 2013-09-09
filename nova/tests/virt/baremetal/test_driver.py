@@ -372,11 +372,11 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
     def test_dhcp_options_for_instance(self):
         node = self._create_node()
-        fake_path = "/a/b/c"
-        self.mox.StubOutWithMock(pxe, 'get_pxe_config_file_path')
-        pxe.get_pxe_config_file_path(mox.IgnoreArg()).AndReturn(fake_path)
+        fake_bootfile = "pxelinux.0"
+        self.mox.StubOutWithMock(pxe, 'get_pxe_bootfile_name')
+        pxe.get_pxe_bootfile_name(mox.IgnoreArg()).AndReturn(fake_bootfile)
         self.mox.ReplayAll()
-        expected = [{'opt_name': 'bootfile-name', 'opt_value': fake_path},
+        expected = [{'opt_name': 'bootfile-name', 'opt_value': fake_bootfile},
                     {'opt_name': 'server-ip-address', 'opt_value': CONF.my_ip},
                     {'opt_name': 'tftp-server', 'opt_value': CONF.my_ip}]
 

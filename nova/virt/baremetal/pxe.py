@@ -60,6 +60,10 @@ pxe_opts = [
                 help='If set, pass the network configuration details to the '
                 'initramfs via cmdline.',
                 default=False),
+    cfg.StrOpt('pxe_bootfile_name',
+               help='This gets passed to Neutron as the bootfile dhcp '
+               'parameter when the dhcp_options_enabled is set.',
+               default='pxelinux.0'),
     ]
 
 LOG = logging.getLogger(__name__)
@@ -154,6 +158,11 @@ def get_image_file_path(instance):
 def get_pxe_config_file_path(instance):
     """Generate the path for an instances PXE config file."""
     return os.path.join(CONF.baremetal.tftp_root, instance['uuid'], 'config')
+
+
+def get_pxe_bootfile_name(instance):
+    """Returns the pxe_bootfile_name option."""
+    return CONF.baremetal.pxe_bootfile_name
 
 
 def get_partition_sizes(instance):
