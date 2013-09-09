@@ -53,6 +53,21 @@ class KeyManager(object):
         pass
 
     @abc.abstractmethod
+    def copy_key(self, ctxt, key_id, **kwargs):
+        """Copies (i.e., clones) a key stored by the key manager.
+
+        This method copies the specified key and returns the copy's UUID. If
+        the specified context does not permit copying keys, then a
+        NotAuthorized error should be raised.
+
+        Implementation note: This method should behave identically to
+            store_key(context, get_key(context, <encryption key UUID>))
+        although it is preferable to perform this operation within the key
+        manager to avoid unnecessary handling of the key material.
+        """
+        pass
+
+    @abc.abstractmethod
     def get_key(self, ctxt, key_id, **kwargs):
         """Retrieves the specified key.
 

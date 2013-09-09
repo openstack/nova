@@ -20,12 +20,12 @@ anything but integration testing.
 """
 
 import array
-import uuid
 
 from nova import exception
 from nova.keymgr import key
 from nova.keymgr import key_mgr
 from nova.openstack.common import log as logging
+from nova.openstack.common import uuidutils
 from nova import utils
 
 
@@ -35,15 +35,15 @@ LOG = logging.getLogger(__name__)
 class MockKeyManager(key_mgr.KeyManager):
     """
     This mock key manager implementation supports all the methods specified
-    by the key manager interface. This implementation creates a single key in
-    response to all invocations of create_key. Side effects (e.g., raising
-    exceptions) for each method are handled as specified by the key manager
-    interface.
+    by the key manager interface. This implementation stores keys within a
+    dictionary, and as a result, it is not acceptable for use across different
+    services. Side effects (e.g., raising exceptions) for each method are
+    handled as specified by the key manager interface.
 
     This class should NOT be used for anything but integration testing because
-    the same key is created for all invocations of create_key and keys are not
-    stored persistently.
+    keys are not stored persistently.
     """
+
     def __init__(self):
         self.keys = {}
 
@@ -67,6 +67,13 @@ class MockKeyManager(key_mgr.KeyManager):
 
         return self.store_key(ctxt, _key)
 
+    def _generate_key_id(self):
+        key_id = uuidutils.generate_uuid()
+        while key_id in self.keys:
+            key_id = uuidutils.generate_uuid()
+
+        return key_id
+
     def store_key(self, ctxt, key, **kwargs):
         """Stores (i.e., registers) a key with the key manager.
 
@@ -76,22 +83,26 @@ class MockKeyManager(key_mgr.KeyManager):
         if ctxt is None:
             raise exception.NotAuthorized()
 
-        # generate UUID and ensure that it isn't in use
-        key_id = uuid.uuid4()
-        while key_id in self.keys:
-            key_id = uuid.uuid4()
-
+        key_id = self._generate_key_id()
         self.keys[key_id] = key
 
         return key_id
 
+    def copy_key(self, ctxt, key_id, **kwargs):
+        if ctxt is None:
+            raise exception.NotAuthorized()
+
+        copied_key_id = self._generate_key_id()
+        self.keys[copied_key_id] = self.keys[key_id]
+
+        return copied_key_id
+
     def get_key(self, ctxt, key_id, **kwargs):
         """Retrieves the key identified by the specified id.
 
-        This implementation returns a fixed key that is associated with the
-        UUID returned by the create_key method. A NotAuthorized exception is
-        raised if the specified context is None; a KeyError is raised if the
-        UUID is invalid.
+        This implementation returns the key that is associated with the
+        specified UUID. A NotAuthorized exception is raised if the specified
+        context is None; a KeyError is raised if the UUID is invalid.
         """
         if ctxt is None:
             raise exception.NotAuthorized()
@@ -101,9 +112,8 @@ class MockKeyManager(key_mgr.KeyManager):
     def delete_key(self, ctxt, key_id, **kwargs):
         """Deletes the key identified by the specified id.
 
-        This implementation intentionally does nothing except raise a
-        NotAuthorized exception is the context is None or a KeyError if the
-        UUID is invalid.
+        A NotAuthorized exception is raised if the context is None and a
+        KeyError is raised if the UUID is invalid.
         """
         if ctxt is None:
             raise exception.NotAuthorized()

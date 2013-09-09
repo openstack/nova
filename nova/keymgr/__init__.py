@@ -21,7 +21,8 @@ from nova.openstack.common import log as logging
 
 keymgr_opts = [
     cfg.StrOpt('keymgr_api_class',
-               default='nova.keymgr.key_mgr.KeyManager',
+               default='nova.keymgr.'
+                       'not_implemented_key_mgr.NotImplementedKeyManager',
                help='The full class name of the key manager API class'),
 ]
 
