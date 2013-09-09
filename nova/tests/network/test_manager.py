@@ -2533,6 +2533,32 @@ class FloatingIPTestCase(test.TestCase):
                           self.network.get_floating_ip,
                           self.context, 'fake-id')
 
+    def _test_associate_floating_ip_failure(self, stdout, expected_exception):
+        def _fake_catchall(*args, **kwargs):
+            return {'id': 'fake', 'network': 'fake'}
+
+        def _fake_add_floating_ip(*args, **kwargs):
+            raise processutils.ProcessExecutionError(stdout)
+
+        self.stubs.Set(self.network.db, 'floating_ip_fixed_ip_associate',
+                _fake_catchall)
+        self.stubs.Set(self.network.db, 'floating_ip_disassociate',
+                _fake_catchall)
+        self.stubs.Set(self.network.l3driver, 'add_floating_ip',
+                _fake_add_floating_ip)
+
+        self.assertRaises(expected_exception,
+                          self.network._associate_floating_ip, self.context,
+                          '', '', '', '')
+
+    def test_associate_floating_ip_failure(self):
+        self._test_associate_floating_ip_failure(None,
+                processutils.ProcessExecutionError)
+
+    def test_associate_floating_ip_failure_interface_not_found(self):
+        self._test_associate_floating_ip_failure('Cannot find device',
+                exception.NoFloatingIpInterface)
+
 
 class InstanceDNSTestCase(test.TestCase):
     """Tests nova.network.manager instance DNS."""
