@@ -63,6 +63,10 @@ def add_instance_fault_from_exc(context, conductor,
             message = None
     if not message:
         message = fault.__class__.__name__
+    # NOTE(dripton) The message field in the database is limited to 255 chars.
+    # MySQL silently truncates overly long messages, but PostgreSQL throws an
+    # error if we don't truncate it.
+    u_message = unicode(message)[:255]
     details = ''
 
     if exc_info and code == 500:
@@ -72,7 +76,7 @@ def add_instance_fault_from_exc(context, conductor,
     values = {
         'instance_uuid': instance['uuid'],
         'code': code,
-        'message': unicode(message),
+        'message': u_message,
         'details': unicode(details),
         'host': CONF.host
     }
