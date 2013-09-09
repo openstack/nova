@@ -1894,7 +1894,7 @@
 # necessary if the image contains a recent version of cloud-
 # init. Possible mechanisms require the nbd driver (for qcow
 # and raw), or loop (for raw). (boolean value)
-#resize_fs_using_block_device=true
+#resize_fs_using_block_device=false
 
 
 #
