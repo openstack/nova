@@ -4800,7 +4800,7 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_instance_get_all_by_host(context, host, columns_to_join):
             call_info['get_all_by_host'] += 1
-            self.assertEqual(columns_to_join, [])
+            self.assertEqual(columns_to_join, ['system_metadata'])
             return instances[:]
 
         def fake_instance_get_by_uuid(context, instance_uuid, columns_to_join):

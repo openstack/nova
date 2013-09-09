@@ -4251,7 +4251,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             else:
                 # No more in our copy of uuids.  Pull from the DB.
                 db_instances = instance_obj.InstanceList.get_by_host(
-                    context, self.host, expected_attrs=[])
+                    context, self.host, expected_attrs=['system_metadata'])
                 if not db_instances:
                     # None.. just return.
                     return
