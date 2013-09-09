@@ -2338,7 +2338,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = db.instance_create(self.context, instance_data)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
-        xml = conn.to_xml(instance_ref, network_info, disk_info)
+        xml = conn.to_xml(self.context, instance_ref, network_info, disk_info)
         tree = etree.fromstring(xml)
         interfaces = tree.findall("./devices/interface")
         self.assertEquals(len(interfaces), 2)
@@ -2357,7 +2357,7 @@ class LibvirtConnTestCase(test.TestCase):
         network_info = _fake_network_info(self.stubs, 1)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
-        xml = conn.to_xml(instance_ref, network_info, disk_info)
+        xml = conn.to_xml(self.context, instance_ref, network_info, disk_info)
         tree = etree.fromstring(xml)
 
         check = [
@@ -2411,7 +2411,8 @@ class LibvirtConnTestCase(test.TestCase):
             network_info = _fake_network_info(self.stubs, 1)
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                                 instance_ref)
-            xml = conn.to_xml(instance_ref, network_info, disk_info)
+            xml = conn.to_xml(self.context, instance_ref,
+                              network_info, disk_info)
             tree = etree.fromstring(xml)
 
             for i, (check, expected_result) in enumerate(checks):
@@ -2447,7 +2448,8 @@ class LibvirtConnTestCase(test.TestCase):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
-        xml = drv.to_xml(instance_ref, network_info, disk_info, image_meta)
+        xml = drv.to_xml(self.context, instance_ref,
+                         network_info, disk_info, image_meta)
         tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
         for disk in disks:
@@ -2460,7 +2462,8 @@ class LibvirtConnTestCase(test.TestCase):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
-        xml = drv.to_xml(instance_ref, network_info, disk_info, image_meta)
+        xml = drv.to_xml(self.context, instance_ref,
+                         network_info, disk_info, image_meta)
         tree = etree.fromstring(xml)
         disks = tree.findall('./devices/disk/driver')
         for disk in disks:
@@ -2477,7 +2480,8 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance_ref,
                                             block_device_info,
                                             image_meta)
-        xml = drv.to_xml(instance_ref, network_info, disk_info, image_meta,
+        xml = drv.to_xml(self.context, instance_ref,
+                         network_info, disk_info, image_meta,
                          block_device_info=block_device_info)
         tree = etree.fromstring(xml)
 
@@ -2504,7 +2508,8 @@ class LibvirtConnTestCase(test.TestCase):
         drv = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance_ref)
-        xml = drv.to_xml(instance_ref, network_info, disk_info, image_meta)
+        xml = drv.to_xml(self.context, instance_ref,
+                         network_info, disk_info, image_meta)
         tree = etree.fromstring(xml)
         self.assertEqual(tree.find('./uuid').text,
                          instance_ref['uuid'])
@@ -2660,8 +2665,8 @@ class LibvirtConnTestCase(test.TestCase):
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                                 instance_ref,
                                                 rescue=rescue)
-            xml = conn.to_xml(instance_ref, network_info, disk_info,
-                              rescue=rescue)
+            xml = conn.to_xml(self.context, instance_ref,
+                              network_info, disk_info, rescue=rescue)
             tree = etree.fromstring(xml)
             for i, (check, expected_result) in enumerate(checks):
                 self.assertEqual(check(tree),
@@ -3475,7 +3480,7 @@ class LibvirtConnTestCase(test.TestCase):
                                             image_meta)
         conn._create_image(context, instance,
                            disk_info['mapping'])
-        xml = conn.to_xml(instance, None,
+        xml = conn.to_xml(self.context, instance, None,
                           disk_info, image_meta)
 
         wantFiles = [
@@ -3536,7 +3541,7 @@ class LibvirtConnTestCase(test.TestCase):
                                             image_meta)
         conn._create_image(context, instance,
                            disk_info['mapping'])
-        xml = conn.to_xml(instance, None,
+        xml = conn.to_xml(self.context, instance, None,
                           disk_info, image_meta)
 
         wantFiles = [
@@ -4029,7 +4034,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn._destroy(instance)
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance, block_device_info)
-        conn.to_xml(instance, network_info, disk_info,
+        conn.to_xml(self.context, instance, network_info, disk_info,
                     block_device_info=block_device_info,
                     write_to_disk=True).AndReturn(dummyxml)
         disk_info_json = '[{"virt_disk_size": 2}]'
@@ -6481,7 +6486,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_extend(path, size, use_cow=False):
             pass
 
-        def fake_to_xml(instance, network_info, disk_info,
+        def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
                         block_device_info=None, write_to_disk=False):
             return ""
@@ -6570,7 +6575,7 @@ class LibvirtDriverTestCase(test.TestCase):
             else:
                 return {'state': power_state.SHUTDOWN}
 
-        def fake_to_xml(instance, network_info, disk_info,
+        def fake_to_xml(context, instance, network_info, disk_info,
                         image_meta=None, rescue=None,
                         block_device_info=None):
             return ""
