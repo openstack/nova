@@ -677,9 +677,9 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.list_networks(
             tenant_id=self.instance['project_id'],
             shared=False).AndReturn(
-                {'networks': []})
+                {'networks': model.NetworkInfo([])})
         self.moxed_client.list_networks(shared=True).AndReturn(
-            {'networks': []})
+            {'networks': model.NetworkInfo([])})
         self.mox.ReplayAll()
         nwinfo = api.allocate_for_instance(self.context, self.instance)
         self.assertEqual(len(nwinfo), 0)

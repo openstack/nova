@@ -262,7 +262,7 @@ class API(base.Base):
 
         if not nets:
             LOG.warn(_("No network configured!"), instance=instance)
-            return []
+            return network_model.NetworkInfo([])
 
         security_groups = kwargs.get('security_groups', [])
         security_group_ids = []
