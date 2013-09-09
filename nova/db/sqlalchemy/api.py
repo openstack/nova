@@ -4443,10 +4443,11 @@ def _cell_get_by_name_query(context, cell_name, session=None):
 def cell_update(context, cell_name, values):
     session = get_session()
     with session.begin():
-        cell = _cell_get_by_name_query(context, cell_name, session=session)
-        if cell.count() == 0:
+        cell_query = _cell_get_by_name_query(context, cell_name,
+                                             session=session)
+        if not cell_query.update(values):
             raise exception.CellNotFound(cell_name=cell_name)
-        cell.update(values)
+        cell = cell_query.first()
     return cell
 
 
