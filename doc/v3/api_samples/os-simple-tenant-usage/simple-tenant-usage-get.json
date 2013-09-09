@@ -1,0 +1,13 @@
+{
+    "tenant_usages": [
+        {
+            "start": "2013-09-09T13:18:27.898411",
+            "stop": "2013-09-09T14:18:27.898411",
+            "tenant_id": "openstack",
+            "total_hours": 1.0,
+            "total_local_gb_usage": 1.0,
+            "total_memory_mb_usage": 512.0,
+            "total_vcpus_usage": 1.0
+        }
+    ]
+}
