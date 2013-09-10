@@ -85,3 +85,39 @@ class VMwareVifTestCase(test.TestCase):
             self.cluster)
         self.mox.ReplayAll()
         vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=False)
+
+    def test_get_network_ref_quantum(self):
+        self.mox.StubOutWithMock(vif, 'get_quantum_network')
+        vif.get_quantum_network(self.session, 'fa0', self.cluster, self.vif)
+        self.mox.ReplayAll()
+        vif.get_network_ref(self.session, self.cluster, self.vif, True)
+
+    def test_get_network_ref_flat_dhcp(self):
+        self.mox.StubOutWithMock(vif, 'ensure_vlan_bridge')
+        vif.ensure_vlan_bridge(self.session, self.vif, cluster=self.cluster,
+                               create_vlan=False)
+        self.mox.ReplayAll()
+        vif.get_network_ref(self.session, self.cluster, self.vif, False)
+
+    def test_get_network_ref_bridge(self):
+        self.mox.StubOutWithMock(vif, 'ensure_vlan_bridge')
+        vif.ensure_vlan_bridge(self.session, self.vif, cluster=self.cluster,
+                               create_vlan=True)
+        self.mox.ReplayAll()
+        network = network_model.Network(id=0,
+                                        bridge='fa0',
+                                        label='fake',
+                                        vlan=3,
+                                        bridge_interface='eth0',
+                                        injected=True,
+                                        should_create_vlan=True)
+        self.vif = network_model.NetworkInfo([
+                network_model.VIF(id=None,
+                                  address='DE:AD:BE:EF:00:00',
+                                  network=network,
+                                  type=None,
+                                  devname=None,
+                                  ovs_interfaceid=None,
+                                 rxtx_cap=3)
+        ])[0]
+        vif.get_network_ref(self.session, self.cluster, self.vif, False)

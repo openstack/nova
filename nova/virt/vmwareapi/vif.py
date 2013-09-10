@@ -20,8 +20,10 @@
 from oslo.config import cfg
 
 from nova import exception
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
-
+from nova.virt.vmwareapi import vim_util
+from nova.virt.vmwareapi import vm_util
 
 CONF = cfg.CONF
 
@@ -82,3 +84,43 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
             network_util.create_port_group(session, bridge,
                                        vswitch_associated, 0,
                                        cluster)
+
+
+def get_quantum_network(session, network_name, cluster, vif):
+    host = vm_util.get_host_ref(session, cluster)
+    try:
+        opaque = session._call_method(vim_util, "get_dynamic_property", host,
+                                      "HostSystem",
+                                      "config.network.opaqueNetwork")
+    except error_util.VimFaultException:
+        opaque = None
+    network_ref = None
+    if opaque:
+        bridge = vif['network']['id']
+        opaque_networks = opaque.HostOpaqueNetworkInfo
+        for network in opaque_networks:
+            if network['opaqueNetworkId'] == bridge:
+                network_ref = {'type': 'OpaqueNetwork',
+                               'network-id': network['opaqueNetworkId'],
+                               'network-name': network['opaqueNetworkName'],
+                               'network-type': network['opaqueNetworkType']}
+                break
+    else:
+        bridge = network_name
+        network_ref = network_util.get_network_with_the_name(
+                session, network_name, cluster)
+    if network_ref is None:
+        raise exception.NetworkNotFoundForBridge(bridge=bridge)
+    return network_ref
+
+
+def get_network_ref(session, cluster, vif, is_quantum):
+    if is_quantum:
+        network_name = (vif['network']['bridge'] or
+                        CONF.vmware.integration_bridge)
+        network_ref = get_quantum_network(session, network_name, cluster, vif)
+    else:
+        create_vlan = vif['network'].get_meta('should_create_vlan', False)
+        network_ref = ensure_vlan_bridge(session, vif, cluster=cluster,
+                                         create_vlan=create_vlan)
+    return network_ref
