@@ -55,7 +55,7 @@ class API(base.Base):
         #               console info. I am not sure which is better
         #               here.
         instance = self._get_instance(context, instance_uuid)
-        topic = self._get_console_topic(context, instance['host']),
+        topic = self._get_console_topic(context, instance['host'])
         rpcapi = console_rpcapi.ConsoleAPI(topic=topic)
         rpcapi.add_console(context, instance['id'])
 
