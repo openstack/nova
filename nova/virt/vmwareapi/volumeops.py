@@ -165,12 +165,17 @@ class VMwareVolumeOps(object):
     def get_volume_connector(self, instance):
         """Return volume connector information."""
         instance_name = instance['name']
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        try:
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+        except exception.InstanceNotFound:
+            vm_ref = None
         iqn = volume_util.get_host_iqn(self._session, self._cluster)
-        return {'ip': CONF.vmware.host_ip,
-                'initiator': iqn,
-                'host': CONF.vmware.host_ip,
-                'instance': vm_ref.value}
+        connector = {'ip': CONF.vmware.host_ip,
+                     'initiator': iqn,
+                     'host': CONF.vmware.host_ip}
+        if vm_ref:
+            connector['instance'] = vm_ref.value
+        return connector
 
     def _get_unit_number(self, mountpoint, unit_number):
         """Get a unit number for the device."""
