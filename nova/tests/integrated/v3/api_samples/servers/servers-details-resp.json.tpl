@@ -34,6 +34,7 @@
                     }
                 ]
             },
+            "key_name": null,
             "links": [
                 {
                     "href": "%(host)s/v3/servers/%(uuid)s",
