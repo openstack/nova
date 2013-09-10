@@ -1,0 +1,1 @@
+{"console": {"console_type": "fake", "port": 5999, "instance_name": "instance-00000001", "host": "fake", "password": "%(password)s", "id": 1}}

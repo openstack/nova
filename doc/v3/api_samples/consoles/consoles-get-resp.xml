@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<console>
+  <console_type>fake</console_type>
+  <port>5999</port>
+  <instance_name>instance-00000001</instance_name>
+  <host>fake</host>
+  <password>qM3ZwY5a</password>
+  <id>1</id>
+</console>
