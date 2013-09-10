@@ -246,6 +246,10 @@ class CellsScheduler(base.Base):
                                   'routing_path': message.routing_path,
                                   'host_sched_kwargs': build_inst_kwargs,
                                   'request_spec': request_spec})
+        # NOTE(belliott) remove when deprecated schedule_run_instance
+        # code gets removed.
+        filter_properties['cell_scheduler_method'] = 'build_instances'
+
         self._schedule_build_to_cells(message, instance_uuids,
                 filter_properties, self._build_instances, build_inst_kwargs)
 
@@ -258,6 +262,10 @@ class CellsScheduler(base.Base):
                                   'routing_path': message.routing_path,
                                   'host_sched_kwargs': host_sched_kwargs,
                                   'request_spec': request_spec})
+        # NOTE(belliott) remove when deprecated schedule_run_instance
+        # code gets removed.
+        filter_properties['cell_scheduler_method'] = 'schedule_run_instance'
+
         self._schedule_build_to_cells(message, instance_uuids,
                 filter_properties, self._run_instance, host_sched_kwargs)
 
@@ -268,6 +276,10 @@ class CellsScheduler(base.Base):
             for i in xrange(max(0, CONF.cells.scheduler_retries) + 1):
                 try:
                     target_cells = self._grab_target_cells(filter_properties)
+                    if target_cells is None:
+                        # a filter took care of scheduling.  skip.
+                        return
+
                     return method(message, target_cells, instance_uuids,
                             method_kwargs)
                 except exception.NoCellsAvailable:
