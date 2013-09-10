@@ -90,10 +90,11 @@ class SecurityGroupsOutputController(wsgi.Controller):
                     # Add security group to server, if no security group was in
                     # request add default since that is the group it is part of
                     servers[0][key] = req_obj['server'].get(
-                        key, [{'name': 'default'}])
+                        ATTRIBUTE_NAME, [{'name': 'default'}])
                 except ValueError:
                     root = xmlutils.safe_minidom_parse_string(req.body)
-                    sg_root = root.getElementsByTagName(key)
+                    sg_root = root.getElementsByTagNameNS(
+                        SecurityGroups.namespace, key)
                     groups = []
                     if sg_root:
                         security_groups = sg_root[0].getElementsByTagName(
