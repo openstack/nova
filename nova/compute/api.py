@@ -843,7 +843,7 @@ class API(base.Base):
         return "Server %s" % instance_uuid
 
     def _populate_instance_for_create(self, base_options, image,
-            security_groups):
+                                      index, security_groups):
         """Build the beginning of a new instance."""
         image_properties = image.get('properties', {})
 
@@ -853,7 +853,7 @@ class API(base.Base):
             # for additional setup before creating the DB entry.
             instance['uuid'] = str(uuid.uuid4())
 
-        instance['launch_index'] = 0
+        instance['launch_index'] = index
         instance['vm_state'] = vm_states.BUILDING
         instance['task_state'] = task_states.SCHEDULING
         instance['info_cache'] = {'network_info': '[]'}
@@ -891,7 +891,7 @@ class API(base.Base):
         instance has been determined.
         """
         instance = self._populate_instance_for_create(base_options,
-                image, security_group)
+                image, index, security_group)
 
         self._populate_instance_names(instance, num_instances)
 

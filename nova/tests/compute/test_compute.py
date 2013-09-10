@@ -4575,6 +4575,24 @@ class ComputeAPITestCase(BaseTestCase):
             user_data=base64.encodestring('1' * 48510))
         db.instance_destroy(self.context, refs[0]['uuid'])
 
+    def test_populate_instance_for_create(self):
+        base_options = {'image_ref': self.fake_image['id'],
+                        'system_metadata': {'fake': 'value'}}
+        instance = {}
+        instance.update(base_options)
+        instance = self.compute_api._populate_instance_for_create(
+                                                    instance,
+                                                    self.fake_image,
+                                                    1,
+                                                    security_groups=None)
+        self.assertEquals(base_options['image_ref'],
+                          instance['system_metadata']['image_base_image_ref'])
+        self.assertEquals(vm_states.BUILDING, instance['vm_state'])
+        self.assertEquals(task_states.SCHEDULING, instance['task_state'])
+        self.assertEquals(1, instance['launch_index'])
+        self.assertIsNotNone(instance.get('uuid'))
+        self.assertIsNone(instance.get('security_groups'))
+
     def test_default_hostname_generator(self):
         fake_uuids = [str(uuid.uuid4()) for x in xrange(4)]
 
