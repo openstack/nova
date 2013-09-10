@@ -22,6 +22,7 @@ import time
 
 from oslo.config import cfg
 
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt.disk.mount import api
@@ -76,6 +77,7 @@ class NbdMount(api.Mount):
             pid = int(f.readline())
         return pid
 
+    @lockutils.synchronized('nbd-allocation-lock', 'nova-')
     def _inner_get_dev(self):
         device = self._allocate_nbd()
         if not device:
