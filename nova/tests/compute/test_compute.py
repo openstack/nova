@@ -543,9 +543,6 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_detach_volume_usage(self):
         # Test that detach volume update the volume usage cache table correctly
         instance = self._create_fake_instance()
-        vol = {'id': 1,
-               'attach_status': 'in-use',
-               'instance_uuid': instance['uuid']}
         bdm = {'id': 1,
                'device_name': '/dev/vdb',
                'connection_info': '{}',
@@ -2715,7 +2712,6 @@ class ComputeTestCase(BaseTestCase):
     def test_run_instance_error_notification_on_failure(self):
         # Test that error notif is sent if build fails hard
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        instance_uuid = instance['uuid']
 
         def build_inst_fail(*args, **kwargs):
             raise test.TestingException("i'm dying")
@@ -4353,7 +4349,6 @@ class ComputeTestCase(BaseTestCase):
                                           'state_description': 'migrating',
                                           'state': power_state.PAUSED}))
         inst_uuid = inst_ref['uuid']
-        inst_id = inst_ref['id']
 
         db.instance_update(c, inst_uuid,
                            {'task_state': task_states.MIGRATING,
@@ -4398,7 +4393,6 @@ class ComputeTestCase(BaseTestCase):
                                 'state_description': 'migrating',
                                 'state': power_state.PAUSED}))
         inst_uuid = inst_ref['uuid']
-        inst_id = inst_ref['id']
 
         db.instance_update(c, inst_uuid,
                            {'task_state': task_states.MIGRATING,
@@ -5314,7 +5308,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute,
                        '_complete_partial_deletion',
                        fake_partial_deletion)
-        self.compute._init_instance(context, instance)
+        self.compute._init_instance(admin_context, instance)
 
         self.assertFalse(instance['deleted'] == 0)
 
@@ -6051,7 +6045,6 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_in_error_not_launched(self):
         instance = jsonutils.to_primitive(
             self._create_fake_instance(params={'image_ref': ''}))
-        instance_uuid = instance['uuid']
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
         self.compute.run_instance(self.context, instance=instance)
 
@@ -6275,8 +6268,6 @@ class ComputeAPITestCase(BaseTestCase):
                 {'image_ref': 'my_placeholder_img',
                  'root_device_name': '/dev/vda'})
             )
-        volume_backed_uuid_1 = volume_backed_inst_1['uuid']
-        volume_backed_uuid_2 = volume_backed_inst_2['uuid']
 
         def fake_get_instance_bdms(*args, **kwargs):
             return [{'device_name': '/dev/vda',
