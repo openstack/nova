@@ -213,8 +213,8 @@ def deploy(address, port, iqn, lun, image_path, pxe_config_path,
         with excutils.save_and_reraise_exception():
             # Log output if there was a error
             LOG.error(_("Cmd     : %s"), err.cmd)
-            LOG.error(_("StdOut  : %s"), err.stdout)
-            LOG.error(_("StdErr  : %s"), err.stderr)
+            LOG.error(_("StdOut  : %r"), err.stdout)
+            LOG.error(_("StdErr  : %r"), err.stderr)
     finally:
         logout_iscsi(address, port, iqn)
     switch_pxe_config(pxe_config_path, root_uuid)
