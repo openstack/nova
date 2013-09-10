@@ -1398,11 +1398,6 @@ class ImageDownloadModuleNotImplementedError(ImageDownloadModuleError):
     msg_fmt = _("The method %(method_name)s is not implemented.")
 
 
-class ImageDownloadModuleMetaDataError(ImageDownloadModuleError):
-    msg_fmt = _("The metadata for this location will not work with this "
-                "module %(module)s.  %(reason)s.")
-
-
 class ImageDownloadModuleConfigurationError(ImageDownloadModuleError):
     msg_fmt = _("The module %(module)s is misconfigured: %(reason)s.")
 
