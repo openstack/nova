@@ -4085,10 +4085,13 @@ def console_get_by_pool_instance(context, pool_id, instance_uuid):
     return result
 
 
-def console_get_all_by_instance(context, instance_uuid):
-    return model_query(context, models.Console, read_deleted="yes").\
-                   filter_by(instance_uuid=instance_uuid).\
-                   all()
+def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
+    query = model_query(context, models.Console, read_deleted="yes").\
+                filter_by(instance_uuid=instance_uuid)
+    if columns_to_join:
+        for column in columns_to_join:
+            query = query.options(joinedload(column))
+    return query.all()
 
 
 def console_get(context, console_id, instance_uuid=None):

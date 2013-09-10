@@ -36,7 +36,8 @@ class API(base.Base):
         super(API, self).__init__(**kwargs)
 
     def get_consoles(self, context, instance_uuid):
-        return self.db.console_get_all_by_instance(context, instance_uuid)
+        return self.db.console_get_all_by_instance(context, instance_uuid,
+                                                   columns_to_join=['pool'])
 
     def get_console(self, context, instance_uuid, console_uuid):
         return self.db.console_get(context, console_uuid, instance_uuid)

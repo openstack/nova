@@ -1379,9 +1379,10 @@ def console_get_by_pool_instance(context, pool_id, instance_uuid):
     return IMPL.console_get_by_pool_instance(context, pool_id, instance_uuid)
 
 
-def console_get_all_by_instance(context, instance_uuid):
+def console_get_all_by_instance(context, instance_uuid, columns_to_join=None):
     """Get consoles for a given instance."""
-    return IMPL.console_get_all_by_instance(context, instance_uuid)
+    return IMPL.console_get_all_by_instance(context, instance_uuid,
+                                            columns_to_join)
 
 
 def console_get(context, console_id, instance_uuid=None):
