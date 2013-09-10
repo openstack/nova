@@ -327,6 +327,13 @@ class TestOpenStackClientV3(TestOpenStackClient):
     def delete_image(self, image_id):
         return fake._fakeImageService.delete(None, image_id)
 
+    def post_server(self, server):
+        response = self.api_post('/servers', server)
+        if 'servers_reservation' in response:
+            return response['servers_reservation']
+        else:
+            return response['server']
+
 
 class TestOpenStackClientV3Mixin(object):
     def _get_test_client(self):
