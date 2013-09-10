@@ -484,7 +484,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
             size = int(output[0])
         else:
             LOG.error(_("Uncompressed image file not found"))
-            raise exception.PowerVMFileTransferFailed()
+            raise exception.PowerVMFileTransferFailed(file_path=final_path)
         if (size % 512 != 0):
             size = (int(size / 512) + 1) * 512
 
