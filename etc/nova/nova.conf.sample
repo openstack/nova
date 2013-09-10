@@ -972,15 +972,6 @@
 
 
 #
-# Options defined in nova.keymgr
-#
-
-# The full class name of the key manager API class (string
-# value)
-#keymgr_api_class=nova.keymgr.not_implemented_key_mgr.NotImplementedKeyManager
-
-
-#
 # Options defined in nova.network
 #
 
@@ -2622,6 +2613,28 @@
 #volume_attach_retry_interval=5
 
 
+[zookeeper]
+
+#
+# Options defined in nova.servicegroup.drivers.zk
+#
+
+# The ZooKeeper addresses for servicegroup service in the
+# format of host1:port,host2:port,host3:port (string value)
+#address=<None>
+
+# recv_timeout parameter for the zk session (integer value)
+#recv_timeout=4000
+
+# The prefix used in ZooKeeper to store ephemeral nodes
+# (string value)
+#sg_prefix=/servicegroups
+
+# Number of seconds to wait until retrying to join the session
+# (integer value)
+#sg_retry_interval=5
+
+
 [osapi_v3]
 
 #
@@ -2661,67 +2674,24 @@
 #workers=<None>
 
 
-[database]
+[keymgr]
 
 #
-# Options defined in nova.openstack.common.db.api
+# Options defined in nova.keymgr
 #
 
-# The backend to use for db (string value)
-#backend=sqlalchemy
-
-# Enable the experimental use of thread pooling for all DB API
-# calls (boolean value)
-#use_tpool=false
-
-
-#
-# Options defined in nova.openstack.common.db.sqlalchemy.session
-#
-
-# The SQLAlchemy connection string used to connect to the
-# database (string value)
-#connection=sqlite:////nova/openstack/common/db/$sqlite_db
-
-# The SQLAlchemy connection string used to connect to the
-# slave database (string value)
-#slave_connection=
-
-# timeout before idle sql connections are reaped (integer
+# The full class name of the key manager API class (string
 # value)
-#idle_timeout=3600
+#api_class=nova.keymgr.conf_key_mgr.ConfKeyManager
 
-# Minimum number of SQL connections to keep open in a pool
-# (integer value)
-#min_pool_size=1
 
-# Maximum number of SQL connections to keep open in a pool
-# (integer value)
-#max_pool_size=<None>
+#
+# Options defined in nova.keymgr.conf_key_mgr
+#
 
-# maximum db connection retries during startup. (setting -1
-# implies an infinite retry count) (integer value)
-#max_retries=10
-
-# interval between retries of opening a sql connection
-# (integer value)
-#retry_interval=10
-
-# If set, use this value for max_overflow with sqlalchemy
-# (integer value)
-#max_overflow=<None>
-
-# Verbosity of SQL debugging information. 0=None,
-# 100=Everything (integer value)
-#connection_debug=0
-
-# Add python stack traces to SQL as comment strings (boolean
+# Fixed key returned by key manager, specified in hex (string
 # value)
-#connection_trace=false
-
-# If set, use this value for pool_timeout with sqlalchemy
-# (integer value)
-#pool_timeout=<None>
+#fixed_key=<None>
 
 
 [cells]
@@ -2862,26 +2832,67 @@
 #ram_weight_multiplier=10.0
 
 
-[zookeeper]
+[database]
 
 #
-# Options defined in nova.servicegroup.drivers.zk
+# Options defined in nova.openstack.common.db.api
 #
 
-# The ZooKeeper addresses for servicegroup service in the
-# format of host1:port,host2:port,host3:port (string value)
-#address=<None>
+# The backend to use for db (string value)
+#backend=sqlalchemy
 
-# recv_timeout parameter for the zk session (integer value)
-#recv_timeout=4000
+# Enable the experimental use of thread pooling for all DB API
+# calls (boolean value)
+#use_tpool=false
 
-# The prefix used in ZooKeeper to store ephemeral nodes
-# (string value)
-#sg_prefix=/servicegroups
 
-# Number of seconds to wait until retrying to join the session
+#
+# Options defined in nova.openstack.common.db.sqlalchemy.session
+#
+
+# The SQLAlchemy connection string used to connect to the
+# database (string value)
+#connection=sqlite:////nova/openstack/common/db/$sqlite_db
+
+# The SQLAlchemy connection string used to connect to the
+# slave database (string value)
+#slave_connection=
+
+# timeout before idle sql connections are reaped (integer
+# value)
+#idle_timeout=3600
+
+# Minimum number of SQL connections to keep open in a pool
 # (integer value)
-#sg_retry_interval=5
+#min_pool_size=1
+
+# Maximum number of SQL connections to keep open in a pool
+# (integer value)
+#max_pool_size=<None>
+
+# maximum db connection retries during startup. (setting -1
+# implies an infinite retry count) (integer value)
+#max_retries=10
+
+# interval between retries of opening a sql connection
+# (integer value)
+#retry_interval=10
+
+# If set, use this value for max_overflow with sqlalchemy
+# (integer value)
+#max_overflow=<None>
+
+# Verbosity of SQL debugging information. 0=None,
+# 100=Everything (integer value)
+#connection_debug=0
+
+# Add python stack traces to SQL as comment strings (boolean
+# value)
+#connection_trace=false
+
+# If set, use this value for pool_timeout with sqlalchemy
+# (integer value)
+#pool_timeout=<None>
 
 
 [image_file_url]
