@@ -5261,6 +5261,33 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             new_stats = self._stats_as_dict(node['stats'])
             self._stats_equal(self.stats, new_stats)
 
+    def test_compute_node_get_all_mult_compute_nodes_one_service_entry(self):
+        service_data = self.service_dict.copy()
+        service_data['host'] = 'host2'
+        service = db.service_create(self.ctxt, service_data)
+
+        existing_node = dict(self.item.iteritems())
+        existing_node['service'] = dict(self.service.iteritems())
+        expected = [existing_node]
+
+        for name in ['bm_node1', 'bm_node2']:
+            compute_node_data = self.compute_node_dict.copy()
+            compute_node_data['service_id'] = service['id']
+            compute_node_data['stats'] = self.stats
+            compute_node_data['hypervisor_hostname'] = 'bm_node_1'
+            node = db.compute_node_create(self.ctxt, compute_node_data)
+
+            node = dict(node.iteritems())
+            node['service'] = dict(service.iteritems())
+
+            expected.append(node)
+
+        result = sorted(db.compute_node_get_all(self.ctxt, False),
+                        key=lambda n: n['hypervisor_hostname'])
+
+        self._assertEqualListsOfObjects(expected, result,
+                                        ignored_keys=['stats'])
+
     def test_compute_node_get(self):
         compute_node_id = self.item['id']
         node = db.compute_node_get(self.ctxt, compute_node_id)
