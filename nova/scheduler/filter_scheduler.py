@@ -23,7 +23,6 @@ import random
 
 from oslo.config import cfg
 
-from nova.compute import flavors
 from nova.compute import rpcapi as compute_rpcapi
 from nova import db
 from nova import exception
@@ -372,32 +371,3 @@ class FilterScheduler(driver.Scheduler):
         """
         service_ref = db.service_get_by_compute_host(context, dest)
         return service_ref['compute_node'][0]
-
-    def _assert_compute_node_has_enough_memory(self, context,
-                                              instance_ref, dest):
-        """Checks if destination host has enough memory for live migration.
-
-
-        :param context: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
-        :param dest: destination host
-
-        """
-        compute = self._get_compute_info(context, dest)
-        node = compute.get('hypervisor_hostname')
-        host_state = self.host_manager.host_state_cls(dest, node)
-        host_state.update_from_compute_node(compute)
-
-        instance_type = flavors.extract_flavor(instance_ref)
-        filter_properties = {'instance_type': instance_type}
-
-        hosts = self.host_manager.get_filtered_hosts([host_state],
-                                                     filter_properties,
-                                                     'RamFilter')
-        if not hosts:
-            instance_uuid = instance_ref['uuid']
-            reason = (_("Unable to migrate %(instance_uuid)s to %(dest)s: "
-                        "Lack of memory")
-                      % {'instance_uuid': instance_uuid,
-                         'dest': dest})
-            raise exception.MigrationPreCheckError(reason=reason)
