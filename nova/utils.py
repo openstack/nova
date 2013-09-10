@@ -38,7 +38,6 @@ from xml.sax import saxutils
 
 import eventlet
 import netaddr
-
 from oslo.config import cfg
 
 from nova import exception
