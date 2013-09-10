@@ -947,9 +947,21 @@ class LibvirtDriver(driver.ComputeDriver):
                                                            encryption)
                     encryptor.detach_volume(**encryption)
 
-            self.volume_driver_method('disconnect_volume',
-                                      connection_info,
-                                      disk_dev)
+            try:
+                self.volume_driver_method('disconnect_volume',
+                                          connection_info,
+                                          disk_dev)
+            except Exception as exc:
+                with excutils.save_and_reraise_exception() as ctxt:
+                    if destroy_disks:
+                        # Don't block on Volume errors if we're trying to
+                        # delete the instance as we may be patially created
+                        # or deleted
+                        ctxt.reraise = False
+                        LOG.warn(_("Ignoring Volume Error on vol %(vol_id)s "
+                                   "during delete %(exc)s"),
+                                 {'vol_id': vol.get('volume_id'), 'exc': exc},
+                                 instance=instance)
 
         if destroy_disks:
             #NOTE(GuanQiang): teardown lxc container to avoid resource leak

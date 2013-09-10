@@ -3963,10 +3963,12 @@ class LibvirtConnTestCase(test.TestCase):
         instance = db.instance_create(self.context, self.test_instance)
         conn.destroy(self.context, instance, {})
 
-    def test_destroy_removes_disk(self):
+    def _test_destroy_removes_disk(self, volume_fail=False):
         instance = {"name": "instancename", "id": "42",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
                     "cleaned": 0, 'info_cache': None, 'security_groups': []}
+        vol = {'block_device_mapping': [
+              {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_undefine_domain')
@@ -3977,6 +3979,18 @@ class LibvirtConnTestCase(test.TestCase):
                                                  'security_groups'],
                                 use_slave=False
                                 ).AndReturn(instance)
+        self.mox.StubOutWithMock(driver, "block_device_info_get_mapping")
+        driver.block_device_info_get_mapping(vol
+                                 ).AndReturn(vol['block_device_mapping'])
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
+                                 "volume_driver_method")
+        if volume_fail:
+            libvirt_driver.LibvirtDriver.volume_driver_method(
+                        mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
+                                     AndRaise(exception.VolumeNotFound('vol'))
+        else:
+            libvirt_driver.LibvirtDriver.volume_driver_method(
+                        mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.StubOutWithMock(shutil, "rmtree")
         shutil.rmtree(os.path.join(CONF.instances_path,
                                    'instance-%08x' % int(instance['id'])))
@@ -4018,7 +4032,13 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_obj_load_attr)
         self.stubs.Set(instance_obj.Instance, 'save', fake_save)
 
-        conn.destroy(self.context, instance, [])
+        conn.destroy(self.context, instance, [], vol)
+
+    def test_destroy_removes_disk(self):
+        self._test_destroy_removes_disk(volume_fail=False)
+
+    def test_destroy_removes_disk_volume_fails(self):
+        self._test_destroy_removes_disk(volume_fail=True)
 
     def test_destroy_not_removes_disk(self):
         instance = {"name": "instancename", "id": "instanceid",
