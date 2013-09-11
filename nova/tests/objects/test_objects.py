@@ -599,6 +599,18 @@ class _TestObject(object):
         obj.obj_reset_changes()
         self.assertEqual({}, obj.obj_get_changes())
 
+    def test_obj_fields(self):
+        class TestObj(base.NovaObject):
+            fields = {'foo': int}
+            obj_extra_fields = ['bar']
+
+            @property
+            def bar(self):
+                return 'this is bar'
+
+        obj = TestObj()
+        self.assertEqual(['foo', 'bar'], obj.obj_fields)
+
 
 class TestObject(_LocalTest, _TestObject):
     pass

@@ -341,12 +341,15 @@ class NovaObject(object):
         False if not. Raises AttributeError if attrname is not
         a valid attribute for this object.
         """
-        if (attrname not in self.fields and
-                attrname not in self.obj_extra_fields):
+        if attrname not in self.obj_fields:
             raise AttributeError(
                 _("%(objname)s object has no attribute '%(attrname)s'") %
                 {'objname': self.obj_name(), 'attrname': attrname})
         return hasattr(self, get_attrname(attrname))
+
+    @property
+    def obj_fields(self):
+        return self.fields.keys() + self.obj_extra_fields
 
     # dictish syntactic sugar
     def iteritems(self):
@@ -354,7 +357,7 @@ class NovaObject(object):
 
         NOTE(danms): May be removed in the future.
         """
-        for name in self.fields.keys() + self.obj_extra_fields:
+        for name in self.obj_fields:
             if (self.obj_attr_is_set(name) or
                     name in self.obj_extra_fields):
                 yield name, getattr(self, name)
@@ -390,7 +393,7 @@ class NovaObject(object):
 
         NOTE(danms): May be removed in the future.
         """
-        if key not in self.fields:
+        if key not in self.obj_fields:
             raise AttributeError("'%s' object has no attribute '%s'" % (
                     self.__class__, key))
         if value != NotSpecifiedSentinel and not self.obj_attr_is_set(key):
