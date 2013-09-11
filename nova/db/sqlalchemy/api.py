@@ -2240,8 +2240,12 @@ def _instance_update(context, instance_uuid, values, copy_old_instance=False,
                 expected = (expected,)
             actual_state = instance_ref["task_state"]
             if actual_state not in expected:
-                raise exception.UnexpectedTaskStateError(actual=actual_state,
-                                                         expected=expected)
+                if actual_state == task_states.DELETING:
+                    raise exception.UnexpectedDeletingTaskStateError(
+                            actual=actual_state, expected=expected)
+                else:
+                    raise exception.UnexpectedTaskStateError(
+                            actual=actual_state, expected=expected)
         if "expected_vm_state" in values:
             expected = values.pop("expected_vm_state")
             if not isinstance(expected, (tuple, list, set)):

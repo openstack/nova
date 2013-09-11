@@ -8987,8 +8987,8 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute, '_spawn')
         self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
 
-        exc = exception.UnexpectedTaskStateError(expected=task_states.SPAWNING,
-                actual=task_states.DELETING)
+        exc = exception.UnexpectedDeletingTaskStateError(
+                expected=task_states.SPAWNING, actual=task_states.DELETING)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg(), set_access_ip=False).AndRaise(exc)

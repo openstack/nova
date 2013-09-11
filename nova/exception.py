@@ -1253,6 +1253,10 @@ class UnexpectedTaskStateError(NovaException):
                 "the actual state is %(actual)s")
 
 
+class UnexpectedDeletingTaskStateError(UnexpectedTaskStateError):
+    pass
+
+
 class InstanceActionNotFound(NovaException):
     msg_fmt = _("Action for request_id %(request_id)s on instance"
                 " %(instance_uuid)s not found")
