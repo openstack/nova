@@ -20,7 +20,6 @@ Test cases for the single key manager.
 
 import array
 
-from nova import context
 from nova import exception
 from nova.keymgr import key
 from nova.tests.keymgr import single_key_mgr
@@ -34,8 +33,6 @@ class SingleKeyManagerTestCase(test_mock_key_mgr.MockKeyManagerTestCase):
 
     def setUp(self):
         super(SingleKeyManagerTestCase, self).setUp()
-
-        self.ctxt = context.RequestContext('fake', 'fake')
 
         self.key_id = '00000000-0000-0000-0000-000000000000'
         encoded = array.array('B', ('0' * 64).decode('hex')).tolist()

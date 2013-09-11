@@ -59,18 +59,20 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.reboot(instance, network_info, reboot_type)
 
     def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, context=None):
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
 
     def get_info(self, instance):
         return self._vmops.get_info(instance)
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         return self._volumeops.attach_volume(connection_info,
                                              instance['name'])
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint,
+                      encryption=None):
         return self._volumeops.detach_volume(connection_info,
                                              instance['name'])
 

@@ -1214,7 +1214,8 @@ class HyperVAPITestCase(test.TestCase):
                                  target_portal)
 
         self._mox.ReplayAll()
-        self._conn.attach_volume(connection_info, instance_data, mount_point)
+        self._conn.attach_volume(None, connection_info, instance_data,
+                                 mount_point)
         self._mox.VerifyAll()
 
         self.assertEquals(len(self._instance_volume_disks), 1)

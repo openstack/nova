@@ -105,7 +105,7 @@ class PowerVMDriver(driver.ComputeDriver):
         self._powervm.spawn(context, instance, image_meta['id'], network_info)
 
     def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, context=None):
         """Destroy (shutdown and delete) the specified instance."""
         self._powervm.destroy(instance['name'], destroy_disks)
 

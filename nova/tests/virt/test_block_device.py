@@ -278,8 +278,8 @@ class TestDriverBlockDevice(test.TestCase):
         instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
         volume = {'id': 'fake-volume-id-1'}
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
-        connection_info = {'data': 'fake_data'}
-        expected_conn_info = {'data': 'fake_data',
+        connection_info = {'data': {}}
+        expected_conn_info = {'data': {},
                               'serial': 'fake-volume-id-1'}
 
         self.volume_api.get(self.context,
@@ -308,8 +308,8 @@ class TestDriverBlockDevice(test.TestCase):
 
         instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
-        connection_info = {'data': 'fake_data'}
-        expected_conn_info = {'data': 'fake_data',
+        connection_info = {'data': {}}
+        expected_conn_info = {'data': {},
                               'serial': 'fake-volume-id-2'}
 
         self.virt_driver.get_volume_connector(instance).AndReturn(connector)
