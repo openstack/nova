@@ -1408,16 +1408,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         def fake_aggregate_get_by_host(self, *args, **kwargs):
             was['called'] = True
-            raise Exception()
+            raise test.TestingException()
         self.stubs.Set(self.conn._session._virtapi, "aggregate_get_by_host",
                        fake_aggregate_get_by_host)
 
         self.stubs.Set(self.conn._session, "is_slave", True)
 
-        try:
-            self.conn._session._get_host_uuid()
-        except Exception:
-            pass
+        self.assertRaises(test.TestingException,
+                self.conn._session._get_host_uuid)
         self.assertTrue(was['called'])
 
     def test_per_instance_usage_running(self):

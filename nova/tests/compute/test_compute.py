@@ -1545,14 +1545,14 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(len(instances), 1)
 
         def _fake_deallocate_network(*args, **kwargs):
-            raise Exception()
+            raise test.TestingException()
 
         self.stubs.Set(self.compute, '_deallocate_network',
                 _fake_deallocate_network)
 
         try:
             self.compute.terminate_instance(self.context, instance=instance)
-        except Exception:
+        except test.TestingException:
             pass
 
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
@@ -3086,18 +3086,12 @@ class ComputeTestCase(BaseTestCase):
 
         func = getattr(self.compute, operation)
 
-        raised = False
-        try:
-            func(self.context, instance=instance, **kwargs)
-        except test.TestingException:
-            raised = True
-        finally:
-            # self.context.elevated() is called in tearDown()
-            self.stubs.Set(self.context, 'elevated', orig_elevated)
-            self.stubs.Set(self.compute,
-                           '_notify_about_instance_usage', orig_notify)
-
-        self.assertTrue(raised)
+        self.assertRaises(test.TestingException,
+                func, self.context, instance=instance, **kwargs)
+        # self.context.elevated() is called in tearDown()
+        self.stubs.Set(self.context, 'elevated', orig_elevated)
+        self.stubs.Set(self.compute,
+                       '_notify_about_instance_usage', orig_notify)
 
         # Fetch the instance's task_state and make sure it reverted to None.
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
