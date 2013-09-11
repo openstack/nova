@@ -1163,6 +1163,22 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64")
 
+    def test_spawn_with_resetnetwork_alternative_returncode(self):
+        self.flags(xenapi_use_agent_default=True)
+
+        def fake_resetnetwork(self, method, args):
+            fake_resetnetwork.called = True
+            #NOTE(johngarbutt): as returned by FreeBSD and Gentoo
+            return jsonutils.dumps({'returncode': '500',
+                                    'message': 'success'})
+        self.stubs.Set(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_resetnetwork', fake_resetnetwork)
+        fake_resetnetwork.called = False
+
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
+        self.assertTrue(fake_resetnetwork.called)
+
     def _test_spawn_fails_with(self, trigger, expected_exception):
         self.flags(xenapi_use_agent_default=True)
         self.flags(agent_version_timeout=0)

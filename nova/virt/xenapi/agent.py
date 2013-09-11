@@ -83,12 +83,14 @@ CONF.register_opts(xenapi_agent_opts)
 
 
 def _call_agent(session, instance, vm_ref, method, addl_args=None,
-                timeout=None, success_code='0'):
+                timeout=None, success_codes=None):
     """Abstracts out the interaction with the agent xenapi plugin."""
     if addl_args is None:
         addl_args = {}
     if timeout is None:
         timeout = CONF.agent_timeout
+    if success_codes is None:
+        success_codes = ['0']
 
     vm_rec = session.call_xenapi("VM.get_record", vm_ref)
 
@@ -130,12 +132,17 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
                       instance=instance)
             raise exception.AgentError(method=method)
 
-    if ret['returncode'] != success_code:
+    if ret['returncode'] not in success_codes:
         LOG.error(_('The agent call to %(method)s returned an '
                     'an error: %(ret)r. args=%(args)r'),
                   {'method': method, 'ret': ret, 'args': args},
                   instance=instance)
         raise exception.AgentError(method=method)
+
+    LOG.debug(_('The agent call to %(method)s was successful: '
+                '%(ret)r. args=%(args)r'),
+              {'method': method, 'ret': ret, 'args': args},
+              instance=instance)
 
     # Some old versions of the Windows agent have a trailing \\r\\n
     # (ie CRLF escaped) for some reason. Strip that off.
@@ -150,9 +157,9 @@ class XenAPIBasedAgent(object):
         self.vm_ref = vm_ref
 
     def _call_agent(self, method, addl_args=None, timeout=None,
-                    success_code='0'):
+                    success_codes=None):
         return _call_agent(self.session, self.instance, self.vm_ref,
-                           method, addl_args, timeout, success_code)
+                           method, addl_args, timeout, success_codes)
 
     def get_agent_version(self):
         """Get the version of the agent running on the VM instance."""
@@ -192,7 +199,7 @@ class XenAPIBasedAgent(object):
     def _exchange_key_with_agent(self):
         dh = SimpleDH()
         args = {'pub': str(dh.get_public())}
-        resp = self._call_agent('key_init', args, success_code='D0')
+        resp = self._call_agent('key_init', args, success_codes=['D0'])
         agent_pub = int(resp)
         dh.compute_shared(agent_pub)
         return dh
@@ -275,8 +282,10 @@ class XenAPIBasedAgent(object):
     def resetnetwork(self):
         LOG.debug(_('Resetting network'), instance=self.instance)
 
+        #NOTE(johngarbutt) old FreeBSD and Gentoo agents return 500 on success
         return self._call_agent('resetnetwork',
-                                timeout=CONF.agent_resetnetwork_timeout)
+                                timeout=CONF.agent_resetnetwork_timeout,
+                                success_codes=['0', '500'])
 
     def _skip_ssh_key_inject(self):
         return self._get_sys_meta_key(SKIP_SSH_SM_KEY)
