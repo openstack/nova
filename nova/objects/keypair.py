@@ -45,9 +45,7 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
+        updates = self.obj_get_changes()
         db_keypair = db.key_pair_create(context, updates)
         self._from_db_object(context, self, db_keypair)
 

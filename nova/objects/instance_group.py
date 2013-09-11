@@ -64,10 +64,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     def save(self, context):
         """Save updates to this instance group."""
 
-        updates = {}
-        for key in self.obj_what_changed():
-            updates[key] = self[key]
-
+        updates = self.obj_get_changes()
         if not updates:
             return
 
@@ -95,10 +92,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        updates = {}
-        for attr in self.obj_what_changed():
-            updates[attr] = self[attr]
-
+        updates = self.obj_get_changes()
         updates.pop('id', None)
         policies = updates.pop('policies', None)
         members = updates.pop('members', None)

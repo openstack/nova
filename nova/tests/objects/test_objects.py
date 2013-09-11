@@ -557,6 +557,16 @@ class _TestObject(object):
         self.assertEqual(set(myobj_fields) | set(myobj3_fields),
                          set(TestSubclassedObject.fields.keys()))
 
+    def test_get_changes(self):
+        obj = MyObj()
+        self.assertEqual({}, obj.obj_get_changes())
+        obj.foo = 123
+        self.assertEqual({'foo': 123}, obj.obj_get_changes())
+        obj.bar = 'test'
+        self.assertEqual({'foo': 123, 'bar': 'test'}, obj.obj_get_changes())
+        obj.obj_reset_changes()
+        self.assertEqual({}, obj.obj_get_changes())
+
 
 class TestObject(_LocalTest, _TestObject):
     pass

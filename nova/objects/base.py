@@ -317,6 +317,13 @@ class NovaObject(object):
         """Returns a set of fields that have been modified."""
         return self._changed_fields
 
+    def obj_get_changes(self):
+        """Returns a dict of changed fields and their new values."""
+        changes = {}
+        for key in self.obj_what_changed():
+            changes[key] = self[key]
+        return changes
+
     def obj_reset_changes(self, fields=None):
         """Reset the list of fields that have been changed.
 

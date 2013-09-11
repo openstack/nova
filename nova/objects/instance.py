@@ -319,9 +319,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-        updates = {}
-        for attr in self.obj_what_changed() - set(['id']):
-            updates[attr] = self[attr]
+        updates = self.obj_get_changes()
+        updates.pop('id', None)
         expected_attrs = [attr for attr in INSTANCE_DEFAULT_FIELDS
                           if attr in updates]
         if 'security_groups' in updates:
