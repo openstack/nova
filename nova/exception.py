@@ -75,7 +75,8 @@ def wrap_exception(notifier=None, get_notifier=None):
                 with excutils.save_and_reraise_exception():
                     if notifier or get_notifier:
                         payload = dict(exception=e)
-                        call_dict = safe_utils.getcallargs(f, *args, **kw)
+                        call_dict = safe_utils.getcallargs(f, context,
+                                                           *args, **kw)
                         cleansed = _cleanse_dict(call_dict)
                         payload.update({'args': cleansed})
 
