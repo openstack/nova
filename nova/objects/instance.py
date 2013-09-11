@@ -180,9 +180,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             # NOTE(russellb): Don't use self.iteritems() here, as it will
             # result in infinite recursion on the name property.
             for key in self.fields:
-                # prevent recursion if someone specifies %(name)s
-                # %(name)s will not be valid.
                 if key == 'name':
+                    # NOTE(danms): prevent recursion
+                    continue
+                elif not self.obj_attr_is_set(key):
+                    # NOTE(danms): Don't trigger lazy-loads
                     continue
                 info[key] = self[key]
             try:
