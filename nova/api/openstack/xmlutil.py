@@ -81,6 +81,8 @@ class Selector(object):
             if callable(elem):
                 obj = elem(obj)
             else:
+                if obj == '':
+                    return ''
                 # Use indexing
                 try:
                     obj = obj[elem]

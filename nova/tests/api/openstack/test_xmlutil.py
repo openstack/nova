@@ -724,6 +724,32 @@ class TemplateTest(test.NoDBTestCase):
         result = master.serialize(obj)
         self.assertEqual(expected_xml, result)
 
+    def test__serialize_with_empty_datum_selector(self):
+        # Our test object to serialize
+        obj = {
+            'test': {
+                'name': 'foobar',
+                'image': ''
+                },
+            }
+
+        root = xmlutil.TemplateElement('test', selector='test',
+                                       name='name')
+        master = xmlutil.MasterTemplate(root, 1)
+        root_slave = xmlutil.TemplateElement('test', selector='test')
+        image = xmlutil.SubTemplateElement(root_slave, 'image',
+                                           selector='image')
+        image.set('id')
+        xmlutil.make_links(image, 'links')
+        slave = xmlutil.SlaveTemplate(root_slave, 1)
+        master.attach(slave)
+
+        siblings = master._siblings()
+        result = master._serialize(None, obj, siblings)
+        self.assertEqual(result.tag, 'test')
+        self.assertEqual(result[0].tag, 'image')
+        self.assertEqual(result[0].get('id'), str(obj['test']['image']))
+
 
 class MasterTemplateBuilder(xmlutil.TemplateBuilder):
     def construct(self):
