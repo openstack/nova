@@ -461,7 +461,8 @@ class VMwareVMOps(object):
                            block_device_info)[0]
             connection_info = root_disk['connection_info']
             self._volumeops.attach_root_volume(connection_info, instance,
-                                               self._default_root_device)
+                                               self._default_root_device,
+                                               data_store_ref)
 
         def _power_on_vm():
             """Power on the VM."""
