@@ -1,0 +1,18 @@
+{
+    "server" : {
+        "os-access-ips:access_ip_v4": "1.2.3.4",
+        "os-access-ips:access_ip_v6": "fe80::",
+        "name" : "new-server-test",
+        "image_ref" : "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavor_ref" : "http://openstack.example.com/openstack/flavors/1",
+        "metadata" : {
+            "My Server Name" : "Apache1"
+        },
+        "personality" : [
+            {
+                "path" : "/etc/banner.txt",
+                "contents" : "ICAgICAgDQoiQSBjbG91ZCBkb2VzIG5vdCBrbm93IHdoeSBpdCBtb3ZlcyBpbiBqdXN0IHN1Y2ggYSBkaXJlY3Rpb24gYW5kIGF0IHN1Y2ggYSBzcGVlZC4uLkl0IGZlZWxzIGFuIGltcHVsc2lvbi4uLnRoaXMgaXMgdGhlIHBsYWNlIHRvIGdvIG5vdy4gQnV0IHRoZSBza3kga25vd3MgdGhlIHJlYXNvbnMgYW5kIHRoZSBwYXR0ZXJucyBiZWhpbmQgYWxsIGNsb3VkcywgYW5kIHlvdSB3aWxsIGtub3csIHRvbywgd2hlbiB5b3UgbGlmdCB5b3Vyc2VsZiBoaWdoIGVub3VnaCB0byBzZWUgYmV5b25kIGhvcml6b25zLiINCg0KLVJpY2hhcmQgQmFjaA=="
+            }
+        ]
+    }
+}

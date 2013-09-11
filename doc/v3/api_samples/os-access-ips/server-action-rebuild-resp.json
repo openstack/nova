@@ -1,0 +1,57 @@
+{
+    "server": {
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "type": "fixed",
+                    "version": 4
+                }
+            ]
+        },
+        "admin_password": "99WHAxN8gpvg",
+        "created": "2013-11-06T07:51:09Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "host_id": "5c8072dbcda8ce3f26deb6662bd7718e1a6d349bdf2296911d1be4ac",
+        "id": "53a63a19-c145-47f8-9ae5-b39d6bff33ec",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/53a63a19-c145-47f8-9ae5-b39d6bff33ec",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/53a63a19-c145-47f8-9ae5-b39d6bff33ec",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "meta_var": "meta_val"
+        },
+        "name": "new-server-test",
+        "os-access-ips:access_ip_v4": "4.3.2.1",
+        "os-access-ips:access_ip_v6": "80fe::",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2013-11-06T07:51:11Z",
+        "user_id": "fake"
+    }
+}

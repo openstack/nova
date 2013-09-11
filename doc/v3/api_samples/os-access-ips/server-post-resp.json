@@ -1,0 +1,18 @@
+{
+    "server": {
+        "admin_password": "n7JGBda664QG",
+        "id": "934760e1-2b0b-4f9e-a916-eac1e69839dc",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/934760e1-2b0b-4f9e-a916-eac1e69839dc",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/934760e1-2b0b-4f9e-a916-eac1e69839dc",
+                "rel": "bookmark"
+            }
+        ],
+        "os-access-ips:access_ip_v4": "1.2.3.4",
+        "os-access-ips:access_ip_v6": "fe80::"
+    }
+}
