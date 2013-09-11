@@ -687,7 +687,8 @@ class VMwareAPIVMTestCase(test.TestCase):
         volumeops.VMwareVolumeOps._attach_volume_vmdk(connection_info,
                 self.instance, mount_point)
         self.mox.ReplayAll()
-        self.conn.attach_volume(connection_info, self.instance, mount_point)
+        self.conn.attach_volume(None, connection_info, self.instance,
+                                mount_point)
 
     def test_volume_detach_vmdk(self):
         self._create_vm()
@@ -723,7 +724,8 @@ class VMwareAPIVMTestCase(test.TestCase):
                 controller_key=mox.IgnoreArg(),
                 unit_number=mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.conn.attach_volume(connection_info, self.instance, mount_point)
+        self.conn.attach_volume(None, connection_info, self.instance,
+                                mount_point)
 
     def test_detach_vmdk_disk_from_vm(self):
         self._create_vm()
@@ -756,7 +758,8 @@ class VMwareAPIVMTestCase(test.TestCase):
         volumeops.VMwareVolumeOps._attach_volume_iscsi(connection_info,
                 self.instance, mount_point)
         self.mox.ReplayAll()
-        self.conn.attach_volume(connection_info, self.instance, mount_point)
+        self.conn.attach_volume(None, connection_info, self.instance,
+                                mount_point)
 
     def test_volume_detach_iscsi(self):
         self._create_vm()
@@ -788,7 +791,8 @@ class VMwareAPIVMTestCase(test.TestCase):
                 unit_number=mox.IgnoreArg(),
                 device_name=mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.conn.attach_volume(connection_info, self.instance, mount_point)
+        self.conn.attach_volume(None, connection_info, self.instance,
+                                mount_point)
 
     def test_detach_iscsi_disk_from_vm(self):
         self._create_vm()

@@ -207,7 +207,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, context=None):
         key = instance['name']
         if key in self.instances:
             del self.instances[key]
@@ -216,7 +216,8 @@ class FakeDriver(driver.ComputeDriver):
                         {'key': key,
                          'inst': self.instances}, instance=instance)
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         """Attach the disk to the instance at mountpoint using info."""
         instance_name = instance['name']
         if instance_name not in self._mounts:
@@ -224,7 +225,8 @@ class FakeDriver(driver.ComputeDriver):
         self._mounts[instance_name][mountpoint] = connection_info
         return True
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint,
+                      encryption=None):
         """Detach the disk attached to the instance."""
         try:
             del self._mounts[instance['name']][mountpoint]

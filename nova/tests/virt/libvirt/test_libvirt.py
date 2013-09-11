@@ -2293,7 +2293,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.VolumeDriverNotFound,
-                          conn.attach_volume,
+                          conn.attach_volume, None,
                           {"driver_volume_type": "badtype"},
                           {"name": "fake-instance"},
                           "/dev/sda")
@@ -2305,7 +2305,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.InvalidHypervisorType,
-                          conn.attach_volume,
+                          conn.attach_volume, None,
                           {"driver_volume_type": "fake",
                            "data": {"logical_block_size": "4096",
                                     "physical_block_size": "4096"}
@@ -2323,7 +2323,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
         self.assertRaises(exception.Invalid,
-                          conn.attach_volume,
+                          conn.attach_volume, None,
                           {"driver_volume_type": "fake",
                            "data": {"logical_block_size": "4096",
                                     "physical_block_size": "4096"}

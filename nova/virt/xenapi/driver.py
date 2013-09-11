@@ -237,7 +237,7 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.change_instance_metadata(instance, diff)
 
     def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, context=None):
         """Destroy VM instance."""
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
@@ -376,13 +376,15 @@ class XenAPIDriver(driver.ComputeDriver):
         xs_url = urlparse.urlparse(CONF.xenapi_connection_url)
         return xs_url.netloc
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         """Attach volume storage to VM instance."""
         return self._volumeops.attach_volume(connection_info,
                                              instance['name'],
                                              mountpoint)
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint,
+                      encryption=None):
         """Detach volume storage from VM instance."""
         return self._volumeops.detach_volume(connection_info,
                                              instance['name'],

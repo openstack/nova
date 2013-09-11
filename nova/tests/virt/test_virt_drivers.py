@@ -420,17 +420,19 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_attach_detach_volume(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.attach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref,
+        connection_info = {
+            "driver_volume_type": "fake",
+            "serial": "fake_serial",
+        }
+        self.connection.attach_volume(None, connection_info, instance_ref,
                                       '/dev/sda')
-        self.connection.detach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref,
+        self.connection.detach_volume(connection_info, instance_ref,
                                       '/dev/sda')
 
     @catch_notimplementederror
     def test_swap_volume(self):
         instance_ref, network_info = self._get_running_instance()
-        self.connection.attach_volume({'driver_volume_type': 'fake'},
+        self.connection.attach_volume(None, {'driver_volume_type': 'fake'},
                                       instance_ref,
                                       '/dev/sda')
         self.connection.swap_volume({'driver_volume_type': 'fake'},
@@ -441,9 +443,12 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_attach_detach_different_power_states(self):
         instance_ref, network_info = self._get_running_instance()
+        connection_info = {
+            "driver_volume_type": "fake",
+            "serial": "fake_serial",
+        }
         self.connection.power_off(instance_ref)
-        self.connection.attach_volume({'driver_volume_type': 'fake'},
-                                      instance_ref,
+        self.connection.attach_volume(None, connection_info, instance_ref,
                                       '/dev/sda')
 
         bdm = {
@@ -463,7 +468,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             }]
         }
         self.connection.power_on(self.ctxt, instance_ref, network_info, bdm)
-        self.connection.detach_volume({'driver_volume_type': 'fake'},
+        self.connection.detach_volume(connection_info,
                                       instance_ref,
                                       '/dev/sda')
 

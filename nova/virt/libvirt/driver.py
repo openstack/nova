@@ -100,6 +100,7 @@ from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
 from nova import volume
+from nova.volume import encryptors
 
 native_threading = patcher.original("threading")
 native_Queue = patcher.original("Queue")
@@ -828,9 +829,10 @@ class LibvirtDriver(driver.ComputeDriver):
             self._destroy(instance)
 
     def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, context=None):
         self._destroy(instance)
-        self._cleanup(instance, network_info, block_device_info, destroy_disks)
+        self._cleanup(instance, network_info, block_device_info,
+                      destroy_disks, context=context)
 
     def _undefine_domain(self, instance):
         try:
@@ -864,7 +866,7 @@ class LibvirtDriver(driver.ComputeDriver):
                               {'errcode': errcode, 'e': e}, instance=instance)
 
     def _cleanup(self, instance, network_info, block_device_info,
-                 destroy_disks):
+                 destroy_disks, context=None):
         self._undefine_domain(instance)
         self.unplug_vifs(instance, network_info)
         retry = True
@@ -908,6 +910,21 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
+
+            if ('data' in connection_info and
+                    'volume_id' in connection_info['data']):
+                volume_id = connection_info['data']['volume_id']
+                encryption = \
+                    encryptors.get_encryption_metadata(context, volume_id,
+                                                       connection_info)
+                if encryption:
+                    # The volume must be detached from the VM before
+                    # disconnecting it from its encryptor. Otherwise, the
+                    # encryptor may report that the volume is still in use.
+                    encryptor = self._get_volume_encryptor(connection_info,
+                                                           encryption)
+                    encryptor.detach_volume(**encryption)
+
             self.volume_driver_method('disconnect_volume',
                                       connection_info,
                                       disk_dev)
@@ -1012,7 +1029,13 @@ class LibvirtDriver(driver.ComputeDriver):
         method = getattr(driver, method_name)
         return method(connection_info, *args, **kwargs)
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def _get_volume_encryptor(self, connection_info, encryption):
+        encryptor = encryptors.get_volume_encryptor(connection_info,
+                                                    **encryption)
+        return encryptor
+
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         instance_name = instance['name']
         virt_dom = self._lookup_by_name(instance_name)
         disk_dev = mountpoint.rpartition("/")[2]
@@ -1056,6 +1079,16 @@ class LibvirtDriver(driver.ComputeDriver):
             state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
             if state == power_state.RUNNING:
                 flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+
+            # cache device_path in connection_info -- required by encryptors
+            if 'data' in connection_info:
+                connection_info['data']['device_path'] = conf.source_path
+
+            if encryption:
+                encryptor = self._get_volume_encryptor(connection_info,
+                                                       encryption)
+                encryptor.attach_volume(context, **encryption)
+
             virt_dom.attachDeviceFlags(conf.to_xml(), flags)
         except Exception as ex:
             if isinstance(ex, libvirt.libvirtError):
@@ -1157,7 +1190,8 @@ class LibvirtDriver(driver.ComputeDriver):
                               block_device_info=block_device_info)
         return xml
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint,
+                      encryption=None):
         instance_name = instance['name']
         disk_dev = mountpoint.rpartition("/")[2]
         try:
@@ -1174,6 +1208,14 @@ class LibvirtDriver(driver.ComputeDriver):
                 if state == power_state.RUNNING:
                     flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
                 virt_dom.detachDeviceFlags(xml, flags)
+
+                if encryption:
+                    # The volume must be detached from the VM before
+                    # disconnecting it from its encryptor. Otherwise, the
+                    # encryptor may report that the volume is still in use.
+                    encryptor = self._get_volume_encryptor(connection_info,
+                                                           encryption)
+                    encryptor.detach_volume(**encryption)
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if
@@ -1864,7 +1906,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # Initialize all the necessary networking, block devices and
         # start the instance.
         self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info)
+                                        block_device_info, context=context,
+                                        reboot=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance))
 
@@ -2022,7 +2065,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           write_to_disk=True)
 
         self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info)
+                                        block_device_info, context=context)
         LOG.debug(_("Instance is running"), instance=instance)
 
         def _wait_for_boot():
@@ -3108,7 +3151,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return domain
 
     def _create_domain_and_network(self, xml, instance, network_info,
-                                   block_device_info=None, power_on=True):
+                                   block_device_info=None, power_on=True,
+                                   context=None, reboot=False):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -3118,9 +3162,25 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             disk_dev = vol['mount_device'].rpartition("/")[2]
             disk_info = blockinfo.get_info_from_bdm(CONF.libvirt_type, vol)
-            self.volume_driver_method('connect_volume',
-                                      connection_info,
-                                      disk_info)
+            conf = self.volume_driver_method('connect_volume',
+                                             connection_info,
+                                             disk_info)
+
+            # cache device_path in connection_info -- required by encryptors
+            if (not reboot and 'data' in connection_info and
+                    'volume_id' in connection_info['data']):
+                connection_info['data']['device_path'] = conf.source_path
+                self.virtapi.block_device_mapping_update(context, vol.id,
+                        {'connection_info': jsonutils.dumps(connection_info)})
+
+                volume_id = connection_info['data']['volume_id']
+                encryption = \
+                        encryptors.get_encryption_metadata(context, volume_id,
+                                                           connection_info)
+                if encryption:
+                    encryptor = self._get_volume_encryptor(connection_info,
+                                                           encryption)
+                    encryptor.attach_volume(context, **encryption)
 
         self.plug_vifs(instance, network_info)
         self.firewall_driver.setup_basic_filtering(instance, network_info)
@@ -4454,7 +4514,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           block_device_info=block_device_info,
                           write_to_disk=True)
         self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, power_on)
+                                        block_device_info, power_on,
+                                        context=context)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
                                                     self._wait_for_running,

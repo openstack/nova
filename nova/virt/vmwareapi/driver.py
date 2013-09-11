@@ -191,7 +191,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._vmops.reboot(instance, network_info)
 
     def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True):
+                destroy_disks=True, context=None):
         """Destroy VM instance."""
         self._vmops.destroy(instance, network_info, destroy_disks)
 
@@ -283,13 +283,15 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Retrieves the IP address of the ESX host."""
         return self._host_ip
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         """Attach volume storage to VM instance."""
         return self._volumeops.attach_volume(connection_info,
                                              instance,
                                              mountpoint)
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint,
+                      encryption=None):
         """Detach volume storage to VM instance."""
         return self._volumeops.detach_volume(connection_info,
                                              instance,
@@ -603,7 +605,8 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops.spawn(context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info)
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         """Attach volume storage to VM instance."""
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.attach_volume(connection_info,

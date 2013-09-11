@@ -196,7 +196,7 @@ class BareMetalDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
             mountpoint = vol['mount_device']
-            self.attach_volume(
+            self.attach_volume(None,
                     connection_info, instance['name'], mountpoint)
 
     def _detach_block_devices(self, instance, block_device_info):
@@ -294,7 +294,8 @@ class BareMetalDriver(driver.ComputeDriver):
                 "for instance %r") % instance['uuid'])
         _update_state(ctx, node, instance, state)
 
-    def destroy(self, instance, network_info, block_device_info=None):
+    def destroy(self, instance, network_info, block_device_info=None,
+                context=None):
         context = nova_context.get_admin_context()
 
         try:
@@ -354,11 +355,13 @@ class BareMetalDriver(driver.ComputeDriver):
     def get_volume_connector(self, instance):
         return self.volume_driver.get_volume_connector(instance)
 
-    def attach_volume(self, connection_info, instance, mountpoint):
+    def attach_volume(self, context, connection_info, instance, mountpoint,
+                      encryption=None):
         return self.volume_driver.attach_volume(connection_info,
                                                 instance, mountpoint)
 
-    def detach_volume(self, connection_info, instance_name, mountpoint):
+    def detach_volume(self, connection_info, instance_name, mountpoint,
+                      encryption=None):
         return self.volume_driver.detach_volume(connection_info,
                                                 instance_name, mountpoint)
 

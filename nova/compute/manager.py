@@ -83,6 +83,7 @@ from nova.virt import event as virtevent
 from nova.virt import storage_users
 from nova.virt import virtapi
 from nova import volume
+from nova.volume import encryptors
 
 
 compute_opts = [
@@ -1414,7 +1415,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                               injected_files, admin_password,
                               network_info,
                               block_device_info)
-
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
@@ -1654,8 +1654,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
         try:
-            self.driver.destroy(instance, network_info,
-                                block_device_info)
+            self.driver.destroy(instance, network_info, block_device_info,
+                                context=context)
         except exception.InstancePowerOffFailure:
             # if the instance can't power off, don't release the ip
             with excutils.save_and_reraise_exception():
@@ -3598,10 +3598,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         if 'serial' not in connection_info:
             connection_info['serial'] = volume_id
 
+        encryption = encryptors.get_encryption_metadata(context, volume_id,
+                                                        connection_info)
         try:
-            self.driver.attach_volume(connection_info,
+            self.driver.attach_volume(context,
+                                      connection_info,
                                       instance,
-                                      mountpoint)
+                                      mountpoint,
+                                      encryption=encryption)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
                 LOG.exception(_("Failed to attach volume %(volume_id)s "
@@ -3651,9 +3655,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             if not self.driver.instance_exists(instance['name']):
                 LOG.warn(_('Detaching volume from unknown instance'),
                          context=context, instance=instance)
+
+            encryption = encryptors.get_encryption_metadata(context, volume_id,
+                                                            connection_info)
             self.driver.detach_volume(connection_info,
                                       instance,
-                                      mp)
+                                      mp,
+                                      encryption=encryption)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Failed to detach volume %(volume_id)s '

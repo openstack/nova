@@ -368,6 +368,10 @@ class ComputeVolumeTestCase(BaseTestCase):
                        store_cinfo)
 
     def test_attach_volume_serial(self):
+        def fake_get_volume_encryption_metadata(self, context, volume_id):
+            return {}
+        self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
+                       fake_get_volume_encryption_metadata)
 
         instance = self._create_fake_instance()
         self.compute.attach_volume(self.context, self.volume_id,
@@ -573,6 +577,11 @@ class ComputeVolumeTestCase(BaseTestCase):
                         'instance': instance}])
 
         self.mox.ReplayAll()
+
+        def fake_get_volume_encryption_metadata(self, context, volume_id):
+            return {}
+        self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
+                       fake_get_volume_encryption_metadata)
 
         self.compute.attach_volume(self.context, 1, '/dev/vdb', instance)
 
@@ -2860,8 +2869,10 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
         self.mox.StubOutWithMock(self.compute, '_deallocate_network')
         exp = exception.InstancePowerOffFailure(reason='')
-        self.compute.driver.destroy(mox.IgnoreArg(), mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndRaise(exp)
+        self.compute.driver.destroy(mox.IgnoreArg(),
+                                    mox.IgnoreArg(),
+                                    mox.IgnoreArg(),
+                                    context=mox.IgnoreArg()).AndRaise(exp)
         # mox will detect if _deallocate_network gets called unexpectedly
         self.mox.ReplayAll()
         instance = self._create_fake_instance()
@@ -2875,8 +2886,10 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
         self.mox.StubOutWithMock(self.compute, '_deallocate_network')
         exp = test.TestingException()
-        self.compute.driver.destroy(mox.IgnoreArg(), mox.IgnoreArg(),
-                                    mox.IgnoreArg()).AndRaise(exp)
+        self.compute.driver.destroy(mox.IgnoreArg(),
+                                    mox.IgnoreArg(),
+                                    mox.IgnoreArg(),
+                                    context=mox.IgnoreArg()).AndRaise(exp)
         self.compute._deallocate_network(mox.IgnoreArg(),
                                          mox.IgnoreArg(),
                                          mox.IgnoreArg())
@@ -3387,6 +3400,11 @@ class ComputeTestCase(BaseTestCase):
         def fake_volume_get(self, context, volume):
             return volume
         self.stubs.Set(cinder.API, "get", fake_volume_get)
+
+        def fake_get_volume_encryption_metadata(self, context, volume_id):
+            return {}
+        self.stubs.Set(cinder.API, 'get_volume_encryption_metadata',
+                       fake_get_volume_encryption_metadata)
 
         orig_connection_data = {
             'target_discovered': True,
@@ -9115,7 +9133,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'spawn', self._spawn)
 
     def _spawn(self, context, instance, image_meta, injected_files,
-            admin_password, nw_info, block_device_info):
+            admin_password, nw_info, block_device_info, db_api=None):
         self.assertEqual(self.expected, injected_files)
 
     def _test(self, injected_files, decoded_files):

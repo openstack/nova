@@ -351,6 +351,9 @@ class API(base.Base):
     def delete_snapshot(self, context, snapshot_id):
         cinderclient(context).volume_snapshots.delete(snapshot_id)
 
+    def get_volume_encryption_metadata(self, context, volume_id):
+        return cinderclient(context).volumes.get_encryption_metadata(volume_id)
+
     @translate_volume_exception
     def get_volume_metadata(self, context, volume_id):
         raise NotImplementedError()
