@@ -1476,3 +1476,7 @@ class PciDeviceDetachFailed(NovaException):
 
 class PciDeviceUnsupportedHypervisor(NovaException):
     msg_fmt = _("%(type)s hypervisor does not support PCI devices")
+
+
+class KeyManagerError(NovaException):
+    msg_fmt = _("key manager error: %(reason)s")

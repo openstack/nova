@@ -14,25 +14,25 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+
 from oslo.config import cfg
 
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 
+
 keymgr_opts = [
-    cfg.StrOpt('keymgr_api_class',
-               default='nova.keymgr.'
-                       'not_implemented_key_mgr.NotImplementedKeyManager',
+    cfg.StrOpt('api_class',
+               default='nova.keymgr.conf_key_mgr.ConfKeyManager',
                help='The full class name of the key manager API class'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(keymgr_opts)
+CONF.register_opts(keymgr_opts, group='keymgr')
 
 LOG = logging.getLogger(__name__)
 
 
 def API():
-    keymgr_api_class = CONF.keymgr_api_class
-    cls = importutils.import_class(keymgr_api_class)
+    cls = importutils.import_class(CONF.keymgr.api_class)
     return cls()
