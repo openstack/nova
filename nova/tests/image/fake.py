@@ -212,7 +212,7 @@ class _FakeImageService(object):
             image = self.images[image_id]
             try:
                 image['properties'].update(metadata.pop('properties'))
-            except Exception:
+            except KeyError:
                 pass
             image.update(metadata)
         return self.images[image_id]

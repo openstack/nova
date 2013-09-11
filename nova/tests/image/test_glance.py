@@ -122,7 +122,7 @@ class TestGlanceImageService(test.TestCase):
         for f in self.files_to_clean:
             try:
                 os.unlink(f)
-            except Exception:
+            except os.error:
                 pass
 
     def _get_tempfile(self):
