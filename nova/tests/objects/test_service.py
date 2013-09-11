@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from nova import db
 from nova.objects import service
 from nova.openstack.common import timeutils
@@ -35,17 +33,7 @@ fake_service = {
     'disabled_reason': None,
     }
 
-
-def compare(obj, db_obj):
-    allow_missing = ('availability_zone', 'compute_node')
-    for key in obj.fields:
-        if key in allow_missing and not obj.obj_attr_is_set(key):
-            continue
-        obj_val = obj[key]
-        if isinstance(obj_val, datetime.datetime):
-            obj_val = obj_val.replace(tzinfo=None)
-        db_val = db_obj[key]
-        assert db_val == obj_val, '%s != %s' % (db_val, obj_val)
+OPTIONAL = ['availability_zone', 'compute_node']
 
 
 class _TestServiceObject(object):
@@ -56,7 +44,7 @@ class _TestServiceObject(object):
         self.mox.ReplayAll()
         obj = getattr(service.Service, obj_method)(self.context, *args,
                                                    **kwargs)
-        compare(obj, fake_service)
+        self.compare_obj(obj, fake_service, allow_missing=OPTIONAL)
 
     def test_get_by_id(self):
         self._test_query('service_get', 'get_by_id', 123)
@@ -82,7 +70,9 @@ class _TestServiceObject(object):
         self.mox.ReplayAll()
         service_obj = service.Service.get_by_id(self.context, 123)
         self.assertTrue(service_obj.obj_attr_is_set('compute_node'))
-        compare(service_obj.compute_node, test_compute_node.fake_compute_node)
+        self.compare_obj(service_obj.compute_node,
+                         test_compute_node.fake_compute_node,
+                         allow_missing=OPTIONAL)
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'service_create')
@@ -128,7 +118,7 @@ class _TestServiceObject(object):
         self.mox.ReplayAll()
         services = service.ServiceList.get_by_topic(self.context, 'fake-topic')
         self.assertEqual(1, len(services))
-        compare(services[0], fake_service)
+        self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
 
     def test_get_by_host(self):
         self.mox.StubOutWithMock(db, 'service_get_all_by_host')
@@ -137,7 +127,7 @@ class _TestServiceObject(object):
         self.mox.ReplayAll()
         services = service.ServiceList.get_by_host(self.context, 'fake-host')
         self.assertEqual(1, len(services))
-        compare(services[0], fake_service)
+        self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
 
     def test_get_all(self):
         self.mox.StubOutWithMock(db, 'service_get_all')
@@ -146,7 +136,7 @@ class _TestServiceObject(object):
         self.mox.ReplayAll()
         services = service.ServiceList.get_all(self.context, disabled=False)
         self.assertEqual(1, len(services))
-        compare(services[0], fake_service)
+        self.compare_obj(services[0], fake_service, allow_missing=OPTIONAL)
 
     def test_get_all_with_az(self):
         self.mox.StubOutWithMock(db, 'service_get_all')
@@ -169,7 +159,9 @@ class _TestServiceObject(object):
         service_obj = service.Service()
         service_obj._context = self.context
         service_obj.id = 123
-        compare(service_obj.compute_node, test_compute_node.fake_compute_node)
+        self.compare_obj(service_obj.compute_node,
+                         test_compute_node.fake_compute_node,
+                         allow_missing=OPTIONAL)
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
 

@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from nova import db
 from nova.objects import compute_node
 from nova.objects import service
@@ -47,20 +45,12 @@ fake_compute_node = {
 
 
 class _TestComputeNodeObject(object):
-    def _compare(self, obj, db_obj):
-        for key in obj.fields:
-            obj_val = obj[key]
-            if isinstance(obj_val, datetime.datetime):
-                obj_val = obj_val.replace(tzinfo=None)
-            db_val = db_obj[key]
-            self.assertEqual(db_val, obj_val)
-
     def test_get_by_id(self):
         self.mox.StubOutWithMock(db, 'compute_node_get')
         db.compute_node_get(self.context, 123).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode.get_by_id(self.context, 123)
-        self._compare(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node)
 
     def test_get_by_service_id(self):
         self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
@@ -68,7 +58,7 @@ class _TestComputeNodeObject(object):
             fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode.get_by_service_id(self.context, 456)
-        self._compare(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node)
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
@@ -78,7 +68,7 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode()
         compute.service_id = 456
         compute.create(self.context)
-        self._compare(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')
@@ -90,7 +80,7 @@ class _TestComputeNodeObject(object):
         compute.id = 123
         compute.vcpus_used = 3
         compute.save(self.context)
-        self._compare(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node)
 
     def test_destroy(self):
         self.mox.StubOutWithMock(db, 'compute_node_delete')
@@ -118,7 +108,7 @@ class _TestComputeNodeObject(object):
         self.mox.ReplayAll()
         computes = compute_node.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(computes))
-        self._compare(computes[0], fake_compute_node)
+        self.compare_obj(computes[0], fake_compute_node)
 
     def test_get_by_hypervisor(self):
         self.mox.StubOutWithMock(db, 'compute_node_search_by_hypervisor')
@@ -128,7 +118,7 @@ class _TestComputeNodeObject(object):
         computes = compute_node.ComputeNodeList.get_by_hypervisor(self.context,
                                                                   'hyper')
         self.assertEqual(1, len(computes))
-        self._compare(computes[0], fake_compute_node)
+        self.compare_obj(computes[0], fake_compute_node)
 
 
 class TestComputeNodeObject(test_objects._LocalTest,

@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import datetime
-
 from nova import context
 from nova import db
 from nova.objects import migration
@@ -49,14 +47,6 @@ def fake_db_migration(**updates):
 
 
 class _TestMigrationObject(object):
-    def _compare(self, obj, db_obj):
-        for key in obj.fields:
-            obj_val = obj[key]
-            if isinstance(obj_val, datetime.datetime):
-                obj_val = obj_val.replace(tzinfo=None)
-            db_val = db_obj[key]
-            self.assertEqual(db_val, obj_val)
-
     def test_get_by_id(self):
         ctxt = context.get_admin_context()
         fake_migration = fake_db_migration()
@@ -64,7 +54,7 @@ class _TestMigrationObject(object):
         db.migration_get(ctxt, fake_migration['id']).AndReturn(fake_migration)
         self.mox.ReplayAll()
         mig = migration.Migration.get_by_id(ctxt, fake_migration['id'])
-        self._compare(mig, fake_migration)
+        self.compare_obj(mig, fake_migration)
 
     def test_get_by_instance_and_status(self):
         ctxt = context.get_admin_context()
@@ -77,7 +67,7 @@ class _TestMigrationObject(object):
         self.mox.ReplayAll()
         mig = migration.Migration.get_by_instance_and_status(
             ctxt, fake_migration['id'], 'migrating')
-        self._compare(mig, fake_migration)
+        self.compare_obj(mig, fake_migration)
 
     def test_create(self):
         ctxt = context.get_admin_context()
@@ -133,7 +123,7 @@ class _TestMigrationObject(object):
                 ctxt, 'window', 'foo'))
         self.assertEqual(2, len(migrations))
         for index, db_migration in enumerate(db_migrations):
-            self._compare(migrations[index], db_migration)
+            self.compare_obj(migrations[index], db_migration)
 
     def test_get_in_progress_by_host_and_node(self):
         ctxt = context.get_admin_context()
@@ -149,7 +139,7 @@ class _TestMigrationObject(object):
                 ctxt, 'host', 'node'))
         self.assertEqual(2, len(migrations))
         for index, db_migration in enumerate(db_migrations):
-            self._compare(migrations[index], db_migration)
+            self.compare_obj(migrations[index], db_migration)
 
     def test_get_by_filters(self):
         ctxt = context.get_admin_context()
@@ -163,7 +153,7 @@ class _TestMigrationObject(object):
         migrations = migration.MigrationList.get_by_filters(ctxt, filters)
         self.assertEqual(2, len(migrations))
         for index, db_migration in enumerate(db_migrations):
-            self._compare(migrations[index], db_migration)
+            self.compare_obj(migrations[index], db_migration)
 
 
 class TestMigrationObject(test_objects._LocalTest,
