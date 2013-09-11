@@ -1645,6 +1645,85 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
+    def test_rescue_notifications(self):
+        # Ensure notifications on instance rescue.
+        def fake_rescue(self, context, instance_ref, network_info, image_meta,
+                        rescue_password):
+            pass
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'rescue', fake_rescue)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
+
+        fake_notifier.NOTIFICATIONS = []
+        db.instance_update(self.context, instance_uuid,
+                           {"task_state": task_states.RESCUING})
+        self.compute.rescue_instance(self.context, instance=instance)
+
+        expected_notifications = ['compute.instance.exists',
+                                  'compute.instance.rescue.start',
+                                  'compute.instance.rescue.end']
+        self.assertEquals([m.event_type for m in fake_notifier.NOTIFICATIONS],
+                          expected_notifications)
+        for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
+            self.assertEquals(msg.event_type, expected_notifications[n])
+            self.assertEquals(msg.priority, 'INFO')
+            payload = msg.payload
+            self.assertEquals(payload['tenant_id'], self.project_id)
+            self.assertEquals(payload['user_id'], self.user_id)
+            self.assertEquals(payload['instance_id'], instance_uuid)
+            self.assertEquals(payload['instance_type'], 'm1.tiny')
+            type_id = flavors.get_flavor_by_name('m1.tiny')['id']
+            self.assertEquals(str(payload['instance_type_id']), str(type_id))
+            self.assertTrue('display_name' in payload)
+            self.assertTrue('created_at' in payload)
+            self.assertTrue('launched_at' in payload)
+            image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
+            self.assertEquals(payload['image_ref_url'], image_ref_url)
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertTrue('rescue_image_name' in msg.payload)
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
+    def test_unrescue_notifications(self):
+        # Ensure notifications on instance rescue.
+        def fake_unrescue(self, instance_ref, network_info):
+            pass
+        self.stubs.Set(nova.virt.fake.FakeDriver, 'unrescue',
+                       fake_unrescue)
+
+        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance_uuid = instance['uuid']
+        self.compute.run_instance(self.context, instance=instance)
+
+        fake_notifier.NOTIFICATIONS = []
+        db.instance_update(self.context, instance_uuid,
+                           {"task_state": task_states.UNRESCUING})
+        self.compute.unrescue_instance(self.context, instance=instance)
+
+        expected_notifications = ['compute.instance.unrescue.start',
+                                  'compute.instance.unrescue.end']
+        self.assertEquals([m.event_type for m in fake_notifier.NOTIFICATIONS],
+                          expected_notifications)
+        for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
+            self.assertEquals(msg.event_type, expected_notifications[n])
+            self.assertEquals(msg.priority, 'INFO')
+            payload = msg.payload
+            self.assertEquals(payload['tenant_id'], self.project_id)
+            self.assertEquals(payload['user_id'], self.user_id)
+            self.assertEquals(payload['instance_id'], instance_uuid)
+            self.assertEquals(payload['instance_type'], 'm1.tiny')
+            type_id = flavors.get_flavor_by_name('m1.tiny')['id']
+            self.assertEquals(str(payload['instance_type_id']), str(type_id))
+            self.assertTrue('display_name' in payload)
+            self.assertTrue('created_at' in payload)
+            self.assertTrue('launched_at' in payload)
+            image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
+            self.assertEquals(payload['image_ref_url'], image_ref_url)
+
+        self.compute.terminate_instance(self.context, instance=instance)
+
     def test_rescue_handle_err(self):
         # If the driver fails to rescue, instance state should remain the same
         # and the exception should be converted to InstanceNotRescuable
