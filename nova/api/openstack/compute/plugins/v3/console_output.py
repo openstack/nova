@@ -25,7 +25,7 @@ from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
 
-ALIAS = "os-console-output"
+ALIAS = "console-output"
 authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
 
 
@@ -82,8 +82,8 @@ class ConsoleOutput(extensions.V3APIExtensionBase):
 
     name = "ConsoleOutput"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-console-output/api/v3")
+    namespace = ("http://docs.openstack.org/compute/core/"
+                 "console-output/api/v3")
     version = 1
 
     def get_controller_extensions(self):
