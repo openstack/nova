@@ -5630,8 +5630,7 @@ class CellTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'is_parent': False,
         }
         test_cellname = self._get_cell_base_values()['name']
-        db.cell_update(self.ctxt, test_cellname, new_values)
-        updated_cell = db.cell_get(self.ctxt, test_cellname)
+        updated_cell = db.cell_update(self.ctxt, test_cellname, new_values)
         self._assertEqualObjects(updated_cell, new_values,
                                  ignored_keys=self._ignored_keys + ['name'])
 
