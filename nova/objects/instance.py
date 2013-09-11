@@ -23,12 +23,15 @@ from nova.objects import instance_info_cache
 from nova.objects import pci_device
 from nova.objects import security_group
 from nova.objects import utils as obj_utils
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 from nova import utils
 
 from oslo.config import cfg
 
 
 CONF = cfg.CONF
+LOG = logging.getLogger(__name__)
 
 
 # These are fields that can be specified as expected_attrs but are
@@ -362,7 +365,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         for secgroup in self.security_groups:
             secgroup.save(context)
 
-    def _save_instance_fault(self, context):
+    def _save_fault(self, context):
         # NOTE(danms): I don't think we need to worry about this, do we?
         pass
 
@@ -417,7 +420,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         for field in self.fields:
             if (hasattr(self, base.get_attrname(field)) and
                     isinstance(self[field], base.NovaObject)):
-                getattr(self, '_save_%s' % field)(context)
+                try:
+                    getattr(self, '_save_%s' % field)(context)
+                except AttributeError:
+                    LOG.exception(_('No save handler for %s') % field,
+                                  instance=self)
             elif field in changes:
                 updates[field] = self[field]
 
