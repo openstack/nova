@@ -1002,3 +1002,21 @@ class TestGlanceApiServers(test.TestCase):
             self.assertIn(server[0], glance_host)
             if i > 2:
                 break
+
+
+class TestUpdateGlanceImage(test.NoDBTestCase):
+    def test_start(self):
+        consumer = glance.UpdateGlanceImage(
+            'context', 'id', 'metadata', 'stream')
+        image_service = self.mox.CreateMock(glance.GlanceImageService)
+
+        self.mox.StubOutWithMock(glance, 'get_remote_image_service')
+
+        glance.get_remote_image_service(
+            'context', 'id').AndReturn((image_service, 'image_id'))
+        image_service.update(
+            'context', 'image_id', 'metadata', 'stream', purge_props=False)
+
+        self.mox.ReplayAll()
+
+        consumer.start()

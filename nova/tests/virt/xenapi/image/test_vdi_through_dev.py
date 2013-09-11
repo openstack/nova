@@ -73,7 +73,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
 
     def test__perform_upload(self):
         producer = self.mox.CreateMock(vdi_through_dev.TarGzProducer)
-        consumer = self.mox.CreateMock(vdi_through_dev.UpdateGlanceImage)
+        consumer = self.mox.CreateMock(glance.UpdateGlanceImage)
         pool = self.mox.CreateMock(eventlet.GreenPool)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', 'session', 'instance', ['vdi0', 'vdi1'], 'id')
@@ -81,7 +81,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
         self.mox.StubOutWithMock(store, '_get_virtual_size')
         self.mox.StubOutWithMock(producer, 'get_metadata')
         self.mox.StubOutWithMock(vdi_through_dev, 'TarGzProducer')
-        self.mox.StubOutWithMock(vdi_through_dev, 'UpdateGlanceImage')
+        self.mox.StubOutWithMock(glance, 'UpdateGlanceImage')
         self.mox.StubOutWithMock(vdi_through_dev, 'eventlet')
 
         producer.get_metadata().AndReturn('metadata')
@@ -90,7 +90,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
         vdi_through_dev.TarGzProducer(
             'devpath', 'writefile', '324', 'disk.raw').AndReturn(
                 producer)
-        vdi_through_dev.UpdateGlanceImage('context', 'id', 'metadata',
+        glance.UpdateGlanceImage('context', 'id', 'metadata',
             'readfile').AndReturn(consumer)
         vdi_through_dev.eventlet.GreenPool().AndReturn(pool)
         pool.spawn(producer.start)
@@ -182,21 +182,3 @@ class TestTarGzProducer(test.NoDBTestCase):
             'disk_format': 'raw',
             'container_format': 'tgz'},
             producer.get_metadata())
-
-
-class TestUpdateGlanceImage(test.NoDBTestCase):
-    def test_start(self):
-        consumer = vdi_through_dev.UpdateGlanceImage(
-            'context', 'id', 'metadata', 'stream')
-        image_service = self.mox.CreateMock(glance.GlanceImageService)
-
-        self.mox.StubOutWithMock(vdi_through_dev, 'glance')
-
-        vdi_through_dev.glance.get_remote_image_service(
-            'context', 'id').AndReturn((image_service, 'image_id'))
-        image_service.update(
-            'context', 'image_id', 'metadata', 'stream', purge_props=False)
-
-        self.mox.ReplayAll()
-
-        consumer.start()
