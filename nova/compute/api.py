@@ -809,7 +809,7 @@ class API(base.Base):
                 try:
                     volume_id = bdm['volume_id']
                     volume = self.volume_api.get(context, volume_id)
-                    return volume['volume_image_metadata']
+                    return volume.get('volume_image_metadata', {})
                 except Exception:
                     raise exception.InvalidBDMVolume(id=volume_id)
 
