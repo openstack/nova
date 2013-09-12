@@ -595,28 +595,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Good path
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
                                  {'uuid': 'fake'})
-        self.assertTrue(volumes[old_volume_id]['status'], 'available')
-        self.assertTrue(volumes[new_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[old_volume_id]['status'], 'available')
+        self.assertEqual(volumes[new_volume_id]['status'], 'in-use')
 
         # Error paths
         volumes[old_volume_id]['status'] = 'detaching'
-        volumes[old_volume_id]['status'] = 'attaching'
+        volumes[new_volume_id]['status'] = 'attaching'
         self.stubs.Set(self.compute.driver, 'swap_volume', fake_func_exc)
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
                           {'uuid': 'fake'})
-        self.assertTrue(volumes[old_volume_id]['status'], 'detaching')
-        self.assertTrue(volumes[new_volume_id]['status'], 'attaching')
+        self.assertEqual(volumes[old_volume_id]['status'], 'detaching')
+        self.assertEqual(volumes[new_volume_id]['status'], 'attaching')
 
         volumes[old_volume_id]['status'] = 'detaching'
-        volumes[old_volume_id]['status'] = 'attaching'
+        volumes[new_volume_id]['status'] = 'attaching'
         self.stubs.Set(self.compute.volume_api, 'initialize_connection',
                        fake_func_exc)
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
                           {'uuid': 'fake'})
-        self.assertTrue(volumes[old_volume_id]['status'], 'detaching')
-        self.assertTrue(volumes[new_volume_id]['status'], 'attaching')
+        self.assertEqual(volumes[old_volume_id]['status'], 'detaching')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
     def test_check_can_live_migrate_source(self):
         is_volume_backed = 'volume_backed'
