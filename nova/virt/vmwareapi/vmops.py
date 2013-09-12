@@ -1097,7 +1097,7 @@ class VMwareVMOps(object):
         self._power_on(instance)
 
     def _get_orig_vm_name_label(self, instance):
-        return instance['name'] + '-orig'
+        return instance['uuid'] + '-orig'
 
     def _update_instance_progress(self, context, instance, step, total_steps):
         """Update instance progress percent to reflect current step number
@@ -1130,9 +1130,9 @@ class VMwareVMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         vm_ref = vm_util.get_vm_ref(self._session, instance)
+        # Read the host_ref for the destination. If this is None then the
+        # VC will decide on placement
         host_ref = self._get_host_ref_from_name(dest)
-        if host_ref is None:
-            raise exception.HostNotFound(host=dest)
 
         # 1. Power off the instance
         self.power_off(instance)
@@ -1156,7 +1156,8 @@ class VMwareVMOps(object):
 
         # Get the clone vm spec
         ds_ref = vm_util.get_datastore_ref_and_name(
-                            self._session, None, dest)[0]
+                            self._session, self._cluster, host_ref,
+                            datastore_regex=self._datastore_regex)[0]
         client_factory = self._session._get_vim().client.factory
         rel_spec = vm_util.relocate_vm_spec(client_factory, ds_ref, host_ref)
         clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
@@ -1168,7 +1169,7 @@ class VMwareVMOps(object):
                                 self._session._get_vim(),
                                 "CloneVM_Task", vm_ref,
                                 folder=vm_folder_ref,
-                                name=instance['name'],
+                                name=instance['uuid'],
                                 spec=clone_spec)
         self._session._wait_for_task(instance['uuid'], vm_clone_task)
         LOG.debug(_("Cloned VM to host %s") % dest, instance=instance)
@@ -1179,10 +1180,9 @@ class VMwareVMOps(object):
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
         instance_name = self._get_orig_vm_name_label(instance)
-        # Destroy the original VM.
-        vm_ref = vm_util.get_vm_ref_from_uuid(self._session, instance['uuid'])
-        if vm_ref is None:
-            vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
+        # Destroy the original VM. The vm_ref is via the instance_name
+        # and not the UUID
+        vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
         if vm_ref is None:
             LOG.debug(_("instance not present"), instance=instance)
             return
@@ -1192,7 +1192,7 @@ class VMwareVMOps(object):
             destroy_task = self._session._call_method(
                                         self._session._get_vim(),
                                         "Destroy_Task", vm_ref)
-            self._session._wait_for_task(instance['uuid'], destroy_task)
+            self._session._wait_for_task(instance_name, destroy_task)
             LOG.debug(_("Destroyed the VM"), instance=instance)
         except Exception as excep:
             LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
@@ -1223,6 +1223,16 @@ class VMwareVMOps(object):
                          network_info, image_meta, resize_instance=False,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
+        if resize_instance:
+            client_factory = self._session._get_vim().client.factory
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
+                                                        instance)
+            reconfig_task = self._session._call_method(
+                                            self._session._get_vim(),
+                                            "ReconfigVM_Task", vm_ref,
+                                            spec=vm_resize_spec)
+
         # 4. Start VM
         if power_on:
             self._power_on(instance)
@@ -1430,8 +1440,9 @@ class VMwareVMOps(object):
                     "HostSystem", ["name"])
         vm_util._cancel_retrieve_if_necessary(self._session, host_objs)
         for host in host_objs:
-            if host.propSet[0].val == host_name:
-                return host.obj
+            if hasattr(host, 'propSet'):
+                if host.propSet[0].val == host_name:
+                    return host.obj
         return None
 
     def _get_vmfolder_ref(self):
