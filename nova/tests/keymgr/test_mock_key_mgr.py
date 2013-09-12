@@ -23,7 +23,7 @@ import array
 from nova import context
 from nova import exception
 from nova.keymgr import key as keymgr_key
-from nova.tests.keymgr import mock_key_mgr
+from nova.keymgr import mock_key_mgr
 from nova.tests.keymgr import test_key_mgr
 
 

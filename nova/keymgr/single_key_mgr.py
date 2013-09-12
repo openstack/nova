@@ -21,9 +21,9 @@ all invocations of get_key.
 
 
 from nova import exception
+from nova.keymgr import mock_key_mgr
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.tests.keymgr import mock_key_mgr
 
 
 LOG = logging.getLogger(__name__)

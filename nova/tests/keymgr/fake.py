@@ -19,7 +19,7 @@
 """Implementation of a fake key manager."""
 
 
-from nova.tests.keymgr import mock_key_mgr
+from nova.keymgr import mock_key_mgr
 
 
 def fake_api():
