@@ -2519,9 +2519,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         admin_password = (rescue_password if rescue_password else
                       utils.generate_password())
 
+        self.conductor_api.notify_usage_exists(context, instance,
+                                               current_period=True)
+
         network_info = self._get_instance_nw_info(context, instance)
 
         rescue_image_meta = self._get_rescue_image(context, instance)
+
+        extra_usage_info = {'rescue_image_name':
+                            rescue_image_meta.get('name', '')}
+        self._notify_about_instance_usage(context, instance,
+                "rescue.start", extra_usage_info=extra_usage_info,
+                network_info=network_info)
 
         try:
             self.driver.rescue(context, instance,
@@ -2535,13 +2544,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                 reason=_("Driver Error: %s") % unicode(e))
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
+        instance = self._instance_update(context,
                               instance['uuid'],
                               vm_state=vm_states.RESCUED,
                               task_state=None,
                               power_state=current_power_state,
                               launched_at=timeutils.utcnow(),
                               expected_task_state=task_states.RESCUING)
+        self._notify_about_instance_usage(context, instance,
+                "rescue.end", extra_usage_info=extra_usage_info,
+                network_info=network_info)
 
     @wrap_exception()
     @reverts_task_state
@@ -2553,18 +2565,23 @@ class ComputeManager(manager.SchedulerDependentManager):
         LOG.audit(_('Unrescuing'), context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
-
+        self._notify_about_instance_usage(context, instance,
+                "unrescue.start", network_info=network_info)
         with self._error_out_instance_on_exception(context, instance['uuid']):
             self.driver.unrescue(instance,
                                  network_info)
 
         current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context,
-                              instance['uuid'],
-                              vm_state=vm_states.ACTIVE,
-                              task_state=None,
-                              expected_task_state=task_states.UNRESCUING,
-                              power_state=current_power_state)
+        instance = self._instance_update(context,
+            instance['uuid'],
+            vm_state=vm_states.ACTIVE,
+            task_state=None,
+            expected_task_state=task_states.UNRESCUING,
+            power_state=current_power_state)
+        self._notify_about_instance_usage(context,
+                                          instance,
+                                          "unrescue.end",
+                                          network_info=network_info)
 
     @wrap_exception()
     @reverts_task_state
