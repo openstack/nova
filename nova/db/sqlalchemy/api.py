@@ -677,13 +677,17 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
 
 @require_admin_context
 def compute_node_delete(context, compute_id):
-    """Delete a ComputeNode record."""
-    result = model_query(context, models.ComputeNode).\
-             filter_by(id=compute_id).\
-             soft_delete()
+    """Delete a ComputeNode record and prune its stats."""
+    session = get_session()
+    with session.begin():
+        # Prune the compute node's stats
+        _update_stats(context, {}, compute_id, session, True)
+        result = model_query(context, models.ComputeNode, session=session).\
+                 filter_by(id=compute_id).\
+                 soft_delete(synchronize_session=False)
 
-    if not result:
-        raise exception.ComputeHostNotFound(host=compute_id)
+        if not result:
+            raise exception.ComputeHostNotFound(host=compute_id)
 
 
 def compute_node_statistics(context):
