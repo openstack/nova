@@ -196,6 +196,9 @@ def translate_exceptions():
     except exception.SecurityGroupLimitExceeded as exp:
         msg = exp.format_message()
         raise exc.HTTPRequestEntityTooLarge(explanation=msg)
+    except exception.NoUniqueMatch as exp:
+        msg = exp.format_message()
+        raise exc.HTTPConflict(explanation=msg)
 
 
 class SecurityGroupControllerBase(object):

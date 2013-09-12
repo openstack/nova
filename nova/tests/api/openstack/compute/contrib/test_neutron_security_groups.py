@@ -21,6 +21,7 @@ import uuid
 
 from lxml import etree
 from neutronclient.common import exceptions as n_exc
+from neutronclient.neutron import v2_0 as neutronv20
 from oslo.config import cfg
 import webob
 
@@ -79,6 +80,15 @@ class TestNeutronSecurityGroups(
                 body['port'][field] = kwargs[field]
         neutron = get_client()
         return neutron.create_port(body)
+
+    def _create_security_group(self, **kwargs):
+        body = {'security_group': {}}
+        fields = ['name', 'description']
+        for field in fields:
+            if field in kwargs:
+                body['security_group'][field] = kwargs[field]
+        neutron = get_client()
+        return neutron.create_security_group(body)
 
     def test_create_security_group_with_no_description(self):
         # Neutron's security group description field is optional.
@@ -204,6 +214,24 @@ class TestNeutronSecurityGroups(
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.manager._addSecurityGroup(req, '1', body)
 
+    def test_associate_duplicate_names(self):
+        sg1 = self._create_security_group(name='sg1',
+                                          description='sg1')['security_group']
+        self._create_security_group(name='sg1',
+                                    description='sg1')['security_group']
+        net = self._create_network()
+        self._create_port(
+            network_id=net['network']['id'], security_groups=[sg1['id']],
+            device_id=test_security_groups.FAKE_UUID1)
+
+        self.stubs.Set(nova.db, 'instance_get',
+                       test_security_groups.return_server)
+        body = dict(addSecurityGroup=dict(name="sg1"))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.manager._addSecurityGroup, req, '1', body)
+
     def test_associate_port_security_enabled_true(self):
         sg = self._create_sg_template().get('security_group')
         net = self._create_network()
@@ -269,6 +297,18 @@ class TestNeutronSecurityGroups(
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
         self.manager._removeSecurityGroup(req, '1', body)
+
+    def test_get_raises_no_unique_match_error(self):
+
+        def fake_find_resourceid_by_name_or_id(client, param, name):
+
+            raise n_exc.NeutronClientNoUniqueMatch()
+
+        self.stubs.Set(neutronv20, 'find_resourceid_by_name_or_id',
+                       fake_find_resourceid_by_name_or_id)
+        security_group_api = self.controller.security_group_api
+        self.assertRaises(exception.NoUniqueMatch, security_group_api.get,
+                          context.get_admin_context(), 'foobar')
 
     def test_get_instances_security_groups_bindings(self):
         servers = [{'id': test_security_groups.FAKE_UUID1},

@@ -840,7 +840,8 @@ class ServersController(wsgi.Controller):
                 exception.SecurityGroupNotFound,
                 exception.NetworkNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
-        except exception.PortInUse as error:
+        except (exception.PortInUse,
+                exception.NoUniqueMatch) as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 
         # If the caller wanted a reservation_id, return it
