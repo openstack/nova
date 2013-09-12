@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2010 Citrix Systems, Inc.
 # Copyright 2010 OpenStack Foundation
@@ -514,7 +513,8 @@ class XenAPIDriver(driver.ComputeDriver):
         :params : block_migration: if true, post operation of block_migraiton.
         """
         # TODO(JohnGarbutt) look at moving/downloading ramdisk and kernel
-        pass
+        self._vmops.post_live_migration_at_destination(ctxt, instance_ref,
+                network_info, block_device_info, block_device_info)
 
     def unfilter_instance(self, instance_ref, network_info):
         """Removes security groups configured for an instance."""

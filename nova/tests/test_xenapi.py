@@ -2723,7 +2723,27 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         # ensure method is present
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        self.conn.post_live_migration_at_destination(None, None, None, None)
+
+        fake_instance = "instance"
+        fake_network_info = "network_info"
+
+        def fake_fw(instance, network_info):
+            self.assertEquals(instance, fake_instance)
+            self.assertEquals(network_info, fake_network_info)
+            fake_fw.called += 1
+
+        fake_fw.called = 0
+        _vmops = self.conn._vmops
+        self.stubs.Set(_vmops.firewall_driver,
+                       'setup_basic_filtering', fake_fw)
+        self.stubs.Set(_vmops.firewall_driver,
+                       'prepare_instance_filter', fake_fw)
+        self.stubs.Set(_vmops.firewall_driver,
+                       'apply_instance_filter', fake_fw)
+
+        self.conn.post_live_migration_at_destination(None, fake_instance,
+                                                     fake_network_info, None)
+        self.assertEqual(fake_fw.called, 3)
 
     def test_check_can_live_migrate_destination_with_block_migration(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
