@@ -63,7 +63,12 @@ class TargetCellFilter(filters.BaseCellFilter):
         if cell_name == filter_properties['routing_path']:
             return [scheduler.state_manager.get_my_state()]
         ctxt = filter_properties['context']
-        scheduler.msg_runner.schedule_run_instance(ctxt, cell_name,
-            filter_properties['host_sched_kwargs'])
+
+        # NOTE(belliott) Remove after deprecated schedule_run_instance
+        # code goes away:
+        schedule = filter_properties['cell_scheduler_method']
+        schedule = getattr(scheduler.msg_runner, schedule)
+        schedule(ctxt, cell_name, filter_properties['host_sched_kwargs'])
+
         # Returning None means to skip further scheduling, because we
         # handled it.
