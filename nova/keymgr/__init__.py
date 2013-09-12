@@ -18,7 +18,6 @@
 from oslo.config import cfg
 
 from nova.openstack.common import importutils
-from nova.openstack.common import log as logging
 
 
 keymgr_opts = [
@@ -29,8 +28,6 @@ keymgr_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(keymgr_opts, group='keymgr')
-
-LOG = logging.getLogger(__name__)
 
 
 def API():
