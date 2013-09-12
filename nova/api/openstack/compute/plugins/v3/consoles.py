@@ -20,7 +20,6 @@ from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.console import api as console_api
 from nova import exception
 
@@ -30,7 +29,7 @@ def _translate_keys(cons):
     pool = cons['pool']
     info = {'id': cons['id'],
             'console_type': pool['console_type']}
-    return dict(console=info)
+    return info
 
 
 def _translate_detail_keys(cons):
@@ -45,40 +44,6 @@ def _translate_detail_keys(cons):
     return dict(console=info)
 
 
-class ConsoleTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('console', selector='console')
-
-        id_elem = xmlutil.SubTemplateElement(root, 'id', selector='id')
-        id_elem.text = xmlutil.Selector()
-
-        port_elem = xmlutil.SubTemplateElement(root, 'port', selector='port')
-        port_elem.text = xmlutil.Selector()
-
-        host_elem = xmlutil.SubTemplateElement(root, 'host', selector='host')
-        host_elem.text = xmlutil.Selector()
-
-        passwd_elem = xmlutil.SubTemplateElement(root, 'password',
-                                                 selector='password')
-        passwd_elem.text = xmlutil.Selector()
-
-        constype_elem = xmlutil.SubTemplateElement(root, 'console_type',
-                                                   selector='console_type')
-        constype_elem.text = xmlutil.Selector()
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class ConsolesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('consoles')
-        console = xmlutil.SubTemplateElement(root, 'console',
-                                             selector='consoles')
-        console.append(ConsoleTemplate())
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class ConsolesController(object):
     """The Consoles controller for the OpenStack API."""
 
@@ -86,7 +51,6 @@ class ConsolesController(object):
         self.console_api = console_api.API()
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=ConsolesTemplate)
     def index(self, req, server_id):
         """Returns a list of consoles for this instance."""
         try:
@@ -108,7 +72,6 @@ class ConsolesController(object):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=ConsoleTemplate)
     def show(self, req, server_id, id):
         """Shows in-depth information on a specific console."""
         try:
