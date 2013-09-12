@@ -55,11 +55,10 @@ class ConfKeyManager(single_key_mgr.SingleKeyManager):
     """
 
     def __init__(self):
-        super(ConfKeyManager, self).__init__()
-
         if CONF.keymgr.fixed_key is None:
             raise ValueError(_('keymgr.fixed_key not defined'))
         self._hex_key = CONF.keymgr.fixed_key
+        super(ConfKeyManager, self).__init__()
 
-    def _get_hex_key(self):
+    def _generate_hex_key(self, **kwargs):
         return self._hex_key
