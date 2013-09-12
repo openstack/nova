@@ -20,9 +20,13 @@ from nova.objects import utils
 
 
 class Aggregate(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: String attributes updated to support unicode
+    VERSION = '1.1'
+
     fields = {
         'id': int,
-        'name': str,
+        'name': utils.str_value,
         'hosts': utils.list_of_strings_or_none,
         'metadata': utils.dict_of_strings_or_none,
         }

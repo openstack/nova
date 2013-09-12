@@ -19,6 +19,10 @@ from nova.objects import utils
 
 
 class InstanceAction(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: String attributes updated to support unicode
+    VERSION = '1.1'
+
     fields = {
         'id': int,
         'action': utils.str_or_none,

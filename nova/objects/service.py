@@ -23,7 +23,8 @@ from nova.objects import utils
 class Service(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added compute_node nested object
-    VERSION = '1.1'
+    # Version 1.2: String attributes updated to support unicode
+    VERSION = '1.2'
 
     fields = {
         'id': int,

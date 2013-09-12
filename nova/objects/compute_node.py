@@ -20,7 +20,8 @@ from nova.objects import utils
 class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_service_id()
-    VERSION = '1.1'
+    # Version 1.2: String attributes updated to support unicode
+    VERSION = '1.2'
 
     fields = {
         'id': int,
@@ -31,7 +32,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'vcpus_used': int,
         'memory_mb_used': int,
         'local_gb_used': int,
-        'hypervisor_type': str,
+        'hypervisor_type': utils.str_value,
         'hypervisor_version': int,
         'hypervisor_hostname': utils.str_or_none,
         'free_ram_mb': utils.int_or_none,
