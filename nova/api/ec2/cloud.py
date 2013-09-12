@@ -1258,10 +1258,11 @@ class CloudController(object):
     def disassociate_address(self, context, public_ip, **kwargs):
         instance_id = self.network_api.get_instance_id_by_floating_address(
                                                          context, public_ip)
-        instance = self.compute_api.get(context, instance_id)
-        LOG.audit(_("Disassociate address %s"), public_ip, context=context)
-        self.network_api.disassociate_floating_ip(context, instance,
-                                                  address=public_ip)
+        if instance_id:
+            instance = self.compute_api.get(context, instance_id)
+            LOG.audit(_("Disassociate address %s"), public_ip, context=context)
+            self.network_api.disassociate_floating_ip(context, instance,
+                                                      address=public_ip)
         return {'return': "true"}
 
     def run_instances(self, context, **kwargs):
