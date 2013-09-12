@@ -419,7 +419,8 @@ class ServersController(wsgi.Controller):
                 namespace=self.EXTENSION_REBUILD_NAMESPACE,
                 check_func=_check_load_extension('server_rebuild'),
                 invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info})
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
         if not list(self.rebuild_extension_manager):
             LOG.debug(_("Did not find any server rebuild extensions"))
 
@@ -431,7 +432,8 @@ class ServersController(wsgi.Controller):
                 check_func=_check_load_extension(
                     'server_xml_extract_rebuild_deserialize'),
                 invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info})
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
         if not list(self.rebuild_xml_deserialize_manager):
             LOG.debug(_("Did not find any server rebuild xml deserializer"
                         " extensions"))
@@ -442,7 +444,8 @@ class ServersController(wsgi.Controller):
                 namespace=self.EXTENSION_RESIZE_NAMESPACE,
                 check_func=_check_load_extension('server_resize'),
                 invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info})
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
         if not list(self.resize_extension_manager):
             LOG.debug(_("Did not find any server resize extensions"))
 
@@ -454,7 +457,8 @@ class ServersController(wsgi.Controller):
                 check_func=_check_load_extension(
                     'server_xml_extract_resize_deserialize'),
                 invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info})
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
         if not list(self.resize_xml_deserialize_manager):
             LOG.debug(_("Did not find any server resize xml deserializer"
                         " extensions"))
@@ -465,7 +469,8 @@ class ServersController(wsgi.Controller):
                 namespace=self.EXTENSION_UPDATE_NAMESPACE,
                 check_func=_check_load_extension('server_resize'),
                 invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info})
+                invoke_kwds={"extension_info": self.extension_info},
+                propagate_map_exceptions=True)
         if not list(self.update_extension_manager):
             LOG.debug(_("Did not find any server update extensions"))
 
