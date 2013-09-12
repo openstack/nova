@@ -1000,10 +1000,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
             context, instance, legacy=False)
 
-        # Verify that all the BDMs have a device_name set and assign a default
-        # one to the ones missing it with the help of the driver.
-        self._default_block_device_names(context, instance, image_meta, bdms)
-
         # b64 decode the files to inject:
         injected_files_orig = injected_files
         injected_files = self._decode_files(injected_files)
@@ -1023,6 +1019,11 @@ class ComputeManager(manager.SchedulerDependentManager):
                         context, instance['uuid'],
                         vm_state=vm_states.BUILDING,
                         task_state=task_states.BLOCK_DEVICE_MAPPING)
+
+                # Verify that all the BDMs have a device_name set and assign a
+                # default to the ones missing it with the help of the driver.
+                self._default_block_device_names(context, instance, image_meta,
+                                                 bdms)
 
                 block_device_info = self._prep_block_device(
                         context, instance, bdms)
