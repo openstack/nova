@@ -85,7 +85,7 @@ from nova.virt import driver
 CONF = cfg.CONF
 
 
-SUPPORTED_DEVICE_TYPES = ('disk', 'cdrom', 'floppy')
+SUPPORTED_DEVICE_TYPES = ('disk', 'cdrom', 'floppy', 'lun')
 
 
 def has_disk_dev(mapping, disk_dev):
