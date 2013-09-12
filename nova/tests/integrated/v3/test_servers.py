@@ -23,6 +23,7 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV3):
         subs = {
             'image_id': fake.get_valid_image_id(),
             'host': self._get_host(),
+            'glance_host': self._get_glance_host()
         }
         response = self._do_post('servers', 'server-post-req', subs)
         subs = self._get_regexes()

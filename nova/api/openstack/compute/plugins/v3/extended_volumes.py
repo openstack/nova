@@ -54,7 +54,7 @@ class ExtendedVolumesController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('swap_volume_attachment')
-    def swap(self, req, server_id, body):
+    def swap(self, req, id, body):
         context = req.environ['nova.context']
         authorize_swap(context)
 
@@ -72,7 +72,7 @@ class ExtendedVolumesController(wsgi.Controller):
             raise exc.HTTPBadRequest("The request body is invalid")
 
         try:
-            instance = self.compute_api.get(context, server_id,
+            instance = self.compute_api.get(context, id,
                                             want_objects=True)
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
