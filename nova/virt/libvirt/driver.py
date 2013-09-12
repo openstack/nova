@@ -1124,8 +1124,11 @@ class LibvirtDriver(driver.ComputeDriver):
             if domain.isPersistent():
                 domain.undefine()
 
+            # Start copy with VIR_DOMAIN_REBASE_REUSE_EXT flag to
+            # allow writing to existing external volume file
             domain.blockRebase(disk_path, new_path, 0,
-                               libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY)
+                               libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                               libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
 
             while self._wait_for_block_job(domain, disk_path):
                 time.sleep(0.5)
