@@ -17,6 +17,7 @@ from oslo.config import cfg
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
+from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
 from nova.image import glance
@@ -147,8 +148,10 @@ class LiveMigrationTask(object):
         attempted_hosts = [self.source]
         image = None
         if self.instance.image_ref:
-            image = self.image_service.show(self.context,
-                                            self.instance.image_ref)
+            image = compute_utils.get_image_metadata(self.context,
+                                                     self.image_service,
+                                                     self.instance.image_ref,
+                                                     self.instance)
         instance_type = flavors.extract_flavor(self.instance)
 
         host = None
