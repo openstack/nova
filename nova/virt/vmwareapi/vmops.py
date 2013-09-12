@@ -73,6 +73,7 @@ VMWARE_POWER_STATES = {
                     'suspended': power_state.SUSPENDED}
 VMWARE_PREFIX = 'vmware'
 
+VMWARE_LINKED_CLONE = 'vmware_linked_clone'
 
 RESIZE_TOTAL_STEPS = 4
 
@@ -156,6 +157,10 @@ class VMwareVMOps(object):
         data_store_ref = ds[0]
         data_store_name = ds[1]
 
+        #TODO(hartsocks): this pattern is confusing, reimplement as methods
+        # The use of nested functions in this file makes for a confusing and
+        # hard to maintain file. At some future date, refactor this method to
+        # be a full-fledged method. This will also make unit testing easier.
         def _get_image_properties():
             """
             Get the Size of the flat vmdk file that is there on the storage
@@ -173,11 +178,18 @@ class VMwareVMOps(object):
                                              "preallocated")
             # Get the network card type from the image properties.
             vif_model = image_properties.get("hw_vif_model", "VirtualE1000")
+
+            # Fetch the image_linked_clone data here. It is retrieved
+            # with the above network based API call. To retrieve it
+            # later will necessitate additional network calls using the
+            # identical method. Consider this a cache.
+            image_linked_clone = image_properties.get(VMWARE_LINKED_CLONE)
+
             return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
-                vif_model)
+                vif_model, image_linked_clone)
 
         (vmdk_file_size_in_kb, os_type, adapter_type,
-            disk_type, vif_model) = _get_image_properties()
+            disk_type, vif_model, image_linked_clone) = _get_image_properties()
 
         vm_folder_ref = self._get_vmfolder_ref()
         node_mo_id = vm_util.get_mo_id_from_instance(instance)
@@ -362,7 +374,13 @@ class VMwareVMOps(object):
                 self._default_root_device, block_device_info)
 
         if not ebs_root:
-            linked_clone = CONF.vmware.use_linked_clone
+            # this logic allows for instances or images to decide
+            # for themselves which strategy is best for them.
+
+            linked_clone = VMwareVMOps.decide_linked_clone(
+                image_linked_clone,
+                CONF.vmware.use_linked_clone
+            )
             if linked_clone:
                 upload_folder = self._instance_path_base
                 upload_name = instance['image_ref']
@@ -515,6 +533,52 @@ class VMwareVMOps(object):
         LOG.debug(_("Reconfigured VM instance %(instance_name)s to attach "
                     "cdrom %(file_path)s"),
                   {'instance_name': instance_name, 'file_path': file_path})
+
+    @staticmethod
+    def decide_linked_clone(image_linked_clone, global_linked_clone):
+        """Explicit decision logic: whether to use linked clone on a vmdk.
+
+        This is *override* logic not boolean logic.
+
+        1. let the image over-ride if set at all
+        2. default to the global setting
+
+        In math terms, I need to allow:
+        glance image to override global config.
+
+        That is g vs c. "g" for glance. "c" for Config.
+
+        So, I need  g=True vs c=False to be True.
+        And, I need g=False vs c=True to be False.
+        And, I need g=None vs c=True to be True.
+
+        Some images maybe independently best tuned for use_linked_clone=True
+        saving datastorage space. Alternatively a whole OpenStack install may
+        be tuned to performance use_linked_clone=False but a single image
+        in this environment may be best configured to save storage space and
+        set use_linked_clone=True only for itself.
+
+        The point is: let each layer of control override the layer beneath it.
+
+        rationale:
+        For technical discussion on the clone strategies and their trade-offs
+        see: https://www.vmware.com/support/ws5/doc/ws_clone_typeofclone.html
+
+        :param image_linked_clone: boolean or string or None
+        :param global_linked_clone: boolean or string or None
+        :return: Boolean
+        """
+
+        value = None
+
+        # Consider the values in order of override.
+        if image_linked_clone is not None:
+            value = image_linked_clone
+        else:
+            # this will never be not-set by this point.
+            value = global_linked_clone
+
+        return utils.get_boolean(value)
 
     def snapshot(self, context, instance, snapshot_name, update_task_state):
         """Create snapshot from a running VM instance.
