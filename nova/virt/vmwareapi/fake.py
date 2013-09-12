@@ -329,6 +329,9 @@ class VirtualMachine(ManagedObject):
         setting of the Virtual Machine object.
         """
         try:
+            if not hasattr(val, 'deviceChange'):
+                return
+
             if len(val.deviceChange) < 2:
                 return
 
@@ -965,6 +968,10 @@ class FakeVim(object):
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
+    def _clone_vm(self, method, *args, **kwargs):
+        """Fakes a VM clone."""
+        return self._just_return_task(method)
+
     def _unregister_vm(self, method, *args, **kwargs):
         """Unregisters a VM from the Host System."""
         vm_ref = args[0]
@@ -1105,6 +1112,11 @@ class FakeVim(object):
         elif attr_name == "UnregisterVM":
             return lambda *args, **kwargs: self._unregister_vm(attr_name,
                                                 *args, **kwargs)
+        elif attr_name == "CloneVM_Task":
+            return lambda *args, **kwargs: self._clone_vm(attr_name,
+                                                *args, **kwargs)
+        elif attr_name == "Rename_Task":
+            return lambda *args, **kwargs: self._just_return_task(attr_name)
         elif attr_name == "SearchDatastore_Task":
             return lambda *args, **kwargs: self._search_ds(attr_name,
                                                 *args, **kwargs)

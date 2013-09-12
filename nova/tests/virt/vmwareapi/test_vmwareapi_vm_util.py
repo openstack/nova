@@ -211,6 +211,19 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 vm_util.get_datastore_ref_and_name,
                 fake_session(fake_objects))
 
+    def test_get_resize_spec(self):
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00',
+                         'vcpus': 2, 'memory_mb': 2048}
+        result = vm_util.get_vm_resize_spec(fake.FakeFactory(),
+                                            fake_instance)
+        expected = """{'memoryMB': 2048,
+                       'numCPUs': 2,
+                       'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
     def test_get_cdrom_attach_config_spec(self):
 
         result = vm_util.get_cdrom_attach_config_spec(fake.FakeFactory(),
