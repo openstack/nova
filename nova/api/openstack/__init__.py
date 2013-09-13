@@ -30,6 +30,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova import notifications
+from nova.openstack.common import gettextutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
@@ -100,8 +101,14 @@ class FaultWrapper(base_wsgi.Middleware):
         # inconsistent with the EC2 API to hide every exception,
         # including those that are safe to expose, see bug 1021373
         if safe:
+            if isinstance(inner.msg_fmt, gettextutils.Message):
+                user_locale = req.best_match_language()
+                inner_msg = gettextutils.get_localized_message(
+                        inner.msg_fmt, user_locale)
+            else:
+                inner_msg = unicode(inner)
             outer.explanation = '%s: %s' % (inner.__class__.__name__,
-                                            unicode(inner))
+                                            inner_msg)
 
         notifications.send_api_fault(req.url, status, inner)
         return wsgi.Fault(outer)
