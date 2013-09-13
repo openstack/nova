@@ -3,7 +3,7 @@ SQLAlchemy>=0.7.8,<=0.7.99
 amqplib>=0.6.1
 anyjson>=0.3.3
 argparse
-boto>=2.4.0
+boto>=2.4.0,!=2.13.0
 eventlet>=0.13.0
 Jinja2
 kombu>=2.4.8
