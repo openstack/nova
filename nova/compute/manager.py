@@ -345,7 +345,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._resource_tracker_dict = {}
         self.pre_defined_network = (
             network.get_pre_defined_network())
-
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
 
@@ -3218,18 +3217,26 @@ class ComputeManager(manager.SchedulerDependentManager):
         # must be deleted for preparing next block migration
         # must be deleted for preparing next live migration w/o shared storage
         is_shared_storage = True
+        destroy_disks = True
         if migrate_data:
             is_shared_storage = migrate_data.get('is_shared_storage', True)
         if block_migration or not is_shared_storage:
+            bdi = self._get_instance_volume_block_device_info(ctxt, instance_ref)
             self.driver.destroy(instance_ref,
-                                self._legacy_nw_info(network_info))
+                        self._legacy_nw_info(network_info),
+                        bdi,
+                        destroy_disks)
         else:
             # self.driver.destroy() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
             # is false, as the network devices at the source must be
             # torn down
-            self.driver.unplug_vifs(instance_ref,
-                                    self._legacy_nw_info(network_info))
+            self.driver.destroy(instance_ref,
+                                self._legacy_nw_info(network_info),
+                                self._get_instance_volume_block_device_info(ctxt, instance_ref),
+                                destroy_disk=True)
+           # self.driver.unplug_vifs(instance_ref,
+           #                         self._legacy_nw_info(network_info))
 
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(ctxt, instance_ref,
@@ -3289,10 +3296,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                     node=node_name)
 
         # NOTE(vish): this is necessary to update dhcp
-
-
-        LOG.debug("network info fiexed %s floating",network_info.fixed_ips())
-        LOG.debug("network info floating ip %s",network_info.floating_ips())
         self.network_api.migrate_instance_finish(context,instance,migration)
         LOG.debug('migrate is done')
 
