@@ -4812,10 +4812,13 @@ class ComputeTestCase(BaseTestCase):
         # Simulate an error and make sure cleanup proceeds with next instance.
         self.compute._shutdown_instance(admin_context,
                                         instance1,
-                                        bdms).AndRaise(test.TestingException)
+                                        bdms,
+                                        notify=False).\
+                                        AndRaise(test.TestingException)
         self.compute._shutdown_instance(admin_context,
                                         instance2,
-                                        bdms).AndReturn(None)
+                                        bdms,
+                                        notify=False).AndReturn(None)
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
         self.compute._cleanup_volumes(admin_context,
