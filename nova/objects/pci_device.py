@@ -136,8 +136,8 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
 
     def __init__(self):
         super(PciDevice, self).__init__()
-        self.extra_info = {}
         self.obj_reset_changes()
+        self.extra_info = {}
 
     @staticmethod
     def _from_db_object(context, pci_device, db_dev):
