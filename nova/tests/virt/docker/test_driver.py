@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import socket
+
 from nova import test
 from nova.tests import utils
 import nova.tests.virt.docker.mock_client
@@ -59,3 +61,13 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
         self.connection.spawn(self.ctxt, instance_ref, image_info,
                               [], 'herp', network_info=network_info)
         return instance_ref, network_info
+
+    def test_get_host_stats(self):
+        self.mox.StubOutWithMock(socket, 'gethostname')
+        socket.gethostname().AndReturn('foo')
+        socket.gethostname().AndReturn('bar')
+        self.mox.ReplayAll()
+        self.assertEqual('foo',
+                         self.connection.get_host_stats()['host_hostname'])
+        self.assertEqual('foo',
+                         self.connection.get_host_stats()['host_hostname'])

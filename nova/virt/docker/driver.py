@@ -131,12 +131,20 @@ class DockerDriver(driver.ComputeDriver):
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()
         stats = self.get_available_resource(hostname)
-        stats['hypervisor_hostname'] = hostname
-        stats['host_hostname'] = hostname
-        stats['host_name_label'] = hostname
+        stats['hypervisor_hostname'] = stats['hypervisor_hostname']
+        stats['host_hostname'] = stats['hypervisor_hostname']
+        stats['host_name_label'] = stats['hypervisor_hostname']
         return stats
 
     def get_available_resource(self, nodename):
+        if not hasattr(self, '_nodename'):
+            self._nodename = nodename
+        if nodename != self._nodename:
+            LOG.error(_('Hostname has changed from %(old)s to %(new)s. '
+                        'A restart is required to take effect.'
+                        ) % {'old': self._nodename,
+                             'new': nodename})
+
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()
         stats = {
@@ -149,7 +157,7 @@ class DockerDriver(driver.ComputeDriver):
             'disk_available_least': disk['available'] / (1024 ** 3),
             'hypervisor_type': 'docker',
             'hypervisor_version': '1.0',
-            'hypervisor_hostname': nodename,
+            'hypervisor_hostname': self._nodename,
             'cpu_info': '?',
             'supported_instances': jsonutils.dumps([
                     ('i686', 'docker', 'lxc'),
