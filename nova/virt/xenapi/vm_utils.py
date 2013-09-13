@@ -23,7 +23,6 @@ their attributes like VDIs, VIFs, as well as their lookup functions.
 
 import contextlib
 import os
-import re
 import time
 import urllib
 import urlparse
@@ -782,14 +781,12 @@ def resize_disk(session, instance, vdi_ref, instance_type):
         reason = _("Can't resize a disk to 0 GB.")
         raise exception.ResizeError(reason=reason)
 
-    # Copy VDI over to something we can resize
-    # NOTE(jerdfelt): Would be nice to just set vdi_ref to read/write
     sr_ref = safe_find_sr(session)
-    copy_ref = session.call_xenapi('VDI.copy', vdi_ref, sr_ref)
+    clone_ref = _clone_vdi(session, vdi_ref)
 
     try:
         # Resize partition and filesystem down
-        _auto_configure_disk(session, copy_ref, size_gb)
+        _auto_configure_disk(session, clone_ref, size_gb)
 
         # Create new VDI
         vdi_size = size_gb * 1024 * 1024 * 1024
@@ -802,11 +799,11 @@ def resize_disk(session, instance, vdi_ref, instance_type):
 
         # Manually copy contents over
         virtual_size = size_gb * 1024 * 1024 * 1024
-        _copy_partition(session, copy_ref, new_ref, 1, virtual_size)
+        _copy_partition(session, clone_ref, new_ref, 1, virtual_size)
 
         return new_ref, new_uuid
     finally:
-        destroy_vdi(session, copy_ref)
+        destroy_vdi(session, clone_ref)
 
 
 def _auto_configure_disk(session, vdi_ref, new_gb):
@@ -2055,16 +2052,7 @@ def _write_partition(session, virtual_size, dev):
         return utils.execute(*cmd, **kwargs)
 
     _make_partition(session, dev, "%ds" % primary_first, "%ds" % primary_last)
-
     LOG.debug(_('Writing partition table %s done.'), dev_path)
-
-
-def _get_min_sectors(partition_path, block_size=4096):
-    stdout, _err = utils.execute('resize2fs', '-P', partition_path,
-        run_as_root=True)
-    min_size_blocks = long(re.sub('[^0-9]', '', stdout))
-    min_size_bytes = min_size_blocks * block_size
-    return min_size_bytes / SECTOR_SIZE
 
 
 def _repair_filesystem(partition_path):
@@ -2095,15 +2083,15 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
 
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
-        min_sectors = _get_min_sectors(partition_path)
-        if min_sectors >= new_sectors:
-            reason = (_('Resize down not allowed because minimum '
-                       'filesystem sectors %(min_sectors)d is too big '
-                       'for target sectors %(new_sectors)d') %
-                      {'min_sectors': min_sectors, 'new_sectors': new_sectors})
+        try:
+            utils.execute('resize2fs', partition_path, '%ds' % size,
+                          run_as_root=True)
+        except processutils.ProcessExecutionError as exc:
+            LOG.error(str(exc))
+            reason = _("Shrinking the filesystem down with resize2fs "
+                       "has failed, please check if you have "
+                       "enough free space on your disk.")
             raise exception.ResizeError(reason=reason)
-        utils.execute('resize2fs', partition_path, '%ds' % size,
-                      run_as_root=True)
 
     utils.execute('parted', '--script', dev_path, 'rm', '1',
                   run_as_root=True)

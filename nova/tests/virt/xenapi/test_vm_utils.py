@@ -27,6 +27,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.virt.xenapi import stubs
@@ -428,17 +429,6 @@ class TestImageCompression(test.NoDBTestCase):
 
 
 class ResizeHelpersTestCase(test.NoDBTestCase):
-    def test_get_min_sectors(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-
-        utils.execute('resize2fs', '-P', "fakepath",
-            run_as_root=True).AndReturn(("size is: 42", ""))
-
-        self.mox.ReplayAll()
-
-        result = vm_utils._get_min_sectors("fakepath")
-        self.assertEquals(42 * 4096 / 512, result)
-
     def test_repair_filesystem(self):
         self.mox.StubOutWithMock(utils, 'execute')
 
@@ -465,13 +455,11 @@ class ResizeHelpersTestCase(test.NoDBTestCase):
     def test_resize_part_and_fs_down_succeeds(self):
         self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
         self.mox.StubOutWithMock(utils, 'execute')
-        self.mox.StubOutWithMock(vm_utils, "_get_min_sectors")
 
         dev_path = "/dev/fake"
         partition_path = "%s1" % dev_path
         vm_utils._repair_filesystem(partition_path)
         self._call_tune2fs_remove_journal(partition_path)
-        vm_utils._get_min_sectors(partition_path).AndReturn(9)
         utils.execute("resize2fs", partition_path, "10s", run_as_root=True)
         self._call_parted(dev_path, 0, 9)
         self._call_tune2fs_add_journal(partition_path)
@@ -503,18 +491,20 @@ class ResizeHelpersTestCase(test.NoDBTestCase):
     def test_resize_part_and_fs_down_fails_disk_too_big(self):
         self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
         self.mox.StubOutWithMock(utils, 'execute')
-        self.mox.StubOutWithMock(vm_utils, "_get_min_sectors")
 
         dev_path = "/dev/fake"
         partition_path = "%s1" % dev_path
+        new_sectors = 10
         vm_utils._repair_filesystem(partition_path)
         self._call_tune2fs_remove_journal(partition_path)
-        vm_utils._get_min_sectors(partition_path).AndReturn(10)
-
+        mobj = utils.execute("resize2fs",
+                             partition_path,
+                             "%ss" % new_sectors,
+                             run_as_root=True)
+        mobj.AndRaise(processutils.ProcessExecutionError)
         self.mox.ReplayAll()
-
         self.assertRaises(exception.ResizeError,
-            vm_utils._resize_part_and_fs, "fake", 0, 20, 10)
+                          vm_utils._resize_part_and_fs, "fake", 0, 20, 10)
 
     def test_resize_part_and_fs_up_succeeds(self):
         self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
