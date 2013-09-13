@@ -386,10 +386,10 @@ class VMOps(object):
             return kernel_file, ramdisk_file
 
         @step
-        def create_vm_record_step(undo_mgr, vdis, disk_image_type,
-                kernel_file, ramdisk_file):
+        def create_vm_record_step(undo_mgr, disk_image_type,
+                                  kernel_file, ramdisk_file):
             vm_ref = self._create_vm_record(context, instance, name_label,
-                    vdis, disk_image_type, kernel_file, ramdisk_file)
+                    disk_image_type, kernel_file, ramdisk_file)
 
             def undo_create_vm():
                 self._destroy(instance, vm_ref, network_info=network_info)
@@ -483,7 +483,7 @@ class VMOps(object):
                                      name_label)
             kernel_file, ramdisk_file = create_kernel_ramdisk_step(undo_mgr)
 
-            vm_ref = create_vm_record_step(undo_mgr, vdis, disk_image_type,
+            vm_ref = create_vm_record_step(undo_mgr, disk_image_type,
                     kernel_file, ramdisk_file)
             attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type)
 
@@ -524,40 +524,25 @@ class VMOps(object):
         if not vm_utils.is_enough_free_mem(self._session, instance):
             raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
 
-    def _create_vm_record(self, context, instance, name_label, vdis,
-            disk_image_type, kernel_file, ramdisk_file):
+    def _create_vm_record(self, context, instance, name_label,
+                          disk_image_type, kernel_file, ramdisk_file):
         """Create the VM record in Xen, making sure that we do not create
         a duplicate name-label.  Also do a rough sanity check on memory
         to try to short-circuit a potential failure later.  (The memory
         check only accounts for running VMs, so it can miss other builds
         that are in progress.)
         """
-        mode = self._determine_vm_mode(instance, vdis, disk_image_type)
+        mode = vm_utils.determine_vm_mode(instance, disk_image_type)
         if instance['vm_mode'] != mode:
             # Update database with normalized (or determined) value
             self._virtapi.instance_update(context,
                                           instance['uuid'], {'vm_mode': mode})
 
         use_pv_kernel = (mode == vm_mode.XEN)
+        LOG.debug(_("Using PV kernel: %s") % use_pv_kernel, instance=instance)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
                                     kernel_file, ramdisk_file, use_pv_kernel)
         return vm_ref
-
-    def _determine_vm_mode(self, instance, vdis, disk_image_type):
-        current_mode = vm_mode.get_from_instance(instance)
-        if current_mode == vm_mode.XEN or current_mode == vm_mode.HVM:
-            return current_mode
-
-        is_pv = False
-        if 'root' in vdis:
-            os_type = instance['os_type']
-            vdi_ref = vdis['root']['ref']
-            is_pv = vm_utils.determine_is_pv(self._session, vdi_ref,
-                                             disk_image_type, os_type)
-        if is_pv:
-            return vm_mode.XEN
-        else:
-            return vm_mode.HVM
 
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
                       disk_image_type, admin_password=None, files=None):

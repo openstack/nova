@@ -757,8 +757,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                         'herp', network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, instance_type_id, check_injection)
-        self.assertTrue(instance['os_type'])
-        self.assertTrue(instance['architecture'])
+        self.assertEqual(instance['os_type'], os_type)
+        self.assertEqual(instance['architecture'], architecture)
 
     def test_spawn_ipxe_iso_success(self):
         self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
@@ -870,7 +870,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(start_vms, end_vms)
 
     def test_spawn_raw_glance(self):
-        self._test_spawn(IMAGE_RAW, None, None)
+        self._test_spawn(IMAGE_RAW, None, None, os_type=None)
         self.check_vm_params_for_windows()
 
     def test_spawn_vhd_glance_linux(self):
@@ -2037,34 +2037,6 @@ class XenAPIDetermineDiskImageTestCase(test.NoDBTestCase):
     def test_none(self):
         image_meta = None
         self.assert_disk_type(image_meta, None)
-
-
-class XenAPIDetermineIsPVTestCase(test.NoDBTestCase):
-    """Unit tests for code that detects the PV status based on ImageType."""
-    def assert_pv_status(self, disk_image_type, os_type, expected_pv_status):
-        session = None
-        vdi_ref = None
-        actual = vm_utils.determine_is_pv(session, vdi_ref,
-                                          disk_image_type, os_type)
-        self.assertEqual(expected_pv_status, actual)
-
-    def test_windows_vhd(self):
-        self.assert_pv_status(vm_utils.ImageType.DISK_VHD, 'windows', False)
-
-    def test_linux_vhd(self):
-        self.assert_pv_status(vm_utils.ImageType.DISK_VHD, 'linux', True)
-
-    def test_raw(self):
-        self.assert_pv_status(vm_utils.ImageType.DISK_RAW, 'linux', False)
-
-    def test_disk(self):
-        self.assert_pv_status(vm_utils.ImageType.DISK, None, True)
-
-    def test_iso(self):
-        self.assert_pv_status(vm_utils.ImageType.DISK_ISO, None, False)
-
-    def test_none(self):
-        self.assert_pv_status(None, None, False)
 
 
 class CompareVersionTestCase(test.NoDBTestCase):
