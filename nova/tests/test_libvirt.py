@@ -3907,6 +3907,24 @@ class LibvirtConnTestCase(test.TestCase):
         """
         self._test_attach_detach_interface_get_config("detach_interface")
 
+    def test_hypervisor_hostname_caching(self):
+        # Make sure that the first hostname is always returned
+        class FakeConn(object):
+            def getHostname(self):
+                pass
+
+            def getLibVersion(self):
+                return 99999
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        conn._wrapped_conn = FakeConn()
+        self.mox.StubOutWithMock(conn._wrapped_conn, 'getHostname')
+        conn._conn.getHostname().AndReturn('foo')
+        conn._conn.getHostname().AndReturn('bar')
+        self.mox.ReplayAll()
+        self.assertEqual('foo', conn.get_hypervisor_hostname())
+        self.assertEqual('foo', conn.get_hypervisor_hostname())
+
 
 class HostStateTestCase(test.TestCase):
 

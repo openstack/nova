@@ -586,7 +586,14 @@ class BaseOperator(object):
         :returns: string -- hostname
         """
         output = self.run_vios_command(self.command.hostname())
-        return output[0]
+        hostname = output[0]
+        if not hasattr(self, '_hostname'):
+            self._hostname = hostname
+        elif hostname != self._hostname:
+            LOG.error(_('Hostname has changed from %(old)s to %(new)s. '
+                        'A restart is required to take effect.'
+                        ) % {'old': self._hostname, 'new': hostname})
+        return self._hostname
 
     def get_disk_name_by_vhost(self, vhost):
         """Returns the disk name attached to a vhost.

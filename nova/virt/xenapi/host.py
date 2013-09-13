@@ -167,6 +167,13 @@ class HostState(object):
                 data["host_memory_free_computed"] = host_memory.get(
                                                     'free-computed', 0)
                 del data['host_memory']
+            if (data['host_hostname'] !=
+                    self._stats.get('host_hostname', data['host_hostname'])):
+                LOG.error(_('Hostname has changed from %(old)s '
+                            'to %(new)s. A restart is required to take effect.'
+                            ) % {'old': self._stats['host_hostname'],
+                                 'new': data['host_hostname']})
+                data['host_hostname'] = self._stats['host_hostname']
             data['hypervisor_hostname'] = data['host_hostname']
             self._stats = data
 

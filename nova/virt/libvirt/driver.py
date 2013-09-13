@@ -2668,7 +2668,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_hypervisor_hostname(self):
         """Returns the hostname of the hypervisor."""
-        return self._conn.getHostname()
+        hostname = self._conn.getHostname()
+        if not hasattr(self, '_hypervisor_hostname'):
+            self._hypervisor_hostname = hostname
+        elif hostname != self._hypervisor_hostname:
+            LOG.error(_('Hostname has changed from %(old)s '
+                        'to %(new)s. A restart is required to take effect.'
+                        ) % {'old': self._hypervisor_hostname,
+                             'new': hostname})
+        return self._hypervisor_hostname
 
     def get_instance_capabilities(self):
         """Get hypervisor instance capabilities

@@ -20,6 +20,7 @@ import ast
 import base64
 import contextlib
 import functools
+import mox
 import os
 import re
 
@@ -1613,6 +1614,38 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
         stats = self.conn.get_host_stats()
         self.assertEquals("SOMERETURNVALUE", stats['supported_instances'])
+
+    def test_update_stats_caches_hostname(self):
+        self.mox.StubOutWithMock(host, 'call_xenhost')
+        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
+        self.mox.StubOutWithMock(self.conn._session, 'call_xenapi')
+        data = {'disk_total': 0,
+                'disk_used': 0,
+                'disk_available': 0,
+                'supported_instances': 0,
+                'host_capabilities': [],
+                'host_hostname': 'foo',
+                }
+        sr_rec = {
+            'physical_size': 0,
+            'physical_utilisation': 0,
+            }
+
+        for i in range(3):
+            host.call_xenhost(mox.IgnoreArg(), 'host_data', {}).AndReturn(data)
+            vm_utils.safe_find_sr(self.conn._session).AndReturn(None)
+            self.conn._session.call_xenapi('SR.scan', None)
+            self.conn._session.call_xenapi('SR.get_record', None).AndReturn(
+                sr_rec)
+            if i == 2:
+                # On the third call (the second below) change the hostname
+                data = dict(data, host_hostname='bar')
+
+        self.mox.ReplayAll()
+        stats = self.conn.get_host_stats(refresh=True)
+        self.assertEqual('foo', stats['hypervisor_hostname'])
+        stats = self.conn.get_host_stats(refresh=True)
+        self.assertEqual('foo', stats['hypervisor_hostname'])
 
 
 class ToSupportedInstancesTestCase(test.TestCase):
