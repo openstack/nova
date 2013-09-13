@@ -168,7 +168,7 @@ class QuotaSetsController(object):
             raise webob.exc.HTTPForbidden()
 
         for key, value in body['quota_set'].items():
-            if key in NON_QUOTA_KEYS or not value:
+            if key in NON_QUOTA_KEYS or (not value and value != 0):
                 continue
             # validate whether already used and reserved exceeds the new
             # quota, this check will be ignored if admin want to force

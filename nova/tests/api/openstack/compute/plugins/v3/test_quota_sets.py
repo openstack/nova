@@ -135,6 +135,24 @@ class QuotaSetsTest(test.TestCase):
         body['quota_set'].update(id=id)
         self.assertEqual(res_dict, body)
 
+    def test_quotas_update_zero_value_as_admin(self):
+        id = 'update_me'
+        body = {'quota_set': {'instances': 0, 'cores': 0,
+                              'ram': 0, 'floating_ips': 0,
+                              'fixed_ips': 0, 'metadata_items': 0,
+                              'injected_files': 0,
+                              'injected_file_content_bytes': 0,
+                              'injected_file_path_bytes': 0,
+                              'security_groups': 0,
+                              'security_group_rules': 0,
+                              'key_pairs': 100, 'fixed_ips': -1}}
+
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/' + id,
+                                      use_admin_context=True)
+        res_dict = self.controller.update(req, id, body)
+        body['quota_set'].update(id=id)
+        self.assertEqual(res_dict, body)
+
     def test_quotas_update_as_user(self):
         body = self._generate_quota_set()
 

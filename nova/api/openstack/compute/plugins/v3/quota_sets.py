@@ -176,7 +176,7 @@ class QuotaSetsController(object):
         LOG.debug(_("Force update quotas: %s"), force_update)
 
         for key, value in body['quota_set'].iteritems():
-            if key == 'force' or not value:
+            if key == 'force' or (not value and value != 0):
                 continue
             # validate whether already used and reserved exceeds the new
             # quota, this check will be ignored if admin want to force

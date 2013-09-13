@@ -135,6 +135,26 @@ class QuotaSetsTest(test.TestCase):
 
         self.assertEqual(res_dict, body)
 
+    def test_quotas_update_zero_value_as_admin(self):
+        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
+        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
+        self.mox.ReplayAll()
+        body = {'quota_set': {'instances': 0, 'cores': 0,
+                              'ram': 0, 'floating_ips': 0,
+                              'fixed_ips': 0, 'metadata_items': 0,
+                              'injected_files': 0,
+                              'injected_file_content_bytes': 0,
+                              'injected_file_path_bytes': 0,
+                              'security_groups': 0,
+                              'security_group_rules': 0,
+                              'key_pairs': 100, 'fixed_ips': -1}}
+
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        res_dict = self.controller.update(req, 'update_me', body)
+
+        self.assertEqual(res_dict, body)
+
     def test_quotas_update_as_user(self):
         self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
         self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
