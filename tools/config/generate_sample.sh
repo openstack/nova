@@ -21,6 +21,9 @@ while true; do
             echo "-b, --base-dir=DIR        Project base directory (required)"
             echo "-p, --package-name=NAME   Project package name"
             echo "-o, --output-dir=DIR      File output directory"
+            echo ""
+            echo "To generate a new config, try:"
+            echo "   ${0##*/} -b ./ -p nova -o etc/nova/"
             exit 0
             ;;
         -b|--base-dir)
