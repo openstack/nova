@@ -8297,9 +8297,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         # Ensure ComputeHostNotFound is raised when adding invalid host.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
+        fake_notifier.NOTIFICATIONS = []
         self.assertRaises(exception.ComputeHostNotFound,
                           self.api.add_host_to_aggregate,
                           self.context, aggr['id'], 'invalid_host')
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(fake_notifier.NOTIFICATIONS[1].publisher_id,
+                         'compute.fake-mini')
 
     def test_remove_host_from_aggregate_active(self):
         # Ensure we can remove a host from an aggregate.
