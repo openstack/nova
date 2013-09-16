@@ -2497,9 +2497,12 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         image_service, image_id = glance.get_remote_image_service(
             context, rescue_image_ref)
-        return compute_utils.get_image_metadata(
-            context, image_service, rescue_image_ref, instance
-        )
+        image_meta = compute_utils.get_image_metadata(context, image_service,
+                                                      rescue_image_ref,
+                                                      instance)
+        # NOTE(belliott) bug #1227350 - xenapi needs the actual image id
+        image_meta['id'] = rescue_image_ref
+        return image_meta
 
     @wrap_exception()
     @reverts_task_state
