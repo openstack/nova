@@ -220,3 +220,13 @@ class FlavorsExtraSpecsXMLSerializerTest(test.TestCase):
                     '<extra_spec key="key1">value1</extra_spec>')
         text = serializer.serialize(dict({"key1": "value1"}))
         self.assertEqual(text, expected)
+
+    def test_serializer_with_colon_tagname(self):
+        # Our test object to serialize
+        obj = {'extra_specs': {'foo:bar': '999'}}
+        serializer = flavors_extraspecs.ExtraSpecsTemplate()
+        expected_xml = (("<?xml version='1.0' encoding='UTF-8'?>\n"
+                    '<extra_specs><foo:bar xmlns:foo="foo">999</foo:bar>'
+                    '</extra_specs>'))
+        result = serializer.serialize(obj)
+        self.assertEqual(expected_xml, result)
