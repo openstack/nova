@@ -1574,3 +1574,16 @@ class HostFiltersTestCase(test.NoDBTestCase):
         filter_properties = {}
         host = fakes.FakeHostState('h1', 'n1', {})
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_pci_passthrough_comopute_stats(self):
+        filt_cls = self.class_map['PciPassthroughFilter']()
+        requests = [{'count': 1, 'spec': [{'vendor_id': '8086'}]}]
+        filter_properties = {'pci_requests': requests}
+        self.stubs.Set(pci_stats.PciDeviceStats, 'support_requests',
+                       self._fake_pci_support_requests)
+        host = fakes.FakeHostState(
+            'host1', 'node1',
+            attribute_dict={})
+        self.pci_request_result = True
+        self.assertRaises(AttributeError, filt_cls.host_passes,
+                          host, filter_properties)
