@@ -896,7 +896,8 @@ class API(base.Base):
         data = neutron.list_ports(**search_opts)
         ports = data['ports']
         for p in ports:
-            port_req_body = {'port': {'binding:host_id': instance.get('host')}}
+            port_req_body = {'port': {'binding:host_id':
+                                      migration['dest_compute']}}
             try:
                 neutron.update_port(p['id'], port_req_body)
             except Exception as ex:
