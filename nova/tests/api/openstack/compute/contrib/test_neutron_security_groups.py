@@ -20,7 +20,7 @@
 import uuid
 
 from lxml import etree
-from neutronclient.common import exceptions as q_exc
+from neutronclient.common import exceptions as n_exc
 from oslo.config import cfg
 import webob
 
@@ -610,7 +610,7 @@ class MockClient(object):
         s = body.get('security_group')
         if len(s.get('name')) > 255 or len(s.get('description')) > 255:
             msg = 'Security Group name great than 255'
-            raise q_exc.NeutronClientException(message=msg, status_code=401)
+            raise n_exc.NeutronClientException(message=msg, status_code=401)
         ret = {'name': s.get('name'), 'description': s.get('description'),
                'tenant_id': 'fake_tenant', 'security_group_rules': [],
                'id': str(uuid.uuid4())}
@@ -635,7 +635,7 @@ class MockClient(object):
             net = self._fake_networks[s.get('network_id')]
         except KeyError:
             msg = 'Network %s not found' % s.get('network_id')
-            raise q_exc.NeutronClientException(message=msg, status_code=404)
+            raise n_exc.NeutronClientException(message=msg, status_code=404)
         ret = {'name': s.get('name'), 'network_id': s.get('network_id'),
                'tenant_id': 'fake_tenant', 'cidr': s.get('cidr'),
                'id': str(uuid.uuid4()), 'gateway_ip': '10.0.0.1'}
@@ -694,7 +694,7 @@ class MockClient(object):
             sg = self._fake_security_groups[security_group]
         except KeyError:
             msg = 'Security Group %s not found' % security_group
-            raise q_exc.NeutronClientException(message=msg, status_code=404)
+            raise n_exc.NeutronClientException(message=msg, status_code=404)
         for security_group_rule in self._fake_security_group_rules.values():
             if security_group_rule['security_group_id'] == sg['id']:
                 sg['security_group_rules'].append(security_group_rule)
@@ -707,7 +707,7 @@ class MockClient(object):
                     self._fake_security_group_rules[security_group_rule]}
         except KeyError:
             msg = 'Security Group rule %s not found' % security_group_rule
-            raise q_exc.NeutronClientException(message=msg, status_code=404)
+            raise n_exc.NeutronClientException(message=msg, status_code=404)
 
     def show_network(self, network, **_params):
         try:
@@ -715,7 +715,7 @@ class MockClient(object):
                     self._fake_networks[network]}
         except KeyError:
             msg = 'Network %s not found' % network
-            raise q_exc.NeutronClientException(message=msg, status_code=404)
+            raise n_exc.NeutronClientException(message=msg, status_code=404)
 
     def show_port(self, port, **_params):
         try:
@@ -723,7 +723,7 @@ class MockClient(object):
                     self._fake_ports[port]}
         except KeyError:
             msg = 'Port %s not found' % port
-            raise q_exc.NeutronClientException(message=msg, status_code=404)
+            raise n_exc.NeutronClientException(message=msg, status_code=404)
 
     def show_subnet(self, subnet, **_params):
         try:
@@ -731,7 +731,7 @@ class MockClient(object):
                     self._fake_subnets[subnet]}
         except KeyError:
             msg = 'Port %s not found' % subnet
-            raise q_exc.NeutronClientException(message=msg, status_code=404)
+            raise n_exc.NeutronClientException(message=msg, status_code=404)
 
     def list_security_groups(self, **_params):
         ret = []
@@ -784,7 +784,7 @@ class MockClient(object):
                 if sg_port == security_group:
                     msg = ('Unable to delete Security group %s in use'
                            % security_group)
-                    raise q_exc.NeutronClientException(message=msg,
+                    raise n_exc.NeutronClientException(message=msg,
                                                        status_code=409)
         del self._fake_security_groups[security_group]
 
@@ -824,4 +824,4 @@ class MockClient(object):
                 msg = ('Unable to complete operation on network %s. There is '
                        'one or more ports still in use on the network'
                        % network)
-            raise q_exc.NeutronClientException(message=msg, status_code=409)
+            raise n_exc.NeutronClientException(message=msg, status_code=409)
