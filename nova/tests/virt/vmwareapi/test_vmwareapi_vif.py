@@ -68,7 +68,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=True)
 
-    # FlatDHCP network mode without vlan
+    # FlatDHCP network mode without vlan - network doesn't exist with the host
     def test_ensure_vlan_bridge_without_vlan(self):
         self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
         self.mox.StubOutWithMock(network_util,
@@ -86,6 +86,21 @@ class VMwareVifTestCase(test.NoDBTestCase):
         network_util.create_port_group(self.session, 'fa0', 'vmnet0', 0,
             self.cluster)
         network_util.get_network_with_the_name('fake', 'fa0', None)
+        self.mox.ReplayAll()
+        vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=False)
+
+    # FlatDHCP network mode without vlan - network exists with the host
+    # Get vswitch and check vlan interface should not be called
+    def test_ensure_vlan_bridge_with_network(self):
+        self.mox.StubOutWithMock(network_util, 'get_network_with_the_name')
+        self.mox.StubOutWithMock(network_util,
+            'get_vswitch_for_vlan_interface')
+        self.mox.StubOutWithMock(network_util,
+            'check_if_vlan_interface_exists')
+        self.mox.StubOutWithMock(network_util, 'create_port_group')
+        vm_network = {'name': 'VM Network', 'type': 'Network'}
+        network_util.get_network_with_the_name(self.session, 'fa0',
+            self.cluster).AndReturn(vm_network)
         self.mox.ReplayAll()
         vif.ensure_vlan_bridge(self.session, self.vif, create_vlan=False)
 
