@@ -1632,13 +1632,15 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._set_instance_error_state(context, instance['uuid'])
 
     def _shutdown_instance(self, context, instance,
-                           bdms, requested_networks=None):
+                           bdms, requested_networks=None, notify=True):
         """Shutdown an instance on this host."""
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
                   context=context, instance=instance)
 
-        self._notify_about_instance_usage(context, instance, "shutdown.start")
+        if notify:
+            self._notify_about_instance_usage(context, instance,
+                                              "shutdown.start")
 
         # get network info before tearing down
         try:
@@ -1685,7 +1687,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(_('Ignoring VolumeNotFound: %s') % exc,
                          instance=instance)
 
-        self._notify_about_instance_usage(context, instance, "shutdown.end")
+        if notify:
+            self._notify_about_instance_usage(context, instance,
+                                              "shutdown.end")
 
     def _cleanup_volumes(self, context, instance_uuid, bdms):
         for bdm in bdms:
@@ -4871,7 +4875,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                "DELETED but still present on host."),
                              instance['name'], instance=instance)
                     try:
-                        self._shutdown_instance(context, instance, bdms)
+                        self._shutdown_instance(context, instance, bdms,
+                                                notify=False)
                         self._cleanup_volumes(context, instance['uuid'], bdms)
                     except Exception as e:
                         LOG.warning(_("Periodic cleanup failed to delete "
