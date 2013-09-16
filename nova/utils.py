@@ -350,8 +350,7 @@ def get_my_ipv4_address():
     """
     LOCALHOST = '127.0.0.1'
     try:
-        out = execute('ip', '-f', 'inet', '-o', 'route', 'show',
-                      run_as_root=True)
+        out = execute('ip', '-f', 'inet', '-o', 'route', 'show')
 
         # Find the default route
         regex_default = ('default\s*via\s*'
@@ -383,8 +382,7 @@ def _get_ipv4_address_for_interface(iface):
     """Run ip addr show for an interface and grab its ipv4 addresses
     """
     try:
-        out = execute('ip', '-f', 'inet', '-o', 'addr', 'show', iface,
-                      run_as_root=True)
+        out = execute('ip', '-f', 'inet', '-o', 'addr', 'show', iface)
         regexp_address = re.compile('inet\s*'
                                     '(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
         address = [m.group(1) for m in regexp_address.finditer(out[0])
