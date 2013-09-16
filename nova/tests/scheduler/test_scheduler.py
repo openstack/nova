@@ -599,29 +599,3 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
     def test_unimplemented_select_destinations(self):
         self.assertRaises(NotImplementedError,
                 self.driver.select_destinations, self.context, {}, {})
-
-
-class SchedulerDriverModuleTestCase(test.NoDBTestCase):
-    """Test case for scheduler driver module methods."""
-
-    def setUp(self):
-        super(SchedulerDriverModuleTestCase, self).setUp()
-        self.context = context.RequestContext('fake_user', 'fake_project')
-
-    def test_encode_instance(self):
-        instance = {'id': 31337,
-                    'test_arg': 'meow'}
-
-        result = driver.encode_instance(instance, True)
-        expected = {'id': instance['id'], '_is_precooked': False}
-        self.assertThat(result, matchers.DictMatches(expected))
-        # Orig dict not changed
-        self.assertNotEqual(result, instance)
-
-        result = driver.encode_instance(instance, False)
-        expected = {}
-        expected.update(instance)
-        expected['_is_precooked'] = True
-        self.assertThat(result, matchers.DictMatches(expected))
-        # Orig dict not changed
-        self.assertNotEqual(result, instance)

@@ -95,24 +95,6 @@ def instance_update_db(context, instance_uuid, extra_values=None):
     return db.instance_update(context, instance_uuid, values)
 
 
-def encode_instance(instance, local=True):
-    """Encode locally created instance for return via RPC."""
-    # TODO(comstud): I would love to be able to return the full
-    # instance information here, but we'll need some modifications
-    # to the RPC code to handle datetime conversions with the
-    # json encoding/decoding.  We should be able to set a default
-    # json handler somehow to do it.
-    #
-    # For now, I'll just return the instance ID and let the caller
-    # do a DB lookup :-/
-    if local:
-        return dict(id=instance['id'], _is_precooked=False)
-    else:
-        inst = dict(instance)
-        inst['_is_precooked'] = True
-        return inst
-
-
 class Scheduler(object):
     """The base class that all Scheduler classes should inherit from."""
 
