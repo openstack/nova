@@ -172,6 +172,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'mac_address': "de:ad:be:ef:be:ef",
                   'instance_type': 'm1.large',
                   'node': node,
+                  'root_gb': 80,
                   }
         self.instance_node = node
         self.instance = db.instance_create(None, values)
@@ -259,21 +260,65 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         inst_file_path = '[fake-ds] fake-uuid/fake_name.vmdk'
         cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
-        self.assertEqual(vmwareapi_fake.get_file(inst_file_path), True)
-        self.assertEqual(vmwareapi_fake.get_file(cache_file_path), False)
+        self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
+        self.assertFalse(vmwareapi_fake.get_file(cache_file_path))
 
     def test_cache_dir_disk_created(self):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
         self._create_vm()
-        file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
-        self.assertEqual(vmwareapi_fake.get_file(file_path), True)
+        cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
+        cache_root_path = '[fake-ds] vmware_base/fake_image_uuid.80.vmdk'
+        self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
+        self.assertTrue(vmwareapi_fake.get_file(cache_root_path))
 
     def test_spawn(self):
         self._create_vm()
         info = self.conn.get_info({'uuid': 'fake-uuid',
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_disk_extend(self):
+        self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
+        requested_size = 80 * 1024 * 1024
+        self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
+                requested_size, mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self._create_vm()
+        info = self.conn.get_info({'uuid': 'fake-uuid',
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_disk_extend_sparse(self):
+        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
+        result = [1024, {"vmware_ostype": "otherGuest",
+                         "vmware_adaptertype": "lsiLogic",
+                         "vmware_disktype": "sparse"}]
+        vmware_images.get_vmdk_size_and_properties(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(result)
+        self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
+        requested_size = 80 * 1024 * 1024
+        self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
+                requested_size, mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self._create_vm()
+        info = self.conn.get_info({'uuid': 'fake-uuid',
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_disk_invalid_disk_size(self):
+        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
+        result = [82 * 1024 * 1024 * 1024,
+                  {"vmware_ostype": "otherGuest",
+                   "vmware_adaptertype": "lsiLogic",
+                   "vmware_disktype": "sparse"}]
+        vmware_images.get_vmdk_size_and_properties(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(result)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._create_vm)
 
     def test_spawn_attach_volume_vmdk(self):
         self._create_instance_in_the_db()
