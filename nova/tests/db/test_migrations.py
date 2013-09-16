@@ -817,6 +817,40 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         volume = volumes.select(volumes.c.id == "second").execute().first()
         self.assertEqual(volume.id, volume.deleted)
 
+    def _post_downgrade_152(self, engine):
+        # Check indexes exist as they used to
+        if engine.name != 'sqlite':
+            test_data = self._pre_upgrade_194(engine)
+            test_data['migrations'] = ((
+                 'migrations_instance_uuid_and_status_idx',
+                ['deleted', 'instance_uuid', 'status']
+            ), (
+                'migrations_by_host_nodes_and_status_idx',
+                ['deleted', 'source_compute', 'dest_compute', 'source_node',
+                 'dest_node', 'status']
+            ))
+
+            for table_name, indexes in test_data.iteritems():
+                meta = sqlalchemy.MetaData()
+                meta.bind = engine
+                table = sqlalchemy.Table(table_name, meta, autoload=True)
+
+                index_data = [(idx.name, idx.columns.keys())
+                              for idx in table.indexes]
+
+                for name, columns in indexes:
+                    if engine.name == "postgresql":
+                        # we can not get correct order of columns in index
+                        # definition to postgresql using sqlalchemy.
+                        # So we sort columns list before compare
+                        # bug http://www.sqlalchemy.org/trac/ticket/2767
+                        self.assertIn(
+                            (name, sorted(columns)),
+                            ([(idx[0], sorted(idx[1])) for idx in index_data])
+                        )
+                    else:
+                        self.assertIn((name, columns), index_data)
+
     # migration 153, copy flavor information into system_metadata
     def _pre_upgrade_153(self, engine):
         fake_types = [
@@ -1871,10 +1905,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         check = tables & dropped_tables
         self.assertEqual(check, dropped_tables)
 
-    def _check_194(self, engine, data):
-        if engine.name == 'sqlite':
-            return
-
+    def _pre_upgrade_194(self, engine):
         test_data = {
             # table_name: ((index_name_1, (*columns)), ...)
             "certificates": (
@@ -1917,7 +1948,13 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             ),
         }
 
-        for table_name, indexes in test_data.iteritems():
+        return test_data
+
+    def _check_194(self, engine, data):
+        if engine.name == 'sqlite':
+            return
+
+        for table_name, indexes in data.iteritems():
             meta = sqlalchemy.MetaData()
             meta.bind = engine
             table = sqlalchemy.Table(table_name, meta, autoload=True)
@@ -1937,6 +1974,31 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     )
                 else:
                     self.assertIn((name, columns), index_data)
+
+    def _post_downgrade_194(self, engine):
+        if engine.name == 'sqlite':
+            return
+
+        for table_name, indexes in self._pre_upgrade_194(engine).iteritems():
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+            table = sqlalchemy.Table(table_name, meta, autoload=True)
+
+            index_data = [(idx.name, idx.columns.keys())
+                          for idx in table.indexes]
+
+            for name, columns in indexes:
+                if engine.name == "postgresql":
+                    # we can not get correct order of columns in index
+                    # definition to postgresql using sqlalchemy. So we sortind
+                    # columns list before compare
+                    # bug http://www.sqlalchemy.org/trac/ticket/2767
+                    self.assertNotIn(
+                        (name, sorted(columns)),
+                        ([(idx[0], sorted(idx[1])) for idx in index_data])
+                    )
+                else:
+                    self.assertNotIn((name, columns), index_data)
 
     def _pre_upgrade_195(self, engine):
         fixed_ips = db_utils.get_table(engine, 'fixed_ips')
@@ -2900,6 +2962,67 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                           db_utils.get_table, engine,
                           'pci_devices')
+
+    def _pre_upgrade_214(self, engine):
+        test_data = {
+            # table_name: ((index_name_1, (*columns)), ...)
+            "migrations": ((
+                 'migrations_instance_uuid_and_status_idx',
+                ['deleted', 'instance_uuid', 'status']
+            ),)
+        }
+
+        return test_data
+
+    def _check_214(self, engine, data):
+        if engine.name == 'sqlite':
+            return
+
+        for table_name, indexes in data.iteritems():
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+            table = sqlalchemy.Table(table_name, meta, autoload=True)
+
+            index_data = [(idx.name, idx.columns.keys())
+                          for idx in table.indexes]
+
+            for name, columns in indexes:
+                if engine.name == "postgresql":
+                    # we can not get correct order of columns in index
+                    # definition to postgresql using sqlalchemy. So we sortind
+                    # columns list before compare
+                    # bug http://www.sqlalchemy.org/trac/ticket/2767
+                    self.assertIn(
+                        (name, sorted(columns)),
+                        ([(idx[0], sorted(idx[1])) for idx in index_data])
+                    )
+                else:
+                    self.assertIn((name, columns), index_data)
+
+    def _post_downgrade_214(self, engine):
+        if engine.name == 'sqlite':
+            return
+
+        for table_name, indexes in self._pre_upgrade_214(engine).iteritems():
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+            table = sqlalchemy.Table(table_name, meta, autoload=True)
+
+            index_data = [(idx.name, idx.columns.keys())
+                          for idx in table.indexes]
+
+            for name, columns in indexes:
+                if engine.name == "postgresql":
+                    # we can not get correct order of columns in index
+                    # definition to postgresql using sqlalchemy. So we sortind
+                    # columns list before compare
+                    # bug http://www.sqlalchemy.org/trac/ticket/2767
+                    self.assertNotIn(
+                        (name, sorted(columns)),
+                        ([(idx[0], sorted(idx[1])) for idx in index_data])
+                    )
+                else:
+                    self.assertNotIn((name, columns), index_data)
 
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
