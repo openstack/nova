@@ -22,7 +22,7 @@ import array
 
 from nova import exception
 from nova.keymgr import key
-from nova.tests.keymgr import single_key_mgr
+from nova.keymgr import single_key_mgr
 from nova.tests.keymgr import test_mock_key_mgr
 
 
