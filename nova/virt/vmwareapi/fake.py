@@ -574,11 +574,12 @@ class Datacenter(ManagedObject):
 class Task(ManagedObject):
     """Task class."""
 
-    def __init__(self, task_name, state="running"):
+    def __init__(self, task_name, state="running", result=None):
         super(Task, self).__init__("Task")
-        info = DataObject
+        info = DataObject()
         info.name = task_name
         info.state = state
+        info.result = result
         self.set("info", info)
 
 
@@ -621,8 +622,8 @@ def create_cluster(name):
     _create_object('ClusterComputeResource', cluster)
 
 
-def create_task(task_name, state="running"):
-    task = Task(task_name, state)
+def create_task(task_name, state="running", result=None):
+    task = Task(task_name, state, result)
     _create_object("Task", task)
     return task
 
@@ -810,6 +811,11 @@ class FakeVim(object):
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
+    def _extend_disk(self, method, size):
+        """Extend disk size when create a instance."""
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
+
     def _snapshot_vm(self, method):
         """Snapshots a VM. Here we do nothing for faking sake."""
         task_mdo = create_task(method, "success")
@@ -852,7 +858,10 @@ class FakeVim(object):
             raise exception.NoFilesFound()
         for file in _db_content.get("files"):
             if file.find(ds_path) != -1:
-                task_mdo = create_task(method, "success")
+                result = DataObject()
+                result.path = ds_path
+                task_mdo = create_task(method, state="success",
+                                       result=result)
                 return task_mdo.obj
         task_mdo = create_task(method, "error")
         return task_mdo.obj
@@ -954,6 +963,9 @@ class FakeVim(object):
         elif attr_name == "CopyVirtualDisk_Task":
             return lambda *args, **kwargs: self._create_copy_disk(attr_name,
                                                 kwargs.get("destName"))
+        elif attr_name == "ExtendVirtualDisk_Task":
+            return lambda *args, **kwargs: self._extend_disk(attr_name,
+                                                kwargs.get("size"))
         elif attr_name == "DeleteVirtualDisk_Task":
             return lambda *args, **kwargs: self._delete_disk(attr_name,
                                                 *args, **kwargs)

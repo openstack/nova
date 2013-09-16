@@ -230,6 +230,46 @@ class VMwareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
+    def test_spawn_disk_extend(self):
+        self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
+        requested_size = 80 * 1024 * 1024
+        self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
+                requested_size, mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self._create_vm()
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_disk_extend_sparse(self):
+        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
+        result = [1024, {"vmware_ostype": "otherGuest",
+                         "vmware_adaptertype": "lsiLogic",
+                         "vmware_disktype": "sparse"}]
+        vmware_images.get_vmdk_size_and_properties(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(result)
+        self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
+        requested_size = 80 * 1024 * 1024
+        self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
+                requested_size, mox.IgnoreArg(), mox.IgnoreArg())
+        self.mox.ReplayAll()
+        self._create_vm()
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_disk_invalid_disk_size(self):
+        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
+        result = [82 * 1024 * 1024 * 1024,
+                  {"vmware_ostype": "otherGuest",
+                   "vmware_adaptertype": "lsiLogic",
+                   "vmware_disktype": "sparse"}]
+        vmware_images.get_vmdk_size_and_properties(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(result)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InstanceUnacceptable,
+                          self._create_vm)
+
     def _test_snapshot(self):
         expected_calls = [
             {'args': (),
