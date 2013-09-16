@@ -99,18 +99,21 @@ class CreateImportSharedTestMixIn(object):
                                 name, *args)
         self.assertEqual(expected_message, unicode(exc))
 
+    def assertInvalidKeypair(self, expected_message, name):
+        msg = _('Keypair data is invalid') + ': ' + expected_message
+        self.assertKeyNameRaises(exception.InvalidKeypair, msg, name)
+
     def test_name_too_short(self):
         msg = _('Keypair name must be between 1 and 255 characters long')
-        self.assertKeyNameRaises(exception.InvalidKeypair, msg, '')
+        self.assertInvalidKeypair(msg, '')
 
     def test_name_too_long(self):
         msg = _('Keypair name must be between 1 and 255 characters long')
-        self.assertKeyNameRaises(exception.InvalidKeypair, msg, 'x' * 256)
+        self.assertInvalidKeypair(msg, 'x' * 256)
 
     def test_invalid_chars(self):
         msg = _("Keypair name contains unsafe characters")
-        self.assertKeyNameRaises(exception.InvalidKeypair, msg,
-                                 '* BAD CHARACTERS!  *')
+        self.assertInvalidKeypair(msg, '* BAD CHARACTERS!  *')
 
     def test_already_exists(self):
         def db_key_pair_create_duplicate(context, keypair):
@@ -159,7 +162,8 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
                                 self.keypair_api.import_key_pair,
                                 self.ctxt, self.ctxt.user_id, 'foo',
                                 'bad key data')
-        self.assertEqual(u'Keypair data is invalid', unicode(exc))
+        msg = u'Keypair data is invalid: failed to generate fingerprint'
+        self.assertEqual(msg, unicode(exc))
 
 
 class GetKeypairTestCase(KeypairAPITestCase):
