@@ -487,7 +487,7 @@ def get_vdi_uuid_for_volume(session, connection_data):
     vdi_uuid = None
 
     if 'vdi_uuid' in connection_data:
-        session.call_xenapi("SR.scan", sr_ref)
+        _scan_sr(session, sr_ref)
         vdi_uuid = connection_data['vdi_uuid']
     else:
         try:
@@ -586,9 +586,7 @@ def _safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
 
     root_uuid = imported_vhds['root']['uuid']
 
-    # TODO(sirp): for safety, we should probably re-scan the SR after every
-    # call to a dom0 plugin, since there is a possibility that the underlying
-    # VHDs changed
+    # rescan to discover new VHDs
     scan_default_sr(session)
     vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
     return vdi_ref
@@ -1258,8 +1256,8 @@ def _fetch_vhd_image(context, session, instance, image_id):
         vdis = default_handler.download_image(
                 context, session, instance, image_id)
 
-    sr_ref = safe_find_sr(session)
-    _scan_sr(session, sr_ref)
+    # Ensure we can see the import VHDs as VDIs
+    scan_default_sr(session)
 
     try:
         _check_vdi_size(context, session, instance, vdis['root']['uuid'])
@@ -1628,16 +1626,39 @@ def fetch_bandwidth(session):
     return bw
 
 
-def _scan_sr(session, sr_ref=None):
-    """Scans the SR specified by sr_ref."""
+def _scan_sr(session, sr_ref=None, max_attempts=4):
     if sr_ref:
-        LOG.debug(_("Re-scanning SR %s"), sr_ref)
-        session.call_xenapi('SR.scan', sr_ref)
+        # NOTE(johngarbutt) xenapi will collapse any duplicate requests
+        # for SR.scan if there is already a scan in progress.
+        # However, we don't want that, because the scan may have started
+        # before we modified the underlying VHDs on disk through a plugin.
+        # Using our own mutex will reduce cases where our periodic SR scan
+        # in host.update_status starts racing the sr.scan after a plugin call.
+        @utils.synchronized('sr-scan-' + sr_ref)
+        def do_scan(sr_ref):
+            LOG.debug(_("Scanning SR %s"), sr_ref)
+
+            attempt = 1
+            while True:
+                try:
+                    return session.call_xenapi('SR.scan', sr_ref)
+                except session.XenAPI.Failure as exc:
+                    with excutils.save_and_reraise_exception() as ctxt:
+                        if exc.details[0] == 'SR_BACKEND_FAILURE_40':
+                            if attempt < max_attempts:
+                                ctxt.reraise = False
+                                LOG.warn(_("Retry SR scan due to error: %s")
+                                         % exc)
+                                greenthread.sleep(2 ** attempt)
+                                attempt += 1
+        do_scan(sr_ref)
 
 
 def scan_default_sr(session):
     """Looks for the system default SR and triggers a re-scan."""
-    _scan_sr(session, _find_sr(session))
+    sr_ref = safe_find_sr(session)
+    _scan_sr(session, sr_ref)
+    return sr_ref
 
 
 def safe_find_sr(session):
@@ -1860,12 +1881,10 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
         base_uuid = _get_vhd_parent_uuid(session, parent_ref)
         return parent_uuid, base_uuid
 
-    # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
-    # matches the underlying VHDs.
-    _scan_sr(session, sr_ref)
-
     max_attempts = CONF.xenapi_vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
+        # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
+        # matches the underlying VHDs.
         _scan_sr(session, sr_ref)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         if parent_uuid and (parent_uuid != original_parent_uuid):
