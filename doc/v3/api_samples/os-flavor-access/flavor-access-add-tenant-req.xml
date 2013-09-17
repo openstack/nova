@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<add_tenant_access>
+   <tenant_id>fake_tenant</tenant_id>
+</add_tenant_access>
