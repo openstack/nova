@@ -20,6 +20,7 @@ from nova import test
 
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutils
+from nova.virt.hyperv import vmutils
 
 
 class VHDUtilsTestCase(test.TestCase):
@@ -52,3 +53,38 @@ class VHDUtilsTestCase(test.TestCase):
         mock_img_svc.CreateDynamicVirtualHardDisk.assert_called_once_with(
             Path=self._FAKE_VHD_PATH,
             MaxInternalSize=self._FAKE_MAK_INTERNAL_SIZE)
+
+    def test_get_internal_vhd_size_by_file_size_fixed(self):
+        vhdutil = vhdutils.VHDUtils()
+        root_vhd_size = 1 * 1024 ** 3
+        vhdutil.get_vhd_info = mock.MagicMock()
+        vhdutil.get_vhd_info.return_value = {'Type': constants.VHD_TYPE_FIXED}
+
+        real_size = vhdutil._get_internal_vhd_size_by_file_size(None,
+                                                                root_vhd_size)
+        expected_vhd_size = 1 * 1024 ** 3 - 512
+        self.assertEqual(expected_vhd_size, real_size)
+
+    def test_get_internal_vhd_size_by_file_size_dynamic(self):
+        vhdutil = vhdutils.VHDUtils()
+        root_vhd_size = 20 * 1024 ** 3
+        vhdutil.get_vhd_info = mock.MagicMock()
+        vhdutil.get_vhd_info.return_value = {'Type':
+                                             constants.VHD_TYPE_DYNAMIC}
+        vhdutil._get_vhd_dynamic_blk_size = mock.MagicMock()
+        vhdutil._get_vhd_dynamic_blk_size.return_value = 2097152
+
+        real_size = vhdutil._get_internal_vhd_size_by_file_size(None,
+                                                                root_vhd_size)
+        expected_vhd_size = 20 * 1024 ** 3 - 43008
+        self.assertEqual(expected_vhd_size, real_size)
+
+    def test_get_internal_vhd_size_by_file_size_unsupported(self):
+        vhdutil = vhdutils.VHDUtils()
+        root_vhd_size = 20 * 1024 ** 3
+        vhdutil.get_vhd_info = mock.MagicMock()
+        vhdutil.get_vhd_info.return_value = {'Type': 5}
+
+        self.assertRaises(vmutils.HyperVException,
+                          vhdutil._get_internal_vhd_size_by_file_size,
+                          None, root_vhd_size)
