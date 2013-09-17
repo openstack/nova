@@ -140,19 +140,15 @@ class VMwareESXDriver(driver.ComputeDriver):
         super(VMwareESXDriver, self).__init__(virtapi)
 
         self._host_ip = CONF.vmware.host_ip
-        host_username = CONF.vmware.host_username
-        host_password = CONF.vmware.host_password
-        api_retry_count = CONF.vmware.api_retry_count
-        if not self._host_ip or host_username is None or host_password is None:
-            raise Exception(_("Must specify vmwareapi_host_ip,"
-                              "vmwareapi_host_username "
-                              "and vmwareapi_host_password to use"
+        if not (self._host_ip or CONF.vmware.host_username is None or
+                        CONF.vmware.host_password is None):
+            raise Exception(_("Must specify host_ip, "
+                              "host_username "
+                              "and host_password to use "
                               "compute_driver=vmwareapi.VMwareESXDriver or "
                               "vmwareapi.VMwareVCDriver"))
 
-        self._session = VMwareAPISession(self._host_ip,
-                                         host_username, host_password,
-                                         api_retry_count, scheme=scheme)
+        self._session = VMwareAPISession(scheme=scheme)
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
                                         self._volumeops)
@@ -635,16 +631,19 @@ class VMwareVCDriver(VMwareESXDriver):
 
 class VMwareAPISession(object):
     """
-    Sets up a session with the ESX host and handles all
+    Sets up a session with the VC/ESX host and handles all
     the calls made to the host.
     """
 
-    def __init__(self, host_ip, host_username, host_password,
-                 api_retry_count, scheme="https"):
+    def __init__(self, host_ip=CONF.vmware.host_ip,
+                 username=CONF.vmware.host_username,
+                 password=CONF.vmware.host_password,
+                 retry_count=CONF.vmware.api_retry_count,
+                 scheme="https"):
         self._host_ip = host_ip
-        self._host_username = host_username
-        self._host_password = host_password
-        self.api_retry_count = api_retry_count
+        self._host_username = username
+        self._host_password = password
+        self._api_retry_count = retry_count
         self._scheme = scheme
         self._session_id = None
         self.vim = None
@@ -655,10 +654,13 @@ class VMwareAPISession(object):
         return vim.Vim(protocol=self._scheme, host=self._host_ip)
 
     def _create_session(self):
-        """Creates a session with the ESX host."""
+        """Creates a session with the VC/ESX host."""
+
+        delay = 1
+
         while True:
             try:
-                # Login and setup the session with the ESX host for making
+                # Login and setup the session with the host for making
                 # API calls
                 self.vim = self._get_vim_object()
                 session = self.vim.Login(
@@ -683,16 +685,20 @@ class VMwareAPISession(object):
                 self._session_id = session.key
                 return
             except Exception as excep:
-                LOG.critical(_("In vmwareapi:_create_session, "
-                              "got this exception: %s") % excep)
-                raise exception.NovaException(excep)
+                LOG.critical(_("Unable to connect to server at %(server)s, "
+                    "sleeping for %(seconds)s seconds"),
+                    {'server': self._host_ip, 'seconds': delay})
+                time.sleep(delay)
+                delay = min(2 * delay, 60)
 
     def __del__(self):
         """Logs-out the session."""
         # Logout to avoid un-necessary increase in session count at the
         # ESX host
         try:
-            self.vim.Logout(self.vim.get_service_content().sessionManager)
+            # May not have been able to connect to VC, so vim is still None
+            if self.vim:
+                self.vim.Logout(self.vim.get_service_content().sessionManager)
         except Exception as excep:
             # It is just cautionary on our part to do a logout in del just
             # to ensure that the session is not left active.
@@ -762,7 +768,7 @@ class VMwareAPISession(object):
                 break
             # If retry count has been reached then break and
             # raise the exception
-            if retry_count > self.api_retry_count:
+            if retry_count > self._api_retry_count:
                 break
             time.sleep(TIME_BETWEEN_API_CALL_RETRIES)
 
