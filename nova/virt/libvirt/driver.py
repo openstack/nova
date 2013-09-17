@@ -4485,7 +4485,8 @@ class LibvirtDriver(driver.ComputeDriver):
             # then ensure we're in 'raw' format so we can extend file system.
             fmt = info['type']
             if (size and fmt == 'qcow2' and
-                    disk.can_resize_fs(info['path'], size, use_cow=True)):
+                    disk.can_resize_image(info['path'], size) and
+                    disk.is_image_partitionless(info['path'], use_cow=True)):
                 path_raw = info['path'] + '_raw'
                 utils.execute('qemu-img', 'convert', '-f', 'qcow2',
                               '-O', 'raw', info['path'], path_raw)

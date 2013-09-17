@@ -6323,7 +6323,7 @@ class LibvirtDriverTestCase(test.TestCase):
         powered_on = power_on
         self.fake_create_domain_called = False
 
-        def fake_can_resize_fs(path, size, use_cow=False):
+        def fake_can_resize_image(path, size):
             return False
 
         def fake_extend(path, size, use_cow=False):
@@ -6362,8 +6362,8 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.flags(use_cow_images=True)
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
-        self.stubs.Set(libvirt_driver.disk, 'can_resize_fs',
-                       fake_can_resize_fs)
+        self.stubs.Set(libvirt_driver.disk, 'can_resize_image',
+                       fake_can_resize_image)
         self.stubs.Set(self.libvirtconnection, 'to_xml', fake_to_xml)
         self.stubs.Set(self.libvirtconnection, 'plug_vifs', fake_plug_vifs)
         self.stubs.Set(self.libvirtconnection, '_create_image',

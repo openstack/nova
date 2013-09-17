@@ -128,16 +128,13 @@ def get_disk_size(path):
 
 def extend(image, size, use_cow=False):
     """Increase image to size."""
-    virt_size = get_disk_size(image)
-    if virt_size >= size:
+    if not can_resize_image(image, size):
         return
 
-    # Have to check while the container file is still small
-    can_resize = can_resize_fs(image, size, use_cow)
     utils.execute('qemu-img', 'resize', image, size)
 
     # if we can't access the filesystem, we can't do anything more
-    if not can_resize:
+    if not is_image_partitionless(image, use_cow):
         return
 
     # NOTE(vish): attempts to resize filesystem
@@ -154,19 +151,24 @@ def extend(image, size, use_cow=False):
         resize2fs(image)
 
 
-def can_resize_fs(image, size, use_cow=False):
-    """Check whether we can resize contained file system."""
-
+def can_resize_image(image, size):
+    """Check whether we can resize the container image file."""
     LOG.debug(_('Checking if we can resize image %(image)s. '
-                'size=%(size)s, CoW=%(use_cow)s'),
-              {'image': image, 'size': size, 'use_cow': use_cow})
+                'size=%(size)s'), {'image': image, 'size': size})
 
     # Check that we're increasing the size
     virt_size = get_disk_size(image)
     if virt_size >= size:
-        LOG.debug(_('Cannot resize filesystem %s to a smaller size.'),
+        LOG.debug(_('Cannot resize image %s to a smaller size.'),
                   image)
         return False
+    return True
+
+
+def is_image_partitionless(image, use_cow=False):
+    """Check whether we can resize contained file system."""
+    LOG.debug(_('Checking if we can resize filesystem inside %(image)s. '
+                'CoW=%(use_cow)s'), {'image': image, 'use_cow': use_cow})
 
     # Check the image is unpartitioned
     if use_cow:
