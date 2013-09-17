@@ -662,7 +662,8 @@ def get_host_ref(session, cluster=None):
     return host_mor
 
 
-def get_datastore_ref_and_name(session, cluster=None, host=None):
+def get_datastore_ref_and_name(session, cluster=None, host=None,
+                               datastore_regex=None):
     """Get the datastore list and choose the first local storage."""
     if cluster is None and host is None:
         data_stores = session._call_method(vim_util, "get_objects",
@@ -704,6 +705,12 @@ def get_datastore_ref_and_name(session, cluster=None, host=None):
                 ds_free = prop.val
         # Local storage identifier
         if ds_type == "VMFS" or ds_type == "NFS":
-            return elem.obj, ds_name, ds_cap, ds_free
+            if not datastore_regex or datastore_regex.match(ds_name):
+                return elem.obj, ds_name, ds_cap, ds_free
 
+    if datastore_regex:
+        raise exception.DatastoreNotFound(
+                _("Datastore regex %s did not match any datastores")
+                % datastore_regex.pattern)
+    else:
         raise exception.DatastoreNotFound()

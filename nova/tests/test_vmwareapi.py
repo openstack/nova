@@ -108,6 +108,7 @@ class VMwareAPIVMTestCase(test.TestCase):
                    vmwareapi_host_password='test_pass',
                    vnc_enabled=False,
                    use_linked_clone=False)
+        self.flags(datastore_regex='.*', group='vmware')
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
@@ -490,3 +491,14 @@ class VMwareAPIHostTestCase(test.TestCase):
 
     def test_host_maintenance_off(self):
         self._test_host_action(self.conn.host_maintenance_mode, False)
+
+    def test_invalid_datastore_regex(self):
+        # Tests if we raise an exception for Invalid Regular Expression in
+        # vmware_datastore_regex
+        self.flags(vmwareapi_host_ip='test_url',
+                   vmwareapi_host_username='test_username',
+                   vmwareapi_host_password='test_pass',
+                   vnc_enabled=False,
+                   use_linked_clone=False)
+        self.flags(datastore_regex='fake-ds(01', group='vmware')
+        self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
