@@ -112,7 +112,10 @@ class FlavorExtraSpecsController(object):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
-        db.flavor_extra_specs_delete(context, flavor_id, id)
+        try:
+            db.flavor_extra_specs_delete(context, flavor_id, id)
+        except exception.InstanceTypeExtraSpecsNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
 
 
 class Flavorextraspecs(extensions.ExtensionDescriptor):

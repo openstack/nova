@@ -4382,9 +4382,13 @@ def flavor_extra_specs_get_item(context, flavor_id, key):
 
 @require_context
 def flavor_extra_specs_delete(context, flavor_id, key):
-    _instance_type_extra_specs_get_query(context, flavor_id).\
-            filter(models.InstanceTypeExtraSpecs.key == key).\
-            soft_delete(synchronize_session=False)
+    result = _instance_type_extra_specs_get_query(context, flavor_id).\
+                     filter(models.InstanceTypeExtraSpecs.key == key).\
+                     soft_delete(synchronize_session=False)
+    # did not find the extra spec
+    if result == 0:
+        raise exception.InstanceTypeExtraSpecsNotFound(
+                extra_specs_key=key, instance_type_id=flavor_id)
 
 
 @require_context
