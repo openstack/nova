@@ -179,6 +179,26 @@ def convert_image(source, dest, out_format, run_as_root=False):
     utils.execute(*cmd, run_as_root=run_as_root)
 
 
+def direct_fetch(context, image_href, backend_dest, _user_id, _project_id,
+                 max_size=0):
+    """Allow an image backend to fetch directly from the glance backend.
+
+    :backend_dest: the image backend, which must have a direct_fetch
+                   method accepting a list of image locations. This method
+                   should raise exceptions.ImageUnacceptable if the image
+                   cannot be downloaded directly.
+    """
+    # TODO(jdurgin): improve auth handling as noted in fetch()
+    image_service, image_id = glance.get_remote_image_service(context,
+                                                              image_href)
+    locations = image_service.get_locations(context, image_id)
+    image_meta = image_service.show(context, image_id)
+
+    LOG.debug(_('Image locations are: %(locs)s') % {'locs': locations})
+    backend_dest.direct_fetch(image_id, image_meta, locations,
+                              max_size=max_size)
+
+
 def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
     # TODO(vish): Improve context handling and add owner and auth data
     #             when it is added to glance.  Right now there is no

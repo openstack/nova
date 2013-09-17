@@ -18,6 +18,7 @@
 import abc
 import contextlib
 import os
+import urllib
 
 from oslo.config import cfg
 
@@ -298,6 +299,14 @@ class Image(object):
             raise exception.DiskInfoReadWriteFail(reason=unicode(e))
         return driver_format
 
+    def direct_fetch(self, image_id, image_meta, image_locations):
+        """Create an image from a direct image location.
+
+        :raises: exception.ImageUnacceptable if it cannot be fetched directly
+        """
+        reason = _('direct_fetch() is not implemented')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None,
@@ -518,10 +527,13 @@ class RBDVolumeProxy(object):
     The underlying librados client and ioctx can be accessed as the attributes
     'client' and 'ioctx'.
     """
-    def __init__(self, driver, name, pool=None):
+    def __init__(self, driver, name, pool=None, snapshot=None,
+                 read_only=False):
         client, ioctx = driver._connect_to_rados(pool)
         try:
-            self.volume = driver.rbd.Image(ioctx, str(name), snapshot=None)
+            self.volume = driver.rbd.Image(ioctx, str(name),
+                                           snapshot=ascii_str(snapshot),
+                                           read_only=read_only)
         except driver.rbd.Error:
             LOG.exception(_("error opening rbd image %s"), name)
             driver._disconnect_from_rados(client, ioctx)
@@ -543,6 +555,19 @@ class RBDVolumeProxy(object):
         return getattr(self.volume, attrib)
 
 
+class RADOSClient(object):
+    """Context manager to simplify error handling for connecting to ceph."""
+    def __init__(self, driver, pool=None):
+        self.driver = driver
+        self.cluster, self.ioctx = driver._connect_to_rados(pool)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type_, value, traceback):
+        self.driver._disconnect_from_rados(self.cluster, self.ioctx)
+
+
 def ascii_str(s):
     """Convert a string to ascii, or return None if the input is None.
 
@@ -557,20 +582,20 @@ def ascii_str(s):
 class Rbd(Image):
     def __init__(self, instance=None, disk_name=None, path=None,
                  snapshot_name=None, **kwargs):
-        super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
+        super(Rbd, self).__init__("block", 'raw', is_block_dev=True)
         if path:
             try:
-                self.rbd_name = path.split('/')[1]
+                self.rbd_name = str(path.split('/')[1])
             except IndexError:
                 raise exception.InvalidDevicePath(path=path)
         else:
-            self.rbd_name = '%s_%s' % (instance['uuid'], disk_name)
+            self.rbd_name = str('%s_%s' % (instance['uuid'], disk_name))
         self.snapshot_name = snapshot_name
         if not CONF.libvirt_images_rbd_pool:
             raise RuntimeError(_('You should specify'
                                  ' libvirt_images_rbd_pool'
                                  ' flag to use rbd images.'))
-        self.pool = CONF.libvirt_images_rbd_pool
+        self.pool = str(CONF.libvirt_images_rbd_pool)
         self.ceph_conf = ascii_str(CONF.libvirt_images_rbd_ceph_conf)
         self.rbd_user = ascii_str(CONF.rbd_user)
         self.rbd = kwargs.get('rbd', rbd)
@@ -665,11 +690,13 @@ class Rbd(Image):
 
         return False
 
-    def _resize(self, volume_name, size):
-        size = int(size) * 1024
+    def _resize(self, size):
+        with RBDVolumeProxy(self, self.rbd_name) as vol:
+            vol.resize(int(size))
 
-        with RBDVolumeProxy(self, volume_name) as vol:
-            vol.resize(size)
+    def _size(self):
+        with RBDVolumeProxy(self, self.rbd_name) as vol:
+            return vol.size()
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         if self.rbd is None:
@@ -681,23 +708,23 @@ class Rbd(Image):
             old_format = False
             features = self.rbd.RBD_FEATURE_LAYERING
 
-        if not os.path.exists(base):
+        if not self.check_image_exists():
             prepare_template(target=base, max_size=size, *args, **kwargs)
         else:
             self.verify_base_size(base, size)
 
-        # keep using the command line import instead of librbd since it
-        # detects zeroes to preserve sparseness in the image
-        args = ['--pool', self.pool, base, self.rbd_name]
-        if self._supports_layering():
-            args += ['--new-format']
-        args += self._ceph_args()
-        libvirt_utils.import_rbd_image(*args)
+        # prepare_template may have created the image via direct_fetch()
+        if not self.check_image_exists():
+            # keep using the command line import instead of librbd since it
+            # detects zeroes to preserve sparseness in the image
+            args = ['--pool', self.pool, base, self.rbd_name]
+            if self._supports_layering():
+                args += ['--new-format']
+            args += self._ceph_args()
+            libvirt_utils.import_rbd_image(*args)
 
-        base_size = disk.get_disk_size(base)
-
-        if size and size > base_size:
-            self._resize(self.rbd_name, size)
+        if size and self._size() < size:
+            self._resize(size)
 
     def snapshot_create(self):
         pass
@@ -708,6 +735,77 @@ class Rbd(Image):
 
     def snapshot_delete(self):
         pass
+
+    def _parse_location(self, location):
+        prefix = 'rbd://'
+        if not location.startswith(prefix):
+            reason = _('Not stored in rbd')
+            raise exception.ImageUnacceptable(image_id=location, reason=reason)
+        pieces = map(urllib.unquote, location[len(prefix):].split('/'))
+        if any(map(lambda p: p == '', pieces)):
+            reason = _('Blank components')
+            raise exception.ImageUnacceptable(image_id=location, reason=reason)
+        if len(pieces) != 4:
+            reason = _('Not an rbd snapshot')
+            raise exception.ImageUnacceptable(image_id=location, reason=reason)
+        return pieces
+
+    def _get_fsid(self):
+        with RADOSClient(self) as client:
+            return client.cluster.get_fsid()
+
+    def _is_cloneable(self, image_location):
+        try:
+            fsid, pool, image, snapshot = self._parse_location(image_location)
+        except exception.ImageUnacceptable as e:
+            LOG.debug(_('not cloneable: %s'), e)
+            return False
+
+        if self._get_fsid() != fsid:
+            reason = _('%s is in a different ceph cluster') % image_location
+            LOG.debug(reason)
+            return False
+
+        # check that we can read the image
+        try:
+            with RBDVolumeProxy(self, image,
+                                pool=pool,
+                                snapshot=snapshot,
+                                read_only=True):
+                return True
+        except self.rbd.Error as e:
+            LOG.debug(_('Unable to open image %(loc)s: %(err)s') %
+                      dict(loc=image_location, err=e))
+            return False
+
+    def _clone(self, pool, image, snapshot):
+        with RADOSClient(self, str(pool)) as src_client:
+            with RADOSClient(self) as dest_client:
+                self.rbd.RBD().clone(src_client.ioctx,
+                                     str(image),
+                                     str(snapshot),
+                                     dest_client.ioctx,
+                                     self.rbd_name,
+                                     features=self.rbd.RBD_FEATURE_LAYERING)
+
+    def direct_fetch(self, image_id, image_meta, image_locations):
+        if self.check_image_exists():
+            return
+        if image_meta.get('disk_format') != 'raw':
+            reason = _('Image is not raw format')
+            raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
+        if not self._supports_layering():
+            reason = _('installed version of librbd does not support cloning')
+            raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
+
+        for location in image_locations:
+            url = location['url']
+            if self._is_cloneable(url):
+                prefix, pool, image, snapshot = self._parse_location(url)
+                return self._clone(pool, image, snapshot)
+
+        reason = _('No image locations are accessible')
+        raise exception.ImageUnacceptable(image_id=image_id, reason=reason)
 
 
 class Backend(object):

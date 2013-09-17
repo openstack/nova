@@ -639,8 +639,16 @@ def get_fs_info(path):
             'used': used}
 
 
-def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
+def fetch_image(context, target, image_id, user_id, project_id, max_size=0,
+                backend_dest=None):
     """Grab image."""
+    if backend_dest:
+        try:
+            images.direct_fetch(context, image_id, backend_dest,
+                                user_id, project_id)
+            return
+        except exception.ImageUnacceptable:
+            LOG.debug(_('could not fetch directly, falling back to download'))
     images.fetch_to_raw(context, image_id, target, user_id, project_id,
                         max_size=max_size)
 
