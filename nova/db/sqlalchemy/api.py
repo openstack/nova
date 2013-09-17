@@ -4499,6 +4499,7 @@ def instance_metadata_get(context, instance_uuid):
 
 
 @require_context
+@_retry_on_deadlock
 def instance_metadata_delete(context, instance_uuid, key):
     _instance_metadata_get_query(context, instance_uuid).\
         filter_by(key=key).\
