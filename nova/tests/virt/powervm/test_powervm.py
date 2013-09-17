@@ -1212,3 +1212,13 @@ class IVMOperatorTestCase(test.TestCase):
         self.assertRaises(n_exc.InvalidParameterValue,
                           self.ivm_operator._poll_for_lpar_status,
                           'fake', 'bad-lpar-state-value', 'test')
+
+    def test_get_hostname_returns_cached(self):
+        self.mox.StubOutWithMock(self.ivm_operator, 'run_vios_command')
+        self.ivm_operator.run_vios_command(self.ivm_operator.command.hostname()
+                                           ).AndReturn(('foo', None))
+        self.ivm_operator.run_vios_command(self.ivm_operator.command.hostname()
+                                           ).AndReturn(('bar', None))
+        self.mox.ReplayAll()
+        self.assertEqual('foo', self.ivm_operator.get_hostname())
+        self.assertEqual('foo', self.ivm_operator.get_hostname())
