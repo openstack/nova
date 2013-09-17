@@ -424,11 +424,20 @@ class VMOps(object):
                 self._attach_mapped_block_devices(instance,
                                                   block_device_info)
 
-            if rescue:
-                # NOTE(johannes): Attach root disk to rescue VM now, before
-                # booting the VM, since we can't hotplug block devices
-                # on non-PV guests
-                self._attach_orig_disk_for_rescue(instance, vm_ref)
+        if rescue:
+            # NOTE(johannes): Attach root disk to rescue VM now, before
+            # booting the VM, since we can't hotplug block devices
+            # on non-PV guests
+            @step
+            def attach_root_disk_step(undo_mgr, vm_ref):
+                vbd_ref = self._attach_orig_disk_for_rescue(instance, vm_ref)
+
+                def undo_attach_root_disk():
+                    # destroy the vbd in preparation to re-attach the VDI
+                    # to its original VM.  (does not delete VDI)
+                    vm_utils.destroy_vbd(self._session, vbd_ref)
+
+                undo_mgr.undo_with(undo_attach_root_disk)
 
         @step
         def inject_instance_data_step(undo_mgr, vm_ref, vdis):
@@ -492,6 +501,9 @@ class VMOps(object):
             inject_instance_data_step(undo_mgr, vm_ref, vdis)
             setup_network_step(undo_mgr, vm_ref)
 
+            if rescue:
+                attach_root_disk_step(undo_mgr, vm_ref)
+
             boot_instance_step(undo_mgr, vm_ref)
 
             configure_booted_instance_step(undo_mgr, vm_ref)
@@ -506,8 +518,8 @@ class VMOps(object):
     def _attach_orig_disk_for_rescue(self, instance, vm_ref):
         orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
         vdi_ref = self._find_root_vdi_ref(orig_vm_ref)
-        vm_utils.create_vbd(self._session, vm_ref, vdi_ref, DEVICE_RESCUE,
-                            bootable=False)
+        return vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
+                                   DEVICE_RESCUE, bootable=False)
 
     def _file_inject_vm_settings(self, instance, vm_ref, vdis, network_info):
         if CONF.flat_injected:

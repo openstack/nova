@@ -1241,6 +1241,33 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             vdi_uuids.append(xenapi_fake.get_record('VBD', vbd_uuid)["VDI"])
         self.assertTrue("swap" not in vdi_uuids)
 
+    def test_rescue_preserve_disk_on_failure(self):
+        # test that the original disk is preserved if rescue setup fails
+        # bug #1227898
+        instance = self._create_instance()
+        session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
+                                            fake.FakeVirtAPI())
+        image_meta = {'id': IMAGE_VHD,
+                      'disk_format': 'vhd'}
+
+        vm_ref = vm_utils.lookup(session, instance['name'])
+        vdi_ref, vdi_rec = vm_utils.get_vdi_for_vm_safely(session, vm_ref)
+
+        # raise an error in the spawn setup process and trigger the
+        # undo manager logic:
+        def fake_start(*args, **kwargs):
+            raise test.TestingException('Start Error')
+
+        self.stubs.Set(self.conn._vmops, '_start', fake_start)
+
+        self.assertRaises(test.TestingException, self.conn.rescue,
+                          self.context, instance, [], image_meta, '')
+
+        # confirm original disk still exists:
+        vdi_ref2, vdi_rec2 = vm_utils.get_vdi_for_vm_safely(session, vm_ref)
+        self.assertEqual(vdi_ref, vdi_ref2)
+        self.assertEqual(vdi_rec['uuid'], vdi_rec2['uuid'])
+
     def test_unrescue(self):
         instance = self._create_instance()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
