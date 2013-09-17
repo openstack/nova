@@ -223,7 +223,8 @@ class Server(object):
 
         """
         try:
-            self._server.wait()
+            if self._server is not None:
+                self._server.wait()
         except greenlet.GreenletExit:
             LOG.info(_("WSGI server has stopped."))
 

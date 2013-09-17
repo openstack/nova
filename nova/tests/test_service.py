@@ -35,6 +35,8 @@ from nova import test
 from nova.tests import utils
 from nova import wsgi
 
+from nova.openstack.common import service as _service
+
 test_service_opts = [
     cfg.StrOpt("fake_manager",
                default="nova.tests.test_service.FakeManager",
@@ -172,6 +174,41 @@ class ServiceTestCase(test.TestCase):
                                self.topic,
                                'nova.tests.test_service.FakeManager')
         serv.start()
+
+    def test_parent_graceful_shutdown(self):
+        self.manager_mock = self.mox.CreateMock(FakeManager)
+        self.mox.StubOutWithMock(sys.modules[__name__],
+                'FakeManager', use_mock_anything=True)
+        self.mox.StubOutWithMock(self.manager_mock, 'init_host')
+        self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
+        self.mox.StubOutWithMock(self.manager_mock, 'create_rpc_dispatcher')
+        self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
+
+        self.mox.StubOutWithMock(_service.Service, 'stop')
+
+        FakeManager(host=self.host).AndReturn(self.manager_mock)
+
+        # init_host is called before any service record is created
+        self.manager_mock.init_host()
+        self._service_start_mocks()
+        # pre_start_hook is called after service record is created,
+        # but before RPC consumer is created
+        self.manager_mock.pre_start_hook()
+        self.manager_mock.create_rpc_dispatcher(None)
+        # post_start_hook is called after RPC consumer is created.
+        self.manager_mock.post_start_hook()
+
+        _service.Service.stop()
+
+        self.mox.ReplayAll()
+
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.test_service.FakeManager')
+        serv.start()
+
+        serv.stop()
 
 
 class TestWSGIService(test.TestCase):
