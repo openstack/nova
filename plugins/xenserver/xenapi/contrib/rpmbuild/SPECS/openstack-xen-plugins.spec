@@ -42,3 +42,4 @@ rm -rf $RPM_BUILD_ROOT
 /etc/xapi.d/plugins/xenhost
 /etc/xapi.d/plugins/xenstore.py
 /etc/xapi.d/plugins/utils.py
+/etc/xapi.d/plugins/nova_plugin_version

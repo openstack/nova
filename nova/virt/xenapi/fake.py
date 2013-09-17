@@ -673,6 +673,9 @@ class SessionBase(object):
             raise Failure('Guest does not have a console')
         return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
 
+    def _plugin_nova_plugin_version_get_version(self, method, args):
+        return pickle.dumps("1.0")
+
     def host_call_plugin(self, _1, _2, plugin, method, args):
         func = getattr(self, '_plugin_%s_%s' % (plugin, method), None)
         if not func:
