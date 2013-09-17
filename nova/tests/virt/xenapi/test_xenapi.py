@@ -3957,6 +3957,78 @@ class XenAPISessionTestCase(test.NoDBTestCase):
             session._get_product_version_and_brand()
         )
 
+    def test_verify_plugin_version_same(self):
+        session = self._get_mock_xapisession({})
+
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+
+        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
+        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+                            ).AndReturn("2.4")
+
+        self.mox.ReplayAll()
+        session._verify_plugin_version()
+
+    def test_verify_plugin_version_compatible(self):
+        session = self._get_mock_xapisession({})
+        session.XenAPI = xenapi_fake.FakeXenAPI()
+
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+
+        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
+        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+                            ).AndReturn("2.5")
+
+        self.mox.ReplayAll()
+        session._verify_plugin_version()
+
+    def test_verify_plugin_version_bad_maj(self):
+        session = self._get_mock_xapisession({})
+        session.XenAPI = xenapi_fake.FakeXenAPI()
+
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+
+        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
+        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+                            ).AndReturn("3.0")
+
+        self.mox.ReplayAll()
+        self.assertRaises(xenapi_fake.Failure, session._verify_plugin_version)
+
+    def test_verify_plugin_version_bad_min(self):
+        session = self._get_mock_xapisession({})
+        session.XenAPI = xenapi_fake.FakeXenAPI()
+
+        session.PLUGIN_REQUIRED_VERSION = '2.4'
+
+        self.mox.StubOutWithMock(session, 'call_plugin_serialized')
+        session.call_plugin_serialized('nova_plugin_version', 'get_version',
+                            ).AndReturn("2.3")
+
+        self.mox.ReplayAll()
+        self.assertRaises(xenapi_fake.Failure, session._verify_plugin_version)
+
+    def test_verify_current_version_matches(self):
+        session = self._get_mock_xapisession({})
+
+        # Import the plugin to extract its version
+        path = os.path.dirname(__file__)
+        rel_path_elem = "../../../../plugins/xenserver/xenapi/etc/xapi.d/" \
+            "plugins/nova_plugin_version"
+        for elem in rel_path_elem.split('/'):
+            path = os.path.join(path, elem)
+        path = os.path.realpath(path)
+
+        plugin_version = None
+        with open(path) as plugin_file:
+            for line in plugin_file:
+                if "PLUGIN_VERSION = " in line:
+                    print line
+                    plugin_version = line.strip()[17:].strip('"')
+
+        self.assertEquals(session.PLUGIN_REQUIRED_VERSION,
+                          plugin_version)
+
 
 class XenAPIFakeTestCase(test.NoDBTestCase):
     def test_query_matches(self):

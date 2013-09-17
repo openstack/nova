@@ -239,7 +239,10 @@ class FakeSessionForFirewallTests(FakeSessionForVMTests):
                     if '*filter' in lines:
                         output = '\n'.join(lines)
                 ret_str = fake.as_json(out=output, err='')
-        return ret_str
+            return ret_str
+        else:
+            return (super(FakeSessionForVMTests, self).
+                    host_call_plugin(_1, _2, plugin, method, args))
 
 
 def stub_out_vm_methods(stubs):

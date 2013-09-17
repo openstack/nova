@@ -654,6 +654,12 @@ class XenAPIDriver(driver.ComputeDriver):
 class XenAPISession(object):
     """The session to invoke XenAPI SDK calls."""
 
+    # This is not a config option as it should only ever be
+    # changed in development environments.
+    # MAJOR VERSION: Incompatible changes with the plugins
+    # MINOR VERSION: Compatible changes, new plguins, etc
+    PLUGIN_REQUIRED_VERSION = '1.0'
+
     def __init__(self, url, user, pw, virtapi):
         import XenAPI
         self.XenAPI = XenAPI
@@ -667,6 +673,22 @@ class XenAPISession(object):
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
         self._virtapi = virtapi
+
+        self._verify_plugin_version()
+
+    def _verify_plugin_version(self):
+        # Verify that we're using the right version of the plugins
+        returned_version = self.call_plugin_serialized(
+            'nova_plugin_version', 'get_version')
+
+        # Can't use vmops.cmp_version because that tolerates differences in
+        # major version
+        req_maj, req_min = self.PLUGIN_REQUIRED_VERSION.split('.')
+        got_maj, got_min = returned_version.split('.')
+        if req_maj != got_maj or req_min > got_min:
+            raise self.XenAPI.Failure(
+                _("Plugin version mismatch (Expected %(exp)s, got %(got)s)") %
+                {'exp': self.PLUGIN_REQUIRED_VERSION, 'got': returned_version})
 
     def _create_first_session(self, url, user, pw, exception):
         try:
