@@ -64,7 +64,8 @@ def jsonify(fnc):
 
 def _record_exists(arg_dict):
     """Returns whether or not the given record exists. The record path
-    is determined from the given path and dom_id in the arg_dict."""
+    is determined from the given path and dom_id in the arg_dict.
+    """
     cmd = ["xenstore-exists", "/local/domain/%(dom_id)s/%(path)s" % arg_dict]
     try:
         _run_command(cmd)
