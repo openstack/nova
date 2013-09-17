@@ -923,7 +923,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
 
     def test_get_available_nodes(self):
-        nodelist = self.conn.get_available_nodes()
+        nodelist = self.conn.get_available_nodes(refresh=True)
         self.assertEquals(nodelist, [self.node_name, self.node_name2])
 
     def test_spawn_multiple_node(self):

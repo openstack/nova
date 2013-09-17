@@ -504,7 +504,7 @@ class BareMetalDriver(driver.ComputeDriver):
         node = _get_baremetal_node_by_instance_uuid(instance['uuid'])
         return self.driver.get_console_output(node, instance)
 
-    def get_available_nodes(self):
+    def get_available_nodes(self, refresh=False):
         context = nova_context.get_admin_context()
         return [str(n['uuid']) for n in
                 db.bm_node_get_all(context, service_host=CONF.host)]
