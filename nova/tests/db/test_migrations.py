@@ -46,7 +46,6 @@ import commands
 import ConfigParser
 import datetime
 import glob
-import operator
 import os
 import urlparse
 import uuid
@@ -1690,10 +1689,12 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 block_device.c.instance_uuid == 'mig186_uuid-1',
                 block_device.c.instance_uuid == 'mig186_uuid-2',
                 block_device.c.instance_uuid == 'mig186_uuid-3'))\
-            .order_by(block_device.c.device_name.asc())
+            .order_by(block_device.c.device_name.asc(),
+                      block_device.c.instance_uuid.asc())
 
         expected_bdms = sorted(self.mig186_fake_bdms,
-                               key=operator.itemgetter('device_name'))
+                               key=lambda x:
+                                    x['device_name'] + x['instance_uuid'])
         got_bdms = [bdm for bdm in q.execute()]
 
         self.assertEquals(len(expected_bdms), len(got_bdms))
