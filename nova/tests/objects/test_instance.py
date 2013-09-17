@@ -593,6 +593,17 @@ class _TestInstanceObject(object):
         self.assertRaises(exception.ObjectActionError,
                           inst.destroy)
 
+    def test_name_does_not_trigger_lazy_loads(self):
+        values = {'user_id': self.context.user_id,
+                  'project_id': self.context.project_id,
+                  'host': 'foo'}
+        db_inst = db.instance_create(self.context, values)
+        inst = instance.Instance.get_by_uuid(self.context, db_inst['uuid'])
+        self.assertFalse(inst.obj_attr_is_set('fault'))
+        self.flags(instance_name_template='foo-%(uuid)s')
+        self.assertEqual('foo-%s' % db_inst['uuid'], inst.name)
+        self.assertFalse(inst.obj_attr_is_set('fault'))
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
