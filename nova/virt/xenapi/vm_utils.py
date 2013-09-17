@@ -1211,7 +1211,9 @@ def _fetch_vhd_image(context, session, instance, image_id):
     except Exception as e:
         default_handler = _default_download_handler()
 
-        if handler == default_handler:
+        # Using type() instead of isinstance() so instance of subclass doesn't
+        # test as equivalent
+        if type(handler) == type(default_handler):
             raise
 
         LOG.exception(_("Download handler '%(handler)s' raised an"

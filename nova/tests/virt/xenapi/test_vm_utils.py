@@ -234,14 +234,10 @@ class FetchVhdImageTestCase(test.TestCase):
         self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
         vm_utils.get_sr_path(self.session).AndReturn('sr_path')
 
-    def test_fetch_vhd_image_works_with_glance(self):
-        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
-        vm_utils._image_uses_bittorrent(
-            self.context, self.instance).AndReturn(False)
-
+    def _stub_glance_download_vhd(self, raise_exc=None):
         self.mox.StubOutWithMock(
                 self.session, 'call_plugin_serialized_with_retry')
-        self.session.call_plugin_serialized_with_retry(
+        func = self.session.call_plugin_serialized_with_retry(
                 'glance', 'download_vhd', 0, mox.IgnoreArg(),
                 extra_headers={'X-Service-Catalog': '[]',
                                'X-Auth-Token': 'auth_token',
@@ -251,7 +247,41 @@ class FetchVhdImageTestCase(test.TestCase):
                                'X-Identity-Status': 'Confirmed'},
                 image_id='image_id',
                 uuid_stack=["uuid_stack"],
-                sr_path='sr_path').AndReturn({'root': {'uuid': 'vdi'}})
+                sr_path='sr_path')
+
+        if raise_exc:
+            func.AndRaise(raise_exc)
+        else:
+            func.AndReturn({'root': {'uuid': 'vdi'}})
+
+    def _stub_bittorrent_download_vhd(self, raise_exc=None):
+        self.mox.StubOutWithMock(
+                self.session, 'call_plugin_serialized')
+        func = self.session.call_plugin_serialized(
+            'bittorrent', 'download_vhd',
+            image_id='image_id',
+            uuid_stack=["uuid_stack"],
+            sr_path='sr_path',
+            torrent_download_stall_cutoff=600,
+            torrent_listen_port_start=6881,
+            torrent_listen_port_end=6891,
+            torrent_max_last_accessed=86400,
+            torrent_max_seeder_processes_per_host=1,
+            torrent_seed_chance=1.0,
+            torrent_seed_duration=3600,
+            torrent_url='http://foo/image_id.torrent'
+        )
+        if raise_exc:
+            func.AndRaise(raise_exc)
+        else:
+            func.AndReturn({'root': {'uuid': 'vdi'}})
+
+    def test_fetch_vhd_image_works_with_glance(self):
+        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
+        vm_utils._image_uses_bittorrent(
+            self.context, self.instance).AndReturn(False)
+
+        self._stub_glance_download_vhd()
 
         self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
@@ -279,21 +309,7 @@ class FetchVhdImageTestCase(test.TestCase):
         vm_utils._image_uses_bittorrent(
             self.context, self.instance).AndReturn(True)
 
-        self.mox.StubOutWithMock(
-                self.session, 'call_plugin_serialized')
-        self.session.call_plugin_serialized('bittorrent', 'download_vhd',
-            image_id='image_id',
-            uuid_stack=["uuid_stack"],
-            sr_path='sr_path',
-            torrent_download_stall_cutoff=600,
-            torrent_listen_port_start=6881,
-            torrent_listen_port_end=6891,
-            torrent_max_last_accessed=86400,
-            torrent_max_seeder_processes_per_host=1,
-            torrent_seed_chance=1.0,
-            torrent_seed_duration=3600,
-            torrent_url='http://foo/image_id.torrent'
-        ).AndReturn({'root': {'uuid': 'vdi'}})
+        self._stub_bittorrent_download_vhd()
 
         self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
@@ -317,19 +333,7 @@ class FetchVhdImageTestCase(test.TestCase):
         vm_utils._image_uses_bittorrent(
             self.context, self.instance).AndReturn(False)
 
-        self.mox.StubOutWithMock(
-                self.session, 'call_plugin_serialized_with_retry')
-        self.session.call_plugin_serialized_with_retry(
-                'glance', 'download_vhd', 0, mox.IgnoreArg(),
-                extra_headers={'X-Service-Catalog': '[]',
-                               'X-Auth-Token': 'auth_token',
-                               'X-Roles': '',
-                               'X-Tenant-Id': None,
-                               'X-User-Id': None,
-                               'X-Identity-Status': 'Confirmed'},
-                image_id='image_id',
-                uuid_stack=["uuid_stack"],
-                sr_path='sr_path').AndReturn({'root': {'uuid': 'vdi'}})
+        self._stub_glance_download_vhd()
 
         self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
         vm_utils.safe_find_sr(self.session).AndReturn("sr")
@@ -352,6 +356,57 @@ class FetchVhdImageTestCase(test.TestCase):
         self.assertRaises(exception.InstanceTypeDiskTooSmall,
                 vm_utils._fetch_vhd_image, self.context, self.session,
                 self.instance, 'image_id')
+
+        self.mox.VerifyAll()
+
+    def test_fallback_to_default_handler(self):
+        cfg.CONF.import_opt('xenapi_torrent_base_url',
+                            'nova.virt.xenapi.image.bittorrent')
+        self.flags(xenapi_torrent_base_url='http://foo')
+
+        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
+        vm_utils._image_uses_bittorrent(
+            self.context, self.instance).AndReturn(True)
+
+        self._stub_bittorrent_download_vhd(raise_exc=RuntimeError)
+
+        vm_utils._make_uuid_stack().AndReturn(["uuid_stack"])
+        vm_utils.get_sr_path(self.session).AndReturn('sr_path')
+
+        self._stub_glance_download_vhd()
+
+        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
+        vm_utils.safe_find_sr(self.session).AndReturn("sr")
+
+        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
+        vm_utils._scan_sr(self.session, "sr")
+
+        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
+        vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                                 "vdi")
+
+        self.mox.ReplayAll()
+
+        self.assertEqual("vdi", vm_utils._fetch_vhd_image(self.context,
+            self.session, self.instance, 'image_id')['root']['uuid'])
+
+        self.mox.VerifyAll()
+
+    def test_default_handler_doesnt_fallback_to_itself(self):
+        cfg.CONF.import_opt('xenapi_torrent_base_url',
+                            'nova.virt.xenapi.image.bittorrent')
+        self.flags(xenapi_torrent_base_url='http://foo')
+
+        self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
+        vm_utils._image_uses_bittorrent(
+            self.context, self.instance).AndReturn(False)
+
+        self._stub_glance_download_vhd(raise_exc=RuntimeError)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(RuntimeError, vm_utils._fetch_vhd_image,
+                self.context, self.session, self.instance, 'image_id')
 
         self.mox.VerifyAll()
 
