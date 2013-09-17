@@ -2751,8 +2751,6 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_check_can_live_migrate_dest_all_pass_with_block_migration(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
-        dest = "fake_host_2"
-        src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'disk_available_least': 400,
                         'cpu_info': 'asdf',
@@ -2779,8 +2777,6 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_check_can_live_migrate_dest_all_pass_no_block_migration(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
-        dest = "fake_host_2"
-        src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': 'asdf'}
         filename = "file"
@@ -2805,8 +2801,6 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_check_can_live_migrate_dest_incompatible_cpu_raises(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
-        dest = "fake_host_2"
-        src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'cpu_info': 'asdf'}
 
@@ -2922,8 +2916,6 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_check_can_live_migrate_source_with_dest_not_enough_disk(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
-        dest = "fake_host_2"
-        src = instance_ref['host']
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")

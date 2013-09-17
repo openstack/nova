@@ -1402,14 +1402,6 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.create_instance_with_args(context=context2, hostname='h2')
         self.flags(osapi_compute_unique_server_name_scope=None)
 
-    def test_instance_get_all_with_meta(self):
-        inst = self.create_instance_with_args()
-        for inst in db.instance_get_all(self.ctxt):
-            meta = utils.metadata_to_dict(inst['metadata'])
-            self.assertEqual(meta, self.sample_data['metadata'])
-            sys_meta = utils.metadata_to_dict(inst['system_metadata'])
-            self.assertEqual(sys_meta, self.sample_data['system_metadata'])
-
     def test_instance_get_all_by_filters_with_meta(self):
         inst = self.create_instance_with_args()
         for inst in db.instance_get_all_by_filters(self.ctxt, {}):
@@ -4576,12 +4568,6 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
             network.id)
         return network, instance
 
-    def test_network_in_use_on_host(self):
-        network, _ = self._get_associated_fixed_ip('host.net', '192.0.2.0/30',
-            '192.0.2.1')
-        self.assertTrue(db.network_in_use_on_host(self.ctxt, network.id,
-            'host.net'))
-
     def test_network_get_associated_fixed_ips(self):
         network, instance = self._get_associated_fixed_ip('host.net',
             '192.0.2.0/30', '192.0.2.1')
@@ -4703,10 +4689,6 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'virtual_interface_id': vif.id})
         self._assertEqualListsOfObjects([net1, net2, net3],
             db.network_get_all_by_host(self.ctxt, host))
-
-    def test_network_get_by_cidr_nonexistent(self):
-        self.assertRaises(exception.NetworkNotFoundForCidr,
-            db.network_get_by_cidr(self.ctxt, '192.0.2.0/29'))
 
     def test_network_get_by_cidr(self):
         cidr = '192.0.2.0/30'
