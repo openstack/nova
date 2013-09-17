@@ -108,7 +108,7 @@ class TestDictListMatches(testtools.TestCase, helpers.TestMatchersInterface):
          ]
 
 
-class TestDictMatches(testtools.TestCase, helpers.TestMatchersInterface):
+class TestIsSubDictOf(testtools.TestCase, helpers.TestMatchersInterface):
 
     matches_matcher = matchers.IsSubDictOf(
         {'foo': 'bar', 'baz': 'DONTCARE',
