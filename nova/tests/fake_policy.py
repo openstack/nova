@@ -191,6 +191,7 @@ policy_data = """
     "compute_extension:v3:flavor-extra-specs:delete": "is_admin:True",
     "compute_extension:flavormanage": "",
     "compute_extension:v3:flavor-manage": "",
+    "compute_extension:v3:flavors:discoverable": "",
     "compute_extension:floating_ip_dns": "",
     "compute_extension:floating_ip_pools": "",
     "compute_extension:floating_ips": "",
