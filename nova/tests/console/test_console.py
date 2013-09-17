@@ -178,11 +178,11 @@ class ConsoleAPITestCase(test.TestCase):
 
         compute_rpcapi.ComputeAPI.get_console_topic(
             self.context, 'fake_host').AndReturn('compute.fake_host')
-
-        self.mox.StubOutWithMock(console_rpcapi.ConsoleAPI, 'add_console')
-
-        console_rpcapi.ConsoleAPI.add_console(self.context,
-                                              self.fake_instance['id'])
+        self.mox.StubOutClassWithMocks(console_rpcapi, 'ConsoleAPI')
+        console_api_mock = console_rpcapi.ConsoleAPI(
+            topic='compute.fake_host')
+        console_api_mock.add_console(self.context,
+                                     self.fake_instance['id'])
 
         self.mox.ReplayAll()
 
