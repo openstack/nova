@@ -1682,7 +1682,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         def fake_raise(*args, **kwargs):
             raise exception.MigrationError(reason='test failure')
-        self.stubs.Set(vmops.VMOps, "_migrate_vhd", fake_raise)
+        self.stubs.Set(vmops.VMOps, "_migrate_disk_resizing_up", fake_raise)
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.MigrationError,
@@ -1906,7 +1906,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                                 exception.ResizeError(reason="asdf"))
 
         vm_utils.destroy_vdi(vmops._session, new_vdi_ref)
-        vmops._restore_orig_vm_and_cleanup_orphan(instance, None)
+        vmops._restore_orig_vm_and_cleanup_orphan(instance)
 
         self.mox.ReplayAll()
 
