@@ -23,7 +23,8 @@ from nova.objects import utils as obj_utils
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Use list/dict helpers for policies, metadetails, members
+    VERSION = '1.2'
 
     fields = {
         'id': int,
@@ -34,9 +35,9 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         'uuid': obj_utils.str_or_none,
         'name': obj_utils.str_or_none,
 
-        'policies': list,
-        'metadetails': dict,
-        'members': list,
+        'policies': obj_utils.list_of_strings_or_none,
+        'metadetails': obj_utils.dict_of_strings_or_none,
+        'members': obj_utils.list_of_strings_or_none,
         }
 
     @staticmethod
