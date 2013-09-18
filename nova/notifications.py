@@ -342,6 +342,7 @@ def info_from_instance(context, instance_ref, network_info,
 
     instance_type = flavors.extract_flavor(instance_ref)
     instance_type_name = instance_type.get('name', '')
+    instance_flavorid = instance_type.get('flavorid', '')
 
     if system_metadata is None:
         system_metadata = utils.instance_sys_meta(instance_ref)
@@ -360,6 +361,7 @@ def info_from_instance(context, instance_ref, network_info,
         # Type properties
         instance_type=instance_type_name,
         instance_type_id=instance_ref['instance_type_id'],
+        instance_flavor_id=instance_flavorid,
         architecture=instance_ref['architecture'],
 
         # Capacity properties

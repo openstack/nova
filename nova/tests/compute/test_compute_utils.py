@@ -440,6 +440,8 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
@@ -479,6 +481,8 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
@@ -508,6 +512,8 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
@@ -546,6 +552,8 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEquals(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description', 'image_meta'):
             self.assertTrue(attr in payload,
