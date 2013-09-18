@@ -288,6 +288,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
     def test_get_available_nodes(self):
         self.assertEqual(0, len(self.driver.get_available_nodes()))
+        self.assertEqual(0, len(self.driver.get_available_nodes(refresh=True)))
 
         node1 = self._create_node()
         self.assertEqual(1, len(self.driver.get_available_nodes()))

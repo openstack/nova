@@ -572,7 +572,7 @@ class VMwareVCDriver(VMwareESXDriver):
 
         return stats_dict
 
-    def get_available_nodes(self):
+    def get_available_nodes(self, refresh=False):
         """Returns nodenames of all nodes managed by the compute service.
 
         This method is for multi compute-nodes support. If a driver supports
