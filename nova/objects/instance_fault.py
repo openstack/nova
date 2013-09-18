@@ -18,9 +18,13 @@ from nova.objects import utils as obj_utils
 
 
 class InstanceFault(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: String attributes updated to support unicode
+    VERSION = '1.1'
+
     fields = {
         'id': int,
-        'instance_uuid': str,
+        'instance_uuid': obj_utils.str_value,
         'code': int,
         'message': obj_utils.str_or_none,
         'details': obj_utils.str_or_none,

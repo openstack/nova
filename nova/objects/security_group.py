@@ -14,15 +14,20 @@
 
 from nova import db
 from nova.objects import base
+from nova.objects import utils
 
 
 class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: String attributes updated to support unicode
+    VERSION = '1.1'
+
     fields = {
         'id': int,
-        'name': str,
-        'description': str,
-        'user_id': str,
-        'project_id': str,
+        'name': utils.str_value,
+        'description': utils.str_value,
+        'user_id': utils.str_value,
+        'project_id': utils.str_value,
         }
 
     @staticmethod

@@ -91,18 +91,19 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     """
 
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: String attributes updated to support unicode
+    VERSION = '1.1'
 
     fields = {
         'id': int,
         # Note(yjiang5): the compute_node_id may be None because the pci
         # device objects are created before the compute node is created in DB
         'compute_node_id': obj_utils.int_or_none,
-        'address': str,
-        'vendor_id': str,
-        'product_id': str,
-        'dev_type': str,
-        'status': str,
+        'address': obj_utils.str_value,
+        'vendor_id': obj_utils.str_value,
+        'product_id': obj_utils.str_value,
+        'dev_type': obj_utils.str_value,
+        'status': obj_utils.str_value,
         'dev_id': obj_utils.str_or_none,
         'label': obj_utils.str_or_none,
         'instance_uuid': obj_utils.str_or_none,

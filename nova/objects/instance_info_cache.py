@@ -25,14 +25,15 @@ LOG = logging.getLogger(__name__)
 
 
 class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
-    VERSION = '1.3'
     # Version 1.0: Initial version
     # Version 1.1: Converted network_info to store the model.
     # Version 1.2: Added new() and update_cells kwarg to save().
     # Version 1.3: Added delete()
+    # Version 1.4: String attributes updated to support unicode
+    VERSION = '1.4'
 
     fields = {
-        'instance_uuid': str,
+        'instance_uuid': utils.str_value,
         'network_info': utils.network_model_or_none,
         }
 

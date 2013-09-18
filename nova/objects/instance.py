@@ -58,7 +58,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.4: Added locked_by and deprecated locked
     # Version 1.5: Added cleaned
     # Version 1.6: Added pci_devices
-    VERSION = '1.6'
+    # Version 1.7: String attributes updated to support unicode
+    VERSION = '1.7'
 
     fields = {
         'id': int,
