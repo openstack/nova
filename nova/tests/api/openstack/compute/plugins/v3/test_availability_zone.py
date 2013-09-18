@@ -34,6 +34,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
 from nova.tests.image import fake
+from nova.tests import matchers
 
 CONF = cfg.CONF
 FAKE_UUID = fakes.FAKE_UUID
@@ -41,6 +42,10 @@ FAKE_UUID = fakes.FAKE_UUID
 
 def fake_gen_uuid():
     return FAKE_UUID
+
+
+def fake_get_availability_zones(context):
+    return ['nova'], []
 
 
 def return_security_group(context, instance_id, security_group_id):
@@ -223,6 +228,23 @@ class AvailabilityZoneApiTest(test.TestCase):
         _assertZone(z1[3], l6[0], l6[1])
         _assertZone(z1[4], l7[0], l7[1])
         _assertZone(z2[0], l8[0], l8[1])
+
+    def test_availability_zone_detail_no_services(self):
+        expected_response = {'availability_zone_info':
+                                 [{'zone_name': 'nova',
+                                   'hosts': {},
+                                   'zone_state': {'available': True}}]}
+        self.stubs.Set(availability_zones, 'get_availability_zones',
+                       fake_get_availability_zones)
+        availabilityZone = availability_zone.AvailabilityZoneController()
+
+        req = webob.Request.blank('/v3/os-availability-zone/detail')
+        req.method = 'GET'
+        req.environ['nova.context'] = context.get_admin_context()
+        resp_dict = availabilityZone.detail(req)
+
+        self.assertThat(resp_dict,
+                        matchers.DictMatches(expected_response))
 
 
 class AvailabilityZoneSerializerTest(test.TestCase):
