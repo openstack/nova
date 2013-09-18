@@ -21,3 +21,4 @@ def register_all():
     __import__('nova.objects.instance_info_cache')
     __import__('nova.objects.security_group')
     __import__('nova.objects.migration')
+    __import__('nova.objects.quotas')

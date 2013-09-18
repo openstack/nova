@@ -129,6 +129,8 @@ def remotable(fn):
         if ctxt is None:
             raise exception.OrphanedObjectError(method=fn.__name__,
                                                 objtype=self.obj_name())
+        # Force this to be set if it wasn't before.
+        self._context = ctxt
         if NovaObject.indirection_api:
             updates, result = NovaObject.indirection_api.object_action(
                 ctxt, self, fn.__name__, args, kwargs)
