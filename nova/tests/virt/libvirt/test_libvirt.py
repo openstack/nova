@@ -3922,6 +3922,73 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn.reboot(context, instance, network_info)
 
+    def _test_resume_state_on_host_boot_with_state(self, state):
+        called = {'count': 0}
+        mock = self.mox.CreateMock(libvirt.virDomain)
+        mock.info().AndReturn([state, None, None, None, None])
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock
+
+        def fake_hard_reboot(*args):
+            called['count'] += 1
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        network_info = _fake_network_info(self.stubs, 1)
+
+        conn.resume_state_on_host_boot(self.context, instance, network_info,
+                                       block_device_info=None)
+
+        ignored_states = (power_state.RUNNING,
+                          power_state.SUSPENDED,
+                          power_state.NOSTATE,
+                          power_state.PAUSED)
+        if state in ignored_states:
+            self.assertEquals(called['count'], 0)
+        else:
+            self.assertEquals(called['count'], 1)
+
+    def test_resume_state_on_host_boot_with_running_state(self):
+        self._test_resume_state_on_host_boot_with_state(power_state.RUNNING)
+
+    def test_resume_state_on_host_boot_with_suspended_state(self):
+        self._test_resume_state_on_host_boot_with_state(power_state.SUSPENDED)
+
+    def test_resume_state_on_host_boot_with_paused_state(self):
+        self._test_resume_state_on_host_boot_with_state(power_state.PAUSED)
+
+    def test_resume_state_on_host_boot_with_nostate(self):
+        self._test_resume_state_on_host_boot_with_state(power_state.NOSTATE)
+
+    def test_resume_state_on_host_boot_with_shutdown_state(self):
+        self._test_resume_state_on_host_boot_with_state(power_state.RUNNING)
+
+    def test_resume_state_on_host_boot_with_crashed_state(self):
+        self._test_resume_state_on_host_boot_with_state(power_state.CRASHED)
+
+    def test_resume_state_on_host_boot_with_instance_not_found_on_driver(self):
+        called = {'count': 0}
+        instance = {'name': 'test'}
+
+        def fake_instance_exists(name):
+            return False
+
+        def fake_hard_reboot(*args):
+            called['count'] += 1
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn, 'instance_exists', fake_instance_exists)
+        self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
+        conn.resume_state_on_host_boot(self.context, instance, network_info=[],
+                                       block_device_info=None)
+
+        self.assertEquals(called['count'], 1)
+
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
         mock.ID()
