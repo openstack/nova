@@ -22,22 +22,25 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 
 ALIAS = "os-config-drive"
+ATTRIBUTE_NAME = "%s:config_drive" % ALIAS
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class ServerConfigDriveTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('server')
-        root.set('config_drive', 'config_drive')
-        return xmlutil.SlaveTemplate(root, 1)
+        root.set('{%s}config_drive' % ConfigDrive.namespace, ATTRIBUTE_NAME)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={ConfigDrive.alias:
+                                                     ConfigDrive.namespace})
 
 
 class ServersConfigDriveTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('servers')
         elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('config_drive', 'config_drive')
-        return xmlutil.SlaveTemplate(root, 1)
+        elem.set('{%s}config_drive' % ConfigDrive.namespace, ATTRIBUTE_NAME)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={ConfigDrive.alias:
+                                                     ConfigDrive.namespace})
 
 
 class ConfigDriveController(wsgi.Controller):
@@ -47,7 +50,7 @@ class ConfigDriveController(wsgi.Controller):
             db_server = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
             # the core API adding it in its 'show'/'detail' methods.
-            server['config_drive'] = db_server['config_drive']
+            server[ATTRIBUTE_NAME] = db_server['config_drive']
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
@@ -87,9 +90,9 @@ class ConfigDrive(extensions.V3APIExtensionBase):
         return []
 
     def server_create(self, server_dict, create_kwargs):
-        create_kwargs['config_drive'] = server_dict.get('config_drive')
+        create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
 
     def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        config_drive = server_node.getAttribute('config_drive')
+        config_drive = server_node.getAttribute(ATTRIBUTE_NAME)
         if config_drive:
-            server_dict['config_drive'] = config_drive
+            server_dict[ATTRIBUTE_NAME] = config_drive
