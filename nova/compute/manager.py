@@ -65,6 +65,7 @@ from nova import notifier
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -74,7 +75,6 @@ from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import paths
-from nova import quota
 from nova import safe_utils
 from nova import utils
 from nova.virt import block_device as driver_block_device
@@ -600,35 +600,26 @@ class ComputeManager(manager.SchedulerDependentManager):
         deleted in the DB
         """
         self.conductor_api.instance_destroy(context, instance)
-        project_id = instance['project_id']
-        if (instance.get('user_id', None) and
-                (context.user_id != instance['user_id'])):
-            user_id = instance['user_id']
-        else:
-            user_id = context.user_id
         system_meta = utils.metadata_to_dict(instance['system_metadata'])
         bdms = self._get_instance_volume_bdms(context, instance)
         instance_vcpus = instance['vcpus']
         instance_memory_mb = instance['memory_mb']
-        reservations = quota.QUOTAS.reserve(context,
-                                            project_id=project_id,
-                                            user_id=user_id,
-                                            instances=-1,
-                                            cores=-instance_vcpus,
-                                            ram=-instance_memory_mb)
+        quotas = quotas_obj.Quotas()
+        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
+        quotas.reserve(context, project_id=project_id, user_id=user_id,
+                       instances=-1, cores=-instance_vcpus,
+                       ram=-instance_memory_mb)
         self._complete_deletion(context,
                                 instance,
                                 bdms,
-                                reservations,
-                                project_id,
-                                system_meta,
-                                user_id=user_id)
+                                quotas,
+                                system_meta)
 
     def _complete_deletion(self, context, instance, bdms,
-                           reservations, prj_id, system_meta, user_id=None):
+                           quotas, system_meta):
 
-        self._quota_commit(context, reservations, project_id=prj_id,
-                           user_id=user_id)
+        if quotas:
+            quotas.commit()
         # ensure block device mappings are not leaked
         self.conductor_api.block_device_mapping_destroy(context, bdms)
 
@@ -1764,13 +1755,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      project_id=project_id,
                                      user_id=user_id)
 
+        quotas = quotas_obj.Quotas.from_reservations(context,
+                                                     reservations,
+                                                     instance=instance)
         self._complete_deletion(context,
                                 instance,
                                 bdms,
-                                reservations,
-                                project_id,
-                                system_meta,
-                                user_id=user_id)
+                                quotas,
+                                system_meta)
 
     @object_compat
     @wrap_exception()

@@ -57,6 +57,7 @@ from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -5379,6 +5380,7 @@ class ComputeTestCase(BaseTestCase):
             'vcpus': 1,
             'memory_mb': 1,
             'project_id': 'fake-prj',
+            'user_id': 'fake-user',
             'deleted': 0
             }
 
@@ -5397,7 +5399,7 @@ class ComputeTestCase(BaseTestCase):
                        '_complete_deletion',
                        lambda *a, **k: None)
 
-        self.stubs.Set(nova.quota.QUOTAS, 'reserve', lambda *a, **k: None)
+        self.stubs.Set(quotas_obj.Quotas, 'reserve', lambda *a, **k: None)
 
         self.compute._complete_partial_deletion(admin_context, instance)
 
