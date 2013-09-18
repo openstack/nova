@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 
 from nova.compute import power_state
 from nova.compute import task_states
@@ -540,3 +541,77 @@ class SpawnTestCase(VMOpsTestBase):
 
         self.mox.ReplayAll()
         self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
+
+
+@mock.patch.object(vmops.VMOps, '_update_instance_progress')
+@mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
+@mock.patch.object(vm_utils, 'get_sr_path')
+@mock.patch.object(vmops.VMOps, '_detach_block_devices_from_orig_vm')
+@mock.patch.object(vmops.VMOps, '_migrate_disk_resizing_down')
+@mock.patch.object(vmops.VMOps, '_migrate_disk_resizing_up')
+class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
+    def test_migrate_disk_and_power_off_works_down(self,
+                migrate_up, migrate_down, *mocks):
+        instance = {"root_gb": 2, "ephemeral_gb": 0, "uuid": "uuid"}
+        ins_type = {"root_gb": 1, "ephemeral_gb": 0}
+
+        self.vmops.migrate_disk_and_power_off(None, instance, None,
+                ins_type, None)
+
+        self.assertFalse(migrate_up.called)
+        self.assertTrue(migrate_down.called)
+
+    def test_migrate_disk_and_power_off_works_ephemeral_same_up(self,
+                migrate_up, migrate_down, *mocks):
+        instance = {"root_gb": 1, "ephemeral_gb": 1, "uuid": "uuid"}
+        ins_type = {"root_gb": 2, "ephemeral_gb": 1}
+
+        self.vmops.migrate_disk_and_power_off(None, instance, None,
+                ins_type, None)
+
+        self.assertFalse(migrate_down.called)
+        self.assertTrue(migrate_up.called)
+
+
+@mock.patch.object(vm_utils, 'get_vdi_for_vm_safely')
+@mock.patch.object(vmops.VMOps, '_migrate_vhd')
+@mock.patch.object(vmops.VMOps, '_resize_ensure_vm_is_shutdown')
+@mock.patch.object(vmops.VMOps, '_update_instance_progress')
+@mock.patch.object(vmops.VMOps, '_apply_orig_vm_name_label')
+class MigrateDiskResizingUpTestCase(VMOpsTestBase):
+    def test_migrate_disk_resizing_up_works(self,
+            mock_apply_orig, mock_update_progress, mock_shutdown,
+            mock_migrate_vhd, mock_vdi_for_vm):
+        context = "ctxt"
+        instance = {"name": "fake"}
+        dest = "dest"
+        vm_ref = "vm_ref"
+        sr_path = "sr_path"
+
+        mock_vdi_for_vm.return_value = ("ref", {"uuid": "cow"})
+
+        def fake_snapshot_attached_here(_session, _instance, _vm_ref, _label):
+            self.assertEqual(instance, _instance)
+            self.assertEqual(vm_ref, _vm_ref)
+            self.assertEqual("fake-snapshot", _label)
+            yield ["leaf", "parent", "grandp"]
+
+        with mock.patch.object(vm_utils, '_snapshot_attached_here_impl',
+                               fake_snapshot_attached_here):
+            self.vmops._migrate_disk_resizing_up(context, instance, dest,
+                                                 vm_ref, sr_path)
+
+        mock_apply_orig.assert_called_once_with(instance, vm_ref)
+        mock_shutdown.assert_called_once_with(instance, vm_ref)
+        mock_vdi_for_vm.assert_called_once_with(self.vmops._session, vm_ref)
+
+        m_vhd_expected = [mock.call(instance, "parent", dest, sr_path, 1),
+                          mock.call(instance, "grandp", dest, sr_path, 2),
+                          mock.call(instance, "cow", dest, sr_path, 0)]
+        self.assertEqual(m_vhd_expected, mock_migrate_vhd.call_args_list)
+
+        prog_expected = [mock.call(context, instance, 1, 5),
+                         mock.call(context, instance, 2, 5),
+                         mock.call(context, instance, 3, 5),
+                         mock.call(context, instance, 4, 5)]
+        self.assertEqual(prog_expected, mock_update_progress.call_args_list)

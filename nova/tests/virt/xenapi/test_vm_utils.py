@@ -1411,3 +1411,77 @@ class DetermineVmModeTestCase(test.TestCase):
         instance = {"vm_mode": None, "os_type": None}
         self.assertEquals(vm_mode.XEN,
             vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK))
+
+
+class CallXenAPIHelpersTestCase(test.NoDBTestCase):
+    def test_vm_get_vbd_refs(self):
+        session = mock.Mock()
+        vm_utils._vm_get_vbd_refs(session, "vm_ref")
+        session.call_xenapi.assert_called_once_with("VM.get_VBDs", "vm_ref")
+
+    def test_vbd_get_rec(self):
+        session = mock.Mock()
+        vm_utils._vbd_get_rec(session, "vbd_ref")
+        session.call_xenapi.assert_called_once_with("VBD.get_record",
+                                                    "vbd_ref")
+
+    def test_vdi_get_rec(self):
+        session = mock.Mock()
+        vm_utils._vdi_get_rec(session, "vdi_ref")
+        session.call_xenapi.assert_called_once_with("VDI.get_record",
+                                                    "vdi_ref")
+
+
+@mock.patch.object(vm_utils, '_vdi_get_rec')
+@mock.patch.object(vm_utils, '_vbd_get_rec')
+@mock.patch.object(vm_utils, '_vm_get_vbd_refs')
+class GetVdiForVMTestCase(test.NoDBTestCase):
+    def test_get_vdi_for_vm_safely(self, vm_get_vbd_refs,
+                                   vbd_get_rec, vdi_get_rec):
+        session = "session"
+
+        vm_get_vbd_refs.return_value = ["a", "b"]
+        vbd_get_rec.return_value = {'userdevice': '0', 'VDI': 'vdi_ref'}
+        vdi_get_rec.return_value = {}
+
+        result = vm_utils.get_vdi_for_vm_safely(session, "vm_ref")
+        self.assertEqual(('vdi_ref', {}), result)
+
+        vm_get_vbd_refs.assert_called_once_with(session, "vm_ref")
+        vbd_get_rec.assert_called_once_with(session, "a")
+        vdi_get_rec.assert_called_once_with(session, "vdi_ref")
+
+    def test_get_vdi_for_vm_safely_fails(self, vm_get_vbd_refs,
+                                         vbd_get_rec, vdi_get_rec):
+        session = "session"
+
+        vm_get_vbd_refs.return_value = ["a", "b"]
+        vbd_get_rec.return_value = {'userdevice': '1', 'VDI': 'vdi_ref'}
+
+        self.assertRaises(exception.NovaException,
+                          vm_utils.get_vdi_for_vm_safely,
+                          session, "vm_ref")
+
+        self.assertEqual([], vdi_get_rec.call_args_list)
+        self.assertEqual(2, len(vbd_get_rec.call_args_list))
+
+
+class SnapshotAttachedHereTestCase(test.NoDBTestCase):
+    @mock.patch.object(vm_utils, '_snapshot_attached_here_impl')
+    def test_snapshot_attached_here(self, mock_impl):
+        def fake_impl(session, instance, vm_ref, label, *args):
+            self.assertEqual("session", session)
+            self.assertEqual("instance", instance)
+            self.assertEqual("vm_ref", vm_ref)
+            self.assertEqual("label", label)
+            self.assertEqual(2, len(args))
+            yield "fake"
+
+        mock_impl.side_effect = fake_impl
+
+        with vm_utils.snapshot_attached_here("session", "instance", "vm_ref",
+                                             "label", *["a", "b"]) as result:
+            self.assertEqual("fake", result)
+
+        mock_impl.assert_called_once_with("session", "instance", "vm_ref",
+                                          "label", *["a", "b"])

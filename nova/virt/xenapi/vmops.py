@@ -851,42 +851,45 @@ class VMOps(object):
 
     def _migrate_disk_resizing_up(self, context, instance, dest, vm_ref,
                                   sr_path):
-        self._apply_orig_vm_name_label(instance, vm_ref)
+        step = make_step_decorator(context, instance,
+                                   self._update_instance_progress)
 
-        # 1. Create Snapshot
-        label = "%s-snapshot" % instance['name']
-        with vm_utils.snapshot_attached_here(
-                self._session, instance, vm_ref, label) as vdi_uuids:
-            self._update_instance_progress(context, instance,
-                                           step=1,
-                                           total_steps=RESIZE_TOTAL_STEPS)
+        @step
+        def fake_step_to_show_snapshot_complete():
+            pass
 
-            # 2. Transfer the immutable VHDs (base-copies)
-            #
+        @step
+        def transfer_immutable_vhds(vdi_uuids):
             # The first VHD will be the leaf (aka COW) that is being used by
             # the VM. For this step, we're only interested in the immutable
             # VHDs which are all of the parents of the leaf VHD.
             for seq_num, vdi_uuid in itertools.islice(
                     enumerate(vdi_uuids), 1, None):
                 self._migrate_vhd(instance, vdi_uuid, dest, sr_path, seq_num)
-                self._update_instance_progress(context, instance,
-                                               step=2,
-                                               total_steps=RESIZE_TOTAL_STEPS)
 
-            # 3. Now power down the instance
+        @step
+        def power_down_instance():
             self._resize_ensure_vm_is_shutdown(instance, vm_ref)
-            self._update_instance_progress(context, instance,
-                                           step=3,
-                                           total_steps=RESIZE_TOTAL_STEPS)
 
-            # 4. Transfer the COW VHD
+        @step
+        def transfer_leaf_vhd():
             vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
                 self._session, vm_ref)
             cow_uuid = vm_vdi_rec['uuid']
             self._migrate_vhd(instance, cow_uuid, dest, sr_path, 0)
-            self._update_instance_progress(context, instance,
-                                           step=4,
-                                           total_steps=RESIZE_TOTAL_STEPS)
+
+        @step
+        def fake_step_to_be_executed_by_finish_migration():
+            pass
+
+        self._apply_orig_vm_name_label(instance, vm_ref)
+        label = "%s-snapshot" % instance['name']
+        with vm_utils.snapshot_attached_here(
+                self._session, instance, vm_ref, label) as vdi_uuids:
+            fake_step_to_show_snapshot_complete()
+            transfer_immutable_vhds(vdi_uuids)
+            power_down_instance()
+            transfer_leaf_vhd()
 
     def _apply_orig_vm_name_label(self, instance, vm_ref):
         # NOTE(sirp): in case we're resizing to the same host (for dev

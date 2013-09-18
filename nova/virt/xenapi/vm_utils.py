@@ -634,20 +634,39 @@ def _set_vdi_info(session, vdi_ref, vdi_type, name_label, description,
                     "VDI.add_to_other_config", vdi_ref, key, value)
 
 
+def _vm_get_vbd_refs(session, vm_ref):
+    return session.call_xenapi("VM.get_VBDs", vm_ref)
+
+
+def _vbd_get_rec(session, vbd_ref):
+    return session.call_xenapi("VBD.get_record", vbd_ref)
+
+
+def _vdi_get_rec(session, vdi_ref):
+    return session.call_xenapi("VDI.get_record", vdi_ref)
+
+
 def get_vdi_for_vm_safely(session, vm_ref):
     """Retrieves the primary VDI for a VM."""
-    vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
-    for vbd in vbd_refs:
-        vbd_rec = session.call_xenapi("VBD.get_record", vbd)
+    vbd_refs = _vm_get_vbd_refs(session, vm_ref)
+    for vbd_ref in vbd_refs:
+        vbd_rec = _vbd_get_rec(session, vbd_ref)
         # Convention dictates the primary VDI will be userdevice 0
         if vbd_rec['userdevice'] == '0':
-            vdi_rec = session.call_xenapi("VDI.get_record", vbd_rec['VDI'])
-            return vbd_rec['VDI'], vdi_rec
+            vdi_ref = vbd_rec['VDI']
+            vdi_rec = _vdi_get_rec(session, vdi_ref)
+            return vdi_ref, vdi_rec
     raise exception.NovaException(_("No primary VDI found for %s") % vm_ref)
 
 
 @contextlib.contextmanager
 def snapshot_attached_here(session, instance, vm_ref, label, *args):
+    # impl method allow easier patching for tests
+    return _snapshot_attached_here_impl(session, instance, vm_ref, label,
+                                        *args)
+
+
+def _snapshot_attached_here_impl(session, instance, vm_ref, label, *args):
     update_task_state = None
     if len(args) == 1:
         update_task_state = args[0]
