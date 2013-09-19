@@ -358,8 +358,7 @@ class FakeDriver(driver.ComputeDriver):
         return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
-        """This method is supported only by libvirt."""
-        raise NotImplementedError('This method is supported only by libvirt.')
+        return
 
     def get_instance_disk_info(self, instance_name):
         return
@@ -367,6 +366,8 @@ class FakeDriver(driver.ComputeDriver):
     def live_migration(self, context, instance_ref, dest,
                        post_method, recover_method, block_migration=False,
                        migrate_data=None):
+        post_method(context, instance_ref, dest, block_migration,
+                            migrate_data)
         return
 
     def check_can_live_migrate_destination_cleanup(self, ctxt,
@@ -396,8 +397,7 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def unfilter_instance(self, instance_ref, network_info):
-        """This method is supported only by libvirt."""
-        raise NotImplementedError('This method is supported only by libvirt.')
+        return
 
     def test_remove_vm(self, instance_name):
         """Removes the named VM, as if it crashed. For testing."""

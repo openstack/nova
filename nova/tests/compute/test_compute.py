@@ -4421,23 +4421,40 @@ class ComputeTestCase(BaseTestCase):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance_ref = self._create_fake_instance({'host': 'dummy'})
+        instance_ref = self._create_fake_instance()
+        instance_ref['host'] = self.compute.host
+        dest = 'desthost'
         inst_uuid = instance_ref['uuid']
-        inst_id = instance_ref['id']
 
-        instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
+        instance = jsonutils.to_primitive(instance_ref)
 
         migrate_data = {'is_shared_storage': False}
 
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
         self.compute.compute_rpcapi.pre_live_migration(
-            c, instance, False, None, instance['host'], migrate_data)
+            c, instance, False, None, dest, migrate_data)
+
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'network_migrate_instance_start')
+        migration = {'source_compute': instance['host'], 'dest_compute': dest}
+        self.compute.conductor_api.network_migrate_instance_start(c, instance,
+                                                                  migration)
+        self.mox.StubOutWithMock(self.compute.compute_rpcapi,
+                                 'post_live_migration_at_destination')
+        self.compute.compute_rpcapi.post_live_migration_at_destination(
+            c, instance, False, dest)
+
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'setup_networks_on_host')
+        self.compute.network_api.setup_networks_on_host(c, instance,
+                                                        instance['host'],
+                                                        teardown=True)
 
         # start test
         self.mox.ReplayAll()
 
-        ret = self.compute.live_migration(c, dest=instance['host'],
+        ret = self.compute.live_migration(c, dest=dest,
                                           instance=instance,
                                           migrate_data=migrate_data)
         self.assertEqual(ret, None)
