@@ -45,8 +45,8 @@ cinder_opts = [
     cfg.StrOpt('os_region_name',
                 help='region name of this node'),
     cfg.StrOpt('cinder_ca_certificates_file',
-                help='Location of ca certicates file to use for cinder client '
-                     'requests.'),
+                help='Location of ca certificates file to use for cinder '
+                     'client requests.'),
     cfg.IntOpt('cinder_http_retries',
                default=3,
                help='Number of cinderclient retries on failed http calls'),
