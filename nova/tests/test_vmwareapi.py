@@ -297,6 +297,10 @@ class VMwareAPIVMTestCase(test.TestCase):
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(None)
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(),
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
         self.mox.ReplayAll()
         self._test_snapshot()
 
@@ -597,6 +601,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.conn._vmops.get_copy_virtual_disk_spec(
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(None)
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
         self.mox.ReplayAll()
 
         self._test_snapshot()
@@ -615,6 +622,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         # two times
         self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
                                  'get_copy_virtual_disk_spec')
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
         self.conn._vmops.get_copy_virtual_disk_spec(
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(None)
