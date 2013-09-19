@@ -120,6 +120,9 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         return status
 
     def _get_workers(self):
+        # NOTE(hartsocks): use of ps checks the process table for child pid
+        # entries these processes may be ended but not reaped so ps may
+        # show processes that are still being cleaned out of the table.
         f = os.popen('ps ax -o pid,ppid,command')
         # Skip ps header
         f.readline()
@@ -133,21 +136,23 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
         # built in test timeout function so a test
         # stuck in an infinite loop will eventually
         # be killed by the test framework.
-        status = -1
-        try:
-            pid, status = os.waitpid(worker_pid, 0)
-        except OSError as err:
-            # if the kill command is too fast...
-            if err.errno == errno.ESRCH:
-                # the process is already dead... or...
-                return status
-            elif err.errno == errno.ECHILD:
-                # the child may have exited early!
-                return status
-            else:
-                # the unexpected may still happen
-                raise
-        return status
+        LOG.info('waiting on process %r to exit' % worker_pid)
+
+        while True:
+            # poll the process until it isn't there to poll
+            try:
+                os.kill(worker_pid, 0)
+                time.sleep(0.1)
+            except OSError as err:
+                # by watching specifically for errno.ESRCH
+                # we guarantee this loop continues until
+                # the process table has cleared the pid.
+                # Child process table entries hang around
+                # for several cycles in case a parent process
+                # needs to check their exit state.
+                if err.errno == errno.ESRCH:
+                    break
+        LOG.info('process %r has exited' % worker_pid)
 
     def test_killed_worker_recover(self):
         start_workers = self._spawn()
