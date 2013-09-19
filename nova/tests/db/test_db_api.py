@@ -5246,6 +5246,41 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             new_stats = self._stats_as_dict(node['stats'])
             self._stats_equal(self.stats, new_stats)
 
+    def test_compute_node_get_all_deleted_compute_node(self):
+        # Create a service and compute node and ensure we can find its stats;
+        # delete the service and compute node when done and loop again
+        for x in range(2, 5):
+            # Create a service
+            service_data = self.service_dict.copy()
+            service_data['host'] = 'host-%s' % x
+            service = db.service_create(self.ctxt, service_data)
+
+            # Create a compute node
+            compute_node_data = self.compute_node_dict.copy()
+            compute_node_data['service_id'] = service['id']
+            compute_node_data['stats'] = self.stats.copy()
+            compute_node_data['hypervisor_hostname'] = 'hypervisor-%s' % x
+            node = db.compute_node_create(self.ctxt, compute_node_data)
+
+            # Ensure the "new" compute node is found
+            nodes = db.compute_node_get_all(self.ctxt, False)
+            self.assertEqual(2, len(nodes))
+            found = None
+            for n in nodes:
+                if n['id'] == node['id']:
+                    found = n
+                    break
+            self.assertNotEqual(None, found)
+            # Now ensure the match has stats!
+            self.assertNotEqual(self._stats_as_dict(found['stats']), {})
+
+            # Now delete the newly-created compute node to ensure the related
+            # compute node stats are wiped in a cascaded fashion
+            db.compute_node_delete(self.ctxt, node['id'])
+
+            # Clean up the service
+            db.service_destroy(self.ctxt, service['id'])
+
     def test_compute_node_get_all_mult_compute_nodes_one_service_entry(self):
         service_data = self.service_dict.copy()
         service_data['host'] = 'host2'
