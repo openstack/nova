@@ -36,7 +36,8 @@ try:
     os_network_opts = [
         cfg.BoolOpt("enable_network_quota",
                     default=False,
-                    help="Enables or disables quotaing of tenant networks"),
+                    help=('Enables or disables quota checking for tenant '
+                          'networks')),
         cfg.StrOpt('use_neutron_default_nets',
                          default="False",
                          deprecated_name='use_quantum_default_nets',
