@@ -3993,12 +3993,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                      context, instance, "live_migration.pre.start",
                      network_info=network_info)
 
-        # TODO(tr3buchet): figure out how on the earth this is necessary
-        fixed_ips = network_info.fixed_ips()
-        if not fixed_ips:
-            raise exception.FixedIpNotFoundForInstance(
-                                       instance_uuid=instance['uuid'])
-
         pre_live_migration_data = self.driver.pre_live_migration(context,
                                        instance,
                                        block_device_info,
