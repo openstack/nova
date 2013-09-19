@@ -6484,7 +6484,7 @@ class ComputeAPITestCase(BaseTestCase):
         expected = obj_base.obj_to_primitive(
             instance_obj.Instance._from_db_object(
                 self.context, instance_obj.Instance(), exp_instance,
-                instance_obj.INSTANCE_DEFAULT_FIELDS + ['fields']))
+                instance_obj.INSTANCE_DEFAULT_FIELDS + ['fault']))
 
         def fake_db_get(_context, _instance_id, columns_to_join=None):
             return exp_instance
