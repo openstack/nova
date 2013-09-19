@@ -84,8 +84,8 @@ neutron_opts = [
                 help='Number of seconds before querying neutron for'
                      ' extensions'),
     cfg.StrOpt('neutron_ca_certificates_file',
-                help='Location of ca certicates file to use for neutronclient'
-                     ' requests.'),
+                help='Location of ca certificates file to use for '
+                     'neutron client requests.'),
     cfg.BoolOpt('dhcp_options_enabled',
                 default=False,
                 help='Use per-port DHCP options with Neutron'),
