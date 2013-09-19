@@ -110,7 +110,7 @@ class MockEntryPoint(object):
         return another_fetcher
 
 
-class LookupTorrentURLTestCase(test.TestCase):
+class LookupTorrentURLTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LookupTorrentURLTestCase, self).setUp()
         self.store = bittorrent.BittorrentStore()

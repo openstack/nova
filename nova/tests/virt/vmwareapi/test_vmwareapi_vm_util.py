@@ -34,7 +34,7 @@ class fake_session(object):
         return self.ret
 
 
-class VMwareVMUtilTestCase(test.TestCase):
+class VMwareVMUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMUtilTestCase, self).setUp()
         fake.reset()

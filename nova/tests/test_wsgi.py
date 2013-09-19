@@ -37,7 +37,7 @@ SSL_CERT_DIR = os.path.normpath(os.path.join(
                                 'ssl_cert'))
 
 
-class TestLoaderNothingExists(test.TestCase):
+class TestLoaderNothingExists(test.NoDBTestCase):
     """Loader tests where os.path.exists always returns False."""
 
     def setUp(self):
@@ -51,7 +51,7 @@ class TestLoaderNothingExists(test.TestCase):
         )
 
 
-class TestLoaderNormalFilesystem(test.TestCase):
+class TestLoaderNormalFilesystem(test.NoDBTestCase):
     """Loader tests with normal filesystem (unmodified os.path module)."""
 
     _paste_config = """
@@ -87,7 +87,7 @@ document_root = /tmp
         super(TestLoaderNormalFilesystem, self).tearDown()
 
 
-class TestWSGIServer(test.TestCase):
+class TestWSGIServer(test.NoDBTestCase):
     """WSGI server tests."""
 
     def test_no_app(self):
@@ -132,7 +132,7 @@ class TestWSGIServer(test.TestCase):
         server.wait()
 
 
-class TestWSGIServerWithSSL(test.TestCase):
+class TestWSGIServerWithSSL(test.NoDBTestCase):
     """WSGI server with SSL tests."""
 
     def setUp(self):

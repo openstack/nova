@@ -20,7 +20,7 @@ from nova import ipv6
 from nova import test
 
 
-class IPv6RFC2462TestCase(test.TestCase):
+class IPv6RFC2462TestCase(test.NoDBTestCase):
     """Unit tests for IPv6 rfc2462 backend operations."""
     def setUp(self):
         super(IPv6RFC2462TestCase, self).setUp()
@@ -55,7 +55,7 @@ class IPv6RFC2462TestCase(test.TestCase):
                                     bad_project)
 
 
-class IPv6AccountIdentiferTestCase(test.TestCase):
+class IPv6AccountIdentiferTestCase(test.NoDBTestCase):
     """Unit tests for IPv6 account_identifier backend operations."""
     def setUp(self):
         super(IPv6AccountIdentiferTestCase, self).setUp()

@@ -22,7 +22,7 @@ from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutilsv2
 
 
-class VHDUtilsV2TestCase(test.TestCase):
+class VHDUtilsV2TestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V VHDUtilsV2 class."""
 
     _FAKE_VHD_PATH = "C:\\fake_path.vhdx"

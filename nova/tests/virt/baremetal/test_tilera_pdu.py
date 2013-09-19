@@ -30,7 +30,7 @@ from nova.virt.baremetal import utils as bm_utils
 CONF = cfg.CONF
 
 
-class BareMetalPduTestCase(test.TestCase):
+class BareMetalPduTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(BareMetalPduTestCase, self).setUp()

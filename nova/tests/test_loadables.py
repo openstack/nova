@@ -20,7 +20,7 @@ from nova import test
 from nova.tests import fake_loadables
 
 
-class LoadablesTestCase(test.TestCase):
+class LoadablesTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LoadablesTestCase, self).setUp()
         self.fake_loader = fake_loadables.FakeLoader()

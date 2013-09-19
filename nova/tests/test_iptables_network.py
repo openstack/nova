@@ -21,7 +21,7 @@ from nova.network import linux_net
 from nova import test
 
 
-class IptablesManagerTestCase(test.TestCase):
+class IptablesManagerTestCase(test.NoDBTestCase):
 
     binary_name = linux_net.get_binary_name()
 

@@ -61,7 +61,7 @@ class MockEntryPoint(object):
         return self.cls
 
 
-class HookTestCase(test.TestCase):
+class HookTestCase(test.NoDBTestCase):
 
     def _mock_load_plugins(self, iload, iargs, ikwargs):
         return [

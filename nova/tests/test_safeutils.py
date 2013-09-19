@@ -18,7 +18,7 @@ from nova import safe_utils
 from nova import test
 
 
-class GetCallArgsTestCase(test.TestCase):
+class GetCallArgsTestCase(test.NoDBTestCase):
     def _test_func(self, instance, red=None, blue=None):
         pass
 

@@ -23,7 +23,7 @@ from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vmutils
 
 
-class VHDUtilsTestCase(test.TestCase):
+class VHDUtilsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V VHDUtils class."""
 
     _FAKE_VHD_PATH = "C:\\fake_path.vhdx"

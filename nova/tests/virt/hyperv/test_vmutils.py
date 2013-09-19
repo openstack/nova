@@ -22,7 +22,7 @@ from nova import test
 from nova.virt.hyperv import vmutils
 
 
-class VMUtilsTestCase(test.TestCase):
+class VMUtilsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V VMUtils class."""
 
     _FAKE_VM_NAME = 'fake_vm'

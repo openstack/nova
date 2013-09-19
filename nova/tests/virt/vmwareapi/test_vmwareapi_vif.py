@@ -21,7 +21,7 @@ from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
 
 
-class VMwareVifTestCase(test.TestCase):
+class VMwareVifTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVifTestCase, self).setUp()
         self.flags(vlan_interface='vmnet0', group='vmware')

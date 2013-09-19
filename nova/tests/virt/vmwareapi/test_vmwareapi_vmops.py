@@ -21,7 +21,7 @@ from nova import utils
 from nova.virt.vmwareapi import vmops
 
 
-class VMwareVMOpsTestCase(test.TestCase):
+class VMwareVMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',

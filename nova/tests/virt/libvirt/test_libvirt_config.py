@@ -21,7 +21,7 @@ from nova.tests import matchers
 from nova.virt.libvirt import config
 
 
-class LibvirtConfigBaseTest(test.TestCase):
+class LibvirtConfigBaseTest(test.NoDBTestCase):
     def assertXmlEqual(self, expectedXmlstr, actualXmlstr):
         self.assertThat(actualXmlstr, matchers.XMLMatches(expectedXmlstr))
 

@@ -23,7 +23,7 @@ from nova.virt import images
 from nova.virt.libvirt import utils as libvirt_utils
 
 
-class ImageUtilsTestCase(test.TestCase):
+class ImageUtilsTestCase(test.NoDBTestCase):
     def test_disk_type(self):
         # Seems like lvm detection
         # if its in /dev ??

@@ -25,7 +25,7 @@ from nova import test
 from nova.tests import matchers
 
 
-class BlockDeviceTestCase(test.TestCase):
+class BlockDeviceTestCase(test.NoDBTestCase):
     def test_properties(self):
         root_device0 = '/dev/sda'
         root_device1 = '/dev/sdb'
@@ -130,7 +130,7 @@ class BlockDeviceTestCase(test.TestCase):
         _assert_volume_in_mapping('sdh1', False)
 
 
-class TestBlockDeviceDict(test.TestCase):
+class TestBlockDeviceDict(test.NoDBTestCase):
     def setUp(self):
         super(TestBlockDeviceDict, self).setUp()
 

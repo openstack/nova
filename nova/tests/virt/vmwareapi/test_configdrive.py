@@ -31,7 +31,7 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
 
 
-class ConfigDriveTestCase(test.TestCase):
+class ConfigDriveTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ConfigDriveTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)

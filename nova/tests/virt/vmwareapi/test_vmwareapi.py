@@ -54,7 +54,7 @@ class fake_vm_ref(object):
         self._type = 'VirtualMachine'
 
 
-class VMwareAPIConfTestCase(test.TestCase):
+class VMwareAPIConfTestCase(test.NoDBTestCase):
     """Unit tests for VMWare API configurations."""
     def setUp(self):
         super(VMwareAPIConfTestCase, self).setUp()
@@ -105,7 +105,7 @@ class VMwareAPIConfTestCase(test.TestCase):
         self.assertEqual("https://www.example.com/sdk", url)
 
 
-class VMwareAPIVMTestCase(test.TestCase):
+class VMwareAPIVMTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API connection calls."""
 
     def setUp(self):
@@ -829,7 +829,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.conn.detach_volume(connection_info, self.instance, mount_point)
 
 
-class VMwareAPIHostTestCase(test.TestCase):
+class VMwareAPIHostTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API host calls."""
 
     def setUp(self):

@@ -32,7 +32,7 @@ from nova.virt.libvirt import volume
 CONF = cfg.CONF
 
 
-class LibvirtVolumeTestCase(test.TestCase):
+class LibvirtVolumeTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LibvirtVolumeTestCase, self).setUp()

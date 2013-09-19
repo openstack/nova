@@ -18,7 +18,7 @@ from nova import context
 from nova import test
 
 
-class ContextTestCase(test.TestCase):
+class ContextTestCase(test.NoDBTestCase):
 
     def test_request_context_sets_is_admin(self):
         ctxt = context.RequestContext('111',

@@ -29,7 +29,7 @@ from nova import test
 from nova import utils
 
 
-class PolicyFileTestCase(test.TestCase):
+class PolicyFileTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PolicyFileTestCase, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
@@ -59,7 +59,7 @@ class PolicyFileTestCase(test.TestCase):
                               self.context, action, self.target)
 
 
-class PolicyTestCase(test.TestCase):
+class PolicyTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PolicyTestCase, self).setUp()
         rules = {
@@ -147,7 +147,7 @@ class PolicyTestCase(test.TestCase):
         policy.enforce(admin_context, uppercase_action, self.target)
 
 
-class DefaultPolicyTestCase(test.TestCase):
+class DefaultPolicyTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(DefaultPolicyTestCase, self).setUp()
@@ -180,7 +180,7 @@ class DefaultPolicyTestCase(test.TestCase):
                 self.context, "example:noexist", {})
 
 
-class IsAdminCheckTestCase(test.TestCase):
+class IsAdminCheckTestCase(test.NoDBTestCase):
     def test_init_true(self):
         check = policy.IsAdminCheck('is_admin', 'True')
 

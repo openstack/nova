@@ -25,7 +25,7 @@ from nova import test
 from nova.tests import matchers
 
 
-class BlockDeviceMappingEc2CloudTestCase(test.TestCase):
+class BlockDeviceMappingEc2CloudTestCase(test.NoDBTestCase):
     """Test Case for Block Device Mapping."""
 
     def fake_ec2_vol_id_to_uuid(obj, ec2_id):

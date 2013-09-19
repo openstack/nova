@@ -66,7 +66,7 @@ CONF = cfg.CONF
 CONF.import_opt('vswitch_name', 'nova.virt.hyperv.vif', 'hyperv')
 
 
-class HyperVAPITestCase(test.TestCase):
+class HyperVAPITestCase(test.NoDBTestCase):
     """Unit tests for Hyper-V driver calls."""
 
     def __init__(self, test_case_name):

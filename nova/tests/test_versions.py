@@ -23,7 +23,7 @@ from nova import test
 from nova import version
 
 
-class VersionTestCase(test.TestCase):
+class VersionTestCase(test.NoDBTestCase):
     """Test cases for Versions code."""
 
     def test_version_string_with_package_is_good(self):

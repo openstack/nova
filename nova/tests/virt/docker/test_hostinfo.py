@@ -21,7 +21,7 @@ from nova import test
 from nova.virt.docker import hostinfo
 
 
-class HostInfoTestCase(test.TestCase):
+class HostInfoTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(HostInfoTestCase, self).setUp()

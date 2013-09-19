@@ -34,7 +34,7 @@ def _fake_trycmd_losetup_fails(*args, **kwards):
     return '', 'doh'
 
 
-class LoopTestCase(test.TestCase):
+class LoopTestCase(test.NoDBTestCase):
     def test_get_dev(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         l = loop.LoopMount(None, tempdir)

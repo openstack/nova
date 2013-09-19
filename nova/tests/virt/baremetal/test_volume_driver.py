@@ -127,7 +127,7 @@ def fake_show_tgtadm():
     return SHOW_OUTPUT
 
 
-class BareMetalVolumeTestCase(test.TestCase):
+class BareMetalVolumeTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(BareMetalVolumeTestCase, self).setUp()

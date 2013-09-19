@@ -22,7 +22,7 @@ from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 
 
-class LibvirtUtilsTestCase(test.TestCase):
+class LibvirtUtilsTestCase(test.NoDBTestCase):
     def test_get_disk_type(self):
         path = "disk.config"
         example_output = """image: disk.config

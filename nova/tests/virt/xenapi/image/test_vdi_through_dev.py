@@ -30,7 +30,7 @@ def fake_context(result=None):
     yield result
 
 
-class TestDelegatingToCommand(test.TestCase):
+class TestDelegatingToCommand(test.NoDBTestCase):
     def test_upload_image_is_delegated_to_command(self):
         command = self.mox.CreateMock(vdi_through_dev.UploadToGlanceAsRawTgz)
         self.mox.StubOutWithMock(vdi_through_dev, 'UploadToGlanceAsRawTgz')
@@ -47,7 +47,7 @@ class TestDelegatingToCommand(test.TestCase):
         self.assertEquals('result', result)
 
 
-class TestUploadToGlanceAsRawTgz(test.TestCase):
+class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
     def test_upload_image(self):
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', 'session', 'instance', ['vdi0', 'vdi1'], 'id')
@@ -138,7 +138,7 @@ class TestUploadToGlanceAsRawTgz(test.TestCase):
         self.assertEqual(('rfile', 'wfile'), result)
 
 
-class TestTarGzProducer(test.TestCase):
+class TestTarGzProducer(test.NoDBTestCase):
     def test_constructor(self):
         producer = vdi_through_dev.TarGzProducer('devpath', 'writefile',
             '100', 'fname')
@@ -184,7 +184,7 @@ class TestTarGzProducer(test.TestCase):
             producer.get_metadata())
 
 
-class TestUpdateGlanceImage(test.TestCase):
+class TestUpdateGlanceImage(test.NoDBTestCase):
     def test_start(self):
         consumer = vdi_through_dev.UpdateGlanceImage(
             'context', 'id', 'metadata', 'stream')
