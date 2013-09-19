@@ -1005,8 +1005,8 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
             destroy_vdi(session, vdi_ref)
 
 
-def create_kernel_image(context, session, instance, name_label, image_id,
-                        image_type):
+def _create_kernel_image(context, session, instance, name_label, image_id,
+                         image_type):
     """Creates kernel/ramdisk file from the image stored in the cache.
     If the image is not present in the cache, it streams it from glance.
 
@@ -1027,13 +1027,33 @@ def create_kernel_image(context, session, instance, name_label, image_id,
         return {vdi_type: dict(uuid=None, file=filename)}
 
 
-def destroy_kernel_ramdisk(session, kernel, ramdisk):
+def create_kernel_and_ramdisk(context, session, instance, name_label):
+    kernel_file = None
+    ramdisk_file = None
+    if instance['kernel_id']:
+        vdis = _create_kernel_image(context, session,
+                instance, name_label, instance['kernel_id'],
+                ImageType.KERNEL)
+        kernel_file = vdis['kernel'].get('file')
+
+    if instance['ramdisk_id']:
+        vdis = _create_kernel_image(context, session,
+                instance, name_label, instance['ramdisk_id'],
+                ImageType.RAMDISK)
+        ramdisk_file = vdis['ramdisk'].get('file')
+
+    return kernel_file, ramdisk_file
+
+
+def destroy_kernel_ramdisk(session, instance, kernel, ramdisk):
     args = {}
     if kernel:
         args['kernel-file'] = kernel
     if ramdisk:
         args['ramdisk-file'] = ramdisk
     if args:
+        LOG.debug(_("Removing kernel/ramdisk files from dom0"),
+                    instance=instance)
         session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
 
 

@@ -1471,6 +1471,31 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                             network_info)
         return instance
 
+    def test_destroy_clean_up_kernel_and_ramdisk(self):
+        def fake_lookup_kernel_ramdisk(session, vm_ref):
+            return "kernel", "ramdisk"
+
+        self.stubs.Set(vm_utils, "lookup_kernel_ramdisk",
+                       fake_lookup_kernel_ramdisk)
+
+        def fake_destroy_kernel_ramdisk(session, instance, kernel, ramdisk):
+            fake_destroy_kernel_ramdisk.called = True
+            self.assertEqual("kernel", kernel)
+            self.assertEqual("ramdisk", ramdisk)
+
+        fake_destroy_kernel_ramdisk.called = False
+
+        self.stubs.Set(vm_utils, "destroy_kernel_ramdisk",
+                       fake_destroy_kernel_ramdisk)
+
+        instance = self._create_instance(spawn=True)
+        network_info = fake_network.fake_get_instance_nw_info(self.stubs)
+        self.conn.destroy(instance, network_info)
+
+        vm_ref = vm_utils.lookup(self.conn._session, instance['name'])
+        self.assertTrue(vm_ref is None)
+        self.assertTrue(fake_destroy_kernel_ramdisk.called)
+
 
 class XenAPIDiffieHellmanTestCase(test.TestCase):
     """Unit tests for Diffie-Hellman code."""

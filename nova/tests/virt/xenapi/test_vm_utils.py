@@ -16,6 +16,7 @@
 #    under the License.
 
 import contextlib
+import uuid
 
 import fixtures
 import mox
@@ -210,6 +211,9 @@ class XenAPIGetUUID(test.TestCase):
 
 class FakeSession(object):
     def call_xenapi(self, *args):
+        pass
+
+    def call_plugin(self, *args):
         pass
 
     def call_plugin_serialized(self, plugin, fn, *args, **kwargs):
@@ -1205,3 +1209,66 @@ class VMUtilsSRPath(stubs.XenAPITestBase):
         self.mox.ReplayAll()
         self.assertEqual(vm_utils.get_sr_path(self.session),
                          "/var/run/sr-mount/sr_uuid")
+
+
+class CreateKernelRamdiskTestCase(test.TestCase):
+    def setUp(self):
+        super(CreateKernelRamdiskTestCase, self).setUp()
+        self.context = "context"
+        self.session = FakeSession()
+        self.instance = {"kernel_id": None, "ramdisk_id": None}
+        self.name_label = "name"
+        self.mox.StubOutWithMock(self.session, "call_plugin")
+        self.mox.StubOutWithMock(uuid, "uuid4")
+        self.mox.StubOutWithMock(vm_utils, "_fetch_disk_image")
+
+    def test_create_kernel_and_ramdisk_no_create(self):
+        self.mox.ReplayAll()
+        result = vm_utils.create_kernel_and_ramdisk(self.context,
+                    self.session, self.instance, self.name_label)
+        self.assertEqual((None, None), result)
+
+    def test_create_kernel_and_ramdisk_create_both_cached(self):
+        kernel_id = "kernel"
+        ramdisk_id = "ramdisk"
+        self.instance["kernel_id"] = kernel_id
+        self.instance["ramdisk_id"] = ramdisk_id
+
+        args_kernel = {}
+        args_kernel['cached-image'] = kernel_id
+        args_kernel['new-image-uuid'] = "fake_uuid1"
+        uuid.uuid4().AndReturn("fake_uuid1")
+        self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+                                  args_kernel).AndReturn("k")
+
+        args_ramdisk = {}
+        args_ramdisk['cached-image'] = ramdisk_id
+        args_ramdisk['new-image-uuid'] = "fake_uuid2"
+        uuid.uuid4().AndReturn("fake_uuid2")
+        self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+                                  args_ramdisk).AndReturn("r")
+
+        self.mox.ReplayAll()
+        result = vm_utils.create_kernel_and_ramdisk(self.context,
+                    self.session, self.instance, self.name_label)
+        self.assertEqual(("k", "r"), result)
+
+    def test_create_kernel_and_ramdisk_create_kernel_not_cached(self):
+        kernel_id = "kernel"
+        self.instance["kernel_id"] = kernel_id
+
+        args_kernel = {}
+        args_kernel['cached-image'] = kernel_id
+        args_kernel['new-image-uuid'] = "fake_uuid1"
+        uuid.uuid4().AndReturn("fake_uuid1")
+        self.session.call_plugin('kernel', 'create_kernel_ramdisk',
+                                  args_kernel).AndReturn("")
+
+        kernel = {"kernel": {"file": "k"}}
+        vm_utils._fetch_disk_image(self.context, self.session, self.instance,
+                    self.name_label, kernel_id, 0).AndReturn(kernel)
+
+        self.mox.ReplayAll()
+        result = vm_utils.create_kernel_and_ramdisk(self.context,
+                    self.session, self.instance, self.name_label)
+        self.assertEqual(("k", None), result)
