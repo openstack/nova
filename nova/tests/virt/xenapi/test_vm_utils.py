@@ -918,7 +918,7 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
 
         self.assertEqual(expected, other_config)
 
-    def test_move_disks(self):
+    def test_import_migrated_vhds(self):
         # Migrated images should preserve the `other_config`
         other_config = {}
 
@@ -940,7 +940,8 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
         self.stubs.Set(vm_utils, 'get_sr_path', lambda *a, **k: None)
         self.stubs.Set(vm_utils, 'scan_default_sr', lambda *a, **k: None)
 
-        vm_utils.move_disks(self.session, self.fake_instance, {})
+        vm_utils._import_migrated_vhds(self.session, self.fake_instance,
+                                       "disk_label", "root", "vdi_label")
 
         expected = {'nova_disk_type': 'root',
                     'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}
@@ -1057,46 +1058,60 @@ class GenerateEphemeralTestCase(VMUtilsTestBase):
         self.instance = "instance"
         self.vm_ref = "vm_ref"
         self.name_label = "name"
+        self.ephemeral_name_label = "name ephemeral"
         self.userdevice = 4
         self.mox.StubOutWithMock(vm_utils, "_generate_disk")
         self.mox.StubOutWithMock(vm_utils, "safe_destroy_vdis")
 
+    def test_get_ephemeral_disk_sizes_simple(self):
+        result = vm_utils.get_ephemeral_disk_sizes(20)
+        expected = [20]
+        self.assertEqual(expected, list(result))
+
+    def test_get_ephemeral_disk_sizes_three_disks_2000(self):
+        result = vm_utils.get_ephemeral_disk_sizes(4030)
+        expected = [2000, 2000, 30]
+        self.assertEqual(expected, list(result))
+
+    def test_get_ephemeral_disk_sizes_two_disks_1024(self):
+        result = vm_utils.get_ephemeral_disk_sizes(2048)
+        expected = [1024, 1024]
+        self.assertEqual(expected, list(result))
+
     def _expect_generate_disk(self, size, device, name_label):
         vm_utils._generate_disk(self.session, self.instance, self.vm_ref,
-            str(device), name_label, 'ephemeral', size * 1024,
-            None).AndReturn(device)
+            str(device), name_label, 'ephemeral',
+            size * 1024, None).AndReturn(device)
 
     def test_generate_ephemeral_adds_one_disk(self):
-        self._expect_generate_disk(20, self.userdevice, self.name_label)
+        self._expect_generate_disk(20, self.userdevice,
+                                   self.ephemeral_name_label)
         self.mox.ReplayAll()
 
         vm_utils.generate_ephemeral(self.session, self.instance, self.vm_ref,
             str(self.userdevice), self.name_label, 20)
 
     def test_generate_ephemeral_adds_multiple_disks(self):
-        self._expect_generate_disk(2000, self.userdevice, self.name_label)
-        self._expect_generate_disk(2000, self.userdevice + 1, "name (1)")
-        self._expect_generate_disk(30, self.userdevice + 2, "name (2)")
+        self._expect_generate_disk(2000, self.userdevice,
+                                   self.ephemeral_name_label)
+        self._expect_generate_disk(2000, self.userdevice + 1,
+                                   self.ephemeral_name_label + " (1)")
+        self._expect_generate_disk(30, self.userdevice + 2,
+                                   self.ephemeral_name_label + " (2)")
         self.mox.ReplayAll()
 
         vm_utils.generate_ephemeral(self.session, self.instance, self.vm_ref,
             str(self.userdevice), self.name_label, 4030)
 
-    def test_generate_ephemeral_with_1TB_split(self):
-        self._expect_generate_disk(1024, self.userdevice, self.name_label)
-        self._expect_generate_disk(1024, self.userdevice + 1, "name (1)")
-        self.mox.ReplayAll()
-
-        vm_utils.generate_ephemeral(self.session, self.instance, self.vm_ref,
-            str(self.userdevice), self.name_label, 2048)
-
     def test_generate_ephemeral_cleans_up_on_error(self):
-        self._expect_generate_disk(2000, self.userdevice, self.name_label)
-        self._expect_generate_disk(2000, self.userdevice + 1, "name (1)")
+        self._expect_generate_disk(1024, self.userdevice,
+                                   self.ephemeral_name_label)
+        self._expect_generate_disk(1024, self.userdevice + 1,
+                                   self.ephemeral_name_label + " (1)")
 
         vm_utils._generate_disk(self.session, self.instance, self.vm_ref,
-            str(self.userdevice + 2), "name (2)", 'ephemeral', 30 * 1024,
-            None).AndRaise(exception.NovaException)
+            str(self.userdevice + 2), "name ephemeral (2)", 'ephemeral',
+            1024 * 1024, None).AndRaise(exception.NovaException)
 
         vm_utils.safe_destroy_vdis(self.session, [4, 5])
 
@@ -1104,7 +1119,7 @@ class GenerateEphemeralTestCase(VMUtilsTestBase):
 
         self.assertRaises(exception.NovaException, vm_utils.generate_ephemeral,
             self.session, self.instance, self.vm_ref,
-            str(self.userdevice), self.name_label, 4030)
+            str(self.userdevice), self.name_label, 4096)
 
 
 class FakeFile(object):
@@ -1412,20 +1427,30 @@ class DetermineVmModeTestCase(VMUtilsTestBase):
 class CallXenAPIHelpersTestCase(VMUtilsTestBase):
     def test_vm_get_vbd_refs(self):
         session = mock.Mock()
-        vm_utils._vm_get_vbd_refs(session, "vm_ref")
+        session.call_xenapi.return_value = "foo"
+        self.assertEqual("foo", vm_utils._vm_get_vbd_refs(session, "vm_ref"))
         session.call_xenapi.assert_called_once_with("VM.get_VBDs", "vm_ref")
 
     def test_vbd_get_rec(self):
         session = mock.Mock()
-        vm_utils._vbd_get_rec(session, "vbd_ref")
+        session.call_xenapi.return_value = "foo"
+        self.assertEqual("foo", vm_utils._vbd_get_rec(session, "vbd_ref"))
         session.call_xenapi.assert_called_once_with("VBD.get_record",
                                                     "vbd_ref")
 
     def test_vdi_get_rec(self):
         session = mock.Mock()
-        vm_utils._vdi_get_rec(session, "vdi_ref")
+        session.call_xenapi.return_value = "foo"
+        self.assertEqual("foo", vm_utils._vdi_get_rec(session, "vdi_ref"))
         session.call_xenapi.assert_called_once_with("VDI.get_record",
                                                     "vdi_ref")
+
+    def test_vdi_snapshot(self):
+        session = mock.Mock()
+        session.call_xenapi.return_value = "foo"
+        self.assertEqual("foo", vm_utils._vdi_snapshot(session, "vdi_ref"))
+        session.call_xenapi.assert_called_once_with("VDI.snapshot",
+                                                    "vdi_ref", {})
 
 
 @mock.patch.object(vm_utils, '_vdi_get_rec')
@@ -1452,32 +1477,215 @@ class GetVdiForVMTestCase(VMUtilsTestBase):
         session = "session"
 
         vm_get_vbd_refs.return_value = ["a", "b"]
-        vbd_get_rec.return_value = {'userdevice': '1', 'VDI': 'vdi_ref'}
+        vbd_get_rec.return_value = {'userdevice': '0', 'VDI': 'vdi_ref'}
 
         self.assertRaises(exception.NovaException,
                           vm_utils.get_vdi_for_vm_safely,
-                          session, "vm_ref")
+                          session, "vm_ref", userdevice='1')
 
         self.assertEqual([], vdi_get_rec.call_args_list)
         self.assertEqual(2, len(vbd_get_rec.call_args_list))
 
 
+@mock.patch.object(vm_utils, '_vdi_get_uuid')
+@mock.patch.object(vm_utils, '_vbd_get_rec')
+@mock.patch.object(vm_utils, '_vm_get_vbd_refs')
+class GetAllVdiForVMTestCase(VMUtilsTestBase):
+    def _setup_get_all_vdi_uuids_for_vm(self, vm_get_vbd_refs,
+                                       vbd_get_rec, vdi_get_uuid):
+        def fake_vbd_get_rec(session, vbd_ref):
+            return {'userdevice': vbd_ref, 'VDI': "vdi_ref_%s" % vbd_ref}
+
+        def fake_vdi_get_uuid(session, vdi_ref):
+            return vdi_ref
+
+        vm_get_vbd_refs.return_value = ["0", "2"]
+        vbd_get_rec.side_effect = fake_vbd_get_rec
+        vdi_get_uuid.side_effect = fake_vdi_get_uuid
+
+    def test_get_all_vdi_uuids_for_vm_works(self, vm_get_vbd_refs,
+                                            vbd_get_rec, vdi_get_uuid):
+        self._setup_get_all_vdi_uuids_for_vm(vm_get_vbd_refs,
+                vbd_get_rec, vdi_get_uuid)
+
+        result = vm_utils.get_all_vdi_uuids_for_vm('session', "vm_ref")
+        expected = ['vdi_ref_0', 'vdi_ref_2']
+        self.assertEqual(expected, list(result))
+
+    def test_get_all_vdi_uuids_for_vm_finds_none(self, vm_get_vbd_refs,
+                                                 vbd_get_rec, vdi_get_uuid):
+        self._setup_get_all_vdi_uuids_for_vm(vm_get_vbd_refs,
+                vbd_get_rec, vdi_get_uuid)
+
+        result = vm_utils.get_all_vdi_uuids_for_vm('session', "vm_ref",
+                                                   min_userdevice=1)
+        expected = ["vdi_ref_2"]
+        self.assertEqual(expected, list(result))
+
+
 class SnapshotAttachedHereTestCase(VMUtilsTestBase):
     @mock.patch.object(vm_utils, '_snapshot_attached_here_impl')
     def test_snapshot_attached_here(self, mock_impl):
-        def fake_impl(session, instance, vm_ref, label, *args):
+        def fake_impl(session, instance, vm_ref, label, userdevice,
+                      post_snapshot_callback):
             self.assertEqual("session", session)
             self.assertEqual("instance", instance)
             self.assertEqual("vm_ref", vm_ref)
             self.assertEqual("label", label)
-            self.assertEqual(2, len(args))
+            self.assertEqual('0', userdevice)
+            self.assertEqual(None, post_snapshot_callback)
             yield "fake"
 
         mock_impl.side_effect = fake_impl
 
         with vm_utils.snapshot_attached_here("session", "instance", "vm_ref",
-                                             "label", *["a", "b"]) as result:
+                                             "label") as result:
             self.assertEqual("fake", result)
 
         mock_impl.assert_called_once_with("session", "instance", "vm_ref",
-                                          "label", *["a", "b"])
+                                          "label", '0', None)
+
+    @mock.patch.object(vm_utils, 'safe_destroy_vdis')
+    @mock.patch.object(vm_utils, '_walk_vdi_chain')
+    @mock.patch.object(vm_utils, '_wait_for_vhd_coalesce')
+    @mock.patch.object(vm_utils, '_vdi_get_uuid')
+    @mock.patch.object(vm_utils, '_vdi_snapshot')
+    @mock.patch.object(vm_utils, '_get_vhd_parent_uuid')
+    @mock.patch.object(vm_utils, 'get_vdi_for_vm_safely')
+    def test_snapshot_attached_here_impl(self, mock_get_vdi_for_vm_safely,
+            mock_get_vhd_parent_uuid, mock_vdi_snapshot, mock_vdi_get_uuid,
+            mock_wait_for_vhd_coalesce, mock_walk_vdi_chain,
+            mock_safe_destroy_vdis):
+        session = "session"
+        instance = {"uuid": "uuid"}
+        mock_callback = mock.Mock()
+
+        mock_get_vdi_for_vm_safely.return_value = ("vdi_ref",
+                                                   {"SR": "sr_ref"})
+        mock_get_vhd_parent_uuid.return_value = "original_uuid"
+        mock_vdi_snapshot.return_value = "snap_ref"
+        mock_vdi_get_uuid.return_value = "snap_uuid"
+        mock_walk_vdi_chain.return_value = [{"uuid": "a"}, {"uuid": "b"}]
+
+        try:
+            with vm_utils.snapshot_attached_here(session, instance, "vm_ref",
+                    "label", '2', mock_callback) as result:
+                self.assertEqual(["a", "b"], result)
+                raise test.TestingException()
+            self.assertTrue(False)
+        except test.TestingException:
+            pass
+
+        mock_get_vdi_for_vm_safely.assert_called_once_with(session, "vm_ref",
+                                                           '2')
+        mock_get_vhd_parent_uuid.assert_called_once_with(session, "vdi_ref")
+        mock_vdi_snapshot.assert_called_once_with(session, "vdi_ref")
+        mock_wait_for_vhd_coalesce.assert_called_once_with(session, instance,
+                "sr_ref", "vdi_ref", "original_uuid")
+        mock_vdi_get_uuid.assert_called_once_with(session, "snap_ref")
+        mock_walk_vdi_chain.assert_called_once_with(session, "snap_uuid")
+        mock_callback.assert_called_once_with(
+                task_state="image_pending_upload")
+        mock_safe_destroy_vdis.assert_called_once_with(session, ["snap_ref"])
+
+
+class ImportMigratedDisksTestCase(VMUtilsTestBase):
+    @mock.patch.object(vm_utils, '_import_migrate_ephemeral_disks')
+    @mock.patch.object(vm_utils, '_import_migrated_root_disk')
+    def test_import_all_migrated_disks(self, mock_root, mock_ephemeral):
+        session = "session"
+        instance = "instance"
+        mock_root.return_value = "root_vdi"
+        mock_ephemeral.return_value = ["a", "b"]
+
+        result = vm_utils.import_all_migrated_disks(session, instance)
+
+        expected = {'root': 'root_vdi', 'ephemerals': ["a", "b"]}
+        self.assertEqual(expected, result)
+        mock_root.assert_called_once_with(session, instance)
+        mock_ephemeral.assert_called_once_with(session, instance)
+
+    @mock.patch.object(vm_utils, '_import_migrated_vhds')
+    def test_import_migrated_root_disk(self, mock_migrate):
+        mock_migrate.return_value = "foo"
+        instance = {"uuid": "uuid", "name": "name"}
+
+        result = vm_utils._import_migrated_root_disk("s", instance)
+
+        self.assertEqual("foo", result)
+        mock_migrate.assert_called_once_with("s", instance, "uuid", "root",
+                                             "name")
+
+    @mock.patch.object(vm_utils, '_import_migrated_vhds')
+    def test_import_migrate_ephemeral_disks(self, mock_migrate):
+        mock_migrate.return_value = "foo"
+        instance = {"uuid": "uuid", "name": "name", "ephemeral_gb": 4000}
+
+        result = vm_utils._import_migrate_ephemeral_disks("s", instance)
+
+        self.assertEqual({'4': 'foo', '5': 'foo'}, result)
+        expected_calls = [mock.call("s", instance, "uuid_ephemeral_1",
+                                    "ephemeral", "name ephemeral (1)"),
+                          mock.call("s", instance, "uuid_ephemeral_2",
+                                    "ephemeral", "name ephemeral (2)")]
+        self.assertEqual(expected_calls, mock_migrate.call_args_list)
+
+    @mock.patch.object(vm_utils, '_set_vdi_info')
+    @mock.patch.object(vm_utils, 'scan_default_sr')
+    @mock.patch.object(vm_utils, 'get_sr_path')
+    def test_import_migrated_vhds(self, mock_get_sr_path, mock_scan_sr,
+                                  mock_set_info):
+        session = mock.Mock()
+        instance = {"uuid": "uuid"}
+        session.call_plugin_serialized.return_value = {"root": {"uuid": "a"}}
+        session.call_xenapi.return_value = "vdi_ref"
+        mock_get_sr_path.return_value = "sr_path"
+
+        result = vm_utils._import_migrated_vhds(session, instance,
+                'chain_label', 'disk_type', 'vdi_label')
+
+        expected = {'uuid': "a", 'ref': "vdi_ref"}
+        self.assertEqual(expected, result)
+        mock_get_sr_path.assert_called_once_with(session)
+        session.call_plugin_serialized.assert_called_once_with('migration',
+                'move_vhds_into_sr', instance_uuid='chain_label',
+                sr_path='sr_path', uuid_stack=mock.ANY)
+        mock_scan_sr.assert_called_once_with(session)
+        session.call_xenapi.assert_called_once_with('VDI.get_by_uuid', 'a')
+        mock_set_info.assert_called_once_with(session, 'vdi_ref', 'disk_type',
+                'vdi_label', 'disk_type', instance)
+
+
+class MigrateVHDTestCase(VMUtilsTestBase):
+    def _assert_transfer_called(self, session, label):
+        session.call_plugin_serialized.assert_called_once_with(
+                'migration', 'transfer_vhd', instance_uuid=label, host="dest",
+                vdi_uuid="vdi_uuid", sr_path="sr_path", seq_num=2)
+
+    def test_migrate_vhd_root(self):
+        session = mock.Mock()
+        instance = {"uuid": "a"}
+
+        vm_utils.migrate_vhd(session, instance, "vdi_uuid", "dest",
+                             "sr_path", 2)
+
+        self._assert_transfer_called(session, "a")
+
+    def test_migrate_vhd_ephemeral(self):
+        session = mock.Mock()
+        instance = {"uuid": "a"}
+
+        vm_utils.migrate_vhd(session, instance, "vdi_uuid", "dest",
+                             "sr_path", 2, 2)
+
+        self._assert_transfer_called(session, "a_ephemeral_2")
+
+    def test_migrate_vhd_converts_exceptions(self):
+        session = mock.Mock()
+        session.XenAPI.Failure = test.TestingException
+        session.call_plugin_serialized.side_effect = test.TestingException()
+        instance = {"uuid": "a"}
+
+        self.assertRaises(exception.MigrationError, vm_utils.migrate_vhd,
+                          session, instance, "vdi_uuid", "dest", "sr_path", 2)
+        self._assert_transfer_called(session, "a")

@@ -296,16 +296,17 @@ class FakeSessionForVolumeFailedTests(FakeSessionForVolumeTests):
 def stub_out_migration_methods(stubs):
     fakesr = fake.create_sr()
 
-    def fake_move_disks(self, instance, disk_info):
+    def fake_import_all_migrated_disks(session, instance):
         vdi_ref = fake.create_vdi(instance['name'], fakesr)
         vdi_rec = fake.get_record('VDI', vdi_ref)
         vdi_rec['other_config']['nova_disk_type'] = 'root'
-        return {'uuid': vdi_rec['uuid'], 'ref': vdi_ref}
+        return {"root": {'uuid': vdi_rec['uuid'], 'ref': vdi_ref},
+                "ephemerals": {}}
 
     def fake_wait_for_instance_to_start(self, *args):
         pass
 
-    def fake_get_vdi(session, vm_ref):
+    def fake_get_vdi(session, vm_ref, userdevice='0'):
         vdi_ref_parent = fake.create_vdi('derp-parent', fakesr)
         vdi_rec_parent = fake.get_record('VDI', vdi_ref_parent)
         vdi_ref = fake.create_vdi('derp', fakesr,
@@ -328,7 +329,8 @@ def stub_out_migration_methods(stubs):
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
     stubs.Set(vmops.VMOps, '_wait_for_instance_to_start',
               fake_wait_for_instance_to_start)
-    stubs.Set(vm_utils, 'move_disks', fake_move_disks)
+    stubs.Set(vm_utils, 'import_all_migrated_disks',
+              fake_import_all_migrated_disks)
     stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
     stubs.Set(vm_utils, 'get_sr_path', fake_get_sr_path)

@@ -266,14 +266,19 @@ class VMOps(object):
 
         def create_disks_step(undo_mgr, disk_image_type, image_meta,
                               name_label):
-            #TODO(johngarbutt) clean up the move_disks if this is not run
-            root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
+            #TODO(johngarbutt) clean up if this is not run
+            vdis = vm_utils.import_all_migrated_disks(self._session,
+                                                      instance)
 
             def undo_create_disks():
-                vm_utils.safe_destroy_vdis(self._session, [root_vdi['ref']])
+                eph_vdis = vdis['ephemerals']
+                root_vdi = vdis['root']
+                vdi_refs = [vdi['ref'] for vdi in eph_vdis.values()]
+                vdi_refs.append(root_vdi['ref'])
+                vm_utils.safe_destroy_vdis(self._session, vdi_refs)
 
             undo_mgr.undo_with(undo_create_disks)
-            return {'root': root_vdi}
+            return vdis
 
         def completed_callback():
             self._update_instance_progress(context, instance,
@@ -554,7 +559,7 @@ class VMOps(object):
 
             if instance['auto_disk_config']:
                 LOG.debug(_("Auto configuring disk, attempting to "
-                            "resize partition..."), instance=instance)
+                            "resize root disk..."), instance=instance)
                 vm_utils.try_auto_configure_disk(self._session,
                                                  root_vdi['ref'],
                                                  instance_type['root_gb'])
@@ -582,12 +587,20 @@ class VMOps(object):
             vm_utils.generate_swap(self._session, instance, vm_ref,
                                    DEVICE_SWAP, name_label, swap_mb)
 
-        # Attach (optional) ephemeral disk
         ephemeral_gb = instance_type['ephemeral_gb']
         if ephemeral_gb:
-            vm_utils.generate_ephemeral(self._session, instance, vm_ref,
-                                        DEVICE_EPHEMERAL, name_label,
-                                        ephemeral_gb)
+            ephemeral_vdis = vdis.get('ephemerals')
+            if ephemeral_vdis:
+                # attach existing (migrated) ephemeral disks
+                for userdevice, ephemeral_vdi in ephemeral_vdis.iteritems():
+                    vm_utils.create_vbd(self._session, vm_ref,
+                                        ephemeral_vdi['ref'],
+                                        userdevice, bootable=False)
+            else:
+                # create specified ephemeral disks
+                vm_utils.generate_ephemeral(self._session, instance, vm_ref,
+                                            DEVICE_EPHEMERAL, name_label,
+                                            ephemeral_gb)
 
         # Attach (optional) configdrive v2 disk
         if configdrive.required_by(instance):
@@ -702,7 +715,7 @@ class VMOps(object):
 
         with vm_utils.snapshot_attached_here(
                 self._session, instance, vm_ref, label,
-                update_task_state) as vdi_uuids:
+                post_snapshot_callback=update_task_state) as vdi_uuids:
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
             self.image_upload_handler.upload_image(context,
@@ -713,19 +726,6 @@ class VMOps(object):
 
         LOG.debug(_("Finished snapshot and upload for VM"),
                   instance=instance)
-
-    def _migrate_vhd(self, instance, vdi_uuid, dest, sr_path, seq_num):
-        LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
-                  {'vdi_uuid': vdi_uuid, 'seq_num': seq_num},
-                  instance=instance)
-        instance_uuid = instance['uuid']
-        try:
-            self._session.call_plugin_serialized('migration', 'transfer_vhd',
-                    instance_uuid=instance_uuid, host=dest, vdi_uuid=vdi_uuid,
-                    sr_path=sr_path, seq_num=seq_num)
-        except self._session.XenAPI.Failure:
-            msg = _("Failed to transfer vhd to new host")
-            raise exception.MigrationError(reason=msg)
 
     def _get_orig_vm_name_label(self, instance):
         return instance['name'] + '-orig'
@@ -794,7 +794,8 @@ class VMOps(object):
 
         @step
         def transfer_vhd_to_dest(new_vdi_ref, new_vdi_uuid):
-            self._migrate_vhd(instance, new_vdi_uuid, dest, sr_path, 0)
+            vm_utils.migrate_vhd(self._session, instance, new_vdi_uuid,
+                                 dest, sr_path, 0)
             # Clean up VDI now that it's been copied
             vm_utils.destroy_vdi(self._session, new_vdi_ref)
 
@@ -822,23 +823,130 @@ class VMOps(object):
                                   sr_path):
         step = make_step_decorator(context, instance,
                                    self._update_instance_progress)
+        """
+        NOTE(johngarbutt) Understanding how resize up works.
+
+        For resize up, we attempt to minimize the amount of downtime
+        for users by copying snapshots of their disks, while their
+        VM is still running.
+
+        It is worth noting, that migrating the snapshot, means migrating
+        the whole VHD chain up to, but not including, the leaf VHD the VM
+        is still writing to.
+
+        Once the snapshots have been migrated, we power down the VM
+        and migrate all the disk changes since the snapshots were taken.
+
+        In addition, the snapshots are taken at the latest possible point,
+        to help minimize the time it takes to migrate the disk changes
+        after the VM has been turned off.
+
+        Before starting to migrate any of the disks, we rename the VM,
+        to <current_vm_name>-orig, in case we attempt to migrate the VM
+        back onto this host, and so once we have completed the migration
+        of the disk, confirm/rollback migrate can work in the usual way.
+
+        If there is a failure at any point, we need to rollback to the
+        position we were in before starting to migrate. In particular,
+        we need to delete and snapshot VDIs that may have been created,
+        and restore the VM back to its original name.
+        """
 
         @step
         def fake_step_to_show_snapshot_complete():
             pass
 
         @step
-        def transfer_immutable_vhds(parent_vdi_uuids):
-            for vhd_num, vdi_uuid in enumerate(parent_vdi_uuids, start=1):
-                self._migrate_vhd(instance, vdi_uuid, dest, sr_path, vhd_num)
+        def transfer_immutable_vhds(root_vdi_uuids):
+            active_root_vdi_uuid = root_vdi_uuids[0]
+            immutable_root_vdi_uuids = root_vdi_uuids[1:]
+            for vhd_num, vdi_uuid in enumerate(immutable_root_vdi_uuids,
+                                               start=1):
+                vm_utils.migrate_vhd(self._session, instance, vdi_uuid, dest,
+                                     sr_path, vhd_num)
+            LOG.debug(_("Migrated root base vhds"), instance=instance)
+            return active_root_vdi_uuid
+
+        def _process_ephemeral_chain_recursive(ephemeral_chains,
+                                               active_vdi_uuids):
+            # This method is called several times, recursively.
+            # The first phase snapshots the ephemeral disks, and
+            # migrates the read only VHD files.
+            # The final call into this method calls
+            # power_down_and_transfer_leaf_vhds
+            # to turn off the VM and copy the rest of the VHDs.
+            number_of_chains = len(ephemeral_chains)
+            if number_of_chains == 0:
+                # If we get here, we have snapshotted and migrated
+                # all the ephemeral disks, so its time to power down
+                # and complete the migration of the diffs since the snapshot
+                LOG.debug(_("Migrated all base vhds."), instance=instance)
+                return power_down_and_transfer_leaf_vhds(
+                            active_root_vdi_uuid,
+                            active_vdi_uuids)
+
+            current_chain = ephemeral_chains[0]
+            remaining_chains = []
+            if number_of_chains > 1:
+                remaining_chains = ephemeral_chains[1:]
+
+            ephemeral_disk_index = len(active_vdi_uuids)
+            userdevice = int(DEVICE_EPHEMERAL) + ephemeral_disk_index
+
+            # Here we take a snapshot of the ephemeral disk,
+            # and migrate all VHDs in the chain that are not being written to
+            # Once that is completed, we call back into this method to either:
+            # - migrate any remaining ephemeral disks
+            # - or, if all disks are migrated, we power down and complete
+            #   the migration but copying the diffs since all the snapshots
+            #   were taken
+            with vm_utils.snapshot_attached_here(self._session, instance,
+                    vm_ref, label, str(userdevice)) as chain_vdi_uuids:
+
+                # remember active vdi, we will migrate these later
+                active_vdi_uuids.append(chain_vdi_uuids[0])
+
+                # migrate inactive vhds
+                inactive_vdi_uuids = chain_vdi_uuids[1:]
+                ephemeral_disk_number = ephemeral_disk_index + 1
+                for seq_num, vdi_uuid in enumerate(inactive_vdi_uuids,
+                                                   start=1):
+                    vm_utils.migrate_vhd(self._session, instance, vdi_uuid,
+                                         dest, sr_path, seq_num,
+                                         ephemeral_disk_number)
+
+                LOG.debug(_("Read-only migrated for disk: %s") % userdevice,
+                          instance=instance)
+                # This is recursive to simplify the taking and cleaning up
+                # of all the ephemeral disk snapshots
+                return _process_ephemeral_chain_recursive(remaining_chains,
+                                                          active_vdi_uuids)
 
         @step
-        def power_down_instance():
+        def transfer_ephemeral_disks_then_all_leaf_vdis():
+            ephemeral_chains = vm_utils.get_all_vdi_uuids_for_vm(
+                    self._session, vm_ref,
+                    min_userdevice=int(DEVICE_EPHEMERAL))
+
+            if ephemeral_chains:
+                ephemeral_chains = list(ephemeral_chains)
+            else:
+                ephemeral_chains = []
+
+            _process_ephemeral_chain_recursive(ephemeral_chains, [])
+
+        @step
+        def power_down_and_transfer_leaf_vhds(root_vdi_uuid,
+                                              ephemeral_vdi_uuids=None):
             self._resize_ensure_vm_is_shutdown(instance, vm_ref)
-
-        @step
-        def transfer_leaf_vhd(leaf_vdi_uuid):
-            self._migrate_vhd(instance, leaf_vdi_uuid, dest, sr_path, 0)
+            vm_utils.migrate_vhd(self._session, instance, root_vdi_uuid,
+                                 dest, sr_path, 0)
+            if ephemeral_vdi_uuids:
+                for ephemeral_disk_number, ephemeral_vdi_uuid in enumerate(
+                            ephemeral_vdi_uuids, start=1):
+                    vm_utils.migrate_vhd(self._session, instance,
+                                         ephemeral_vdi_uuid, dest,
+                                         sr_path, 0, ephemeral_disk_number)
 
         @step
         def fake_step_to_be_executed_by_finish_migration():
@@ -848,15 +956,19 @@ class VMOps(object):
         try:
             label = "%s-snapshot" % instance['name']
             with vm_utils.snapshot_attached_here(
-                    self._session, instance, vm_ref, label) as vdi_uuids:
+                    self._session, instance, vm_ref, label) as root_vdi_uuids:
+                # NOTE(johngarbutt) snapshot attached here will delete
+                # the snapshot if an error occurs
                 fake_step_to_show_snapshot_complete()
 
-                active_vdi_uuid = vdi_uuids[0]
-                immutable_vdi_uuids = vdi_uuids[1:]
+                # transfer all the non-active VHDs in the root disk chain
+                active_root_vdi_uuid = transfer_immutable_vhds(root_vdi_uuids)
 
-                transfer_immutable_vhds(immutable_vdi_uuids)
-                power_down_instance()
-                transfer_leaf_vhd(active_vdi_uuid)
+                # snapshot and transfer all ephemeral disks
+                # then power down and transfer any diffs since
+                # the snapshots were taken
+                transfer_ephemeral_disks_then_all_leaf_vdis()
+
         except Exception as error:
             LOG.exception(_("_migrate_disk_resizing_up failed. "
                             "Restoring orig vm due_to: %s."), error,
@@ -877,6 +989,14 @@ class VMOps(object):
         name_label = self._get_orig_vm_name_label(instance)
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
+    def _ensure_not_resize_ephemeral(self, instance, instance_type):
+        old_gb = instance["ephemeral_gb"]
+        new_gb = instance_type["ephemeral_gb"]
+
+        if old_gb != new_gb:
+            reason = _("Unable to resize ephemeral disks")
+            raise exception.ResizeError(reason)
+
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, block_device_info):
         """Copies a VHD from one host machine to another, possibly
@@ -886,6 +1006,8 @@ class VMOps(object):
         :param dest: the destination host machine.
         :param instance_type: instance_type to resize to
         """
+        self._ensure_not_resize_ephemeral(instance, instance_type)
+
         # 0. Zero out the progress to begin
         self._update_instance_progress(context, instance,
                                        step=0,

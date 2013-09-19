@@ -646,53 +646,73 @@ def _vdi_get_rec(session, vdi_ref):
     return session.call_xenapi("VDI.get_record", vdi_ref)
 
 
-def get_vdi_for_vm_safely(session, vm_ref):
+def _vdi_get_uuid(session, vdi_ref):
+    return session.call_xenapi("VDI.get_uuid", vdi_ref)
+
+
+def _vdi_snapshot(session, vdi_ref):
+    return session.call_xenapi("VDI.snapshot", vdi_ref, {})
+
+
+def get_vdi_for_vm_safely(session, vm_ref, userdevice='0'):
     """Retrieves the primary VDI for a VM."""
     vbd_refs = _vm_get_vbd_refs(session, vm_ref)
     for vbd_ref in vbd_refs:
         vbd_rec = _vbd_get_rec(session, vbd_ref)
         # Convention dictates the primary VDI will be userdevice 0
-        if vbd_rec['userdevice'] == '0':
+        if vbd_rec['userdevice'] == userdevice:
             vdi_ref = vbd_rec['VDI']
             vdi_rec = _vdi_get_rec(session, vdi_ref)
             return vdi_ref, vdi_rec
     raise exception.NovaException(_("No primary VDI found for %s") % vm_ref)
 
 
+def get_all_vdi_uuids_for_vm(session, vm_ref, min_userdevice=0):
+    vbd_refs = _vm_get_vbd_refs(session, vm_ref)
+    for vbd_ref in vbd_refs:
+        vbd_rec = _vbd_get_rec(session, vbd_ref)
+        if int(vbd_rec['userdevice']) >= min_userdevice:
+            vdi_ref = vbd_rec['VDI']
+            yield _vdi_get_uuid(session, vdi_ref)
+
+
 @contextlib.contextmanager
-def snapshot_attached_here(session, instance, vm_ref, label, *args):
+def snapshot_attached_here(session, instance, vm_ref, label, userdevice='0',
+                           post_snapshot_callback=None):
     # impl method allow easier patching for tests
     return _snapshot_attached_here_impl(session, instance, vm_ref, label,
-                                        *args)
+                                        userdevice, post_snapshot_callback)
 
 
-def _snapshot_attached_here_impl(session, instance, vm_ref, label, *args):
-    update_task_state = None
-    if len(args) == 1:
-        update_task_state = args[0]
-
+def _snapshot_attached_here_impl(session, instance, vm_ref, label, userdevice,
+                                 post_snapshot_callback):
     """Snapshot the root disk only.  Return a list of uuids for the vhds
     in the chain.
     """
     LOG.debug(_("Starting snapshot for VM"), instance=instance)
 
     # Memorize the original_parent_uuid so we can poll for coalesce
-    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref)
+    vm_vdi_ref, vm_vdi_rec = get_vdi_for_vm_safely(session, vm_ref,
+                                                   userdevice)
     original_parent_uuid = _get_vhd_parent_uuid(session, vm_vdi_ref)
     sr_ref = vm_vdi_rec["SR"]
 
-    snapshot_ref = session.call_xenapi("VDI.snapshot", vm_vdi_ref, {})
-    if update_task_state is not None:
-        update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
+    snapshot_ref = _vdi_snapshot(session, vm_vdi_ref)
+    if post_snapshot_callback is not None:
+        post_snapshot_callback(task_state=task_states.IMAGE_PENDING_UPLOAD)
     try:
-        snapshot_rec = session.call_xenapi("VDI.get_record", snapshot_ref)
+        # Ensure no VHDs will vanish while we migrate them
         _wait_for_vhd_coalesce(session, instance, sr_ref, vm_vdi_ref,
-                original_parent_uuid)
-        vdi_uuids = [vdi_rec['uuid'] for vdi_rec in
-                _walk_vdi_chain(session, snapshot_rec['uuid'])]
+                               original_parent_uuid)
+
+        snapshot_uuid = _vdi_get_uuid(session, snapshot_ref)
+        chain = _walk_vdi_chain(session, snapshot_uuid)
+        vdi_uuids = [vdi_rec['uuid'] for vdi_rec in chain]
         yield vdi_uuids
     finally:
         safe_destroy_vdis(session, [snapshot_ref])
+        # TODO(johngarbut) we need to check the snapshot has been coalesced
+        # now its associated VDI has been deleted.
 
 
 def get_sr_path(session, sr_ref=None):
@@ -966,30 +986,37 @@ def generate_swap(session, instance, vm_ref, userdevice, name_label, swap_mb):
                    'swap', swap_mb, fs_type)
 
 
-def generate_ephemeral(session, instance, vm_ref, first_userdevice,
-                       initial_name_label, total_size_gb):
-    # NOTE(johngarbutt): max possible size of a VHD disk is 2043GB
+def get_ephemeral_disk_sizes(total_size_gb):
+    if not total_size_gb:
+        return
+
+    max_size_gb = 2000
     if total_size_gb % 1024 == 0:
         max_size_gb = 1024
-    else:
-        max_size_gb = 2000
 
     left_to_allocate = total_size_gb
+    while left_to_allocate > 0:
+        size_gb = min(max_size_gb, left_to_allocate)
+        yield size_gb
+        left_to_allocate -= size_gb
+
+
+def generate_ephemeral(session, instance, vm_ref, first_userdevice,
+                       instance_name_label, total_size_gb):
+    # NOTE(johngarbutt): max possible size of a VHD disk is 2043GB
+
     first_userdevice = int(first_userdevice)
     userdevice = first_userdevice
+    initial_name_label = instance_name_label + " ephemeral"
     name_label = initial_name_label
 
     vdi_refs = []
     try:
-        while left_to_allocate > 0:
-            size_gb = min(max_size_gb, left_to_allocate)
-
+        for size_gb in get_ephemeral_disk_sizes(total_size_gb):
             ref = _generate_disk(session, instance, vm_ref, str(userdevice),
                                  name_label, 'ephemeral', size_gb * 1024,
                                  CONF.default_ephemeral_format)
             vdi_refs.append(ref)
-
-            left_to_allocate -= size_gb
             userdevice += 1
             label_number = userdevice - first_userdevice
             name_label = "%s (%d)" % (initial_name_label, label_number)
@@ -2383,23 +2410,74 @@ def ensure_correct_host(session):
                           'specified by xenapi_connection_url'))
 
 
-def move_disks(session, instance, disk_info):
+def import_all_migrated_disks(session, instance):
+    root_vdi = _import_migrated_root_disk(session, instance)
+    eph_vdis = _import_migrate_ephemeral_disks(session, instance)
+    return {'root': root_vdi, 'ephemerals': eph_vdis}
+
+
+def _import_migrated_root_disk(session, instance):
+    chain_label = instance['uuid']
+    vdi_label = instance['name']
+    return _import_migrated_vhds(session, instance, chain_label, "root",
+                                 vdi_label)
+
+
+def _import_migrate_ephemeral_disks(session, instance):
+    ephemeral_vdis = {}
+    instance_uuid = instance['uuid']
+    ephemeral_gb = instance["ephemeral_gb"]
+    disk_sizes = get_ephemeral_disk_sizes(ephemeral_gb)
+    for chain_number, _size in enumerate(disk_sizes, start=1):
+        chain_label = instance_uuid + "_ephemeral_%d" % chain_number
+        vdi_label = "%(name)s ephemeral (%(number)d)" % dict(
+                        name=instance['name'], number=chain_number)
+        ephemeral_vdi = _import_migrated_vhds(session, instance,
+                                              chain_label, "ephemeral",
+                                              vdi_label)
+        userdevice = 3 + chain_number
+        ephemeral_vdis[str(userdevice)] = ephemeral_vdi
+    return ephemeral_vdis
+
+
+def _import_migrated_vhds(session, instance, chain_label, disk_type,
+                          vdi_label):
     """Move and possibly link VHDs via the XAPI plugin."""
+    # TODO(johngarbutt) tidy up plugin params
     imported_vhds = session.call_plugin_serialized(
-            'migration', 'move_vhds_into_sr', instance_uuid=instance['uuid'],
+            'migration', 'move_vhds_into_sr', instance_uuid=chain_label,
             sr_path=get_sr_path(session), uuid_stack=_make_uuid_stack())
 
     # Now we rescan the SR so we find the VHDs
     scan_default_sr(session)
 
-    root_uuid = imported_vhds['root']['uuid']
-    root_vdi_ref = session.call_xenapi('VDI.get_by_uuid', root_uuid)
+    vdi_uuid = imported_vhds['root']['uuid']
+    vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
 
     # Set name-label so we can find if we need to clean up a failed migration
-    _set_vdi_info(session, root_vdi_ref, 'root', instance['name'], 'root',
-                  instance)
+    _set_vdi_info(session, vdi_ref, disk_type, vdi_label,
+                  disk_type, instance)
 
-    return {'uuid': root_uuid, 'ref': root_vdi_ref}
+    return {'uuid': vdi_uuid, 'ref': vdi_ref}
+
+
+def migrate_vhd(session, instance, vdi_uuid, dest, sr_path, seq_num,
+                ephemeral_number=0):
+    LOG.debug(_("Migrating VHD '%(vdi_uuid)s' with seq_num %(seq_num)d"),
+              {'vdi_uuid': vdi_uuid, 'seq_num': seq_num},
+              instance=instance)
+    chain_label = instance['uuid']
+    if ephemeral_number:
+        chain_label = instance['uuid'] + "_ephemeral_%d" % ephemeral_number
+    try:
+        # TODO(johngarbutt) tidy up plugin params
+        session.call_plugin_serialized('migration', 'transfer_vhd',
+                instance_uuid=chain_label, host=dest, vdi_uuid=vdi_uuid,
+                sr_path=sr_path, seq_num=seq_num)
+    except session.XenAPI.Failure:
+        msg = _("Failed to transfer vhd to new host")
+        LOG.debug(msg, instance=instance, exc_info=True)
+        raise exception.MigrationError(reason=msg)
 
 
 def vm_ref_or_raise(session, instance_name):
