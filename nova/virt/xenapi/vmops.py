@@ -21,7 +21,6 @@ Management class for VM-related functions (spawn, reboot, etc).
 
 import base64
 import functools
-import itertools
 import time
 import zlib
 
@@ -860,24 +859,17 @@ class VMOps(object):
             pass
 
         @step
-        def transfer_immutable_vhds(vdi_uuids):
-            # The first VHD will be the leaf (aka COW) that is being used by
-            # the VM. For this step, we're only interested in the immutable
-            # VHDs which are all of the parents of the leaf VHD.
-            for seq_num, vdi_uuid in itertools.islice(
-                    enumerate(vdi_uuids), 1, None):
-                self._migrate_vhd(instance, vdi_uuid, dest, sr_path, seq_num)
+        def transfer_immutable_vhds(parent_vdi_uuids):
+            for vhd_num, vdi_uuid in enumerate(parent_vdi_uuids, start=1):
+                self._migrate_vhd(instance, vdi_uuid, dest, sr_path, vhd_num)
 
         @step
         def power_down_instance():
             self._resize_ensure_vm_is_shutdown(instance, vm_ref)
 
         @step
-        def transfer_leaf_vhd():
-            vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
-                self._session, vm_ref)
-            cow_uuid = vm_vdi_rec['uuid']
-            self._migrate_vhd(instance, cow_uuid, dest, sr_path, 0)
+        def transfer_leaf_vhd(leaf_vdi_uuid):
+            self._migrate_vhd(instance, leaf_vdi_uuid, dest, sr_path, 0)
 
         @step
         def fake_step_to_be_executed_by_finish_migration():
@@ -889,9 +881,13 @@ class VMOps(object):
             with vm_utils.snapshot_attached_here(
                     self._session, instance, vm_ref, label) as vdi_uuids:
                 fake_step_to_show_snapshot_complete()
-                transfer_immutable_vhds(vdi_uuids)
+
+                active_vdi_uuid = vdi_uuids[0]
+                immutable_vdi_uuids = vdi_uuids[1:]
+
+                transfer_immutable_vhds(immutable_vdi_uuids)
                 power_down_instance()
-                transfer_leaf_vhd()
+                transfer_leaf_vhd(active_vdi_uuid)
         except Exception as error:
             LOG.exception(_("_migrate_disk_resizing_up failed. "
                             "Restoring orig vm due_to: %s."), error,
