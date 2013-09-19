@@ -282,6 +282,34 @@ class _TestInstanceObject(object):
     def test_save_exp_task_state_api_cell_admin_reset(self):
         self._save_test_helper('api', {'admin_state_reset': True})
 
+    def test_save_rename_sends_notification(self):
+        # Tests that simply changing the 'display_name' on the instance
+        # will send a notification.
+        self.flags(enable=False, group='cells')
+        old_ref = dict(self.fake_instance, display_name='hello')
+        fake_uuid = old_ref['uuid']
+        expected_updates = dict(display_name='goodbye')
+        new_ref = dict(old_ref, **expected_updates)
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
+        self.mox.StubOutWithMock(notifications, 'send_update')
+        db.instance_get_by_uuid(self.context, fake_uuid, columns_to_join=[]
+                                ).AndReturn(old_ref)
+        db.instance_update_and_get_original(
+                self.context, fake_uuid, expected_updates, update_cells=False,
+                columns_to_join=[]).AndReturn((old_ref, new_ref))
+        notifications.send_update(self.context, mox.IgnoreArg(),
+                                  mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+
+        inst = instance.Instance.get_by_uuid(self.context, old_ref['uuid'])
+        self.assertEqual('hello', inst.display_name)
+        inst.display_name = 'goodbye'
+        inst.save()
+        self.assertEqual('goodbye', inst.display_name)
+        self.assertEqual(set([]), inst.obj_what_changed())
+
     def test_get_deleted(self):
         fake_inst = dict(self.fake_instance, id=123, deleted=123)
         fake_uuid = fake_inst['uuid']

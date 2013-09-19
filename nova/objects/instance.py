@@ -464,8 +464,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             cells_api.instance_update_at_top(context, inst_ref)
 
         self._from_db_object(context, self, inst_ref, expected_attrs)
-        if 'vm_state' in updated_keys or 'task_state' in updated_keys:
-            notifications.send_update(context, old_ref, inst_ref)
+        notifications.send_update(context, old_ref, inst_ref)
         self.obj_reset_changes()
 
     @base.remotable
