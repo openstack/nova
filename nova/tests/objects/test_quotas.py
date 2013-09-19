@@ -46,7 +46,6 @@ class TestQuotasModule(test.NoDBTestCase):
 class _TestQuotasObject(object):
     def setUp(self):
         super(_TestQuotasObject, self).setUp()
-        print 'got here'
         self.context = context.RequestContext('fake_user1', 'fake_proj1')
         self.instance = fake_instance.fake_db_instance(
                 project_id='fake_proj2', user_id='fake_user2')
