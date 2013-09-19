@@ -337,3 +337,29 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
                                                     ['cluster'])
         self.assertTrue(not refs)
+
+    def test_propset_dict_simple(self):
+        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
+        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
+
+        object = ObjectContent(propSet=[
+                    DynamicProperty(name='foo', val="bar")])
+        propdict = vm_util.propset_dict(object.propSet)
+        self.assertEqual("bar", propdict['foo'])
+
+    def test_propset_dict_complex(self):
+        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
+        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
+        MoRef = collections.namedtuple('Val', ['value'])
+
+        object = ObjectContent(propSet=[
+                    DynamicProperty(name='foo', val="bar"),
+                    DynamicProperty(name='some.thing',
+                                    val=MoRef(value='else')),
+                    DynamicProperty(name='another.thing', val='value')])
+
+        propdict = vm_util.propset_dict(object.propSet)
+        self.assertEqual("bar", propdict['foo'])
+        self.assertTrue(hasattr(propdict['some.thing'], 'value'))
+        self.assertEqual("else", propdict['some.thing'].value)
+        self.assertEqual("value", propdict['another.thing'])
