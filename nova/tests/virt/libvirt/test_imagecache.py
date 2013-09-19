@@ -53,7 +53,7 @@ def intercept_log_messages():
         mylog.logger.removeHandler(handler)
 
 
-class ImageCacheManagerTestCase(test.TestCase):
+class ImageCacheManagerTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ImageCacheManagerTestCase, self).setUp()
@@ -820,7 +820,7 @@ class ImageCacheManagerTestCase(test.TestCase):
             self.assertTrue(was['called'])
 
 
-class VerifyChecksumTestCase(test.TestCase):
+class VerifyChecksumTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(VerifyChecksumTestCase, self).setUp()

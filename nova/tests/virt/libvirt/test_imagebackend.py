@@ -150,7 +150,7 @@ class _ImageTestCase(object):
              'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
 
 
-class RawTestCase(_ImageTestCase, test.TestCase):
+class RawTestCase(_ImageTestCase, test.NoDBTestCase):
 
     SIZE = 1024
 
@@ -219,7 +219,7 @@ class RawTestCase(_ImageTestCase, test.TestCase):
         self.mox.VerifyAll()
 
 
-class Qcow2TestCase(_ImageTestCase, test.TestCase):
+class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     SIZE = 1024 * 1024 * 1024
 
     def setUp(self):
@@ -344,7 +344,7 @@ class Qcow2TestCase(_ImageTestCase, test.TestCase):
         self.mox.VerifyAll()
 
 
-class LvmTestCase(_ImageTestCase, test.TestCase):
+class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
     VG = 'FakeVG'
     TEMPLATE_SIZE = 512
     SIZE = 1024
@@ -496,7 +496,7 @@ class LvmTestCase(_ImageTestCase, test.TestCase):
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
 
-class RbdTestCase(_ImageTestCase, test.TestCase):
+class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     POOL = "FakePool"
     USER = "FakeUser"
     CONF = "FakeConf"
@@ -620,7 +620,7 @@ class RbdTestCase(_ImageTestCase, test.TestCase):
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
 
-class BackendTestCase(test.TestCase):
+class BackendTestCase(test.NoDBTestCase):
     INSTANCE = {'name': 'fake-instance',
                 'uuid': uuidutils.generate_uuid()}
     NAME = 'fake-name.suffix'

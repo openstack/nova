@@ -35,7 +35,7 @@ class FakeResponse(object):
         return self._headers.get(key)
 
 
-class DockerHTTPClientTestCase(test.TestCase):
+class DockerHTTPClientTestCase(test.NoDBTestCase):
 
     def test_list_containers(self):
         mock_conn = self.mox.CreateMockAnything()

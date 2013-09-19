@@ -27,7 +27,7 @@ LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 
-class StorageLinuxSCSITestCase(test.TestCase):
+class StorageLinuxSCSITestCase(test.NoDBTestCase):
     def setUp(self):
         super(StorageLinuxSCSITestCase, self).setUp()
         self.executes = []

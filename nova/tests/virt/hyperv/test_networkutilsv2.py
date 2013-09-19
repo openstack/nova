@@ -22,7 +22,7 @@ from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import vmutils
 
 
-class NetworkUtilsV2TestCase(test.TestCase):
+class NetworkUtilsV2TestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V NetworkUtilsV2 class."""
 
     _FAKE_VSWITCH_NAME = "fake_vswitch_name"

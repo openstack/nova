@@ -18,7 +18,7 @@ from nova import test
 from nova.virt.libvirt import designer
 
 
-class DesignerTestCase(test.TestCase):
+class DesignerTestCase(test.NoDBTestCase):
     def test_set_vif_bandwidth_config_no_extra_specs(self):
         # Test whether test_set_vif_bandwidth_config_no_extra_specs fails when
         # its second parameter has no 'extra_specs' field.

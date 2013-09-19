@@ -132,7 +132,7 @@ class FakeClientFactory(object):
             assert self.client.callstack[pos][2] == body
 
 
-class CinderTestCase(test.TestCase):
+class CinderTestCase(test.NoDBTestCase):
     """Test case for cinder volume api."""
 
     def setUp(self):

@@ -25,7 +25,7 @@ from nova import test
 from nova.virt.baremetal import utils
 
 
-class BareMetalUtilsTestCase(test.TestCase):
+class BareMetalUtilsTestCase(test.NoDBTestCase):
 
     def test_random_alnum(self):
         s = utils.random_alnum(10)

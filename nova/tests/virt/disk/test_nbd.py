@@ -62,7 +62,7 @@ def _fake_noop(*args, **kwargs):
     return
 
 
-class NbdTestCase(test.TestCase):
+class NbdTestCase(test.NoDBTestCase):
     def setUp(self):
         super(NbdTestCase, self).setUp()
         self.stubs.Set(nbd.NbdMount, '_detect_nbd_devices',

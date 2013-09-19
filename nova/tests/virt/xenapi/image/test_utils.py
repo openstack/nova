@@ -22,7 +22,7 @@ from nova import test
 from nova.virt.xenapi.image import utils
 
 
-class GlanceImageTestCase(test.TestCase):
+class GlanceImageTestCase(test.NoDBTestCase):
     def _get_image(self):
         return utils.GlanceImage('context', 'href')
 
@@ -100,7 +100,7 @@ class GlanceImageTestCase(test.TestCase):
         self.assertEquals('data', image.data())
 
 
-class RawImageTestCase(test.TestCase):
+class RawImageTestCase(test.NoDBTestCase):
     def test_get_size(self):
         glance_image = self.mox.CreateMock(utils.GlanceImage)
         glance_image.meta = {'size': '123'}
@@ -118,7 +118,7 @@ class RawImageTestCase(test.TestCase):
         self.assertEquals('result', raw_image.stream_to('file'))
 
 
-class TestIterableBasedFile(test.TestCase):
+class TestIterableBasedFile(test.NoDBTestCase):
     def test_constructor(self):
         class FakeIterable(object):
             def __iter__(_self):
@@ -169,7 +169,7 @@ class TestIterableBasedFile(test.TestCase):
         self.assertEquals('chunk2', the_file.read(100))
 
 
-class RawTGZTestCase(test.TestCase):
+class RawTGZTestCase(test.NoDBTestCase):
     def test_as_tarfile(self):
         image = utils.RawTGZImage(None)
         self.mox.StubOutWithMock(image, '_as_file')

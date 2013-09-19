@@ -61,7 +61,7 @@ def get_vm_xml(name="testname", uuid=None, source_type='file',
                 'interface_type': interface_type}
 
 
-class FakeLibvirtTests(test.TestCase):
+class FakeLibvirtTests(test.NoDBTestCase):
     def setUp(self):
         super(FakeLibvirtTests, self).setUp()
         libvirt._reset()

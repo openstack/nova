@@ -46,7 +46,7 @@ os.makedirs(os.path.join(OSS_TEMPDIR, 'images'))
 os.makedirs(os.path.join(OSS_TEMPDIR, 'buckets'))
 
 
-class S3APITestCase(test.TestCase):
+class S3APITestCase(test.NoDBTestCase):
     """Test objectstore through S3 API."""
 
     def setUp(self):

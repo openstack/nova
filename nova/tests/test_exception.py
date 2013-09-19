@@ -43,7 +43,7 @@ def bad_function_exception(self, context, extra, blah="a", boo="b", zoo=None):
     raise test.TestingException()
 
 
-class WrapExceptionTestCase(test.TestCase):
+class WrapExceptionTestCase(test.NoDBTestCase):
     def test_wrap_exception_good_return(self):
         wrapped = exception.wrap_exception('foo')
         self.assertEquals(99, wrapped(good_function)(1, 2))
@@ -61,7 +61,7 @@ class WrapExceptionTestCase(test.TestCase):
             self.assertTrue(key in notifier.provided_payload.keys())
 
 
-class NovaExceptionTestCase(test.TestCase):
+class NovaExceptionTestCase(test.NoDBTestCase):
     def test_default_error_msg(self):
         class FakeNovaException(exception.NovaException):
             msg_fmt = "default message"
@@ -140,7 +140,7 @@ class NovaExceptionTestCase(test.TestCase):
         self.assertEquals(exc.format_message(), "some message %(somearg)s")
 
 
-class ExceptionTestCase(test.TestCase):
+class ExceptionTestCase(test.NoDBTestCase):
     @staticmethod
     def _raise_exc(exc):
         raise exc()

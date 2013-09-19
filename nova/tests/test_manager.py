@@ -22,7 +22,7 @@ from nova import manager
 from nova import test
 
 
-class ManagerTestCase(test.TestCase):
+class ManagerTestCase(test.NoDBTestCase):
     def test_additional_apis_for_dispatcher(self):
         class MyAPI(object):
             pass

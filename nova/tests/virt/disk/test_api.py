@@ -23,7 +23,7 @@ from nova import test
 from nova.virt.disk import api
 
 
-class APITestCase(test.TestCase):
+class APITestCase(test.NoDBTestCase):
 
     def test_can_resize_need_fs_type_specified(self):
         # NOTE(mikal): Bug 1094373 saw a regression where we failed to

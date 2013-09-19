@@ -27,7 +27,7 @@ from nova import utils
 from nova.virt import configdrive
 
 
-class ConfigDriveTestCase(test.TestCase):
+class ConfigDriveTestCase(test.NoDBTestCase):
 
     def test_create_configdrive_iso(self):
         imagefile = None

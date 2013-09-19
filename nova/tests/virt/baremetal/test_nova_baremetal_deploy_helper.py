@@ -126,7 +126,7 @@ class WorkerTestCase(bm_db_base.BMDBTestCase):
         self.mox.VerifyAll()
 
 
-class PhysicalWorkTestCase(test.TestCase):
+class PhysicalWorkTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PhysicalWorkTestCase, self).setUp()
 
@@ -223,7 +223,7 @@ class PhysicalWorkTestCase(test.TestCase):
                          pxe_config_path, root_mb, swap_mb)
 
 
-class SwitchPxeConfigTestCase(test.TestCase):
+class SwitchPxeConfigTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SwitchPxeConfigTestCase, self).setUp()
         (fd, self.fname) = tempfile.mkstemp()
@@ -242,7 +242,7 @@ class SwitchPxeConfigTestCase(test.TestCase):
         self.assertEqual(pxeconf, _PXECONF_BOOT)
 
 
-class OtherFunctionTestCase(test.TestCase):
+class OtherFunctionTestCase(test.NoDBTestCase):
     def test_get_dev(self):
         expected = '/dev/disk/by-path/ip-1.2.3.4:5678-iscsi-iqn.fake-lun-9'
         actual = bmdh.get_dev('1.2.3.4', 5678, 'iqn.fake', 9)
