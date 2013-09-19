@@ -321,7 +321,7 @@ def is_vm_shutdown(session, vm_ref):
     return False
 
 
-def ensure_free_mem(session, instance):
+def is_enough_free_mem(session, instance):
     instance_type = flavors.extract_flavor(instance)
     mem = long(instance_type['memory_mb']) * 1024 * 1024
     host = session.get_xenapi_host()
@@ -531,6 +531,10 @@ def get_vdis_for_instance(context, session, instance, name_label, image,
         create_image_vdis = _create_image(
                 context, session, instance, name_label, image, image_type)
         vdis.update(create_image_vdis)
+
+    # Just get the VDI ref once
+    for vdi in vdis.itervalues():
+        vdi['ref'] = session.call_xenapi('VDI.get_by_uuid', vdi['uuid'])
 
     return vdis
 

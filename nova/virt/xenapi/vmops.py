@@ -277,7 +277,7 @@ class VMOps(object):
         root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
 
         if resize_instance:
-            self._resize_instance(instance, root_vdi)
+            self._resize_up_root_vdi(instance, root_vdi)
 
         name_label = instance['name']
 
@@ -331,14 +331,10 @@ class VMOps(object):
                                           image_meta.get('id'),
                                           disk_image_type,
                                           block_device_info=block_device_info)
-        # Just get the VDI ref once
-        for vdi in vdis.itervalues():
-            vdi['ref'] = self._session.call_xenapi('VDI.get_by_uuid',
-                                                   vdi['uuid'])
 
         root_vdi = vdis.get('root')
         if root_vdi:
-            self._resize_instance(instance, root_vdi)
+            self._resize_up_root_vdi(instance, root_vdi)
 
         return vdis
 
@@ -350,6 +346,14 @@ class VMOps(object):
 
         step = make_step_decorator(context, instance,
                                    self._update_instance_progress)
+
+        @step
+        def bdev_set_default_root(undo_mgr):
+            if block_device_info:
+                LOG.debug(_("Block device information present: %s")
+                          % block_device_info, instance=instance)
+            if block_device_info and not block_device_info['root_device_name']:
+                block_device_info['root_device_name'] = self.default_root_dev
 
         @step
         def determine_disk_image_type_step(undo_mgr):
@@ -419,11 +423,7 @@ class VMOps(object):
             # on non-PV guests
             @step
             def attach_root_disk_step(undo_mgr, vm_ref):
-                orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
-                vdi_ref = self._find_root_vdi_ref(orig_vm_ref)
-
-                vm_utils.create_vbd(self._session, vm_ref, vdi_ref,
-                                    DEVICE_RESCUE, bootable=False)
+                self._attach_orig_disk_for_rescue(instance, vm_ref)
 
         @step
         def setup_network_step(undo_mgr, vm_ref, vdis):
@@ -432,8 +432,8 @@ class VMOps(object):
 
         @step
         def inject_instance_data_step(undo_mgr, vm_ref):
-            self.inject_instance_metadata(instance, vm_ref)
-            self.inject_auto_disk_config(instance, vm_ref)
+            self._inject_instance_metadata(instance, vm_ref)
+            self._inject_auto_disk_config(instance, vm_ref)
 
         @step
         def prepare_security_group_filters_step(undo_mgr):
@@ -457,14 +457,6 @@ class VMOps(object):
         @step
         def apply_security_group_filters_step(undo_mgr):
             self.firewall_driver.apply_instance_filter(instance, network_info)
-
-        @step
-        def bdev_set_default_root(undo_mgr):
-            if block_device_info:
-                LOG.debug(_("Block device information present: %s")
-                          % block_device_info, instance=instance)
-            if block_device_info and not block_device_info['root_device_name']:
-                block_device_info['root_device_name'] = self.default_root_dev
 
         undo_mgr = utils.UndoManager()
         try:
@@ -495,6 +487,12 @@ class VMOps(object):
             msg = _("Failed to spawn, rolling back")
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
+    def _attach_orig_disk_for_rescue(self, instance, vm_ref):
+        orig_vm_ref = vm_utils.lookup(self._session, instance['name'])
+        vdi_ref = self._find_root_vdi_ref(orig_vm_ref)
+        vm_utils.create_vbd(self._session, vm_ref, vdi_ref, DEVICE_RESCUE,
+                            bootable=False)
+
     def _create_vm(self, context, instance, name_label, vdis,
             disk_image_type, network_info, kernel_file=None,
             ramdisk_file=None, rescue=False):
@@ -505,7 +503,7 @@ class VMOps(object):
                 disk_image_type)
         self._setup_vm_networking(instance, vm_ref, vdis, network_info,
                 rescue)
-        self.inject_instance_metadata(instance, vm_ref)
+        self._inject_instance_metadata(instance, vm_ref)
 
         return vm_ref
 
@@ -519,10 +517,16 @@ class VMOps(object):
         self._create_vifs(vm_ref, instance, network_info)
         self.inject_network_info(instance, network_info, vm_ref)
 
-        hostname = instance['hostname']
-        if rescue:
-            hostname = 'RESCUE-%s' % hostname
-        self.inject_hostname(instance, vm_ref, hostname)
+        self._inject_hostname(instance, vm_ref, rescue)
+
+    def _ensure_instance_name_unique(self, name_label):
+        vm_ref = vm_utils.lookup(self._session, name_label)
+        if vm_ref is not None:
+            raise exception.InstanceExists(name=name_label)
+
+    def _ensure_enough_free_mem(self, instance):
+        if not vm_utils.is_enough_free_mem(self._session, instance):
+            raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
 
     def _create_vm_record(self, context, instance, name_label, vdis,
             disk_image_type, kernel_file, ramdisk_file):
@@ -532,13 +536,8 @@ class VMOps(object):
         check only accounts for running VMs, so it can miss other builds
         that are in progress.)
         """
-        vm_ref = vm_utils.lookup(self._session, name_label)
-        if vm_ref is not None:
-            raise exception.InstanceExists(name=name_label)
-
-        # Ensure enough free memory is available
-        if not vm_utils.ensure_free_mem(self._session, instance):
-            raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
+        self._ensure_instance_name_unique(name_label)
+        self._ensure_enough_free_mem(instance)
 
         mode = self._determine_vm_mode(instance, vdis, disk_image_type)
         if instance['vm_mode'] != mode:
@@ -693,7 +692,7 @@ class VMOps(object):
             # Reset network config
             agent.resetnetwork()
 
-        self.remove_hostname(instance, vm_ref)
+        self._remove_hostname(instance, vm_ref)
 
     def _get_vm_opaque_ref(self, instance, check_rescue=False):
         """Get xapi OpaqueRef from a db record.
@@ -956,7 +955,7 @@ class VMOps(object):
             self._volumeops.detach_volume(connection_info, name_label,
                                           mount_device)
 
-    def _resize_instance(self, instance, root_vdi):
+    def _resize_up_root_vdi(self, instance, root_vdi):
         """Resize an instances root disk."""
 
         new_disk_size = instance['root_gb'] * 1024 * 1024 * 1024
@@ -1078,7 +1077,7 @@ class VMOps(object):
                          "0123456789-_@")
         return ''.join([x in allowed_chars and x or '_' for x in key])
 
-    def inject_instance_metadata(self, instance, vm_ref):
+    def _inject_instance_metadata(self, instance, vm_ref):
         """Inject instance metadata into xenstore."""
         @utils.synchronized('xenstore-' + instance['uuid'])
         def store_meta(topdir, data_dict):
@@ -1091,7 +1090,7 @@ class VMOps(object):
         # Store user metadata
         store_meta('vm-data/user-metadata', utils.instance_meta(instance))
 
-    def inject_auto_disk_config(self, instance, vm_ref):
+    def _inject_auto_disk_config(self, instance, vm_ref):
         """Inject instance's auto_disk_config attribute into xenstore."""
         @utils.synchronized('xenstore-' + instance['uuid'])
         def store_auto_disk_config(key, value):
@@ -1601,8 +1600,12 @@ class VMOps(object):
         else:
             raise NotImplementedError()
 
-    def inject_hostname(self, instance, vm_ref, hostname):
+    def _inject_hostname(self, instance, vm_ref, rescue):
         """Inject the hostname of the instance into the xenstore."""
+        hostname = instance['hostname']
+        if rescue:
+            hostname = 'RESCUE-%s' % hostname
+
         if instance['os_type'] == "windows":
             # NOTE(jk0): Windows hostnames can only be <= 15 chars.
             hostname = hostname[:15]
@@ -1610,7 +1613,7 @@ class VMOps(object):
         LOG.debug(_("Injecting hostname to xenstore"), instance=instance)
         self._add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
 
-    def remove_hostname(self, instance, vm_ref):
+    def _remove_hostname(self, instance, vm_ref):
         LOG.debug(_("Removing hostname from xenstore"), instance=instance)
         self._remove_from_param_xenstore(vm_ref, 'vm-data/hostname')
 

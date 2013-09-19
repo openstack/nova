@@ -342,7 +342,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         def fake_inject_instance_metadata(self, instance, vm):
             pass
-        self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
+        self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
                        fake_inject_instance_metadata)
 
         def fake_safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
@@ -723,7 +723,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # Fake out inject_instance_metadata
         def fake_inject_instance_metadata(self, instance, vm):
             pass
-        self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
+        self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
                        fake_inject_instance_metadata)
 
         if create_record:
@@ -1000,8 +1000,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_spawn_injects_auto_disk_config_to_xenstore(self):
         instance = self._create_instance(spawn=False)
-        self.mox.StubOutWithMock(self.conn._vmops, 'inject_auto_disk_config')
-        self.conn._vmops.inject_auto_disk_config(instance, mox.IgnoreArg())
+        self.mox.StubOutWithMock(self.conn._vmops, '_inject_auto_disk_config')
+        self.conn._vmops._inject_auto_disk_config(instance, mox.IgnoreArg())
         self.mox.ReplayAll()
         self.conn.spawn(self.context, instance,
                         IMAGE_FIXTURES['1']["image_meta"], [], 'herp', '')
@@ -1580,7 +1580,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         def fake_inject_instance_metadata(self, instance, vm):
             pass
-        self.stubs.Set(vmops.VMOps, 'inject_instance_metadata',
+        self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
                        fake_inject_instance_metadata)
 
     def test_resize_xenserver_6(self):
@@ -1598,8 +1598,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_instance(instance,
-                                     {'uuid': vdi_uuid, 'ref': vdi_ref})
+        conn._vmops._resize_up_root_vdi(instance,
+                                        {'uuid': vdi_uuid, 'ref': vdi_ref})
         self.assertEqual(called['resize'], True)
 
     def test_resize_xcp(self):
@@ -1617,8 +1617,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_instance(instance,
-                                     {'uuid': vdi_uuid, 'ref': vdi_ref})
+        conn._vmops._resize_up_root_vdi(instance,
+                                        {'uuid': vdi_uuid, 'ref': vdi_ref})
         self.assertEqual(called['resize'], True)
 
     def test_migrate_disk_and_power_off(self):
@@ -3670,7 +3670,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
                                          {'key': 'sys_b', 'value': 2},
                                          {'key': 'sys_c', 'value': 3}],
                         uuid='fake')
-        self.conn._vmops.inject_instance_metadata(instance, 'vm_ref')
+        self.conn._vmops._inject_instance_metadata(instance, 'vm_ref')
 
         self.assertEqual(self.xenstore, {
                 'persist': {
