@@ -255,9 +255,9 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.start,
                           self.context, instance)
 
-    def test_stop(self):
+    def _test_stop(self, vm_state, force=False):
         # Make sure 'progress' gets reset
-        params = dict(task_state=None, progress=99)
+        params = dict(task_state=None, progress=99, vm_state=vm_state)
         instance = self._create_instance_obj(params=params)
 
         self.mox.StubOutWithMock(instance, 'save')
@@ -278,14 +278,31 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.ReplayAll()
 
-        self.compute_api.stop(self.context, instance)
+        if force:
+            self.compute_api.force_stop(self.context, instance)
+        else:
+            self.compute_api.stop(self.context, instance)
         self.assertEqual(task_states.POWERING_OFF,
                          instance.task_state)
         self.assertEqual(0, instance.progress)
 
+    def test_stop(self):
+        self._test_stop(vm_states.ACTIVE)
+
+    def test_stop_stopped_instance_with_bypass(self):
+        self._test_stop(vm_states.STOPPED, force=True)
+
     def test_stop_invalid_state(self):
         params = dict(vm_state=vm_states.PAUSED)
         instance = self._create_instance_obj(params=params)
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.stop,
+                          self.context, instance)
+
+    def test_stop_a_stopped_inst(self):
+        params = {'vm_state': vm_states.STOPPED}
+        instance = self._create_instance_obj(params=params)
+
         self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.stop,
                           self.context, instance)

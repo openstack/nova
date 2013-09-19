@@ -4792,9 +4792,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(_("Instance is not stopped. Calling "
                            "the stop API."), instance=db_instance)
                 try:
-                    # Note(maoy): this assumes that the stop API is
-                    # idempotent.
-                    self.compute_api.stop(context, db_instance)
+                    # NOTE(russellb) Force the stop, because normally the
+                    # compute API would not allow an attempt to stop a stopped
+                    # instance.
+                    self.compute_api.force_stop(context, db_instance)
                 except Exception:
                     LOG.exception(_("error during stop() in "
                                     "sync_power_state."),

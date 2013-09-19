@@ -445,13 +445,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(instance.power_state, power_state.SHUTDOWN)
 
     def _test_sync_to_stop(self, power_state, vm_state, driver_power_state,
-                           stop=True):
+                           stop=True, force=False):
         instance = self._get_sync_instance(power_state, vm_state)
         instance.refresh()
         instance.save()
         self.mox.StubOutWithMock(self.compute.compute_api, 'stop')
+        self.mox.StubOutWithMock(self.compute.compute_api, 'force_stop')
         if stop:
-            self.compute.compute_api.stop(self.context, instance)
+            if force:
+                self.compute.compute_api.force_stop(self.context, instance)
+            else:
+                self.compute.compute_api.stop(self.context, instance)
         self.mox.ReplayAll()
         self.compute._sync_instance_power_state(self.context, instance,
                                                 driver_power_state)
@@ -463,7 +467,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                    power_state.SUSPENDED):
             self._test_sync_to_stop(power_state.RUNNING, vm_states.ACTIVE, ps)
         self._test_sync_to_stop(power_state.SHUTDOWN, vm_states.STOPPED,
-                                power_state.RUNNING)
+                                power_state.RUNNING, force=True)
 
     def test_sync_instance_power_state_to_no_stop(self):
         for ps in (power_state.PAUSED, power_state.NOSTATE):
