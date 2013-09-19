@@ -56,6 +56,7 @@ class WrapExceptionTestCase(test.TestCase):
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
         self.assertEquals(notifier.provided_event, "bad_function_exception")
         self.assertEquals(notifier.provided_context, ctxt)
+        self.assertEquals(notifier.provided_payload['args']['extra'], 3)
         for key in ['exception', 'args']:
             self.assertTrue(key in notifier.provided_payload.keys())
 
