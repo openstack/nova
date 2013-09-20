@@ -92,9 +92,13 @@ class PowerVMDriver(driver.ComputeDriver):
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
-        LOG.debug(_('Network injection is not supported by the '
-                    'PowerVM driver.'), instance)
-        pass
+        msg = _("VIF plugging is not supported by the PowerVM driver.")
+        raise NotImplementedError(msg)
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
+        msg = _("VIF unplugging is not supported by the PowerVM driver.")
+        raise NotImplementedError(msg)
 
     def macs_for_instance(self, instance):
         return self._powervm.macs_for_instance(instance)

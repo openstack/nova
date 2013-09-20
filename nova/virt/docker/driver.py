@@ -99,11 +99,13 @@ class DockerDriver(driver.ComputeDriver):
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
-        pass
+        msg = _("VIF plugging is not supported by the Docker driver.")
+        raise NotImplementedError(msg)
 
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
-        pass
+        msg = _("VIF unplugging is not supported by the Docker driver.")
+        raise NotImplementedError(msg)
 
     def find_container_by_name(self, name):
         for info in self.list_instances(inspect=True):

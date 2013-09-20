@@ -1537,3 +1537,17 @@ class HyperVAPITestCase(test.NoDBTestCase):
 
     def test_finish_revert_migration_with_ephemeral_storage(self):
         self._test_finish_revert_migration(False, ephemeral_storage=True)
+
+    def test_plug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self._conn.plug_vifs,
+                          instance=self._test_spawn_instance,
+                          network_info=None)
+
+    def test_unplug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self._conn.unplug_vifs,
+                          instance=self._test_spawn_instance,
+                          network_info=None)
