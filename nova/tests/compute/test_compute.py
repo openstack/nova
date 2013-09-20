@@ -4930,13 +4930,14 @@ class ComputeTestCase(BaseTestCase):
 
         def fake_instance_get_all_by_host(context, host, columns_to_join):
             call_info['get_all_by_host'] += 1
-            self.assertEqual(columns_to_join, ['system_metadata'])
+            self.assertEqual([], columns_to_join)
             return instances[:]
 
         def fake_instance_get_by_uuid(context, instance_uuid, columns_to_join):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
+            self.assertEqual(['system_metadata'], columns_to_join)
             return instance_map[instance_uuid]
 
         # NOTE(comstud): Override the stub in setUp()
