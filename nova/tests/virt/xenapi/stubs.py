@@ -299,6 +299,9 @@ def stub_out_migration_methods(stubs):
         vdi_rec['other_config']['nova_disk_type'] = 'root'
         return {'uuid': vdi_rec['uuid'], 'ref': vdi_ref}
 
+    def fake_wait_for_instance_to_start(self, *args):
+        pass
+
     def fake_get_vdi(session, vm_ref):
         vdi_ref_parent = fake.create_vdi('derp-parent', fakesr)
         vdi_rec_parent = fake.get_record('VDI', vdi_ref_parent)
@@ -320,6 +323,8 @@ def stub_out_migration_methods(stubs):
         pass
 
     stubs.Set(vmops.VMOps, '_destroy', fake_destroy)
+    stubs.Set(vmops.VMOps, '_wait_for_instance_to_start',
+              fake_wait_for_instance_to_start)
     stubs.Set(vm_utils, 'move_disks', fake_move_disks)
     stubs.Set(vm_utils, 'scan_default_sr', fake_sr)
     stubs.Set(vm_utils, 'get_vdi_for_vm_safely', fake_get_vdi)
