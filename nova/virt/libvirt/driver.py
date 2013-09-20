@@ -755,7 +755,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _destroy(self, instance):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
-        except exception.NotFound:
+        except exception.InstanceNotFound:
             virt_dom = None
 
         # If the instance is already terminated, we're still happy
@@ -799,7 +799,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 dom_info = self.get_info(instance)
                 state = dom_info['state']
                 new_domid = dom_info['id']
-            except exception.NotFound:
+            except exception.InstanceNotFound:
                 LOG.error(_("During wait destroy, instance disappeared."),
                           instance=instance)
                 raise loopingcall.LoopingCallDone()
@@ -837,7 +837,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _undefine_domain(self, instance):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
-        except exception.NotFound:
+        except exception.InstanceNotFound:
             virt_dom = None
         if virt_dom:
             try:
@@ -877,7 +877,7 @@ class LibvirtDriver(driver.ComputeDriver):
             except libvirt.libvirtError as e:
                 try:
                     state = self.get_info(instance)['state']
-                except exception.NotFound:
+                except exception.InstanceNotFound:
                     state = power_state.SHUTDOWN
 
                 if state != power_state.SHUTDOWN:
@@ -4044,7 +4044,7 @@ class LibvirtDriver(driver.ComputeDriver):
             """waiting for live migration completion."""
             try:
                 self.get_info(instance)['state']
-            except exception.NotFound:
+            except exception.InstanceNotFound:
                 timer.stop()
                 post_method(context, instance, dest, block_migration,
                             migrate_data)

@@ -4172,6 +4172,24 @@ class LibvirtConnTestCase(test.TestCase):
         # NOTE(vish): verifies destroy doesn't raise if the instance disappears
         conn._destroy(instance)
 
+    def test_undefine_domain_with_not_found_instance(self):
+        def fake_lookup(instance_name):
+            raise libvirt.libvirtError("not found")
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        libvirt.libvirtError.get_error_code().AndReturn(
+            libvirt.VIR_ERR_NO_DOMAIN)
+
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {'name': 'test'}
+
+        # NOTE(wenjianhn): verifies undefine doesn't raise if the
+        # instance disappears
+        conn._undefine_domain(instance)
+
     def test_disk_over_committed_size_total(self):
         # Ensure destroy calls managedSaveRemove for saved instance.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -6362,7 +6380,7 @@ class LibvirtDriverTestCase(test.TestCase):
     def test_wait_for_running(self):
         def fake_get_info(instance):
             if instance['name'] == "not_found":
-                raise exception.NotFound
+                raise exception.InstanceNotFound(instance_id=instance['uuid'])
             elif instance['name'] == "running":
                 return {'state': power_state.RUNNING}
             else:
@@ -6372,7 +6390,7 @@ class LibvirtDriverTestCase(test.TestCase):
                        fake_get_info)
 
         # instance not found case
-        self.assertRaises(exception.NotFound,
+        self.assertRaises(exception.InstanceNotFound,
                 self.libvirtconnection._wait_for_running,
                     {'name': 'not_found',
                      'uuid': 'not_found_uuid'})
