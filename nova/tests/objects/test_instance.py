@@ -171,6 +171,7 @@ class _TestInstanceObject(object):
 
     def test_load_invalid(self):
         inst = instance.Instance()
+        inst.uuid = 'fake-uuid'
         self.assertRaises(exception.ObjectActionError,
                           inst.obj_load_attr, 'foo')
 

@@ -473,6 +473,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 action='obj_load_attr',
                 reason='attribute %s not lazy-loadable' % attrname)
 
+        LOG.debug(_("Lazy-loading `%(attr)s' on %(name) uuid %(uuid)s"),
+                  {'attr': attrname,
+                   'name': self.obj_name(),
+                   'uuid': self.uuid,
+                   })
         # FIXME(comstud): This should be optimized to only load the attr.
         instance = self.__class__.get_by_uuid(self._context,
                                               uuid=self.uuid,

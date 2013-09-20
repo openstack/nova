@@ -18,6 +18,11 @@ from nova import exception
 from nova.objects import base
 from nova.objects import compute_node
 from nova.objects import utils
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
+
+
+LOG = logging.getLogger(__name__)
 
 
 class Service(base.NovaPersistentObject, base.NovaObject):
@@ -65,6 +70,11 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         return service
 
     def obj_load_attr(self, attrname):
+        LOG.debug(_("Lazy-loading `%(attr)s' on %(name)s id %(id)s"),
+                  {'attr': attrname,
+                   'name': self.obj_name(),
+                   'id': self.id,
+                   })
         if attrname != 'compute_node':
             raise exception.ObjectActionError(
                 action='obj_load_attr',
