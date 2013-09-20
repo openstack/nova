@@ -28,8 +28,11 @@ def fake_get(*args, **kwargs):
     return nova_group
 
 
-def fake_get_instance_security_groups(*args, **kwargs):
-    return [{'name': 'test'}]
+def fake_get_instances_security_groups_bindings(self, context, servers):
+    result = {}
+    for s in servers:
+        result[s.get('id')] = [{'name': 'test'}]
+    return result
 
 
 class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
@@ -40,8 +43,8 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
         super(SecurityGroupsJsonTest, self).setUp()
         self.stubs.Set(neutron_driver.SecurityGroupAPI, 'get', fake_get)
         self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'get_instance_security_groups',
-                       fake_get_instance_security_groups)
+                       'get_instances_security_groups_bindings',
+                       fake_get_instances_security_groups_bindings)
 
     def test_server_create(self):
         self._post_server()

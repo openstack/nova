@@ -42,6 +42,11 @@ wrap_check_security_groups_policy = compute_api.policy_decorator(
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+# NOTE: Neutron client has a max URL length of 8192, so we have
+# to limit the number of IDs we include in any single search.  Really
+# doesn't seem to be any point in making this a config value.
+MAX_SEARCH_IDS = 150
+
 
 class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
@@ -279,35 +284,92 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 raise exc_info[0], exc_info[1], exc_info[2]
         return self._convert_to_nova_security_group_rule_format(rule)
 
-    def get_instances_security_groups_bindings(self, context):
+    def _get_ports_from_server_list(self, servers, neutron):
+        """Returns a list of ports used by the servers."""
+
+        def _chunk_by_ids(servers, limit):
+            ids = []
+            for server in servers:
+                ids.append(server['id'])
+                if len(ids) >= limit:
+                    yield ids
+                    ids = []
+            if ids:
+                yield ids
+
+        # Note: Have to split the query up as the search criteria
+        # form part of the URL, which has a fixed max size
+        ports = []
+        for ids in _chunk_by_ids(servers, MAX_SEARCH_IDS):
+            search_opts = {'device_id': ids}
+            ports.extend(neutron.list_ports(**search_opts).get('ports'))
+
+        return ports
+
+    def _get_secgroups_from_port_list(self, ports, neutron):
+        """Returns a dict of security groups keyed by thier ids."""
+
+        def _chunk_by_ids(sg_ids, limit):
+            sg_id_list = []
+            for sg_id in sg_ids:
+                sg_id_list.append(sg_id)
+                if len(sg_id_list) >= limit:
+                    yield sg_id_list
+                    sg_id_list = []
+            if sg_id_list:
+                yield sg_id_list
+
+        # Find the set of unique SecGroup IDs to search for
+        sg_ids = set()
+        for port in ports:
+            sg_ids.update(port.get('security_groups', []))
+
+        # Note: Have to split the query up as the search criteria
+        # form part of the URL, which has a fixed max size
+        security_groups = {}
+        for sg_id_list in _chunk_by_ids(sg_ids, MAX_SEARCH_IDS):
+            sg_search_opts = {'id': sg_id_list}
+            search_results = neutron.list_security_groups(**sg_search_opts)
+            for sg in search_results.get('security_groups'):
+                security_groups[sg['id']] = sg
+
+        return security_groups
+
+    def get_instances_security_groups_bindings(self, context, servers,
+                                               detailed=False):
         """Returns a dict(instance_id, [security_groups]) to allow obtaining
         all of the instances and their security groups in one shot.
         """
-        neutron = neutronv2.get_client(context)
-        ports = neutron.list_ports().get('ports')
-        security_groups = neutron.list_security_groups().get('security_groups')
-        security_group_lookup = {}
-        instances_security_group_bindings = {}
-        for security_group in security_groups:
-            security_group_lookup[security_group['id']] = security_group
 
+        neutron = neutronv2.get_client(context)
+
+        ports = self._get_ports_from_server_list(servers, neutron)
+
+        security_groups = self._get_secgroups_from_port_list(ports, neutron)
+
+        instances_security_group_bindings = {}
         for port in ports:
-            for port_security_group in port.get('security_groups', []):
-                try:
-                    sg = security_group_lookup[port_security_group]
-                    # name is optional in neutron so if not specified return id
-                    if sg.get('name'):
-                        sg_entry = {'name': sg['name']}
+            for port_sg_id in port.get('security_groups', []):
+
+                # Note:  have to check we found port_sg as its possible
+                # the port has an SG that this user doesn't have access to
+                port_sg = security_groups.get(port_sg_id)
+                if port_sg:
+                    if detailed:
+                        sg_entry = self._convert_to_nova_security_group_format(
+                                 port_sg)
+                        instances_security_group_bindings.setdefault(
+                            port['device_id'], []).append(sg_entry)
                     else:
-                        sg_entry = {'name': sg['id']}
-                    instances_security_group_bindings.setdefault(
-                        port['device_id'], []).append(sg_entry)
-                except KeyError:
-                    # This should only happen due to a race condition
-                    # if the security group on a port was deleted after the
-                    # ports were returned. We pass since this security
-                    # group is no longer on the port.
-                    pass
+                        # name is optional in neutron so if not specified
+                        # return id
+                        name = port_sg.get('name')
+                        if not name:
+                            name = port_sg.get('id')
+                        sg_entry = {'name': name}
+                        instances_security_group_bindings.setdefault(
+                            port['device_id'], []).append(sg_entry)
+
         return instances_security_group_bindings
 
     def get_instance_security_groups(self, context, instance_uuid,
@@ -316,38 +378,10 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         If detailed is True then it also returns the full details of the
         security groups associated with an instance.
         """
-        neutron = neutronv2.get_client(context)
-        params = {'device_id': instance_uuid}
-        ports = neutron.list_ports(**params)
-        security_groups = neutron.list_security_groups().get('security_groups')
-
-        security_group_lookup = {}
-        for security_group in security_groups:
-            security_group_lookup[security_group['id']] = security_group
-
-        ret = []
-        for port in ports['ports']:
-            for security_group in port.get('security_groups', []):
-                try:
-                    if detailed:
-                        ret.append(self._convert_to_nova_security_group_format(
-                            security_group_lookup[security_group]))
-                    else:
-                        name = security_group_lookup[security_group].get(
-                            'name')
-                        # Since the name is optional for
-                        # neutron security groups
-                        if not name:
-                            name = security_group
-                        ret.append({'name': name})
-                except KeyError:
-                    # This should only happen due to a race condition
-                    # if the security group on a port was deleted after the
-                    # ports were returned. We pass since this security
-                    # group is no longer on the port.
-                    pass
-
-        return ret
+        servers = [{'id': instance_uuid}]
+        sg_bindings = self.get_instances_security_groups_bindings(
+                                  context, servers, detailed)
+        return sg_bindings.get(instance_uuid)
 
     def _has_security_group_requirements(self, port):
         port_security_enabled = port.get('port_security_enabled', True)
