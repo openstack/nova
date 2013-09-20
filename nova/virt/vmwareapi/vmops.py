@@ -844,8 +844,6 @@ class VMwareVMOps(object):
     def reboot(self, instance, network_info):
         """Reboot a VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
-        self.plug_vifs(instance, network_info)
-
         lst_properties = ["summary.guest.toolsStatus", "runtime.powerState",
                           "summary.guest.toolsRunningStatus"]
         props = self._session._call_method(vim_util, "get_object_properties",
@@ -898,9 +896,6 @@ class VMwareVMOps(object):
             except Exception as excep:
                 LOG.warn(_("In vmwareapi:vmops:delete, got this exception"
                            " while destroying the VM: %s") % str(excep))
-
-            if network_info:
-                self.unplug_vifs(instance, network_info)
         except Exception as exc:
             LOG.exception(exc, instance=instance)
 
@@ -945,10 +940,6 @@ class VMwareVMOps(object):
             except Exception as excep:
                 LOG.warn(_("In vmwareapi:vmops:destroy, got this exception"
                            " while un-registering the VM: %s") % str(excep))
-
-            if network_info:
-                self.unplug_vifs(instance, network_info)
-
             # Delete the folder holding the VM related content on
             # the datastore.
             if destroy_disks:
@@ -1228,9 +1219,6 @@ class VMwareVMOps(object):
         except Exception as excep:
             LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
                      "exception while destroying the VM: %s") % str(excep))
-
-        if network_info:
-            self.unplug_vifs(instance, network_info)
 
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info, power_on=True):
@@ -1598,11 +1586,13 @@ class VMwareVMOps(object):
 
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
-        pass
+        msg = _("VIF plugging is not supported by the VMware driver.")
+        raise NotImplementedError(msg)
 
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
-        pass
+        msg = _("VIF unplugging is not supported by the VMware driver.")
+        raise NotImplementedError(msg)
 
 
 class VMwareVCVMOps(VMwareVMOps):

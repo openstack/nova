@@ -1664,3 +1664,17 @@ class VolumeOpsTestCase(HyperVAPITestCase):
             self.assertRaises(exception.NotFound,
                               self.volumeops._get_mounted_disk_from_lun,
                               target_iqn, target_lun)
+
+    def test_plug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self._conn.plug_vifs,
+                          instance=self._test_spawn_instance,
+                          network_info=None)
+
+    def test_unplug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self._conn.unplug_vifs,
+                          instance=self._test_spawn_instance,
+                          network_info=None)

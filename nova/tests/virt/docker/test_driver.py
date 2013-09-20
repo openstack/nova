@@ -71,3 +71,17 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
                          self.connection.get_host_stats()['host_hostname'])
         self.assertEqual('foo',
                          self.connection.get_host_stats()['host_hostname'])
+
+    def test_plug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self.connection.plug_vifs,
+                          instance=utils.get_test_instance(),
+                          network_info=None)
+
+    def test_unplug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self.assertRaises(NotImplementedError,
+                          self.connection.unplug_vifs,
+                          instance=utils.get_test_instance(),
+                          network_info=None)
