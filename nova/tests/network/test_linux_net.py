@@ -16,8 +16,10 @@
 # under the License.
 
 import calendar
+import contextlib
 import os
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -937,3 +939,25 @@ class LinuxNetworkTestCase(test.TestCase):
         expected = ('-s 0.0.0.0/0 -d 169.254.169.254/32 -p tcp -m tcp '
                     '--dport 80 -j REDIRECT --to-ports 8775')
         self._test_add_metadata_forward_rule(expected)
+
+    def test_ensure_bridge_brings_up_interface(self):
+        calls = {
+            'device_exists': [mock.call('bridge')],
+            '_execute': [
+                mock.call('brctl', 'addif', 'bridge', 'eth0',
+                          run_as_root=True, check_exit_code=False),
+                mock.call('ip', 'link', 'set', 'eth0', 'up',
+                          run_as_root=True, check_exit_code=False),
+                mock.call('ip', 'route', 'show', 'dev', 'eth0'),
+                mock.call('ip', 'addr', 'show', 'dev', 'eth0', 'scope',
+                          'global', run_as_root=True),
+                ]
+            }
+        with contextlib.nested(
+            mock.patch.object(linux_net, 'device_exists', return_value=True),
+            mock.patch.object(linux_net, '_execute', return_value=('', ''))
+        ) as (device_exists, _execute):
+            driver = linux_net.LinuxBridgeInterfaceDriver()
+            driver.ensure_bridge('bridge', 'eth0')
+            device_exists.assert_has_calls(calls['device_exists'])
+            _execute.assert_has_calls(calls['_execute'])
