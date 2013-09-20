@@ -51,7 +51,7 @@ pci_requests_multiple = [{'count': 1,
                           'spec': [{'vendor_id': 'v2'}]}]
 
 
-class PciDeviceStatsTestCase(test.TestCase):
+class PciDeviceStatsTestCase(test.NoDBTestCase):
     def _create_fake_devs(self):
         self.fake_dev_1 = pci_device.PciDevice.create(fake_pci_1)
         self.fake_dev_2 = pci_device.PciDevice.create(fake_pci_2)

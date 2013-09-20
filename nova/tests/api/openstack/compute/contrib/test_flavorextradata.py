@@ -50,7 +50,7 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
     ]
 
 
-class FlavorextradataTest(test.TestCase):
+class FlavorextradataTest(test.NoDBTestCase):
     def setUp(self):
         super(FlavorextradataTest, self).setUp()
         ext = ('nova.api.openstack.compute.contrib'

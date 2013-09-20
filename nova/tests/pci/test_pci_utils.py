@@ -21,7 +21,7 @@ from nova.pci import pci_utils
 from nova import test
 
 
-class PciDeviceMatchTestCase(test.TestCase):
+class PciDeviceMatchTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciDeviceMatchTestCase, self).setUp()
         self.fake_pci_1 = {'vendor_id': 'v1',
@@ -49,7 +49,7 @@ class PciDeviceMatchTestCase(test.TestCase):
             [{'vendor_id': 'v1', 'device_id': 'd1', 'wrong_key': 'k1'}]))
 
 
-class PciDeviceAddressParserTestCase(test.TestCase):
+class PciDeviceAddressParserTestCase(test.NoDBTestCase):
     def test_parse_address(self):
         self.parse_result = pci_utils.parse_address("0000:04:12.6")
         self.assertEqual(self.parse_result, ('0000', '04', '12', '6'))

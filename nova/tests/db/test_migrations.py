@@ -183,7 +183,7 @@ class CommonTestsMixIn(object):
             self.fail("Shouldn't have connected")
 
 
-class BaseMigrationTestCase(test.TestCase):
+class BaseMigrationTestCase(test.NoDBTestCase):
     """Base class fort testing migrations and migration utils."""
     USER = None
     PASSWD = None
@@ -3136,7 +3136,7 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         db_utils.get_table(engine, 'bm_pxe_ips')
 
 
-class ProjectTestCase(test.TestCase):
+class ProjectTestCase(test.NoDBTestCase):
 
     def test_all_migrations_have_downgrade(self):
         topdir = os.path.normpath(os.path.dirname(__file__) + '/../../../')

@@ -129,7 +129,7 @@ def fake_instance_get_all_by_host(context, host):
     return results
 
 
-class HypervisorsTest(test.TestCase):
+class HypervisorsTest(test.NoDBTestCase):
     def setUp(self):
         super(HypervisorsTest, self).setUp()
         self.controller = hypervisors.HypervisorsController()
@@ -415,7 +415,7 @@ class HypervisorsTest(test.TestCase):
                           self.controller.statistics, req)
 
 
-class HypervisorsSerializersTest(test.TestCase):
+class HypervisorsSerializersTest(test.NoDBTestCase):
     def compare_to_exemplar(self, exemplar, hyper):
         # Check attributes
         for key, value in exemplar.items():

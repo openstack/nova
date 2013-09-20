@@ -30,7 +30,7 @@ dev_dict = {
     }
 
 
-class PciHostDevicesWhiteListTestCase(test.TestCase):
+class PciHostDevicesWhiteListTestCase(test.NoDBTestCase):
     def setUp(self):
         super(PciHostDevicesWhiteListTestCase, self).setUp()
 

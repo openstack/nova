@@ -36,7 +36,7 @@ def fake_create_cert(context, *args, **kwargs):
     return 'fakepk', 'fakecert'
 
 
-class CertificatesTest(test.TestCase):
+class CertificatesTest(test.NoDBTestCase):
     def setUp(self):
         super(CertificatesTest, self).setUp()
         self.context = context.RequestContext('fake', 'fake')
@@ -73,7 +73,7 @@ class CertificatesTest(test.TestCase):
         self.assertEqual(self.controller.create.wsgi_code, 201)
 
 
-class CertificatesSerializerTest(test.TestCase):
+class CertificatesSerializerTest(test.NoDBTestCase):
     def test_index_serializer(self):
         serializer = certificates.CertificateTemplate()
         text = serializer.serialize(dict(

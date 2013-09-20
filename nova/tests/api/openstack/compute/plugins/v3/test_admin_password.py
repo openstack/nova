@@ -46,7 +46,7 @@ def fake_set_admin_password_non_implement(self, context, instance,
     raise NotImplementedError()
 
 
-class AdminPasswordTest(test.TestCase):
+class AdminPasswordTest(test.NoDBTestCase):
 
     def setUp(self):
         super(AdminPasswordTest, self).setUp()
@@ -100,7 +100,7 @@ class AdminPasswordTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
 
-class AdminPasswordXMLTest(test.TestCase):
+class AdminPasswordXMLTest(test.NoDBTestCase):
     def test_change_password_deserializer(self):
         deserializer = admin_password.ChangePasswordDeserializer()
         request = '<change_password admin_password="1"></change_password>'

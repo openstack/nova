@@ -116,7 +116,7 @@ class FakeResponse(object):
         pass
 
 
-class FlavorAccessTest(test.TestCase):
+class FlavorAccessTest(test.NoDBTestCase):
     def setUp(self):
         super(FlavorAccessTest, self).setUp()
         self.flavor_controller = flavors_api.Controller()
@@ -291,7 +291,7 @@ class FlavorAccessTest(test.TestCase):
                           self.req, '3', body)
 
 
-class FlavorAccessSerializerTest(test.TestCase):
+class FlavorAccessSerializerTest(test.NoDBTestCase):
     def test_serializer_empty(self):
         serializer = flavor_access.FlavorAccessTemplate()
         text = serializer.serialize(dict(flavor_access=[]))

@@ -93,7 +93,7 @@ EXP_VERSIONS = {
 }
 
 
-class VersionsTest(test.TestCase):
+class VersionsTest(test.NoDBTestCase):
 
     def test_get_version_list(self):
         req = webob.Request.blank('/')
@@ -516,7 +516,7 @@ class VersionsTest(test.TestCase):
                         matchers.DictMatches(expected))
 
 
-class VersionsViewBuilderTests(test.TestCase):
+class VersionsViewBuilderTests(test.NoDBTestCase):
     def test_view_builder(self):
         base_url = "http://example.org/"
 
@@ -580,7 +580,7 @@ class VersionsViewBuilderTests(test.TestCase):
         self.assertEqual(actual, expected)
 
 
-class VersionsSerializerTests(test.TestCase):
+class VersionsSerializerTests(test.NoDBTestCase):
     def test_versions_list_xml_serializer(self):
         versions_data = {
             'versions': [

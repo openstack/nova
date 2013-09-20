@@ -192,7 +192,7 @@ class FakeNetworkAPI(object):
         return new_networks
 
 
-class NetworksTest(test.TestCase):
+class NetworksTest(test.NoDBTestCase):
 
     def setUp(self):
         super(NetworksTest, self).setUp()

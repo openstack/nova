@@ -28,7 +28,7 @@ from nova import test
 CONF = cfg.CONF
 
 
-class ConsoleAuthRpcAPITestCase(test.TestCase):
+class ConsoleAuthRpcAPITestCase(test.NoDBTestCase):
     def _test_consoleauth_api(self, method, **kwargs):
         do_cast = kwargs.pop('_do_cast', False)
         ctxt = context.RequestContext('fake_user', 'fake_project')

@@ -62,7 +62,7 @@ class FakeRequest(object):
     GET = {}
 
 
-class MigrationsTestCase(test.TestCase):
+class MigrationsTestCase(test.NoDBTestCase):
     def setUp(self):
         """Run before each test."""
         super(MigrationsTestCase, self).setUp()
@@ -101,7 +101,7 @@ class MigrationsTestCase(test.TestCase):
                           self.req)
 
 
-class MigrationsTemplateTest(test.TestCase):
+class MigrationsTemplateTest(test.NoDBTestCase):
     def setUp(self):
         super(MigrationsTemplateTest, self).setUp()
         self.serializer = migrations.MigrationsTemplate()

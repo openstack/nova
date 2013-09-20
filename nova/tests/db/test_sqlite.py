@@ -27,7 +27,7 @@ from sqlalchemy import Column, BigInteger, String
 from sqlalchemy.ext.declarative import declarative_base
 
 
-class TestSqlite(test.TestCase):
+class TestSqlite(test.NoDBTestCase):
     """Tests for sqlite-specific logic."""
 
     def setUp(self):

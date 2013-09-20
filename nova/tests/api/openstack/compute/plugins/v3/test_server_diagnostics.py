@@ -42,7 +42,7 @@ def fake_instance_get_instance_not_found(self, _context, instance_uuid):
     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
-class ServerDiagnosticsTest(test.TestCase):
+class ServerDiagnosticsTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ServerDiagnosticsTest, self).setUp()
@@ -69,7 +69,7 @@ class ServerDiagnosticsTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
 
-class TestServerDiagnosticsXMLSerializer(test.TestCase):
+class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
     namespace = wsgi.XMLNS_V11
 
     def _tag(self, elem):

@@ -77,7 +77,7 @@ def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
     return newflavor
 
 
-class FlavorManageTest(test.TestCase):
+class FlavorManageTest(test.NoDBTestCase):
     def setUp(self):
         super(FlavorManageTest, self).setUp()
         self.stubs.Set(flavors,

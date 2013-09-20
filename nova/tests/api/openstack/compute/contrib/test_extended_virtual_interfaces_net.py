@@ -56,7 +56,7 @@ def get_vif_by_mac_address(self, context, mac_address):
         return {'net_uuid': '11111111-1111-1111-1111-11111111111111112'}
 
 
-class ExtendedServerVIFNetTest(test.TestCase):
+class ExtendedServerVIFNetTest(test.NoDBTestCase):
     content_type = 'application/json'
     prefix = "%s:" % extended_virtual_interfaces_net. \
                         Extended_virtual_interfaces_net.alias

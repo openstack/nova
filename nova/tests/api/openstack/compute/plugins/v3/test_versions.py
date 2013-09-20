@@ -73,7 +73,7 @@ EXP_VERSIONS = {
 }
 
 
-class VersionsTest(test.TestCase):
+class VersionsTest(test.NoDBTestCase):
 
     def test_get_version_list_302(self):
         req = webob.Request.blank('/v3')

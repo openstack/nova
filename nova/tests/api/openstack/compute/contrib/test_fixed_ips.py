@@ -104,7 +104,7 @@ def fake_network_get_all(context):
     return [FakeModel(network)]
 
 
-class FixedIpTest(test.TestCase):
+class FixedIpTest(test.NoDBTestCase):
 
     def setUp(self):
         super(FixedIpTest, self).setUp()

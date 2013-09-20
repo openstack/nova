@@ -132,7 +132,7 @@ def fake_get_instance(self, context, intance_id):
     return {}
 
 
-class InterfaceAttachTests(test.TestCase):
+class InterfaceAttachTests(test.NoDBTestCase):
     def setUp(self):
         super(InterfaceAttachTests, self).setUp()
         self.flags(neutron_auth_strategy=None)

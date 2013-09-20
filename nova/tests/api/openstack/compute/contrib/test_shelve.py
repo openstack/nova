@@ -23,7 +23,7 @@ from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
 
 
-class ShelvePolicyTest(test.TestCase):
+class ShelvePolicyTest(test.NoDBTestCase):
     def setUp(self):
         super(ShelvePolicyTest, self).setUp()
         self.controller = shelve.ShelveController()

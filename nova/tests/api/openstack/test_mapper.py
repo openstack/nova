@@ -22,7 +22,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class MapperTest(test.TestCase):
+class MapperTest(test.NoDBTestCase):
     def test_resource_project_prefix(self):
         class Controller(object):
             def index(self, req):
