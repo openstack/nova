@@ -20,7 +20,7 @@ from nova import test
 from nova import wsgi
 
 
-class TestFaults(test.TestCase):
+class TestFaults(test.NoDBTestCase):
     """Tests covering ec2 Fault class."""
 
     def test_fault_exception(self):

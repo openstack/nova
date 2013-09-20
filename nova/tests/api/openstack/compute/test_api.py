@@ -29,7 +29,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class APITest(test.TestCase):
+class APITest(test.NoDBTestCase):
 
     def _wsgi_app(self, inner_app):
         # simpler version of the app than fakes.wsgi_app

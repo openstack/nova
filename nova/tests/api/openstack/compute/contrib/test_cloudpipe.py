@@ -50,7 +50,7 @@ def utils_vpn_ping(addr, port, timoeout=0.05, session_id=None):
     return True
 
 
-class CloudpipeTest(test.TestCase):
+class CloudpipeTest(test.NoDBTestCase):
 
     def setUp(self):
         super(CloudpipeTest, self).setUp()
@@ -130,7 +130,7 @@ class CloudpipeTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
 
-class CloudpipesXMLSerializerTest(test.TestCase):
+class CloudpipesXMLSerializerTest(test.NoDBTestCase):
     def test_default_serializer(self):
         serializer = cloudpipe.CloudpipeTemplate()
         exemplar = dict(cloudpipe=dict(instance_id='1234-1234-1234-1234'))

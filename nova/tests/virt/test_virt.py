@@ -23,7 +23,7 @@ from nova.virt.disk import api as disk_api
 from nova.virt import driver
 
 
-class TestVirtDriver(test.TestCase):
+class TestVirtDriver(test.NoDBTestCase):
     def test_block_device(self):
         swap = {'device_name': '/dev/sdb',
                 'swap_size': 1}
@@ -84,7 +84,7 @@ class TestVirtDriver(test.TestCase):
                                                 'swap_size': 1}))
 
 
-class TestVirtDisk(test.TestCase):
+class TestVirtDisk(test.NoDBTestCase):
     def setUp(self):
         super(TestVirtDisk, self).setUp()
         self.executes = []

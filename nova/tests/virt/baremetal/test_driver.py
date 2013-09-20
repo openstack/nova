@@ -55,7 +55,7 @@ BAREMETAL_FLAGS = dict(
 )
 
 
-class BareMetalDriverNoDBTestCase(test.TestCase):
+class BareMetalDriverNoDBTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(BareMetalDriverNoDBTestCase, self).setUp()

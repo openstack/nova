@@ -25,7 +25,7 @@ from nova.virt import driver
 from nova.volume import cinder
 
 
-class TestDriverBlockDevice(test.TestCase):
+class TestDriverBlockDevice(test.NoDBTestCase):
     driver_classes = {
         'swap': driver_block_device.DriverSwapBlockDevice,
         'ephemeral': driver_block_device.DriverEphemeralBlockDevice,

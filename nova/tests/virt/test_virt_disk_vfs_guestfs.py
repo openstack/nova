@@ -23,7 +23,7 @@ from nova.tests import fakeguestfs
 from nova.virt.disk.vfs import guestfs as vfsimpl
 
 
-class VirtDiskVFSGuestFSTest(test.TestCase):
+class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
 
     def setUp(self):
         super(VirtDiskVFSGuestFSTest, self).setUp()

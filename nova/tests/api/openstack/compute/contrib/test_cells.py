@@ -81,7 +81,7 @@ def fake_cells_api_get_all_cell_info(*args):
     return cells
 
 
-class CellsTest(test.TestCase):
+class CellsTest(test.NoDBTestCase):
     def setUp(self):
         super(CellsTest, self).setUp()
         self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', fake_cell_get)
@@ -396,7 +396,7 @@ class CellsTest(test.TestCase):
                 self.controller.sync_instances, req, body=body)
 
 
-class TestCellsXMLSerializer(test.TestCase):
+class TestCellsXMLSerializer(test.NoDBTestCase):
     def test_multiple_cells(self):
         fixture = {'cells': fake_cells_api_get_all_cell_info()}
 
@@ -455,7 +455,7 @@ class TestCellsXMLSerializer(test.TestCase):
         self.assertEqual(len(res_tree), 0)
 
 
-class TestCellsXMLDeserializer(test.TestCase):
+class TestCellsXMLDeserializer(test.NoDBTestCase):
     def test_cell_deserializer(self):
         caps_dict = {'cap1': 'a;b',
                              'cap2': 'c;d'}

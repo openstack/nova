@@ -29,7 +29,7 @@ from nova.tests import matchers
 CONF = cfg.CONF
 
 
-class NetworkRpcAPITestCase(test.TestCase):
+class NetworkRpcAPITestCase(test.NoDBTestCase):
     def setUp(self):
         super(NetworkRpcAPITestCase, self).setUp()
         self.flags(multi_host=True)

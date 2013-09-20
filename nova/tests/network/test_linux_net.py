@@ -222,7 +222,7 @@ def get_associated(context, network_id, host=None, address=None):
     return result
 
 
-class LinuxNetworkTestCase(test.TestCase):
+class LinuxNetworkTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LinuxNetworkTestCase, self).setUp()

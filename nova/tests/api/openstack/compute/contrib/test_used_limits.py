@@ -32,7 +32,7 @@ class FakeRequest(object):
         self.GET = {'reserved': 1} if reserved else {}
 
 
-class UsedLimitsTestCase(test.TestCase):
+class UsedLimitsTestCase(test.NoDBTestCase):
     def setUp(self):
         """Run before each test."""
         super(UsedLimitsTestCase, self).setUp()

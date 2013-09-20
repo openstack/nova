@@ -65,7 +65,7 @@ def format_event(event):
     return event
 
 
-class InstanceActionsPolicyTest(test.TestCase):
+class InstanceActionsPolicyTest(test.NoDBTestCase):
     def setUp(self):
         super(InstanceActionsPolicyTest, self).setUp()
         self.controller = instance_actions.InstanceActionsController()
@@ -106,7 +106,7 @@ class InstanceActionsPolicyTest(test.TestCase):
                           str(uuid.uuid4()), '1')
 
 
-class InstanceActionsTest(test.TestCase):
+class InstanceActionsTest(test.NoDBTestCase):
     def setUp(self):
         super(InstanceActionsTest, self).setUp()
         self.controller = instance_actions.InstanceActionsController()
@@ -205,7 +205,7 @@ class InstanceActionsTest(test.TestCase):
                           FAKE_UUID)
 
 
-class InstanceActionsSerializerTest(test.TestCase):
+class InstanceActionsSerializerTest(test.NoDBTestCase):
     def setUp(self):
         super(InstanceActionsSerializerTest, self).setUp()
         self.fake_actions = copy.deepcopy(fake_instance_actions.FAKE_ACTIONS)

@@ -25,7 +25,7 @@ from nova.keymgr import key
 from nova import test
 
 
-class KeyTestCase(test.TestCase):
+class KeyTestCase(test.NoDBTestCase):
 
     def _create_key(self):
         raise NotImplementedError()

@@ -39,7 +39,7 @@ def get_vifs_by_instance(self, context, instance_id):
              'address': '11-11-11-11-11-11'}]
 
 
-class ServerVirtualInterfaceTest(test.TestCase):
+class ServerVirtualInterfaceTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ServerVirtualInterfaceTest, self).setUp()
@@ -67,7 +67,7 @@ class ServerVirtualInterfaceTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
 
-class ServerVirtualInterfaceSerializerTest(test.TestCase):
+class ServerVirtualInterfaceSerializerTest(test.NoDBTestCase):
     def setUp(self):
         super(ServerVirtualInterfaceSerializerTest, self).setUp()
         self.namespace = wsgi.XMLNS_V11

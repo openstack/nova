@@ -107,7 +107,7 @@ def fake_last_completed_audit_period(unit=None, before=None):
     return begin1, end1
 
 
-class InstanceUsageAuditLogTest(test.TestCase):
+class InstanceUsageAuditLogTest(test.NoDBTestCase):
     def setUp(self):
         super(InstanceUsageAuditLogTest, self).setUp()
         self.context = context.get_admin_context()

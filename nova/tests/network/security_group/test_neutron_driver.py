@@ -28,7 +28,7 @@ from nova.network.security_group import neutron_driver
 from nova import test
 
 
-class TestNeutronDriver(test.TestCase):
+class TestNeutronDriver(test.NoDBTestCase):
     def setUp(self):
         super(TestNeutronDriver, self).setUp()
         self.mox.StubOutWithMock(neutronv2, 'get_client')

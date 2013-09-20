@@ -33,7 +33,7 @@ class Filter2(filters.BaseFilter):
     pass
 
 
-class FiltersTestCase(test.TestCase):
+class FiltersTestCase(test.NoDBTestCase):
     def test_filter_all(self):
         filter_obj_list = ['obj1', 'obj2', 'obj3']
         filter_properties = 'fake_filter_properties'

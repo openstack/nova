@@ -39,7 +39,7 @@ class FakeRequest(object):
     environ = {"nova.context": context.get_admin_context()}
 
 
-class AggregateTestCase(test.TestCase):
+class AggregateTestCase(test.NoDBTestCase):
     """Test Case for aggregates admin api."""
 
     def setUp(self):

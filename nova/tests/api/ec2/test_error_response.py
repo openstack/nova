@@ -38,7 +38,7 @@ class TestServerExceptionEC2(Exception):
     code = 500
 
 
-class Ec2ErrorResponseTestCase(test.TestCase):
+class Ec2ErrorResponseTestCase(test.NoDBTestCase):
     """
     Test EC2 error responses.
 

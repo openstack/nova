@@ -139,7 +139,7 @@ class CommonMixin(object):
         self.mox.UnsetStubs()
 
 
-class AdminActionsTest(CommonMixin, test.TestCase):
+class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
                    'resetNetwork', 'injectNetworkInfo', 'lock',
@@ -262,7 +262,7 @@ class AdminActionsTest(CommonMixin, test.TestCase):
         self.assertEqual(403, res.status_int)
 
 
-class CreateBackupTests(CommonMixin, test.TestCase):
+class CreateBackupTests(CommonMixin, test.NoDBTestCase):
     def setUp(self):
         super(CreateBackupTests, self).setUp()
         self.mox.StubOutWithMock(common,
@@ -430,7 +430,7 @@ class CreateBackupTests(CommonMixin, test.TestCase):
                                          body_map=body_map)
 
 
-class ResetStateTests(test.TestCase):
+class ResetStateTests(test.NoDBTestCase):
     def setUp(self):
         super(ResetStateTests, self).setUp()
 
