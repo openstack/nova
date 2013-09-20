@@ -381,10 +381,11 @@ def info_from_instance(context, instance_ref, network_info,
 
         # Date properties
         created_at=str(instance_ref['created_at']),
-        # Nova's deleted vs terminated instance terminology is confusing,
-        # this should be when the instance was deleted (i.e. terminated_at),
-        # not when the db record was deleted. (mdragon)
-        deleted_at=null_safe_isotime(instance_ref.get('terminated_at')),
+        # Terminated and Deleted are slightly different (although being
+        # terminated and not deleted is a transient state), so include
+        # both and let the recipient decide which they want to use.
+        terminated_at=null_safe_isotime(instance_ref.get('terminated_at')),
+        deleted_at=null_safe_isotime(instance_ref.get('deleted_at')),
         launched_at=null_safe_isotime(instance_ref.get('launched_at')),
 
         # Image properties
