@@ -5617,8 +5617,17 @@ class ComputeTestCase(BaseTestCase):
         ctxt = self.context.elevated()
         self._create_fake_instance({'host': self.compute.host})
         self._create_fake_instance({'host': self.compute.host})
+        self._create_fake_instance({'host': self.compute.host})
         self.mox.StubOutWithMock(self.compute.driver, 'get_info')
         self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
+
+        # Check to make sure task continues on error.
+        self.compute.driver.get_info(mox.IgnoreArg()).AndRaise(
+            exception.InstanceNotFound(instance_id='fake-uuid'))
+        self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
+                                                power_state.NOSTATE).AndRaise(
+            exception.InstanceNotFound(instance_id='fake-uuid'))
+
         self.compute.driver.get_info(mox.IgnoreArg()).AndReturn(
             {'state': power_state.RUNNING})
         self.compute._sync_instance_power_state(ctxt, mox.IgnoreArg(),
