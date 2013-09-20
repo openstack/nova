@@ -275,6 +275,7 @@ class VMOps(object):
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
         root_vdi = vm_utils.move_disks(self._session, instance, disk_info)
+        vdis = {'root': root_vdi}
 
         if resize_instance:
             self._resize_up_root_vdi(instance, root_vdi)
@@ -285,16 +286,25 @@ class VMOps(object):
                 context, self._session, instance, name_label)
 
         disk_image_type = vm_utils.determine_disk_image_type(image_meta)
-        vm_ref = self._create_vm(context, instance, instance['name'],
-                                 {'root': root_vdi},
-                                 disk_image_type, network_info, kernel_file,
-                                 ramdisk_file)
+        self._ensure_instance_name_unique(name_label)
+        self._ensure_enough_free_mem(instance)
+        vm_ref = self._create_vm_record(context, instance, name_label,
+                vdis, disk_image_type, kernel_file, ramdisk_file)
+
+        self._attach_disks(instance, vm_ref, name_label, vdis,
+                           disk_image_type)
+
+        self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
+        self._create_vifs(instance, vm_ref, network_info)
+        self.inject_network_info(instance, network_info, vm_ref)
+        self._inject_hostname(instance, vm_ref, False)
+        self._inject_instance_metadata(instance, vm_ref)
 
         self._attach_mapped_block_devices(instance, block_device_info)
 
         # 5. Start VM
         if power_on:
-            self._start(instance, vm_ref=vm_ref)
+            self._start(instance, vm_ref)
         self._update_instance_progress(context, instance,
                                        step=5,
                                        total_steps=RESIZE_TOTAL_STEPS)
@@ -388,6 +398,8 @@ class VMOps(object):
         @step
         def create_vm_record_step(undo_mgr, vdis, disk_image_type,
                 kernel_file, ramdisk_file):
+            self._ensure_instance_name_unique(name_label)
+            self._ensure_enough_free_mem(instance)
             vm_ref = self._create_vm_record(context, instance, name_label,
                     vdis, disk_image_type, kernel_file, ramdisk_file)
 
@@ -427,8 +439,10 @@ class VMOps(object):
 
         @step
         def setup_network_step(undo_mgr, vm_ref, vdis):
-            self._setup_vm_networking(instance, vm_ref, vdis, network_info,
-                    rescue)
+            self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
+            self._create_vifs(instance, vm_ref, network_info)
+            self.inject_network_info(instance, network_info, vm_ref)
+            self._inject_hostname(instance, vm_ref, rescue)
 
         @step
         def inject_instance_data_step(undo_mgr, vm_ref):
@@ -451,8 +465,11 @@ class VMOps(object):
 
         @step
         def boot_instance_step(undo_mgr, vm_ref):
-            self._boot_new_instance(instance, vm_ref, injected_files,
-                                    admin_password)
+            self._start(instance, vm_ref)
+            self._wait_for_instance_to_start(instance, vm_ref)
+            self._configure_new_instance_with_agent(instance, vm_ref,
+                    injected_files, admin_password)
+            self._remove_hostname(instance, vm_ref)
 
         @step
         def apply_security_group_filters_step(undo_mgr):
@@ -493,31 +510,10 @@ class VMOps(object):
         vm_utils.create_vbd(self._session, vm_ref, vdi_ref, DEVICE_RESCUE,
                             bootable=False)
 
-    def _create_vm(self, context, instance, name_label, vdis,
-            disk_image_type, network_info, kernel_file=None,
-            ramdisk_file=None, rescue=False):
-        """Create VM instance."""
-        vm_ref = self._create_vm_record(context, instance, name_label,
-                vdis, disk_image_type, kernel_file, ramdisk_file)
-        self._attach_disks(instance, vm_ref, name_label, vdis,
-                disk_image_type)
-        self._setup_vm_networking(instance, vm_ref, vdis, network_info,
-                rescue)
-        self._inject_instance_metadata(instance, vm_ref)
-
-        return vm_ref
-
-    def _setup_vm_networking(self, instance, vm_ref, vdis, network_info,
-            rescue):
-        # Alter the image before VM start for network injection.
+    def _file_inject_vm_settings(self, instance, vm_ref, vdis, network_info):
         if CONF.flat_injected:
             vm_utils.preconfigure_instance(self._session, instance,
                                            vdis['root']['ref'], network_info)
-
-        self._create_vifs(vm_ref, instance, network_info)
-        self.inject_network_info(instance, network_info, vm_ref)
-
-        self._inject_hostname(instance, vm_ref, rescue)
 
     def _ensure_instance_name_unique(self, name_label):
         vm_ref = vm_utils.lookup(self._session, name_label)
@@ -536,9 +532,6 @@ class VMOps(object):
         check only accounts for running VMs, so it can miss other builds
         that are in progress.)
         """
-        self._ensure_instance_name_unique(name_label)
-        self._ensure_enough_free_mem(instance)
-
         mode = self._determine_vm_mode(instance, vdis, disk_image_type)
         if instance['vm_mode'] != mode:
             # Update database with normalized (or determined) value
@@ -629,15 +622,7 @@ class VMOps(object):
                                           admin_password=admin_password,
                                           files=files)
 
-    def _boot_new_instance(self, instance, vm_ref, injected_files,
-                           admin_password):
-        """Boot a new instance and configure it."""
-        LOG.debug(_('Starting VM'), instance=instance)
-        self._start(instance, vm_ref)
-
-        ctx = nova_context.get_admin_context()
-
-        # Wait for boot to finish
+    def _wait_for_instance_to_start(self, instance, vm_ref):
         LOG.debug(_('Waiting for instance state to become running'),
                   instance=instance)
         expiration = time.time() + CONF.xenapi_running_timeout
@@ -645,10 +630,12 @@ class VMOps(object):
             state = self.get_info(instance, vm_ref)['state']
             if state == power_state.RUNNING:
                 break
-
             greenthread.sleep(0.5)
 
+    def _configure_new_instance_with_agent(self, instance, vm_ref,
+                                           injected_files, admin_password):
         if self.agent_enabled(instance):
+            ctx = nova_context.get_admin_context()
             agent_build = self._virtapi.agent_build_get_by_triple(
                 ctx, 'xen', instance['os_type'], instance['architecture'])
             if agent_build:
@@ -691,8 +678,6 @@ class VMOps(object):
 
             # Reset network config
             agent.resetnetwork()
-
-        self._remove_hostname(instance, vm_ref)
 
     def _get_vm_opaque_ref(self, instance, check_rescue=False):
         """Get xapi OpaqueRef from a db record.
@@ -784,7 +769,7 @@ class VMOps(object):
         # instance's progress field as each step is completed.
         #
         # For a first cut this should be fine, however, for large VM images,
-        # the _create_disks step begins to dominate the equation. A
+        # the get_vdis_for_instance step begins to dominate the equation. A
         # better approximation would use the percentage of the VM image that
         # has been streamed to the destination host.
         progress = round(float(step) / total_steps * 100)
@@ -1562,7 +1547,7 @@ class VMOps(object):
                     pass
         update_nwinfo()
 
-    def _create_vifs(self, vm_ref, instance, network_info):
+    def _create_vifs(self, instance, vm_ref, network_info):
         """Creates vifs for an instance."""
 
         LOG.debug(_("Creating vifs"), instance=instance)

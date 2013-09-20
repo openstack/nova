@@ -16,6 +16,7 @@
 #    under the License.
 
 
+from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
 from nova import exception
@@ -262,7 +263,215 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
                          self.vmops._get_dom_id(vm_ref=vm_ref))
 
 
-class RemoveHostnameTestCase(VMOpsTestBase):
+class SpawnTestCase(VMOpsTestBase):
+    def _stub_out_common(self):
+        self.mox.StubOutWithMock(self.vmops, '_ensure_instance_name_unique')
+        self.mox.StubOutWithMock(self.vmops, '_ensure_enough_free_mem')
+        self.mox.StubOutWithMock(self.vmops, '_update_instance_progress')
+        self.mox.StubOutWithMock(vm_utils, 'determine_disk_image_type')
+        self.mox.StubOutWithMock(vm_utils, 'get_vdis_for_instance')
+        self.mox.StubOutWithMock(vm_utils, 'safe_destroy_vdis')
+        self.mox.StubOutWithMock(self.vmops, '_resize_up_root_vdi')
+        self.mox.StubOutWithMock(vm_utils,
+                                 'create_kernel_and_ramdisk')
+        self.mox.StubOutWithMock(vm_utils, 'destroy_kernel_ramdisk')
+        self.mox.StubOutWithMock(self.vmops, '_create_vm_record')
+        self.mox.StubOutWithMock(self.vmops, '_destroy')
+        self.mox.StubOutWithMock(self.vmops, '_attach_disks')
+        self.mox.StubOutWithMock(self.vmops, '_attach_orig_disk_for_rescue')
+        self.mox.StubOutWithMock(self.vmops, 'inject_network_info')
+        self.mox.StubOutWithMock(self.vmops, '_inject_hostname')
+        self.mox.StubOutWithMock(self.vmops, '_inject_instance_metadata')
+        self.mox.StubOutWithMock(self.vmops, '_inject_auto_disk_config')
+        self.mox.StubOutWithMock(self.vmops, '_file_inject_vm_settings')
+        self.mox.StubOutWithMock(self.vmops, '_create_vifs')
+        self.mox.StubOutWithMock(self.vmops.firewall_driver,
+                                 'setup_basic_filtering')
+        self.mox.StubOutWithMock(self.vmops.firewall_driver,
+                                 'prepare_instance_filter')
+        self.mox.StubOutWithMock(self.vmops, '_start')
+        self.mox.StubOutWithMock(self.vmops, '_wait_for_instance_to_start')
+        self.mox.StubOutWithMock(self.vmops,
+                                 '_configure_new_instance_with_agent')
+        self.mox.StubOutWithMock(self.vmops, '_remove_hostname')
+        self.mox.StubOutWithMock(self.vmops.firewall_driver,
+                                 'apply_instance_filter')
+
+    def _test_spawn(self, name_label_param=None, block_device_info_param=None,
+                    rescue=False, include_root_vdi=True,
+                    throw_exception=None):
+        self._stub_out_common()
+
+        instance = {"name": "dummy", "uuid": "fake_uuid"}
+        name_label = name_label_param
+        if name_label is None:
+            name_label = "dummy"
+        image_meta = {"id": "image_id"}
+        context = "context"
+        session = self.vmops._session
+        injected_files = "fake_files"
+        admin_password = "password"
+        network_info = "net_info"
+        block_device_info = block_device_info_param
+        if block_device_info and not block_device_info['root_device_name']:
+            block_device_info = dict(block_device_info_param)
+            block_device_info['root_device_name'] = \
+                                                self.vmops.default_root_dev
+
+        steps = 11
+        if rescue:
+            steps = 12
+
+        self.vmops._update_instance_progress(context, instance, 1, steps)
+
+        di_type = "di_type"
+        vm_utils.determine_disk_image_type(image_meta).AndReturn(di_type)
+        self.vmops._update_instance_progress(context, instance, 2, steps)
+
+        vdis = {"other": {"ref": "fake_ref_2", "osvol": True}}
+        if include_root_vdi:
+            vdis["root"] = {"ref": "fake_ref"}
+        vm_utils.get_vdis_for_instance(context, session, instance, name_label,
+                    "image_id", di_type,
+                    block_device_info=block_device_info).AndReturn(vdis)
+        if include_root_vdi:
+            self.vmops._resize_up_root_vdi(instance, vdis["root"])
+        self.vmops._update_instance_progress(context, instance, 3, steps)
+
+        kernel_file = "kernel"
+        ramdisk_file = "ramdisk"
+        vm_utils.create_kernel_and_ramdisk(context, session,
+                instance, name_label).AndReturn((kernel_file, ramdisk_file))
+        self.vmops._update_instance_progress(context, instance, 4, steps)
+
+        vm_ref = "fake_vm_ref"
+        self.vmops._ensure_instance_name_unique(name_label)
+        self.vmops._ensure_enough_free_mem(instance)
+        self.vmops._create_vm_record(context, instance, name_label, vdis,
+                di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
+        self.vmops._update_instance_progress(context, instance, 5, steps)
+
+        self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
+                          admin_password, injected_files)
+        self.vmops._update_instance_progress(context, instance, 6, steps)
+
+        if rescue:
+            self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
+            self.vmops._update_instance_progress(context, instance, 7, steps)
+
+        self.vmops._file_inject_vm_settings(instance, vm_ref, vdis,
+                                            network_info)
+        self.vmops._create_vifs(instance, vm_ref, network_info)
+        self.vmops.inject_network_info(instance, network_info, vm_ref)
+        self.vmops._inject_hostname(instance, vm_ref, rescue)
+        self.vmops._update_instance_progress(context, instance, steps - 4,
+                                             steps)
+
+        self.vmops._inject_instance_metadata(instance, vm_ref)
+        self.vmops._inject_auto_disk_config(instance, vm_ref)
+        self.vmops._update_instance_progress(context, instance, steps - 3,
+                                             steps)
+
+        self.vmops.firewall_driver.setup_basic_filtering(instance,
+                network_info).AndRaise(NotImplementedError)
+        self.vmops.firewall_driver.prepare_instance_filter(instance,
+                                                           network_info)
+        self.vmops._update_instance_progress(context, instance, steps - 2,
+                                             steps)
+
+        self.vmops._start(instance, vm_ref)
+        self.vmops._wait_for_instance_to_start(instance, vm_ref)
+        self.vmops._configure_new_instance_with_agent(instance, vm_ref,
+                injected_files, admin_password)
+        self.vmops._remove_hostname(instance, vm_ref)
+        self.vmops._update_instance_progress(context, instance, steps - 1,
+                                             steps)
+
+        self.vmops.firewall_driver.apply_instance_filter(instance,
+                                                         network_info)
+        last_call = self.vmops._update_instance_progress(context, instance,
+                                                         steps, steps)
+        if throw_exception:
+            last_call.AndRaise(throw_exception)
+            self.vmops._destroy(instance, vm_ref, network_info=network_info)
+            vm_utils.destroy_kernel_ramdisk(self.vmops._session, instance,
+                                            kernel_file, ramdisk_file)
+            vm_utils.safe_destroy_vdis(self.vmops._session, ["fake_ref"])
+
+        self.mox.ReplayAll()
+        self.vmops.spawn(context, instance, image_meta, injected_files,
+                         admin_password, network_info,
+                         block_device_info_param, name_label_param, rescue)
+
+    def test_spawn(self):
+        self._test_spawn()
+
+    def test_spawn_with_alternate_options(self):
+        self._test_spawn(include_root_vdi=False, rescue=True,
+                         name_label_param="bob",
+                         block_device_info_param={"root_device_name": ""})
+
+    def test_spawn_performs_rollback_and_throws_exception(self):
+        self.assertRaises(test.TestingException, self._test_spawn,
+                          throw_exception=test.TestingException())
+
+    def test_finish_migration(self):
+        self._stub_out_common()
+        self.mox.StubOutWithMock(vm_utils, "move_disks")
+        self.mox.StubOutWithMock(self.vmops, "_attach_mapped_block_devices")
+
+        context = "context"
+        migration = {}
+        name_label = "dummy"
+        instance = {"name": name_label, "uuid": "fake_uuid"}
+        disk_info = "disk_info"
+        network_info = "net_info"
+        image_meta = {"id": "image_id"}
+        resize_instance = True
+        block_device_info = "bdi"
+        session = self.vmops._session
+
+        root_vdi = "root_vdi"
+        vdis = {"root": root_vdi}
+        vm_utils.move_disks(self.vmops._session, instance,
+                            disk_info).AndReturn(root_vdi)
+
+        self.vmops._resize_up_root_vdi(instance, root_vdi)
+
+        kernel_file = "kernel"
+        ramdisk_file = "ramdisk"
+        vm_utils.create_kernel_and_ramdisk(context, session,
+                instance, name_label).AndReturn((kernel_file, ramdisk_file))
+
+        di_type = "di_type"
+        vm_utils.determine_disk_image_type(image_meta).AndReturn(di_type)
+        self.vmops._ensure_instance_name_unique(name_label)
+        self.vmops._ensure_enough_free_mem(instance)
+        vm_ref = "fake_vm_ref"
+        self.vmops._create_vm_record(context, instance, name_label, vdis,
+                di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
+
+        self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type)
+
+        self.vmops._file_inject_vm_settings(instance, vm_ref, vdis,
+                                            network_info)
+        self.vmops._create_vifs(instance, vm_ref, network_info)
+        self.vmops.inject_network_info(instance, network_info, vm_ref)
+        self.vmops._inject_hostname(instance, vm_ref, False)
+        self.vmops._inject_instance_metadata(instance, vm_ref)
+
+        self.vmops._attach_mapped_block_devices(instance, block_device_info)
+
+        self.vmops._start(instance, vm_ref)
+
+        self.vmops._update_instance_progress(context, instance,
+                                             step=5, total_steps=5)
+
+        self.mox.ReplayAll()
+        self.vmops.finish_migration(context, migration, instance, disk_info,
+                                    network_info, image_meta, resize_instance,
+                                    block_device_info)
+
     def test_remove_hostname(self):
         vm, vm_ref = self.create_vm("dummy")
         instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": None}
@@ -273,3 +482,64 @@ class RemoveHostnameTestCase(VMOpsTestBase):
         self.mox.ReplayAll()
         self.vmops._remove_hostname(instance, vm_ref)
         self.mox.VerifyAll()
+
+    def test_inject_hostname(self):
+        instance = {"hostname": "dummy", "os_type": "fake", "uuid": "uuid"}
+        vm_ref = "vm_ref"
+
+        self.mox.StubOutWithMock(self.vmops, '_add_to_param_xenstore')
+        self.vmops._add_to_param_xenstore(vm_ref, 'vm-data/hostname', 'dummy')
+
+        self.mox.ReplayAll()
+        self.vmops._inject_hostname(instance, vm_ref, rescue=False)
+
+    def test_inject_hostname_with_rescue_prefix(self):
+        instance = {"hostname": "dummy", "os_type": "fake", "uuid": "uuid"}
+        vm_ref = "vm_ref"
+
+        self.mox.StubOutWithMock(self.vmops, '_add_to_param_xenstore')
+        self.vmops._add_to_param_xenstore(vm_ref, 'vm-data/hostname',
+                                          'RESCUE-dummy')
+
+        self.mox.ReplayAll()
+        self.vmops._inject_hostname(instance, vm_ref, rescue=True)
+
+    def test_inject_hostname_with_windows_name_truncation(self):
+        instance = {"hostname": "dummydummydummydummydummy",
+                    "os_type": "windows", "uuid": "uuid"}
+        vm_ref = "vm_ref"
+
+        self.mox.StubOutWithMock(self.vmops, '_add_to_param_xenstore')
+        self.vmops._add_to_param_xenstore(vm_ref, 'vm-data/hostname',
+                                          'RESCUE-dummydum')
+
+        self.mox.ReplayAll()
+        self.vmops._inject_hostname(instance, vm_ref, rescue=True)
+
+    def test_wait_for_instance_to_start(self):
+        instance = {"uuid": "uuid"}
+        vm_ref = "vm_ref"
+
+        self.mox.StubOutWithMock(self.vmops, 'get_info')
+        self.vmops.get_info(instance, vm_ref).AndReturn({"state": "asdf"})
+        self.vmops.get_info(instance, vm_ref).AndReturn({
+                                            "state": power_state.RUNNING})
+
+        self.mox.ReplayAll()
+        self.vmops._wait_for_instance_to_start(instance, vm_ref)
+
+    def test_attach_orig_disk_for_rescue(self):
+        instance = {"name": "dummy"}
+        vm_ref = "vm_ref"
+
+        self.mox.StubOutWithMock(vm_utils, 'lookup')
+        self.mox.StubOutWithMock(self.vmops, '_find_root_vdi_ref')
+        self.mox.StubOutWithMock(vm_utils, 'create_vbd')
+
+        vm_utils.lookup(self.vmops._session, "dummy").AndReturn("ref")
+        self.vmops._find_root_vdi_ref("ref").AndReturn("vdi_ref")
+        vm_utils.create_vbd(self.vmops._session, vm_ref, "vdi_ref",
+                            vmops.DEVICE_RESCUE, bootable=False)
+
+        self.mox.ReplayAll()
+        self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
