@@ -171,6 +171,7 @@ class _TestInstanceObject(object):
 
     def test_load_invalid(self):
         inst = instance.Instance()
+        inst._context = self.context
         inst.uuid = 'fake-uuid'
         self.assertRaises(exception.ObjectActionError,
                           inst.obj_load_attr, 'foo')
@@ -213,6 +214,20 @@ class _TestInstanceObject(object):
         self.assertEqual(inst.host, 'new-host')
         self.assertRemotes()
         self.assertEqual(set([]), inst.obj_what_changed())
+
+    def test_refresh_does_not_recurse(self):
+        inst = instance.Instance()
+        inst._context = self.context
+        inst.uuid = 'fake-uuid'
+        inst.metadata = {}
+        inst_copy = instance.Instance()
+        inst_copy.uuid = inst.uuid
+        self.mox.StubOutWithMock(instance.Instance, 'get_by_uuid')
+        instance.Instance.get_by_uuid(self.context, uuid=inst.uuid,
+                                      expected_attrs=['metadata']
+                                      ).AndReturn(inst_copy)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.OrphanedObjectError, inst.refresh)
 
     def _save_test_helper(self, cell_type, save_kwargs):
         """Common code for testing save() for cells/non-cells."""
