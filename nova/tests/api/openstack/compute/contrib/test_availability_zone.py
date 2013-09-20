@@ -24,6 +24,7 @@ from nova.openstack.common import jsonutils
 from nova import servicegroup
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import matchers
 
 
 def fake_service_get_all(context, disabled=None):
@@ -71,6 +72,10 @@ def fake_service_is_up(self, service):
 
 def fake_set_availability_zones(context, services):
     return services
+
+
+def fake_get_availability_zones(context):
+    return ['nova'], []
 
 
 class AvailabilityZoneApiTest(test.TestCase):
@@ -201,6 +206,23 @@ class AvailabilityZoneApiTest(test.TestCase):
         _assertZone(z1[3], l6[0], l6[1])
         _assertZone(z1[4], l7[0], l7[1])
         _assertZone(z2[0], l8[0], l8[1])
+
+    def test_availability_zone_detail_no_services(self):
+        expected_response = {'availabilityZoneInfo':
+                                 [{'zoneState': {'available': True},
+                             'hosts': {},
+                             'zoneName': 'nova'}]}
+        self.stubs.Set(availability_zones, 'get_availability_zones',
+                       fake_get_availability_zones)
+        availabilityZone = availability_zone.AvailabilityZoneController()
+
+        req = webob.Request.blank('/v2/fake/os-availability-zone/detail')
+        req.method = 'GET'
+        req.environ['nova.context'] = context.get_admin_context()
+        resp_dict = availabilityZone.detail(req)
+
+        self.assertThat(resp_dict,
+                        matchers.DictMatches(expected_response))
 
 
 class AvailabilityZoneSerializerTest(test.TestCase):
