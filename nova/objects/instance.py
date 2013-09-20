@@ -134,18 +134,18 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'metadata': dict,
         'system_metadata': dict,
 
-        'info_cache': obj_utils.nested_object_or_none(
+        'info_cache': obj_utils.nested_object(
             instance_info_cache.InstanceInfoCache),
 
-        'security_groups': obj_utils.nested_object_or_none(
+        'security_groups': obj_utils.nested_object(
             security_group.SecurityGroupList),
 
-        'fault': obj_utils.nested_object_or_none(
+        'fault': obj_utils.nested_object(
             instance_fault.InstanceFault),
 
         'cleaned': bool,
 
-        'pci_devices': obj_utils.nested_object_or_none(
+        'pci_devices': obj_utils.nested_object(
             pci_device.PciDeviceList),
         }
 
