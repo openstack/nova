@@ -168,7 +168,7 @@ class HostState(object):
         self.vcpus_total = compute['vcpus']
         self.vcpus_used = compute['vcpus_used']
         self.updated = compute['updated_at']
-        if hasattr(compute, 'pci_stats'):
+        if 'pci_stats' in compute:
             self.pci_stats = pci_stats.PciDeviceStats(compute['pci_stats'])
         else:
             self.pci_stats = None
