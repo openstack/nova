@@ -80,6 +80,11 @@ def _make_secgroup_list(context, secgroup_list, db_secgroup_list):
 
 
 class SecurityGroupList(base.ObjectListBase, base.NovaObject):
+    def __init__(self):
+        super(SecurityGroupList, self).__init__()
+        self.objects = []
+        self.obj_reset_changes()
+
     @base.remotable_classmethod
     def get_all(cls, context):
         return _make_secgroup_list(context, cls(),

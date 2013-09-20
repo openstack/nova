@@ -45,7 +45,10 @@ def fake_db_instance(**updates):
         'project_id': 'fake-project',
         'host': 'fake-host',
         'created_at': datetime.datetime(1955, 11, 5),
+        'pci_devices': [],
+        'security_groups': [],
         }
+
     for field, typefn in instance_obj.Instance.fields.items():
         if field in db_instance:
             continue
