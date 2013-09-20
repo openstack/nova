@@ -1371,12 +1371,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         # We expect the VM.pool_migrate call to have been called to
         # migrate our instance to the 'bar' host
-        expected = (instance['uuid'], 'bar', {})
-        self.assertTrue(api_calls.get('VM.pool_migrate'), expected)
+        vm_ref = vm_utils.lookup(self.conn._session, instance['name'])
+        host_ref = "foo"
+        expected = (vm_ref, host_ref, {"live": "true"})
+        self.assertEqual(api_calls.get('VM.pool_migrate'), expected)
 
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assertTrue(instance['vm_state'], vm_states.ACTIVE)
-        self.assertTrue(instance['task_state'], task_states.MIGRATING)
+        self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
+        self.assertEqual(instance['task_state'], task_states.MIGRATING)
 
     def test_maintenance_mode(self):
         self._test_maintenance_mode(True, True)
@@ -3576,6 +3578,32 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
             block_migration="SOMEDATA",
             migrate_data=dict(migrate_send_data='SOMEDATA',
                               destination_sr_ref="TARGET_SR_OPAQUE_REF"))
+
+    def test_live_migrate_pool_migration_xapi_call_parameters(self):
+
+        class Session(xenapi_fake.SessionBase):
+            def VM_pool_migrate(self_, session, vm_ref, host_ref, options):
+                self.assertEquals("fake_ref", host_ref)
+                self.assertEquals({"live": "true"}, options)
+                raise IOError()
+
+        stubs.stubout_session(self.stubs, Session)
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self._add_default_live_migrate_stubs(conn)
+
+        def fake_get_host_opaque_ref(context, destination):
+            return "fake_ref"
+
+        self.stubs.Set(conn._vmops, "_get_host_opaque_ref",
+                       fake_get_host_opaque_ref)
+
+        def dummy_callback(*args, **kwargs):
+            pass
+
+        self.assertRaises(IOError, conn.live_migration,
+            self.context, instance_ref=dict(name='ignore'), dest=None,
+            post_method=dummy_callback, recover_method=dummy_callback,
+            block_migration=False, migrate_data={})
 
     def test_generate_vdi_map(self):
         stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)

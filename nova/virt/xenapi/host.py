@@ -93,7 +93,8 @@ class Host(object):
                     instance.save()
 
                     self._session.call_xenapi('VM.pool_migrate',
-                                              vm_ref, host_ref, {})
+                                              vm_ref, host_ref,
+                                              {"live": "true"})
                     migrations_counter = migrations_counter + 1
 
                     instance.vm_state = vm_states.ACTIVE

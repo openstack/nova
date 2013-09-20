@@ -1897,7 +1897,7 @@ class VMOps(object):
                 host_ref = self._get_host_opaque_ref(context,
                                                      destination_hostname)
                 self._session.call_xenapi("VM.pool_migrate", vm_ref,
-                                          host_ref, {})
+                                          host_ref, {"live": "true"})
             post_method(context, instance, destination_hostname,
                         block_migration)
         except Exception:
