@@ -4270,14 +4270,15 @@ class ComputeManager(manager.SchedulerDependentManager):
             if instance_uuids:
                 try:
                     instance = instance_obj.Instance.get_by_uuid(
-                        context, instance_uuids.pop(0))
+                        context, instance_uuids.pop(0),
+                        expected_attrs=['system_metadata'])
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue
             else:
                 # No more in our copy of uuids.  Pull from the DB.
                 db_instances = instance_obj.InstanceList.get_by_host(
-                    context, self.host, expected_attrs=['system_metadata'])
+                    context, self.host, expected_attrs=[])
                 if not db_instances:
                     # None.. just return.
                     return
