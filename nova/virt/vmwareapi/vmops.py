@@ -580,7 +580,13 @@ class VMwareVMOps(object):
 
         return utils.get_boolean(value)
 
-    def snapshot(self, context, instance, snapshot_name, update_task_state):
+    def _get_copy_virtual_disk_spec(self, client_factory, adapter_type,
+                                    disk_type):
+        return vm_util.get_copy_virtual_disk_spec(client_factory,
+                                                  adapter_type,
+                                                  disk_type)
+
+    def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance.
 
         Steps followed are:
@@ -672,9 +678,9 @@ class VMwareVMOps(object):
         def _copy_vmdk_content():
             # Copy the contents of the disk ( or disks, if there were snapshots
             # done earlier) to a temporary vmdk file.
-            copy_spec = vm_util.get_copy_virtual_disk_spec(client_factory,
-                                                           adapter_type,
-                                                           disk_type)
+            copy_spec = self._get_copy_virtual_disk_spec(client_factory,
+                                                         adapter_type,
+                                                         disk_type)
             LOG.debug(_('Copying disk data before snapshot of the VM'),
                       instance=instance)
             copy_disk_task = self._session._call_method(
@@ -697,11 +703,11 @@ class VMwareVMOps(object):
 
         def _upload_vmdk_to_image_repository():
             # Upload the contents of -flat.vmdk file which has the disk data.
-            LOG.debug(_("Uploading image %s") % snapshot_name,
+            LOG.debug(_("Uploading image %s") % image_id,
                       instance=instance)
             vmware_images.upload_image(
                 context,
-                snapshot_name,
+                image_id,
                 instance,
                 os_type=os_type,
                 adapter_type=adapter_type,
@@ -711,7 +717,7 @@ class VMwareVMOps(object):
                 datastore_name=datastore_name,
                 cookies=cookies,
                 file_path="vmware-tmp/%s-flat.vmdk" % random_name)
-            LOG.debug(_("Uploaded image %s") % snapshot_name,
+            LOG.debug(_("Uploaded image %s") % image_id,
                       instance=instance)
 
         update_task_state(task_state=task_states.IMAGE_UPLOADING,
@@ -1483,3 +1489,22 @@ class VMwareVMOps(object):
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         pass
+
+
+class VMwareVCVMOps(VMwareVMOps):
+    """Management class for VM-related tasks.
+
+    Contains specializations to account for differences in vSphere API behavior
+    when invoked on Virtual Center instead of ESX host.
+    """
+
+    def _get_copy_virtual_disk_spec(self, client_factory, adapter_type,
+                                    disk_type):
+        LOG.debug(_("Will copy while retaining adapter type "
+                    "%(adapter_type)s and disk type %(disk_type)s") %
+                    {"disk_type": disk_type,
+                     "adapter_type": adapter_type})
+        # Passing of the destination copy spec is not supported when
+        # VirtualDiskManager.CopyVirtualDisk is called on VC. The behavior of a
+        # spec-less copy is to consolidate to the target disk while keeping its
+        # disk and adapter type unchanged.

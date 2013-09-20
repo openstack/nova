@@ -309,7 +309,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         network_info=self.network_info,
                         block_device_info=None)
 
-    def test_snapshot(self):
+    def _test_snapshot(self):
         expected_calls = [
             {'args': (),
              'kwargs':
@@ -327,6 +327,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertIsNone(func_call_matcher.match())
+
+    def test_snapshot(self):
+        self._test_snapshot()
 
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
@@ -885,6 +888,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def setUp(self):
         super(VMwareAPIVCDriverTestCase, self).setUp()
+
         cluster_name = 'test_cluster'
         cluster_name2 = 'test_cluster2'
         self.flags(cluster_name=[cluster_name, cluster_name2],
@@ -916,6 +920,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                 '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]')
 
     def test_invalid_datastore_regex(self):
+
         # Tests if we raise an exception for Invalid Regular Expression in
         # vmware_datastore_regex
         self.flags(cluster_name=['test_cluster'], datastore_regex='fake-ds(01',
@@ -951,7 +956,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(False, self.power_on_called)
 
     def test_get_vnc_console(self):
-        self._create_instance_in_the_db()
         self._create_vm()
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
         fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
@@ -959,3 +963,15 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(vnc_dict['host'], "ha-host")
         self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
                           fake_vm_id % cfg.CONF.vmware.vnc_port_total)
+
+    def test_snapshot(self):
+        # Ensure VMwareVCVMOps's _get_copy_virtual_disk_spec is getting called
+        self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
+                                 '_get_copy_virtual_disk_spec')
+        self.conn._vmops._get_copy_virtual_disk_spec(
+                mox.IgnoreArg(),
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
+        self.mox.ReplayAll()
+
+        self._test_snapshot()

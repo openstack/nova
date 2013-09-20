@@ -149,10 +149,12 @@ def upload_image(context, image, instance, **kwargs):
                                 kwargs.get("file_path"))
     file_size = read_file_handle.get_size()
     (image_service, image_id) = glance.get_remote_image_service(context, image)
+    metadata = image_service.show(context, image_id)
+
     # The properties and other fields that we need to set for the image.
     image_metadata = {"disk_format": "vmdk",
                       "is_public": "false",
-                      "name": kwargs.get("snapshot_name"),
+                      "name": metadata['name'],
                       "status": "active",
                       "container_format": "bare",
                       "size": file_size,
