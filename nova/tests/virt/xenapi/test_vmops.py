@@ -313,6 +313,9 @@ class SpawnTestCase(VMOpsTestBase):
         admin_password = "password"
         network_info = "net_info"
         steps = 10
+        if rescue:
+            steps += 1
+
         block_device_info = block_device_info_param
         if block_device_info and not block_device_info['root_device_name']:
             block_device_info = dict(block_device_info_param)
@@ -321,7 +324,8 @@ class SpawnTestCase(VMOpsTestBase):
 
         di_type = "di_type"
         vm_utils.determine_disk_image_type(image_meta).AndReturn(di_type)
-        self.vmops._update_instance_progress(context, instance, 1, steps)
+        step = 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         vdis = {"other": {"ref": "fake_ref_2", "osvol": True}}
         if include_root_vdi:
@@ -331,26 +335,28 @@ class SpawnTestCase(VMOpsTestBase):
                     block_device_info=block_device_info).AndReturn(vdis)
         if include_root_vdi:
             self.vmops._resize_up_root_vdi(instance, vdis["root"])
-        self.vmops._update_instance_progress(context, instance, 2, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         kernel_file = "kernel"
         ramdisk_file = "ramdisk"
         vm_utils.create_kernel_and_ramdisk(context, session,
                 instance, name_label).AndReturn((kernel_file, ramdisk_file))
-        self.vmops._update_instance_progress(context, instance, 3, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         vm_ref = "fake_vm_ref"
         self.vmops._ensure_instance_name_unique(name_label)
         self.vmops._ensure_enough_free_mem(instance)
         self.vmops._create_vm_record(context, instance, name_label, vdis,
                 di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
-        self.vmops._update_instance_progress(context, instance, 4, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
                           admin_password, injected_files)
-        if rescue:
-            self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
-        self.vmops._update_instance_progress(context, instance, 5, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops._inject_instance_metadata(instance, vm_ref)
         self.vmops._inject_auto_disk_config(instance, vm_ref)
@@ -358,28 +364,38 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._file_inject_vm_settings(instance, vm_ref, vdis,
                                             network_info)
         self.vmops.inject_network_info(instance, network_info, vm_ref)
-        self.vmops._update_instance_progress(context, instance, 6, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops._create_vifs(instance, vm_ref, network_info)
         self.vmops.firewall_driver.setup_basic_filtering(instance,
                 network_info).AndRaise(NotImplementedError)
         self.vmops.firewall_driver.prepare_instance_filter(instance,
                                                            network_info)
-        self.vmops._update_instance_progress(context, instance, 7, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
+        if rescue:
+            self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
+            step += 1
+            self.vmops._update_instance_progress(context, instance, step,
+                                                 steps)
         self.vmops._start(instance, vm_ref)
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
-        self.vmops._update_instance_progress(context, instance, 8, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops._configure_new_instance_with_agent(instance, vm_ref,
                 injected_files, admin_password)
         self.vmops._remove_hostname(instance, vm_ref)
-        self.vmops._update_instance_progress(context, instance, 9, steps)
+        step += 1
+        self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops.firewall_driver.apply_instance_filter(instance,
                                                          network_info)
+        step += 1
         last_call = self.vmops._update_instance_progress(context, instance,
-                                                         steps, steps)
+                                                         step, steps)
         if throw_exception:
             last_call.AndRaise(throw_exception)
             self.vmops._destroy(instance, vm_ref, network_info=network_info)
