@@ -73,14 +73,6 @@ SUSPENDING = 'suspending'
 # possible task states during resume()
 RESUMING = 'resuming'
 
-# NOTE(johannes): STOPPING and STARTING need to stick around for the
-# grizzly release for compatibility, but can be removed afterwards.
-# possible task states during stop()
-STOPPING = 'stopping'
-
-# possible task states during start()
-STARTING = 'starting'
-
 # possible task states during power_off()
 POWERING_OFF = 'powering-off'
 
