@@ -27,7 +27,7 @@ CONF = cfg.CONF
 CONF.import_opt('topic', 'nova.cells.opts', group='cells')
 
 
-class CellsAPITestCase(test.TestCase):
+class CellsAPITestCase(test.NoDBTestCase):
     """Test case for cells.api interfaces."""
 
     def setUp(self):

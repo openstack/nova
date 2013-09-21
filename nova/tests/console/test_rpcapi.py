@@ -28,7 +28,7 @@ from nova import test
 CONF = cfg.CONF
 
 
-class ConsoleRpcAPITestCase(test.TestCase):
+class ConsoleRpcAPITestCase(test.NoDBTestCase):
     def _test_console_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = console_rpcapi.ConsoleAPI()

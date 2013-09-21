@@ -20,7 +20,7 @@ from nova import test
 from nova.compute import vm_mode
 
 
-class ComputeVMModeTest(test.TestCase):
+class ComputeVMModeTest(test.NoDBTestCase):
 
     def test_case(self):
         inst = dict(vm_mode="HVM")

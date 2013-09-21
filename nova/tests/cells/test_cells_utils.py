@@ -23,7 +23,7 @@ from nova import db
 from nova import test
 
 
-class CellsUtilsTestCase(test.TestCase):
+class CellsUtilsTestCase(test.NoDBTestCase):
     """Test case for Cells utility methods."""
     def test_get_instances_to_sync(self):
         fake_context = 'fake_context'

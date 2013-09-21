@@ -24,7 +24,7 @@ from nova import test
 import nova.tests.image.fake
 
 
-class FakeImageServiceTestCase(test.TestCase):
+class FakeImageServiceTestCase(test.NoDBTestCase):
     def setUp(self):
         super(FakeImageServiceTestCase, self).setUp()
         self.image_service = nova.tests.image.fake.FakeImageService()

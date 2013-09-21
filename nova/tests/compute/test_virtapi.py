@@ -24,7 +24,7 @@ from nova.virt import fake
 from nova.virt import virtapi
 
 
-class VirtAPIBaseTest(test.TestCase, test.APICoverage):
+class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
 
     cover_api = virtapi.VirtAPI
 
