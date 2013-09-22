@@ -906,6 +906,11 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
 
+    def test_datastore_regex_configured(self):
+        for node in self.conn._resources.keys():
+            self.assertEqual(self.conn._datastore_regex,
+                    self.conn._resources[node]['vmops']._datastore_regex)
+
     def test_get_available_resource(self):
         stats = self.conn.get_available_resource(self.node_name)
         self.assertEquals(stats['vcpus'], 16)

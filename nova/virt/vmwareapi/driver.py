@@ -499,7 +499,8 @@ class VMwareVCDriver(VMwareESXDriver):
                                         vc_support=True)
             _vmops = vmops.VMwareVCVMOps(self._session, self._virtapi,
                                        _volumeops,
-                                       self.dict_mors[node]['cluster_mor'])
+                                       self.dict_mors[node]['cluster_mor'],
+                                       datastore_regex=self._datastore_regex)
             name = self.dict_mors.get(node)['name']
             _vc_state = host.VCState(self._session,
                                      self._create_nodename(node, name),
