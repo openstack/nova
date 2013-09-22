@@ -21,9 +21,12 @@
 Test suite for VMwareAPI.
 """
 
+import copy
+
 import mock
 import mox
 from oslo.config import cfg
+import suds
 
 from nova import block_device
 from nova.compute import api as compute_api
@@ -45,6 +48,7 @@ from nova import utils as nova_utils
 from nova.virt import driver as v_driver
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
@@ -52,6 +56,46 @@ from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
 from nova.virt.vmwareapi import volume_util
 from nova.virt.vmwareapi import volumeops
+
+
+class fake_vm_ref(object):
+    def __init__(self):
+        self.value = 4
+        self._type = 'VirtualMachine'
+
+
+class fake_service_content(object):
+    def __init__(self):
+        self.ServiceContent = vmwareapi_fake.DataObject()
+        self.ServiceContent.fake = 'fake'
+
+
+class VMwareSudsTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(VMwareSudsTest, self).setUp()
+
+        def new_client_init(self, url, **kwargs):
+            return
+
+        mock.patch.object(suds.client.Client,
+                          '__init__', new=new_client_init).start()
+        self.vim = self._vim_create()
+        self.addCleanup(mock.patch.stopall)
+
+    def _vim_create(self):
+
+        def fake_retrieve_service_content(fake):
+            return fake_service_content()
+
+        self.stubs.Set(vim.Vim, 'retrieve_service_content',
+                fake_retrieve_service_content)
+        return vim.Vim()
+
+    def test_exception_with_deepcopy(self):
+        self.assertIsNotNone(self.vim)
+        self.assertRaises(error_util.VimException,
+                          copy.deepcopy, self.vim)
 
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):
