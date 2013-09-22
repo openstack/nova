@@ -16,6 +16,8 @@
 
 from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
+from nova import context
+from nova import db
 from nova.tests.api.openstack import fakes
 from nova.tests.integrated.v3 import test_servers
 from nova.volume import cinder
@@ -39,6 +41,73 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
 
         self.stubs.Set(compute_api.API, "get_instance_bdms",
                        fake_compute_api_get_instance_bdms)
+
+    def _stub_compute_api_get(self):
+
+        def fake_compute_api_get(self, context, instance_id,
+                                 want_objects=False):
+            return {'uuid': instance_id}
+
+        self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
+
+    def test_show(self):
+        uuid = self._post_server()
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fakes.stub_bdm_get_all_by_instance)
+        response = self._do_get('servers/%s' % uuid)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        self._verify_response('server-get-resp', subs, response, 200)
+
+    def test_detail(self):
+        uuid = self._post_server()
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fakes.stub_bdm_get_all_by_instance)
+        response = self._do_get('servers/detail')
+        subs = self._get_regexes()
+        subs['id'] = uuid
+        subs['hostid'] = '[a-f0-9]+'
+        self._verify_response('servers-detail-resp', subs, response, 200)
+
+    def test_attach_volume(self):
+        device_name = '/dev/vdd'
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(cinder.API, 'check_attach', lambda *a, **k: None)
+        self.stubs.Set(cinder.API, 'reserve_volume', lambda *a, **k: None)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       "reserve_block_device_name",
+                       lambda *a, **k: device_name)
+        self.stubs.Set(compute_manager.ComputeManager,
+                       'attach_volume',
+                       lambda *a, **k: None)
+
+        volume = fakes.stub_volume_get(None, context.get_admin_context(),
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
+        subs = {
+            'volume_id': volume['id'],
+            'device': device_name
+        }
+        server_id = self._post_server()
+        response = self._do_post('servers/%s/action'
+                                 % server_id,
+                                 'attach-volume-req', subs)
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
+
+    def test_detach_volume(self):
+        server_id = self._post_server()
+        attach_id = "a26887c6-c47b-4654-abb5-dfadf7d3f803"
+        self._stub_compute_api_get_instance_bdms(server_id)
+        self._stub_compute_api_get()
+        self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
+        self.stubs.Set(compute_api.API, 'detach_volume', lambda *a, **k: None)
+        subs = {
+            'volume_id': attach_id,
+        }
+        response = self._do_post('servers/%s/action'
+                                 % server_id, 'detach-volume-req', subs)
+        self.assertEqual(response.status, 202)
+        self.assertEqual(response.read(), '')
 
     def test_swap_volume(self):
         server_id = self._post_server()

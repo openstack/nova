@@ -1,14 +1,14 @@
 {
     "server": {
-        "admin_pass": "wCGJKvs9RApD",
-        "id": "c43b584c-86ac-438c-aa9d-70aac14c2b27",
+        "admin_pass": "uNqGTziMK3px",
+        "id": "7d62983e-23df-4320-bc89-bbc77f2a2e40",
         "links": [
             {
-                "href": "http://openstack.example.com/v3/servers/c43b584c-86ac-438c-aa9d-70aac14c2b27",
+                "href": "http://openstack.example.com/v3/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
                 "rel": "self"
             },
             {
-                "href": "http://openstack.example.com/servers/c43b584c-86ac-438c-aa9d-70aac14c2b27",
+                "href": "http://openstack.example.com/servers/7d62983e-23df-4320-bc89-bbc77f2a2e40",
                 "rel": "bookmark"
             }
         ]
