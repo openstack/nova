@@ -69,7 +69,7 @@ class FaultCheckers(object):
     """
 
     @staticmethod
-    def retrieveproperties_fault_checker(resp_obj):
+    def retrievepropertiesex_fault_checker(resp_obj):
         """
         Checks the RetrievePropertiesEx response for errors. Certain faults
         are sent as part of the SOAP body as property of missingSet.
