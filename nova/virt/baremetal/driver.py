@@ -31,7 +31,6 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova import paths
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
 from nova.virt.baremetal import pxe
@@ -42,13 +41,6 @@ from nova.virt.libvirt import imagecache
 LOG = logging.getLogger(__name__)
 
 opts = [
-    cfg.BoolOpt('inject_password',
-                default=True,
-                help='Whether baremetal compute injects password or not'),
-    cfg.StrOpt('injected_network_template',
-               default=paths.basedir_def('nova/virt/'
-                                         'baremetal/interfaces.template'),
-               help='Template file for injected network'),
     cfg.StrOpt('vif_driver',
                default='nova.virt.baremetal.vif_driver.BareMetalVIFDriver',
                help='Baremetal VIF driver.'),

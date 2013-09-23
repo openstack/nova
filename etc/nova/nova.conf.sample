@@ -2930,13 +2930,6 @@
 # Options defined in nova.virt.baremetal.driver
 #
 
-# Whether baremetal compute injects password or not (boolean
-# value)
-#inject_password=true
-
-# Template file for injected network (string value)
-#injected_network_template=$pybasedir/nova/virt/baremetal/interfaces.template
-
 # Baremetal VIF driver. (string value)
 #vif_driver=nova.virt.baremetal.vif_driver.BareMetalVIFDriver
 
