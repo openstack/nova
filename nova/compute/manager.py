@@ -660,6 +660,22 @@ class ComputeManager(manager.Manager):
             finally:
                 return
 
+        if (instance.vm_state == vm_states.BUILDING or
+            instance.task_state in [task_states.SCHEDULING,
+                                    task_states.BLOCK_DEVICE_MAPPING,
+                                    task_states.NETWORKING,
+                                    task_states.SPAWNING]):
+            # NOTE(dave-mcnally) compute stopped before instance was fully
+            # spawned so set to ERROR state. This is safe to do as the state
+            # may be set by the api but the host is not so if we get here the
+            # instance has already been scheduled to this particular host.
+            LOG.debug(_("Instance failed to spawn correctly, "
+                        "setting to ERROR state"), instance=instance)
+            instance = self._instance_update(context, instance.uuid,
+                                             task_state=None,
+                                             vm_state=vm_states.ERROR)
+            return
+
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
             self.driver.plug_vifs(instance, net_info)
