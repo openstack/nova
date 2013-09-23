@@ -1,0 +1,3 @@
+<remove_fixed_ip>
+    <address>10.0.0.4</address>
+</remove_fixed_ip>
