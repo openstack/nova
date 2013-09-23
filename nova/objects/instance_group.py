@@ -84,8 +84,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         """Refreshes the instance group."""
         current = self.__class__.get_by_uuid(context, self.uuid)
         for field in self.fields:
-            if (hasattr(self, base.get_attrname(field)) and
-                    self[field] != current[field]):
+            if self.obj_attr_is_set(field) and self[field] != current[field]:
                 self[field] = current[field]
         self.obj_reset_changes()
 

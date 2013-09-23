@@ -420,7 +420,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         updates = {}
         changes = self.obj_what_changed()
         for field in self.fields:
-            if (hasattr(self, base.get_attrname(field)) and
+            if (self.obj_attr_is_set(field) and
                     isinstance(self[field], base.NovaObject)):
                 try:
                     getattr(self, '_save_%s' % field)(context)
@@ -449,10 +449,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
         expected_attrs = []
         for attr in INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS:
-            if hasattr(self, base.get_attrname(attr)):
+            if self.obj_attr_is_set(attr):
                 expected_attrs.append(attr)
 
-        updated_keys = updates.keys()
         old_ref, inst_ref = db.instance_update_and_get_original(
                 context, self.uuid, updates, update_cells=False,
                 columns_to_join=self._attrs_to_columns(expected_attrs))
@@ -471,13 +470,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     def refresh(self, context):
         extra = []
         for field in INSTANCE_OPTIONAL_FIELDS + INSTANCE_IMPLIED_FIELDS:
-            if hasattr(self, base.get_attrname(field)):
+            if self.obj_attr_is_set(field):
                 extra.append(field)
         current = self.__class__.get_by_uuid(context, uuid=self.uuid,
                                              expected_attrs=extra)
         for field in self.fields:
-            if (hasattr(self, base.get_attrname(field)) and
-                    self[field] != current[field]):
+            if self.obj_attr_is_set(field) and self[field] != current[field]:
                 self[field] = current[field]
         self.obj_reset_changes()
 
@@ -507,7 +505,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                                               expected_attrs=extra)
 
         # NOTE(danms): Never allow us to recursively-load
-        if hasattr(instance, base.get_attrname(attrname)):
+        if instance.obj_attr_is_set(attrname):
             self[attrname] = instance[attrname]
         else:
             raise exception.ObjectActionError(
