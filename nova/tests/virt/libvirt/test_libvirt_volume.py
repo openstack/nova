@@ -86,6 +86,38 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertEqual(tree.get('type'), 'file')
         self.assertEqual(tree.find('./source').get('file'), file_path)
 
+    def _assertDiskInfoEquals(self, tree, disk_info):
+        self.assertEqual(tree.get('device'), disk_info['type'])
+        self.assertEqual(tree.find('./target').get('bus'),
+                         disk_info['bus'])
+        self.assertEqual(tree.find('./target').get('dev'),
+                         disk_info['dev'])
+
+    def _test_libvirt_volume_driver_disk_info(self):
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                'device_path': '/foo',
+            },
+            'serial': 'fake_serial',
+        }
+        conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertDiskInfoEquals(tree, self.disk_info)
+
+    def test_libvirt_volume_disk_info_type(self):
+        self.disk_info['type'] = 'cdrom'
+        self._test_libvirt_volume_driver_disk_info()
+
+    def test_libvirt_volume_disk_info_dev(self):
+        self.disk_info['dev'] = 'hdc'
+        self._test_libvirt_volume_driver_disk_info()
+
+    def test_libvirt_volume_disk_info_bus(self):
+        self.disk_info['bus'] = 'scsi'
+        self._test_libvirt_volume_driver_disk_info()
+
     def test_libvirt_volume_driver_serial(self):
         libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
         connection_info = {

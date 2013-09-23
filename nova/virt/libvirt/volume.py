@@ -100,7 +100,7 @@ class LibvirtBaseVolumeDriver(object):
             self.connection.get_hypervisor_version(),
             self.is_block_dev
         )
-        conf.device_type = disk_info['type']
+        conf.source_device = disk_info['type']
         conf.driver_format = "raw"
         conf.driver_cache = "none"
         conf.target_dev = disk_info['dev']
