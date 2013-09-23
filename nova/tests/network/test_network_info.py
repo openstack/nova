@@ -378,8 +378,8 @@ class NetworkInfoTests(test.TestCase):
                  fake_network_cache_model.new_ip(
                         {'address': '10.10.0.3'})] * 4)
 
-    def _test_injected_network_template(self, should_inject, use_ipv6=False,
-                                        gateway=True):
+    def _test_injected_network_template(self, should_inject, use_ipv4=True,
+                                        use_ipv6=False, gateway=True):
         """Check that netutils properly decides whether to inject based on
            whether the supplied subnet is static or dynamic.
         """
@@ -391,7 +391,9 @@ class NetworkInfoTests(test.TestCase):
         if not should_inject:
             subnet_dict['dhcp_server'] = '10.10.0.1'
 
-        network.add_subnet(fake_network_cache_model.new_subnet(subnet_dict))
+        if use_ipv4:
+            network.add_subnet(
+                fake_network_cache_model.new_subnet(subnet_dict))
 
         if should_inject and use_ipv6:
             gateway_ip = fake_network_cache_model.new_ip(dict(
@@ -419,22 +421,25 @@ class NetworkInfoTests(test.TestCase):
         if not should_inject:
             self.assertTrue(template is None)
         else:
-            self.assertTrue('auto eth0' in template)
-            self.assertTrue('iface eth0 inet static' in template)
-            self.assertTrue('address 10.10.0.2' in template)
-            self.assertTrue('netmask 255.255.255.0' in template)
-            self.assertTrue('broadcast 10.10.0.255' in template)
-            if gateway:
-                self.assertTrue('gateway 10.10.0.1' in template)
-            else:
-                self.assertFalse('gateway' in template)
-            self.assertTrue('dns-nameservers 1.2.3.4 2.3.4.5' in template)
+            if use_ipv4:
+                self.assertTrue('auto eth0' in template)
+                self.assertTrue('iface eth0 inet static' in template)
+                self.assertTrue('address 10.10.0.2' in template)
+                self.assertTrue('netmask 255.255.255.0' in template)
+                self.assertTrue('broadcast 10.10.0.255' in template)
+                if gateway:
+                    self.assertTrue('gateway 10.10.0.1' in template)
+                else:
+                    self.assertFalse('gateway' in template)
+                self.assertTrue('dns-nameservers 1.2.3.4 2.3.4.5' in template)
             if use_ipv6:
                 self.assertTrue('iface eth0 inet6 static' in template)
                 self.assertTrue('address 1234:567::2' in template)
                 self.assertTrue('netmask 48' in template)
                 if gateway:
                     self.assertTrue('gateway 1234:567::1' in template)
+            if not use_ipv4 and not use_ipv6:
+                self.assertTrue(template is None)
 
     def test_injection_static(self):
         self._test_injected_network_template(should_inject=True)
@@ -456,3 +461,22 @@ class NetworkInfoTests(test.TestCase):
     def test_injection_dynamic_nogateway(self):
         self._test_injected_network_template(should_inject=False,
                                              gateway=False)
+
+    def test_injection_static_with_ipv4_off(self):
+        self._test_injected_network_template(should_inject=True,
+                                             use_ipv4=False)
+
+    def test_injection_static_ipv6_with_ipv4_off(self):
+        self._test_injected_network_template(should_inject=True,
+                                             use_ipv6=True,
+                                             use_ipv4=False)
+
+    def test_injection_static_ipv6_nogateway_with_ipv4_off(self):
+        self._test_injected_network_template(should_inject=True,
+                                             use_ipv6=True,
+                                             use_ipv4=False,
+                                             gateway=False)
+
+    def test_injection_dynamic_with_ipv4_off(self):
+        self._test_injected_network_template(should_inject=False,
+                                             use_ipv4=False)
