@@ -31,6 +31,7 @@ from nova.compute import task_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import jsonutils
 from nova import test
 import nova.tests.image.fake
 from nova.tests import matchers
@@ -114,6 +115,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.flags(host_ip='test_url',
                    host_username='test_username',
                    host_password='test_pass',
+                   cluster_name='test_cluster',
                    use_linked_clone=False, group='vmware')
         self.flags(vnc_enabled=False)
         self.user_id = 'fake'
@@ -926,14 +928,19 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_get_available_resource(self):
         stats = self.conn.get_available_resource(self.node_name)
-        self.assertEquals(stats['vcpus'], 16)
+        cpu_info = {"model": ["Intel(R) Xeon(R)", "Intel(R) Xeon(R)"],
+                    "vendor": ["Intel", "Intel"],
+                    "topology": {"cores": 16,
+                                 "threads": 32}}
+        self.assertEquals(stats['vcpus'], 32)
         self.assertEquals(stats['local_gb'], 1024)
         self.assertEquals(stats['local_gb_used'], 1024 - 500)
-        self.assertEquals(stats['memory_mb'], 1024)
-        self.assertEquals(stats['memory_mb_used'], 1024 - 524)
-        self.assertEquals(stats['hypervisor_type'], 'VMware ESXi')
-        self.assertEquals(stats['hypervisor_version'], '5.0.0')
+        self.assertEquals(stats['memory_mb'], 1000)
+        self.assertEquals(stats['memory_mb_used'], 500)
+        self.assertEquals(stats['hypervisor_type'], 'VMware vCenter Server')
+        self.assertEquals(stats['hypervisor_version'], '5.1.0')
         self.assertEquals(stats['hypervisor_hostname'], self.node_name)
+        self.assertEquals(stats['cpu_info'], jsonutils.dumps(cpu_info))
         self.assertEquals(stats['supported_instances'],
                 '[["i686", "vmware", "hvm"], ["x86_64", "vmware", "hvm"]]')
 
