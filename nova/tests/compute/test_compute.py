@@ -1103,6 +1103,20 @@ class ComputeTestCase(BaseTestCase):
                 self.compute.run_instance, self.context, instance=instance,
                 filter_properties=filter_properties)
 
+    def test_create_multiple_instance_with_neutron_port(self):
+        instance_type = flavors.get_default_flavor()
+
+        def fake_is_neutron():
+            return True
+        self.stubs.Set(utils, 'is_neutron', fake_is_neutron)
+        self.assertRaises(exception.MultiplePortsNotApplicable,
+                          self.compute_api.create,
+                          self.context,
+                          instance_type=instance_type,
+                          image_href=None,
+                          max_count=2,
+                          requested_networks=[(None, None, 'adadds')])
+
     def test_create_instance_with_oversubscribed_ram(self):
         # Test passing of oversubscribed ram policy from the scheduler.
 

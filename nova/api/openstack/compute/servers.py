@@ -950,6 +950,7 @@ class Controller(wsgi.Controller):
                 exception.InstanceTypeNotFound,
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
+                exception.MultiplePortsNotApplicable,
                 exception.PortNotFound,
                 exception.SecurityGroupNotFound,
                 exception.InvalidBDM) as error:

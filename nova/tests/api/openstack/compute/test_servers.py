@@ -2247,31 +2247,6 @@ class ServersControllerCreateTest(test.TestCase):
         except webob.exc.HTTPRequestEntityTooLarge as e:
             self.assertEquals(e.explanation, expected_msg)
 
-    def test_create_instance_with_security_group_enabled(self):
-        self.ext_mgr.extensions = {'os-security-groups': 'fake'}
-        group = 'foo'
-        old_create = compute_api.API.create
-
-        def sec_group_get(ctx, proj, name):
-            if name == group:
-                return True
-            else:
-                raise exception.SecurityGroupNotFoundForProject(
-                    project_id=proj, security_group_id=name)
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['security_group'], [group])
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(db, 'security_group_get_by_name', sec_group_get)
-        # negative test
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self._test_create_extra,
-                          {'security_groups': [{'name': 'bogus'}]})
-        # positive test - extra assert in create path
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra({'security_groups': [{'name': group}]})
-
     def test_create_instance_with_security_group_disabled(self):
         group = 'foo'
         params = {'security_groups': [{'name': group}]}
@@ -2902,6 +2877,24 @@ class ServersControllerCreateTest(test.TestCase):
 
         def fake_create(*args, **kwargs):
             raise exception.PortNotFound(port_id=port)
+
+        self.stubs.Set(compute_api.API, 'create', fake_create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                                        self._test_create_extra, params)
+
+    def test_create_multiple_instance_with_neutronv2_port(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        self.body['server']['max_count'] = 2
+        requested_networks = [{'uuid': network, 'port': port}]
+        params = {'networks': requested_networks}
+
+        def fake_create(*args, **kwargs):
+            msg = _("Unable to launch multiple instances with"
+                    " a single configured port ID. Please launch your"
+                    " instance one by one with different ports.")
+            raise exception.MultiplePortsNotApplicable(reason=msg)
 
         self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,

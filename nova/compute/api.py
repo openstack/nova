@@ -1177,6 +1177,15 @@ class API(base.Base):
         if block_device_mapping:
             check_policy(context, 'create:attach_volume', target)
 
+    def _check_multiple_instances_neutron_ports(self, requested_networks):
+        """Check whether multiple instances are created from port id(s)."""
+        for net, ip, port in requested_networks:
+            if port:
+                msg = _("Unable to launch multiple instances with"
+                        " a single configured port ID. Please launch your"
+                        " instance one by one with different ports.")
+                raise exception.MultiplePortsNotApplicable(reason=msg)
+
     @hooks.add_hook("create_instance")
     def create(self, context, instance_type,
                image_href, kernel_id=None, ramdisk_id=None,
@@ -1198,6 +1207,9 @@ class API(base.Base):
 
         self._check_create_policies(context, availability_zone,
                 requested_networks, block_device_mapping)
+
+        if requested_networks and max_count > 1 and utils.is_neutron():
+            self._check_multiple_instances_neutron_ports(requested_networks)
 
         return self._create_instance(
                                context, instance_type,

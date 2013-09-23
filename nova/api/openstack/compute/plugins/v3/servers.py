@@ -824,6 +824,7 @@ class ServersController(wsgi.Controller):
                 exception.InstanceTypeNotFound,
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
+                exception.MultiplePortsNotApplicable,
                 exception.SecurityGroupNotFound,
                 exception.InstanceUserDataMalformed) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())

@@ -2273,6 +2273,23 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self._test_create_extra, params)
 
+    def test_create_multiple_instance_with_neutronv2_port(self):
+        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'uuid': network, 'port': port}]
+        params = {'networks': requested_networks}
+        self.body['server']['max_count'] = 2
+
+        def fake_create(*args, **kwargs):
+            msg = _("Unable to launch multiple instances with"
+                    " a single configured port ID. Please launch your"
+                    " instance one by one with different ports.")
+            raise exception.MultiplePortsNotApplicable(reason=msg)
+
+        self.stubs.Set(compute_api.API, 'create', fake_create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
 
 class TestServerCreateRequestXMLDeserializer(test.TestCase):
 
