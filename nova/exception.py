@@ -142,11 +142,6 @@ class NovaException(Exception):
             return unicode(self)
 
 
-#TODO(bcwaldon): EOL this exception!
-class Duplicate(NovaException):
-    pass
-
-
 class EncryptionFailure(NovaException):
     msg_fmt = _("Failed to encrypt text: %(reason)s")
 
@@ -489,7 +484,7 @@ class AgentBuildNotFound(NotFound):
     msg_fmt = _("No agent-build associated with id %(id)s.")
 
 
-class AgentBuildExists(Duplicate):
+class AgentBuildExists(NovaException):
     msg_fmt = _("Agent-build with hypervisor %(hypervisor)s os %(os)s "
                 "architecture %(architecture)s exists.")
 
@@ -607,7 +602,7 @@ class PortNotFree(Invalid):
     msg_fmt = _("No free port available for instance %(instance)s.")
 
 
-class FixedIpExists(Duplicate):
+class FixedIpExists(NovaException):
     msg_fmt = _("Fixed ip %(address)s already exists.")
 
 
@@ -660,7 +655,7 @@ class NoFixedIpsDefined(NotFound):
     msg_fmt = _("Zero fixed ips could be found.")
 
 
-class FloatingIpExists(Duplicate):
+class FloatingIpExists(NovaException):
     msg_fmt = _("Floating ip %(address)s already exists.")
 
 
@@ -727,11 +722,11 @@ class ServiceNotFound(NotFound):
     msg_fmt = _("Service %(service_id)s could not be found.")
 
 
-class ServiceBinaryExists(Duplicate):
+class ServiceBinaryExists(NovaException):
     msg_fmt = _("Service with host %(host)s binary %(binary)s exists.")
 
 
-class ServiceTopicExists(Duplicate):
+class ServiceTopicExists(NovaException):
     msg_fmt = _("Service with host %(host)s topic %(topic)s exists.")
 
 
@@ -760,7 +755,7 @@ class QuotaNotFound(NotFound):
     msg_fmt = _("Quota could not be found")
 
 
-class QuotaExists(Duplicate):
+class QuotaExists(NovaException):
     msg_fmt = _("Quota exists for project %(project_id)s, "
                 "resource %(resource)s")
 
@@ -855,7 +850,7 @@ class ConsolePoolNotFound(NotFound):
     msg_fmt = _("Console pool %(pool_id)s could not be found.")
 
 
-class ConsolePoolExists(Duplicate):
+class ConsolePoolExists(NovaException):
     msg_fmt = _("Console pool with host %(host)s, console_type "
                 "%(console_type)s and compute_host %(compute_host)s "
                 "already exists.")
@@ -910,7 +905,7 @@ class CellNotFound(NotFound):
     msg_fmt = _("Cell %(cell_name)s doesn't exist.")
 
 
-class CellExists(Duplicate):
+class CellExists(NovaException):
     msg_fmt = _("Cell with name %(name)s already exists.")
 
 
@@ -984,24 +979,24 @@ class RotationRequiredForBackup(NovaException):
     msg_fmt = _("Rotation param is required for backup image_type")
 
 
-class KeyPairExists(Duplicate):
+class KeyPairExists(NovaException):
     ec2_code = 'InvalidKeyPair.Duplicate'
     msg_fmt = _("Key pair '%(key_name)s' already exists.")
 
 
-class InstanceExists(Duplicate):
+class InstanceExists(NovaException):
     msg_fmt = _("Instance %(name)s already exists.")
 
 
-class InstanceTypeExists(Duplicate):
+class InstanceTypeExists(NovaException):
     msg_fmt = _("Instance Type with name %(name)s already exists.")
 
 
-class InstanceTypeIdExists(Duplicate):
+class InstanceTypeIdExists(NovaException):
     msg_fmt = _("Instance Type with ID %(flavor_id)s already exists.")
 
 
-class FlavorAccessExists(Duplicate):
+class FlavorAccessExists(NovaException):
     msg_fmt = _("Flavor access already exists for flavor %(flavor_id)s "
                 "and project %(project_id)s combination.")
 
@@ -1123,7 +1118,7 @@ class AggregateNotFound(NotFound):
     msg_fmt = _("Aggregate %(aggregate_id)s could not be found.")
 
 
-class AggregateNameExists(Duplicate):
+class AggregateNameExists(NovaException):
     msg_fmt = _("Aggregate %(aggregate_name)s already exists.")
 
 
@@ -1136,7 +1131,7 @@ class AggregateMetadataNotFound(NotFound):
                 "key %(metadata_key)s.")
 
 
-class AggregateHostExists(Duplicate):
+class AggregateHostExists(NovaException):
     msg_fmt = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 
 
@@ -1150,7 +1145,7 @@ class InstancePasswordSetFailed(NovaException):
     safe = True
 
 
-class DuplicateVlan(Duplicate):
+class DuplicateVlan(NovaException):
     msg_fmt = _("Detected existing vlan with id %(vlan)d")
 
 
@@ -1350,7 +1345,7 @@ class InstanceGroupNotFound(NotFound):
     msg_fmt = _("Instance group %(group_uuid)s could not be found.")
 
 
-class InstanceGroupIdExists(Duplicate):
+class InstanceGroupIdExists(NovaException):
     msg_fmt = _("Instance group %(group_uuid)s already exists.")
 
 
