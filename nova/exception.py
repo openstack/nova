@@ -136,10 +136,9 @@ class NovaException(Exception):
         super(NovaException, self).__init__(message)
 
     def format_message(self):
-        if self.__class__.__name__.endswith('_Remote'):
-            return self.args[0]
-        else:
-            return unicode(self)
+        # NOTE(mrodden): use the first argument to the python Exception object
+        # which should be our full NovaException message, (see __init__)
+        return self.args[0]
 
 
 class EncryptionFailure(NovaException):
