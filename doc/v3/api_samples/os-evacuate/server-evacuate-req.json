@@ -1,0 +1,7 @@
+{
+    "evacuate": {
+        "host": "b419863b7d814906a68fb31703c0dbd6",
+        "admin_password": "MySecretPass",
+        "on_shared_storage": "False"
+    }
+}

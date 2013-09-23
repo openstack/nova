@@ -1,0 +1,16 @@
+{
+    "server": {
+        "admin_pass": "UCvmH8nHXm66",
+        "id": "a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/a8c1c13d-ec7e-47c7-b4ff-077f72c1ca46",
+                "rel": "bookmark"
+            }
+        ]
+    }
+}

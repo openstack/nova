@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<evacuate xmlns="http://docs.openstack.org/compute/api/v2"
+   host="c8b85acac4394623a8bd99f66e6a623d"
+   admin_password="MySecretPass"
+   on_shared_storage="False"/>
