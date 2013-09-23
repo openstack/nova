@@ -29,6 +29,7 @@ import urlparse
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import utils
 
 LOG = logging.getLogger(__name__)
 
@@ -117,7 +118,10 @@ class VMwareHTTPWriteFile(VMwareHTTPFile):
 
     def __init__(self, host, data_center_name, datastore_name, cookies,
                  file_path, file_size, scheme="https"):
-        base_url = "%s://%s/folder/%s" % (scheme, host, file_path)
+        if utils.is_valid_ipv6(host):
+            base_url = "%s://[%s]/folder/%s" % (scheme, host, file_path)
+        else:
+            base_url = "%s://%s/folder/%s" % (scheme, host, file_path)
         param_list = {"dcPath": data_center_name, "dsName": datastore_name}
         base_url = base_url + "?" + urllib.urlencode(param_list)
         _urlparse = urlparse.urlparse(base_url)
