@@ -429,11 +429,14 @@ class ComputeVolumeTestCase(BaseTestCase):
                                         block_device_mapping)
         self.assertEqual(self.cinfo.get('serial'), self.volume_id)
 
-    def test_boot_volume_metadata(self):
+    def test_boot_volume_metadata(self, metadata=True):
         def volume_api_get(*args, **kwargs):
-            return {
-                'volume_image_metadata': {'vol_test_key': 'vol_test_value'}
-            }
+            if metadata:
+                return {
+                    'volume_image_metadata': {'vol_test_key': 'vol_test_value'}
+                }
+            else:
+                return {}
 
         self.stubs.Set(self.compute_api.volume_api, 'get', volume_api_get)
 
@@ -449,7 +452,10 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         image_meta = self.compute_api._get_bdm_image_metadata(
             self.context, block_device_mapping)
-        self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+        if metadata:
+            self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+        else:
+            self.assertEqual(image_meta, {})
 
         # Test it with new-style BDMs
         block_device_mapping = [{
@@ -462,7 +468,13 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         image_meta = self.compute_api._get_bdm_image_metadata(
             self.context, block_device_mapping, legacy_bdm=False)
-        self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+        if metadata:
+            self.assertEqual(image_meta['vol_test_key'], 'vol_test_value')
+        else:
+            self.assertEqual(image_meta, {})
+
+    def test_boot_volume_no_metadata(self):
+        self.test_boot_volume_metadata(metadata=False)
 
     def test_boot_image_metadata(self, metadata=True):
         def image_api_show(*args, **kwargs):
