@@ -4154,6 +4154,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                    "This error can be safely ignored."),
                  instance=instance_ref)
 
+        if CONF.vnc_enabled or CONF.spice.enabled:
+            if CONF.cells.enable:
+                self.cells_rpcapi.consoleauth_delete_tokens(ctxt,
+                        instance_ref['uuid'])
+            else:
+                self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
+                        instance_ref['uuid'])
+
     @wrap_exception()
     def post_live_migration_at_destination(self, context, instance,
                                            block_migration=False):
