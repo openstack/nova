@@ -500,14 +500,6 @@ class SnapshotNotFound(NotFound):
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
 
 
-class ISCSITargetNotFoundForVolume(NotFound):
-    msg_fmt = _("No target id found for volume %(volume_id)s.")
-
-
-class ISERTargetNotFoundForVolume(NotFound):
-    msg_fmt = _("No target id found for volume %(volume_id)s.")
-
-
 class DiskNotFound(NotFound):
     msg_fmt = _("No disk at %(location)s")
 
@@ -950,11 +942,6 @@ class SchedulerHostFilterNotFound(NotFound):
     msg_fmt = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
-class InstanceMetadataNotFound(NotFound):
-    msg_fmt = _("Instance %(instance_uuid)s has no metadata with "
-                "key %(metadata_key)s.")
-
-
 class InstanceTypeExtraSpecsNotFound(NotFound):
     msg_fmt = _("Instance Type %(instance_type_id)s has no extra specs with "
                 "key %(extra_specs_key)s.")
@@ -1384,10 +1371,6 @@ class PluginRetriesExceeded(NovaException):
 class ImageDownloadModuleError(NovaException):
     msg_fmt = _("There was an error with the download module %(module)s. "
                 "%(reason)s")
-
-
-class ImageDownloadModuleLoadError(ImageDownloadModuleError):
-    msg_fmt = _("Could not load the module %(module)s")
 
 
 class ImageDownloadModuleMetaDataError(ImageDownloadModuleError):
