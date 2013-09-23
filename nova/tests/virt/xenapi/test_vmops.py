@@ -197,6 +197,15 @@ class VMOpsTestCase(test.TestCase):
 
         self.assertEqual(self.make_plugin_call_count, 1)
 
+    def test_get_vm_opaque_ref_raises_instance_not_found(self):
+        instance = {"name": "dummy"}
+        self.mox.StubOutWithMock(vm_utils, 'lookup')
+        vm_utils.lookup(self._session, instance['name'], False).AndReturn(None)
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.InstanceNotFound,
+                self._vmops._get_vm_opaque_ref, instance)
+
 
 class InjectAutoDiskConfigTestCase(VMOpsTestBase):
     def setUp(self):

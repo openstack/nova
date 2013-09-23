@@ -697,8 +697,7 @@ class VMOps(object):
         """
         vm_ref = vm_utils.lookup(self._session, instance['name'], check_rescue)
         if vm_ref is None:
-            raise exception.NotFound(_('Could not find VM with name %s') %
-                                     instance['name'])
+            raise exception.InstanceNotFound(instance_id=instance['name'])
         return vm_ref
 
     def _acquire_bootlock(self, vm):
