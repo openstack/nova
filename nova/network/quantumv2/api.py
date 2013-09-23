@@ -180,6 +180,13 @@ class API(base.Base):
                 if network_id:
                     net_ids.append(network_id)
 
+        private_net_id = quantumv20.find_resourceid_by_name_or_id(
+                    quantum, 'network', CONF.quantum_default_private_network)
+        if not private_net_id:
+            raise Exception(_('Default Private Network ID Not Found'))
+        else:
+            net_ids.append(private_net_id)
+
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
         security_groups = kwargs.get('security_groups', [])
@@ -791,11 +798,13 @@ class API(base.Base):
         LOG.info("vagration is finishing.....")
         if not self._has_port_binding_extension(refresh_cache=True):
             return
-        
+
         quantum = quantumv2.get_client(context, admin=True)
+        network_info = self.get_instance_nw_info(context,instance,self.conductor_api)
         search_opts = {'device_id': instance['uuid'],
                        'tenant_id': instance['project_id']}
         data = quantum.list_ports(**search_opts)
+        LOG.info("port update at %s", instance.get('host'))
         ports = data['ports']
         for p in ports:
             port_req_body = {'port': {'binding:host_id': instance.get('host')}}
@@ -805,21 +814,7 @@ class API(base.Base):
                 with excutils.save_and_reraise_exception():
                     msg = _("Unable to update host of port %s")
                     LOG.exception(msg, p['id'])
-	
-	network_info = self.get_instance_nw_info(context,instance,self.conductor_api)
-        fixed_ips=network_info.fixed_ips()
 
-        for fixed_ip in fixed_ips:
-            floating_ip_address=fixed_ip['floating_ips']
-            for floating_ip in floating_ip_address:
-                LOG.info("floating_ip_address is %s floating_ip %s",floating_ip, floating_ip['address'])
-                try:
-                    self.disassociate_floating_ip(context,instance,floating_ip['address'])
-                    self.associate_floating_ip(context,instance,floating_ip['address'],fixed_ip['address'])
-                except Exception as ex:
-                    with excutils.save_and_reraise_exception():
-                        msg = _("Unable to floating ip of port %s")
-                        LOG.exception(msg, p['id'])
 
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force add a network to the project."""
@@ -949,23 +944,23 @@ class API(base.Base):
             subnets.append(subnet_object)
         return subnets
 
-    def get_network_id_by_name(self, context, network_name=None):
-        quantum = quantumv2.get_client(context)
-        try:
-            network_id = quantumv20.find_resourceid_by_name_or_id(
-                quantum, 'network', network_name)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_("Unable to get ID of network '%s'")
-                    % network_name)
-        return network_id
-
     def get_dns_domains(self, context):
         """Return a list of available dns domains.
 
         These can be used to create DNS entries for floating ips.
         """
         raise NotImplementedError()
+
+    def get_network_id_by_name(self, context, network_name=None):
+        quantum = quantumv2.get_client(context)
+        try:
+          network_id = quantumv20.find_resourceid_by_name_or_id(
+                  quantum, 'network', network_name)
+        except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_("Unable to get ID of network '%s'")
+                                   %network_name)
+        return network_id
 
     def add_dns_entry(self, context, address, name, dns_type, domain):
         """Create specified DNS entry for address."""
