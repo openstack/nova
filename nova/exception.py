@@ -267,7 +267,7 @@ class VolumeNotCreated(NovaException):
 
 class InvalidKeypair(Invalid):
     ec2_code = 'InvalidKeyPair.Format'
-    msg_fmt = _("Keypair data is invalid")
+    msg_fmt = _("Keypair data is invalid") + ": %(reason)s"
 
 
 class InvalidRequest(Invalid):

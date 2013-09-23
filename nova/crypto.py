@@ -141,7 +141,8 @@ def generate_fingerprint(public_key):
                 f.write(public_key)
             return _generate_fingerprint(pubfile)
         except processutils.ProcessExecutionError:
-            raise exception.InvalidKeypair()
+            raise exception.InvalidKeypair(
+                reason=_('failed to generate fingerprint'))
 
 
 def generate_key_pair(bits=None):

@@ -3223,11 +3223,12 @@ class KeypairAPI(base.Base):
         clean_value = "".join(x for x in key_name if x in safe_chars)
         if clean_value != key_name:
             raise exception.InvalidKeypair(
-                _("Keypair name contains unsafe characters"))
+                reason=_("Keypair name contains unsafe characters"))
 
         if not 0 < len(key_name) < 256:
             raise exception.InvalidKeypair(
-                _('Keypair name must be between 1 and 255 characters long'))
+                reason=_('Keypair name must be between '
+                         '1 and 255 characters long'))
 
         count = QUOTAS.count(context, 'key_pairs', user_id)
         try:

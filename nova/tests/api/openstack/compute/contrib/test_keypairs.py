@@ -109,6 +109,7 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
+            'Keypair data is invalid: '
             'Keypair name must be between 1 and 255 characters long',
             res_dict['badRequest']['message'])
 
@@ -126,6 +127,7 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
+            'Keypair data is invalid: '
             'Keypair name must be between 1 and 255 characters long',
             res_dict['badRequest']['message'])
 
@@ -144,6 +146,7 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
+            "Keypair data is invalid: "
             "Keypair name contains unsafe characters",
             res_dict['badRequest']['message'])
 
@@ -261,8 +264,9 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
         res_dict = jsonutils.loads(res.body)
-        self.assertEqual("Keypair data is invalid",
-                         res_dict['badRequest']['message'])
+        self.assertEqual(
+            'Keypair data is invalid: failed to generate fingerprint',
+            res_dict['badRequest']['message'])
 
     def test_keypair_delete(self):
         req = webob.Request.blank('/v2/fake/os-keypairs/FAKE')
