@@ -1,0 +1,16 @@
+{
+    "server": {
+        "admin_pass": "kmspFLBzL75q",
+        "id": "f8eeb5ba-19b7-49be-a1a9-10250dda5b14",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/f8eeb5ba-19b7-49be-a1a9-10250dda5b14",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/f8eeb5ba-19b7-49be-a1a9-10250dda5b14",
+                "rel": "bookmark"
+            }
+        ]
+    }
+}
