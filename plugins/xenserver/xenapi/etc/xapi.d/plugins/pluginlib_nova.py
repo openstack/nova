@@ -135,7 +135,8 @@ def exists(args, key):
 
 def optional(args, key):
     """If the given key is in args, return the corresponding value, otherwise
-    return None"""
+    return None
+    """
     return key in args and args[key] or None
 
 
@@ -207,7 +208,8 @@ def vbd_unplug_with_retry(session, vbd):
     """Call VBD.unplug on the given VBD, with a retry if we get
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
-    should be dead."""
+    should be dead.
+    """
     while True:
         try:
             session.xenapi.VBD.unplug(vbd)
@@ -215,7 +217,7 @@ def vbd_unplug_with_retry(session, vbd):
             return
         except XenAPI.Failure, e:
             if (len(e.details) > 0 and
-                e.details[0] == 'DEVICE_DETACH_REJECTED'):
+                    e.details[0] == 'DEVICE_DETACH_REJECTED'):
                 logging.debug(_('VBD.unplug rejected: retrying...'))
                 time.sleep(1)
             elif (len(e.details) > 0 and

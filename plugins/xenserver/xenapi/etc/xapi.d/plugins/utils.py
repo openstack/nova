@@ -103,6 +103,7 @@ def finish_subprocess(proc, cmdline, cmd_input=None, ok_exit_codes=None):
         raise SubprocessException(' '.join(cmdline), ret, out, err)
     return out
 
+
 def run_command(cmd, cmd_input=None, ok_exit_codes=None):
     """Abstracts out the basics of issuing system commands. If the command
     returns anything in stderr, an exception is raised with that information.
