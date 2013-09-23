@@ -831,6 +831,23 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.conn.detach_volume(connection_info, self.instance, mount_point)
 
+    def test_connection_info_get(self):
+        self._create_vm()
+        connector = self.conn.get_volume_connector(self.instance)
+        self.assertEqual(connector['ip'], 'test_url')
+        self.assertEqual(connector['host'], 'test_url')
+        self.assertEqual(connector['initiator'], 'iscsi-name')
+        self.assertIn('instance', connector)
+
+    def test_connection_info_get_after_destroy(self):
+        self._create_vm()
+        self.conn.destroy(self.instance, self.network_info)
+        connector = self.conn.get_volume_connector(self.instance)
+        self.assertEqual(connector['ip'], 'test_url')
+        self.assertEqual(connector['host'], 'test_url')
+        self.assertEqual(connector['initiator'], 'iscsi-name')
+        self.assertNotIn('instance', connector)
+
 
 class VMwareAPIHostTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API host calls."""
