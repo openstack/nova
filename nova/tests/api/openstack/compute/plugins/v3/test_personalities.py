@@ -241,7 +241,7 @@ class ServersControllerCreateTest(test.TestCase):
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
 
-    def test_rebuild_instance_with_personality_diabled(self):
+    def test_rebuild_instance_with_personality_disabled(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         image_href = 'http://localhost/v3/images/%s' % image_uuid
         access_ipv4 = '0.0.0.0'
@@ -322,6 +322,25 @@ class ServersControllerCreateTest(test.TestCase):
                                               FAKE_UUID,
                                               body).obj
         self.assertTrue(self.rebuild_called)
+
+    def test_rebuild_bad_personality(self):
+        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+        image_href = 'http://localhost/v3/images/%s' % image_uuid
+        body = {
+            "rebuild": {
+                "image_ref": image_href,
+                "personality": [{
+                    "path": "/path/to/file",
+                    "contents": "INVALID b64",
+                }]
+            },
+        }
+
+        req = fakes.HTTPRequestV3.blank(
+            '/servers/%s/action' % FAKE_UUID)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          req, FAKE_UUID, body)
 
     def test_rebuild_instance_without_personality(self):
         image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
