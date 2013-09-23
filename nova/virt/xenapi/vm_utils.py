@@ -777,6 +777,11 @@ def _find_cached_image(session, image_id, sr_ref):
 
 
 def resize_disk(session, instance, vdi_ref, instance_type):
+    size_gb = instance_type['root_gb']
+    if size_gb == 0:
+        reason = _("Can't resize a disk to 0 GB.")
+        raise exception.ResizeError(reason=reason)
+
     # Copy VDI over to something we can resize
     # NOTE(jerdfelt): Would be nice to just set vdi_ref to read/write
     sr_ref = safe_find_sr(session)
@@ -784,10 +789,10 @@ def resize_disk(session, instance, vdi_ref, instance_type):
 
     try:
         # Resize partition and filesystem down
-        _auto_configure_disk(session, copy_ref, instance_type['root_gb'])
+        _auto_configure_disk(session, copy_ref, size_gb)
 
         # Create new VDI
-        vdi_size = instance_type['root_gb'] * 1024 * 1024 * 1024
+        vdi_size = size_gb * 1024 * 1024 * 1024
         # NOTE(johannes): No resizing allowed for rescue instances, so
         # using instance['name'] is safe here
         new_ref = create_vdi(session, sr_ref, instance, instance['name'],
@@ -796,7 +801,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
         new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
 
         # Manually copy contents over
-        virtual_size = instance_type['root_gb'] * 1024 * 1024 * 1024
+        virtual_size = size_gb * 1024 * 1024 * 1024
         _copy_partition(session, copy_ref, new_ref, 1, virtual_size)
 
         return new_ref, new_uuid
@@ -820,6 +825,10 @@ def _auto_configure_disk(session, vdi_ref, new_gb):
 
         3. The file-system on the one partition must be ext3 or ext4.
     """
+    if new_gb == 0:
+        LOG.debug(_("Skipping auto_config_disk as destination size is 0GB"))
+        return
+
     with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
         partitions = _get_partitions(dev)
 

@@ -19,6 +19,7 @@
 import ast
 import base64
 import contextlib
+import copy
 import functools
 import mox
 import os
@@ -1672,6 +1673,27 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
                           conn.migrate_disk_and_power_off,
                           self.context, instance,
                           '127.0.0.1', instance_type, None)
+
+    def test_migrate_disk_and_power_off_throws_on_zero_gb_resize_down(self):
+        instance = db.instance_create(self.context, self.instance_values)
+        instance_type = {"root_gb": 0}
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.ResizeError,
+                          conn.migrate_disk_and_power_off,
+                          self.context, instance,
+                          'fake_dest', instance_type, None)
+
+    def test_migrate_disk_and_power_off_with_zero_gb_old_and_new_works(self):
+        instance_type = db.flavor_get_by_name(self.context, 'm1.tiny')
+        instance_type["root_gb"] = 0
+        values = copy.copy(self.instance_values)
+        values["root_gb"] = 0
+        values["instance_type"] = instance_type['id']
+        instance = db.instance_create(self.context, values)
+        xenapi_fake.create_vm(instance['name'], 'Running')
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        conn.migrate_disk_and_power_off(self.context, instance,
+                                        '127.0.0.1', instance_type, None)
 
     def _test_revert_migrate(self, power_on):
         instance = create_instance_with_system_metadata(self.context,

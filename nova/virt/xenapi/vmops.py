@@ -918,12 +918,16 @@ class VMOps(object):
                                        step=0,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        vm_ref = self._get_vm_opaque_ref(instance)
-        sr_path = vm_utils.get_sr_path(self._session)
-
         old_gb = instance['root_gb']
         new_gb = instance_type['root_gb']
         resize_down = old_gb > new_gb
+
+        if new_gb == 0 and old_gb != 0:
+            reason = _("Can't resize a disk to 0 GB.")
+            raise exception.ResizeError(reason=reason)
+
+        vm_ref = self._get_vm_opaque_ref(instance)
+        sr_path = vm_utils.get_sr_path(self._session)
 
         if resize_down:
             self._migrate_disk_resizing_down(

@@ -532,6 +532,14 @@ class ResizeHelpersTestCase(test.TestCase):
 
         vm_utils._resize_part_and_fs("fake", 0, 20, 30)
 
+    def test_resize_disk_throws_on_zero_size(self):
+        self.assertRaises(exception.ResizeError,
+                vm_utils.resize_disk, "session", "instance", "vdi_ref",
+                {"root_gb": 0})
+
+    def test_auto_config_disk_returns_early_on_zero_size(self):
+        vm_utils.try_auto_configure_disk("bad_session", "bad_vdi_ref", 0)
+
 
 class CheckVDISizeTestCase(test.TestCase):
     def setUp(self):
