@@ -2283,10 +2283,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                           cells.insert().execute,
                           {'name': 'cell_transport_123', 'deleted': 0})
 
-    def _check_201(self, engine, data):
-        if engine.name != 'sqlite':
-            return
-
+    def _pre_upgrade_201(self, engine):
         data = {
             # table_name: ((idx_1, (c1, c2,)), (idx2, (c1, c2,)), ...)
             'agent_builds': (
@@ -2420,17 +2417,38 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 ('ix_task_log_period_ending', ('period_ending',)),
             ),
         }
+        return data
+
+    def _check_201(self, engine, data):
+        if engine.name != 'sqlite':
+            return
 
         meta = sqlalchemy.MetaData()
         meta.bind = engine
 
         for table_name, indexes in data.iteritems():
             table = sqlalchemy.Table(table_name, meta, autoload=True)
-            indexes = [(i.name, tuple(i.columns.keys()))
-                       for i in table.indexes]
+            loaded_indexes = [(i.name, tuple(i.columns.keys()))
+                              for i in table.indexes]
 
             for index in indexes:
-                self.assertIn(index, indexes)
+                self.assertIn(index, loaded_indexes)
+
+    def _post_downgrade_201(self, engine):
+        if engine.name != 'sqlite':
+            return
+
+        data = self._pre_upgrade_201(engine)
+        meta = sqlalchemy.MetaData()
+        meta.bind = engine
+
+        for table_name, indexes in data.iteritems():
+            table = sqlalchemy.Table(table_name, meta, autoload=True)
+            loaded_indexes = [(i.name, tuple(i.columns.keys()))
+                              for i in table.indexes]
+
+            for index in indexes:
+                self.assertNotIn(index, loaded_indexes)
 
     def _pre_upgrade_202(self, engine):
         fake_types = [
