@@ -1320,36 +1320,7 @@ class API(base.Base):
                     instance.refresh()
 
             if instance['vm_state'] == vm_states.RESIZED:
-                # If in the middle of a resize, use confirm_resize to
-                # ensure the original instance is cleaned up too
-                mig_cls = migration_obj.Migration
-                try:
-                    migration = mig_cls.get_by_instance_and_status(
-                        context.elevated(), instance.uuid, 'finished')
-                except exception.MigrationNotFoundByStatus:
-                    migration = None
-                if migration:
-                    src_host = migration.source_compute
-                    # Call since this can race with the terminate_instance.
-                    # The resize is done but awaiting confirmation/reversion,
-                    # so there are two cases:
-                    # 1. up-resize: here -instance['vcpus'/'memory_mb'] match
-                    #    the quota usages accounted for this instance,
-                    #    so no further quota adjustment is needed
-                    # 2. down-resize: here -instance['vcpus'/'memory_mb'] are
-                    #    shy by delta(old, new) from the quota usages accounted
-                    #    for this instance, so we must adjust
-                    deltas = self._downsize_quota_delta(context, instance)
-                    downsize_reservations = self._reserve_quota_delta(context,
-                                                                      deltas)
-
-                    self._record_action_start(context, instance,
-                                              instance_actions.CONFIRM_RESIZE)
-
-                    self.compute_rpcapi.confirm_resize(context,
-                            instance, migration,
-                            src_host, downsize_reservations,
-                            cast=False)
+                self._confirm_resize_on_deleting(context, instance)
 
             is_up = False
             try:
@@ -1388,6 +1359,56 @@ class API(base.Base):
                                     reservations,
                                     project_id=project_id,
                                     user_id=user_id)
+
+    def _confirm_resize_on_deleting(self, context, instance):
+        # If in the middle of a resize, use confirm_resize to
+        # ensure the original instance is cleaned up too
+        mig_cls = migration_obj.Migration
+        migration = None
+        for status in ('finished', 'confirming'):
+            try:
+                migration = mig_cls.get_by_instance_and_status(
+                        context.elevated(), instance.uuid, status)
+                LOG.info(_('Found an unconfirmed migration during delete, '
+                           'id: %(id)s, status: %(status)s') %
+                           {'id': migration.id,
+                            'status': migration.status},
+                           context=context, instance=instance)
+                break
+            except exception.MigrationNotFoundByStatus:
+                pass
+
+        if not migration:
+            LOG.info(_('Instance may have been confirmed during delete'),
+                    context=context, instance=instance)
+            return
+
+        src_host = migration.source_compute
+        # Call since this can race with the terminate_instance.
+        # The resize is done but awaiting confirmation/reversion,
+        # so there are two cases:
+        # 1. up-resize: here -instance['vcpus'/'memory_mb'] match
+        #    the quota usages accounted for this instance,
+        #    so no further quota adjustment is needed
+        # 2. down-resize: here -instance['vcpus'/'memory_mb'] are
+        #    shy by delta(old, new) from the quota usages accounted
+        #    for this instance, so we must adjust
+        try:
+            deltas = self._downsize_quota_delta(context, instance)
+        except KeyError:
+            LOG.info(_('Migration %s may have been confirmed during delete') %
+                    migration.id, context=context, instance=instance)
+            return
+        downsize_reservations = self._reserve_quota_delta(context,
+                                                          deltas)
+
+        self._record_action_start(context, instance,
+                                  instance_actions.CONFIRM_RESIZE)
+
+        self.compute_rpcapi.confirm_resize(context,
+                instance, migration,
+                src_host, downsize_reservations,
+                cast=False)
 
     def _create_reservations(self, context, old_instance, new_instance_type_id,
                              project_id, user_id):

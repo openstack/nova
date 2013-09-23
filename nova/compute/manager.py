@@ -2620,11 +2620,52 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations=None,
                        migration=None, migration_id=None):
-        """Destroys the source instance."""
-        if not migration:
-            migration = migration_obj.Migration.get_by_id(
-                    context.elevated(), migration_id)
 
+        @utils.synchronized(instance['uuid'])
+        def do_confirm_resize(context, instance, migration_id):
+            # NOTE(wangpan): Get the migration status from db, if it has been
+            #                confirmed, we do nothing and return here
+            LOG.debug(_("Going to confirm migration %s") % migration_id,
+                        context=context, instance=instance)
+            try:
+                migration = migration_obj.Migration.get_by_id(
+                                    context.elevated(), migration_id)
+            except exception.MigrationNotFound:
+                LOG.error(_("Migration %s is not found during confirmation") %
+                            migration_id, context=context, instance=instance)
+                return
+
+            if migration.status == 'confirmed':
+                LOG.info(_("Migration %s is already confirmed") %
+                            migration_id, context=context, instance=instance)
+                return
+            elif migration.status not in ('finished', 'confirming'):
+                LOG.warn(_("Unexpected confirmation status '%(status)s' of "
+                           "migration %(id)s, exit confirmation process") %
+                           {"status": migration.status, "id": migration_id},
+                           context=context, instance=instance)
+                return
+
+            # NOTE(wangpan): Get the instance from db, if it has been
+            #                deleted, we do nothing and return here
+            expected_attrs = ['metadata', 'system_metadata']
+            try:
+                instance = instance_obj.Instance.get_by_uuid(context,
+                                instance.uuid, expected_attrs=expected_attrs)
+            except exception.InstanceNotFound:
+                LOG.info(_("Instance is not found during confirmation"),
+                            context=context, instance=instance)
+                return
+
+            self._confirm_resize(context, instance, reservations=reservations,
+                                 migration=migration)
+
+        migration_id = migration_id if migration_id else migration.id
+        do_confirm_resize(context, instance, migration_id)
+
+    def _confirm_resize(self, context, instance, reservations=None,
+                        migration=None):
+        """Destroys the source instance."""
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
 
