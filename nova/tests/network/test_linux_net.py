@@ -25,11 +25,13 @@ from oslo.config import cfg
 
 from nova import context
 from nova import db
+from nova import exception
 from nova.network import driver
 from nova.network import linux_net
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova import utils
@@ -444,6 +446,22 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         driver = linux_net.LinuxBridgeInterfaceDriver()
         driver.plug({"bridge": "br100", "bridge_interface": "eth0"},
                     "fakemac")
+
+    def test_linux_ovs_driver_plug_exception(self):
+        self.flags(fake_network=False)
+
+        def fake_execute(*args, **kwargs):
+            raise processutils.ProcessExecutionError('error')
+
+        def fake_device_exists(*args, **kwargs):
+            return False
+
+        self.stubs.Set(utils, 'execute', fake_execute)
+        self.stubs.Set(linux_net, 'device_exists', fake_device_exists)
+        driver = linux_net.LinuxOVSInterfaceDriver()
+        self.assertRaises(exception.AgentError,
+                          driver.plug, {'uuid': 'fake_network_uuid'},
+                          'fake_mac')
 
     def test_vlan_override(self):
         """Makes sure vlan_interface flag overrides network bridge_interface.

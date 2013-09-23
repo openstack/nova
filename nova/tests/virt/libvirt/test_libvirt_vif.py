@@ -495,7 +495,7 @@ class LibvirtVifTestCase(test.TestCase):
                                   'qbrvif-xxx-yyy', 'down', run_as_root=True),
                         mock.call('brctl', 'delbr',
                                   'qbrvif-xxx-yyy', run_as_root=True),
-                        mock.call('ovs-vsctl', 'del-port',
+                        mock.call('ovs-vsctl', '--timeout=120', 'del-port',
                                   'br0', 'qvovif-xxx-yyy', run_as_root=True),
                         mock.call('ip', 'link', 'delete',
                                   'qvovif-xxx-yyy', run_as_root=True,
@@ -517,7 +517,8 @@ class LibvirtVifTestCase(test.TestCase):
         calls = {
             'device_exists': [mock.call('qbrvif-xxx-yyy'),
                               mock.call('qvovif-xxx-yyy')],
-            'execute': [mock.call('ovs-vsctl', 'del-port', 'br0',
+            'execute': [mock.call('ovs-vsctl', '--timeout=120',
+                                  'del-port', 'br0',
                                   'qvovif-xxx-yyy', run_as_root=True)]
         }
         with contextlib.nested(
