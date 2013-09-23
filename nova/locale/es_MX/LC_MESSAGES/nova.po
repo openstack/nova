@@ -1,19 +1,18 @@
-# Polish (Poland) translations for nova.
+# Spanish (Mexico) translations for nova.
 # Copyright (C) 2013 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
 msgid ""
 msgstr ""
-"Project-Id-Version:  Nova\n"
+"Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
 "POT-Creation-Date: 2013-09-23 06:06+0000\n"
-"PO-Revision-Date: 2013-06-28 18:59+0000\n"
+"PO-Revision-Date: 2013-08-30 07:15+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Polish (Poland) "
-"(http://www.transifex.com/projects/p/openstack/language/pl_PL/)\n"
-"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && "
-"(n%100<10 || n%100>=20) ? 1 : 2)\n"
+"Language-Team: Spanish (Mexico) "
+"(http://www.transifex.com/projects/p/openstack/language/es_MX/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13044,256 +13043,7 @@ msgstr ""
 msgid "formatting encrypted volume %s"
 msgstr ""
 
-#~ msgid "Created reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Failed to commit reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Committed reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Failed to roll back reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid "Rolled back reservations %(reservations)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ msgstr ""
-
-#~ msgid "Received Token: %(token)s, %(token_dict)s)"
-#~ msgstr ""
-
-#~ msgid "Checking Token: %(token)s, %(token_valid)s)"
-#~ msgstr ""
-
-#~ msgid "Fixed ip %(fixed_ip_id)s not found"
-#~ msgstr ""
-
-#~ msgid "Interface %(interface)s not found"
-#~ msgstr ""
-
-#~ msgid "floating IP allocation for instance |%(floating_address)s|"
-#~ msgstr ""
-
-#~ msgid "Quota exceeded for %(pid)s, tried to allocate floating IP"
-#~ msgstr ""
-
-#~ msgid "Starting migration network for instance %(instance_uuid)s"
-#~ msgstr ""
-
-#~ msgid "Finishing migration network for instance %(instance_uuid)s"
-#~ msgstr ""
-
-#~ msgid "networks retrieved for instance: |%(networks_list)s|"
-#~ msgstr ""
-
-#~ msgid "Quota exceeded for %(pid)s, tried to allocate fixed IP"
-#~ msgstr ""
-
-#~ msgid "Leased IP |%(address)s|"
-#~ msgstr ""
-
-#~ msgid "Released IP |%(address)s|"
-#~ msgstr ""
-
-#~ msgid "Failed to delete neutron port %(port_id)s "
-#~ msgstr ""
-
-#~ msgid "Cannot load '%(attrname)s' in the base class"
-#~ msgstr ""
-
-#~ msgid "Group affinity: %(host)s in %(configured)s"
-#~ msgstr ""
-
-#~ msgid "Could not decode cpu_allocation_ratio: '%(e)s'"
-#~ msgstr ""
-
-#~ msgid "Could not decode ram_allocation_ratio: '%(e)s'"
-#~ msgstr ""
-
-#~ msgid "Couldn't find multipath device %(line)s"
-#~ msgstr ""
-
-#~ msgid "Found multipath device = %(mdev)s"
-#~ msgstr ""
-
-#~ msgid "Make directory path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Append file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Replace file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Read file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Has file path=%(path)s"
-#~ msgstr ""
-
-#~ msgid "Exception received during cell processing: %(exc_name)s."
-#~ msgstr ""
-
-#~ msgid "%(code)s: %(message)s"
-#~ msgstr ""
-
-#~ msgid "InstanceNotFound raised: %s"
-#~ msgstr ""
-
-#~ msgid "VolumeNotFound raised: %s"
-#~ msgstr ""
-
-#~ msgid "SnapshotNotFound raised: %s"
-#~ msgstr ""
-
-#~ msgid "NotFound raised: %s"
-#~ msgstr ""
-
-#~ msgid "KeyPairExists raised: %s"
-#~ msgstr ""
-
-#~ msgid "InvalidKeypair raised: %s"
-#~ msgstr ""
-
-#~ msgid "InvalidParameterValue raised: %s"
-#~ msgstr ""
-
-#~ msgid "InvalidPortRange raised: %s"
-#~ msgstr ""
-
-#~ msgid "NotAuthorized raised: %s"
-#~ msgstr ""
-
-#~ msgid "InvalidRequest raised: %s"
-#~ msgstr ""
-
-#~ msgid "QuotaError raised: %s"
-#~ msgstr ""
-
-#~ msgid "Invalid id: bogus (expecting \"i-...\"): %s"
-#~ msgstr ""
-
-#~ msgid "Unexpected error raised: %s"
-#~ msgstr ""
-
-#~ msgid "Compute.api::reset_state %s"
-#~ msgstr ""
-
-#~ msgid "Must supply valid parameters to create instance_type"
-#~ msgstr ""
-
-#~ msgid "Instance Type exists."
-#~ msgstr ""
-
-#~ msgid "Please ensure instance_type name and flavorid are unique."
-#~ msgstr ""
-
-#~ msgid "Currently defined instance_type names and flavorids:"
-#~ msgstr ""
-
-#~ msgid "Valid instance type name is required"
-#~ msgstr ""
-
-#~ msgid "Key %(key)s on instance type %(name)s unset"
-#~ msgstr ""
-
-#~ msgid "Got semaphore \"%(lock)s\" for method \"%(method)s\"..."
-#~ msgstr ""
-
-#~ msgid "Attempting to grab file lock \"%(lock)s\" for method \"%(method)s\"..."
-#~ msgstr ""
-
-#~ msgid "Got file lock \"%(lock)s\" at %(path)s for method \"%(method)s\"..."
-#~ msgstr ""
-
-#~ msgid "Failed to sanitize %(item)s. Key error %(err)s"
-#~ msgstr ""
-
-#~ msgid "Driver must implement schedule_prep_resize"
-#~ msgstr ""
-
-#~ msgid "Failed to soft reboot instance."
-#~ msgstr ""
-
-#~ msgid "Error(s) %s occurred in the call to RetrieveProperties"
-#~ msgstr ""
-
-#~ msgid "download_vhd failed: %r"
-#~ msgstr ""
-
-#~ msgid "Setting VCPU weight"
-#~ msgstr ""
-
-#~ msgid "upload_vhd failed: %r"
-#~ msgstr ""
-
-#~ msgid "No torrent URL fetcher extension found."
-#~ msgstr ""
-
-#~ msgid "Multiple torrent URL fetcher extension found.  Failing."
-#~ msgstr ""
-
-#~ msgid "No torrent URL fetcher installed."
-#~ msgstr ""
-
-#~ msgid "Failed to get torrent URL for image %s"
-#~ msgstr ""
-
-#~ msgid "Running pygrub against %s"
-#~ msgstr ""
-
-#~ msgid "Found Xen kernel %s"
-#~ msgstr ""
-
-#~ msgid "No Xen kernel found.  Booting HVM."
-#~ msgstr ""
-
-#~ msgid "%(name)s has less than %(min_length)s characters."
-#~ msgstr ""
-
-#~ msgid "Missing device_name in some block devices."
-#~ msgstr ""
-
-#~ msgid "Error in evacuate, %s"
-#~ msgstr ""
-
-#~ msgid "leasing ip"
-#~ msgstr ""
-
-#~ msgid "releasing ip"
-#~ msgstr ""
-
-#~ msgid "bdm %s"
-#~ msgstr ""
-
-#~ msgid "Host already in availability zone %s."
-#~ msgstr ""
-
-#~ msgid "Setting up bdm %s"
-#~ msgstr ""
-
-#~ msgid "%s. Setting instance vm_state to ERROR"
-#~ msgstr ""
-
-#~ msgid "Extra column %(table)%.%(column)s in shadow table"
-#~ msgstr ""
-
-#~ msgid "Please extend mock libvirt module to support flags"
-#~ msgstr ""
-
 #~ msgid "Unknown"
-#~ msgstr ""
-
-#~ msgid "Not enough parameters, need group_name or group_id"
-#~ msgstr ""
-
-#~ msgid "%s Not enough parameters to build a valid rule"
-#~ msgstr ""
-
-#~ msgid "Invalid IP protocol %s."
 #~ msgstr ""
 
 #~ msgid "%s - This rule already exists in group"
@@ -13306,9 +13056,6 @@ msgstr ""
 #~ msgstr ""
 
 #~ msgid "Detach Volume Failed."
-#~ msgstr ""
-
-#~ msgid "attribute not supported: %s"
 #~ msgstr ""
 
 #~ msgid "No more floating IPs available"
@@ -13335,31 +13082,10 @@ msgstr ""
 #~ msgid "Could not found metadata to be set in request body"
 #~ msgstr ""
 
-#~ msgid "Reserving IP address %s"
-#~ msgstr ""
-
-#~ msgid "Unreserving IP address %s"
-#~ msgstr ""
-
-#~ msgid "min_count must be an integer value"
-#~ msgstr ""
-
-#~ msgid "min_count must be > 0"
-#~ msgstr ""
-
-#~ msgid "max_count must be an integer value"
-#~ msgstr ""
-
-#~ msgid "max_count must be > 0"
-#~ msgstr ""
-
 #~ msgid ""
 #~ "%(overs)s quota exceeded for %(pid)s, "
 #~ "tried to run %(min_count)s instances. "
 #~ "%(msg)s"
-#~ msgstr ""
-
-#~ msgid "Old volume must be attached in order to swap."
 #~ msgstr ""
 
 #~ msgid "Updating host status"
@@ -13371,19 +13097,7 @@ msgstr ""
 #~ " been claimed."
 #~ msgstr ""
 
-#~ msgid ""
-#~ "Exceeded max scheduling attempts "
-#~ "%(max_attempts)d for instance %(instance_uuid)s "
-#~ "during live migration"
-#~ msgstr ""
-
-#~ msgid "v4 subnets are required for legacy nw_info"
-#~ msgstr ""
-
 #~ msgid "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of memory"
-#~ msgstr ""
-
-#~ msgid "%(host_state)s is disabled via capabilities"
 #~ msgstr ""
 
 #~ msgid ""
