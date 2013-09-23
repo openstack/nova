@@ -2935,10 +2935,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         if engine.name == 'mysql':
             self._212(engine)
 
-    def _pre_upgrade_213(self, engine):
+    def _213(self, engine):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
                           db_utils.get_table, engine,
                           'pci_devices')
+        self.assertColumnNotExists(engine, 'compute_nodes', 'pci_stats')
+
+    def _pre_upgrade_213(self, engine):
+        self._213(engine)
 
     def _check_213(self, engine, data):
         fake_pci = {'id': 3353,
@@ -2959,28 +2963,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         result = devs.select().execute().fetchall()
         self.assertEqual(len(result), 1)
         self.assertEqual(result[0]['vendor_id'], '1520')
-        fake_node = dict(vcpus=2, memory_mb=1024, local_gb=2048,
-                         vcpus_used=0, memory_mb_used=0,
-                         local_gb_used=0, free_ram_mb=1024,
-                         free_disk_gb=2048, hypervisor_type="xen",
-                         hypervisor_version=1, cpu_info="",
-                         running_vms=0, current_workload=0,
-                         service_id=1,
-                         disk_available_least=100,
-                         hypervisor_hostname='abracadabra104',
-                         host_ip='127.0.0.1',
-                         supported_instances='')
+
+        self.assertColumnExists(engine, 'compute_nodes', 'pci_stats')
         nodes = db_utils.get_table(engine, 'compute_nodes')
-        engine.execute(nodes.insert(), fake_node)
-        result = nodes.select().execute().fetchall()
-        self.assertEqual(len(result), 1)
-        self.assertEqual(result[0]['pci_stats'], None)
+        self.assertTrue(isinstance(nodes.c.pci_stats.type,
+                                   sqlalchemy.types.Text))
 
     def _post_downgrade_213(self, engine):
-        # check that groups does not exist
-        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          db_utils.get_table, engine,
-                          'pci_devices')
+        self._213(engine)
 
     def _pre_upgrade_214(self, engine):
         test_data = {
