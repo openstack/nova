@@ -64,9 +64,6 @@ opts = [
                help='Baremetal compute node\'s tftp root path'),
     ]
 
-
-LOG = logging.getLogger(__name__)
-
 baremetal_group = cfg.OptGroup(name='baremetal',
                                title='Baremetal Options')
 
