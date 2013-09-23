@@ -114,12 +114,12 @@ class InstallVenv(object):
         print('Installing dependencies with pip (this can take a while)...')
 
         # First things first, make sure our venv has the latest pip and
-        # setuptools.
-        self.pip_install('pip>=1.3')
+        # setuptools and pbr
+        self.pip_install('pip>=1.4')
         self.pip_install('setuptools')
+        self.pip_install('pbr')
 
-        self.pip_install('-r', self.requirements)
-        self.pip_install('-r', self.test_requirements)
+        self.pip_install('-r', self.requirements, '-r', self.test_requirements)
 
     def post_process(self):
         self.get_distro().post_process()
@@ -201,12 +201,13 @@ class Fedora(Distro):
         RHEL: https://bugzilla.redhat.com/958868
         """
 
-        # Install "patch" program if it's not there
-        if not self.check_pkg('patch'):
-            self.die("Please install 'patch'.")
+        if os.path.exists('contrib/redhat-eventlet.patch'):
+            # Install "patch" program if it's not there
+            if not self.check_pkg('patch'):
+                self.die("Please install 'patch'.")
 
-        # Apply the eventlet patch
-        self.apply_patch(os.path.join(self.venv, 'lib', self.py_version,
-                                      'site-packages',
-                                      'eventlet/green/subprocess.py'),
-                         'contrib/redhat-eventlet.patch')
+            # Apply the eventlet patch
+            self.apply_patch(os.path.join(self.venv, 'lib', self.py_version,
+                                          'site-packages',
+                                          'eventlet/green/subprocess.py'),
+                             'contrib/redhat-eventlet.patch')
