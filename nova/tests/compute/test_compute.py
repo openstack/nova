@@ -5513,6 +5513,19 @@ class ComputeTestCase(BaseTestCase):
         updated_ats = (updated_at_1, updated_at_2, updated_at_3)
         self.assertEqual(len(updated_ats), len(set(updated_ats)))
 
+    def test_no_pending_deletes_for_soft_deleted_instances(self):
+        self.flags(reclaim_instance_interval=0)
+        ctxt = context.get_admin_context()
+
+        instance = self._create_fake_instance(
+                params={'host': CONF.host,
+                        'vm_state': vm_states.SOFT_DELETED,
+                        'deleted_at': timeutils.utcnow()})
+
+        self.compute._run_pending_deletes(ctxt)
+        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
+        self.assertFalse(instance['cleaned'])
+
     def test_reclaim_queued_deletes(self):
         self.flags(reclaim_instance_interval=3600)
         ctxt = context.get_admin_context()

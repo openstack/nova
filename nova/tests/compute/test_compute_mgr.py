@@ -502,7 +502,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                  'get_by_filters')
         instance_obj.InstanceList.get_by_filters(
             {'read_deleted': 'yes'},
-            {'deleted': True, 'host': 'fake-mini', 'cleaned': False},
+            {'deleted': True, 'soft_deleted': False, 'host': 'fake-mini',
+             'cleaned': False},
             expected_attrs=['info_cache', 'security_groups',
                             'system_metadata']).AndReturn([a, b, c])
 

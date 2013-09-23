@@ -5054,6 +5054,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         LOG.debug(_('Cleaning up deleted instances'))
         filters = {'deleted': True,
+                   'soft_deleted': False,
                    'host': CONF.host,
                    'cleaned': False}
         attrs = ['info_cache', 'security_groups', 'system_metadata']
