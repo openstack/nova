@@ -1716,6 +1716,9 @@ def _build_instance_get(context, session=None, columns_to_join=None):
     if columns_to_join is None:
         columns_to_join = ['metadata', 'system_metadata']
     for column in columns_to_join:
+        if column in ['info_cache', 'security_groups']:
+            # Already always joined above
+            continue
         query = query.options(joinedload(column))
     #NOTE(alaski) Stop lazy loading of columns not needed.
     for col in ['metadata', 'system_metadata']:
