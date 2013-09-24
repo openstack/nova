@@ -1503,6 +1503,8 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
             LOG.debug(msg, {'interface': interface, 'bridge': bridge})
             out, err = _execute('brctl', 'addif', bridge, interface,
                                 check_exit_code=False, run_as_root=True)
+            out, err = _execute('ip', 'link', 'set', interface, 'up',
+                                check_exit_code=False, run_as_root=True)
 
             # NOTE(vish): This will break if there is already an ip on the
             #             interface, so we move any ips to the bridge
