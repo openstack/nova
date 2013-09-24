@@ -3691,7 +3691,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_destroy_removes_disk(self):
         instance = {"name": "instancename", "id": "42",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
-                    "cleaned": 0, 'info_cache': None, 'security_groups': None}
+                    "cleaned": 0, 'info_cache': None, 'security_groups': []}
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver,
                                  '_undefine_domain')
@@ -3777,7 +3777,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_delete_instance_files(self):
         instance = {"name": "instancename", "id": "42",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64",
-                    "cleaned": 0, 'info_cache': None, 'security_groups': None}
+                    "cleaned": 0, 'info_cache': None, 'security_groups': []}
 
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(os.path, 'exists')

@@ -51,7 +51,7 @@ class _TestInstanceObject(object):
                 tzinfo=iso8601.iso8601.Utc(), microsecond=0))
         fake_instance['deleted'] = False
         fake_instance['info_cache']['instance_uuid'] = fake_instance['uuid']
-        fake_instance['security_groups'] = None
+        fake_instance['security_groups'] = []
         fake_instance['pci_devices'] = []
         fake_instance['user_id'] = self.context.user_id
         fake_instance['project_id'] = self.context.project_id
@@ -421,18 +421,6 @@ class _TestInstanceObject(object):
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
             ['pci_devices'])
         self.assertEqual(len(inst.pci_devices), 0)
-
-    def test_with_none_pci_devices(self):
-        fake_inst = dict(self.fake_instance, pci_devices=None)
-        fake_uuid = fake_inst['uuid']
-        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
-        db.instance_get_by_uuid(self.context, fake_uuid,
-                                columns_to_join=['pci_devices']
-                                ).AndReturn(fake_inst)
-        self.mox.ReplayAll()
-        inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
-            ['pci_devices'])
-        self.assertEqual(None, inst.pci_devices)
 
     def test_with_pci_devices(self):
         fake_inst = dict(self.fake_instance)

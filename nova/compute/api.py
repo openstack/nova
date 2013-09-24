@@ -58,7 +58,7 @@ from nova.objects import instance_action
 from nova.objects import instance_info_cache
 from nova.objects import keypair as keypair_obj
 from nova.objects import migration as migration_obj
-from nova.objects import security_group
+from nova.objects import security_group as security_group_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -3675,7 +3675,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
 
     def populate_security_groups(self, instance, security_groups):
         if not security_groups:
-            instance.security_groups = None
-            return
-        instance.security_groups = security_group.make_secgroup_list(
+            # Make sure it's an empty list and not None
+            security_groups = []
+        instance.security_groups = security_group_obj.make_secgroup_list(
             security_groups)

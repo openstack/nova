@@ -6068,7 +6068,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEquals(task_states.SCHEDULING, instance['task_state'])
         self.assertEquals(1, instance['launch_index'])
         self.assertIsNotNone(instance.get('uuid'))
-        self.assertIsNone(instance.get('security_groups'))
+        self.assertEqual([], instance.security_groups.objects)
 
     def test_default_hostname_generator(self):
         fake_uuids = [str(uuid.uuid4()) for x in xrange(4)]

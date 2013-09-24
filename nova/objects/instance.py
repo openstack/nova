@@ -59,7 +59,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.5: Added cleaned
     # Version 1.6: Added pci_devices
     # Version 1.7: String attributes updated to support unicode
-    VERSION = '1.7'
+    # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
+    VERSION = '1.8'
 
     fields = {
         'id': int,
@@ -138,7 +139,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             instance_info_cache.InstanceInfoCache),
 
         'security_groups': obj_utils.nested_object(
-            security_group.SecurityGroupList),
+            security_group.SecurityGroupList, none_ok=False),
 
         'fault': obj_utils.nested_object(
             instance_fault.InstanceFault),
@@ -146,7 +147,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'cleaned': bool,
 
         'pci_devices': obj_utils.nested_object(
-            pci_device.PciDeviceList),
+            pci_device.PciDeviceList, none_ok=False),
         }
 
     obj_extra_fields = ['name']
@@ -227,7 +228,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
     def _attr_pci_devices_from_primitive(self, val):
         if val is None:
-            return None
+            # Only possible in version <= 1.7
+            return pci_device.PciDeviceList()
         return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
@@ -259,12 +261,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     context, instance.uuid))
 
         if 'pci_devices' in expected_attrs:
-            if db_inst['pci_devices'] is None:
-                pci_devices = None
-            else:
-                pci_devices = pci_device._make_pci_list(
-                        context, pci_device.PciDeviceList(),
-                        db_inst['pci_devices'])
+            pci_devices = pci_device._make_pci_list(
+                    context, pci_device.PciDeviceList(),
+                    db_inst['pci_devices'])
             instance['pci_devices'] = pci_devices
 
         # NOTE(danms): info_cache and security_groups are almost
@@ -274,12 +273,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             instance['info_cache'] = instance_info_cache.InstanceInfoCache()
             instance_info_cache.InstanceInfoCache._from_db_object(
                     context, instance['info_cache'], db_inst['info_cache'])
-        if ('security_groups' in expected_attrs and
-                db_inst.get('security_groups') is not None):
-            instance['security_groups'] = security_group.SecurityGroupList()
-            security_group._make_secgroup_list(context,
-                                               instance['security_groups'],
-                                               db_inst['security_groups'])
+        if 'security_groups' in expected_attrs:
+            sec_groups = security_group._make_secgroup_list(
+                    context, security_group.SecurityGroupList(),
+                    db_inst['security_groups'])
+            instance['security_groups'] = sec_groups
 
         instance._context = context
         instance.obj_reset_changes()

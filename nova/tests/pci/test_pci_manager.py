@@ -324,7 +324,7 @@ class PciGetInstanceDevs(test.TestCase):
         def _fake_obj_load_attr(foo, attrname):
             if attrname == 'pci_devices':
                 self.load_attr_called = True
-                foo.pci_devices = None
+                foo.pci_devices = pci_device.PciDeviceList()
 
         inst = fakes.stub_instance(id='1')
         ctxt = context.get_admin_context()
