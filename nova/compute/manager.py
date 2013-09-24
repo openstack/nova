@@ -27,7 +27,6 @@ terminating it.
 
 """
 
-
 import base64
 import contextlib
 import functools
