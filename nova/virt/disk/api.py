@@ -75,7 +75,7 @@ disk_opts = [
                          'The format is <os_type>=<mkfs command>'),
 
     cfg.BoolOpt('resize_fs_using_block_device',
-                default=True,
+                default=False,
                 help='Attempt to resize the filesystem by accessing the '
                      'image over a block device. This is done by the host '
                      'and may not be necessary if the image contains a recent '
