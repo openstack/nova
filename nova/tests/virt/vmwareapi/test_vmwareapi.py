@@ -269,16 +269,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 mox.IgnoreArg()).AndReturn(root_disk)
         mount_point = '/dev/vdc'
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 '_get_volume_uuid')
-        volumeops.VMwareVolumeOps._get_volume_uuid(mox.IgnoreArg(),
-                'volume-fake-id').AndReturn('fake_disk_uuid')
-        self.mox.StubOutWithMock(vm_util, 'get_vmdk_backed_disk_device')
-        vm_util.get_vmdk_backed_disk_device(mox.IgnoreArg(),
-                'fake_disk_uuid').AndReturn('fake_device')
+                                 '_get_res_pool_of_vm')
+        volumeops.VMwareVolumeOps._get_res_pool_of_vm(
+                 mox.IgnoreArg()).AndReturn('fake_res_pool')
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
-                                 '_consolidate_vmdk_volume')
-        volumeops.VMwareVolumeOps._consolidate_vmdk_volume(self.instance,
-                 mox.IgnoreArg(), 'fake_device', mox.IgnoreArg())
+                                 '_relocate_vmdk_volume')
+        volumeops.VMwareVolumeOps._relocate_vmdk_volume(mox.IgnoreArg(),
+                 'fake_res_pool', mox.IgnoreArg())
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  'attach_volume')
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
