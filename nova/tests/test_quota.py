@@ -1947,6 +1947,9 @@ class FakeSession(object):
     def begin(self):
         return self
 
+    def add(self, instance):
+        pass
+
     def __enter__(self):
         return self
 
