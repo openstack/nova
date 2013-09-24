@@ -58,6 +58,7 @@ from nova.tests.api.openstack.compute.contrib import test_services
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
+from nova.tests import fake_network_cache_model
 from nova.tests import fake_utils
 from nova.tests.image import fake
 from nova.tests.integrated import api_samples_test_base
@@ -3523,32 +3524,11 @@ class AttachInterfacesSampleJsonTest(ServersSampleBase):
                 network_id = "fake_net_uuid"
             if not port_id:
                 port_id = "fake_port_uuid"
-            network_info = [
-                {
-                    'bridge': 'br-100',
-                    'id': network_id,
-                    'cidr': '192.168.1.0/24',
-                    'vlan': '101',
-                    'injected': 'False',
-                    'multi_host': 'False',
-                    'bridge_interface': 'bridge_interface'
-                },
-                {
-                    "vif_uuid": port_id,
-                    "network_id": network_id,
-                    "admin_state_up": True,
-                    "status": "ACTIVE",
-                    "mac_address": "fa:16:3e:4c:2c:30",
-                    "fixed_ips": [
-                        {
-                            "ip_address": requested_ip,
-                            "subnet_id": "f8a6e8f8-c2ec-497c-9f23-da9616de54ef"
-                        }
-                    ],
-                    "device_id": instance['uuid'],
-                }
-            ]
-            return network_info
+            vif = fake_network_cache_model.new_vif()
+            vif['id'] = port_id
+            vif['network']['id'] = network_id
+            vif['network']['subnets'][0]['ips'][0] = requested_ip
+            return vif
 
         def fake_detach_interface(self, context, instance, port_id):
             pass
