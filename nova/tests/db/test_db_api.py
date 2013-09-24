@@ -1470,6 +1470,14 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                 {'metadata': {'foo': 'bar'}})
         self._assertEqualListsOfInstances([instance], result)
 
+    def test_instance_get_all_by_filters_system_metadata(self):
+        instance = self.create_instance_with_args(
+                system_metadata={'foo': 'bar'})
+        self.create_instance_with_args()
+        result = db.instance_get_all_by_filters(self.ctxt,
+                {'system_metadata': {'foo': 'bar'}})
+        self._assertEqualListsOfInstances([instance], result)
+
     def test_instance_get_all_by_filters_unicode_value(self):
         instance = self.create_instance_with_args(display_name=u'test♥')
         result = db.instance_get_all_by_filters(self.ctxt,
