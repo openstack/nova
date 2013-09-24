@@ -191,7 +191,7 @@ class _FakeImageService(object):
         image_id = str(metadata.get('id', uuid.uuid4()))
         metadata['id'] = image_id
         if image_id in self.images:
-            raise exception.Duplicate()
+            raise exception.CouldNotUploadImage(image_id=image_id)
         self.images[image_id] = copy.deepcopy(metadata)
         if data:
             self._imagedata[image_id] = data.read()
