@@ -65,7 +65,7 @@ class ResourceTracker(object):
     def __init__(self, host, driver, nodename):
         self.host = host
         self.driver = driver
-        self.pci_tracker = pci_manager.PciDevTracker()
+        self.pci_tracker = None
         self.nodename = nodename
         self.compute_node = None
         self.stats = importutils.import_object(CONF.compute_stats_class)
@@ -232,7 +232,9 @@ class ResourceTracker(object):
 
             if instance_type['id'] == itype['id']:
                 self.stats.update_stats_for_migration(itype, sign=-1)
-                self.pci_tracker.update_pci_for_migration(instance, sign=-1)
+                if self.pci_tracker:
+                    self.pci_tracker.update_pci_for_migration(instance,
+                                                              sign=-1)
                 self._update_usage(self.compute_node, itype, sign=-1)
                 self.compute_node['stats'] = self.stats
 
@@ -284,6 +286,8 @@ class ResourceTracker(object):
         self._report_hypervisor_resource_view(resources)
 
         if 'pci_passthrough_devices' in resources:
+            if not self.pci_tracker:
+                self.pci_tracker = pci_manager.PciDevTracker()
             self.pci_tracker.set_hvdevs(jsonutils.loads(resources.pop(
                 'pci_passthrough_devices')))
 
@@ -310,8 +314,11 @@ class ResourceTracker(object):
         # this periodic task, and also because the resource tracker is not
         # notified when instances are deleted, we need remove all usages
         # from deleted instances.
-        self.pci_tracker.clean_usage(instances, migrations, orphans)
-        resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+        if self.pci_tracker:
+            self.pci_tracker.clean_usage(instances, migrations, orphans)
+            resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+        else:
+            resources['pci_stats'] = jsonutils.dumps({})
 
         self._report_final_resource_view(resources)
 
@@ -331,14 +338,16 @@ class ResourceTracker(object):
                 for cn in compute_node_refs:
                     if cn.get('hypervisor_hostname') == self.nodename:
                         self.compute_node = cn
-                        self.pci_tracker.set_compute_node_id(cn['id'])
+                        if self.pci_tracker:
+                            self.pci_tracker.set_compute_node_id(cn['id'])
                         break
 
         if not self.compute_node:
             # Need to create the ComputeNode record:
             resources['service_id'] = service['id']
             self._create(context, resources)
-            self.pci_tracker.set_compute_node_id(self.compute_node['id'])
+            if self.pci_tracker:
+                self.pci_tracker.set_compute_node_id(self.compute_node['id'])
             LOG.info(_('Compute_service record created for %(host)s:%(node)s')
                     % {'host': self.host, 'node': self.nodename})
 
@@ -417,7 +426,8 @@ class ResourceTracker(object):
             del self.compute_node['service']
         self.compute_node = self.conductor_api.compute_node_update(
             context, self.compute_node, values, prune_stats)
-        self.pci_tracker.save(context)
+        if self.pci_tracker:
+            self.pci_tracker.save(context)
 
     def _update_usage(self, resources, usage, sign=1):
         mem_usage = usage['memory_mb']
@@ -480,10 +490,15 @@ class ResourceTracker(object):
 
         if itype:
             self.stats.update_stats_for_migration(itype)
-            self.pci_tracker.update_pci_for_migration(instance)
+            if self.pci_tracker:
+                self.pci_tracker.update_pci_for_migration(instance)
             self._update_usage(resources, itype)
             resources['stats'] = self.stats
-            resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+            if self.pci_tracker:
+                resources['pci_stats'] = jsonutils.dumps(
+                        self.pci_tracker.stats)
+            else:
+                resources['pci_stats'] = jsonutils.dumps({})
             self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, context, resources, migrations):
@@ -542,7 +557,8 @@ class ResourceTracker(object):
 
         self.stats.update_stats_for_instance(instance)
 
-        self.pci_tracker.update_pci_for_instance(instance)
+        if self.pci_tracker:
+            self.pci_tracker.update_pci_for_instance(instance)
 
         # if it's a new or deleted instance:
         if is_new_instance or is_deleted_instance:
@@ -551,7 +567,10 @@ class ResourceTracker(object):
 
         resources['current_workload'] = self.stats.calculate_workload()
         resources['stats'] = self.stats
-        resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+        if self.pci_tracker:
+            resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
+        else:
+            resources['pci_stats'] = jsonutils.dumps({})
 
     def _update_usage_from_instances(self, resources, instances):
         """Calculate resource usage based on instance utilization.  This is

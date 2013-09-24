@@ -17,6 +17,7 @@
 
 """Tests for compute resource tracking."""
 
+import re
 import uuid
 
 from oslo.config import cfg
@@ -29,6 +30,7 @@ from nova import context
 from nova import db
 from nova.objects import base as obj_base
 from nova.objects import migration as migration_obj
+from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.objects import test_migration
@@ -58,7 +60,7 @@ class UnsupportedVirtDriver(driver.ComputeDriver):
 
 class FakeVirtDriver(driver.ComputeDriver):
 
-    def __init__(self):
+    def __init__(self, pci_support=False):
         super(FakeVirtDriver, self).__init__(None)
         self.memory_mb = FAKE_VIRT_MEMORY_MB
         self.local_gb = FAKE_VIRT_LOCAL_GB
@@ -66,6 +68,7 @@ class FakeVirtDriver(driver.ComputeDriver):
 
         self.memory_mb_used = 0
         self.local_gb_used = 0
+        self.pci_support = pci_support
 
     def get_host_ip_addr(self):
         return '127.0.0.1'
@@ -83,6 +86,15 @@ class FakeVirtDriver(driver.ComputeDriver):
             'hypervisor_hostname': 'fakehost',
             'cpu_info': '',
         }
+        if self.pci_support:
+            d['pci_passthrough_devices'] = jsonutils.dumps([{
+                    'label': 'forza-napoli',
+                    'compute_node_id': 1,
+                    'address': '0000:00:00.1',
+                    'product_id': 'p1',
+                    'vendor_id': 'v1',
+                    'status': 'available',
+                    'extra_k1': 'v1'}])
         return d
 
     def estimate_instance_overhead(self, instance_info):
@@ -503,6 +515,37 @@ class TrackerTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
+        self._assert('{}', 'pci_stats')
+
+
+class TrackerPciStatsTestCase(BaseTrackerTestCase):
+
+    def test_update_compute_node(self):
+        self.assertFalse(self.tracker.disabled)
+        self.assertTrue(self.updated)
+
+    def test_init(self):
+        self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
+        self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
+        self._assert(FAKE_VIRT_VCPUS, 'vcpus')
+        self._assert(0, 'memory_mb_used')
+        self._assert(0, 'local_gb_used')
+        self._assert(0, 'vcpus_used')
+        self._assert(0, 'running_vms')
+        self._assert(FAKE_VIRT_MEMORY_MB, 'free_ram_mb')
+        self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
+        self.assertFalse(self.tracker.disabled)
+        self.assertEqual(0, self.tracker.compute_node['current_workload'])
+        expected = """[{"count": 1,
+                        "vendor_id": "v1",
+                        "product_id": "p1",
+                        "extra_info": {"extra_k1": "v1"}}]"""
+        expected = re.sub(r'\s+', '', expected)
+        pci = re.sub(r'\s+', '', self.tracker.compute_node['pci_stats'])
+        self.assertEqual(expected, pci)
+
+    def _driver(self):
+        return FakeVirtDriver(pci_support=True)
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):
