@@ -57,7 +57,7 @@ def fake_service_get_by_compute_host(self, context, host):
             }
 
 
-class EvacuateTest(test.TestCase):
+class EvacuateTest(test.NoDBTestCase):
 
     _methods = ('resize', 'evacuate')
 

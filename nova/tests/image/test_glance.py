@@ -54,7 +54,7 @@ class NullWriter(object):
         pass
 
 
-class TestGlanceSerializer(test.TestCase):
+class TestGlanceSerializer(test.NoDBTestCase):
     def test_serialize(self):
         metadata = {'name': 'image1',
                     'is_public': True,
@@ -90,7 +90,7 @@ class TestGlanceSerializer(test.TestCase):
         self.assertEqual(glance._convert_from_string(converted), metadata)
 
 
-class TestGlanceImageService(test.TestCase):
+class TestGlanceImageService(test.NoDBTestCase):
     """
     Tests the Glance image service.
 
@@ -773,7 +773,7 @@ def _create_failing_glance_client(info):
     return MyGlanceStubClient()
 
 
-class TestGlanceClientWrapper(test.TestCase):
+class TestGlanceClientWrapper(test.NoDBTestCase):
 
     def setUp(self):
         super(TestGlanceClientWrapper, self).setUp()
@@ -959,7 +959,7 @@ class TestGlanceClientWrapper(test.TestCase):
         self.assertEqual(info['num_calls'], 2)
 
 
-class TestGlanceUrl(test.TestCase):
+class TestGlanceUrl(test.NoDBTestCase):
 
     def test_generate_glance_http_url(self):
         generated_url = glance.generate_glance_url()

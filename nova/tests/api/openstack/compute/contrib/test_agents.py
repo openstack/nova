@@ -82,7 +82,7 @@ class FakeRequestWithHypervisor(object):
         GET = {'hypervisor': 'kvm'}
 
 
-class AgentsTest(test.TestCase):
+class AgentsTest(test.NoDBTestCase):
 
     def setUp(self):
         super(AgentsTest, self).setUp()

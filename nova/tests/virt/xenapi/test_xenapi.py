@@ -1527,7 +1527,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertTrue(fake_destroy_kernel_ramdisk.called)
 
 
-class XenAPIDiffieHellmanTestCase(test.TestCase):
+class XenAPIDiffieHellmanTestCase(test.NoDBTestCase):
     """Unit tests for Diffie-Hellman code."""
     def setUp(self):
         super(XenAPIDiffieHellmanTestCase, self).setUp()
@@ -1970,7 +1970,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         vmops._resize_ensure_vm_is_shutdown(fake_instance, "ref")
 
 
-class XenAPIImageTypeTestCase(test.TestCase):
+class XenAPIImageTypeTestCase(test.NoDBTestCase):
     """Test ImageType class."""
 
     def test_to_string(self):
@@ -2000,7 +2000,7 @@ class XenAPIImageTypeTestCase(test.TestCase):
         self._assert_role('root', vm_utils.ImageType.DISK_VHD)
 
 
-class XenAPIDetermineDiskImageTestCase(test.TestCase):
+class XenAPIDetermineDiskImageTestCase(test.NoDBTestCase):
     """Unit tests for code that detects the ImageType."""
     def assert_disk_type(self, image_meta, expected_disk_type):
         actual = vm_utils.determine_disk_image_type(image_meta)
@@ -2023,7 +2023,7 @@ class XenAPIDetermineDiskImageTestCase(test.TestCase):
         self.assert_disk_type(image_meta, None)
 
 
-class XenAPIDetermineIsPVTestCase(test.TestCase):
+class XenAPIDetermineIsPVTestCase(test.NoDBTestCase):
     """Unit tests for code that detects the PV status based on ImageType."""
     def assert_pv_status(self, disk_image_type, os_type, expected_pv_status):
         session = None
@@ -2051,7 +2051,7 @@ class XenAPIDetermineIsPVTestCase(test.TestCase):
         self.assert_pv_status(None, None, False)
 
 
-class CompareVersionTestCase(test.TestCase):
+class CompareVersionTestCase(test.NoDBTestCase):
     def test_less_than(self):
         # Test that cmp_version compares a as less than b.
         self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.5') < 0)
@@ -2194,7 +2194,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.assertEqual('foo', stats['hypervisor_hostname'])
 
 
-class ToSupportedInstancesTestCase(test.TestCase):
+class ToSupportedInstancesTestCase(test.NoDBTestCase):
     def test_default_return_value(self):
         self.assertEquals([],
             host.to_supported_instances(None))
@@ -3208,7 +3208,7 @@ class ResourcePoolWithStubs(StubDependencies, pool.ResourcePool):
     """A ResourcePool, use stub dependencies."""
 
 
-class HypervisorPoolTestCase(test.TestCase):
+class HypervisorPoolTestCase(test.NoDBTestCase):
 
     fake_aggregate = {
         'id': 98,
@@ -3242,7 +3242,7 @@ class HypervisorPoolTestCase(test.TestCase):
             slave.compute_rpcapi._mock_calls)
 
 
-class SwapXapiHostTestCase(test.TestCase):
+class SwapXapiHostTestCase(test.NoDBTestCase):
 
     def test_swapping(self):
         self.assertEquals(
@@ -3860,7 +3860,7 @@ class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
         self.assertTrue(self.called_fake_get_vm_opaque_ref)
 
 
-class XenAPISessionTestCase(test.TestCase):
+class XenAPISessionTestCase(test.NoDBTestCase):
     def _get_mock_xapisession(self, software_version):
         class MockXapiSession(xenapi_conn.XenAPISession):
             def __init__(_ignore):
@@ -3923,7 +3923,7 @@ class XenAPISessionTestCase(test.TestCase):
         )
 
 
-class XenAPIFakeTestCase(test.TestCase):
+class XenAPIFakeTestCase(test.NoDBTestCase):
     def test_query_matches(self):
         record = {'a': '1', 'b': '2', 'c_d': '3'}
 

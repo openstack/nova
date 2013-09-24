@@ -51,7 +51,7 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
     ]
 
 
-class FlavorRxtxTest(test.TestCase):
+class FlavorRxtxTest(test.NoDBTestCase):
     content_type = 'application/json'
     prefix = ''
 

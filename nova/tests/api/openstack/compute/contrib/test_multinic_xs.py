@@ -42,7 +42,7 @@ def compute_api_get(self, context, instance_id):
     return {'id': 1, 'uuid': instance_id}
 
 
-class FixedIpTest(test.TestCase):
+class FixedIpTest(test.NoDBTestCase):
     def setUp(self):
         super(FixedIpTest, self).setUp()
         fakes.stub_out_networking(self.stubs)

@@ -21,7 +21,7 @@ from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import volumeops
 
 
-class VolumeAttachTestCase(test.TestCase):
+class VolumeAttachTestCase(test.NoDBTestCase):
     def test_detach_volume_call(self):
         registered_calls = []
 

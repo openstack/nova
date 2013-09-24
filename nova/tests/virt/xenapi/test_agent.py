@@ -37,7 +37,7 @@ def _get_fake_instance(**kwargs):
     }
 
 
-class AgentTestCaseBase(test.TestCase):
+class AgentTestCaseBase(test.NoDBTestCase):
     def _create_agent(self, instance):
         self.session = "session"
         self.virtapi = "virtapi"

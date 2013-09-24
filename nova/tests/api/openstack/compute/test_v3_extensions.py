@@ -57,7 +57,7 @@ class fake_loaded_extension_info(object):
         return {'core1': None, 'core2': None, 'noncore1': None}
 
 
-class ExtensionLoadingTestCase(test.TestCase):
+class ExtensionLoadingTestCase(test.NoDBTestCase):
 
     def _set_v3_core(self, core_extensions):
         openstack.API_V3_CORE_EXTENSIONS = core_extensions

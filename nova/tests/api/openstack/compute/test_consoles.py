@@ -124,7 +124,7 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
     return instance
 
 
-class ConsolesControllerTest(test.TestCase):
+class ConsolesControllerTest(test.NoDBTestCase):
     def setUp(self):
         super(ConsolesControllerTest, self).setUp()
         self.flags(verbose=True)
@@ -252,7 +252,7 @@ class ConsolesControllerTest(test.TestCase):
                           req, self.uuid, '20')
 
 
-class TestConsolesXMLSerializer(test.TestCase):
+class TestConsolesXMLSerializer(test.NoDBTestCase):
     def test_show(self):
         fixture = {'console': {'id': 20,
                                'password': 'fake_password',

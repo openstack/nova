@@ -54,7 +54,7 @@ class VMOpsTestBase(stubs.XenAPITestBase):
             xenapi_fake.destroy_vm(vm)
 
 
-class VMOpsTestCase(test.TestCase):
+class VMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMOpsTestCase, self).setUp()
         self._setup_mock_vmops()

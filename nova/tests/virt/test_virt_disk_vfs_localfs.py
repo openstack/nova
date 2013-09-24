@@ -122,7 +122,7 @@ def fake_execute(*args, **kwargs):
             files[path]["content"] = kwargs["process_input"]
 
 
-class VirtDiskVFSLocalFSTestPaths(test.TestCase):
+class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
     def setUp(self):
         super(VirtDiskVFSLocalFSTestPaths, self).setUp()
 
@@ -152,7 +152,7 @@ class VirtDiskVFSLocalFSTestPaths(test.TestCase):
                           'etc/../../../something.conf')
 
 
-class VirtDiskVFSLocalFSTest(test.TestCase):
+class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
     def test_makepath(self):
         global dirs, commands
         dirs = []

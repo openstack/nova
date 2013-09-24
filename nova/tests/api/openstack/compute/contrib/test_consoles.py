@@ -64,7 +64,7 @@ def fake_get_not_found(self, context, instance_uuid):
     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 
-class ConsolesExtensionTest(test.TestCase):
+class ConsolesExtensionTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ConsolesExtensionTest, self).setUp()

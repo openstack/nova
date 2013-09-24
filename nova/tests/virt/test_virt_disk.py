@@ -24,7 +24,7 @@ from nova.virt.disk import api as diskapi
 from nova.virt.disk.vfs import guestfs as vfsguestfs
 
 
-class VirtDiskTest(test.TestCase):
+class VirtDiskTest(test.NoDBTestCase):
 
     def setUp(self):
         super(VirtDiskTest, self).setUp()

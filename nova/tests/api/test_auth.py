@@ -21,7 +21,7 @@ from nova.openstack.common.gettextutils import _
 from nova import test
 
 
-class TestNovaKeystoneContextMiddleware(test.TestCase):
+class TestNovaKeystoneContextMiddleware(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNovaKeystoneContextMiddleware, self).setUp()
@@ -68,7 +68,7 @@ class TestNovaKeystoneContextMiddleware(test.TestCase):
         self.assertEqual(response.status, '500 Internal Server Error')
 
 
-class TestKeystoneMiddlewareRoles(test.TestCase):
+class TestKeystoneMiddlewareRoles(test.NoDBTestCase):
 
     def setUp(self):
         super(TestKeystoneMiddlewareRoles, self).setUp()

@@ -29,7 +29,7 @@ import webob
 from nova import wsgi
 
 
-class Test(test.TestCase):
+class Test(test.NoDBTestCase):
 
     def test_debug(self):
 

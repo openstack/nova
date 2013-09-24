@@ -33,7 +33,7 @@ def unrescue(self, context, instance):
     pass
 
 
-class RescueTest(test.TestCase):
+class RescueTest(test.NoDBTestCase):
     def setUp(self):
         super(RescueTest, self).setUp()
 

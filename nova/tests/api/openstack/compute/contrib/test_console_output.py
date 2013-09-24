@@ -52,7 +52,7 @@ def fake_get_not_found(*args, **kwargs):
     raise exception.NotFound()
 
 
-class ConsoleOutputExtensionTest(test.TestCase):
+class ConsoleOutputExtensionTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ConsoleOutputExtensionTest, self).setUp()

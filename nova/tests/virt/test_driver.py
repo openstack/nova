@@ -29,7 +29,7 @@ class FakeDriver2(FakeDriver):
     pass
 
 
-class ToDriverRegistryTestCase(test.TestCase):
+class ToDriverRegistryTestCase(test.NoDBTestCase):
 
     def assertDriverInstance(self, inst, class_, *args, **kwargs):
         self.assertEquals(class_, inst.__class__)

@@ -42,7 +42,7 @@ def conditional_forbid(req):
     return 'OK'
 
 
-class LockoutTestCase(test.TestCase):
+class LockoutTestCase(test.NoDBTestCase):
     """Test case for the Lockout middleware."""
     def setUp(self):  # pylint: disable=C0103
         super(LockoutTestCase, self).setUp()
@@ -90,7 +90,7 @@ class LockoutTestCase(test.TestCase):
         self.assertFalse(self._is_locked_out('test'))
 
 
-class ExecutorTestCase(test.TestCase):
+class ExecutorTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ExecutorTestCase, self).setUp()
         self.executor = ec2.Executor()
@@ -151,7 +151,7 @@ class FakeResponse(object):
         return '{}'
 
 
-class KeystoneAuthTestCase(test.TestCase):
+class KeystoneAuthTestCase(test.NoDBTestCase):
     def setUp(self):
         super(KeystoneAuthTestCase, self).setUp()
         self.kauth = ec2.EC2KeystoneAuth(conditional_forbid)

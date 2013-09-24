@@ -36,7 +36,7 @@ def fake_network_update(context, network_id, values):
                 network[key] = values[key]
 
 
-class CloudpipeUpdateTest(test.TestCase):
+class CloudpipeUpdateTest(test.NoDBTestCase):
 
     def setUp(self):
         super(CloudpipeUpdateTest, self).setUp()

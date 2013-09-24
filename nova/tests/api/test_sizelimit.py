@@ -23,7 +23,7 @@ CONF = cfg.CONF
 MAX_REQUEST_BODY_SIZE = CONF.osapi_max_request_body_size
 
 
-class TestLimitingReader(test.TestCase):
+class TestLimitingReader(test.NoDBTestCase):
 
     def test_limiting_reader(self):
         BYTES = 1024
@@ -69,7 +69,7 @@ class TestLimitingReader(test.TestCase):
                           _consume_all_read)
 
 
-class TestRequestBodySizeLimiter(test.TestCase):
+class TestRequestBodySizeLimiter(test.NoDBTestCase):
 
     def setUp(self):
         super(TestRequestBodySizeLimiter, self).setUp()

@@ -22,7 +22,7 @@ Test cases for the key manager.
 from nova import test
 
 
-class KeyManagerTestCase(test.TestCase):
+class KeyManagerTestCase(test.NoDBTestCase):
 
     def _create_key_manager(self):
         raise NotImplementedError()

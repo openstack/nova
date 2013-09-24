@@ -70,7 +70,7 @@ def _fake_noop(*args, **kwargs):
     return
 
 
-class LookupTestCase(test.TestCase):
+class LookupTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(LookupTestCase, self).setUp()
@@ -126,7 +126,7 @@ class LookupTestCase(test.TestCase):
                           check_rescue=True)
 
 
-class GenerateConfigDriveTestCase(test.TestCase):
+class GenerateConfigDriveTestCase(test.NoDBTestCase):
     def test_no_admin_pass(self):
         # This is here to avoid masking errors, it shouldn't be used normally
         self.useFixture(fixtures.MonkeyPatch(
@@ -179,7 +179,7 @@ class GenerateConfigDriveTestCase(test.TestCase):
                                       'userdevice')
 
 
-class XenAPIGetUUID(test.TestCase):
+class XenAPIGetUUID(test.NoDBTestCase):
     def test_get_this_vm_uuid_new_kernel(self):
         self.mox.StubOutWithMock(vm_utils, '_get_sys_hypervisor_uuid')
 
@@ -224,7 +224,7 @@ class FakeSession(object):
         pass
 
 
-class FetchVhdImageTestCase(test.TestCase):
+class FetchVhdImageTestCase(test.NoDBTestCase):
     def setUp(self):
         super(FetchVhdImageTestCase, self).setUp()
         self.context = context.get_admin_context()
@@ -415,7 +415,7 @@ class FetchVhdImageTestCase(test.TestCase):
         self.mox.VerifyAll()
 
 
-class TestImageCompression(test.TestCase):
+class TestImageCompression(test.NoDBTestCase):
     def test_image_compression(self):
         # Testing for nova.conf, too low, negative, and a correct value.
         self.assertEqual(vm_utils.get_compression_level(), None)
@@ -427,7 +427,7 @@ class TestImageCompression(test.TestCase):
         self.assertEqual(vm_utils.get_compression_level(), 6)
 
 
-class ResizeHelpersTestCase(test.TestCase):
+class ResizeHelpersTestCase(test.NoDBTestCase):
     def test_get_min_sectors(self):
         self.mox.StubOutWithMock(utils, 'execute')
 
@@ -541,7 +541,7 @@ class ResizeHelpersTestCase(test.TestCase):
         vm_utils.try_auto_configure_disk("bad_session", "bad_vdi_ref", 0)
 
 
-class CheckVDISizeTestCase(test.TestCase):
+class CheckVDISizeTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CheckVDISizeTestCase, self).setUp()
         self.context = 'fakecontext'
@@ -661,7 +661,7 @@ class GetInstanceForVdisForSrTestCase(stubs.XenAPITestBase):
         self.assertNotEquals(vdi_uuid, None)
 
 
-class VMRefOrRaiseVMFoundTestCase(test.TestCase):
+class VMRefOrRaiseVMFoundTestCase(test.NoDBTestCase):
 
     def test_lookup_call(self):
         mock = mox.Mox()
@@ -685,7 +685,7 @@ class VMRefOrRaiseVMFoundTestCase(test.TestCase):
         mock.VerifyAll()
 
 
-class VMRefOrRaiseVMNotFoundTestCase(test.TestCase):
+class VMRefOrRaiseVMNotFoundTestCase(test.NoDBTestCase):
 
     def test_exception_raised(self):
         mock = mox.Mox()
@@ -762,7 +762,7 @@ class BittorrentTestCase(stubs.XenAPITestBase):
         self._test_create_image('none')
 
 
-class ShutdownTestCase(test.TestCase):
+class ShutdownTestCase(test.NoDBTestCase):
 
     def test_hardshutdown_should_return_true_when_vm_is_shutdown(self):
         self.mock = mox.Mox()
@@ -787,7 +787,7 @@ class ShutdownTestCase(test.TestCase):
             session, instance, vm_ref))
 
 
-class CreateVBDTestCase(test.TestCase):
+class CreateVBDTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CreateVBDTestCase, self).setUp()
         self.session = FakeSession()
@@ -1060,7 +1060,7 @@ class GenerateDiskTestCase(stubs.XenAPITestBase):
         self._check_vdi(vdi_ref)
 
 
-class GenerateEphemeralTestCase(test.TestCase):
+class GenerateEphemeralTestCase(test.NoDBTestCase):
     def setUp(self):
         super(GenerateEphemeralTestCase, self).setUp()
         self.session = "session"
@@ -1125,7 +1125,7 @@ class FakeFile(object):
         self._file_operations.append((self.seek, offset))
 
 
-class StreamDiskTestCase(test.TestCase):
+class StreamDiskTestCase(test.NoDBTestCase):
     def setUp(self):
         import __builtin__
         super(StreamDiskTestCase, self).setUp()
@@ -1219,7 +1219,7 @@ class VMUtilsSRPath(stubs.XenAPITestBase):
                          "/var/run/sr-mount/sr_uuid")
 
 
-class CreateKernelRamdiskTestCase(test.TestCase):
+class CreateKernelRamdiskTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CreateKernelRamdiskTestCase, self).setUp()
         self.context = "context"

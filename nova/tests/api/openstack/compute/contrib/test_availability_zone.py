@@ -78,7 +78,7 @@ def fake_get_availability_zones(context):
     return ['nova'], []
 
 
-class AvailabilityZoneApiTest(test.TestCase):
+class AvailabilityZoneApiTest(test.NoDBTestCase):
     def setUp(self):
         super(AvailabilityZoneApiTest, self).setUp()
         availability_zones.reset_cache()
@@ -225,7 +225,7 @@ class AvailabilityZoneApiTest(test.TestCase):
                         matchers.DictMatches(expected_response))
 
 
-class AvailabilityZoneSerializerTest(test.TestCase):
+class AvailabilityZoneSerializerTest(test.NoDBTestCase):
     def test_availability_zone_index_detail_serializer(self):
         def _verify_zone(zone_dict, tree):
             self.assertEqual(tree.tag, 'availabilityZone')

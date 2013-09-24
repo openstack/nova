@@ -17,7 +17,7 @@ from nova import test
 from nova.virt import images
 
 
-class QemuTestCase(test.TestCase):
+class QemuTestCase(test.NoDBTestCase):
     def test_qemu_info_with_bad_path(self):
         image_info = images.qemu_img_info("/path/that/does/not/exist")
         self.assertTrue(image_info)

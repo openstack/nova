@@ -22,7 +22,7 @@ from nova.api import validator
 from nova import test
 
 
-class ValidatorTestCase(test.TestCase):
+class ValidatorTestCase(test.NoDBTestCase):
 
     def test_validate(self):
         fixture = {

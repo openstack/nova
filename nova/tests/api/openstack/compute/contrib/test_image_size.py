@@ -72,7 +72,7 @@ def fake_detail(*args, **kwargs):
     return IMAGES
 
 
-class ImageSizeTest(test.TestCase):
+class ImageSizeTest(test.NoDBTestCase):
     content_type = 'application/json'
     prefix = 'OS-EXT-IMG-SIZE'
 
