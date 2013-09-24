@@ -682,7 +682,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         # Fake out verifying checksums, as that is tested elsewhere
         self.stubs.Set(image_cache_manager, '_verify_checksum',
-                       lambda x, y: y == hashed_42)
+                       lambda x, y: True)
 
         # Fake getmtime as well
         orig_getmtime = os.path.getmtime
@@ -723,7 +723,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertTrue(rem in image_cache_manager.removable_base_files)
 
         # Ensure there are no "corrupt" images as well
-        self.assertTrue(len(image_cache_manager.corrupt_base_files), 0)
+        self.assertEqual(len(image_cache_manager.corrupt_base_files), 0)
 
     def test_verify_base_images_no_base(self):
         self.flags(instances_path='/tmp/no/such/dir/name/please')
