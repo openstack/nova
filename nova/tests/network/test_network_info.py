@@ -23,7 +23,7 @@ from nova.tests import fake_network_cache_model
 from nova.virt import netutils
 
 
-class RouteTests(test.TestCase):
+class RouteTests(test.NoDBTestCase):
     def test_create_route_with_attrs(self):
         route = fake_network_cache_model.new_route()
         ip = fake_network_cache_model.new_ip(dict(address='192.168.1.1'))
@@ -50,7 +50,7 @@ class RouteTests(test.TestCase):
         self.assertEqual(route['interface'], None)
 
 
-class FixedIPTests(test.TestCase):
+class FixedIPTests(test.NoDBTestCase):
     def test_createnew_fixed_ip_with_attrs(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
         self.assertEqual(fixed_ip['address'], '192.168.1.100')
@@ -99,7 +99,7 @@ class FixedIPTests(test.TestCase):
         self.assertEqual(fixed_ip['floating_ips'], ['192.168.1.101'])
 
 
-class SubnetTests(test.TestCase):
+class SubnetTests(test.NoDBTestCase):
     def test_create_subnet_with_attrs(self):
         subnet = fake_network_cache_model.new_subnet()
 
@@ -199,7 +199,7 @@ class SubnetTests(test.TestCase):
         self.assertEqual(subnet['version'], 4)
 
 
-class NetworkTests(test.TestCase):
+class NetworkTests(test.NoDBTestCase):
     def test_create_network(self):
         network = fake_network_cache_model.new_network()
         self.assertEqual(network['id'], 1)
@@ -250,7 +250,7 @@ class NetworkTests(test.TestCase):
                         dict(cidr='255.255.255.255'))])
 
 
-class VIFTests(test.TestCase):
+class VIFTests(test.NoDBTestCase):
     def test_create_vif(self):
         vif = fake_network_cache_model.new_vif()
         self.assertEqual(vif['id'], 1)
@@ -322,7 +322,7 @@ class VIFTests(test.TestCase):
                 fake_network_cache_model.new_network())
 
 
-class NetworkInfoTests(test.TestCase):
+class NetworkInfoTests(test.NoDBTestCase):
     def test_create_model(self):
         ninfo = model.NetworkInfo([fake_network_cache_model.new_vif(),
                 fake_network_cache_model.new_vif(

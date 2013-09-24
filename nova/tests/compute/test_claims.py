@@ -40,7 +40,7 @@ class DummyTracker(object):
         self.pci_tracker = pci_manager.PciDevTracker()
 
 
-class ClaimTestCase(test.TestCase):
+class ClaimTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ClaimTestCase, self).setUp()

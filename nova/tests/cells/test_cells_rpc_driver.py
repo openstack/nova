@@ -33,7 +33,7 @@ CONF.import_opt('rpc_driver_queue_base', 'nova.cells.rpc_driver',
                 group='cells')
 
 
-class CellsRPCDriverTestCase(test.TestCase):
+class CellsRPCDriverTestCase(test.NoDBTestCase):
     """Test case for Cells communication via RPC."""
 
     def setUp(self):
@@ -221,7 +221,7 @@ class CellsRPCDriverTestCase(test.TestCase):
         self.assertTrue(call_info['process_called'])
 
 
-class ParseTransportURLTestCase(test.TestCase):
+class ParseTransportURLTestCase(test.NoDBTestCase):
     def test_bad_scheme(self):
         url = "bad:///"
         self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
@@ -332,7 +332,7 @@ class ParseTransportURLTestCase(test.TestCase):
         self.assertRaises(ValueError, rpc_driver.parse_transport_url, url)
 
 
-class UnparseTransportURLTestCase(test.TestCase):
+class UnparseTransportURLTestCase(test.NoDBTestCase):
     def test_empty(self):
         result = rpc_driver.unparse_transport_url({})
 

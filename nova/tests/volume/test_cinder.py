@@ -42,7 +42,7 @@ class FakeCinderClient(object):
         self.volume_snapshots = self.volumes
 
 
-class CinderApiTestCase(test.TestCase):
+class CinderApiTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CinderApiTestCase, self).setUp()
 

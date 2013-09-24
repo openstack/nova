@@ -23,7 +23,7 @@ from nova import test
 from nova.tests.cells import fakes
 
 
-class FiltersTestCase(test.TestCase):
+class FiltersTestCase(test.NoDBTestCase):
     """Makes sure the proper filters are in the directory."""
 
     def test_all_filters(self):
@@ -32,7 +32,7 @@ class FiltersTestCase(test.TestCase):
         self.assertIn("TargetCellFilter", class_names)
 
 
-class _FilterTestClass(test.TestCase):
+class _FilterTestClass(test.NoDBTestCase):
     """Base class for testing individual filter plugins."""
     filter_cls_name = None
 

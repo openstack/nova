@@ -23,7 +23,7 @@ from nova.compute import vm_states
 from nova import test
 
 
-class StatsTestCase(test.TestCase):
+class StatsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(StatsTestCase, self).setUp()
         self.stats = stats.Stats()

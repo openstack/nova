@@ -28,7 +28,7 @@ from nova import test
 CONF = cfg.CONF
 
 
-class CertRpcAPITestCase(test.TestCase):
+class CertRpcAPITestCase(test.NoDBTestCase):
     def _test_cert_api(self, method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
         rpcapi = cert_rpcapi.CertAPI()

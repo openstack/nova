@@ -43,7 +43,7 @@ FAKE_TASK_LOGS = [dict(id=1, host='host1'),
                   dict(id=2, host='host2')]
 
 
-class CellsManagerClassTestCase(test.TestCase):
+class CellsManagerClassTestCase(test.NoDBTestCase):
     """Test case for CellsManager class."""
 
     def setUp(self):
