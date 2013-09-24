@@ -38,6 +38,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
     _flavor_ref_parameter = 'flavorRef'
     _access_ipv4_parameter = 'accessIPv4'
     _access_ipv6_parameter = 'accessIPv6'
+    _return_resv_id_parameter = 'return_reservation_id'
+    _min_count_parameter = 'min_count'
 
     def setUp(self):
         super(ServersTest, self).setUp()
@@ -430,8 +432,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Create 2 servers, setting 'return_reservation_id, which should
         # return a reservation_id
         server = self._build_minimal_create_server_request()
-        server['min_count'] = 2
-        server['return_reservation_id'] = True
+        server[self._min_count_parameter] = 2
+        server[self._return_resv_id_parameter] = True
         post = {'server': server}
         response = self.api.post_server(post)
         self.assertIn('reservation_id', response)
@@ -508,8 +510,5 @@ class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
     _flavor_ref_parameter = 'flavor_ref'
     _access_ipv4_parameter = 'access_ip_v4'
     _access_ipv6_parameter = 'access_ip_v6'
-
-    def test_create_multiple_servers(self):
-        # TODO(cyeoh): Remove to enable the test when the V3 multiple
-        # create extension is merged. Bug #1206884
-        pass
+    _return_resv_id_parameter = 'os-multiple-create:return_reservation_id'
+    _min_count_parameter = 'os-multiple-create:min_count'
