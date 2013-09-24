@@ -366,11 +366,21 @@ class FloatingIP(object):
                 self.l3driver.add_floating_ip(floating_address, fixed_address,
                         interface, fixed['network'])
             except processutils.ProcessExecutionError as e:
-                self.db.floating_ip_disassociate(context, floating_address)
-                if "Cannot find device" in str(e):
-                    LOG.error(_('Interface %s not found'), interface)
-                    raise exception.NoFloatingIpInterface(interface=interface)
-                raise
+                with excutils.save_and_reraise_exception() as exc_ctxt:
+                    try:
+                        self.db.floating_ip_disassociate(context,
+                                floating_address)
+                    except Exception:
+                        LOG.warn(_('Failed to disassociated floating '
+                                   'address: %s'), floating_address)
+                        pass
+                    if "Cannot find device" in str(e):
+                        try:
+                            LOG.error(_('Interface %s not found'), interface)
+                        except Exception:
+                            pass
+                        raise exception.NoFloatingIpInterface(
+                                interface=interface)
 
             payload = dict(project_id=context.project_id,
                            instance_id=instance_uuid,
