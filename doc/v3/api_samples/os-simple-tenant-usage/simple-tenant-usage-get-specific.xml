@@ -1,0 +1,26 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<tenant_usage>
+  <tenant_id>openstack</tenant_id>
+  <total_local_gb_usage>1.0</total_local_gb_usage>
+  <total_vcpus_usage>1.0</total_vcpus_usage>
+  <total_memory_mb_usage>512.0</total_memory_mb_usage>
+  <total_hours>1.0</total_hours>
+  <start>2013-09-09 13:18:27.896728</start>
+  <stop>2013-09-09 14:18:27.896728</stop>
+  <server_usages>
+    <server_usage>
+      <instance_id>f14ff0d3-cebe-4692-9202-71946f4db8e4</instance_id>
+      <name>new-server-test</name>
+      <hours>1.0</hours>
+      <memory_mb>512</memory_mb>
+      <local_gb>1</local_gb>
+      <vcpus>1</vcpus>
+      <tenant_id>openstack</tenant_id>
+      <flavor>m1.tiny</flavor>
+      <started_at>2013-09-09 13:18:27.896728</started_at>
+      <ended_at>None</ended_at>
+      <state>active</state>
+      <uptime>3600</uptime>
+    </server_usage>
+  </server_usages>
+</tenant_usage>
