@@ -17,10 +17,12 @@
 
 import uuid
 
+from lxml import etree
 from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import server_metadata
+from nova.api.openstack import xmlutil
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 import nova.db
@@ -597,3 +599,35 @@ class BadStateServerMetaDataTest(BaseTest):
                'name': 'fake',
                'locked': False,
                'vm_state': vm_states.BUILDING})
+
+
+class TestServerMetadataXMLDeserializer(test.TestCase):
+    def test_update_deserializer(self):
+        update_xml = ('<?xml version="1.0" encoding="UTF-8"?>'
+                      '<metadata '
+                      'xmlns="http://docs.openstack.org/compute/api/v1.1" '
+                      'key="foo">Bar Value</metadata>')
+        expected = {'metadata': {
+            'foo': 'Bar Value'
+            }
+        }
+        deserializer = server_metadata.MetaItemDeserializer()
+        result = deserializer.deserialize(update_xml)
+        self.assertEqual(dict(body=expected), result)
+
+
+class TestServerMetadataXMLSerializer(test.TestCase):
+    def test_show_serializer(self):
+        metadata = {'metadata': {
+            'foo': 'Bar Value'
+            }
+        }
+
+        serializer = server_metadata.MetaItemTemplate()
+        output = serializer.serialize(metadata)
+        res_tree = etree.XML(output)
+
+        self.assertEqual(res_tree.tag, '{%s}metadata' % xmlutil.XMLNS_V11)
+        self.assertEqual(len(res_tree), 0)
+        self.assertEqual(res_tree.attrib['key'], 'foo')
+        self.assertEqual(res_tree.text, 'Bar Value')
