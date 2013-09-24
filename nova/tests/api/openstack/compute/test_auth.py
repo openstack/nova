@@ -23,7 +23,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-class TestNoAuthMiddleware(test.TestCase):
+class TestNoAuthMiddleware(test.NoDBTestCase):
 
     def setUp(self):
         super(TestNoAuthMiddleware, self).setUp()

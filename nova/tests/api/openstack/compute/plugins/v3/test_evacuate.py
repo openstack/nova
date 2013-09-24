@@ -52,7 +52,7 @@ def fake_service_get_by_compute_host(self, context, host):
                 'zone': 'nova'}
 
 
-class EvacuateTest(test.TestCase):
+class EvacuateTest(test.NoDBTestCase):
 
     _methods = ('resize', 'evacuate')
 

@@ -52,7 +52,7 @@ def fake_get_all_flavors_sorted_list(context=None, inactive=False,
     ]
 
 
-class FlavorDisabledTest(test.TestCase):
+class FlavorDisabledTest(test.NoDBTestCase):
     content_type = 'application/json'
     prefix = '%s:' % flavor_disabled.Flavor_disabled.alias
 

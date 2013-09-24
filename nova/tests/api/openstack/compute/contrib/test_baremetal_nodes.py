@@ -28,7 +28,7 @@ class FakeRequest(object):
         self.environ = {"nova.context": context}
 
 
-class BareMetalNodesTest(test.TestCase):
+class BareMetalNodesTest(test.NoDBTestCase):
 
     def setUp(self):
         super(BareMetalNodesTest, self).setUp()

@@ -40,7 +40,7 @@ ATOMNS = "{http://www.w3.org/2005/Atom}"
 NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
 
-class ImagesControllerTest(test.TestCase):
+class ImagesControllerTest(test.NoDBTestCase):
     """
     Test of the OpenStack API /images application controller w/Glance.
     """
@@ -393,7 +393,7 @@ class ImagesControllerTest(test.TestCase):
                           self.controller.delete, request, '300')
 
 
-class ImageXMLSerializationTest(test.TestCase):
+class ImageXMLSerializationTest(test.NoDBTestCase):
 
     TIMESTAMP = "2010-10-11T10:30:22Z"
     SERVER_UUID = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'

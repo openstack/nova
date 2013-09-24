@@ -11,7 +11,7 @@ from nova.tests.api.openstack import fakes
 from nova.tests import utils
 
 
-class RequestTest(test.TestCase):
+class RequestTest(test.NoDBTestCase):
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
         request.body = "<body />"
@@ -146,7 +146,7 @@ class RequestTest(test.TestCase):
         self.assertEqual(request.best_match_language(), 'en_US')
 
 
-class ActionDispatcherTest(test.TestCase):
+class ActionDispatcherTest(test.NoDBTestCase):
     def test_dispatch(self):
         serializer = wsgi.ActionDispatcher()
         serializer.create = lambda x: 'pants'
@@ -165,13 +165,13 @@ class ActionDispatcherTest(test.TestCase):
         self.assertEqual(serializer.dispatch({}, action='update'), 'trousers')
 
 
-class DictSerializerTest(test.TestCase):
+class DictSerializerTest(test.NoDBTestCase):
     def test_dispatch_default(self):
         serializer = wsgi.DictSerializer()
         self.assertEqual(serializer.serialize({}, 'update'), '')
 
 
-class XMLDictSerializerTest(test.TestCase):
+class XMLDictSerializerTest(test.NoDBTestCase):
     def test_xml(self):
         input_dict = dict(servers=dict(a=(2, 3)))
         expected_xml = '<serversxmlns="asdf"><a>(2,3)</a></servers>'
@@ -181,7 +181,7 @@ class XMLDictSerializerTest(test.TestCase):
         self.assertEqual(result, expected_xml)
 
 
-class JSONDictSerializerTest(test.TestCase):
+class JSONDictSerializerTest(test.NoDBTestCase):
     def test_json(self):
         input_dict = dict(servers=dict(a=(2, 3)))
         expected_json = '{"servers":{"a":[2,3]}}'
@@ -191,13 +191,13 @@ class JSONDictSerializerTest(test.TestCase):
         self.assertEqual(result, expected_json)
 
 
-class TextDeserializerTest(test.TestCase):
+class TextDeserializerTest(test.NoDBTestCase):
     def test_dispatch_default(self):
         deserializer = wsgi.TextDeserializer()
         self.assertEqual(deserializer.deserialize({}, 'update'), {})
 
 
-class JSONDeserializerTest(test.TestCase):
+class JSONDeserializerTest(test.NoDBTestCase):
     def test_json(self):
         data = """{"a": {
                 "a1": "1",
@@ -249,7 +249,7 @@ class JSONDeserializerTest(test.TestCase):
                           deserializer.deserialize, data)
 
 
-class XMLDeserializerTest(test.TestCase):
+class XMLDeserializerTest(test.NoDBTestCase):
     def test_xml(self):
         xml = """
             <a a1="1" a2="2">
@@ -293,7 +293,7 @@ class XMLDeserializerTest(test.TestCase):
                          deserializer.deserialize, xml)
 
 
-class ResourceTest(test.TestCase):
+class ResourceTest(test.NoDBTestCase):
     def test_resource_call(self):
         class Controller(object):
             def index(self, req):
@@ -941,7 +941,7 @@ class ResourceTest(test.TestCase):
         self.assertRaises(UnicodeDecodeError, req.get_response, app)
 
 
-class ResponseObjectTest(test.TestCase):
+class ResponseObjectTest(test.NoDBTestCase):
     def test_default_code(self):
         robj = wsgi.ResponseObject({})
         self.assertEqual(robj.code, 200)
@@ -1041,7 +1041,7 @@ class ResponseObjectTest(test.TestCase):
             self.assertEqual(response.body, mtype)
 
 
-class ValidBodyTest(test.TestCase):
+class ValidBodyTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ValidBodyTest, self).setUp()

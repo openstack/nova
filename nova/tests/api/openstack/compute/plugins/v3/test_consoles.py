@@ -123,7 +123,7 @@ def stub_instance(id, user_id='fake', project_id='fake', host=None,
     return instance
 
 
-class ConsolesControllerTest(test.TestCase):
+class ConsolesControllerTest(test.NoDBTestCase):
     def setUp(self):
         super(ConsolesControllerTest, self).setUp()
         self.flags(verbose=True)

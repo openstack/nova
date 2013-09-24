@@ -877,7 +877,7 @@ class TestRemoteInstanceListObject(test_objects._RemoteTest,
     pass
 
 
-class TestInstanceObjectMisc(test.TestCase):
+class TestInstanceObjectMisc(test.NoDBTestCase):
     def test_expected_cols(self):
         self.stubs.Set(instance, '_INSTANCE_OPTIONAL_JOINED_FIELDS', ['bar'])
         self.assertEqual(['bar'], instance._expected_cols(['foo', 'bar']))

@@ -32,7 +32,7 @@ from nova.openstack.common import jsonutils
 from nova import test
 
 
-class TestFaultWrapper(test.TestCase):
+class TestFaultWrapper(test.NoDBTestCase):
     """Tests covering `nova.api.openstack:FaultWrapper` class."""
 
     @mock.patch('nova.openstack.common.gettextutils.get_localized_message')
@@ -63,7 +63,7 @@ class TestFaultWrapper(test.TestCase):
                 u'Should be translated.', 'en_US')
 
 
-class TestFaults(test.TestCase):
+class TestFaults(test.NoDBTestCase):
     """Tests covering `nova.api.openstack.faults:Fault` class."""
 
     def _prepare_xml(self, xml_string):
@@ -208,7 +208,7 @@ class TestFaults(test.TestCase):
         self.assertEqual(response.status_int, 400)
 
 
-class FaultsXMLSerializationTestV11(test.TestCase):
+class FaultsXMLSerializationTestV11(test.NoDBTestCase):
     """Tests covering `nova.api.openstack.faults:Fault` class."""
 
     def _prepare_xml(self, xml_string):

@@ -52,7 +52,7 @@ def fake_policy_enforce_selective(context, action, target, do_raise=True):
         return True
 
 
-class ExtensionInfoTest(test.TestCase):
+class ExtensionInfoTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ExtensionInfoTest, self).setUp()

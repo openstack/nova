@@ -51,7 +51,7 @@ NS = {
 }
 
 
-class BaseLimitTestSuite(test.TestCase):
+class BaseLimitTestSuite(test.NoDBTestCase):
     """Base test suite which provides relevant stubs and time abstraction."""
 
     def setUp(self):
@@ -859,7 +859,7 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
         super(WsgiLimiterProxyTest, self).tearDown()
 
 
-class LimitsViewBuilderTest(test.TestCase):
+class LimitsViewBuilderTest(test.NoDBTestCase):
     def setUp(self):
         super(LimitsViewBuilderTest, self).setUp()
         self.view_builder = views.limits.ViewBuilder()
@@ -917,7 +917,7 @@ class LimitsViewBuilderTest(test.TestCase):
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
 
-class LimitsXMLSerializationTest(test.TestCase):
+class LimitsXMLSerializationTest(test.NoDBTestCase):
     def test_xml_declaration(self):
         serializer = limits.LimitsTemplate()
 

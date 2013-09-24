@@ -25,7 +25,7 @@ from nova.tests.api.openstack import fakes
 from nova.volume import cinder
 
 
-class SnapshotApiTest(test.TestCase):
+class SnapshotApiTest(test.NoDBTestCase):
     def setUp(self):
         super(SnapshotApiTest, self).setUp()
         fakes.stub_out_networking(self.stubs)
@@ -154,7 +154,7 @@ class SnapshotApiTest(test.TestCase):
         self.assertEqual(resp_snapshot['id'], 102)
 
 
-class SnapshotSerializerTest(test.TestCase):
+class SnapshotSerializerTest(test.NoDBTestCase):
     def _verify_snapshot(self, snap, tree):
         self.assertEqual(tree.tag, 'snapshot')
 

@@ -26,7 +26,7 @@ from nova import test
 from nova.tests import fake_instance
 
 
-class LiveMigrationTaskTestCase(test.TestCase):
+class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LiveMigrationTaskTestCase, self).setUp()
         self.context = "context"

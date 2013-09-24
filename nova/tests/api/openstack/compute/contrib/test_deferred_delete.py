@@ -29,7 +29,7 @@ class FakeRequest(object):
         self.environ = {'nova.context': context}
 
 
-class DeferredDeleteExtensionTest(test.TestCase):
+class DeferredDeleteExtensionTest(test.NoDBTestCase):
     def setUp(self):
         super(DeferredDeleteExtensionTest, self).setUp()
         self.extension = deferred_delete.DeferredDeleteController()

@@ -24,7 +24,7 @@ from nova import test
 from nova.tests import utils as tests_utils
 
 
-class SelectorTest(test.TestCase):
+class SelectorTest(test.NoDBTestCase):
     obj_for_test = {
         'test': {
             'name': 'test',
@@ -91,7 +91,7 @@ class SelectorTest(test.TestCase):
         self.assertEqual(repr(sel), "'Foobar'")
 
 
-class TemplateElementTest(test.TestCase):
+class TemplateElementTest(test.NoDBTestCase):
     def test_element_initial_attributes(self):
         # Create a template element with some attributes
         elem = xmlutil.TemplateElement('test', attrib=dict(a=1, b=2, c=3),
@@ -518,7 +518,7 @@ class TemplateElementTest(test.TestCase):
                          "<child !selector=Selector()/></test2>")
 
 
-class TemplateTest(test.TestCase):
+class TemplateTest(test.NoDBTestCase):
     def test_tree(self):
         elem = xmlutil.TemplateElement('test')
         tmpl = xmlutil.Template(elem)
@@ -721,7 +721,7 @@ class SlaveTemplateBuilder(xmlutil.TemplateBuilder):
         return xmlutil.SlaveTemplate(elem, 1)
 
 
-class TemplateBuilderTest(test.TestCase):
+class TemplateBuilderTest(test.NoDBTestCase):
     def test_master_template_builder(self):
         # Make sure the template hasn't been built yet
         self.assertEqual(MasterTemplateBuilder._tmpl, None)
@@ -768,7 +768,7 @@ class TemplateBuilderTest(test.TestCase):
         self.assertEqual(tmpl1, tmpl2)
 
 
-class MiscellaneousXMLUtilTests(test.TestCase):
+class MiscellaneousXMLUtilTests(test.NoDBTestCase):
     def test_validate_schema(self):
         xml = '''<?xml version='1.0' encoding='UTF-8'?>
 <metadata xmlns="http://docs.openstack.org/compute/api/v1.1">
@@ -815,7 +815,7 @@ class MiscellaneousXMLUtilTests(test.TestCase):
                           tests_utils.killer_xml_body())
 
 
-class SafeParserTestCase(test.TestCase):
+class SafeParserTestCase(test.NoDBTestCase):
     def test_external_dtd(self):
         xml_string = ("""<?xml version="1.0" encoding="utf-8"?>
                 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"

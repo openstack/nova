@@ -21,7 +21,7 @@ from nova.tests.api.openstack import fakes
 import nova.tests.image.fake
 
 
-class UrlmapTest(test.TestCase):
+class UrlmapTest(test.NoDBTestCase):
     def setUp(self):
         super(UrlmapTest, self).setUp()
         fakes.stub_out_rate_limiting(self.stubs)

@@ -52,7 +52,7 @@ def fake_get_not_found(*args, **kwargs):
     raise exception.InstanceNotFound(instance_id='')
 
 
-class ConsoleOutputExtensionTest(test.TestCase):
+class ConsoleOutputExtensionTest(test.NoDBTestCase):
     application_type = "application/json"
 
     def setUp(self):

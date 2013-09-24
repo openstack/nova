@@ -57,7 +57,7 @@ _fake_alias3 = """{
                }"""
 
 
-class AliasTestCase(test.TestCase):
+class AliasTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(AliasTestCase, self).setUp()

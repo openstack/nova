@@ -31,7 +31,7 @@ from nova import servicegroup
 from nova import test
 
 
-class ZKServiceGroupTestCase(test.TestCase):
+class ZKServiceGroupTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(ZKServiceGroupTestCase, self).setUp()

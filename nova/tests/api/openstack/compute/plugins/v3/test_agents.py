@@ -87,7 +87,7 @@ def fake_agent_build_create_with_exited_agent(context, values):
     raise exception.AgentBuildExists(**values)
 
 
-class AgentsTest(test.TestCase):
+class AgentsTest(test.NoDBTestCase):
 
     def setUp(self):
         super(AgentsTest, self).setUp()
