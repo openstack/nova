@@ -28,6 +28,4 @@ python-keystoneclient>=0.3.2
 six<1.4.0
 stevedore>=0.10
 websockify>=0.5.1,<0.6
-
--f http://tarballs.openstack.org/oslo.config/oslo.config-1.2.0a3.tar.gz#egg=oslo.config-1.2.0a3
-oslo.config>=1.2.0a3
+oslo.config>=1.2.0
