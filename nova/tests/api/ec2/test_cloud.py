@@ -345,9 +345,9 @@ class CloudTestCase(test.TestCase):
                                'pool': 'nova'})
         self.cloud.allocate_address(self.context)
         self.cloud.describe_addresses(self.context)
-        self.assertRaises(exception.InstanceNotFound,
-                          self.cloud.disassociate_address,
-                          self.context, public_ip=address)
+        result = self.cloud.disassociate_address(self.context,
+                                                 public_ip=address)
+        self.assertEqual(result['return'], 'true')
         db.floating_ip_destroy(self.context, address)
 
     def test_describe_security_groups(self):
