@@ -430,7 +430,7 @@ class HypervisorsSerializersTest(test.NoDBTestCase):
         required_children = set([child for child in ('service', 'servers')
                                  if child in exemplar])
         for child in hyper:
-            self.assertTrue(child.tag in required_children)
+            self.assertIn(child.tag, required_children)
             required_children.remove(child.tag)
 
             # Check the node...
