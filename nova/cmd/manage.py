@@ -909,11 +909,11 @@ class FlavorCommands(object):
     Note instance type is a deprecated synonym for flavor.
     """
 
-    def _print_flavors(self, name, val):
+    def _print_flavors(self, val):
         is_public = ('private', 'public')[val["is_public"] == 1]
         print(("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
             "FlavorID: %s, Swap: %sMB, RXTX Factor: %s, %s, ExtraSpecs %s") % (
-            name, val["memory_mb"], val["vcpus"], val["root_gb"],
+            val["name"], val["memory_mb"], val["vcpus"], val["root_gb"],
             val["ephemeral_gb"], val["flavorid"], val["swap"],
             val["rxtx_factor"], is_public, val["extra_specs"]))
 
@@ -984,9 +984,9 @@ class FlavorCommands(object):
             _db_error(e)
         if isinstance(inst_types.values()[0], dict):
             for k, v in inst_types.iteritems():
-                self._print_flavors(k, v)
+                self._print_flavors(v)
         else:
-            self._print_flavors(name, inst_types)
+            self._print_flavors(inst_types)
 
     @args('--name', metavar='<name>', help='Name of flavor')
     @args('--key', metavar='<key>', help='The key of the key/value pair')

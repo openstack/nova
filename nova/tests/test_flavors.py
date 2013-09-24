@@ -255,6 +255,32 @@ class InstanceTypeTestCase(test.TestCase):
         expected_results = all_flavors[3:]
         self.assertEqual(expected_results, marked_flavors)
 
+    def test_get_inactive_flavors(self):
+        flavors.create('flavor1', 256, 1, 120, 100, "test_id1")
+        flavors.create('flavor2', 512, 4, 250, 100, "test_id2")
+        flavors.destroy('flavor1')
+
+        returned_flavors_ids = flavors.get_all_flavors().keys()
+        self.assertNotIn('test_id1', returned_flavors_ids)
+        self.assertIn('test_id2', returned_flavors_ids)
+
+        returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
+        self.assertIn('test_id1', returned_flavors_ids)
+        self.assertIn('test_id2', returned_flavors_ids)
+
+    def test_get_inactive_flavors_with_same_name(self):
+        flavors.create('flavor1', 256, 1, 120, 100, "test_id1")
+        flavors.destroy('flavor1')
+        flavors.create('flavor1', 512, 4, 250, 100, "test_id2")
+
+        returned_flavors_ids = flavors.get_all_flavors().keys()
+        self.assertNotIn('test_id1', returned_flavors_ids)
+        self.assertIn('test_id2', returned_flavors_ids)
+
+        returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
+        self.assertIn('test_id1', returned_flavors_ids)
+        self.assertIn('test_id2', returned_flavors_ids)
+
 
 class InstanceTypeToolsTest(test.TestCase):
     def _dict_to_metadata(self, data):
