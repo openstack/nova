@@ -81,6 +81,11 @@ class ConsoleAuthManager(manager.Manager):
         self.mc.set(token.encode('UTF-8'), data, CONF.console_token_ttl)
         if instance_uuid is not None:
             tokens = self._get_tokens_for_instance(instance_uuid)
+            # Remove the expired tokens from cache.
+            for tok in tokens:
+                token_str = self.mc.get(tok.encode('UTF-8'))
+                if not token_str:
+                    tokens.remove(tok)
             tokens.append(token)
             self.mc.set(instance_uuid.encode('UTF-8'),
                         jsonutils.dumps(tokens))
