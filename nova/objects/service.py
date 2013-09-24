@@ -35,8 +35,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         'disabled': bool,
         'disabled_reason': utils.str_or_none,
         'availability_zone': utils.str_or_none,
-        'compute_node': utils.nested_object_or_none(
-            compute_node.ComputeNode),
+        'compute_node': utils.nested_object(compute_node.ComputeNode),
         }
 
     @staticmethod

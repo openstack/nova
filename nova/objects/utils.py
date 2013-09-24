@@ -76,9 +76,11 @@ def ip_or_none(version):
     return validator
 
 
-def nested_object_or_none(objclass):
+def nested_object(objclass, none_ok=True):
     def validator(val, objclass=objclass):
-        if val is None or isinstance(val, objclass):
+        if none_ok and val is None:
+            return val
+        if isinstance(val, objclass):
             return val
         raise ValueError('An object of class %s is required here' % objclass)
     return validator
