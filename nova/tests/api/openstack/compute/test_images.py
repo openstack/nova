@@ -275,6 +275,25 @@ class ImagesControllerTest(test.TestCase):
         self.assertThat({'limit': ['2'], 'marker': ['124']},
                         matchers.DictMatches(params))
 
+    def test_get_image_details_with_limit_and_page_size(self):
+        request = fakes.HTTPRequest.blank(
+            '/v2/fake/images/detail?limit=2&page_size=1')
+        response = self.controller.detail(request)
+        response_list = response["images"]
+        response_links = response["images_links"]
+
+        expected = [self.expected_image_123["image"],
+                    self.expected_image_124["image"]]
+
+        self.assertThat(expected, matchers.DictListMatches(response_list))
+
+        href_parts = urlparse.urlparse(response_links[0]['href'])
+        self.assertEqual('/v2/fake/images', href_parts.path)
+        params = urlparse.parse_qs(href_parts.query)
+
+        self.assertThat({'limit': ['2'], 'page_size': ['1'],
+                         'marker': ['124']}, matchers.DictMatches(params))
+
     def _detail_request(self, filters, request):
         context = request.environ['nova.context']
         self.image_service.detail(context, filters=filters).AndReturn([])

@@ -196,6 +196,24 @@ class PaginationParamsTest(test.TestCase):
         self.assertEqual(common.get_pagination_params(req),
                          {'marker': marker, 'limit': 20})
 
+    def test_valid_page_size(self):
+        # Test valid page_size param.
+        req = webob.Request.blank('/?page_size=10')
+        self.assertEqual(common.get_pagination_params(req),
+                         {'page_size': 10})
+
+    def test_invalid_page_size(self):
+        # Test invalid page_size param.
+        req = webob.Request.blank('/?page_size=-2')
+        self.assertRaises(
+            webob.exc.HTTPBadRequest, common.get_pagination_params, req)
+
+    def test_valid_limit_and_page_size(self):
+        # Test valid limit and page_size parameters.
+        req = webob.Request.blank('/?limit=20&page_size=5')
+        self.assertEqual(common.get_pagination_params(req),
+                         {'page_size': 5, 'limit': 20})
+
 
 class MiscFunctionsTest(test.TestCase):
 

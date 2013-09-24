@@ -40,7 +40,7 @@ class StubGlanceClient(object):
             setattr(self.images, fn, getattr(self, fn))
 
     #TODO(bcwaldon): implement filters
-    def list(self, filters=None, marker=None, limit=30):
+    def list(self, filters=None, marker=None, limit=30, page_size=20):
         if marker is None:
             index = 0
         else:
@@ -50,7 +50,6 @@ class StubGlanceClient(object):
                     break
             else:
                 raise glanceclient.exc.BadRequest('Marker not found')
-
         return self._images[index:index + limit]
 
     def get(self, image_id):

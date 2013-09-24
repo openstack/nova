@@ -270,7 +270,7 @@ class GlanceImageService(object):
     def _extract_query_params(self, params):
         _params = {}
         accepted_params = ('filters', 'marker', 'limit',
-                           'sort_key', 'sort_dir')
+                           'page_size', 'sort_key', 'sort_dir')
         for param in accepted_params:
             if params.get(param):
                 _params[param] = params.get(param)

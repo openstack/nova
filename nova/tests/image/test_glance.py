@@ -26,6 +26,7 @@ import time
 import sys
 import testtools
 
+from mock import patch
 import mox
 
 import glanceclient.exc
@@ -34,6 +35,7 @@ from oslo.config import cfg
 from nova import context
 from nova import exception
 from nova.image import glance
+from nova.image.glance import GlanceClientWrapper
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
@@ -115,8 +117,8 @@ class TestGlanceImageService(test.TestCase):
         super(TestGlanceImageService, self).setUp()
         fakes.stub_out_compute_api_snapshot(self.stubs)
 
-        client = glance_stubs.StubGlanceClient()
-        self.service = self._create_image_service(client)
+        self.client = glance_stubs.StubGlanceClient()
+        self.service = self._create_image_service(self.client)
         self.context = context.RequestContext('fake', 'fake', auth_token=True)
         self.mox = mox.Mox()
         self.files_to_clean = []
@@ -303,6 +305,14 @@ class TestGlanceImageService(test.TestCase):
 
         image_metas = self.service.detail(self.context, limit=5)
         self.assertEquals(len(image_metas), 5)
+
+    def test_page_size(self):
+        with patch.object(GlanceClientWrapper, 'call') as a_mock:
+            self.service.detail(self.context, page_size=5)
+            self.assertEquals(a_mock.called, True)
+            a_mock.assert_called_with(self.context, 1, 'list',
+                                      filters={'is_public': 'none'},
+                                      page_size=5)
 
     def test_detail_default_limit(self):
         fixtures = []
