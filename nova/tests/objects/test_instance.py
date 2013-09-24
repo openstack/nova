@@ -366,6 +366,19 @@ class _TestInstanceObject(object):
         inst.info_cache.network_info = nwinfo2
         inst.save()
 
+    def test_with_info_cache_none(self):
+        fake_inst = dict(self.fake_instance, info_cache=None)
+        fake_uuid = fake_inst['uuid']
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
+        # NOTE(comstud): info_cache is always joined right now
+        db.instance_get_by_uuid(self.context, fake_uuid,
+                                columns_to_join=[]
+                                ).AndReturn(fake_inst)
+        self.mox.ReplayAll()
+        inst = instance.Instance.get_by_uuid(self.context, fake_uuid,
+                                             ['info_cache'])
+        self.assertEqual(None, inst.info_cache)
+
     def test_with_security_groups(self):
         fake_inst = dict(self.fake_instance)
         fake_uuid = fake_inst['uuid']

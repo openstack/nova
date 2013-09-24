@@ -221,6 +221,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     _attr_terminated_at_from_primitive = obj_utils.dt_deserializer
 
     def _attr_info_cache_from_primitive(self, val):
+        if val is None:
+            return val
         return base.NovaObject.obj_from_primitive(val)
 
     def _attr_security_groups_from_primitive(self, val):
@@ -265,14 +267,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     context, pci_device.PciDeviceList(),
                     db_inst['pci_devices'])
             instance['pci_devices'] = pci_devices
-
-        # NOTE(danms): info_cache and security_groups are almost
-        # always joined in the DB layer right now, so check to see if
-        # they are asked for and are present in the resulting object
-        if 'info_cache' in expected_attrs and db_inst.get('info_cache'):
-            instance['info_cache'] = instance_info_cache.InstanceInfoCache()
-            instance_info_cache.InstanceInfoCache._from_db_object(
-                    context, instance['info_cache'], db_inst['info_cache'])
+        if 'info_cache' in expected_attrs:
+            if db_inst['info_cache'] is None:
+                info_cache = None
+            else:
+                info_cache = instance_info_cache.InstanceInfoCache()
+                instance_info_cache.InstanceInfoCache._from_db_object(
+                        context, info_cache, db_inst['info_cache'])
+            instance['info_cache'] = info_cache
         if 'security_groups' in expected_attrs:
             sec_groups = security_group._make_secgroup_list(
                     context, security_group.SecurityGroupList(),
