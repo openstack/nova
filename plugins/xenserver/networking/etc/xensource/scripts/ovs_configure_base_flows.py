@@ -24,7 +24,7 @@ This script is used to configure base openvswitch flows for XenServer hosts.
 import os
 import sys
 
-import novalib
+import novalib  # noqa
 
 
 def main(command, phys_dev_name):
@@ -62,11 +62,11 @@ def main(command, phys_dev_name):
 
 if __name__ == "__main__":
     if len(sys.argv) != 3 or sys.argv[1] not in ('online', 'offline', 'reset'):
-        print sys.argv
+        print(sys.argv)
         script_name = os.path.basename(sys.argv[0])
-        print "This script configures base ovs flows."
-        print "usage: %s [online|offline|reset] phys-dev-name" % script_name
-        print "   ex: %s online eth0" % script_name
+        print("This script configures base ovs flows.")
+        print("usage: %s [online|offline|reset] phys-dev-name" % script_name)
+        print("   ex: %s online eth0" % script_name)
         sys.exit(1)
     else:
         command, phys_dev_name = sys.argv[1:3]

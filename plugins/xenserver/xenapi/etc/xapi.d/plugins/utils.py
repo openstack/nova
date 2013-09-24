@@ -35,7 +35,7 @@ class CommandNotFound(Exception):
 def delete_if_exists(path):
     try:
         os.unlink(path)
-    except OSError, e:
+    except OSError, e:  # noqa
         if e.errno == errno.ENOENT:
             LOG.warning("'%s' was already deleted, skipping delete" % path)
         else:
@@ -51,7 +51,7 @@ def _rename(src, dst):
     LOG.info("Renaming file '%s' -> '%s'" % (src, dst))
     try:
         os.rename(src, dst)
-    except OSError, e:
+    except OSError, e:  # noqa
         if e.errno == errno.EXDEV:
             LOG.error("Invalid cross-device link.  Perhaps %s and %s should "
                       "be symlinked on the same filesystem?" % (src, dst))
@@ -72,7 +72,7 @@ def make_subprocess(cmdline, stdout=False, stderr=False, stdin=False,
     kwargs['env'] = env
     try:
         proc = subprocess.Popen(cmdline, **kwargs)
-    except OSError, e:
+    except OSError, e:  # noqa
         if e.errno == errno.ENOENT:
             raise CommandNotFound
         else:
@@ -201,8 +201,7 @@ def _assert_vhd_not_hidden(path):
             value = line.split(':')[1].strip()
             if value == "1":
                 raise Exception(
-                    "VHD %(path)s is marked as hidden without child" %
-                    locals())
+                    "VHD %s is marked as hidden without child" % path)
 
 
 def _validate_vhd(vdi_path):
@@ -244,7 +243,8 @@ def _validate_vhd(vdi_path):
 
         raise Exception(
             "VDI '%(vdi_path)s' has an invalid %(part)s: '%(details)s'"
-            "%(extra)s" % locals())
+            "%(extra)s" % {'vdi_path': vdi_path, 'part': part,
+                           'details': details, 'extra': extra})
 
 
 def _validate_vdi_chain(vdi_path):
@@ -264,11 +264,10 @@ def _validate_vdi_chain(vdi_path):
         elif 'has no parent' in first_line:
             return None
         elif 'query failed' in first_line:
-            raise Exception("VDI '%(path)s' not present which breaks"
-                            " the VDI chain, bailing out" % locals())
+            raise Exception("VDI '%s' not present which breaks"
+                            " the VDI chain, bailing out" % path)
         else:
-            raise Exception("Unexpected output '%(out)s' from vhd-util" %
-                            locals())
+            raise Exception("Unexpected output '%s' from vhd-util" % out)
 
     cur_path = vdi_path
     while cur_path:
