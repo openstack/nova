@@ -65,13 +65,17 @@ def get_console_log(session, arg_dict):
     except ValueError:
         raise pluginlib_nova.PluginError("Invalid dom_id")
 
-    logfile = CONSOLE_LOG_FILE_PATTERN % dom_id
+    logfile = open(CONSOLE_LOG_FILE_PATTERN % dom_id, 'rb')
     try:
-        log_content = pluginlib_nova.with_file(logfile, 'rb', _last_bytes)
-    except IOError, e:
-        msg = "Error reading console: %s" % e
-        logging.debug(msg)
-        raise pluginlib_nova.PluginError(msg)
+        try:
+            log_content = _last_bytes(logfile)
+        except IOError, e:
+            msg = "Error reading console: %s" % e
+            logging.debug(msg)
+            raise pluginlib_nova.PluginError(msg)
+    finally:
+        logfile.close()
+
     return base64.b64encode(zlib.compress(log_content))
 
 

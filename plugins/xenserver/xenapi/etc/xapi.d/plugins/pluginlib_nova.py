@@ -20,10 +20,8 @@
 #
 
 import gettext
-import httplib
 import logging
 import logging.handlers
-import re
 import time
 import XenAPI
 
@@ -60,68 +58,7 @@ class ArgumentError(PluginError):
         PluginError.__init__(self, *args)
 
 
-##### Helpers
-
-def ignore_failure(func, *args, **kwargs):
-    try:
-        return func(*args, **kwargs)
-    except XenAPI.Failure, e:
-        logging.error(_('Ignoring XenAPI.Failure %s'), e)
-        return None
-
-
 ##### Argument validation
-
-ARGUMENT_PATTERN = re.compile(r'^[a-zA-Z0-9_:\.\-,]+$')
-
-
-def validate_exists(args, key, default=None):
-    """Validates that a string argument to a RPC method call is given, and
-    matches the shell-safe regex, with an optional default value in case it
-    does not exist.
-
-    Returns the string.
-    """
-    if key in args:
-        if len(args[key]) == 0:
-            raise ArgumentError(_('Argument %(key)s value %(value)s is too '
-                                  'short.') %
-                                {'key': key,
-                                 'value': args[key]})
-        if not ARGUMENT_PATTERN.match(args[key]):
-            raise ArgumentError(_('Argument %(key)s value %(value)s contains '
-                                  'invalid characters.') %
-                                  {'key': key,
-                                   'value': args[key]})
-        if args[key][0] == '-':
-            raise ArgumentError(_('Argument %(key)s value %(value)s starts '
-                                  'with a hyphen.') %
-                                {'key': key,
-                                 'value': args[key]})
-        return args[key]
-    elif default is not None:
-        return default
-    else:
-        raise ArgumentError(_('Argument %s is required.') % key)
-
-
-def validate_bool(args, key, default=None):
-    """Validates that a string argument to a RPC method call is a boolean
-    string, with an optional default value in case it does not exist.
-
-    Returns the python boolean value.
-    """
-    value = validate_exists(args, key, default)
-    if value.lower() == 'true':
-        return True
-    elif value.lower() == 'false':
-        return False
-    else:
-        raise ArgumentError(_("Argument %(key)s may not take value %(value)s. "
-                              "Valid values are ['true', 'false'].")
-                            % {'key': key,
-                               'value': value})
-
 
 def exists(args, key):
     """Validates that a freeform string argument to a RPC method call is given.
@@ -140,42 +77,15 @@ def optional(args, key):
     return key in args and args[key] or None
 
 
-def get_this_host(session):
-    return session.xenapi.session.get_this_host(session.handle)
-
-
-def get_domain_0(session):
-    this_host_ref = get_this_host(session)
+def _get_domain_0(session):
+    this_host_ref = session.xenapi.session.get_this_host(session.handle)
     expr = 'field "is_control_domain" = "true" and field "resident_on" = "%s"'
     expr = expr % this_host_ref
     return session.xenapi.VM.get_all_records_where(expr).keys()[0]
 
 
-def create_vdi(session, sr_ref, name_label, virtual_size, read_only):
-    vdi_ref = session.xenapi.VDI.create(
-         {'name_label': name_label,
-          'name_description': '',
-          'SR': sr_ref,
-          'virtual_size': str(virtual_size),
-          'type': 'User',
-          'sharable': False,
-          'read_only': read_only,
-          'xenstore_data': {},
-          'other_config': {},
-          'sm_config': {},
-          'tags': []})
-    logging.debug(_('Created VDI %(vdi_ref)s (%(label)s, %(size)s, '
-                    '%(read_only)s) on %(sr_ref)s.') %
-                  {'vdi_ref': vdi_ref,
-                   'label': name_label,
-                   'size': virtual_size,
-                   'read_only': read_only,
-                   'sr_ref': sr_ref})
-    return vdi_ref
-
-
 def with_vdi_in_dom0(session, vdi, read_only, f):
-    dom0 = get_domain_0(session)
+    dom0 = _get_domain_0(session)
     vbd_rec = {}
     vbd_rec['VM'] = dom0
     vbd_rec['VDI'] = vdi
@@ -199,12 +109,15 @@ def with_vdi_in_dom0(session, vdi, read_only, f):
         return f(session.xenapi.VBD.get_device(vbd))
     finally:
         logging.debug(_('Destroying VBD for VDI %s ... '), vdi)
-        vbd_unplug_with_retry(session, vbd)
-        ignore_failure(session.xenapi.VBD.destroy, vbd)
+        _vbd_unplug_with_retry(session, vbd)
+        try:
+            session.xenapi.VBD.destroy(vbd)
+        except XenAPI.Failure, e:
+            logging.error(_('Ignoring XenAPI.Failure %s'), e)
         logging.debug(_('Destroying VBD for VDI %s done.'), vdi)
 
 
-def vbd_unplug_with_retry(session, vbd):
+def _vbd_unplug_with_retry(session, vbd):
     """Call VBD.unplug on the given VBD, with a retry if we get
     DEVICE_DETACH_REJECTED.  For reasons which I don't understand, we're
     seeing the device still in use, even when all processes using the device
@@ -228,21 +141,3 @@ def vbd_unplug_with_retry(session, vbd):
                 logging.error(_('Ignoring XenAPI.Failure in VBD.unplug: %s'),
                               e)
                 return
-
-
-def with_http_connection(proto, netloc, f):
-    conn = (proto == 'https' and
-            httplib.HTTPSConnection(netloc) or
-            httplib.HTTPConnection(netloc))
-    try:
-        return f(conn)
-    finally:
-        conn.close()
-
-
-def with_file(dest_path, mode, f):
-    dest = open(dest_path, mode)
-    try:
-        return f(dest)
-    finally:
-        dest.close()
