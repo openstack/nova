@@ -1571,7 +1571,7 @@ class ComputeTestCase(BaseTestCase):
         launch = timeutils.utcnow()
         self.compute.run_instance(self.context, instance=instance)
         instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        self.assert_(instance['launched_at'] > launch)
+        self.assertTrue(instance['launched_at'] > launch)
         self.assertEqual(instance['deleted_at'], None)
         terminate = timeutils.utcnow()
         self.compute.terminate_instance(self.context,
@@ -1579,8 +1579,8 @@ class ComputeTestCase(BaseTestCase):
         with utils.temporary_mutation(self.context, read_deleted='only'):
             instance = db.instance_get_by_uuid(self.context,
                     instance['uuid'])
-        self.assert_(instance['launched_at'] < terminate)
-        self.assert_(instance['deleted_at'] > terminate)
+        self.assertTrue(instance['launched_at'] < terminate)
+        self.assertTrue(instance['deleted_at'] > terminate)
 
     def test_run_terminate_deallocate_net_failure_sets_error_state(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -2508,7 +2508,7 @@ class ComputeTestCase(BaseTestCase):
         # Try with the full instance
         console = self.compute.get_vnc_console(self.context, 'novnc',
                                                instance=instance)
-        self.assert_(console)
+        self.assertTrue(console)
 
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -2570,7 +2570,7 @@ class ComputeTestCase(BaseTestCase):
 
         console = self.compute.get_vnc_console(self.context, 'xvpvnc',
                                                instance=instance)
-        self.assert_(console)
+        self.assertTrue(console)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_invalid_vnc_console_type(self):
@@ -2624,7 +2624,7 @@ class ComputeTestCase(BaseTestCase):
         # Try with the full instance
         console = self.compute.get_spice_console(self.context, 'spice-html5',
                                                instance=instance)
-        self.assert_(console)
+        self.assertTrue(console)
 
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -6021,7 +6021,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(len(db.security_group_get_by_instance(
                              self.context, ref[0]['uuid'])), 1)
             group = db.security_group_get(self.context, group['id'])
-            self.assert_(len(group['instances']) == 1)
+            self.assertTrue(len(group['instances']) == 1)
         finally:
             db.security_group_destroy(self.context, group['id'])
             db.instance_destroy(self.context, ref[0]['uuid'])
@@ -6137,7 +6137,7 @@ class ComputeAPITestCase(BaseTestCase):
         try:
             db.instance_destroy(self.context, ref[0]['uuid'])
             group = db.security_group_get(self.context, group['id'])
-            self.assert_(len(group['instances']) == 0)
+            self.assertTrue(len(group['instances']) == 0)
         finally:
             db.security_group_destroy(self.context, group['id'])
 
@@ -6156,7 +6156,7 @@ class ComputeAPITestCase(BaseTestCase):
             admin_deleted_context = context.get_admin_context(
                     read_deleted="only")
             group = db.security_group_get(admin_deleted_context, group['id'])
-            self.assert_(len(group['instances']) == 0)
+            self.assertTrue(len(group['instances']) == 0)
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 

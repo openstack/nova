@@ -305,7 +305,7 @@ class ExtensionControllerTest(ExtensionTestCase):
 
         # Make sure we have all the extensions, extras extensions being OK.
         exts = root.findall('{0}extension'.format(NS))
-        self.assert_(len(exts) >= len(self.ext_list))
+        self.assertTrue(len(exts) >= len(self.ext_list))
 
         # Make sure that at least Fox in Sox is correct.
         (fox_ext, ) = [x for x in exts if x.get('alias') == 'FOXNSOX']

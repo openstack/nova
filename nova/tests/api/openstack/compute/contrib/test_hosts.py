@@ -160,13 +160,13 @@ class HostTestCase(test.TestCase):
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
         result = self.controller.index(self.req)
-        self.assert_('hosts' in result)
+        self.assertTrue('hosts' in result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST, hosts)
 
     def test_list_hosts_with_zone(self):
         result = self.controller.index(FakeRequestWithNovaZone())
-        self.assert_('hosts' in result)
+        self.assertTrue('hosts' in result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
 

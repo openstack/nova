@@ -92,7 +92,7 @@ class ServiceFlagsTestCase(test.TestCase):
         app.stop()
         ref = db.service_get(context.get_admin_context(), app.service_id)
         db.service_destroy(context.get_admin_context(), app.service_id)
-        self.assert_(not ref['disabled'])
+        self.assertTrue(not ref['disabled'])
 
     def test_service_disabled_on_create_based_on_flag(self):
         self.flags(enable_new_services=False)
@@ -103,7 +103,7 @@ class ServiceFlagsTestCase(test.TestCase):
         app.stop()
         ref = db.service_get(context.get_admin_context(), app.service_id)
         db.service_destroy(context.get_admin_context(), app.service_id)
-        self.assert_(ref['disabled'])
+        self.assertTrue(ref['disabled'])
 
 
 class ServiceTestCase(test.TestCase):
@@ -125,7 +125,7 @@ class ServiceTestCase(test.TestCase):
         app = service.Service.create(host=self.host, binary=self.binary,
                 topic=self.topic)
 
-        self.assert_(app)
+        self.assertTrue(app)
 
     def _service_start_mocks(self):
         service_create = {'host': self.host,

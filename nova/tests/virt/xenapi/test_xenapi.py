@@ -581,7 +581,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         for vdi_ref in xenapi_fake.get_all('VDI'):
             vdi_rec = xenapi_fake.get_record('VDI', vdi_ref)
             name_label = vdi_rec["name_label"]
-            self.assert_(not name_label.endswith('snapshot'))
+            self.assertTrue(not name_label.endswith('snapshot'))
 
         self.assertTrue(self.fake_upload_called)
 

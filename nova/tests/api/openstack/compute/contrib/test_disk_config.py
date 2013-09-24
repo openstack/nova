@@ -146,7 +146,7 @@ class DiskConfigTestCase(test.TestCase):
         nova.tests.image.fake.FakeImageService_reset()
 
     def assertDiskConfig(self, dict_, value):
-        self.assert_(API_DISK_CONFIG in dict_)
+        self.assertTrue(API_DISK_CONFIG in dict_)
         self.assertEqual(dict_[API_DISK_CONFIG], value)
 
     def test_show_server(self):
