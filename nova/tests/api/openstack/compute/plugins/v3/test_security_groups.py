@@ -31,7 +31,6 @@ from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova.network import manager
-from nova.network.security_group import neutron_driver
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
@@ -95,10 +94,9 @@ def fake_get_instance_security_groups(*args, **kwargs):
     return [{'name': 'fake'}]
 
 
-def fake_get_instances_security_groups_bindings(*args, **kwargs):
-    security_groups = [{'name': 'fake'}]
-    return {UUID1: security_groups,
-            UUID2: security_groups}
+def fake_get_instances_security_groups_bindings(inst, context):
+    return {UUID1: [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}],
+            UUID2: [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}]}
 
 
 class SecurityGroupsOutputTest(test.TestCase):
@@ -106,17 +104,11 @@ class SecurityGroupsOutputTest(test.TestCase):
 
     def setUp(self):
         super(SecurityGroupsOutputTest, self).setUp()
-        CONF.set_override('security_group_api', 'neutron')
+        CONF.set_override('security_group_api', 'nova')
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(compute.api.API, 'create', fake_compute_create)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'get_instance_security_groups',
-                       fake_get_instance_security_groups)
-        self.stubs.Set(neutron_driver.SecurityGroupAPI,
-                       'get_instances_security_groups_bindings',
-                       fake_get_instances_security_groups_bindings)
         self.app = fakes.wsgi_app_v3(init_only=('servers',
                                                 'os-security-groups'))
 
@@ -146,13 +138,12 @@ class SecurityGroupsOutputTest(test.TestCase):
         url = '/v3/servers'
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
         server = dict(name='server_test', image_ref=image_uuid, flavor_ref=2)
-        server.update(
-            {'os-security-groups:security_groups': [{'name': 'fake'}]})
         res = self._make_request(url, {'server': server})
         self.assertEqual(res.status_int, 202)
         server = self._get_server(res.body)
         for i, group in enumerate(self._get_groups(server)):
-            self.assertEqual(group.get('name'), 'fake')
+            name = 'fake-2-%s' % i
+            self.assertEqual(group.get('name'), name)
 
     def test_show(self):
         url = '/v3/servers/%s' % UUID3
@@ -161,7 +152,8 @@ class SecurityGroupsOutputTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         server = self._get_server(res.body)
         for i, group in enumerate(self._get_groups(server)):
-            self.assertEqual(group.get('name'), 'fake')
+            name = 'fake-2-%s' % i
+            self.assertEqual(group.get('name'), name)
 
     def test_detail(self):
         url = '/v3/servers/detail'
@@ -170,7 +162,8 @@ class SecurityGroupsOutputTest(test.TestCase):
         self.assertEqual(res.status_int, 200)
         for i, server in enumerate(self._get_servers(res.body)):
             for j, group in enumerate(self._get_groups(server)):
-                self.assertEqual(group.get('name'), 'fake')
+                name = 'fake-%s-%s' % (i, j)
+                self.assertEqual(group.get('name'), name)
 
     def test_no_instance_passthrough_404(self):
 
