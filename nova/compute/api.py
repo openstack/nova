@@ -274,15 +274,6 @@ class API(base.Base):
                     state="temporary_readonly",
                     method=method)
 
-    def _instance_update(self, context, instance_uuid, **kwargs):
-        """Update an instance in the database using kwargs as value."""
-
-        (old_ref, instance_ref) = self.db.instance_update_and_get_original(
-                context, instance_uuid, kwargs)
-        notifications.send_update(context, old_ref, instance_ref, 'api')
-
-        return instance_ref
-
     def _record_action_start(self, context, instance, action):
         instance_action.InstanceAction.action_start(context,
                                                     instance['uuid'],
