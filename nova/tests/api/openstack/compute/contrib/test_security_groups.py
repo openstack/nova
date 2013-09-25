@@ -1498,13 +1498,15 @@ def fake_compute_get_all(*args, **kwargs):
 
 
 def fake_compute_get(*args, **kwargs):
-    return fakes.stub_instance(1, uuid=UUID3,
+    inst = fakes.stub_instance(1, uuid=UUID3,
                                security_groups=[{'name': 'fake-2-0'},
                                                 {'name': 'fake-2-1'}])
+    return fake_instance.fake_instance_obj(args[1],
+               expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS, **inst)
 
 
 def fake_compute_create(*args, **kwargs):
-    return ([fake_compute_get()], '')
+    return ([fake_compute_get(*args, **kwargs)], '')
 
 
 def fake_get_instances_security_groups_bindings(inst, context):

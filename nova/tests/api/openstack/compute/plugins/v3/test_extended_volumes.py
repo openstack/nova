@@ -21,11 +21,13 @@ import webob
 from nova.api.openstack.compute.plugins.v3 import extended_volumes
 from nova import compute
 from nova import context
+from nova import db
 from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 from nova import volume
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
@@ -34,7 +36,8 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
 def fake_compute_get(*args, **kwargs):
-    return fakes.stub_instance(1, uuid=UUID1)
+    inst = fakes.stub_instance(1, uuid=UUID1)
+    return fake_instance.fake_instance_obj(args[1], **inst)
 
 
 def fake_compute_get_not_found(*args, **kwargs):
@@ -126,6 +129,8 @@ class ExtendedVolumesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'attach_volume', fake_attach_volume)
         self.app = fakes.wsgi_app_v3(init_only=('os-extended-volumes',
                                                 'servers'))
+        return_server = fakes.fake_instance_get()
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
     def _make_request(self, url, body=None):
         req = webob.Request.blank(url)

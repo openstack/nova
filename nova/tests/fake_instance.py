@@ -16,15 +16,19 @@ import datetime
 import uuid
 
 from nova.objects import instance as instance_obj
+from nova.objects import instance_fault as inst_fault_obj
 
 
 def fake_db_secgroups(instance, names):
     secgroups = []
     for i, name in enumerate(names):
+        group_name = 'secgroup-%i' % i
+        if isinstance(name, dict) and name.get('name'):
+            group_name = name.get('name')
         secgroups.append(
             {'id': i,
              'instance_uuid': instance['uuid'],
-             'name': 'secgroup-%i' % i,
+             'name': group_name,
              'description': 'Fake secgroup',
              'user_id': instance['user_id'],
              'project_id': instance['project_id'],
@@ -65,3 +69,33 @@ def fake_db_instance(**updates):
             db_instance, db_instance['security_groups'])
 
     return db_instance
+
+
+def fake_instance_obj(context, **updates):
+    expected_attrs = updates.pop('expected_attrs', None)
+    return instance_obj.Instance._from_db_object(context,
+               instance_obj.Instance(), fake_db_instance(**updates),
+               expected_attrs=expected_attrs)
+
+
+def fake_fault_obj(instance_uuid, code=404,
+                   message='HTTPNotFound',
+                   details='Stock details for test',
+                   **updates):
+    fault = {
+        'id': 1,
+        'instance_uuid': instance_uuid,
+        'code': code,
+        'message': message,
+        'details': details,
+        'host': 'fake_host',
+        'deleted': False,
+        'created_at': datetime.datetime(2010, 10, 10, 12, 0, 0),
+        'updated_at': None,
+        'deleted_at': None
+    }
+    if updates:
+        fault.update(updates)
+    return inst_fault_obj.InstanceFault._from_db_object(
+                                           inst_fault_obj.InstanceFault(),
+                                           fault)
