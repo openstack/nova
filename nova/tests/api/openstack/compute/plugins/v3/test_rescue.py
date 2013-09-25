@@ -54,7 +54,7 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.status_int, 202)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual("AABBCC112233", resp_json['admin_pass'])
 
@@ -66,9 +66,22 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 200)
+        self.assertEqual(resp.status_int, 202)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual(CONF.password_length, len(resp_json['admin_pass']))
+
+    def test_rescue_disable_password(self):
+        self.flags(enable_instance_password=False)
+        body = dict(rescue=None)
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 202)
+        resp_json = jsonutils.loads(resp.body)
+        self.assertTrue('admin_pass' not in resp_json)
 
     def test_rescue_of_rescued_instance(self):
         body = dict(rescue=None)

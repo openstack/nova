@@ -44,8 +44,11 @@ from nova import utils
 server_opts = [
     cfg.BoolOpt('enable_instance_password',
                 default=True,
-                help='Allows use of instance password during '
-                     'server creation'),
+                help='Enables returning of the instance password by the'
+                     ' relevant server API calls such as create, rebuild'
+                     ' or rescue, If the hypervisor does not support'
+                     ' password injection then the password returned will'
+                     ' not be correct'),
 ]
 CONF = cfg.CONF
 CONF.register_opts(server_opts)
