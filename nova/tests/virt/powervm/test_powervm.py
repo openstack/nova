@@ -797,27 +797,6 @@ class PowerVMDriverTestCase(test.TestCase):
         uptime = self.powervm_connection.get_host_uptime(None)
         self.assertEquals(output[0], uptime)
 
-    def test_add_to_aggregate(self):
-        # Simple test to make sure the unimplemented method passes.
-        self.powervm_connection.add_to_aggregate(context.get_admin_context(),
-                                                 aggregate={'name': 'foo'},
-                                                 host='fake')
-
-    def test_remove_from_aggregate(self):
-        # Simple test to make sure the unimplemented method passes.
-        self.powervm_connection.remove_from_aggregate(
-                    context.get_admin_context(), aggregate={'name': 'foo'},
-                    host='fake')
-
-    def test_undo_aggregate_operation(self):
-        # Simple test to make sure the unimplemented method passes.
-        def fake_operation(*args, **kwargs):
-            pass
-
-        self.powervm_connection.undo_aggregate_operation(
-                    context.get_admin_context(), op=fake_operation,
-                    aggregate={'name': 'foo'}, host='fake')
-
     def test_plug_vifs(self):
         # Check to make sure the method passes (does nothing) since
         # it simply passes in the powervm driver but it raises a

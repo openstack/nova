@@ -4996,6 +4996,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.add_to_aggregate(context, aggregate, host,
                                          slave_info=slave_info)
+        except NotImplementedError:
+            LOG.debug(_('Hypervisor driver does not support '
+                        'add_aggregate_host'))
         except exception.AggregateError:
             with excutils.save_and_reraise_exception():
                 self.driver.undo_aggregate_operation(
@@ -5013,6 +5016,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,
                                               slave_info=slave_info)
+        except NotImplementedError:
+            LOG.debug(_('Hypervisor driver does not support '
+                        'remove_aggregate_host'))
         except (exception.AggregateError,
                 exception.InvalidAggregateAction) as e:
             with excutils.save_and_reraise_exception():

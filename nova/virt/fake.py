@@ -440,12 +440,6 @@ class FakeDriver(driver.ComputeDriver):
     def get_disk_available_least(self):
         pass
 
-    def add_to_aggregate(self, context, aggregate, host, **kwargs):
-        pass
-
-    def remove_from_aggregate(self, context, aggregate, host, **kwargs):
-        pass
-
     def get_volume_connector(self, instance):
         return {'ip': '127.0.0.1', 'initiator': 'fake', 'host': 'fakehost'}
 
