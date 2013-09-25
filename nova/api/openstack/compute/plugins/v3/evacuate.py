@@ -86,7 +86,7 @@ class EvacuateController(wsgi.Controller):
                     'evacuate')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.ComputeServiceUnavailable as e:
+        except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return {'admin_password': password}

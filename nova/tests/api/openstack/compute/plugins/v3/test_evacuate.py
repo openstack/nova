@@ -140,6 +140,19 @@ class EvacuateTest(test.NoDBTestCase):
         resp_json = jsonutils.loads(res.body)
         self.assertEqual(resp_json['admin_password'], None)
 
+    def test_evacuate_with_active_service(self):
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'on_shared_storage': 'false',
+                                               'admin_password': 'MyNewPass'})
+
+        def fake_evacuate(*args, **kwargs):
+            raise exception.ComputeServiceInUse("Service still in use")
+
+        self.stubs.Set(compute_api.API, 'evacuate', fake_evacuate)
+
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
+
     def test_not_admin(self):
         req, app = self._gen_request_with_app({'host': 'my_host',
                                                'on_shared_storage': 'True'},

@@ -126,7 +126,7 @@ class EvacuateTest(test.NoDBTestCase):
             })
 
         def fake_evacuate(*args, **kwargs):
-            raise exception.ComputeServiceUnavailable("Service Unavailable")
+            raise exception.ComputeServiceInUse("Service still in use")
 
         self.stubs.Set(compute_api.API, 'evacuate', fake_evacuate)
 
