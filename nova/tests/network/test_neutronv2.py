@@ -1658,12 +1658,14 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                        'tenant_id': self.instance['project_id']}
         ports = {'ports': [{'id': 'test1'}]}
         self.moxed_client.list_ports(**search_opts).AndReturn(ports)
+        migration = {'source_compute': self.instance.get('host'),
+                     'dest_compute': 'dest_host', }
         port_req_body = {'port':
-                         {'binding:host_id': self.instance.get('host')}}
+                         {'binding:host_id': migration['dest_compute']}}
         self.moxed_client.update_port('test1',
                                       port_req_body).AndReturn(None)
         self.mox.ReplayAll()
-        api.migrate_instance_finish(self.context, self.instance, None)
+        api.migrate_instance_finish(self.context, self.instance, migration)
 
     def test_migrate_instance_finish_binding_true_exception(self):
         api = neutronapi.API()
@@ -1675,15 +1677,17 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                        'tenant_id': self.instance['project_id']}
         ports = {'ports': [{'id': 'test1'}]}
         self.moxed_client.list_ports(**search_opts).AndReturn(ports)
+        migration = {'source_compute': self.instance.get('host'),
+                     'dest_compute': 'dest_host', }
         port_req_body = {'port':
-                         {'binding:host_id': self.instance.get('host')}}
+                         {'binding:host_id': migration['dest_compute']}}
         self.moxed_client.update_port('test1',
                                       port_req_body).AndRaise(
             Exception("fail to update port"))
         self.mox.ReplayAll()
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           api.migrate_instance_finish,
-                          self.context, self.instance, None)
+                          self.context, self.instance, migration)
 
 
 class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
