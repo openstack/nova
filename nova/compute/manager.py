@@ -2070,7 +2070,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance = self._instance_update(context, instance['uuid'],
                                  vm_state=vm_states.ACTIVE,
                                  task_state=task_states.STOPPING,
-                                 terminated_at=timeutils.utcnow(),
                                  progress=0)
                 self.stop_instance(context, instance=instance)
 
