@@ -57,6 +57,9 @@ node_cpu_model = "Penryn"
 # CPU vendor
 node_cpu_vendor = "Intel"
 
+# Has libvirt connection been used at least once
+connection_used = False
+
 
 def _reset():
     global allow_default_uri_connection
@@ -913,6 +916,8 @@ def openAuth(uri, auth, flags):
         raise Exception(
             _("Expected a function in 'auth[1]' parameter"))
 
+    connection_used = True
+
     return Connection(uri, (flags == VIR_CONNECT_RO))
 
 
@@ -921,7 +926,9 @@ def virEventRunDefaultImpl():
 
 
 def virEventRegisterDefaultImpl():
-    pass
+    if connection_used:
+        raise Exception(_("virEventRegisterDefaultImpl() must be \
+            called before connection is used."))
 
 
 def registerErrorHandler(handler, ctxt):
