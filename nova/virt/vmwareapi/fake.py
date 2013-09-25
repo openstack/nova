@@ -719,6 +719,13 @@ def fake_get_network(*args, **kwargs):
     return {'type': 'fake'}
 
 
+def get_file(file_path):
+    """Check if file exists in the db."""
+    if _db_content.get("files") is None:
+        raise exception.NoFilesFound()
+    return file_path in _db_content.get("files")
+
+
 def fake_fetch_image(context, image, instance, **kwargs):
     """Fakes fetch image call. Just adds a reference to the db for the file."""
     ds_name = kwargs.get("datastore_name")

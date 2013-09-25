@@ -160,14 +160,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def _create_instance_in_the_db(self, node=None):
         if not node:
             node = self.node_name
-        values = {'name': '1',
+        values = {'name': 'fake_name',
                   'id': 1,
                   'uuid': "fake-uuid",
                   'project_id': self.project_id,
                   'user_id': self.user_id,
-                  'image_ref': "1",
-                  'kernel_id': "1",
-                  'ramdisk_id': "1",
+                  'image_ref': "fake_image_uuid",
+                  'kernel_id': "fake_kernel_uuid",
+                  'ramdisk_id': "fake_ramdisk_uuid",
                   'mac_address': "de:ad:be:ef:be:ef",
                   'instance_type': 'm1.large',
                   'node': node,
@@ -250,6 +250,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         instances = self.conn.list_instances()
         self.assertEquals(len(instances), 1)
+
+    def test_instance_dir_disk_created(self):
+        """Test image file isn't cached when use_linked_clone is False."""
+        self._create_vm()
+        inst_file_path = '[fake-ds] fake-uuid/fake_name.vmdk'
+        cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
+        self.assertEqual(vmwareapi_fake.get_file(inst_file_path), True)
+        self.assertEqual(vmwareapi_fake.get_file(cache_file_path), False)
+
+    def test_cache_dir_disk_created(self):
+        """Test image disk is cached when use_linked_clone is True."""
+        self.flags(use_linked_clone=True, group='vmware')
+        self._create_vm()
+        file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
+        self.assertEqual(vmwareapi_fake.get_file(file_path), True)
 
     def test_spawn(self):
         self._create_vm()
