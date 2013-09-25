@@ -114,7 +114,7 @@ class VHDUtilsV2(vhdutils.VHDUtils):
 
         self._vmutils.check_ret_val(ret_val, job_path)
 
-        return vhd_info_xml
+        return vhd_info_xml.encode('utf8', 'xmlcharrefreplace')
 
     def get_vhd_info(self, vhd_path):
         image_man_svc = self._conn.Msvm_ImageManagementService()[0]
