@@ -66,3 +66,11 @@ class ServersSampleJsonTest(ServersSampleBase):
 
 class ServersSampleXmlTest(ServersSampleJsonTest):
     ctype = 'xml'
+
+
+class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
+    all_extensions = True
+
+
+class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
+    all_extensions = True

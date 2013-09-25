@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<servers xmlns:os-extended-volumes="http://docs.openstack.org/compute/ext/extended_volumes/api/v3" xmlns:os-extended-availability-zone="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v3" xmlns:os-extended-status="http://docs.openstack.org/compute/ext/extended_status/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:os-config-drive="http://docs.openstack.org/compute/ext/config_drive/api/v3" xmlns:os-extended-server-attributes="http://docs.openstack.org/compute/ext/extended_server_attributes/api/v3" xmlns:os-disk-config="http://docs.openstack.org/compute/ext/disk_config/api/v3" xmlns:os-server-usage="http://docs.openstack.org/compute/ext/os-server-usage/api/v3" xmlns="http://docs.openstack.org/compute/api/v1.1">
+  <server status="ACTIVE" updated="2013-09-23T13:29:37Z" user_id="fake" name="new-server-test" created="2013-09-23T13:29:36Z" tenant_id="openstack" access_ip_v4="" progress="0" host_id="6da2179515d81d177b0fb59fb11a1b70f7ca3b859bb6d8beb6331403" id="dbcc8944-8510-46bd-a017-ecacd6e6de5c" access_ip_v6="" os-config-drive:config_drive="" os-server-usage:launched_at="2013-09-23 13:29:37.150043" os-server-usage:terminated_at="None" os-extended-status:vm_state="active" os-extended-status:locked_by="None" os-extended-status:power_state="1" os-extended-status:task_state="None" os-disk-config:disk_config="AUTO" os-extended-availability-zone:availability_zone="nova" os-extended-server-attributes:hypervisor_hostname="fake-mini" os-extended-server-attributes:instance_name="instance-00000001" os-extended-server-attributes:host="ac7b409b83234b25af19fc4d36793f8d" key_name="None">
+    <image id="70a599e0-31e7-49b7-b260-868f441e862b">
+      <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
+    </image>
+    <flavor id="1">
+      <atom:link href="http://openstack.example.com/flavors/1" rel="bookmark"/>
+    </flavor>
+    <metadata>
+      <meta key="My Server Name">Apache1</meta>
+    </metadata>
+    <addresses>
+      <network id="private">
+        <ip version="4" type="fixed" addr="192.168.0.3" mac_addr="aa:bb:cc:dd:ee:ff"/>
+      </network>
+    </addresses>
+    <atom:link href="http://openstack.example.com/v3/servers/dbcc8944-8510-46bd-a017-ecacd6e6de5c" rel="self"/>
+    <atom:link href="http://openstack.example.com/servers/dbcc8944-8510-46bd-a017-ecacd6e6de5c" rel="bookmark"/>
+    <security_groups>
+      <security_group name="default"/>
+    </security_groups>
+  </server>
+</servers>
