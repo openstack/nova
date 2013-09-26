@@ -370,8 +370,8 @@ def teardown_container(container_dir):
 def clean_lxc_namespace(container_dir):
     """Clean up the container namespace rootfs mounting one spawned.
 
-    It will umount the mounted names that is mounted
-    but leave the linked deivces alone.
+    It will umount the mounted names that are mounted
+    but leave the linked devices alone.
     """
     try:
         img = _DiskImage(image=None, mount_dir=container_dir)
