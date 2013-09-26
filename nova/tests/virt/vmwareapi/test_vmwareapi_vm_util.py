@@ -281,3 +281,40 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual("lsiLogic", vmdk_adapter_type)
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("dummyAdapter")
         self.assertEqual("dummyAdapter", vmdk_adapter_type)
+
+    def _test_get_vnc_config_spec(self, port, password):
+
+        result = vm_util.get_vnc_config_spec(fake.FakeFactory(),
+                                             port, password)
+        return result
+
+    def test_get_vnc_config_spec(self):
+        result = self._test_get_vnc_config_spec(7, None)
+        expected = """{'extraConfig': [
+                          {'value': 'true',
+                           'key': 'RemoteDisplay.vnc.enabled',
+                           'obj_name': 'ns0:OptionValue'},
+                          {'value': 7,
+                           'key': 'RemoteDisplay.vnc.port',
+                           'obj_name': 'ns0:OptionValue'}],
+                       'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    def test_get_vnc_config_spec_password(self):
+        result = self._test_get_vnc_config_spec(7, 'password')
+        expected = """{'extraConfig': [
+                          {'value': 'true',
+                           'key': 'RemoteDisplay.vnc.enabled',
+                           'obj_name': 'ns0:OptionValue'},
+                          {'value': 7,
+                           'key': 'RemoteDisplay.vnc.port',
+                           'obj_name': 'ns0:OptionValue'},
+                          {'value':'password',
+                           'key':'RemoteDisplay.vnc.password',
+                           'obj_name':'ns0:OptionValue'}],
+                       'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)

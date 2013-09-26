@@ -137,6 +137,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             'size': 512,
         }
         nova.tests.image.fake.stub_out_image_service(self.stubs)
+        self.vnc_host = 'test_url'
 
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
@@ -682,14 +683,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.conn.get_vnc_console,
                           self.instance)
 
-    def test_get_vnc_console(self):
+    def _test_get_vnc_console(self):
         self._create_vm()
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
         fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
         vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], 'test_url')
+        self.assertEquals(vnc_dict['host'], self.vnc_host)
         self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
                           fake_vm_id % cfg.CONF.vmware.vnc_port_total)
+
+    def test_get_vnc_console(self):
+        self._test_get_vnc_console()
+
+    def test_get_vnc_console_with_password(self):
+        self.flags(vnc_password='vmware', group='vmware')
+        self._test_get_vnc_console()
 
     def test_host_ip_addr(self):
         self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
@@ -929,6 +937,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.conn = driver.VMwareVCDriver(None, False)
         self.node_name = self.conn._resources.keys()[0]
         self.node_name2 = self.conn._resources.keys()[1]
+        self.vnc_host = 'ha-host'
 
     def tearDown(self):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
@@ -994,15 +1003,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
         self.assertEquals(False, self.power_on_called)
-
-    def test_get_vnc_console(self):
-        self._create_vm()
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
-        fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
-        vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], "ha-host")
-        self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
-                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)
 
     def test_snapshot(self):
         # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
