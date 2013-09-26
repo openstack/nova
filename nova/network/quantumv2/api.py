@@ -180,13 +180,6 @@ class API(base.Base):
                 if network_id:
                     net_ids.append(network_id)
 
-        private_net_id = quantumv20.find_resourceid_by_name_or_id(
-                    quantum, 'network', CONF.quantum_default_private_network)
-        if not private_net_id:
-            raise Exception(_('Default Private Network ID Not Found'))
-        else:
-            net_ids.append(private_net_id)
-
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
         security_groups = kwargs.get('security_groups', [])

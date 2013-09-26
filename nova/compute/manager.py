@@ -1054,6 +1054,22 @@ class ComputeManager(manager.SchedulerDependentManager):
                               expected_task_state=(task_states.SCHEDULING,
                                                    None))
 
+    def _prep_networks(self, context, instance, requested_networks):
+        """Get pre-defined network ID and add it to the requested networks"""
+        try:
+            pre_defined_network_id = self.network_api.get_network_id_by_name(
+                                          context = context,
+                                          network_name = self.pre_defined_network)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Instance failed get network info'),
+                              instance=instance)
+
+        pre_defined_network = [(pre_defined_network_id, None, None)]
+        requested_networks = (pre_defined_network + requested_networks
+            if requested_networks else pre_defined_network)
+        return requested_networks
+
     def _allocate_network(self, context, instance, requested_networks, macs,
                           security_groups):
         """Allocate networks for an instance and return the network info."""
@@ -1062,11 +1078,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                                          task_state=task_states.NETWORKING,
                                          expected_task_state=None)
         is_vpn = pipelib.is_vpn_image(instance['image_ref'])
+        requested_networks = self._prep_networks(context,
+                                            instance,
+                                            requested_networks)
         try:
             # allocate and get network info
             network_info = self.network_api.allocate_for_instance(
                                 context, instance, vpn=is_vpn,
-                                requested_networks=self.pre_defined_network,
+                                requested_networks=requested_networks,
                                 macs=macs,
                                 conductor_api=self.conductor_api,
                                 security_groups=security_groups)
