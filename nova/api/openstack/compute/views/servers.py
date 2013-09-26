@@ -105,9 +105,10 @@ class ViewBuilder(common.ViewBuilder):
                                          self._collection_name),
             },
         }
-        _inst_fault = self._get_fault(request, instance)
-        if server["server"]["status"] in self._fault_statuses and _inst_fault:
-            server['server']['fault'] = _inst_fault
+        if server["server"]["status"] in self._fault_statuses:
+            _inst_fault = self._get_fault(request, instance)
+            if _inst_fault:
+                server['server']['fault'] = _inst_fault
 
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
@@ -198,7 +199,8 @@ class ViewBuilder(common.ViewBuilder):
         }
 
     def _get_fault(self, request, instance):
-        fault = instance.get("fault", None)
+        # This can result in a lazy load of the fault information
+        fault = instance.fault
 
         if not fault:
             return None
@@ -255,9 +257,10 @@ class ViewBuilderV3(ViewBuilder):
                                          self._collection_name),
             },
         }
-        _inst_fault = self._get_fault(request, instance)
-        if server["server"]["status"] in self._fault_statuses and _inst_fault:
-            server['server']['fault'] = _inst_fault
+        if server["server"]["status"] in self._fault_statuses:
+            _inst_fault = self._get_fault(request, instance)
+            if _inst_fault:
+                server['server']['fault'] = _inst_fault
 
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
