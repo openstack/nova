@@ -111,6 +111,9 @@ class LibvirtBlockInfoTest(test.TestCase):
         dev = blockinfo.find_disk_dev_for_disk_bus(mapping, 'virtio')
         self.assertEqual(dev, 'vda')
 
+        dev = blockinfo.find_disk_dev_for_disk_bus(mapping, 'fdc')
+        self.assertEqual(dev, 'fda')
+
     def test_get_next_disk_dev(self):
         mapping = {}
         mapping['disk.local'] = blockinfo.get_next_disk_info(mapping,
@@ -511,6 +514,10 @@ class LibvirtBlockInfoTest(test.TestCase):
         bus = blockinfo.get_disk_bus_for_device_type('kvm',
                                                      device_type='cdrom')
         self.assertEqual(bus, 'ide')
+
+        bus = blockinfo.get_disk_bus_for_device_type('kvm',
+                                                     device_type='floppy')
+        self.assertEqual(bus, 'fdc')
 
         image_meta = {'properties': {'hw_disk_bus': 'scsi'}}
         bus = blockinfo.get_disk_bus_for_device_type('kvm',
