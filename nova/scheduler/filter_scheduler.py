@@ -24,7 +24,6 @@ import random
 from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
-from nova import db
 from nova import exception
 from nova import notifier
 from nova.openstack.common.gettextutils import _
@@ -360,14 +359,3 @@ class FilterScheduler(driver.Scheduler):
             if update_group_hosts is True:
                 filter_properties['group_hosts'].append(chosen_host.obj.host)
         return selected_hosts
-
-    def _get_compute_info(self, context, dest):
-        """Get compute node's information
-
-        :param context: security context
-        :param dest: hostname (must be compute node)
-        :return: dict of compute node information
-
-        """
-        service_ref = db.service_get_by_compute_host(context, dest)
-        return service_ref['compute_node'][0]
