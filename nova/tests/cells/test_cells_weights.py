@@ -67,7 +67,7 @@ class CellsWeightsTestCase(test.NoDBTestCase):
         self.assertTrue(len(weighers) >= 2)
         class_names = [cls.__name__ for cls in weighers]
         self.assertIn('WeightOffsetWeigher', class_names)
-        self.assert_('RamByInstanceTypeWeigher', class_names)
+        self.assertIn('RamByInstanceTypeWeigher', class_names)
 
 
 class _WeigherTestClass(test.NoDBTestCase):
