@@ -21,7 +21,6 @@ import functools
 from nova import context
 from nova import exception
 from nova.objects import fields
-from nova.objects import utils as obj_utils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
@@ -50,10 +49,10 @@ def make_class_properties(cls):
     for supercls in cls.mro()[1:-1]:
         if not hasattr(supercls, 'fields'):
             continue
-        for field, typefn in supercls.fields.items():
-            if field not in cls.fields:
-                cls.fields[field] = typefn
-    for name, typefn in cls.fields.iteritems():
+        for name, field in supercls.fields.items():
+            if name not in cls.fields:
+                cls.fields[name] = field
+    for name, field in cls.fields.iteritems():
 
         def getter(self, name=name):
             attrname = get_attrname(name)
@@ -61,10 +60,11 @@ def make_class_properties(cls):
                 self.obj_load_attr(name)
             return getattr(self, attrname)
 
-        def setter(self, value, name=name, typefn=typefn):
+        def setter(self, value, name=name, field=field):
             self._changed_fields.add(name)
             try:
-                return setattr(self, get_attrname(name), typefn(value))
+                return setattr(self, get_attrname(name),
+                               field.coerce(self, name, value))
             except Exception:
                 attr = "%s.%s" % (self.obj_name(), name)
                 LOG.exception(_('Error setting %(attr)s') %
@@ -140,7 +140,8 @@ def remotable(fn):
                 ctxt, self, fn.__name__, args, kwargs)
             for key, value in updates.iteritems():
                 if key in self.fields:
-                    self[key] = self._attr_from_primitive(key, value)
+                    field = self.fields[key]
+                    self[key] = field.from_primitive(self, key, value)
             self._changed_fields = set(updates.get('obj_what_changed', []))
             return result
         else:
@@ -186,11 +187,10 @@ class NovaObject(object):
     # Version of this object (see rules above check_object_version())
     version = '1.0'
 
-    # The fields present in this object as key:typefn pairs. For example:
+    # The fields present in this object as key:field pairs. For example:
     #
-    # fields = { 'foo': int,
-    #            'bar': str,
-    #            'baz': lambda x: str(x).ljust(8),
+    # fields = { 'foo': fields.IntegerField(),
+    #            'bar': fields.StringField(),
     #          }
     fields = {}
     obj_extra_fields = []
@@ -230,24 +230,9 @@ class NovaObject(object):
         raise exception.IncompatibleObjectVersion(objname=objname,
                                                   objver=objver)
 
-    def _attr_from_primitive(self, attribute, value):
-        """Attribute deserialization dispatcher.
-
-        This calls self._attr_foo_from_primitive(value) for an attribute
-        foo with value, if it exists, otherwise it assumes the value
-        is suitable for the attribute's setter method.
-        """
-        handler = '_attr_%s_from_primitive' % attribute
-        if hasattr(self, handler):
-            return getattr(self, handler)(value)
-        return value
-
     @classmethod
     def obj_from_primitive(cls, primitive, context=None):
-        """Simple base-case hydration.
-
-        This calls self._attr_from_primitive() for each item in fields.
-        """
+        """Object field-by-field hydration."""
         if primitive['nova_object.namespace'] != 'nova':
             # NOTE(danms): We don't do anything with this now, but it's
             # there for "the future"
@@ -260,26 +245,13 @@ class NovaObject(object):
         objclass = cls.obj_class_from_name(objname, objver)
         self = objclass()
         self._context = context
-        for name in self.fields:
+        for name, field in self.fields.items():
             if name in objdata:
-                setattr(self, name,
-                        self._attr_from_primitive(name, objdata[name]))
+                setattr(self, name, field.from_primitive(self, name,
+                                                         objdata[name]))
         changes = primitive.get('nova_object.changes', [])
         self._changed_fields = set([x for x in changes if x in self.fields])
         return self
-
-    def _attr_to_primitive(self, attribute):
-        """Attribute serialization dispatcher.
-
-        This calls self._attr_foo_to_primitive() for an attribute foo,
-        if it exists, otherwise it assumes the attribute itself is
-        primitive-enough to be sent over the RPC wire.
-        """
-        handler = '_attr_%s_to_primitive' % attribute
-        if hasattr(self, handler):
-            return getattr(self, handler)()
-        else:
-            return getattr(self, attribute)
 
     def __deepcopy__(self, memo):
         nobj = self.__class__()
@@ -298,12 +270,13 @@ class NovaObject(object):
     def obj_to_primitive(self):
         """Simple base-case dehydration.
 
-        This calls self._attr_to_primitive() for each item in fields.
+        This calls to_primitive() for each item in fields.
         """
         primitive = dict()
-        for name in self.fields:
+        for name, field in self.fields.items():
             if self.obj_attr_is_set(name):
-                primitive[name] = self._attr_to_primitive(name)
+                primitive[name] = field.to_primitive(self, name,
+                                                     getattr(self, name))
         obj = {'nova_object.name': self.obj_name(),
                'nova_object.namespace': 'nova',
                'nova_object.version': self.version,
@@ -436,13 +409,6 @@ class NovaPersistentObject(object):
         'deleted_at': fields.DateTimeField(nullable=True),
         'deleted': fields.BooleanField(default=False),
         }
-
-    _attr_created_at_from_primitive = obj_utils.dt_deserializer
-    _attr_updated_at_from_primitive = obj_utils.dt_deserializer
-    _attr_deleted_at_from_primitive = obj_utils.dt_deserializer
-    _attr_created_at_to_primitive = obj_utils.dt_serializer('created_at')
-    _attr_updated_at_to_primitive = obj_utils.dt_serializer('updated_at')
-    _attr_deleted_at_to_primitive = obj_utils.dt_serializer('deleted_at')
 
 
 class ObjectListBase(object):

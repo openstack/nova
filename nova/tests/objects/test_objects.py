@@ -31,9 +31,9 @@ from nova import test
 
 class MyObj(base.NovaPersistentObject, base.NovaObject):
     version = '1.5'
-    fields = {'foo': int,
-              'bar': str,
-              'missing': str,
+    fields = {'foo': fields.Field(fields.Integer()),
+              'bar': fields.Field(fields.String()),
+              'missing': fields.Field(fields.String()),
               }
 
     @staticmethod
@@ -99,7 +99,7 @@ class RandomMixInWithNoFields(object):
 
 
 class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
-    fields = {'new_field': str}
+    fields = {'new_field': fields.Field(fields.String())}
 
 
 class TestMetaclass(test.TestCase):
@@ -240,7 +240,8 @@ class TestUtils(test.TestCase):
                 self.foo = foo
 
         class MyList(base.ObjectListBase, base.NovaObject):
-            pass
+            fields = {'objects': fields.Field(fields.List(
+                        fields.Field(fields.Object(MyObjElement))))}
 
         mylist = MyList()
         mylist.objects = [MyObjElement(1), MyObjElement(2), MyObjElement(3)]
@@ -453,7 +454,7 @@ class _TestObject(object):
 
     def test_load_in_base(self):
         class Foo(base.NovaObject):
-            fields = {'foobar': int}
+            fields = {'foobar': fields.Field(fields.Integer())}
         obj = Foo()
         # NOTE(danms): Can't use assertRaisesRegexp() because of py26
         raised = False
@@ -636,7 +637,7 @@ class _TestObject(object):
 
     def test_obj_fields(self):
         class TestObj(base.NovaObject):
-            fields = {'foo': int}
+            fields = {'foo': fields.Field(fields.Integer())}
             obj_extra_fields = ['bar']
 
             @property
@@ -679,7 +680,8 @@ class TestObjectListBase(test.TestCase):
                 self.foo = foo
 
         class Foo(base.ObjectListBase, base.NovaObject):
-            pass
+            fields = {'objects': fields.Field(fields.List(
+                        fields.Field(fields.Object(MyElement))))}
 
         objlist = Foo()
         objlist._context = 'foo'
@@ -698,7 +700,7 @@ class TestObjectListBase(test.TestCase):
             pass
 
         class Bar(base.NovaObject):
-            fields = {'foo': str}
+            fields = {'foo': fields.Field(fields.String())}
 
         obj = Foo()
         obj.objects = []

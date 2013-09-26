@@ -23,7 +23,6 @@ from nova.objects import instance_fault
 from nova.objects import instance_info_cache
 from nova.objects import pci_device
 from nova.objects import security_group
-from nova.objects import utils as obj_utils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
@@ -204,45 +203,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             except KeyError:
                 base_name = self.uuid
         return base_name
-
-    def _attr_access_ip_v4_to_primitive(self):
-        if self.access_ip_v4 is not None:
-            return str(self.access_ip_v4)
-        else:
-            return None
-
-    def _attr_access_ip_v6_to_primitive(self):
-        if self.access_ip_v6 is not None:
-            return str(self.access_ip_v6)
-        else:
-            return None
-
-    _attr_scheduled_at_to_primitive = obj_utils.dt_serializer('scheduled_at')
-    _attr_launched_at_to_primitive = obj_utils.dt_serializer('launched_at')
-    _attr_terminated_at_to_primitive = obj_utils.dt_serializer('terminated_at')
-    _attr_info_cache_to_primitive = obj_utils.obj_serializer('info_cache')
-    _attr_security_groups_to_primitive = obj_utils.obj_serializer(
-        'security_groups')
-    _attr_pci_devices_to_primitive = obj_utils.obj_serializer(
-        'pci_devices')
-
-    _attr_scheduled_at_from_primitive = obj_utils.dt_deserializer
-    _attr_launched_at_from_primitive = obj_utils.dt_deserializer
-    _attr_terminated_at_from_primitive = obj_utils.dt_deserializer
-
-    def _attr_info_cache_from_primitive(self, val):
-        if val is None:
-            return val
-        return base.NovaObject.obj_from_primitive(val)
-
-    def _attr_security_groups_from_primitive(self, val):
-        return base.NovaObject.obj_from_primitive(val)
-
-    def _attr_pci_devices_from_primitive(self, val):
-        if val is None:
-            # Only possible in version <= 1.7
-            return pci_device.PciDeviceList()
-        return base.NovaObject.obj_from_primitive(val)
 
     @staticmethod
     def _from_db_object(context, instance, db_inst, expected_attrs=None):

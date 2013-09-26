@@ -16,7 +16,6 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import utils
 
 
 class InstanceAction(base.NovaPersistentObject, base.NovaObject):
@@ -35,11 +34,6 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
         'finish_time': fields.DateTimeField(nullable=True),
         'message': fields.StringField(nullable=True),
         }
-
-    _attr_start_time_to_primitive = utils.dt_serializer('start_time')
-    _attr_finish_time_to_primitive = utils.dt_serializer('finish_time')
-    _attr_start_time_from_primitive = utils.dt_deserializer
-    _attr_finish_time_from_primitive = utils.dt_deserializer
 
     @staticmethod
     def _from_db_object(context, action, db_action):
@@ -99,11 +93,6 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
         'result': fields.StringField(nullable=True),
         'traceback': fields.StringField(nullable=True),
         }
-
-    _attr_start_time_to_primitive = utils.dt_serializer('start_time')
-    _attr_finish_time_to_primitive = utils.dt_serializer('finish_time')
-    _attr_start_time_from_primitive = utils.dt_deserializer
-    _attr_finish_time_from_primitive = utils.dt_deserializer
 
     @staticmethod
     def _from_db_object(context, event, db_event):

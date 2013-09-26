@@ -582,13 +582,14 @@ class ConductorManager(manager.Manager):
         updates = dict()
         # NOTE(danms): Diff the object with the one passed to us and
         # generate a list of changes to forward back
-        for field in objinst.fields:
-            if not objinst.obj_attr_is_set(field):
+        for name, field in objinst.fields.items():
+            if not objinst.obj_attr_is_set(name):
                 # Avoid demand-loading anything
                 continue
-            if (not oldobj.obj_attr_is_set(field) or
-                    oldobj[field] != objinst[field]):
-                updates[field] = objinst._attr_to_primitive(field)
+            if (not oldobj.obj_attr_is_set(name) or
+                    oldobj[name] != objinst[name]):
+                updates[name] = field.to_primitive(objinst, name,
+                                                   objinst[name])
         # This is safe since a field named this would conflict with the
         # method anyway
         updates['obj_what_changed'] = objinst.obj_what_changed()

@@ -37,11 +37,6 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
         'network_info': fields.Field(fields.NetworkModel(), nullable=True),
         }
 
-    def _attr_network_info_to_primitive(self):
-        if self.network_info is None:
-            return None
-        return self.network_info.json()
-
     @staticmethod
     def _from_db_object(context, info_cache, db_obj):
         info_cache.instance_uuid = db_obj['instance_uuid']
@@ -88,7 +83,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
     @base.remotable
     def save(self, context, update_cells=True):
         if 'network_info' in self.obj_what_changed():
-            nw_info_json = self._attr_network_info_to_primitive()
+            nw_info_json = self.fields['network_info'].to_primitive(
+                self, 'network_info', self.network_info)
             rv = db.instance_info_cache_update(context, self.instance_uuid,
                                                {'network_info': nw_info_json})
             if update_cells and rv:

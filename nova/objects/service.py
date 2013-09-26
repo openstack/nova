@@ -18,7 +18,6 @@ from nova import exception
 from nova.objects import base
 from nova.objects import compute_node
 from nova.objects import fields
-from nova.objects import utils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -85,11 +84,6 @@ class Service(base.NovaPersistentObject, base.NovaObject):
                 reason='attribute %s not lazy-loadable' % attrname)
         self.compute_node = compute_node.ComputeNode.get_by_service_id(
             self._context, self.id)
-
-    _attr_compute_node_to_primitive = utils.obj_serializer('compute_node')
-
-    def _attr_compute_node_from_primitive(self, val):
-        return base.NovaObject.obj_from_primitive(val)
 
     @base.remotable_classmethod
     def get_by_id(cls, context, service_id):
