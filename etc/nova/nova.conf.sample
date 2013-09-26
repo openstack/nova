@@ -2988,7 +2988,7 @@
 
 # additional append parameters for baremetal PXE boot (string
 # value)
-#pxe_append_params=<None>
+#pxe_append_params=nofb nomodeset vga=normal
 
 # Template file for PXE configuration (string value)
 #pxe_config_template=$pybasedir/nova/virt/baremetal/pxe_config.template
