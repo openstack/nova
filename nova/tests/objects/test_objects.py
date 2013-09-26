@@ -162,6 +162,18 @@ class TestUtils(test.TestCase):
         self.assertEqual(utils.str_or_none('foo'), 'foo')
         self.assertEqual(utils.str_or_none(1), '1')
         self.assertEqual(utils.str_or_none(None), None)
+        self.assertTrue(isinstance(utils.str_or_none('foo'), unicode))
+
+    def test_str_value(self):
+        self.assertEqual('foo', utils.str_value('foo'))
+        self.assertEqual('1', utils.str_value(1))
+        self.assertRaises(ValueError, utils.str_value, None)
+        self.assertTrue(isinstance(utils.str_value('foo'), unicode))
+
+    def test_cstring(self):
+        self.assertEqual('foo', utils.cstring('foo'))
+        self.assertEqual('1', utils.cstring(1))
+        self.assertRaises(ValueError, utils.cstring, None)
 
     def test_ip_or_none(self):
         ip4 = netaddr.IPAddress('1.2.3.4', 4)

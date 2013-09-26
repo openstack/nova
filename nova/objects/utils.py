@@ -55,6 +55,8 @@ def int_or_none(val):
 
 
 def str_value(val):
+    if val is None:
+        raise ValueError(_('None is not valid here'))
     return unicode(val)
 
 
@@ -63,7 +65,13 @@ def str_or_none(val):
     if val is None:
         return val
     else:
-        return str(val)
+        return str_value(val)
+
+
+def cstring(val):
+    if val is None:
+        raise ValueError(_('None is not valid here'))
+    return str(val)
 
 
 def ip_or_none(version):

@@ -89,6 +89,7 @@ class FakeVirtDriver(driver.ComputeDriver):
         if self.pci_support:
             d['pci_passthrough_devices'] = jsonutils.dumps([{
                     'label': 'forza-napoli',
+                    'dev_type': 'foo',
                     'compute_node_id': 1,
                     'address': '0000:00:00.1',
                     'product_id': 'p1',

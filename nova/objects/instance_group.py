@@ -24,7 +24,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Use list/dict helpers for policies, metadetails, members
-    VERSION = '1.2'
+    # Version 1.3: Make uuid a non-None real string
+    VERSION = '1.3'
 
     fields = {
         'id': int,
@@ -32,7 +33,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         'user_id': obj_utils.str_or_none,
         'project_id': obj_utils.str_or_none,
 
-        'uuid': obj_utils.str_or_none,
+        'uuid': obj_utils.cstring,
         'name': obj_utils.str_or_none,
 
         'policies': obj_utils.list_of_strings_or_none,
