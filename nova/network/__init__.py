@@ -54,13 +54,4 @@ def get_pre_defined_network(pre_defined_network=None):
         LOG.error(_("Pre-defined network required, but not specified"))
         sys.exit(1)
 
-    try:
-        network_api = API()
-        pre_defined_network_id = network_api.get_network_id_by_name(
-                                     context=context.get_admin_context(),
-                                     network_name=pre_defined_network)
-        return [(pre_defined_network_id, None, None)]
-    except Exception:
-        LOG.error(_("Unable to get pre-defined network '%s' ID")
-            % pre_defined_network)
-        sys.exit(1)
+    return pre_defined_network
