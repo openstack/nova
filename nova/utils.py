@@ -850,7 +850,7 @@ class UndoManager(object):
             self._rollback()
 
 
-def mkfs(fs, path, label=None):
+def mkfs(fs, path, label=None, run_as_root=False):
     """Format a file or block device
 
     :param fs: Filesystem type (examples include 'swap', 'ext3', 'ext4'
@@ -863,7 +863,7 @@ def mkfs(fs, path, label=None):
     else:
         args = ['mkfs', '-t', fs]
     #add -F to force no interactive execute on non-block device.
-    if fs in ('ext3', 'ext4'):
+    if fs in ('ext3', 'ext4', 'ntfs'):
         args.extend(['-F'])
     if label:
         if fs in ('msdos', 'vfat'):
@@ -872,7 +872,7 @@ def mkfs(fs, path, label=None):
             label_opt = '-L'
         args.extend([label_opt, label])
     args.append(path)
-    execute(*args)
+    execute(*args, run_as_root=run_as_root)
 
 
 def last_bytes(file_like_object, num):

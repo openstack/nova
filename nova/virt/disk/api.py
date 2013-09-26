@@ -63,14 +63,7 @@ disk_opts = [
     #                 escape such commas.
     #
     cfg.MultiStrOpt('virt_mkfs',
-                    default=[
-                      'default=mkfs.ext3 -L %(fs_label)s -F %(target)s',
-                      'linux=mkfs.ext3 -L %(fs_label)s -F %(target)s',
-                      'windows=mkfs.ntfs'
-                      ' --force --fast --label %(fs_label)s %(target)s',
-                      # NOTE(yamahata): vfat case
-                      #'windows=mkfs.vfat -n %(fs_label)s %(target)s',
-                      ],
+                    default=[],
                     help='mkfs commands for ephemeral device. '
                          'The format is <os_type>=<mkfs command>'),
 
@@ -85,10 +78,12 @@ disk_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(disk_opts)
+CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None
-
+_DEFAULT_FS_BY_OSTYPE = {'linux': 'ext3',
+                         'windows': 'ntfs'}
 
 for s in CONF.virt_mkfs:
     # NOTE(yamahata): mkfs command may includes '=' for its options.
@@ -100,11 +95,24 @@ for s in CONF.virt_mkfs:
         _DEFAULT_MKFS_COMMAND = mkfs_command
 
 
-def mkfs(os_type, fs_label, target):
+def mkfs(os_type, fs_label, target, run_as_root=True):
+    """Format a file or block device using
+       a user provided command for each os type.
+       If user has not provided any configuration,
+       format type will be used according to a
+       default_ephemeral_format configuration
+       or a system defaults.
+    """
+
     mkfs_command = (_MKFS_COMMAND.get(os_type, _DEFAULT_MKFS_COMMAND) or
                     '') % {'fs_label': fs_label, 'target': target}
     if mkfs_command:
-        utils.execute(*mkfs_command.split(), run_as_root=True)
+        utils.execute(*mkfs_command.split(), run_as_root=run_as_root)
+    else:
+        default_fs = CONF.default_ephemeral_format
+        if not default_fs:
+            default_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
+        utils.mkfs(default_fs, target, fs_label, run_as_root=run_as_root)
 
 
 def resize2fs(image, check_exit_code=False, run_as_root=False):
