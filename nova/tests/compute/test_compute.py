@@ -1845,10 +1845,26 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.PAUSING})
+        fake_notifier.NOTIFICATIONS = []
         self.compute.pause_instance(self.context, instance=instance)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.pause.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.pause.end')
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.UNPAUSING})
+        fake_notifier.NOTIFICATIONS = []
         self.compute.unpause_instance(self.context, instance=instance)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.unpause.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'compute.instance.unpause.end')
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_suspend(self):
