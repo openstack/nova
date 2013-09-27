@@ -75,7 +75,7 @@ from nova import volume
 
 LOG = logging.getLogger(__name__)
 
-get_notifier = functools.partial(notifier.get_notifier, service='aggregate')
+get_notifier = functools.partial(notifier.get_notifier, service='compute')
 wrap_exception = functools.partial(exception.wrap_exception,
                                    get_notifier=get_notifier)
 
