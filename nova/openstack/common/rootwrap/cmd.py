@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
 # Copyright (c) 2011 OpenStack Foundation.
@@ -57,10 +56,19 @@ def _subprocess_setup():
 
 
 def _exit_error(execname, message, errorcode, log=True):
-    print("%s: %s" % (execname, message))
+    print("%s: %s" % (execname, message), file=sys.stderr)
     if log:
         logging.error(message)
     sys.exit(errorcode)
+
+
+def _getlogin():
+    try:
+        return os.getlogin()
+    except OSError:
+        return (os.getenv('USER') or
+                os.getenv('USERNAME') or
+                os.getenv('LOGNAME'))
 
 
 def main():
@@ -107,7 +115,7 @@ def main():
                                               exec_dirs=config.exec_dirs)
             if config.use_syslog:
                 logging.info("(%s > %s) Executing %s (filter match = %s)" % (
-                    os.getlogin(), pwd.getpwuid(os.getuid())[0],
+                    _getlogin(), pwd.getpwuid(os.getuid())[0],
                     command, filtermatch.name))
 
             obj = subprocess.Popen(command,
