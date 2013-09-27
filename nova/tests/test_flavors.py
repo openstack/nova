@@ -256,30 +256,43 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(expected_results, marked_flavors)
 
     def test_get_inactive_flavors(self):
-        flavors.create('flavor1', 256, 1, 120, 100, "test_id1")
-        flavors.create('flavor2', 512, 4, 250, 100, "test_id2")
+        flav1 = flavors.create('flavor1', 256, 1, 120)
+        flav2 = flavors.create('flavor2', 512, 4, 250)
         flavors.destroy('flavor1')
 
         returned_flavors_ids = flavors.get_all_flavors().keys()
-        self.assertNotIn('test_id1', returned_flavors_ids)
-        self.assertIn('test_id2', returned_flavors_ids)
+        self.assertNotIn(flav1['id'], returned_flavors_ids)
+        self.assertIn(flav2['id'], returned_flavors_ids)
 
         returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
-        self.assertIn('test_id1', returned_flavors_ids)
-        self.assertIn('test_id2', returned_flavors_ids)
+        self.assertIn(flav1['id'], returned_flavors_ids)
+        self.assertIn(flav2['id'], returned_flavors_ids)
 
     def test_get_inactive_flavors_with_same_name(self):
-        flavors.create('flavor1', 256, 1, 120, 100, "test_id1")
-        flavors.destroy('flavor1')
-        flavors.create('flavor1', 512, 4, 250, 100, "test_id2")
+        flav1 = flavors.create('flavor', 256, 1, 120)
+        flavors.destroy('flavor')
+        flav2 = flavors.create('flavor', 512, 4, 250)
 
         returned_flavors_ids = flavors.get_all_flavors().keys()
-        self.assertNotIn('test_id1', returned_flavors_ids)
-        self.assertIn('test_id2', returned_flavors_ids)
+        self.assertNotIn(flav1['id'], returned_flavors_ids)
+        self.assertIn(flav2['id'], returned_flavors_ids)
 
         returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
-        self.assertIn('test_id1', returned_flavors_ids)
-        self.assertIn('test_id2', returned_flavors_ids)
+        self.assertIn(flav1['id'], returned_flavors_ids)
+        self.assertIn(flav2['id'], returned_flavors_ids)
+
+    def test_get_inactive_flavors_with_same_flavorid(self):
+        flav1 = flavors.create('flavor', 256, 1, 120, 100, "flavid")
+        flavors.destroy('flavor')
+        flav2 = flavors.create('flavor', 512, 4, 250, 100, "flavid")
+
+        returned_flavors_ids = flavors.get_all_flavors().keys()
+        self.assertNotIn(flav1['id'], returned_flavors_ids)
+        self.assertIn(flav2['id'], returned_flavors_ids)
+
+        returned_flavors_ids = flavors.get_all_flavors(inactive=True).keys()
+        self.assertIn(flav1['id'], returned_flavors_ids)
+        self.assertIn(flav2['id'], returned_flavors_ids)
 
 
 class InstanceTypeToolsTest(test.TestCase):
