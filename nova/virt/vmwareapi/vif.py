@@ -38,6 +38,19 @@ vmwareapi_vif_opts = [
 CONF.register_opts(vmwareapi_vif_opts, 'vmware')
 
 
+def _get_associated_vswitch_for_interface(session, interface, cluster=None):
+    # Check if the physical network adapter exists on the host.
+    if not network_util.check_if_vlan_interface_exists(session,
+                                        interface, cluster):
+        raise exception.NetworkAdapterNotFound(adapter=interface)
+    # Get the vSwitch associated with the Physical Adapter
+    vswitch_associated = network_util.get_vswitch_for_vlan_interface(
+                                    session, interface, cluster)
+    if not vswitch_associated:
+        raise exception.SwitchNotFoundForNetworkAdapter(adapter=interface)
+    return vswitch_associated
+
+
 def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
     """Create a vlan and bridge unless they already exist."""
     vlan_num = vif['network'].get_meta('vlan')
@@ -49,22 +62,12 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
     if network_ref and network_ref['type'] == 'DistributedVirtualPortgroup':
         return network_ref
 
-    # Get the vSwitch associated with the Physical Adapter
-    vswitch_associated = network_util.get_vswitch_for_vlan_interface(
-                                    session, vlan_interface, cluster)
-    if vswitch_associated is None:
-        raise exception.SwitchNotFoundForNetworkAdapter(
-            adapter=vlan_interface)
-    # Check if the vlan_interface physical network adapter exists on the
-    # host.
-    if not network_util.check_if_vlan_interface_exists(session,
-                                        vlan_interface, cluster):
-        raise exception.NetworkAdapterNotFound(adapter=vlan_interface)
-
-    if network_ref is None:
+    if not network_ref:
         # Create a port group on the vSwitch associated with the
         # vlan_interface corresponding physical network adapter on the ESX
         # host.
+        vswitch_associated = _get_associated_vswitch_for_interface(session,
+                                 vlan_interface, cluster)
         network_util.create_port_group(session, bridge,
                                        vswitch_associated,
                                        vlan_num if create_vlan else 0,
@@ -73,6 +76,9 @@ def ensure_vlan_bridge(session, vif, cluster=None, create_vlan=True):
                                                              bridge,
                                                              cluster)
     elif create_vlan:
+        # Get the vSwitch associated with the Physical Adapter
+        vswitch_associated = _get_associated_vswitch_for_interface(session,
+                                 vlan_interface, cluster)
         # Get the vlan id and vswitch corresponding to the port group
         _get_pg_info = network_util.get_vlanid_and_vswitch_for_portgroup
         pg_vlanid, pg_vswitch = _get_pg_info(session, bridge, cluster)
