@@ -1569,6 +1569,38 @@ class TestNeutronv2(TestNeutronv2Base):
         fip = api.allocate_floating_ip(self.context, 'ext_net')
         self.assertEqual(fip, self.fip_unassociated['floating_ip_address'])
 
+    def test_allocate_floating_ip_addr_gen_fail(self):
+        api = neutronapi.API()
+        pool_name = self.fip_pool['name']
+        pool_id = self.fip_pool['id']
+        search_opts = {'router:external': True,
+                       'fields': 'id',
+                       'name': pool_name}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool]})
+        self.moxed_client.create_floatingip(
+            {'floatingip': {'floating_network_id': pool_id}}).\
+            AndRaise(exceptions.IpAddressGenerationFailureClient)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.NoMoreFloatingIps,
+                          api.allocate_floating_ip, self.context, 'ext_net')
+
+    def test_allocate_floating_ip_exhausted_fail(self):
+        api = neutronapi.API()
+        pool_name = self.fip_pool['name']
+        pool_id = self.fip_pool['id']
+        search_opts = {'router:external': True,
+                       'fields': 'id',
+                       'name': pool_name}
+        self.moxed_client.list_networks(**search_opts).\
+            AndReturn({'networks': [self.fip_pool]})
+        self.moxed_client.create_floatingip(
+            {'floatingip': {'floating_network_id': pool_id}}).\
+            AndRaise(exceptions.ExternalIpAddressExhaustedClient)
+        self.mox.ReplayAll()
+        self.assertRaises(exception.NoMoreFloatingIps,
+                          api.allocate_floating_ip, self.context, 'ext_net')
+
     def test_allocate_floating_ip_with_pool_id(self):
         api = neutronapi.API()
         pool_id = self.fip_pool['id']

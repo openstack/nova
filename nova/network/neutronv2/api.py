@@ -899,7 +899,11 @@ class API(base.Base):
         # At this timing it is ensured that a network for pool exists.
         # quota error may be returned.
         param = {'floatingip': {'floating_network_id': pool_id}}
-        fip = client.create_floatingip(param)
+        try:
+            fip = client.create_floatingip(param)
+        except (neutron_client_exc.IpAddressGenerationFailureClient,
+                neutron_client_exc.ExternalIpAddressExhaustedClient) as e:
+            raise exception.NoMoreFloatingIps(unicode(e))
         return fip['floatingip']['floating_ip_address']
 
     def _get_floating_ip_by_address(self, client, address):
