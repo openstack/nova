@@ -4677,15 +4677,25 @@ class ComputeManager(manager.SchedulerDependentManager):
                 continue
             # No pending tasks. Now try to figure out the real vm_power_state.
             try:
-                vm_instance = self.driver.get_info(db_instance)
-                vm_power_state = vm_instance['state']
-            except exception.InstanceNotFound:
-                vm_power_state = power_state.NOSTATE
-            # Note(maoy): the above get_info call might take a long time,
-            # for example, because of a broken libvirt driver.
-            self._sync_instance_power_state(context,
-                                            db_instance,
-                                            vm_power_state)
+                try:
+                    vm_instance = self.driver.get_info(db_instance)
+                    vm_power_state = vm_instance['state']
+                except exception.InstanceNotFound:
+                    vm_power_state = power_state.NOSTATE
+                # Note(maoy): the above get_info call might take a long time,
+                # for example, because of a broken libvirt driver.
+                try:
+                    self._sync_instance_power_state(context,
+                                                    db_instance,
+                                                    vm_power_state)
+                except exception.InstanceNotFound:
+                    # NOTE(hanlind): If the instance gets deleted during sync,
+                    # silently ignore and move on to next instance.
+                    continue
+            except Exception:
+                LOG.exception(_("Periodic sync_power_state task had an error "
+                                "while processing an instance."),
+                                instance=db_instance)
 
     def _sync_instance_power_state(self, context, db_instance, vm_power_state):
         """Align instance power state between the database and hypervisor.
