@@ -68,7 +68,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.6: Added pci_devices
     # Version 1.7: String attributes updated to support unicode
     # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
-    VERSION = '1.8'
+    # Version 1.9: Make uuid a non-None real string
+    VERSION = '1.9'
 
     fields = {
         'id': int,
@@ -122,7 +123,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'os_type': obj_utils.str_or_none,
         'architecture': obj_utils.str_or_none,
         'vm_mode': obj_utils.str_or_none,
-        'uuid': obj_utils.str_or_none,
+        'uuid': obj_utils.cstring,
 
         'root_device_name': obj_utils.str_or_none,
         'default_ephemeral_device': obj_utils.str_or_none,
