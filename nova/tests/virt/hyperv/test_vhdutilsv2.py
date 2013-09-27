@@ -16,6 +16,7 @@ import mock
 
 from nova import test
 
+from nova.openstack.common import units
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vhdutilsv2
 
@@ -26,16 +27,24 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
     _FAKE_VHD_PATH = "C:\\fake_path.vhdx"
     _FAKE_PARENT_VHD_PATH = "C:\\fake_parent_path.vhdx"
     _FAKE_FORMAT = 3
-    _FAKE_MAK_INTERNAL_SIZE = 1000
+    _FAKE_MAK_INTERNAL_SIZE = units.Gi
     _FAKE_TYPE = 3
     _FAKE_JOB_PATH = 'fake_job_path'
     _FAKE_RET_VAL = 0
+    _FAKE_VHD_FORMAT = 'vhdx'
+    _FAKE_BLOCK_SIZE = 33554432
+    _FAKE_LOG_SIZE = 1048576
+    _FAKE_LOGICAL_SECTOR_SIZE = 4096
+    _FAKE_METADATA_SIZE = 1048576
 
     def setUp(self):
         self._vhdutils = vhdutilsv2.VHDUtilsV2()
         self._vhdutils._conn = mock.MagicMock()
         self._vhdutils._vmutils = mock.MagicMock()
+        self._vhdutils.get_vhd_format = mock.MagicMock(
+            return_value=self._FAKE_VHD_FORMAT)
 
+        self._fake_file_handle = mock.MagicMock()
         self._fake_vhd_info_xml = (
             '<INSTANCE CLASSNAME="Msvm_VirtualHardDiskSettingData">'
             '<PROPERTY NAME="BlockSize" TYPE="uint32">'
@@ -144,6 +153,8 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
         mock_img_svc = self._vhdutils._conn.Msvm_ImageManagementService()[0]
         mock_img_svc.ResizeVirtualHardDisk.return_value = (self._FAKE_JOB_PATH,
                                                            self._FAKE_RET_VAL)
+        self._vhdutils.get_internal_vhd_size_by_file_size = mock.MagicMock(
+            return_value=self._FAKE_MAK_INTERNAL_SIZE)
 
         self._vhdutils.resize_vhd(self._FAKE_VHD_PATH,
                                   self._FAKE_MAK_INTERNAL_SIZE)
@@ -151,3 +162,75 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
         mock_img_svc.ResizeVirtualHardDisk.assert_called_once_with(
             Path=self._FAKE_VHD_PATH,
             MaxInternalSize=self._FAKE_MAK_INTERNAL_SIZE)
+
+        self.mock_get = self._vhdutils.get_internal_vhd_size_by_file_size
+        self.mock_get.assert_called_once_with(self._FAKE_VHD_PATH,
+                                              self._FAKE_MAK_INTERNAL_SIZE)
+
+    def test_get_vhdx_internal_size(self):
+        self._vhdutils.get_vhd_info = mock.MagicMock(
+            return_value={'ParentPath': self._FAKE_PARENT_VHD_PATH,
+                          'Format': self._FAKE_FORMAT,
+                          'BlockSize': self._FAKE_BLOCK_SIZE,
+                          'LogicalSectorSize': self._FAKE_LOGICAL_SECTOR_SIZE,
+                          'Type': self._FAKE_TYPE})
+        self._vhdutils._get_vhdx_log_size = mock.MagicMock(
+            return_value=self._FAKE_LOG_SIZE)
+        self._vhdutils._get_vhdx_metadata_size_and_offset = mock.MagicMock(
+            return_value=(self._FAKE_METADATA_SIZE, 1024))
+        self._vhdutils._get_vhdx_block_size = mock.MagicMock(
+            return_value=self._FAKE_BLOCK_SIZE)
+
+        file_mock = mock.MagicMock()
+        with mock.patch('__builtin__.open', file_mock):
+            internal_size = (
+                self._vhdutils.get_internal_vhd_size_by_file_size(
+                    self._FAKE_VHD_PATH, self._FAKE_MAK_INTERNAL_SIZE))
+
+        self.assertEqual(self._FAKE_MAK_INTERNAL_SIZE - self._FAKE_BLOCK_SIZE,
+                         internal_size)
+
+    def test_get_vhdx_current_header(self):
+        VHDX_HEADER_OFFSETS = [64 * 1024, 128 * 1024]
+        fake_sequence_numbers = ['\x01\x00\x00\x00\x00\x00\x00\x00',
+                                 '\x02\x00\x00\x00\x00\x00\x00\x00']
+        self._fake_file_handle.read = mock.MagicMock(
+            side_effect=fake_sequence_numbers)
+
+        offset = self._vhdutils._get_vhdx_current_header_offset(
+            self._fake_file_handle)
+        self.assertEqual(offset, VHDX_HEADER_OFFSETS[1])
+
+    def test_get_vhdx_metadata_size(self):
+        fake_metadata_offset = '\x01\x00\x00\x00\x00\x00\x00\x00'
+        fake_metadata_size = '\x01\x00\x00\x00'
+        self._fake_file_handle.read = mock.MagicMock(
+            side_effect=[fake_metadata_offset, fake_metadata_size])
+
+        metadata_size, metadata_offset = (
+            self._vhdutils._get_vhdx_metadata_size_and_offset(
+                self._fake_file_handle))
+        self.assertEqual(metadata_size, 1)
+        self.assertEqual(metadata_offset, 1)
+
+    def test_get_block_size(self):
+        self._vhdutils._get_vhdx_metadata_size_and_offset = mock.MagicMock(
+            return_value=(self._FAKE_METADATA_SIZE, 1024))
+        fake_block_size = '\x01\x00\x00\x00'
+        self._fake_file_handle.read = mock.MagicMock(
+            return_value=fake_block_size)
+
+        block_size = self._vhdutils._get_vhdx_block_size(
+            self._fake_file_handle)
+        self.assertEqual(block_size, 1)
+
+    def test_get_log_size(self):
+        fake_current_header_offset = 64 * 1024
+        self._vhdutils._get_vhdx_current_header_offset = mock.MagicMock(
+            return_value=fake_current_header_offset)
+        fake_log_size = '\x01\x00\x00\x00'
+        self._fake_file_handle.read = mock.MagicMock(
+            return_value=fake_log_size)
+
+        log_size = self._vhdutils._get_vhdx_log_size(self._fake_file_handle)
+        self.assertEqual(log_size, 1)

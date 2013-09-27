@@ -95,6 +95,10 @@ class VHDUtils(object):
             DestinationPath=dest_vhd_path)
         self._vmutils.check_ret_val(ret_val, job_path)
 
+    def _get_resize_method(self):
+        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+        return image_man_svc.ExpandVirtualHardDisk
+
     def resize_vhd(self, vhd_path, new_max_size, is_file_max_size=True):
         if is_file_max_size:
             new_internal_max_size = self.get_internal_vhd_size_by_file_size(
@@ -102,9 +106,9 @@ class VHDUtils(object):
         else:
             new_internal_max_size = new_max_size
 
-        image_man_svc = self._conn.Msvm_ImageManagementService()[0]
+        resize = self._get_resize_method()
 
-        (job_path, ret_val) = image_man_svc.ExpandVirtualHardDisk(
+        (job_path, ret_val) = resize(
             Path=vhd_path, MaxInternalSize=new_internal_max_size)
         self._vmutils.check_ret_val(ret_val, job_path)
 

@@ -976,7 +976,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
                 mox.IsA(str), mox.IsA(object))
             m.AndReturn(1025)
 
-            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+            vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object),
+                                         is_file_max_size=False)
 
     def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
                                     with_exception=False,
@@ -1016,7 +1017,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
                 m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
                     mox.IsA(str), mox.IsA(object))
                 m.AndReturn(1025)
-                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
+                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object),
+                                             is_file_max_size=False)
 
         self._setup_check_admin_permissions_mocks(
                                           admin_permissions=admin_permissions)

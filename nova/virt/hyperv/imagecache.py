@@ -26,7 +26,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
 from nova.virt.hyperv import utilsfactory
-from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
 from nova.virt import images
 
@@ -65,14 +64,9 @@ class ImageCache(object):
         root_vhd_size_gb = self._get_root_vhd_size_gb(instance)
         root_vhd_size = root_vhd_size_gb * units.Gi
 
-        # NOTE(lpetrut): Checking the namespace is needed as the following
-        # method is not yet implemented in the vhdutilsv2 module.
-        if not isinstance(self._vhdutils, vhdutilsv2.VHDUtilsV2):
-            root_vhd_internal_size = (
+        root_vhd_internal_size = (
                 self._vhdutils.get_internal_vhd_size_by_file_size(
                     vhd_path, root_vhd_size))
-        else:
-            root_vhd_internal_size = root_vhd_size
 
         if root_vhd_internal_size < vhd_size:
             raise vmutils.HyperVException(
@@ -101,7 +95,8 @@ class ImageCache(object):
                                   {'resized_vhd_path': resized_vhd_path,
                                    'root_vhd_size': root_vhd_size})
                         self._vhdutils.resize_vhd(resized_vhd_path,
-                                                  root_vhd_size)
+                                                  root_vhd_internal_size,
+                                                  is_file_max_size=False)
                     except Exception:
                         with excutils.save_and_reraise_exception():
                             if self._pathutils.exists(resized_vhd_path):
