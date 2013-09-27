@@ -451,18 +451,7 @@ class VMOps(object):
         @step
         def setup_network_step(undo_mgr, vm_ref):
             self._create_vifs(instance, vm_ref, network_info)
-
-            try:
-                self.firewall_driver.setup_basic_filtering(
-                        instance, network_info)
-            except NotImplementedError:
-                # NOTE(salvatore-orlando): setup_basic_filtering might be
-                # empty or not implemented at all, as basic filter could
-                # be implemented with VIF rules created by xapi plugin
-                pass
-
-            self.firewall_driver.prepare_instance_filter(instance,
-                                                         network_info)
+            self._prepare_instance_filter(instance, network_info)
 
         @step
         def boot_instance_step(undo_mgr, vm_ref):
@@ -689,6 +678,19 @@ class VMOps(object):
 
             # Reset network config
             agent.resetnetwork()
+
+    def _prepare_instance_filter(self, instance, network_info):
+        try:
+            self.firewall_driver.setup_basic_filtering(
+                    instance, network_info)
+        except NotImplementedError:
+            # NOTE(salvatore-orlando): setup_basic_filtering might be
+            # empty or not implemented at all, as basic filter could
+            # be implemented with VIF rules created by xapi plugin
+            pass
+
+        self.firewall_driver.prepare_instance_filter(instance,
+                                                     network_info)
 
     def _get_vm_opaque_ref(self, instance, check_rescue=False):
         """Get xapi OpaqueRef from a db record.
@@ -1903,6 +1905,14 @@ class VMOps(object):
             with excutils.save_and_reraise_exception():
                 recover_method(context, instance, destination_hostname,
                                block_migration)
+
+    def post_live_migration_at_destination(self, context, instance,
+                                           network_info, block_migration,
+                                           block_device_info):
+        # FIXME(johngarbutt): we should block all traffic until we have
+        # applied security groups, however this requires changes to XenServer
+        self._prepare_instance_filter(instance, network_info)
+        self.firewall_driver.apply_instance_filter(instance, network_info)
 
     def get_per_instance_usage(self):
         """Get usage info about each active instance."""
