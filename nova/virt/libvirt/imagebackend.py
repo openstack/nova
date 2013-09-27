@@ -193,6 +193,36 @@ class Image(object):
                           (CONF.preallocate_images, self.path))
         return can_fallocate
 
+    @staticmethod
+    def verify_base_size(base, size, base_size=0):
+        """Check that the base image is not larger than size.
+           Since images can't be generally shrunk, enforce this
+           constraint taking account of virtual image size.
+        """
+
+        # Note(pbrady): The size and min_disk parameters of a glance
+        #  image are checked against the instance size before the image
+        #  is even downloaded from glance, but currently min_disk is
+        #  adjustable and doesn't currently account for virtual disk size,
+        #  so we need this extra check here.
+        # NOTE(cfb): Having a flavor that sets the root size to 0 and having
+        #  nova effectively ignore that size and use the size of the
+        #  image is considered a feature at this time, not a bug.
+
+        if size is None:
+            return
+
+        if size and not base_size:
+            base_size = disk.get_disk_size(base)
+
+        if size < base_size:
+            msg = _('%(base)s virtual size %(base_size)s '
+                    'larger than flavor root disk size %(size)s')
+            LOG.error(msg % {'base': base,
+                              'base_size': base_size,
+                              'size': size})
+            raise exception.InstanceTypeDiskTooSmall()
+
     def snapshot_create(self):
         raise NotImplementedError()
 
@@ -234,7 +264,8 @@ class Raw(Image):
             #Generating image in place
             prepare_template(target=self.path, *args, **kwargs)
         else:
-            prepare_template(target=base, *args, **kwargs)
+            prepare_template(target=base, max_size=size, *args, **kwargs)
+            self.verify_base_size(base, size)
             if not os.path.exists(self.path):
                 with fileutils.remove_path_on_error(self.path):
                     copy_raw_image(base, self.path, size)
@@ -273,7 +304,9 @@ class Qcow2(Image):
 
         # Download the unmodified base image unless we already have a copy.
         if not os.path.exists(base):
-            prepare_template(target=base, *args, **kwargs)
+            prepare_template(target=base, max_size=size, *args, **kwargs)
+        else:
+            self.verify_base_size(base, size)
 
         legacy_backing_size = None
         legacy_base = base
@@ -299,17 +332,6 @@ class Qcow2(Image):
                     libvirt_utils.copy_image(base, legacy_base)
                     disk.extend(legacy_base, legacy_backing_size, use_cow=True)
 
-        # NOTE(cfb): Having a flavor that sets the root size to 0 and having
-        #            nova effectively ignore that size and use the size of the
-        #            image is considered a feature at this time, not a bug.
-        disk_size = disk.get_disk_size(base)
-        if size and size < disk_size:
-            msg = _('%(base)s virtual size %(disk_size)s'
-                    'larger than flavor root disk size %(size)s')
-            LOG.error(msg % {'base': base,
-                              'disk_size': disk_size,
-                              'size': size})
-            raise exception.InstanceTypeDiskTooSmall()
         if not os.path.exists(self.path):
             with fileutils.remove_path_on_error(self.path):
                 copy_qcow2_image(base, self.path, size)
@@ -367,6 +389,7 @@ class Lvm(Image):
         @utils.synchronized(base, external=True, lock_path=self.lock_path)
         def create_lvm_image(base, size):
             base_size = disk.get_disk_size(base)
+            self.verify_base_size(base, size, base_size=base_size)
             resize = size > base_size
             size = size if resize else base_size
             libvirt_utils.create_lvm_image(self.vg, self.lv,
@@ -384,7 +407,7 @@ class Lvm(Image):
             with self.remove_volume_on_error(self.path):
                 prepare_template(target=self.path, *args, **kwargs)
         else:
-            prepare_template(target=base, *args, **kwargs)
+            prepare_template(target=base, max_size=size, *args, **kwargs)
             with self.remove_volume_on_error(self.path):
                 create_lvm_image(base, size)
 
@@ -514,7 +537,9 @@ class Rbd(Image):
             features = self.rbd.RBD_FEATURE_LAYERING
 
         if not os.path.exists(base):
-            prepare_template(target=base, *args, **kwargs)
+            prepare_template(target=base, max_size=size, *args, **kwargs)
+        else:
+            self.verify_base_size(base, size)
 
         # keep using the command line import instead of librbd since it
         # detects zeroes to preserve sparseness in the image

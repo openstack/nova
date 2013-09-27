@@ -197,7 +197,7 @@ def get_fs_info(path):
             'free': 84 * (1024 ** 3)}
 
 
-def fetch_image(context, target, image_id, user_id, project_id):
+def fetch_image(context, target, image_id, user_id, project_id, max_size=0):
     pass
 
 
