@@ -1473,7 +1473,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    update_task_state)
 
     def _generic_snapshot(self, context, snapshot_name, snapshot_backend,
-                          disk_path, live_snapshot,  virt_dom, state,
+                          disk_path, live_snapshot, virt_dom, state,
                           image_format, instance, image_href, metadata,
                           image_service, update_task_state):
         snapshot_directory = CONF.libvirt_snapshots_directory

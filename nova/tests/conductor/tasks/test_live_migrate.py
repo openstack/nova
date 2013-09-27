@@ -14,14 +14,13 @@
 
 import mox
 
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.conductor.tasks import live_migrate
 from nova import db
 from nova import exception
-from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
+from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fake_instance
 
@@ -233,7 +232,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_works(self):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi, 'select_hosts')
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
@@ -242,7 +241,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         compute_utils.get_image_metadata(self.context,
                 self.task.image_service, self.instance_image,
                 self.instance).AndReturn("image")
-        flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
+                                           mox.IgnoreArg()).AndReturn({})
         self.task.scheduler_rpcapi.select_hosts(self.context, mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(["host1"])
         self.task._check_compatible_with_source_hypervisor("host1")
@@ -254,21 +254,16 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_find_destination_no_image_works(self):
         self.instance['image_ref'] = ''
 
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi, 'select_hosts')
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        flavors.extract_flavor(self.instance).AndReturn("inst_type")
-        # request_spec with no image set
-        instance_p = obj_base.obj_to_primitive(self.instance)
-        request_spec = {'instance_properties': instance_p,
-                        'instance_type': "inst_type",
-                        'instance_uuids': [self.instance['uuid']]}
-        self.task.scheduler_rpcapi.select_hosts(self.context, request_spec,
+        scheduler_utils.build_request_spec(self.context, None,
+                                           mox.IgnoreArg()).AndReturn({})
+        self.task.scheduler_rpcapi.select_hosts(self.context, mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(["host1"])
-
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")
 
@@ -277,7 +272,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def _test_find_destination_retry_hypervisor_raises(self, error):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi, 'select_hosts')
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
@@ -286,7 +281,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         compute_utils.get_image_metadata(self.context,
                 self.task.image_service, self.instance_image,
                 self.instance).AndReturn("image")
-        flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
+                                           mox.IgnoreArg()).AndReturn({})
         self.task.scheduler_rpcapi.select_hosts(self.context, mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(["host1"])
         self.task._check_compatible_with_source_hypervisor("host1")\
@@ -311,7 +307,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_find_destination_retry_with_invalid_livem_checks(self):
         self.flags(migrate_max_retries=1)
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi, 'select_hosts')
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
@@ -320,7 +316,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         compute_utils.get_image_metadata(self.context,
                 self.task.image_service, self.instance_image,
                 self.instance).AndReturn("image")
-        flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
+                                           mox.IgnoreArg()).AndReturn({})
         self.task.scheduler_rpcapi.select_hosts(self.context, mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(["host1"])
         self.task._check_compatible_with_source_hypervisor("host1")
@@ -338,16 +335,16 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_find_destination_retry_exceeds_max(self):
         self.flags(migrate_max_retries=0)
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi, 'select_hosts')
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
         compute_utils.get_image_metadata(self.context,
                 self.task.image_service, self.instance_image,
                 self.instance).AndReturn("image")
-        flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
+                                           mox.IgnoreArg()).AndReturn({})
         self.task.scheduler_rpcapi.select_hosts(self.context, mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(["host1"])
         self.task._check_compatible_with_source_hypervisor("host1")\
@@ -358,16 +355,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_when_runs_out_of_hosts(self):
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
-        self.mox.StubOutWithMock(flavors, 'extract_flavor')
+        self.mox.StubOutWithMock(scheduler_utils, 'build_request_spec')
         self.mox.StubOutWithMock(self.task.scheduler_rpcapi, 'select_hosts')
-        self.mox.StubOutWithMock(self.task,
-                '_check_compatible_with_source_hypervisor')
-        self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
         compute_utils.get_image_metadata(self.context,
                 self.task.image_service, self.instance_image,
                 self.instance).AndReturn("image")
-        flavors.extract_flavor(self.instance).AndReturn("inst_type")
+        scheduler_utils.build_request_spec(self.context, mox.IgnoreArg(),
+                                           mox.IgnoreArg()).AndReturn({})
         self.task.scheduler_rpcapi.select_hosts(self.context, mox.IgnoreArg(),
                 mox.IgnoreArg()).AndRaise(exception.NoValidHost(reason=""))
 
