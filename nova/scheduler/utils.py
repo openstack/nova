@@ -114,7 +114,8 @@ def populate_filter_properties(filter_properties, host_state):
     _add_retry_host(filter_properties, host, nodename)
 
     # Adds oversubscription policy
-    filter_properties['limits'] = limits
+    if not filter_properties.get('force_hosts'):
+        filter_properties['limits'] = limits
 
 
 def _add_retry_host(filter_properties, host, node):
