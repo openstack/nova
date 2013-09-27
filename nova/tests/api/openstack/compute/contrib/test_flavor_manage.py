@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack.compute.contrib import flavormanage
 from nova.compute import flavors
+from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
@@ -58,21 +59,20 @@ def fake_destroy(flavorname):
     pass
 
 
-def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
-                flavorid, swap, rxtx_factor, is_public):
+def fake_create(context, kwargs):
+    flavorid = kwargs.get('flavorid')
     if flavorid is None:
         flavorid = 1234
-    newflavor = fake_get_flavor_by_flavor_id(flavorid,
-                                                    read_deleted="no")
 
-    newflavor["name"] = name
-    newflavor["memory_mb"] = int(memory_mb)
-    newflavor["vcpus"] = int(vcpus)
-    newflavor["root_gb"] = int(root_gb)
-    newflavor["ephemeral_gb"] = int(ephemeral_gb)
-    newflavor["swap"] = swap
-    newflavor["rxtx_factor"] = float(rxtx_factor)
-    newflavor["is_public"] = bool(is_public)
+    newflavor = {'flavorid': flavorid}
+    newflavor["name"] = kwargs.get('name')
+    newflavor["memory_mb"] = int(kwargs.get('memory_mb'))
+    newflavor["vcpus"] = int(kwargs.get('vcpus'))
+    newflavor["root_gb"] = int(kwargs.get('root_gb'))
+    newflavor["ephemeral_gb"] = int(kwargs.get('ephemeral_gb'))
+    newflavor["swap"] = kwargs.get('swap')
+    newflavor["rxtx_factor"] = float(kwargs.get('rxtx_factor'))
+    newflavor["is_public"] = bool(kwargs.get('is_public'))
 
     return newflavor
 
@@ -84,7 +84,7 @@ class FlavorManageTest(test.NoDBTestCase):
                        "get_flavor_by_flavor_id",
                        fake_get_flavor_by_flavor_id)
         self.stubs.Set(flavors, "destroy", fake_destroy)
-        self.stubs.Set(flavors, "create", fake_create)
+        self.stubs.Set(db, "flavor_create", fake_create)
         self.flags(
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
@@ -111,7 +111,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "vcpus": 2,
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": 1234,
+                "id": unicode('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
                 "os-flavor-access:is_public": True,
@@ -173,14 +173,14 @@ class FlavorManageTest(test.NoDBTestCase):
                 "vcpus": 2,
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
-                "id": 1234,
+                "id": unicode(1234),
                 "swap": 512,
                 "rxtx_factor": 1,
                 "os-flavor-access:is_public": True,
             }
         }
 
-        self.stubs.Set(flavors, "create", fake_create)
+        self.stubs.Set(db, "flavor_create", fake_create)
         url = '/v2/fake/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
@@ -214,6 +214,67 @@ class FlavorManageTest(test.NoDBTestCase):
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
             self.assertEquals(body["flavor"][key], expected["flavor"][key])
+
+    def test_create_without_flavorname(self):
+        expected = {
+            "flavor": {
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+
+    def test_create_empty_body(self):
+        self.stubs.UnsetAll()
+        expected = {
+            "flavor": {}
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
+
+    def test_create_no_body(self):
+        self.stubs.UnsetAll()
+        expected = {}
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
+
+    def test_create_invalid_format_body(self):
+        self.stubs.UnsetAll()
+        expected = {
+            "flavor": []
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(expected)
+        res = req.get_response(self.app)
+        self.assertEquals(res.status_code, 400)
 
     def test_create_invalid_flavorid(self):
         self.stubs.UnsetAll()

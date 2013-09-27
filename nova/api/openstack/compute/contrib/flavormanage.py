@@ -20,6 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.compute import flavors
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 
 authorize = extensions.extension_authorizer('compute', 'flavormanage')
@@ -54,9 +55,11 @@ class FlavorManageController(wsgi.Controller):
     def _create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
-
+        if not self.is_valid_body(body, 'flavor'):
+            msg = _("Invalid request body")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         vals = body['flavor']
-        name = vals['name']
+        name = vals.get('name')
         flavorid = vals.get('id')
         memory = vals.get('ram')
         vcpus = vals.get('vcpus')
