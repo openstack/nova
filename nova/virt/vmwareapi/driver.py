@@ -642,6 +642,96 @@ class VMwareVCDriver(VMwareESXDriver):
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.get_volume_connector(instance)
 
+    def snapshot(self, context, instance, name, update_task_state):
+        """Create snapshot from a running VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.snapshot(context, instance, name, update_task_state)
+
+    def reboot(self, context, instance, network_info, reboot_type,
+               block_device_info=None, bad_volumes_callback=None):
+        """Reboot VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.reboot(instance, network_info)
+
+    def destroy(self, instance, network_info, block_device_info=None,
+                destroy_disks=True, context=None):
+        """Destroy VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.destroy(instance, network_info, destroy_disks)
+
+    def pause(self, instance):
+        """Pause VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.pause(instance)
+
+    def unpause(self, instance):
+        """Unpause paused VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.unpause(instance)
+
+    def suspend(self, instance):
+        """Suspend the specified instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.suspend(instance)
+
+    def resume(self, instance, network_info, block_device_info=None):
+        """Resume the suspended VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.resume(instance)
+
+    def rescue(self, context, instance, network_info, image_meta,
+               rescue_password):
+        """Rescue the specified instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.rescue(context, instance, network_info, image_meta)
+
+    def unrescue(self, instance, network_info):
+        """Unrescue the specified instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.unrescue(instance)
+
+    def power_off(self, instance):
+        """Power off the specified instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.power_off(instance)
+
+    def power_on(self, context, instance, network_info,
+                 block_device_info=None):
+        """Power on the specified instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops._power_on(instance)
+
+    def poll_rebooting_instances(self, timeout, instances):
+        """Poll for rebooting instances."""
+        for instance in instances:
+            _vmops = self._get_vmops_for_compute_node(instance['node'])
+            _vmops.poll_rebooting_instances(timeout, [instance])
+
+    def get_info(self, instance):
+        """Return info about the VM instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.get_info(instance)
+
+    def get_diagnostics(self, instance):
+        """Return data about VM diagnostics."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.get_info(instance)
+
+    def inject_network_info(self, instance, network_info):
+        """inject network info for specified instance."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.inject_network_info(instance, network_info)
+
+    def plug_vifs(self, instance, network_info):
+        """Plug VIFs into networks."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.plug_vifs(instance, network_info)
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.unplug_vifs(instance, network_info)
+
 
 class VMwareAPISession(object):
     """
