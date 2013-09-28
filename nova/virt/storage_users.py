@@ -20,44 +20,82 @@ import os
 import time
 
 from nova import utils
+from oslo.config import cfg
 
 
+CONF = cfg.CONF
 TWENTY_FOUR_HOURS = 3600 * 24
 
 
-@utils.synchronized('storage-registry-lock', external=True)
+# NOTE(morganfainberg): Due to circular import dependencies, the use of the
+# CONF.instances_path needs to be wrapped so that it can be resolved at the
+# appropriate time. Because compute.manager imports this file, we end up in
+# a rather ugly dependency loop without moving this into a wrapped function.
+# This issue mostly stems from the use of a decorator for the lock
+# synchronize and the implications of how decorators wrap the wrapped function
+# or method.  If this needs to be used outside of compute.manager, it should
+# be refactored to eliminate this circular dependency loop.
 def register_storage_use(storage_path, hostname):
     """Idenfity the id of this instance storage."""
 
-    # NOTE(mikal): this is required to determine if the instance storage is
-    # shared, which is something that the image cache manager needs to
-    # know. I can imagine other uses as well though.
+    # NOTE(morganfainberg): config option import is avoided here since it is
+    # explicitly imported from compute.manager and may cause issues with
+    # defining options after config has been processed with the
+    # wrapped-function style used here.
+    LOCK_PATH = os.path.join(CONF.instances_path, 'locks')
 
-    d = {}
-    id_path = os.path.join(storage_path, 'compute_nodes')
-    if os.path.exists(id_path):
-        with open(id_path) as f:
-            d = json.loads(f.read())
+    @utils.synchronized('storage-registry-lock', external=True,
+                        lock_path=LOCK_PATH)
+    def do_register_storage_use(storage_path, hostname):
+        # NOTE(mikal): this is required to determine if the instance storage is
+        # shared, which is something that the image cache manager needs to
+        # know. I can imagine other uses as well though.
 
-    d[hostname] = time.time()
+        d = {}
+        id_path = os.path.join(storage_path, 'compute_nodes')
+        if os.path.exists(id_path):
+            with open(id_path) as f:
+                d = json.loads(f.read())
 
-    with open(id_path, 'w') as f:
-        f.write(json.dumps(d))
+        d[hostname] = time.time()
+
+        with open(id_path, 'w') as f:
+            f.write(json.dumps(d))
+
+    return do_register_storage_use(storage_path, hostname)
 
 
-@utils.synchronized('storage-registry-lock', external=True)
+# NOTE(morganfainberg): Due to circular import dependencies, the use of the
+# CONF.instances_path needs to be wrapped so that it can be resolved at the
+# appropriate time. Because compute.manager imports this file, we end up in
+# a rather ugly dependency loop without moving this into a wrapped function.
+# This issue mostly stems from the use of a decorator for the lock
+# synchronize and the implications of how decorators wrap the wrapped function
+# or method.  If this needs to be used outside of compute.manager, it should
+# be refactored to eliminate this circular dependency loop.
 def get_storage_users(storage_path):
     """Get a list of all the users of this storage path."""
 
-    d = {}
-    id_path = os.path.join(storage_path, 'compute_nodes')
-    if os.path.exists(id_path):
-        with open(id_path) as f:
-            d = json.loads(f.read())
+    # NOTE(morganfainberg): config option import is avoided here since it is
+    # explicitly imported from compute.manager and may cause issues with
+    # defining options after config has been processed with the
+    # wrapped-function style used here.
+    LOCK_PATH = os.path.join(CONF.instances_path, 'locks')
 
-    recent_users = []
-    for node in d:
-        if time.time() - d[node] < TWENTY_FOUR_HOURS:
-            recent_users.append(node)
+    @utils.synchronized('storage-registry-lock', external=True,
+                        lock_path=LOCK_PATH)
+    def do_get_storage_users(storage_path):
+        d = {}
+        id_path = os.path.join(storage_path, 'compute_nodes')
+        if os.path.exists(id_path):
+            with open(id_path) as f:
+                d = json.loads(f.read())
 
-    return recent_users
+        recent_users = []
+        for node in d:
+            if time.time() - d[node] < TWENTY_FOUR_HOURS:
+                recent_users.append(node)
+
+        return recent_users
+
+    return do_get_storage_users(storage_path)
