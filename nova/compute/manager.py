@@ -1807,8 +1807,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.power_state = current_power_state
         instance.vm_state = vm_states.STOPPED
         instance.task_state = None
-        instance.save(expected_task_state=(task_states.POWERING_OFF,
-                                           task_states.STOPPING))
+        instance.save(expected_task_state=task_states.POWERING_OFF)
         self._notify_about_instance_usage(context, instance, "power_off.end")
 
     def _power_on(self, context, instance):
@@ -1835,8 +1834,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.power_state = current_power_state
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
-        instance.save(expected_task_state=(task_states.POWERING_ON,
-                                           task_states.STARTING))
+        instance.save(expected_task_state=task_states.POWERING_ON)
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
     @object_compat
@@ -2069,7 +2067,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if orig_vm_state == vm_states.STOPPED:
                 instance = self._instance_update(context, instance['uuid'],
                                  vm_state=vm_states.ACTIVE,
-                                 task_state=task_states.STOPPING,
+                                 task_state=task_states.POWERING_OFF,
                                  progress=0)
                 self.stop_instance(context, instance=instance)
 
@@ -2840,7 +2838,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance.task_state = None
                 instance.save()
             else:
-                instance.task_state = task_states.STOPPING
+                instance.task_state = task_states.POWERING_OFF
                 instance.save()
                 self.stop_instance(context, instance=instance)
 
