@@ -21,6 +21,7 @@ Time related utilities and helper functions.
 
 import calendar
 import datetime
+import time
 
 import iso8601
 import six
@@ -49,9 +50,9 @@ def parse_isotime(timestr):
     try:
         return iso8601.parse_date(timestr)
     except iso8601.ParseError as e:
-        raise ValueError(e.message)
+        raise ValueError(unicode(e))
     except TypeError as e:
-        raise ValueError(e.message)
+        raise ValueError(unicode(e))
 
 
 def strtime(at=None, fmt=PERFECT_TIME_FORMAT):
@@ -90,6 +91,11 @@ def is_newer_than(after, seconds):
 
 def utcnow_ts():
     """Timestamp version of our utcnow function."""
+    if utcnow.override_time is None:
+        # NOTE(kgriffs): This is several times faster
+        # than going through calendar.timegm(...)
+        return int(time.time())
+
     return calendar.timegm(utcnow().timetuple())
 
 
@@ -111,12 +117,15 @@ def iso8601_from_timestamp(timestamp):
 utcnow.override_time = None
 
 
-def set_time_override(override_time=datetime.datetime.utcnow()):
+def set_time_override(override_time=None):
     """Overrides utils.utcnow.
 
     Make it return a constant time or a list thereof, one at a time.
+
+    :param override_time: datetime instance or list thereof. If not
+                          given, defaults to the current UTC time.
     """
-    utcnow.override_time = override_time
+    utcnow.override_time = override_time or datetime.datetime.utcnow()
 
 
 def advance_time_delta(timedelta):
