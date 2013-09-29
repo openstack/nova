@@ -1189,7 +1189,8 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                                 instance,
                                                 block_device_info)
-            xml = self.to_xml(instance, network_info, disk_info,
+            xml = self.to_xml(nova_context.get_admin_context(),
+                              instance, network_info, disk_info,
                               block_device_info=block_device_info)
         return xml
 
@@ -1895,7 +1896,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             regenerate raw backend images, however, so when it
         #             does we need to (re)generate the xml after the images
         #             are in place.
-        xml = self.to_xml(instance, network_info, disk_info,
+        xml = self.to_xml(context, instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
 
@@ -2016,7 +2017,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            '.rescue', rescue_images,
                            network_info=network_info,
                            admin_pass=rescue_password)
-        xml = self.to_xml(instance, network_info, disk_info,
+        xml = self.to_xml(context, instance, network_info, disk_info,
                           image_meta, rescue=rescue_images,
                           write_to_disk=True)
         self._destroy(instance)
@@ -2062,7 +2063,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            block_device_info=block_device_info,
                            files=injected_files,
                            admin_pass=admin_password)
-        xml = self.to_xml(instance, network_info,
+        xml = self.to_xml(context, instance, network_info,
                           disk_info, image_meta,
                           block_device_info=block_device_info,
                           write_to_disk=True)
@@ -3020,9 +3021,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return guest
 
-    def to_xml(self, instance, network_info, disk_info,
+    def to_xml(self, context, instance, network_info, disk_info,
                image_meta=None, rescue=None,
                block_device_info=None, write_to_disk=False):
+        # We should get image metadata everytime for generating xml
+        if image_meta is None:
+            (image_service, image_id) = glance.get_remote_image_service(
+                                            context, instance['image_ref'])
+            image_meta = compute_utils.get_image_metadata(
+                                context, image_service, image_id, instance)
         LOG.debug(_('Start to_xml instance=%(instance)s '
                     'network_info=%(network_info)s '
                     'disk_info=%(disk_info)s '
@@ -4225,7 +4232,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # libvirt.xml
             disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                                 instance)
-            self.to_xml(instance, network_info, disk_info,
+            self.to_xml(context, instance, network_info, disk_info,
                         block_device_info, write_to_disk=True)
             # libvirt.xml should be made by to_xml(), but libvirt
             # does not accept to_xml() result, since uuid is not
@@ -4531,7 +4538,7 @@ class LibvirtDriver(driver.ComputeDriver):
                            disk_mapping=disk_info['mapping'],
                            network_info=network_info,
                            block_device_info=None, inject_files=False)
-        xml = self.to_xml(instance, network_info, disk_info,
+        xml = self.to_xml(context, instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
         self._create_domain_and_network(xml, instance, network_info,
@@ -4572,7 +4579,8 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,
                                             block_device_info)
-        xml = self.to_xml(instance, network_info, disk_info,
+        xml = self.to_xml(nova_context.get_admin_context(),
+                          instance, network_info, disk_info,
                           block_device_info=block_device_info)
         self._create_domain_and_network(xml, instance, network_info,
                                         block_device_info, power_on)
