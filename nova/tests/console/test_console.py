@@ -144,7 +144,8 @@ class ConsoleAPITestCase(test.TestCase):
             return self.fake_console
         self.stubs.Set(db, 'console_get', _fake_db_console_get)
 
-        def _fake_db_console_get_all_by_instance(_ctxt, _instance_uuid):
+        def _fake_db_console_get_all_by_instance(_ctxt, _instance_uuid,
+                                                 columns_to_join):
             return [self.fake_console]
         self.stubs.Set(db, 'console_get_all_by_instance',
                        _fake_db_console_get_all_by_instance)

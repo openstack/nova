@@ -5532,7 +5532,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
              'compute_host': 'compute_host2',
             },
         ]
-        console_pools = [db.console_pool_create(self.ctxt, val)
+        self.console_pools = [db.console_pool_create(self.ctxt, val)
                          for val in pools_data]
         instance_uuid = uuidutils.generate_uuid()
         db.instance_create(self.ctxt, {'uuid': instance_uuid})
@@ -5540,7 +5540,7 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                   ('instance_uuid', instance_uuid),
                                   ('password', 'pass' + str(x)),
                                   ('port', 7878 + x),
-                                  ('pool_id', console_pools[x]['id'])])
+                                  ('pool_id', self.console_pools[x]['id'])])
                              for x in xrange(len(pools_data))]
         self.consoles = [db.console_create(self.ctxt, val)
                          for val in self.console_data]
@@ -5577,6 +5577,15 @@ class ConsoleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         instance_uuid = self.consoles[0]['instance_uuid']
         consoles_get = db.console_get_all_by_instance(self.ctxt, instance_uuid)
         self._assertEqualListsOfObjects(self.consoles, consoles_get)
+
+    def test_console_get_all_by_instance_with_pool(self):
+        instance_uuid = self.consoles[0]['instance_uuid']
+        consoles_get = db.console_get_all_by_instance(self.ctxt, instance_uuid,
+                                                      columns_to_join=['pool'])
+        self._assertEqualListsOfObjects(self.consoles, consoles_get,
+                                        ignored_keys=['pool'])
+        self._assertEqualListsOfObjects([pool for pool in self.console_pools],
+                                        [c['pool'] for c in consoles_get])
 
     def test_console_get_all_by_instance_empty(self):
         consoles_get = db.console_get_all_by_instance(self.ctxt,
