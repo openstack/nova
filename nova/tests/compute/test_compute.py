@@ -4331,14 +4331,17 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
-        # Confirm raising exception if instance doesn't have fixed_ip.
-        # creating instance testdata
+        # Confirm that no exception is raised if there is no fixed ip on
+        # pre_live_migration
         instance = jsonutils.to_primitive(self._create_fake_instance())
+        c = context.get_admin_context()
 
         self.mox.ReplayAll()
-        self.assertRaises(exception.FixedIpNotFoundForInstance,
-                          self.compute.pre_live_migration, self.context,
-                          instance=instance)
+        self.compute.driver.pre_live_migration(mox.IsA(c), mox.IsA(instance),
+                                               {'block_device_mapping': []},
+                                               mox.IgnoreArg(),
+                                               mox.IgnoreArg(),
+                                               mox.IgnoreArg())
 
     def test_pre_live_migration_works_correctly(self):
         # Confirm setup_compute_volume is called when volume is mounted.
