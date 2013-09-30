@@ -1955,6 +1955,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 if not self.driver.capabilities["supports_recreate"]:
                     raise exception.InstanceRecreateNotSupported
 
+                self._check_instance_exists(context, instance)
+
                 # To cover case when admin expects that instance files are on
                 # shared storage, but not accessible and vice versa
                 if on_shared_storage != self.driver.instance_on_disk(instance):
