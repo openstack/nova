@@ -34,6 +34,12 @@ class fake_session(object):
         return self.ret
 
 
+class partialObject(object):
+    def __init__(self, path='fake-path'):
+        self.path = path
+        self.fault = fake.DataObject()
+
+
 class VMwareVMUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMUtilTestCase, self).setUp()
@@ -318,3 +324,23 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected = re.sub(r'\s+', '', expected)
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
+
+    def test_get_all_cluster_refs_by_name_none(self):
+        fake_objects = fake.FakeRetrieveResult()
+        refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
+                                                    ['fake_cluster'])
+        self.assertTrue(not refs)
+
+    def test_get_all_cluster_refs_by_name_exists(self):
+        fake_objects = fake.FakeRetrieveResult()
+        fake_objects.add_object(fake.ClusterComputeResource(name='cluster'))
+        refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
+                                                    ['cluster'])
+        self.assertTrue(len(refs) == 1)
+
+    def test_get_all_cluster_refs_by_name_missing(self):
+        fake_objects = fake.FakeRetrieveResult()
+        fake_objects.add_object(partialObject(path='cluster'))
+        refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
+                                                    ['cluster'])
+        self.assertTrue(not refs)
