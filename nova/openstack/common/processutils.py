@@ -132,7 +132,7 @@ def execute(*cmd, **kwargs):
         raise UnknownArgumentError(_('Got unknown keyword args '
                                      'to utils.execute: %r') % kwargs)
 
-    if run_as_root and os.geteuid() != 0:
+    if run_as_root and hasattr(os, 'geteuid') and os.geteuid() != 0:
         if not root_helper:
             raise NoRootWrapSpecified(
                 message=('Command requested root, but did not specify a root '
