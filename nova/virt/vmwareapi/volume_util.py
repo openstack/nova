@@ -121,7 +121,7 @@ def find_st(session, data, cluster=None):
     return result
 
 
-def rescan_iscsi_hba(session, cluster=None):
+def rescan_iscsi_hba(session, cluster=None, target_portal=None):
     """Rescan the iSCSI HBA to discover iSCSI targets."""
     host_mor = vm_util.get_host_ref(session, cluster)
     storage_system_mor = session._call_method(vim_util, "get_dynamic_property",
@@ -141,11 +141,30 @@ def rescan_iscsi_hba(session, cluster=None):
     for hba in host_hbas:
         if hba.__class__.__name__ == 'HostInternetScsiHba':
             hba_device = hba.device
+            if target_portal:
+                # Check if iscsi host is already in the send target host list
+                send_targets = getattr(hba, 'configuredSendTarget', [])
+                send_tgt_portals = ['%s:%s' % (s.address, s.port) for s in
+                                    send_targets]
+                if target_portal not in send_tgt_portals:
+                    _add_iscsi_send_target_host(session, storage_system_mor,
+                                                hba_device, target_portal)
             break
     else:
         return
-
     LOG.debug(_("Rescanning HBA %s") % hba_device)
     session._call_method(session._get_vim(), "RescanHba", storage_system_mor,
                          hbaDevice=hba_device)
     LOG.debug(_("Rescanned HBA %s ") % hba_device)
+
+
+def _add_iscsi_send_target_host(session, storage_system_mor, hba_device,
+                                target_portal):
+    """Adds the iscsi host to send target host list."""
+    client_factory = session._get_vim().client.factory
+    send_tgt = client_factory.create('ns0:HostInternetScsiHbaSendTarget')
+    (send_tgt.address, send_tgt.port) = target_portal.split(':')
+    LOG.debug(_("Adding iSCSI host %s to send targets"), send_tgt.address)
+    session._call_method(
+        session._get_vim(), "AddInternetScsiSendTargets", storage_system_mor,
+        iScsiHbaDevice=hba_device, targets=[send_tgt])
