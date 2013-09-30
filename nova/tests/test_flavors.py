@@ -248,7 +248,7 @@ class InstanceTypeTestCase(test.TestCase):
         all_flavors = flavors.get_all_flavors_sorted_list()
 
         # Set the 3rd result as the marker
-        marker_flavorid = all_flavors[2]['id']
+        marker_flavorid = all_flavors[2]['flavorid']
         marked_flavors = flavors.get_all_flavors_sorted_list(
             marker=marker_flavorid)
         # We expect everything /after/ the 3rd result

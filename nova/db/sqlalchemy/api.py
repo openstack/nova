@@ -4232,7 +4232,7 @@ def flavor_get_all(context, inactive=False, filters=None,
     if marker is not None:
         marker = _instance_type_get_query(context,
                                           read_deleted=read_deleted).\
-                    filter_by(id=marker).\
+                    filter_by(flavorid=marker).\
                     first()
         if not marker:
             raise exception.MarkerNotFound(marker)
