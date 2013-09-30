@@ -482,7 +482,7 @@ class Rbd(Image):
         return hosts, ports
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-            extra_specs):
+            extra_specs, hypervisor_version):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
