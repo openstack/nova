@@ -544,18 +544,18 @@ def _translate_image_exception(image_id, exc_value):
     if isinstance(exc_value, glanceclient.exc.NotFound):
         return exception.ImageNotFound(image_id=image_id)
     if isinstance(exc_value, glanceclient.exc.BadRequest):
-        return exception.Invalid(exc_value)
+        return exception.Invalid(unicode(exc_value))
     return exc_value
 
 
 def _translate_plain_exception(exc_value):
     if isinstance(exc_value, (glanceclient.exc.Forbidden,
                     glanceclient.exc.Unauthorized)):
-        return exception.NotAuthorized(exc_value)
+        return exception.NotAuthorized(unicode(exc_value))
     if isinstance(exc_value, glanceclient.exc.NotFound):
-        return exception.NotFound(exc_value)
+        return exception.NotFound(unicode(exc_value))
     if isinstance(exc_value, glanceclient.exc.BadRequest):
-        return exception.Invalid(exc_value)
+        return exception.Invalid(unicode(exc_value))
     return exc_value
 
 
