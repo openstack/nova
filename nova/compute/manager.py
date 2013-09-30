@@ -3891,77 +3891,95 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
 
+    def _init_volume_connection(self, context, new_volume_id,
+                                old_volume_id, connector, instance, bdm):
+
+        new_cinfo = self.volume_api.initialize_connection(context,
+                                                          new_volume_id,
+                                                          connector)
+        old_cinfo = jsonutils.loads(bdm['connection_info'])
+        if old_cinfo and 'serial' not in old_cinfo:
+            old_cinfo['serial'] = old_volume_id
+        new_cinfo['serial'] = old_cinfo['serial']
+        return (old_cinfo, new_cinfo)
+
+    def _swap_volume(self, context, instance, bdm, connector, old_volume_id,
+                                                              new_volume_id):
+        mountpoint = bdm['device_name']
+        failed = False
+        new_cinfo = None
+        try:
+            old_cinfo, new_cinfo = self._init_volume_connection(context,
+                                                                new_volume_id,
+                                                                old_volume_id,
+                                                                connector,
+                                                                instance,
+                                                                bdm)
+            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint)
+        except Exception:  # pylint: disable=W0702
+            failed = True
+            with excutils.save_and_reraise_exception():
+                if new_cinfo:
+                    msg = _("Failed to swap volume %(old_volume_id)s "
+                            "for %(new_volume_id)s")
+                    LOG.exception(msg % {'old_volume_id': old_volume_id,
+                                         'new_volume_id': new_volume_id},
+                                  context=context,
+                                  instance=instance)
+                else:
+                    msg = _("Failed to connect to volume %(volume_id)s "
+                            "with volume at %(mountpoint)s")
+                    LOG.exception(msg % {'volume_id': new_volume_id,
+                                         'mountpoint': bdm['device_name']},
+                                  context=context,
+                                  instance=instance)
+                self.volume_api.roll_detaching(context, old_volume_id)
+                self.volume_api.unreserve_volume(context, new_volume_id)
+        finally:
+            conn_volume = new_volume_id if failed else old_volume_id
+            if new_cinfo:
+                self.volume_api.terminate_connection(context,
+                                                     conn_volume,
+                                                     connector)
+            # If Cinder initiated the swap, it will keep
+            # the original ID
+            comp_ret = self.volume_api.migrate_volume_completion(
+                                                      context,
+                                                      old_volume_id,
+                                                      new_volume_id,
+                                                      error=failed)
+
+        self.volume_api.attach(context,
+                               new_volume_id,
+                               instance['uuid'],
+                               mountpoint)
+        # Remove old connection
+        self.volume_api.detach(context.elevated(), old_volume_id)
+
+        return (comp_ret, new_cinfo)
+
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def swap_volume(self, context, old_volume_id, new_volume_id, instance):
         """Swap volume for an instance."""
         context = context.elevated()
+
         bdm = self._get_instance_volume_bdm(context, instance, old_volume_id)
-        mountpoint = bdm['device_name']
         connector = self.driver.get_volume_connector(instance)
-        volume = self.volume_api.get(context, new_volume_id)
-        try:
-            new_cinfo = self.volume_api.initialize_connection(context,
-                                                              new_volume_id,
-                                                              connector)
-        except Exception:  # pylint: disable=W0702
-            with excutils.save_and_reraise_exception():
-                msg = _("Failed to connect to volume %(volume_id)s "
-                        "with volume at %(mountpoint)s")
-                LOG.exception(msg % {'volume_id': new_volume_id,
-                                     'mountpoint': mountpoint},
-                              context=context,
-                              instance=instance)
-                self.volume_api.unreserve_volume(context, new_volume_id)
-                self.volume_api.migrate_volume_completion(context,
-                                                          old_volume_id,
-                                                          new_volume_id,
-                                                          error=True)
+        comp_ret, new_cinfo = self._swap_volume(context, instance,
+                                                         bdm,
+                                                         connector,
+                                                         old_volume_id,
+                                                         new_volume_id)
 
-        old_cinfo = jsonutils.loads(bdm['connection_info'])
-        if old_cinfo and 'serial' not in old_cinfo:
-            old_cinfo['serial'] = old_volume_id
-        new_cinfo['serial'] = old_cinfo['serial']
-
-        try:
-            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint)
-        except Exception:  # pylint: disable=W0702
-            with excutils.save_and_reraise_exception():
-                msg = _("Failed to swap volume %(old_volume_id)s "
-                        "for %(new_volume_id)s")
-                LOG.exception(msg % {'old_volume_id': old_volume_id,
-                                     'new_volume_id': new_volume_id},
-                              context=context,
-                              instance=instance)
-                self.volume_api.terminate_connection(context,
-                                                     new_volume_id,
-                                                     connector)
-                self.volume_api.migrate_volume_completion(context,
-                                                          old_volume_id,
-                                                          new_volume_id,
-                                                          error=True)
-        self.volume_api.attach(context,
-                               new_volume_id,
-                               instance['uuid'],
-                               mountpoint)
-        # Remove old connection
-        volume = self.volume_api.get(context, old_volume_id)
-        self.volume_api.terminate_connection(context, old_volume_id, connector)
-        self.volume_api.detach(context.elevated(), old_volume_id)
-
-        # If Cinder initiated the swap, it will keep the original ID
-        comp_ret = self.volume_api.migrate_volume_completion(context,
-                                                             old_volume_id,
-                                                             new_volume_id,
-                                                             error=False)
         save_volume_id = comp_ret['save_volume_id']
 
         # Update bdm
         values = {
             'instance_uuid': instance['uuid'],
             'connection_info': jsonutils.dumps(new_cinfo),
-            'device_name': mountpoint,
+            'device_name': bdm['device_name'],
             'delete_on_termination': False,
             'virtual_name': None,
             'snapshot_id': None,
