@@ -958,7 +958,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         try:
             self._start_building(context, instance)
-        except exception.InstanceNotFound:
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError):
             msg = _("Instance disappeared before we could start it")
             # Quickly bail out of here
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
