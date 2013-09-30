@@ -402,14 +402,14 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image_too_small(self):
         fn = self.prepare_mocks()
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.Qcow2, 'get_disk_size')
+        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
         os.path.exists(self.INSTANCES_PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagebackend.Qcow2.get_disk_size(self.TEMPLATE_PATH
-                                         ).AndReturn(self.SIZE)
+        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
+                                       ).AndReturn(self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -962,20 +962,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.assertFalse(image._is_cloneable(location))
 
-    def test_image_path(self):
-
-        conf = "FakeConf"
-        pool = "FakePool"
-        user = "FakeUser"
-
-        self.flags(libvirt_images_rbd_pool=pool)
-        self.flags(libvirt_images_rbd_ceph_conf=conf)
-        self.flags(rbd_user=user)
-        image = self.image_class(self.INSTANCE, self.NAME)
-        rbd_path = "rbd:%s/%s:id=%s:conf=%s" % (pool, image.rbd_name,
-                                                user, conf)
-
-        self.assertEqual(image.path, rbd_path)
+    def test_parent_compatible(self):
+        self.assertEqual(getargspec(imagebackend.Image.libvirt_info),
+             getargspec(self.image_class.libvirt_info))
 
 
 class BackendTestCase(test.NoDBTestCase):
