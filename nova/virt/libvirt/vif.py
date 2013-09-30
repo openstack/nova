@@ -301,6 +301,17 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         return conf
 
+    def get_config_midonet(self, instance, vif, image_meta,
+                           inst_type):
+        conf = super(LibvirtGenericVIFDriver,
+                     self).get_config(instance, vif,
+                                      image_meta, inst_type)
+
+        dev = self.get_vif_devname(vif)
+        designer.set_vif_host_backend_ethernet_config(conf, dev)
+
+        return conf
+
     def get_config_mlnx_direct(self, instance, vif, image_meta,
                                inst_type):
         conf = super(LibvirtGenericVIFDriver,
@@ -359,6 +370,11 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                                vif,
                                                image_meta,
                                                inst_type)
+        elif vif_type == network_model.VIF_TYPE_MIDONET:
+            return self.get_config_midonet(instance,
+                                           vif,
+                                           image_meta,
+                                           inst_type)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -511,6 +527,22 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).plug(instance, vif)
 
+    def plug_midonet(self, instance, vif):
+        """Plug into MidoNet's network port
+
+        Bind the vif to a MidoNet virtual port.
+        """
+        super(LibvirtGenericVIFDriver,
+              self).plug(instance, vif)
+        dev = self.get_vif_devname(vif)
+        port_id = vif['id']
+        try:
+            linux_net.create_tap_dev(dev)
+            utils.execute('mm-ctl', '--bind-port', port_id, dev,
+                          run_as_root=True)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_("Failed while plugging vif"), instance=instance)
+
     def plug_iovisor(self, instance, vif):
         """Plug using PLUMgrid IO Visor Driver
 
@@ -561,6 +593,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.plug_iovisor(instance, vif)
         elif vif_type == network_model.VIF_TYPE_MLNX_DIRECT:
             self.plug_mlnx_direct(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MIDONET:
+            self.plug_midonet(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
@@ -675,6 +709,22 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
 
+    def unplug_midonet(self, instance, vif):
+        """Unplug from MidoNet network port
+
+        Unbind the vif from a MidoNet virtual port.
+        """
+        super(LibvirtGenericVIFDriver,
+              self).unplug(instance, vif)
+        dev = self.get_vif_devname(vif)
+        port_id = vif['id']
+        try:
+            utils.execute('mm-ctl', '--unbind-port', port_id,
+                          run_as_root=True)
+            linux_net.delete_net_dev(dev)
+        except processutils.ProcessExecutionError:
+            LOG.exception(_("Failed while unplugging vif"), instance=instance)
+
     def unplug_iovisor(self, instance, vif):
         """Unplug using PLUMgrid IO Visor Driver
 
@@ -722,6 +772,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.unplug_iovisor(instance, vif)
         elif vif_type == network_model.VIF_TYPE_MLNX_DIRECT:
             self.unplug_mlnx_direct(instance, vif)
+        elif vif_type == network_model.VIF_TYPE_MIDONET:
+            self.unplug_midonet(instance, vif)
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)

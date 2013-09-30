@@ -37,6 +37,7 @@ VIF_TYPE_BRIDGE = 'bridge'
 VIF_TYPE_802_QBG = '802.1qbg'
 VIF_TYPE_802_QBH = '802.1qbh'
 VIF_TYPE_MLNX_DIRECT = 'mlnx_direct'
+VIF_TYPE_MIDONET = 'midonet'
 VIF_TYPE_OTHER = 'other'
 
 # Constant for max length of network interface names
