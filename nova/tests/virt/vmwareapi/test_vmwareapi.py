@@ -400,7 +400,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                  {'task_state': task_states.IMAGE_UPLOADING,
                   'expected_state': task_states.IMAGE_PENDING_UPLOAD}}]
         func_call_matcher = matchers.FunctionCallMatcher(expected_calls)
-        self._create_vm()
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
@@ -412,6 +411,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertIsNone(func_call_matcher.match())
 
     def test_snapshot(self):
+        self._create_vm()
         self._test_snapshot()
 
     def test_snapshot_non_existent(self):
@@ -1139,6 +1139,29 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
         self.mox.ReplayAll()
 
+        self._create_vm()
+        self._test_snapshot()
+
+    def test_snapshot_using_file_manager(self):
+        self._create_vm()
+        uuid_str = uuidutils.generate_uuid()
+        self.mox.StubOutWithMock(uuidutils,
+                                 'generate_uuid')
+        uuidutils.generate_uuid().AndReturn(uuid_str)
+
+        self.mox.StubOutWithMock(vmops.VMwareVMOps,
+                                 '_delete_datastore_file')
+        # Check calls for delete vmdk and -flat.vmdk pair
+        self.conn._vmops._delete_datastore_file(
+                mox.IgnoreArg(),
+                "[fake-ds] vmware-tmp/%s-flat.vmdk" % uuid_str,
+                mox.IgnoreArg()).AndReturn(None)
+        self.conn._vmops._delete_datastore_file(
+                mox.IgnoreArg(),
+                "[fake-ds] vmware-tmp/%s.vmdk" % uuid_str,
+                mox.IgnoreArg()).AndReturn(None)
+
+        self.mox.ReplayAll()
         self._test_snapshot()
 
     def test_spawn_invalid_node(self):
