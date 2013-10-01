@@ -3215,12 +3215,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Pause an instance on this host."""
         context = context.elevated()
         LOG.audit(_('Pausing'), context=context, instance=instance)
+        self._notify_about_instance_usage(context, instance, 'pause.start')
         self.driver.pause(instance)
         current_power_state = self._get_power_state(context, instance)
         instance.power_state = current_power_state
         instance.vm_state = vm_states.PAUSED
         instance.task_state = None
         instance.save(expected_task_state=task_states.PAUSING)
+        self._notify_about_instance_usage(context, instance, 'pause.end')
 
     @object_compat
     @wrap_exception()
@@ -3231,12 +3233,14 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Unpause a paused instance on this host."""
         context = context.elevated()
         LOG.audit(_('Unpausing'), context=context, instance=instance)
+        self._notify_about_instance_usage(context, instance, 'unpause.start')
         self.driver.unpause(instance)
         current_power_state = self._get_power_state(context, instance)
         instance.power_state = current_power_state
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
         instance.save(expected_task_state=task_states.UNPAUSING)
+        self._notify_about_instance_usage(context, instance, 'unpause.end')
 
     @wrap_exception()
     def host_power_action(self, context, host=None, action=None):
