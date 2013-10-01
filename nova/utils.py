@@ -189,11 +189,6 @@ def novadir():
     return os.path.abspath(nova.__file__).split('nova/__init__.py')[0]
 
 
-def debug(arg):
-    LOG.debug(_('debug in callback: %s'), arg)
-    return arg
-
-
 def generate_uid(topic, size=8):
     characters = '01234567890abcdefghijklmnopqrstuvwxyz'
     choices = [random.choice(characters) for _x in xrange(size)]
