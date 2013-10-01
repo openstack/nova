@@ -3896,7 +3896,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         self.network_api.deallocate_port_for_instance(context, instance,
             port_id, conductor_api=self.conductor_api)
-        self.driver.detach_interface(instance, [condemned])
+        self.driver.detach_interface(instance, condemned)
 
     def _get_compute_info(self, context, host):
         compute_node_ref = self.conductor_api.service_get_by_compute_host(

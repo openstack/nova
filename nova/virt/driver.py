@@ -335,11 +335,11 @@ class ComputeDriver(object):
         """Replace the disk attached to the instance."""
         raise NotImplementedError()
 
-    def attach_interface(self, instance, image_meta, network_info):
+    def attach_interface(self, instance, image_meta, vif):
         """Attach an interface to the instance."""
         raise NotImplementedError()
 
-    def detach_interface(self, instance, network_info):
+    def detach_interface(self, instance, vif):
         """Detach an interface from the instance."""
         raise NotImplementedError()
 

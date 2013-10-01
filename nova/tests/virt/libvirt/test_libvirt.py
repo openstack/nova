@@ -5239,9 +5239,10 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         if method_name == "attach_interface":
-            conn.attach_interface(test_instance, fake_image_meta, network_info)
+            conn.attach_interface(test_instance, fake_image_meta,
+                                  network_info[0])
         elif method_name == "detach_interface":
-            conn.detach_interface(test_instance, network_info)
+            conn.detach_interface(test_instance, network_info[0])
         else:
             raise ValueError("Unhandled method %" % method_name)
 
