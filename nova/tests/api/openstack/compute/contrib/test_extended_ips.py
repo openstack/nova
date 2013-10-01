@@ -23,6 +23,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
@@ -88,7 +89,9 @@ ALL_IPS.sort()
 
 
 def fake_compute_get(*args, **kwargs):
-    return fakes.stub_instance(1, uuid=UUID3, nw_cache=NW_CACHE)
+    inst = fakes.stub_instance(1, uuid=UUID3, nw_cache=NW_CACHE)
+    return fake_instance.fake_instance_obj(args[1],
+              expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS, **inst)
 
 
 def fake_compute_get_all(*args, **kwargs):

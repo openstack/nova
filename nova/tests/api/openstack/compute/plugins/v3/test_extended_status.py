@@ -24,6 +24,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
@@ -31,8 +32,9 @@ UUID3 = '00000000-0000-0000-0000-000000000003'
 
 
 def fake_compute_get(*args, **kwargs):
-    return fakes.stub_instance(1, uuid=UUID3, task_state="kayaking",
+    inst = fakes.stub_instance(1, uuid=UUID3, task_state="kayaking",
             vm_state="slightly crunchy", power_state=1, locked_by='owner')
+    return fake_instance.fake_instance_obj(args[1], **inst)
 
 
 def fake_compute_get_all(*args, **kwargs):
@@ -57,7 +59,8 @@ class ExtendedStatusTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_compute_get)
+        return_server = fakes.fake_instance_get()
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
     def _make_request(self, url):
         req = webob.Request.blank(url)

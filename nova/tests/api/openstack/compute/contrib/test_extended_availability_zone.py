@@ -20,11 +20,13 @@ from nova.api.openstack.compute.contrib import extended_availability_zone
 from nova import availability_zones
 from nova import compute
 from nova.compute import vm_states
+from nova import db
 from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_instance
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
@@ -35,20 +37,20 @@ def fake_compute_get_az(*args, **kwargs):
     inst = fakes.stub_instance(1, uuid=UUID3, host="get-host",
                                vm_state=vm_states.ACTIVE,
                                availability_zone='fakeaz')
-    return inst
+    return fake_instance.fake_instance_obj(args[1], **inst)
 
 
 def fake_compute_get_empty(*args, **kwargs):
     inst = fakes.stub_instance(1, uuid=UUID3, host="",
                                vm_state=vm_states.ACTIVE,
                                availability_zone='fakeaz')
-    return inst
+    return fake_instance.fake_instance_obj(args[1], **inst)
 
 
 def fake_compute_get(*args, **kwargs):
     inst = fakes.stub_instance(1, uuid=UUID3, host="get-host",
                                vm_state=vm_states.ACTIVE)
-    return inst
+    return fake_instance.fake_instance_obj(args[1], **inst)
 
 
 def fake_compute_get_all(*args, **kwargs):
@@ -83,6 +85,8 @@ class ExtendedServerAttributesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
         self.stubs.Set(availability_zones, 'get_host_availability_zone',
                        fake_get_host_availability_zone)
+        return_server = fakes.fake_instance_get()
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
         self.flags(
             osapi_compute_extension=[
