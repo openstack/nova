@@ -54,13 +54,16 @@ CONF.register_opts(scheduler_driver_opts)
 
 
 def handle_schedule_error(context, ex, instance_uuid, request_spec):
+    """On run_instance failure, update instance state and
+    send notifications.
+    """
+
     if not isinstance(ex, exception.NoValidHost):
         LOG.exception(_("Exception during scheduler.run_instance"))
     state = vm_states.ERROR.upper()
     LOG.warning(_('Setting instance to %s state.'), state,
                 instance_uuid=instance_uuid)
 
-    # update instance state and notify on the transition
     (old_ref, new_ref) = db.instance_update_and_get_original(context,
             instance_uuid, {'vm_state': vm_states.ERROR,
                             'task_state': None})
@@ -83,10 +86,10 @@ def handle_schedule_error(context, ex, instance_uuid, request_spec):
 
 
 def instance_update_db(context, instance_uuid, extra_values=None):
-    '''Clear the host and node - set the scheduled_at field of an Instance.
+    """Clear the host and node - set the scheduled_at field of an Instance.
 
     :returns: An Instance with the updated fields set properly.
-    '''
+    """
     now = timeutils.utcnow()
     values = {'host': None, 'node': None, 'scheduled_at': now}
     if extra_values:
