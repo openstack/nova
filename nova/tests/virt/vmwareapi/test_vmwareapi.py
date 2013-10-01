@@ -813,7 +813,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         volumeops.VMwareVolumeOps._detach_volume_vmdk(connection_info,
                 self.instance, mount_point)
         self.mox.ReplayAll()
-        self.conn.detach_volume(connection_info, self.instance, mount_point)
+        self.conn.detach_volume(connection_info, self.instance, mount_point,
+                                encryption=None)
 
     def test_attach_vmdk_disk_to_vm(self):
         self._create_vm()
@@ -861,7 +862,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         volumeops.VMwareVolumeOps.detach_disk_from_vm(mox.IgnoreArg(),
                 self.instance, mox.IgnoreArg())
         self.mox.ReplayAll()
-        self.conn.detach_volume(connection_info, self.instance, mount_point)
+        self.conn.detach_volume(connection_info, self.instance, mount_point,
+                                encryption=None)
 
     def test_volume_attach_iscsi(self):
         self._create_vm()
@@ -884,7 +886,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         volumeops.VMwareVolumeOps._detach_volume_iscsi(connection_info,
                 self.instance, mount_point)
         self.mox.ReplayAll()
-        self.conn.detach_volume(connection_info, self.instance, mount_point)
+        self.conn.detach_volume(connection_info, self.instance, mount_point,
+                                encryption=None)
 
     def test_attach_iscsi_disk_to_vm(self):
         self._create_vm()
@@ -926,7 +929,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         volumeops.VMwareVolumeOps.detach_disk_from_vm(mox.IgnoreArg(),
                 self.instance, device)
         self.mox.ReplayAll()
-        self.conn.detach_volume(connection_info, self.instance, mount_point)
+        self.conn.detach_volume(connection_info, self.instance, mount_point,
+                                encryption=None)
 
     def test_connection_info_get(self):
         self._create_vm()

@@ -630,7 +630,8 @@ class VMwareVCDriver(VMwareESXDriver):
                                              instance,
                                              mountpoint)
 
-    def detach_volume(self, connection_info, instance, mountpoint):
+    def detach_volume(self, connection_info, instance, mountpoint,
+                      encryption=None):
         """Detach volume storage to VM instance."""
         _volumeops = self._get_volumeops_for_compute_node(instance['node'])
         return _volumeops.detach_volume(connection_info,
