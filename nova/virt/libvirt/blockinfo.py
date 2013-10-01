@@ -190,18 +190,18 @@ def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
 
 
 def is_disk_bus_valid_for_virt(virt_type, disk_bus):
-        valid_bus = {
-            'qemu': ['virtio', 'scsi', 'ide', 'usb'],
-            'kvm': ['virtio', 'scsi', 'ide', 'usb'],
-            'xen': ['xen', 'ide'],
-            'uml': ['uml'],
-            'lxc': ['lxc'],
-            }
+    valid_bus = {
+        'qemu': ['virtio', 'scsi', 'ide', 'usb'],
+        'kvm': ['virtio', 'scsi', 'ide', 'usb'],
+        'xen': ['xen', 'ide'],
+        'uml': ['uml'],
+        'lxc': ['lxc'],
+        }
 
-        if virt_type not in valid_bus:
-            raise exception.UnsupportedVirtType(virt=virt_type)
+    if virt_type not in valid_bus:
+        raise exception.UnsupportedVirtType(virt=virt_type)
 
-        return disk_bus in valid_bus[virt_type]
+    return disk_bus in valid_bus[virt_type]
 
 
 def get_disk_bus_for_device_type(virt_type,
