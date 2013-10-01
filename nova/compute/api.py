@@ -478,7 +478,7 @@ class API(base.Base):
         return kernel_id, ramdisk_id
 
     @staticmethod
-    def _handle_availability_zone(availability_zone):
+    def _handle_availability_zone(context, availability_zone):
         # NOTE(vish): We have a legacy hack to allow admins to specify hosts
         #             via az using az:host:node. It might be nice to expose an
         #             api to specify specific hosts to force onto, but for
@@ -504,6 +504,11 @@ class API(base.Base):
 
         if not availability_zone:
             availability_zone = CONF.default_schedule_zone
+
+        if forced_host:
+            check_policy(context, 'create:forced_host', {})
+        if forced_node:
+            check_policy(context, 'create:forced_host', {})
 
         return availability_zone, forced_host, forced_node
 
@@ -727,10 +732,8 @@ class API(base.Base):
         filter_properties = dict(scheduler_hints=scheduler_hints)
         filter_properties['instance_type'] = instance_type
         if forced_host:
-            check_policy(context, 'create:forced_host', {})
             filter_properties['force_hosts'] = [forced_host]
         if forced_node:
-            check_policy(context, 'create:forced_host', {})
             filter_properties['force_nodes'] = [forced_node]
         return filter_properties
 
@@ -846,7 +849,7 @@ class API(base.Base):
                                      auto_disk_config=auto_disk_config)
 
         handle_az = self._handle_availability_zone
-        availability_zone, forced_host, forced_node = handle_az(
+        availability_zone, forced_host, forced_node = handle_az(context,
                                                             availability_zone)
 
         base_options = self._validate_and_build_base_options(context,
