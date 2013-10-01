@@ -98,21 +98,6 @@ DEVICE_EPHEMERAL = '4'
 DEVICE_CD = '1'
 
 
-def cmp_version(a, b):
-    """Compare two version strings (eg 0.0.1.10 > 0.0.1.9)."""
-    a = a.split('.')
-    b = b.split('.')
-
-    # Compare each individual portion of both version strings
-    for va, vb in zip(a, b):
-        ret = int(va) - int(vb)
-        if ret:
-            return ret
-
-    # Fallback to comparing length last
-    return len(a) - len(b)
-
-
 def make_step_decorator(context, instance, update_instance_progress):
     """Factory to create a decorator that records instance progress as a series
     of discrete steps.
@@ -623,50 +608,33 @@ class VMOps(object):
 
     def _configure_new_instance_with_agent(self, instance, vm_ref,
                                            injected_files, admin_password):
-        if self.agent_enabled(instance):
-            ctx = nova_context.get_admin_context()
-            agent_build = self._virtapi.agent_build_get_by_triple(
-                ctx, 'xen', instance['os_type'], instance['architecture'])
-            if agent_build:
-                LOG.info(_('Latest agent build for %(hypervisor)s/%(os)s'
-                           '/%(architecture)s is %(version)s') % agent_build)
-            else:
-                LOG.info(_('No agent build found for %(hypervisor)s/%(os)s'
-                           '/%(architecture)s') % {
-                            'hypervisor': 'xen',
-                            'os': instance['os_type'],
-                            'architecture': instance['architecture']})
+        if not self.agent_enabled(instance):
+            LOG.debug(_("Skip agent setup, not enabled."), instance=instance)
+            return
 
-            # Update agent, if necessary
-            # This also waits until the agent starts
-            agent = self._get_agent(instance, vm_ref)
-            version = agent.get_agent_version()
-            if version:
-                LOG.info(_('Instance agent version: %s'), version,
-                         instance=instance)
+        agent = self._get_agent(instance, vm_ref)
 
-            if (version and agent_build and
-                    cmp_version(version, agent_build['version']) < 0):
-                agent.agent_update(agent_build)
+        version = agent.get_version()
+        if not version:
+            LOG.debug(_("Skip agent setup, unable to contact agent."),
+                      instance=instance)
+            return
 
-            # if the guest agent is not available, configure the
-            # instance, but skip the admin password configuration
-            no_agent = version is None
+        LOG.debug(_('Detected agent version: %s'), version, instance=instance)
 
-            # Inject ssh key.
-            agent.inject_ssh_key()
+        # NOTE(johngarbutt) the agent object allows all of
+        # the following steps to silently fail
+        agent.update_if_needed(version)
 
-            # Inject files, if necessary
-            if injected_files:
-                # Inject any files, if specified
-                agent.inject_files(injected_files)
+        agent.inject_ssh_key()
 
-            # Set admin password, if necessary
-            if admin_password and not no_agent:
-                agent.set_admin_password(admin_password)
+        if injected_files:
+            agent.inject_files(injected_files)
 
-            # Reset network config
-            agent.resetnetwork()
+        if admin_password:
+            agent.set_admin_password(admin_password)
+
+        agent.resetnetwork()
 
     def _prepare_instance_filter(self, instance, network_info):
         try:
