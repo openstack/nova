@@ -340,10 +340,6 @@ def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     return ''.join(password)
 
 
-def last_octet(address):
-    return int(address.split('.')[-1])
-
-
 def get_my_ipv4_address():
     """Run ip route/addr commands to figure out the best ipv4
     """
