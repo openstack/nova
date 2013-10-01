@@ -88,3 +88,47 @@ class VHDUtilsTestCase(test.NoDBTestCase):
         self.assertRaises(vmutils.HyperVException,
                           vhdutil._get_internal_vhd_size_by_file_size,
                           None, root_vhd_size)
+
+    def test_get_vhd_format_vhdx(self):
+        with mock.patch('nova.virt.hyperv.vhdutils.open',
+                        mock.mock_open(read_data=vhdutils.VHDX_SIGNATURE),
+                        create=True) as mock_open:
+
+            format = self._vhdutils.get_vhd_format(self._FAKE_VHD_PATH)
+
+            self.assertEqual(constants.DISK_FORMAT_VHDX, format)
+
+    def test_get_vhd_format_vhd(self):
+        with mock.patch('nova.virt.hyperv.vhdutils.open',
+                        mock.mock_open(read_data=vhdutils.VHD_SIGNATURE),
+                        create=True) as mock_open:
+            f = mock_open.return_value
+            f.tell.return_value = 1024
+
+            format = self._vhdutils.get_vhd_format(self._FAKE_VHD_PATH)
+
+            self.assertEqual(constants.DISK_FORMAT_VHD, format)
+
+    def test_get_vhd_format_invalid_format(self):
+        with mock.patch('nova.virt.hyperv.vhdutils.open',
+                        mock.mock_open(read_data='invalid'),
+                        create=True) as mock_open:
+            f = mock_open.return_value
+            f.tell.return_value = 1024
+
+            self.assertRaises(vmutils.HyperVException,
+                              self._vhdutils.get_vhd_format,
+                              self._FAKE_VHD_PATH)
+
+    def test_get_vhd_format_zero_length_file(self):
+        with mock.patch('nova.virt.hyperv.vhdutils.open',
+                        mock.mock_open(read_data=''),
+                        create=True) as mock_open:
+            f = mock_open.return_value
+            f.tell.return_value = 0
+
+            self.assertRaises(vmutils.HyperVException,
+                              self._vhdutils.get_vhd_format,
+                              self._FAKE_VHD_PATH)
+
+            f.seek.assert_called_once_with(0, 2)
