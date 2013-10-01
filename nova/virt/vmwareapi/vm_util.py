@@ -990,7 +990,8 @@ def get_dynamic_property_mor(session, mor_ref, attribute):
 
 def find_entity_mor(entity_list, entity_name):
     """Returns managed object ref for given cluster or resource pool name."""
-    return [mor for mor in entity_list if mor.propSet[0].val == entity_name]
+    return [mor for mor in entity_list if (hasattr(mor, 'propSet') and
+                                           mor.propSet[0].val == entity_name)]
 
 
 def get_all_cluster_refs_by_name(session, path_list):
@@ -1000,7 +1001,11 @@ def get_all_cluster_refs_by_name(session, path_list):
     The input will have the list of clusters and resource pool names
     """
     cls = get_all_cluster_mors(session)
+    if not cls:
+        return
     res = get_all_res_pool_mors(session)
+    if not res:
+        return
     path_list = [path.strip() for path in path_list]
     list_obj = []
     for entity_path in path_list:
