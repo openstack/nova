@@ -32,6 +32,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception as exc
 from nova import notifications
+from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
@@ -823,6 +824,46 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.compute_confirm_resize(self.context, inst_obj,
                                               mig_obj)
+
+    def _test_object_action(self, is_classmethod, raise_exception):
+        class TestObject(obj_base.NovaObject):
+            def foo(self, context, raise_exception=False):
+                if raise_exception:
+                    raise Exception('test')
+                else:
+                    return 'test'
+
+            @classmethod
+            def bar(cls, context, raise_exception=False):
+                if raise_exception:
+                    raise Exception('test')
+                else:
+                    return 'test'
+
+        obj = TestObject()
+        if is_classmethod:
+            result = self.conductor.object_class_action(
+                self.context, TestObject.obj_name(), 'bar', '1.0',
+                tuple(), {'raise_exception': raise_exception})
+        else:
+            updates, result = self.conductor.object_action(
+                self.context, obj, 'foo', tuple(),
+                {'raise_exception': raise_exception})
+        self.assertEqual('test', result)
+
+    def test_object_action(self):
+        self._test_object_action(False, False)
+
+    def test_object_action_on_raise(self):
+        self.assertRaises(rpc_common.ClientException,
+                          self._test_object_action, False, True)
+
+    def test_object_class_action(self):
+        self._test_object_action(True, False)
+
+    def test_object_class_action_on_raise(self):
+        self.assertRaises(rpc_common.ClientException,
+                          self._test_object_action, True, True)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
