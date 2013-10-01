@@ -101,7 +101,7 @@ class InterfaceAttachmentController(object):
         try:
             instance = self.compute_api.get(context, server_id)
             LOG.audit(_("Attach interface"), instance=instance)
-            network_info = self.compute_api.attach_interface(context,
+            vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
         except exception.NotFound as e:
             LOG.exception(e)
@@ -114,8 +114,7 @@ class InterfaceAttachmentController(object):
             msg = _("Failed to attach interface")
             raise webob.exc.HTTPInternalServerError(explanation=msg)
 
-        network, mapping = network_info
-        return self.show(req, server_id, mapping['vif_uuid'])
+        return self.show(req, server_id, vif['id'])
 
     def update(self, req, server_id, id, body):
         """Update a interface attachment.  We don't currently support this."""
