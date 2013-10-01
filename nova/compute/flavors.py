@@ -184,7 +184,7 @@ def get_all_flavors(ctxt=None, inactive=False, filters=None):
 
     inst_type_dict = {}
     for inst_type in inst_types:
-        inst_type_dict[inst_type['flavorid']] = inst_type
+        inst_type_dict[inst_type['id']] = inst_type
     return inst_type_dict
 
 
