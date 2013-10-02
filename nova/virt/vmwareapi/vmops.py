@@ -425,6 +425,12 @@ class VMwareVMOps(object):
             LOG.debug(_("Powered on the VM instance"), instance=instance)
         _power_on_vm()
 
+    def _get_copy_virtual_disk_spec(self, client_factory, adapter_type,
+                                    disk_type):
+        return vm_util.get_copy_virtual_disk_spec(client_factory,
+                                                  adapter_type,
+                                                  disk_type)
+
     def snapshot(self, context, instance, snapshot_name, update_task_state):
         """Create snapshot from a running VM instance.
 
@@ -517,9 +523,9 @@ class VMwareVMOps(object):
         def _copy_vmdk_content():
             # Copy the contents of the disk ( or disks, if there were snapshots
             # done earlier) to a temporary vmdk file.
-            copy_spec = vm_util.get_copy_virtual_disk_spec(client_factory,
-                                                           adapter_type,
-                                                           disk_type)
+            copy_spec = self._get_copy_virtual_disk_spec(client_factory,
+                                                         adapter_type,
+                                                         disk_type)
             LOG.debug(_('Copying disk data before snapshot of the VM'),
                       instance=instance)
             copy_disk_task = self._session._call_method(
@@ -1317,3 +1323,22 @@ class VMwareVMOps(object):
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         pass
+
+
+class VMwareVCVMOps(VMwareVMOps):
+    """Management class for VM-related tasks.
+
+    Contains specializations to account for differences in vSphere API behavior
+    when invoked on Virtual Center instead of ESX host.
+    """
+
+    def _get_copy_virtual_disk_spec(self, client_factory, adapter_type,
+                                    disk_type):
+        LOG.debug(_("Will copy while retaining adapter type "
+                    "%(adapter_type)s and disk type %(disk_type)s") %
+                    {"disk_type": disk_type,
+                     "adapter_type": adapter_type})
+        # Passing of the destination copy spec is not supported when
+        # VirtualDiskManager.CopyVirtualDisk is called on VC. The behavior of a
+        # spec-less copy is to consolidate to the target disk while keeping its
+        # disk and adapter type unchanged.

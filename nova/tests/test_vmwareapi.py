@@ -39,6 +39,7 @@ from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
+from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import volume_util
 
 
@@ -226,7 +227,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
 
-    def test_snapshot(self):
+    def _test_snapshot(self):
         expected_calls = [
             {'args': (),
              'kwargs':
@@ -244,6 +245,17 @@ class VMwareAPIVMTestCase(test.TestCase):
         info = self.conn.get_info({'uuid': 'fake-uuid'})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertIsNone(func_call_matcher.match())
+
+    def test_snapshot(self):
+        # Ensure VMwareVCVMOps's _get_copy_virtual_disk_spec is getting called
+        self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
+                                 '_get_copy_virtual_disk_spec')
+        self.conn._vmops._get_copy_virtual_disk_spec(
+                mox.IgnoreArg(),
+                mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
+        self.mox.ReplayAll()
+        self._test_snapshot()
 
     def test_snapshot_non_existent(self):
         self._create_instance_in_the_db()
