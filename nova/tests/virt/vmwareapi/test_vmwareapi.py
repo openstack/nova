@@ -256,12 +256,15 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEquals(len(instances), 1)
 
     def test_instance_dir_disk_created(self):
-        """Test image file isn't cached when use_linked_clone is False."""
+        """Test image file is cached when even when use_linked_clone
+            is False
+        """
+
         self._create_vm()
         inst_file_path = '[fake-ds] fake-uuid/fake_name.vmdk'
         cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
-        self.assertFalse(vmwareapi_fake.get_file(cache_file_path))
+        self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
 
     def test_cache_dir_disk_created(self):
         """Test image disk is cached when use_linked_clone is True."""
@@ -1086,11 +1089,16 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_snapshot(self):
         # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
+        # two times
         self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
                                  'get_copy_virtual_disk_spec')
         self.conn._vmops.get_copy_virtual_disk_spec(
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(None)
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
+
         self.mox.ReplayAll()
 
         self._test_snapshot()
@@ -1114,11 +1122,16 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                 mox.IgnoreArg()).AndReturn(result)
 
         # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
+        # two times
         self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
                                  'get_copy_virtual_disk_spec')
         self.conn._vmops.get_copy_virtual_disk_spec(
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(None)
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
+
         self.mox.ReplayAll()
         self._create_vm()
         info = self.conn.get_info({'uuid': 'fake-uuid',
