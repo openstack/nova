@@ -18,7 +18,9 @@
 import contextlib
 import uuid
 
+from eventlet import greenthread
 import fixtures
+import mock
 import mox
 from oslo.config import cfg
 
@@ -1280,3 +1282,67 @@ class CreateKernelRamdiskTestCase(test.NoDBTestCase):
         result = vm_utils.create_kernel_and_ramdisk(self.context,
                     self.session, self.instance, self.name_label)
         self.assertEqual(("k", None), result)
+
+
+class ScanSrTestCase(test.NoDBTestCase):
+    @mock.patch.object(vm_utils, "_scan_sr")
+    @mock.patch.object(vm_utils, "safe_find_sr")
+    def test_scan_default_sr(self, mock_safe_find_sr, mock_scan_sr):
+        mock_safe_find_sr.return_value = "sr_ref"
+
+        self.assertEqual("sr_ref", vm_utils.scan_default_sr("fake_session"))
+
+        mock_scan_sr.assert_called_once_with("fake_session", "sr_ref")
+
+    def test_scan_sr_works(self):
+        session = mock.Mock()
+        vm_utils._scan_sr(session, "sr_ref")
+        session.call_xenapi.assert_called_once_with('SR.scan', "sr_ref")
+
+    def test_scan_sr_unknown_error_fails_once(self):
+        session = mock.Mock()
+        session.call_xenapi.side_effect = test.TestingException
+        self.assertRaises(test.TestingException,
+                          vm_utils._scan_sr, session, "sr_ref")
+        session.call_xenapi.assert_called_once_with('SR.scan', "sr_ref")
+
+    @mock.patch.object(greenthread, 'sleep')
+    def test_scan_sr_known_error_retries_then_throws(self, mock_sleep):
+        session = mock.Mock()
+
+        class FakeException(Exception):
+            details = ['SR_BACKEND_FAILURE_40', "", "", ""]
+
+        session.XenAPI.Failure = FakeException
+        session.call_xenapi.side_effect = FakeException
+
+        self.assertRaises(FakeException,
+                          vm_utils._scan_sr, session, "sr_ref")
+
+        session.call_xenapi.assert_called_with('SR.scan', "sr_ref")
+        self.assertEqual(4, session.call_xenapi.call_count)
+        mock_sleep.assert_has_calls([mock.call(2), mock.call(4), mock.call(8)])
+
+    @mock.patch.object(greenthread, 'sleep')
+    def test_scan_sr_known_error_retries_then_succeeds(self, mock_sleep):
+        session = mock.Mock()
+
+        class FakeException(Exception):
+            details = ['SR_BACKEND_FAILURE_40', "", "", ""]
+
+        session.XenAPI.Failure = FakeException
+        sr_scan_call_count = 0
+
+        def fake_call_xenapi(*args):
+            fake_call_xenapi.count += 1
+            if fake_call_xenapi.count != 2:
+                raise FakeException()
+
+        fake_call_xenapi.count = 0
+        session.call_xenapi.side_effect = fake_call_xenapi
+
+        vm_utils._scan_sr(session, "sr_ref")
+
+        session.call_xenapi.assert_called_with('SR.scan', "sr_ref")
+        self.assertEqual(2, session.call_xenapi.call_count)
+        mock_sleep.assert_called_once_with(2)

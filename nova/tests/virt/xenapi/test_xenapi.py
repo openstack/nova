@@ -2179,7 +2179,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def test_update_stats_caches_hostname(self):
         self.mox.StubOutWithMock(host, 'call_xenhost')
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
+        self.mox.StubOutWithMock(vm_utils, 'scan_default_sr')
         self.mox.StubOutWithMock(self.conn._session, 'call_xenapi')
         data = {'disk_total': 0,
                 'disk_used': 0,
@@ -2195,9 +2195,8 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
         for i in range(3):
             host.call_xenhost(mox.IgnoreArg(), 'host_data', {}).AndReturn(data)
-            vm_utils.safe_find_sr(self.conn._session).AndReturn(None)
-            self.conn._session.call_xenapi('SR.scan', None)
-            self.conn._session.call_xenapi('SR.get_record', None).AndReturn(
+            vm_utils.scan_default_sr(self.conn._session).AndReturn("ref")
+            self.conn._session.call_xenapi('SR.get_record', "ref").AndReturn(
                 sr_rec)
             if i == 2:
                 # On the third call (the second below) change the hostname
