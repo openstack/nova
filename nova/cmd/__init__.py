@@ -32,6 +32,3 @@ os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 import eventlet
 
 eventlet.monkey_patch(os=False)
-
-from nova.openstack.common import gettextutils
-gettextutils.enable_lazy()
