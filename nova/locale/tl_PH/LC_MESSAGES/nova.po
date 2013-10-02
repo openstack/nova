@@ -1,18 +1,18 @@
-# Slovak translations for nova.
+# Filipino (Philippines) translations for nova.
 # Copyright (C) 2013 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
 msgid ""
 msgstr ""
-"Project-Id-Version:  Nova\n"
+"Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
 "POT-Creation-Date: 2013-10-02 06:05+0000\n"
-"PO-Revision-Date: 2013-08-27 04:58+0000\n"
-"Last-Translator: daisy.ycguo <daisy.ycguo@gmail.com>\n"
-"Language-Team: Slovak "
-"(http://www.transifex.com/projects/p/openstack/language/sk/)\n"
-"Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2\n"
+"PO-Revision-Date: 2013-09-26 22:10+0000\n"
+"Last-Translator: Tom Fifield <tom@openstack.org>\n"
+"Language-Team: Tagalog (Philippines) "
+"(http://www.transifex.com/projects/p/openstack/language/tl_PH/)\n"
+"Plural-Forms: nplurals=2; plural=(n > 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13125,13 +13125,16 @@ msgstr ""
 #~ msgid "Unknown"
 #~ msgstr ""
 
-#~ msgid "Not enough parameters, need group_name or group_id"
+#~ msgid "No target id found for volume %(volume_id)s."
 #~ msgstr ""
 
-#~ msgid "%s Not enough parameters to build a valid rule"
+#~ msgid "Unavailable console type %(console_type)s"
 #~ msgstr ""
 
-#~ msgid "Invalid IP protocol %s."
+#~ msgid "Instance %(instance_uuid)s has no metadata with key %(metadata_key)s."
+#~ msgstr ""
+
+#~ msgid "Could not load the module %(module)s"
 #~ msgstr ""
 
 #~ msgid "%s - This rule already exists in group"
@@ -13144,9 +13147,6 @@ msgstr ""
 #~ msgstr ""
 
 #~ msgid "Detach Volume Failed."
-#~ msgstr ""
-
-#~ msgid "attribute not supported: %s"
 #~ msgstr ""
 
 #~ msgid "No more floating IPs available"
@@ -13173,40 +13173,46 @@ msgstr ""
 #~ msgid "Could not found metadata to be set in request body"
 #~ msgstr ""
 
-#~ msgid "Reserving IP address %s"
+#~ msgid "StdOut  : %s"
 #~ msgstr ""
 
-#~ msgid "Unreserving IP address %s"
-#~ msgstr ""
-
-#~ msgid "min_count must be an integer value"
-#~ msgstr ""
-
-#~ msgid "min_count must be > 0"
-#~ msgstr ""
-
-#~ msgid "max_count must be an integer value"
-#~ msgstr ""
-
-#~ msgid "max_count must be > 0"
+#~ msgid "StdErr  : %s"
 #~ msgstr ""
 
 #~ msgid ""
-#~ msgstr ""
-
-#~ msgid "Old volume must be attached in order to swap."
+#~ "%(overs)s quota exceeded for %(pid)s, "
+#~ "tried to run %(min_count)s instances. "
+#~ "%(msg)s"
 #~ msgstr ""
 
 #~ msgid "Updating host status"
 #~ msgstr ""
 
-#~ msgid "v4 subnets are required for legacy nw_info"
+#~ msgid ""
+#~ "Node field should be not be set"
+#~ " on the instance until resources have"
+#~ " been claimed."
 #~ msgstr ""
 
 #~ msgid "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of memory"
 #~ msgstr ""
 
-#~ msgid "%(host_state)s is disabled via capabilities"
+#~ msgid ""
+#~ "Instance contains properties %(image_props)s, "
+#~ "but no corresponding capabilities are "
+#~ "advertised by the compute node"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Instance properties %(image_props)s are "
+#~ "satisfied by compute host capabilities "
+#~ "%(capabilities)s"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Instance contains properties %(image_props)s "
+#~ "that are not provided by the "
+#~ "compute node capabilities %(capabilities)s"
 #~ msgstr ""
 
 #~ msgid "200 Role Match"
@@ -13215,7 +13221,17 @@ msgstr ""
 #~ msgid "200 No Roles"
 #~ msgstr ""
 
+#~ msgid ""
+#~ "Sparse copy in progress, %(complete_pct).2f%%"
+#~ " complete. %(left) bytes left to copy"
+#~ msgstr ""
+
 #~ msgid "Exception no pxe bootfile-name path: %s"
+#~ msgstr ""
+
+#~ msgid ""
+#~ "Checking if we can resize image "
+#~ "%(image)s. size=%(size)s, CoW=%(use_cow)s"
 #~ msgstr ""
 
 #~ msgid "Cannot resize filesystem %s to a smaller size."
@@ -13233,6 +13249,13 @@ msgstr ""
 #~ msgid "Network injection is not supported by thePowerVM driver."
 #~ msgstr ""
 
+#~ msgid ""
+#~ "Must specify vmwareapi_host_ip,vmwareapi_host_username "
+#~ "and vmwareapi_host_password to "
+#~ "usecompute_driver=vmwareapi.VMwareESXDriver or "
+#~ "vmwareapi.VMwareVCDriver"
+#~ msgstr ""
+
 #~ msgid "VMware Cluster %s is not found"
 #~ msgstr ""
 
@@ -13240,27 +13263,6 @@ msgstr ""
 #~ msgstr ""
 
 #~ msgid "Starting VM"
-#~ msgstr ""
-
-#~ msgid "No target id found for volume %(volume_id)s."
-#~ msgstr ""
-
-#~ msgid "Unavailable console type %(console_type)s"
-#~ msgstr ""
-
-#~ msgid "Instance %(instance_uuid)s has no metadata with key %(metadata_key)s."
-#~ msgstr ""
-
-#~ msgid "Could not load the module %(module)s"
-#~ msgstr ""
-
-#~ msgid "StdOut  : %s"
-#~ msgstr ""
-
-#~ msgid "StdErr  : %s"
-#~ msgstr ""
-
-#~ msgid "Removing node %s since its removed from nova.conf"
 #~ msgstr ""
 
 #~ msgid "Could not find VM with name %s"
