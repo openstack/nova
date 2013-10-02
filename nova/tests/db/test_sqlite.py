@@ -19,6 +19,7 @@
 
 """Test cases for sqlite-specific logic"""
 
+from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 import os
@@ -48,7 +49,15 @@ class TestSqlite(test.NoDBTestCase):
         get_schema_cmd = "sqlite3 %s '.schema'" % self.db_file
         engine = create_engine("sqlite:///%s" % self.db_file)
         base_class.metadata.create_all(engine)
-        output, _ = utils.execute(get_schema_cmd, shell=True)
+        try:
+            output, _ = utils.execute(get_schema_cmd, shell=True)
+        except processutils.ProcessExecutionError as e:
+            # NOTE(alaski): If this check becomes necessary in other tests it
+            # should be moved into setUp.
+            if 'not found' in str(e):
+                self.skipTest(str(e))
+            else:
+                raise
         self.assertFalse('BIGINT' in output, msg="column type BIGINT "
                          "not converted to INTEGER in schema")
 
