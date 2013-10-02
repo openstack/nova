@@ -444,13 +444,15 @@ class API(base.Base):
                 raise exception.SecurityGroupNotFoundForProject(
                     project_id=context.project_id, security_group_id=secgroup)
 
-    def _check_requested_networks(self, context, requested_networks):
+    def _check_requested_networks(self, context, requested_networks,
+                                  max_count):
         """
         Check if the networks requested belongs to the project
         and the fixed IP address for each network provided is within
         same the network block
         """
-        self.network_api.validate_networks(context, requested_networks)
+        return self.network_api.validate_networks(context, requested_networks,
+                                                  max_count)
 
     @staticmethod
     def _handle_kernel_and_ramdisk(context, kernel_id, ramdisk_id, image):
@@ -663,7 +665,8 @@ class API(base.Base):
                                          access_ip_v4, access_ip_v6,
                                          requested_networks, config_drive,
                                          block_device_mapping,
-                                         auto_disk_config, reservation_id):
+                                         auto_disk_config, reservation_id,
+                                         max_count):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed.
         """
@@ -695,7 +698,12 @@ class API(base.Base):
                 instance_type, metadata, injected_files)
 
         self._check_requested_secgroups(context, security_groups)
-        self._check_requested_networks(context, requested_networks)
+
+        # Note:  max_count is the number of instances requested by the user,
+        # max_network_count is the maximum number of instances taking into
+        # account any network quotas
+        max_network_count = self._check_requested_networks(context,
+                                     requested_networks, max_count)
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, kernel_id, ramdisk_id, boot_meta)
@@ -748,7 +756,9 @@ class API(base.Base):
 
         base_options.update(options_from_image)
 
-        return base_options
+        # return the validated options and maximum number of instances allowed
+        # by the network quotas
+        return base_options, max_network_count
 
     def _build_filter_properties(self, context, scheduler_hints, forced_host,
             forced_node, instance_type):
@@ -875,13 +885,27 @@ class API(base.Base):
         availability_zone, forced_host, forced_node = handle_az(context,
                                                             availability_zone)
 
-        base_options = self._validate_and_build_base_options(context,
+        base_options, max_net_count = self._validate_and_build_base_options(
+                context,
                 instance_type, boot_meta, image_href, image_id, kernel_id,
                 ramdisk_id, display_name, display_description,
                 key_name, key_data, security_groups, availability_zone,
                 forced_host, user_data, metadata, injected_files, access_ip_v4,
                 access_ip_v6, requested_networks, config_drive,
-                block_device_mapping, auto_disk_config, reservation_id)
+                block_device_mapping, auto_disk_config, reservation_id,
+                max_count)
+
+        # max_net_count is the maximum number of instances requested by the
+        # user adjusted for any network quota constraints, including
+        # considertaion of connections to each requested network
+        if max_net_count == 0:
+            raise exception.PortLimitExceeded()
+        elif max_net_count < max_count:
+            LOG.debug(_("max count reduced from %(max_count)d to "
+                        "%(max_net_count)d due to network port quota"),
+                       {'max_count': max_count,
+                        'max_net_count': max_net_count})
+            max_count = max_net_count
 
         block_device_mapping = self._check_and_transform_bdm(
             base_options, boot_meta, min_count, max_count,
