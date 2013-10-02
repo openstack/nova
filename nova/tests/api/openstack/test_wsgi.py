@@ -143,7 +143,16 @@ class RequestTest(test.NoDBTestCase):
         request = wsgi.Request.blank('/')
         accepted = 'nb-no'
         request.headers = {'Accept-Language': accepted}
-        self.assertEqual(request.best_match_language(), 'en_US')
+        self.assertIs(request.best_match_language(), None)
+
+    def test_no_lang_header(self):
+        self.stubs.Set(gettextutils, 'get_available_languages',
+                       fakes.fake_get_available_languages)
+
+        request = wsgi.Request.blank('/')
+        accepted = ''
+        request.headers = {'Accept-Language': accepted}
+        self.assertIs(request.best_match_language(), None)
 
 
 class ActionDispatcherTest(test.NoDBTestCase):

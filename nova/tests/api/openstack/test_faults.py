@@ -60,7 +60,7 @@ class TestFaultWrapper(test.NoDBTestCase):
 
         self.assertIn("I've been translated!", unicode(response.body))
         mock_get_localized.assert_any_call(
-                u'Should be translated.', 'en_US')
+                u'Should be translated.', None)
 
 
 class TestFaults(test.NoDBTestCase):
