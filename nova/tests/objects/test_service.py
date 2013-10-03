@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova.objects import service
 from nova.openstack.common import timeutils
 from nova.tests.objects import test_compute_node
@@ -164,6 +165,12 @@ class _TestServiceObject(object):
                          allow_missing=OPTIONAL)
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
+
+    def test_load_when_orphaned(self):
+        service_obj = service.Service()
+        service_obj.id = 123
+        self.assertRaises(exception.OrphanedObjectError,
+                          getattr, service_obj, 'compute_node')
 
 
 class TestServiceObject(test_objects._LocalTest,

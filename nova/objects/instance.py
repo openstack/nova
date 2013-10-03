@@ -463,6 +463,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                        if self.obj_attr_is_set(field)]
         current = self.__class__.get_by_uuid(context, uuid=self.uuid,
                                              expected_attrs=extra)
+        # NOTE(danms): We orphan the instance copy so we do not unexpectedly
+        # trigger a lazy-load (which would mean we failed to calculate the
+        # expected_attrs properly)
+        current._context = None
+
         for field in self.fields:
             if self.obj_attr_is_set(field) and self[field] != current[field]:
                 self[field] = current[field]
@@ -473,6 +478,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(
                 action='obj_load_attr',
                 reason='attribute %s not lazy-loadable' % attrname)
+        if not self._context:
+            raise exception.OrphanedObjectError(method='obj_load_attr',
+                                                objtype=self.obj_name())
 
         LOG.debug(_("Lazy-loading `%(attr)s' on %(name)s uuid %(uuid)s"),
                   {'attr': attrname,

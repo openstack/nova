@@ -70,6 +70,9 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         return service
 
     def obj_load_attr(self, attrname):
+        if not self._context:
+            raise exception.OrphanedObjectError(method='obj_load_attr',
+                                                objtype=self.obj_name())
         LOG.debug(_("Lazy-loading `%(attr)s' on %(name)s id %(id)s"),
                   {'attr': attrname,
                    'name': self.obj_name(),
