@@ -60,7 +60,7 @@ class _TestQuotasObject(object):
         self.assertEqual(None, quotas.user_id)
 
     def test_from_reservations_bogus(self):
-        fake_reservations = [1, 2]
+        fake_reservations = [_TestQuotasObject, _TestQuotasObject]
         self.assertRaises(ValueError,
                           quotas_obj.Quotas.from_reservations,
                           self.context, fake_reservations)
