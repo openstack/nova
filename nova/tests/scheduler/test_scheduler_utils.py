@@ -97,8 +97,12 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def _test_populate_filter_props(self, host_state_obj=True,
                                     with_retry=True,
-                                    force_hosts=[],
-                                    force_nodes=[]):
+                                    force_hosts=None,
+                                    force_nodes=None):
+        if force_hosts is None:
+            force_hosts = []
+        if force_nodes is None:
+            force_nodes = []
         if with_retry:
             if not force_hosts and not force_nodes:
                 filter_properties = dict(retry=dict(hosts=[]))
