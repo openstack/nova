@@ -6094,8 +6094,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_populate_instance_for_create(self):
         base_options = {'image_ref': self.fake_image['id'],
-                        'system_metadata': utils.dict_to_metadata(
-                                                            {'fake': 'value'})}
+                        'system_metadata': {'fake': 'value'}}
         instance = instance_obj.Instance()
         instance.update(base_options)
         inst_type = flavors.get_flavor_by_name("m1.tiny")

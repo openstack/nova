@@ -51,6 +51,8 @@ def fake_db_instance(**updates):
         'created_at': datetime.datetime(1955, 11, 5),
         'pci_devices': [],
         'security_groups': [],
+        'metadata': {},
+        'system_metadata': {},
         }
 
     for field, typefn in instance_obj.Instance.fields.items():

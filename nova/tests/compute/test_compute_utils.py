@@ -666,6 +666,9 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
             self.ctx, self.image_service, 'fake-image', self.instance_obj)
 
         self.image['properties'] = 'DONTCARE'
+        # NOTE(danms): The trip through system_metadata will stringify things
+        for key in self.image:
+            self.image[key] = str(self.image[key])
         self.assertThat(self.image, matchers.DictMatches(image_meta))
 
     def test_get_image_meta_no_image_system_meta(self):
