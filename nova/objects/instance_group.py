@@ -17,7 +17,7 @@
 from nova import db
 from nova import exception
 from nova.objects import base
-from nova.objects import utils as obj_utils
+from nova.objects import fields
 
 
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
@@ -28,17 +28,17 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.3'
 
     fields = {
-        'id': int,
+        'id': fields.IntegerField(),
 
-        'user_id': obj_utils.str_or_none,
-        'project_id': obj_utils.str_or_none,
+        'user_id': fields.StringField(nullable=True),
+        'project_id': fields.StringField(nullable=True),
 
-        'uuid': obj_utils.cstring,
-        'name': obj_utils.str_or_none,
+        'uuid': fields.UUIDField(),
+        'name': fields.StringField(nullable=True),
 
-        'policies': obj_utils.list_of_strings_or_none,
-        'metadetails': obj_utils.dict_of_strings_or_none,
-        'members': obj_utils.list_of_strings_or_none,
+        'policies': fields.ListOfStringsField(nullable=True),
+        'metadetails': fields.DictOfStringsField(nullable=True),
+        'members': fields.ListOfStringsField(nullable=True),
         }
 
     @staticmethod
