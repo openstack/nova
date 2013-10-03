@@ -141,7 +141,7 @@ class Scheduler(object):
         """Must override select_destinations method.
 
         :return: A list of dicts with 'host', 'nodename' and 'limits' as keys
-            that satisifies the request_spec and filter_properties.
+            that satisfies the request_spec and filter_properties.
         """
         msg = _("Driver must implement select_destinations")
         raise NotImplementedError(msg)

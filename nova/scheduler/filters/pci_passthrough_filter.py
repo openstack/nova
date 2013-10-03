@@ -21,7 +21,7 @@ from nova.scheduler import filters
 class PciPassthroughFilter(filters.BaseHostFilter):
     """Pci Passthrough Filter based on PCI request
 
-    Filter that schedules tasks on a host if the host has devices
+    Filter that schedules instances on a host if the host has devices
     to meet the device requests in the 'extra_specs' for the flavor.
 
     PCI resource tracker provides updated summary information about the
@@ -31,7 +31,7 @@ class PciPassthroughFilter(filters.BaseHostFilter):
     and VM requests PCI devices via PCI requests, like:
     [{"count": 1, "vendor_id": "8086", "product_id": "1520",}].
 
-    The filter checkes if the host passes or not based on these information.
+    The filter checks if the host passes or not based on this information.
     """
 
     def host_passes(self, host_state, filter_properties):
