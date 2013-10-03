@@ -184,8 +184,8 @@ def _upgrade_bdm_v2(meta, bdm_table, bdm_shadow_table):
             bdm_v2['destination_type'] = 'volume'
 
         else:  # Log a warning that the bdm is not as expected
-            LOG.warn("Got an unexpected block device %s"
-                     "that cannot be converted to v2 format")
+            LOG.warn(_("Got an unexpected block device %s "
+                       "that cannot be converted to v2 format") % bdm_id)
 
         # NOTE (ndipanov): Mark only the image or the bootable volume
         #                  with boot index, as we don't support it yet.
