@@ -119,6 +119,10 @@ class Field(object):
         self._nullable = nullable
         self._default = default
 
+    def __call__(self, value):
+        """Transitional helper to make this work like the old-style fields."""
+        return self.coerce(None, None, value)
+
     @property
     def nullable(self):
         return self._nullable
