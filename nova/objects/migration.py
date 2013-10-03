@@ -14,8 +14,8 @@
 
 from nova import db
 from nova.objects import base
+from nova.objects import fields
 from nova.objects import instance as instance_obj
-from nova.objects import utils
 
 
 class Migration(base.NovaPersistentObject, base.NovaObject):
@@ -24,16 +24,16 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'id': int,
-        'source_compute': utils.str_or_none,
-        'dest_compute': utils.str_or_none,
-        'source_node': utils.str_or_none,
-        'dest_node': utils.str_or_none,
-        'dest_host': utils.str_or_none,
-        'old_instance_type_id': utils.int_or_none,
-        'new_instance_type_id': utils.int_or_none,
-        'instance_uuid': utils.str_or_none,
-        'status': utils.str_or_none,
+        'id': fields.IntegerField(),
+        'source_compute': fields.StringField(nullable=True),
+        'dest_compute': fields.StringField(nullable=True),
+        'source_node': fields.StringField(nullable=True),
+        'dest_node': fields.StringField(nullable=True),
+        'dest_host': fields.StringField(nullable=True),
+        'old_instance_type_id': fields.IntegerField(nullable=True),
+        'new_instance_type_id': fields.IntegerField(nullable=True),
+        'instance_uuid': fields.StringField(nullable=True),
+        'status': fields.StringField(nullable=True),
         }
 
     @staticmethod
