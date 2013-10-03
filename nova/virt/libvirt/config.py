@@ -1051,7 +1051,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_cmdline = None
         self.os_root = None
         self.os_init_path = None
-        self.os_boot_dev = None
+        self.os_boot_dev = []
         self.os_smbios = None
         self.devices = []
 
@@ -1081,8 +1081,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
             os.append(self._text_node("root", self.os_root))
         if self.os_init_path is not None:
             os.append(self._text_node("init", self.os_init_path))
-        if self.os_boot_dev is not None:
-            os.append(etree.Element("boot", dev=self.os_boot_dev))
+
+        for boot_dev in self.os_boot_dev:
+            os.append(etree.Element("boot", dev=boot_dev))
+
         if self.os_smbios is not None:
             os.append(self.os_smbios.format_dom())
         root.append(os)

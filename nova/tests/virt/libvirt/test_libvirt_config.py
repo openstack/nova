@@ -1095,7 +1095,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.name = "demo"
         obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
         obj.os_type = "linux"
-        obj.os_boot_dev = "hd"
+        obj.os_boot_dev = ["hd", "cdrom", "fd"]
         obj.os_smbios = config.LibvirtConfigGuestSMBIOS()
         obj.acpi = True
         obj.apic = True
@@ -1130,6 +1130,8 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               <os>
                 <type>linux</type>
                 <boot dev="hd"/>
+                <boot dev="cdrom"/>
+                <boot dev="fd"/>
                 <smbios mode="sysinfo"/>
               </os>
               <features>

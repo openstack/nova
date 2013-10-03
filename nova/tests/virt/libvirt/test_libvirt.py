@@ -689,7 +689,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
         self.assertEquals(cfg.os_type, vm_mode.HVM)
-        self.assertEquals(cfg.os_boot_dev, "hd")
+        self.assertEquals(cfg.os_boot_dev, ["hd"])
         self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 7)
         self.assertEquals(type(cfg.devices[0]),
@@ -750,7 +750,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
         self.assertEquals(cfg.os_type, vm_mode.HVM)
-        self.assertEquals(cfg.os_boot_dev, "hd")
+        self.assertEquals(cfg.os_boot_dev, ["hd"])
         self.assertEquals(cfg.os_root, None)
         self.assertEquals(len(cfg.devices), 8)
         self.assertEquals(type(cfg.devices[0]),
@@ -808,7 +808,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.memory, 1024 * 1024 * 2)
         self.assertEquals(cfg.vcpus, 1)
         self.assertEquals(cfg.os_type, "uml")
-        self.assertEquals(cfg.os_boot_dev, None)
+        self.assertEquals(cfg.os_boot_dev, [])
         self.assertEquals(cfg.os_root, '/dev/vdb')
         self.assertEquals(len(cfg.devices), 3)
         self.assertEquals(type(cfg.devices[0]),
