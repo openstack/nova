@@ -25,7 +25,7 @@ python-cinderclient>=1.0.5
 python-neutronclient>=2.3.0,<3
 python-glanceclient>=0.9.0
 python-keystoneclient>=0.3.2
-six<1.4.0
+six
 stevedore>=0.10
 websockify>=0.5.1,<0.6
 oslo.config>=1.2.0
