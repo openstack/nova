@@ -25,6 +25,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.objects import base as objects_base
+from nova.objects import fields as objects_fields
 from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import rpc
@@ -275,7 +276,7 @@ class CellsMessageClassesTestCase(test.TestCase):
             """Test object.  We just need 1 field in order to test
             that this gets serialized properly.
             """
-            fields = {'test': str}
+            fields = {'test': objects_fields.StringField()}
 
         test_obj = CellsMsgingTestObject()
         test_obj.test = 'meow'

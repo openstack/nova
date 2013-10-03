@@ -33,6 +33,7 @@ from nova.db.sqlalchemy import models
 from nova import exception as exc
 from nova import notifications
 from nova.objects import base as obj_base
+from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common import jsonutils
@@ -867,7 +868,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
 
     def test_object_action_copies_object(self):
         class TestObject(obj_base.NovaObject):
-            fields = {'dict': dict}
+            fields = {'dict': fields.DictOfStringsField()}
 
             def touch_dict(self, context):
                 self.dict['foo'] = 'bar'

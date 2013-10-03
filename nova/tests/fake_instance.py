@@ -15,6 +15,7 @@
 import datetime
 import uuid
 
+from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import instance_fault as inst_fault_obj
 
@@ -55,13 +56,15 @@ def fake_db_instance(**updates):
         'system_metadata': {},
         }
 
-    for field, typefn in instance_obj.Instance.fields.items():
-        if field in db_instance:
+    for name, field in instance_obj.Instance.fields.items():
+        if name in db_instance:
             continue
-        try:
-            db_instance[field] = typefn(None)
-        except TypeError:
-            db_instance[field] = typefn()
+        if field.nullable:
+            db_instance[name] = None
+        elif field.default != fields.UnspecifiedDefault:
+            db_instance[name] = field.default
+        else:
+            raise Exception('fake_db_instance needs help with %s' % name)
 
     if updates:
         db_instance.update(updates)
