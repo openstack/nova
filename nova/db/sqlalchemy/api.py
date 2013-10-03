@@ -3124,6 +3124,19 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
                                                          until_refresh or None,
                                                          session=session)
 
+                    if user_usages[res].in_use != in_use:
+                        LOG.debug(_('quota_usages out of sync, updating. '
+                                    'project_id: %(project_id)s, '
+                                    'user_id: %(user_id)s, '
+                                    'resource: %(res)s, '
+                                    'tracked usage: %(tracked_use)s, '
+                                    'actual usage: %(in_use)s'),
+                            {'project_id': project_id,
+                             'user_id': user_id,
+                             'res': res,
+                             'tracked_use': user_usages[res].in_use,
+                             'in_use': in_use})
+
                     # Update the usage
                     user_usages[res].in_use = in_use
                     user_usages[res].until_refresh = until_refresh or None
