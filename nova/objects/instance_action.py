@@ -15,6 +15,7 @@
 from nova.compute import utils as compute_utils
 from nova import db
 from nova.objects import base
+from nova.objects import fields
 from nova.objects import utils
 
 
@@ -24,15 +25,15 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'id': int,
-        'action': utils.str_or_none,
-        'instance_uuid': utils.str_or_none,
-        'request_id': utils.str_or_none,
-        'user_id': utils.str_or_none,
-        'project_id': utils.str_or_none,
-        'start_time': utils.datetime_or_none,
-        'finish_time': utils.datetime_or_none,
-        'message': utils.str_or_none,
+        'id': fields.IntegerField(),
+        'action': fields.StringField(nullable=True),
+        'instance_uuid': fields.UUIDField(nullable=True),
+        'request_id': fields.StringField(nullable=True),
+        'user_id': fields.StringField(nullable=True),
+        'project_id': fields.StringField(nullable=True),
+        'start_time': fields.DateTimeField(nullable=True),
+        'finish_time': fields.DateTimeField(nullable=True),
+        'message': fields.StringField(nullable=True),
         }
 
     _attr_start_time_to_primitive = utils.dt_serializer('start_time')
@@ -90,13 +91,13 @@ class InstanceActionList(base.ObjectListBase, base.NovaObject):
 
 class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
     fields = {
-        'id': int,
-        'event': utils.str_or_none,
-        'action_id': utils.int_or_none,
-        'start_time': utils.datetime_or_none,
-        'finish_time': utils.datetime_or_none,
-        'result': utils.str_or_none,
-        'traceback': utils.str_or_none,
+        'id': fields.IntegerField(),
+        'event': fields.StringField(nullable=True),
+        'action_id': fields.IntegerField(nullable=True),
+        'start_time': fields.DateTimeField(nullable=True),
+        'finish_time': fields.DateTimeField(nullable=True),
+        'result': fields.StringField(nullable=True),
+        'traceback': fields.StringField(nullable=True),
         }
 
     _attr_start_time_to_primitive = utils.dt_serializer('start_time')
