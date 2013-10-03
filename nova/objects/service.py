@@ -17,6 +17,7 @@ from nova import db
 from nova import exception
 from nova.objects import base
 from nova.objects import compute_node
+from nova.objects import fields
 from nova.objects import utils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -32,15 +33,15 @@ class Service(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.2'
 
     fields = {
-        'id': int,
-        'host': utils.str_or_none,
-        'binary': utils.str_or_none,
-        'topic': utils.str_or_none,
-        'report_count': int,
-        'disabled': bool,
-        'disabled_reason': utils.str_or_none,
-        'availability_zone': utils.str_or_none,
-        'compute_node': utils.nested_object(compute_node.ComputeNode),
+        'id': fields.IntegerField(),
+        'host': fields.StringField(nullable=True),
+        'binary': fields.StringField(nullable=True),
+        'topic': fields.StringField(nullable=True),
+        'report_count': fields.IntegerField(),
+        'disabled': fields.BooleanField(),
+        'disabled_reason': fields.StringField(nullable=True),
+        'availability_zone': fields.StringField(nullable=True),
+        'compute_node': fields.ObjectField(compute_node.ComputeNode),
         }
 
     @staticmethod
