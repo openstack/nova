@@ -508,6 +508,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         dev = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (location, iqn)
         devs = [dev0, dev]
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
+        self.stubs.Set(libvirt_driver, '_get_iscsi_devices', lambda: [])
         connection_info = self.iser_connection(vol, location, iqn)
         mpdev_filepath = '/dev/mapper/foo'
         disk_info = {
