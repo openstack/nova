@@ -41,6 +41,7 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
@@ -643,7 +644,7 @@ class VMwareVMOps(object):
             # this will never be not-set by this point.
             value = global_linked_clone
 
-        return utils.get_boolean(value)
+        return strutils.bool_from_string(value)
 
     def get_copy_virtual_disk_spec(self, client_factory, adapter_type,
                                    disk_type):
