@@ -16,7 +16,7 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
 from nova.objects import base
-from nova.objects import utils
+from nova.objects import fields
 
 
 class Aggregate(base.NovaPersistentObject, base.NovaObject):
@@ -25,10 +25,10 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'id': int,
-        'name': utils.str_value,
-        'hosts': utils.list_of_strings_or_none,
-        'metadata': utils.dict_of_strings_or_none,
+        'id': fields.IntegerField(),
+        'name': fields.StringField(),
+        'hosts': fields.ListOfStringsField(nullable=True),
+        'metadata': fields.DictOfStringsField(nullable=True),
         }
 
     obj_extra_fields = ['availability_zone']
