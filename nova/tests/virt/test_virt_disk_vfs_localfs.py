@@ -167,7 +167,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         self.assertEqual(dirs,
                          ["/scratch/dir/some/dir", "/scratch/dir/other/dir"]),
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/dir'),
@@ -200,7 +200,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         self.assertEquals(files["/scratch/dir/some/file"]["content"],
                           "Hello World Goodbye")
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
@@ -226,7 +226,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         self.assertEquals(files["/scratch/dir/some/file"]["content"],
                           "Goodbye")
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
@@ -247,7 +247,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.imgdir = "/scratch/dir"
         self.assertEqual(vfs.read_file("/some/file"), "Hello World")
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
@@ -270,7 +270,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         self.assertTrue(vfs.has_file("/some/file"))
         self.assertFalse(vfs.has_file("/other/file"))
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
@@ -310,7 +310,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.set_permissions("/some/file", 0o777)
         self.assertEquals(files["/scratch/dir/some/file"]["mode"], 0o777)
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
@@ -353,7 +353,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         self.assertEquals(files["/scratch/dir/some/file"]["uid"], 110)
         self.assertEquals(files["/scratch/dir/some/file"]["gid"], 600)
 
-        root_helper = nova.utils.get_root_helper()
+        root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
                          [{'args': ('readlink', '-nm',
                                     '/scratch/dir/some/file'),
