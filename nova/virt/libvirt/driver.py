@@ -2879,7 +2879,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 if instance['ramdisk_id']:
                     guest.os_initrd = os.path.join(inst_path, "ramdisk")
             else:
-                guest.os_boot_dev = ["hd"]
+                guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
         if CONF.libvirt_type != "lxc" and CONF.libvirt_type != "uml":
             guest.acpi = True
