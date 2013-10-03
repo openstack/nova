@@ -22,7 +22,7 @@ import functools
 from nova import db
 from nova import exception
 from nova.objects import base
-from nova.objects import utils as obj_utils
+from nova.objects import fields
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
@@ -95,19 +95,19 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'id': int,
+        'id': fields.IntegerField(),
         # Note(yjiang5): the compute_node_id may be None because the pci
         # device objects are created before the compute node is created in DB
-        'compute_node_id': obj_utils.int_or_none,
-        'address': obj_utils.str_value,
-        'vendor_id': obj_utils.str_value,
-        'product_id': obj_utils.str_value,
-        'dev_type': obj_utils.str_value,
-        'status': obj_utils.str_value,
-        'dev_id': obj_utils.str_or_none,
-        'label': obj_utils.str_or_none,
-        'instance_uuid': obj_utils.str_or_none,
-        'extra_info': dict,
+        'compute_node_id': fields.IntegerField(nullable=True),
+        'address': fields.StringField(),
+        'vendor_id': fields.StringField(),
+        'product_id': fields.StringField(),
+        'dev_type': fields.StringField(),
+        'status': fields.StringField(),
+        'dev_id': fields.StringField(nullable=True),
+        'label': fields.StringField(nullable=True),
+        'instance_uuid': fields.StringField(nullable=True),
+        'extra_info': fields.DictOfStringsField(),
     }
 
     def update_device(self, dev_dict):
