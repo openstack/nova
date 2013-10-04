@@ -145,7 +145,13 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             scheduler_utils.populate_filter_properties(filter_properties,
                                                        host_state)
 
-        self.assertEqual('fake-limits', filter_properties['limits'])
+        if force_hosts:
+            expected_limits = None
+        else:
+            expected_limits = 'fake-limits'
+        self.assertEqual(expected_limits,
+                         filter_properties.get('limits'))
+
         if with_retry and not force_hosts and not force_nodes:
             self.assertEqual([['fake-host', 'fake-node'],
                               ['fake-host', 'fake-node']],
