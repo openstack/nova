@@ -128,6 +128,16 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         self.assertEquals(fake_host_name, host_name)
 
+    def test_get_host_ref_no_hosts_in_cluster(self):
+        self.assertRaises(exception.NoValidHost,
+                          vm_util.get_host_ref,
+                          fake_session(""), 'fake_cluster')
+
+    def test_get_datastore_ref_and_name_no_host_in_cluster(self):
+        self.assertRaises(exception.DatastoreNotFound,
+                          vm_util.get_datastore_ref_and_name,
+                          fake_session(""), 'fake_cluster')
+
     def test_get_host_name_for_vm(self):
         fake_host = fake.HostSystem()
         fake_host_id = fake_host.obj.value
