@@ -14,7 +14,6 @@
 
 from oslo.config import cfg
 
-from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import utils as compute_utils
@@ -25,6 +24,7 @@ from nova.objects import base as obj_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
+from nova.scheduler import utils as scheduler_utils
 from nova import servicegroup
 
 LOG = logging.getLogger(__name__)
@@ -152,14 +152,16 @@ class LiveMigrationTask(object):
                                                      self.image_service,
                                                      self.instance.image_ref,
                                                      self.instance)
-        instance_type = flavors.extract_flavor(self.instance)
+        instance_p = obj_base.obj_to_primitive(self.instance)
+        request_spec = scheduler_utils.build_request_spec(self.context, image,
+                                                          [instance_p])
 
         host = None
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
-
-            host = self._get_candidate_destination(image,
-                    instance_type, attempted_hosts)
+            filter_properties = {'ignore_hosts': attempted_hosts}
+            host = self.scheduler_rpcapi.select_hosts(self.context,
+                            request_spec, filter_properties)[0]
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)
@@ -169,18 +171,6 @@ class LiveMigrationTask(object):
                 attempted_hosts.append(host)
                 host = None
         return host
-
-    def _get_candidate_destination(self, image, instance_type,
-                                   attempted_hosts):
-        instance_p = obj_base.obj_to_primitive(self.instance)
-        request_spec = {'instance_properties': instance_p,
-                        'instance_type': instance_type,
-                        'instance_uuids': [self.instance.uuid]}
-        if image:
-            request_spec['image'] = image
-        filter_properties = {'ignore_hosts': attempted_hosts}
-        return self.scheduler_rpcapi.select_hosts(self.context,
-                        request_spec, filter_properties)[0]
 
     def _check_not_over_max_retries(self, attempted_hosts):
         if CONF.migrate_max_retries == -1:
