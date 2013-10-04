@@ -557,7 +557,7 @@ def get_add_vswitch_port_group_spec(client_factory, vswitch_name,
     return vswitch_port_group_spec
 
 
-def get_vnc_config_spec(client_factory, port, password):
+def get_vnc_config_spec(client_factory, port):
     """Builds the vnc config spec."""
     virtual_machine_config_spec = client_factory.create(
                                     'ns0:VirtualMachineConfigSpec')
@@ -569,15 +569,6 @@ def get_vnc_config_spec(client_factory, port, password):
     opt_port.key = "RemoteDisplay.vnc.port"
     opt_port.value = port
     extras = [opt_enabled, opt_port]
-    if password:
-        LOG.deprecated(_("The password-based access to VNC consoles will be "
-                         "removed in the next release. Please, switch to "
-                         "using the default value (this will disable password "
-                         "protection on the VNC console)."))
-        opt_pass = client_factory.create('ns0:OptionValue')
-        opt_pass.key = "RemoteDisplay.vnc.password"
-        opt_pass.value = password
-        extras.append(opt_pass)
     virtual_machine_config_spec.extraConfig = extras
     return virtual_machine_config_spec
 
