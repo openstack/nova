@@ -302,6 +302,9 @@ class CellsController(object):
             self._validate_cell_type(cell['type'])
             cell['is_parent'] = cell['type'] == 'parent'
             del cell['type']
+        # Avoid cell type being overwritten to 'child'
+        elif existing:
+            cell['is_parent'] = existing['is_parent']
         else:
             cell['is_parent'] = False
 

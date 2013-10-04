@@ -275,6 +275,40 @@ class CellsTest(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest,
             self.controller.update, req, 'cell1', body)
 
+    def test_cell_update_without_type_specified(self):
+        body = {'cell': {'username': 'wingwj'}}
+
+        req = self._get_request("cells/cell1")
+        res_dict = self.controller.update(req, 'cell1', body)
+        cell = res_dict['cell']
+
+        self.assertEqual(cell['name'], 'cell1')
+        self.assertEqual(cell['rpc_host'], 'r1.example.org')
+        self.assertEqual(cell['username'], 'wingwj')
+        self.assertEqual(cell['type'], 'parent')
+
+    def test_cell_update_with_type_specified(self):
+        body1 = {'cell': {'username': 'wingwj', 'type': 'child'}}
+        body2 = {'cell': {'username': 'wingwj', 'type': 'parent'}}
+
+        req1 = self._get_request("cells/cell1")
+        res_dict1 = self.controller.update(req1, 'cell1', body1)
+        cell1 = res_dict1['cell']
+
+        req2 = self._get_request("cells/cell2")
+        res_dict2 = self.controller.update(req2, 'cell2', body2)
+        cell2 = res_dict2['cell']
+
+        self.assertEqual(cell1['name'], 'cell1')
+        self.assertEqual(cell1['rpc_host'], 'r1.example.org')
+        self.assertEqual(cell1['username'], 'wingwj')
+        self.assertEqual(cell1['type'], 'child')
+
+        self.assertEqual(cell2['name'], 'cell2')
+        self.assertEqual(cell2['rpc_host'], 'r2.example.org')
+        self.assertEqual(cell2['username'], 'wingwj')
+        self.assertEqual(cell2['type'], 'parent')
+
     def test_cell_info(self):
         caps = ['cap1=a;b', 'cap2=c;d']
         self.flags(name='darksecret', capabilities=caps, group='cells')
