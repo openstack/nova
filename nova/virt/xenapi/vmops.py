@@ -2021,6 +2021,10 @@ class VMOps(object):
         self._prepare_instance_filter(instance, network_info)
         self.firewall_driver.apply_instance_filter(instance, network_info)
 
+        # NOTE(johngarbutt) workaround XenServer bug CA-98606
+        vm_ref = self._get_vm_opaque_ref(instance)
+        vm_utils.strip_base_mirror_from_vdis(self._session, vm_ref)
+
     def get_per_instance_usage(self):
         """Get usage info about each active instance."""
         usage = {}

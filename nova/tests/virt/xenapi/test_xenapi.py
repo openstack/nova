@@ -3291,9 +3291,9 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         def fake_fw(instance, network_info):
             self.assertEqual(instance, fake_instance)
             self.assertEqual(network_info, fake_network_info)
-            fake_fw.called += 1
+            fake_fw.call_count += 1
 
-        fake_fw.called = 0
+        fake_fw.call_count = 0
         _vmops = self.conn._vmops
         self.stubs.Set(_vmops.firewall_driver,
                        'setup_basic_filtering', fake_fw)
@@ -3302,9 +3302,22 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(_vmops.firewall_driver,
                        'apply_instance_filter', fake_fw)
 
+        def fake_get_vm_opaque_ref(instance):
+            fake_get_vm_opaque_ref.called = True
+        self.stubs.Set(_vmops, "_get_vm_opaque_ref", fake_get_vm_opaque_ref)
+        fake_get_vm_opaque_ref.called = False
+
+        def fake_strip_base_mirror_from_vdis(session, vm_ref):
+            fake_strip_base_mirror_from_vdis.called = True
+        self.stubs.Set(vm_utils, "strip_base_mirror_from_vdis",
+                       fake_strip_base_mirror_from_vdis)
+        fake_strip_base_mirror_from_vdis.called = False
+
         self.conn.post_live_migration_at_destination(None, fake_instance,
                                                      fake_network_info, None)
-        self.assertEqual(fake_fw.called, 3)
+        self.assertEqual(fake_fw.call_count, 3)
+        self.assertTrue(fake_get_vm_opaque_ref.called)
+        self.assertTrue(fake_strip_base_mirror_from_vdis.called)
 
     def test_check_can_live_migrate_destination_with_block_migration(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
