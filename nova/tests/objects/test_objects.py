@@ -23,6 +23,7 @@ from nova.conductor import rpcapi as conductor_rpcapi
 from nova import context
 from nova import exception
 from nova.objects import base
+from nova.objects import fields
 from nova.objects import utils
 from nova.openstack.common import timeutils
 from nova import test
@@ -231,11 +232,20 @@ class TestUtils(test.TestCase):
         self.assertRaises(ValueError, utils.dt_deserializer, None, 'foo')
 
     def test_obj_to_primitive_list(self):
+        class MyObjElement(base.NovaObject):
+            fields = {'foo': fields.IntegerField()}
+
+            def __init__(self, foo):
+                super(MyObjElement, self).__init__()
+                self.foo = foo
+
         class MyList(base.ObjectListBase, base.NovaObject):
             pass
+
         mylist = MyList()
-        mylist.objects = [1, 2, 3]
-        self.assertEqual([1, 2, 3], base.obj_to_primitive(mylist))
+        mylist.objects = [MyObjElement(1), MyObjElement(2), MyObjElement(3)]
+        self.assertEqual([1, 2, 3],
+                         [x['foo'] for x in base.obj_to_primitive(mylist)])
 
     def test_obj_to_primitive_dict(self):
         myobj = MyObj()
@@ -661,20 +671,27 @@ class TestRemoteObject(_RemoteTest, _TestObject):
 
 class TestObjectListBase(test.TestCase):
     def test_list_like_operations(self):
+        class MyElement(base.NovaObject):
+            fields = {'foo': fields.IntegerField()}
+
+            def __init__(self, foo):
+                super(MyElement, self).__init__()
+                self.foo = foo
+
         class Foo(base.ObjectListBase, base.NovaObject):
             pass
 
         objlist = Foo()
         objlist._context = 'foo'
-        objlist.objects = [1, 2, 3]
+        objlist.objects = [MyElement(1), MyElement(2), MyElement(3)]
         self.assertEqual(list(objlist), objlist.objects)
         self.assertEqual(len(objlist), 3)
-        self.assertIn(2, objlist)
-        self.assertEqual(list(objlist[:1]), [1])
+        self.assertIn(objlist.objects[0], objlist)
+        self.assertEqual(list(objlist[:1]), [objlist.objects[0]])
         self.assertEqual(objlist[:1]._context, 'foo')
-        self.assertEqual(objlist[2], 3)
-        self.assertEqual(objlist.count(1), 1)
-        self.assertEqual(objlist.index(2), 1)
+        self.assertEqual(objlist[2], objlist.objects[2])
+        self.assertEqual(objlist.count(objlist.objects[0]), 1)
+        self.assertEqual(objlist.index(objlist.objects[1]), 1)
 
     def test_serialization(self):
         class Foo(base.ObjectListBase, base.NovaObject):

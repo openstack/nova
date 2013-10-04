@@ -20,6 +20,7 @@ import functools
 
 from nova import context
 from nova import exception
+from nova.objects import fields
 from nova.objects import utils as obj_utils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -427,14 +428,13 @@ class NovaObject(object):
 
 class NovaPersistentObject(object):
     """Mixin class for Persistent objects.
-
     This adds the fields that we use in common for all persisent objects.
     """
     fields = {
-        'created_at': obj_utils.datetime_or_str_or_none,
-        'updated_at': obj_utils.datetime_or_str_or_none,
-        'deleted_at': obj_utils.datetime_or_str_or_none,
-        'deleted': bool,
+        'created_at': fields.DateTimeField(nullable=True),
+        'updated_at': fields.DateTimeField(nullable=True),
+        'deleted_at': fields.DateTimeField(nullable=True),
+        'deleted': fields.BooleanField(default=False),
         }
 
     _attr_created_at_from_primitive = obj_utils.dt_deserializer
@@ -454,7 +454,7 @@ class ObjectListBase(object):
     serialization of the list of objects automatically.
     """
     fields = {
-        'objects': list,
+        'objects': fields.ListOfObjectsField(NovaObject),
         }
 
     def __iter__(self):
