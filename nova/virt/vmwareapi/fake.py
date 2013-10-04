@@ -33,7 +33,7 @@ from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
-            'files', 'ClusterComputeResource']
+            'files', 'ClusterComputeResource', 'HostStorageSystem']
 
 _FAKE_FILE_SIZE = 1024
 
@@ -59,6 +59,7 @@ def reset():
             _db_content[c] = {}
     create_network()
     create_host_network_system()
+    create_host_storage_system()
     create_host()
     create_host()
     create_datacenter()
@@ -241,8 +242,15 @@ class DataObject(object):
         return str(self.__dict__)
 
 
-class HostInternetScsiHba():
-    pass
+class HostInternetScsiHba(DataObject):
+    """
+    iSCSI Host Bus Adapter
+    """
+
+    def __init__(self):
+        super(HostInternetScsiHba, self).__init__()
+        self.device = 'vmhba33'
+        self.key = 'key-vmhba33'
 
 
 class VirtualDisk(DataObject):
@@ -502,6 +510,13 @@ class HostNetworkSystem(ManagedObject):
         self.set("networkInfo.pnic", net_info_pnic)
 
 
+class HostStorageSystem(ManagedObject):
+    """HostStorageSystem class."""
+
+    def __init__(self):
+        super(HostStorageSystem, self).__init__("storageSystem")
+
+
 class HostSystem(ManagedObject):
     """Host System class."""
 
@@ -510,9 +525,13 @@ class HostSystem(ManagedObject):
         self.set("name", name)
         if _db_content.get("HostNetworkSystem", None) is None:
             create_host_network_system()
+        if not _get_object_refs('HostStorageSystem'):
+            create_host_storage_system()
         host_net_key = _db_content["HostNetworkSystem"].keys()[0]
         host_net_sys = _db_content["HostNetworkSystem"][host_net_key].obj
         self.set("configManager.networkSystem", host_net_sys)
+        host_storage_sys_key = _get_object_refs('HostStorageSystem')[0]
+        self.set("configManager.storageSystem", host_storage_sys_key)
 
         summary = DataObject()
         hardware = DataObject()
@@ -581,13 +600,43 @@ class HostSystem(ManagedObject):
         config = DataObject()
         storageDevice = DataObject()
 
-        hostBusAdapter = HostInternetScsiHba()
-        hostBusAdapter.HostHostBusAdapter = [hostBusAdapter]
-        hostBusAdapter.iScsiName = "iscsi-name"
-        storageDevice.hostBusAdapter = hostBusAdapter
+        iscsi_hba = HostInternetScsiHba()
+        iscsi_hba.iScsiName = "iscsi-name"
+        host_bus_adapter_array = DataObject()
+        host_bus_adapter_array.HostHostBusAdapter = [iscsi_hba]
+        storageDevice.hostBusAdapter = host_bus_adapter_array
         config.storageDevice = storageDevice
-        self.set("config.storageDevice.hostBusAdapter",
-                 config.storageDevice.hostBusAdapter)
+        self.set("config.storageDevice.hostBusAdapter", host_bus_adapter_array)
+
+        # Set the same on the storage system managed object
+        host_storage_sys = _get_object(host_storage_sys_key)
+        host_storage_sys.set('storageDeviceInfo.hostBusAdapter',
+                             host_bus_adapter_array)
+
+    def _add_iscsi_target(self, data):
+        default_lun = DataObject()
+        default_lun.scsiLun = 'key-vim.host.ScsiDisk-010'
+        default_lun.key = 'key-vim.host.ScsiDisk-010'
+        default_lun.deviceName = 'fake-device'
+        default_lun.uuid = 'fake-uuid'
+        scsi_lun_array = DataObject()
+        scsi_lun_array.ScsiLun = [default_lun]
+        self.set("config.storageDevice.scsiLun", scsi_lun_array)
+
+        transport = DataObject()
+        transport.address = [data['target_portal']]
+        transport.iScsiName = data['target_iqn']
+        default_target = DataObject()
+        default_target.lun = [default_lun]
+        default_target.transport = transport
+
+        iscsi_adapter = DataObject()
+        iscsi_adapter.adapter = 'key-vmhba33'
+        iscsi_adapter.transport = transport
+        iscsi_adapter.target = [default_target]
+        iscsi_topology = DataObject()
+        iscsi_topology.adapter = [iscsi_adapter]
+        self.set("config.storageDevice.scsiTopology", iscsi_topology)
 
     def _add_port_group(self, spec):
         """Adds a port group to the host system object in the db."""
@@ -645,6 +694,11 @@ class Task(ManagedObject):
 def create_host_network_system():
     host_net_system = HostNetworkSystem()
     _create_object("HostNetworkSystem", host_net_system)
+
+
+def create_host_storage_system():
+    host_storage_system = HostStorageSystem()
+    _create_object("HostStorageSystem", host_storage_system)
 
 
 def create_host():

@@ -914,6 +914,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
 
+    def test_find_st(self):
+        data = {'target_portal': 'fake_target_host:port',
+                'target_iqn': 'fake_target_iqn'}
+        host = vmwareapi_fake._get_objects('HostSystem').objects[0]
+        host._add_iscsi_target(data)
+        result = volume_util.find_st(self.conn._session, data)
+        self.assertEquals(('fake-device', 'fake-uuid'), result)
+
     def test_detach_iscsi_disk_from_vm(self):
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('iscsi')
