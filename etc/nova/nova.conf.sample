@@ -2968,7 +2968,7 @@
 
 # maximal number of retries for IPMI operations (integer
 # value)
-#ipmi_power_retry=5
+#ipmi_power_retry=10
 
 
 #
