@@ -1346,3 +1346,39 @@ class ScanSrTestCase(test.NoDBTestCase):
         session.call_xenapi.assert_called_with('SR.scan', "sr_ref")
         self.assertEqual(2, session.call_xenapi.call_count)
         mock_sleep.assert_called_once_with(2)
+
+
+class AllowVSSProviderTest(stubs.XenAPITestBase):
+    def setUp(self):
+        super(AllowVSSProviderTest, self).setUp()
+        self.flags(disable_process_locking=True,
+                   instance_name_template='%d',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver',
+                   xenapi_connection_url='test_url',
+                   xenapi_connection_password='test_pass',)
+        stubs.stubout_session(self.stubs, fake.SessionBase)
+        driver = xenapi_conn.XenAPIDriver(False)
+        self.session = driver._session
+        self.session.is_local_connection = False
+        self.instance = {
+            'uuid': 'fakeinstance',
+            'kernel_id': 'kernel',
+        }
+
+    def test_allow_vss_provider(self):
+        def fake_extract_flavor(inst):
+            return {
+                'memory_mb': 1024,
+                'vcpus': 1,
+                'vcpu_weight': 1.0,
+            }
+
+        def fake_call_xenapi(command, rec):
+            xenstore_data = rec.get('xenstore_data')
+            self.assertTrue('vm-data/allowvssprovider' in xenstore_data)
+
+        self.stubs.Set(flavors, 'extract_flavor', fake_extract_flavor)
+        self.stubs.Set(self.session, 'call_xenapi', fake_call_xenapi)
+        vm_utils.create_vm(self.session, self.instance, "label",
+                           "kernel", "ramdisk")
