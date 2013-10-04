@@ -2052,7 +2052,7 @@
 #xen_hvmloader_path=/usr/lib/xen/boot/hvmloader
 
 # Specific cachemodes to use for different disk types e.g:
-# ["file=directsync","block=none"] (list value)
+# file=directsync,block=none (list value)
 #disk_cachemodes=
 
 # Which pcpus can be used by vcpus of instance e.g:
