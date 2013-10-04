@@ -1137,3 +1137,17 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         info = self.conn.get_info({'uuid': 'fake-uuid',
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
+
+    def test_plug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self._create_instance_in_the_db()
+        self.assertRaises(NotImplementedError,
+                          self.conn.plug_vifs,
+                          instance=self.instance, network_info=None)
+
+    def test_unplug_vifs(self):
+        # Check to make sure the method raises NotImplementedError.
+        self._create_instance_in_the_db()
+        self.assertRaises(NotImplementedError,
+                          self.conn.unplug_vifs,
+                          instance=self.instance, network_info=None)

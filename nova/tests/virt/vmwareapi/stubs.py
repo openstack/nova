@@ -22,7 +22,6 @@ Stubouts for the test suite
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_util
-from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
 
 
@@ -38,7 +37,6 @@ def fake_is_vim_object(arg, module):
 
 def set_stubs(stubs):
     """Set the stubs."""
-    stubs.Set(vmops.VMwareVMOps, 'plug_vifs', fake.fake_plug_vifs)
     stubs.Set(network_util, 'get_network_with_the_name',
               fake.fake_get_network)
     stubs.Set(vmware_images, 'fetch_image', fake.fake_fetch_image)

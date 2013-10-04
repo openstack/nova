@@ -662,9 +662,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 return
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
-
-        self.driver.plug_vifs(instance, net_info)
-
+        try:
+            self.driver.plug_vifs(instance, net_info)
+        except NotImplementedError as e:
+            LOG.debug(e, instance=instance)
         if instance['task_state'] == task_states.RESIZE_MIGRATING:
             # We crashed during resize/migration, so roll back for safety
             try:
@@ -4134,8 +4135,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             # but we must do it explicitly here when block_migration
             # is false, as the network devices at the source must be
             # torn down
-            self.driver.unplug_vifs(instance_ref, network_info)
-
+            try:
+                self.driver.unplug_vifs(instance_ref, network_info)
+            except NotImplementedError as e:
+                LOG.debug(e, instance=instance_ref)
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(ctxt, instance_ref,
                                                 self.host, teardown=True)
