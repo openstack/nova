@@ -1235,52 +1235,50 @@ class LibvirtDriver(driver.ComputeDriver):
                                   connection_info,
                                   disk_dev)
 
-    def attach_interface(self, instance, image_meta, network_info):
+    def attach_interface(self, instance, image_meta, vif):
         virt_dom = self._lookup_by_name(instance['name'])
         inst_type = self.virtapi.instance_type_get(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
-        for vif in network_info:
-            self.vif_driver.plug(instance, vif)
-            self.firewall_driver.setup_basic_filtering(instance, [vif])
-            cfg = self.vif_driver.get_config(instance, vif, image_meta,
-                                             inst_type)
-            try:
-                flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-                state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
-                if state == power_state.RUNNING:
-                    flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-                virt_dom.attachDeviceFlags(cfg.to_xml(), flags)
-            except libvirt.libvirtError:
-                LOG.error(_('attaching network adapter failed.'),
-                         instance=instance)
-                self.vif_driver.unplug(instance, vif)
-                raise exception.InterfaceAttachFailed(instance)
+        self.vif_driver.plug(instance, vif)
+        self.firewall_driver.setup_basic_filtering(instance, [vif])
+        cfg = self.vif_driver.get_config(instance, vif, image_meta,
+                                         inst_type)
+        try:
+            flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+            state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+            if state == power_state.RUNNING:
+                flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+            virt_dom.attachDeviceFlags(cfg.to_xml(), flags)
+        except libvirt.libvirtError:
+            LOG.error(_('attaching network adapter failed.'),
+                     instance=instance)
+            self.vif_driver.unplug(instance, vif)
+            raise exception.InterfaceAttachFailed(instance)
 
-    def detach_interface(self, instance, network_info):
+    def detach_interface(self, instance, vif):
         virt_dom = self._lookup_by_name(instance['name'])
         inst_type = self.virtapi.instance_type_get(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
-        for vif in network_info:
-            cfg = self.vif_driver.get_config(instance, vif, None, inst_type)
-            try:
-                self.vif_driver.unplug(instance, vif)
-                flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
-                state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
-                if state == power_state.RUNNING:
-                    flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
-                virt_dom.detachDeviceFlags(cfg.to_xml(), flags)
-            except libvirt.libvirtError as ex:
-                error_code = ex.get_error_code()
-                if error_code == libvirt.VIR_ERR_NO_DOMAIN:
-                    LOG.warn(_("During detach_interface, "
-                               "instance disappeared."),
-                             instance=instance)
-                else:
-                    LOG.error(_('detaching network adapter failed.'),
-                             instance=instance)
-                    raise exception.InterfaceDetachFailed(instance)
+        cfg = self.vif_driver.get_config(instance, vif, None, inst_type)
+        try:
+            self.vif_driver.unplug(instance, vif)
+            flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
+            state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
+            if state == power_state.RUNNING:
+                flags |= libvirt.VIR_DOMAIN_AFFECT_LIVE
+            virt_dom.detachDeviceFlags(cfg.to_xml(), flags)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                LOG.warn(_("During detach_interface, "
+                           "instance disappeared."),
+                         instance=instance)
+            else:
+                LOG.error(_('detaching network adapter failed.'),
+                         instance=instance)
+                raise exception.InterfaceDetachFailed(instance)
 
     def snapshot(self, context, instance, image_href, update_task_state):
         """Create snapshot from a running VM instance.
