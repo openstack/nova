@@ -24,7 +24,7 @@ LOG = logging.getLogger(__name__)
 class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
     """Isolate tenants in specific aggregates."""
 
-   # Aggreagte data and tenant do not change within a request
+   # Aggregate data and tenant do not change within a request
     run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):

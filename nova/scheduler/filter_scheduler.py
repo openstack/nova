@@ -227,7 +227,7 @@ class FilterScheduler(driver.Scheduler):
         """
         exc = retry.pop('exc', None)  # string-ified exception from compute
         if not exc:
-            return  # no exception info from a prevous attempt, skip
+            return  # no exception info from a previous attempt, skip
 
         hosts = retry.get('hosts', None)
         if not hosts:

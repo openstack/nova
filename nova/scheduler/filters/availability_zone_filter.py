@@ -30,7 +30,7 @@ class AvailabilityZoneFilter(filters.BaseHostFilter):
     Note: in theory a compute node can be part of multiple availability_zones
     """
 
-    # Availabilty zones do not change within a request
+    # Availability zones do not change within a request
     run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
