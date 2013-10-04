@@ -337,16 +337,3 @@ class PowerVMDriver(driver.ComputeDriver):
 
         if power_on:
             self._powervm.power_on(instance['name'])
-
-    def add_to_aggregate(self, context, aggregate, host, **kwargs):
-        """Add a compute host to an aggregate."""
-        pass
-
-    def remove_from_aggregate(self, context, aggregate, host, **kwargs):
-        """Remove a compute host from an aggregate."""
-        pass
-
-    def undo_aggregate_operation(self, context, op, aggregate,
-                                  host, set_error=True):
-        """Undo for Resource Pools."""
-        pass
