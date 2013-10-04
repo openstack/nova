@@ -1998,7 +1998,6 @@ def regex_filter(query, model, filters):
     regexp_op_map = {
         'postgresql': '~',
         'mysql': 'REGEXP',
-        'oracle': 'REGEXP_LIKE',
         'sqlite': 'REGEXP'
     }
     db_string = CONF.database.connection.split(':')[0].split('+')[0]
@@ -2010,8 +2009,12 @@ def regex_filter(query, model, filters):
             continue
         if 'property' == type(column_attr).__name__:
             continue
-        query = query.filter(column_attr.op(db_regexp_op)(
-                                    str(filters[filter_name])))
+        if db_regexp_op == 'LIKE':
+            query = query.filter(column_attr.op(db_regexp_op)(
+                                 '%' + str(filters[filter_name]) + '%'))
+        else:
+            query = query.filter(column_attr.op(db_regexp_op)(
+                                 str(filters[filter_name])))
     return query
 
 
