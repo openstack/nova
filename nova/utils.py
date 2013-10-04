@@ -22,7 +22,6 @@
 import contextlib
 import datetime
 import functools
-import hashlib
 import inspect
 import os
 import pyclbr
@@ -767,14 +766,6 @@ def read_cached_file(filename, cache_info, reload_func=None):
         if reload_func:
             reload_func(cache_info['data'])
     return cache_info['data']
-
-
-def hash_file(file_like_object):
-    """Generate a hash for the contents of a file."""
-    checksum = hashlib.sha1()
-    for chunk in iter(lambda: file_like_object.read(32768), b''):
-        checksum.update(chunk)
-    return checksum.hexdigest()
 
 
 @contextlib.contextmanager

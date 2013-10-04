@@ -17,7 +17,6 @@
 import __builtin__
 import datetime
 import functools
-import hashlib
 import importlib
 import os
 import os.path
@@ -403,13 +402,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertEqual('&gt;', utils.xhtml_escape('>'))
         self.assertEqual('&lt;', utils.xhtml_escape('<'))
         self.assertEqual('&lt;foo&gt;', utils.xhtml_escape('<foo>'))
-
-    def test_hash_file(self):
-        data = 'Mary had a little lamb, its fleece as white as snow'
-        flo = StringIO.StringIO(data)
-        h1 = utils.hash_file(flo)
-        h2 = hashlib.sha1(data).hexdigest()
-        self.assertEquals(h1, h2)
 
     def test_is_valid_ipv4(self):
         self.assertTrue(utils.is_valid_ipv4('127.0.0.1'))
