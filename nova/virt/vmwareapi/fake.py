@@ -164,12 +164,14 @@ class ObjectContent(object):
 
         # propSet is the name your Python code will need to
         # use since this is the name that the API will use
-        self.propSet = prop_list
+        if prop_list:
+            self.propSet = prop_list
 
         # missingSet is the name your python code will
         # need to use since this is the name that the
         # API we are talking to will use.
-        self.missingSet = missing_list
+        if missing_list:
+            self.missingSet = missing_list
 
 
 class ManagedObject(object):
