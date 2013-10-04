@@ -159,10 +159,8 @@ class BareMetalIPMITestCase(test.NoDBTestCase):
         self.ipmi._exec_ipmitool("power on").AndReturn([])
         self.ipmi._exec_ipmitool("power status").AndReturn(
                 ["Chassis Power is off\n"])
-        self.ipmi._exec_ipmitool("power on").AndReturn([])
         self.ipmi._exec_ipmitool("power status").AndReturn(
                 ["Chassis Power is off\n"])
-        self.ipmi._exec_ipmitool("power on").AndReturn([])
         self.ipmi._exec_ipmitool("power status").AndReturn(
                 ["Chassis Power is off\n"])
         self.mox.ReplayAll()
