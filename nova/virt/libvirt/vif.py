@@ -839,7 +839,7 @@ class LibvirtOpenVswitchVirtualPortDriver(LibvirtGenericVIFDriver):
 
 
 class NeutronLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
-    """Retained in Grizzly for compatibility with Nuetron
+    """Retained in Grizzly for compatibility with Neutron
        drivers which do not yet report 'vif_type' port binding.
        Will be deprecated in Havana, and removed in Ixxxx.
     """
@@ -869,5 +869,5 @@ class NeutronLinuxBridgeVIFDriver(LibvirtGenericVIFDriver):
     def unplug(self, instance, vif):
         self.unplug_bridge(instance, vif)
 
-# For compatibility with exsiting Nova deployments
+# For compatibility with existing Nova deployments
 QuantumLinuxBridgeVIFDriver = NeutronLinuxBridgeVIFDriver

@@ -201,7 +201,7 @@ class VolumeDriver(object):
 
 
 class LibvirtVolumeDriver(VolumeDriver):
-    """The VolumeDriver deligates to nova.virt.libvirt.volume."""
+    """The VolumeDriver delegates to nova.virt.libvirt.volume."""
 
     def __init__(self, virtapi):
         super(LibvirtVolumeDriver, self).__init__(virtapi)

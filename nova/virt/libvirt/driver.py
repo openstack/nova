@@ -373,7 +373,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # Some filesystems (eg GlusterFS via FUSE) don't support
             # O_DIRECT though. For those we fallback to 'writethrough'
             # which gives host crash safety, and is safe for migration
-            # provided the filesystem is cache coherant (cluster filesystems
+            # provided the filesystem is cache coherent (cluster filesystems
             # typically are, but things like NFS are not).
             self._disk_cachemode = "none"
             if not self._supports_direct_io(CONF.instances_path):
@@ -933,7 +933,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._delete_instance_files(instance)
 
             self._cleanup_lvm(instance)
-            #NOTE(haomai): destory volumes if needed
+            #NOTE(haomai): destroy volumes if needed
             if CONF.libvirt_images_type == 'rbd':
                 self._cleanup_rbd(instance)
 
@@ -1048,7 +1048,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Note(cfb): If the volume has a custom block size, check that
         #            that we are using QEMU/KVM and libvirt >= 0.10.2. The
-        #            prescence of a block size is considered mandatory by
+        #            presence of a block size is considered mandatory by
         #            cinder so we fail if we can't honor the request.
         data = {}
         if ('data' in connection_info):
@@ -1345,7 +1345,7 @@ class LibvirtDriver(driver.ComputeDriver):
             live_snapshot = True
             # Abort is an idempotent operation, so make sure any block
             # jobs which may have failed are ended. This operation also
-            # confims the running instance, as opposed to the system as a
+            # confirms the running instance, as opposed to the system as a
             # whole, has a new enough version of the hypervisor (bug 1193146).
             try:
                 virt_dom.blockJobAbort(disk_path, 0)
@@ -1840,7 +1840,7 @@ class LibvirtDriver(driver.ComputeDriver):
         #             is already shutdown.
         if state == power_state.RUNNING:
             dom.shutdown()
-        # NOTE(vish): This actually could take slighty longer than the
+        # NOTE(vish): This actually could take slightly longer than the
         #             FLAG defines depending on how long the get_info
         #             call takes to return.
         self._prepare_pci_devices_for_use(
@@ -2511,7 +2511,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _detach_pci_devices(self, dom, pci_devs):
 
         # for libvirt version < 1.1.1, this is race condition
-        # so forbiden detach if not had this version
+        # so forbid detach if not had this version
         if not self.has_min_version(MIN_LIBVIRT_DEVICE_CALLBACK_VERSION):
             if pci_devs:
                 reason = (_("Detaching PCI devices with libvirt < %(ver)s"
@@ -3022,7 +3022,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def to_xml(self, context, instance, network_info, disk_info,
                image_meta=None, rescue=None,
                block_device_info=None, write_to_disk=False):
-        # We should get image metadata everytime for generating xml
+        # We should get image metadata every time for generating xml
         if image_meta is None:
             (image_service, image_id) = glance.get_remote_image_service(
                                             context, instance['image_ref'])
@@ -3544,7 +3544,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # TODO(berrange): why do we bother converting the
         # libvirt capabilities XML into a special JSON format ?
         # The data format is different across all the drivers
-        # so we could just return the raw capabilties XML
+        # so we could just return the raw capabilities XML
         # which 'compare_cpu' could use directly
         #
         # That said, arch_filter.py now seems to rely on
@@ -3599,7 +3599,7 @@ class LibvirtDriver(driver.ComputeDriver):
         device.update(_get_device_type(cfgdev))
         return device
 
-    def _pci_device_assignbale(self, device):
+    def _pci_device_assignable(self, device):
         if device['dev_type'] == 'type-PF':
             return False
         return self.dev_filter.device_assignable(device)
@@ -3624,7 +3624,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for name in dev_names:
             pci_dev = self._get_pcidev_info(name)
-            if self._pci_device_assignbale(pci_dev):
+            if self._pci_device_assignable(pci_dev):
                 pci_info.append(pci_dev)
 
         return jsonutils.dumps(pci_info)
@@ -4138,7 +4138,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up
         # Retry operation is necessary because continuously request comes,
-        # concorrent request occurs to iptables, then it complains.
+        # concurrent request occurs to iptables, then it complains.
         max_retry = CONF.live_migration_retry_count
         for cnt in range(max_retry):
             try:
@@ -4221,7 +4221,7 @@ class LibvirtDriver(driver.ComputeDriver):
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :param network_info: instance network information
-        :param block_migration: if true, post operation of block_migraiton.
+        :param block_migration: if true, post operation of block_migration.
         """
         # Define migrated instance, otherwise, suspend/destroy does not work.
         dom_list = self._conn.listDefinedDomains()
@@ -4669,7 +4669,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def instance_on_disk(self, instance):
         # ensure directories exist and are writable
         instance_path = libvirt_utils.get_instance_path(instance)
-        LOG.debug(_('Checking instance files accessability %s'), instance_path)
+        LOG.debug(_('Checking instance files accessibility %s'), instance_path)
         return os.access(instance_path, os.W_OK)
 
     def inject_network_info(self, instance, nw_info):

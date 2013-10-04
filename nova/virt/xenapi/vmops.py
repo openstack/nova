@@ -1826,7 +1826,7 @@ class VMOps(object):
             # iSCSI VBDs
             if not self._is_xsm_sr_check_relaxed():
                 raise exception.MigrationError(_('XAPI supporting '
-                                'relax-xsm-sr-check=true requried'))
+                                'relax-xsm-sr-check=true required'))
 
         if 'migrate_data' in dest_check_data:
             vm_ref = self._get_vm_opaque_ref(instance_ref)

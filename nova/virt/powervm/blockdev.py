@@ -112,7 +112,7 @@ class PowerVMDiskAdapter(object):
 
 
 class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
-    """Default block device providor for PowerVM
+    """Default block device provider for PowerVM
 
     This disk adapter uses logical volumes on the hosting VIOS
     to provide backing block devices for instances/LPARs

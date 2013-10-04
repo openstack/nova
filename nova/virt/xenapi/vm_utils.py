@@ -1120,7 +1120,7 @@ def _create_image(context, session, instance, name_label, image_id,
     """
     cache_images = CONF.cache_images.lower()
 
-    # Deterimine if the image is cacheable
+    # Determine if the image is cacheable
     if image_type == ImageType.DISK_ISO:
         cache = False
     elif cache_images == 'all':

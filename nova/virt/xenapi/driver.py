@@ -552,7 +552,7 @@ class XenAPIDriver(driver.ComputeDriver):
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :params network_info: instance network information
-        :params : block_migration: if true, post operation of block_migraiton.
+        :params : block_migration: if true, post operation of block_migration.
         """
         self._vmops.post_live_migration_at_destination(ctxt, instance_ref,
                 network_info, block_device_info, block_device_info)

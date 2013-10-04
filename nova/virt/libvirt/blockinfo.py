@@ -125,7 +125,7 @@ def get_dev_prefix_for_disk_bus(disk_bus):
         return "vd"
     elif disk_bus == "xen":
         # Two possible mappings for Xen, xvda or sda
-        # which are interchangable, so we pick sda
+        # which are interchangeable, so we pick sda
         return "sd"
     elif disk_bus == "scsi":
         return "sd"
@@ -373,7 +373,7 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
 
     # NOTE (ndipanov): This is a hack to avoid considering an image
     #                  BDM with local target, as we don't support them
-    #                  yet. Only aplies when passed non-driver format
+    #                  yet. Only applies when passed non-driver format
     no_root_bdm = (not root_bdm or (
         root_bdm.get('source_type') == 'image' and
         root_bdm.get('destination_type') == 'local'))
@@ -517,7 +517,7 @@ def get_disk_mapping(virt_type, instance,
                     if bdm.get('boot_index') == 0).next()
     except StopIteration:
         # NOTE (ndipanov): This happens when we boot from image as
-        # there is no driver represenation of local targeted images
+        # there is no driver representation of local targeted images
         # and they will not be in block_device_info list.
         root_bdm = None
 
@@ -527,7 +527,7 @@ def get_disk_mapping(virt_type, instance,
                               disk_bus, cdrom_bus, root_device_name)
 
     mapping['root'] = root_info
-    # NOTE (ndipanov): This implicitely relies on image->local BDMs not
+    # NOTE (ndipanov): This implicitly relies on image->local BDMs not
     #                  being considered in the driver layer - so missing
     #                  bdm with boot_index 0 means - use image, unless it was
     #                  overriden. This can happen when using legacy syntax and

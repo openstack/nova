@@ -519,7 +519,7 @@ class ComputeDriver(object):
     def post_live_migration(self, ctxt, instance_ref, block_device_info):
         """Post operation of live migration at source host.
 
-        :param ctxt: security contet
+        :param ctxt: security context
         :instance_ref: instance object that was migrated
         :block_device_info: instance block device information
         """

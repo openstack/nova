@@ -4333,7 +4333,7 @@ class BlockDeviceMappingTestCase(test.TestCase):
                                                           bdm['instance_uuid'])
         self.assertEqual(len(bdm), 0)
 
-    def test_block_device_mapping_destory_by_instance_and_volumne(self):
+    def test_block_device_mapping_destroy_by_instance_and_volumne(self):
         vol_id1 = '69f5c254-1a5b-4fff-acf7-cb369904f58f'
         vol_id2 = '69f5c254-1a5b-4fff-acf7-cb369904f59f'
 
