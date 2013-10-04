@@ -576,6 +576,63 @@ class _ComputeAPIUnitTestMixIn(object):
         for k, v in updates.items():
             self.assertEqual(inst[k], v)
 
+    def test_local_delete_with_deleted_volume(self):
+        bdms = [{'id': 'bmd_id', 'volume_id': 'volume_id',
+                 'delete_on_termiantion': False}]
+
+        def _fake_do_delete(context, instance, bdms,
+                           rservations=None, local=False):
+            pass
+
+        inst = self._create_instance_obj()
+        inst._context = self.context
+
+        self.mox.StubOutWithMock(inst, 'destroy')
+        self.mox.StubOutWithMock(self.context, 'elevated')
+        self.mox.StubOutWithMock(inst.info_cache, 'delete')
+        self.mox.StubOutWithMock(self.compute_api.network_api,
+                                 'deallocate_for_instance')
+        self.mox.StubOutWithMock(db, 'instance_system_metadata_get')
+        self.mox.StubOutWithMock(compute_utils,
+                                 'notify_about_instance_usage')
+        self.mox.StubOutWithMock(self.compute_api.volume_api,
+                                 'terminate_connection')
+        self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
+
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
+
+        inst.info_cache.delete()
+        compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
+                                                  self.context,
+                                                   inst,
+                                                   'delete.start')
+        self.context.elevated().MultipleTimes().AndReturn(self.context)
+        if not self.is_cells:
+            self.compute_api.network_api.deallocate_for_instance(
+                        self.context, inst)
+        db.instance_system_metadata_get(self.context, inst.uuid
+                                            ).AndReturn('sys-meta')
+
+        self.compute_api.volume_api.terminate_connection(
+            mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
+               AndRaise(exception.  VolumeNotFound('volume_id'))
+        db.block_device_mapping_destroy(self.context, mox.IgnoreArg())
+
+        inst.destroy()
+        compute_utils.notify_about_instance_usage(
+                mox.IgnoreArg(),
+                self.context, inst, 'delete.end',
+                system_metadata='sys-meta')
+
+        self.mox.ReplayAll()
+        self.compute_api._local_delete(self.context, inst, bdms,
+                                       'delete',
+                                       _fake_do_delete)
+
     def test_delete_disabled(self):
         inst = self._create_instance_obj()
         inst.disable_terminate = True

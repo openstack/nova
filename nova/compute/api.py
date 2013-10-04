@@ -1478,12 +1478,16 @@ class API(base.Base):
                 #             connector. This can be improved when we
                 #             expose get_volume_connector to rpc.
                 connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
-                self.volume_api.terminate_connection(context,
-                                                     bdm['volume_id'],
-                                                     connector)
-                self.volume_api.detach(elevated, bdm['volume_id'])
-                if bdm['delete_on_termination']:
-                    self.volume_api.delete(context, bdm['volume_id'])
+                try:
+                    self.volume_api.terminate_connection(context,
+                                                         bdm['volume_id'],
+                                                         connector)
+                    self.volume_api.detach(elevated, bdm['volume_id'])
+                    if bdm['delete_on_termination']:
+                        self.volume_api.delete(context, bdm['volume_id'])
+                except Exception as exc:
+                    err_str = _("Ignoring volume cleanup failure due to %s")
+                    LOG.warn(err_str % exc, instance=instance)
             self.db.block_device_mapping_destroy(context, bdm['id'])
         cb(context, instance, bdms, local=True)
         instance.destroy()
