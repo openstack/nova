@@ -31,65 +31,66 @@ from nova.tests.api.openstack import fakes
 from nova.tests import utils
 
 
-FAKE_CELLS = [
-        dict(id=1, name='cell1', is_parent=True,
-                weight_scale=1.0, weight_offset=0.0,
-                transport_url='rabbit://bob:xxxx@r1.example.org/'),
-        dict(id=2, name='cell2', is_parent=False,
-                weight_scale=1.0, weight_offset=0.0,
-                transport_url='rabbit://alice:qwerty@r2.example.org/')]
-
-
-FAKE_CAPABILITIES = [
-        {'cap1': '0,1', 'cap2': '2,3'},
-        {'cap3': '4,5', 'cap4': '5,6'}]
-
-
-def fake_cell_get(self, context, cell_name):
-    for cell in FAKE_CELLS:
-        if cell_name == cell['name']:
-            return cell
-    else:
-        raise exception.CellNotFound(cell_name=cell_name)
-
-
-def fake_cell_create(self, context, values):
-    cell = dict(id=1)
-    cell.update(values)
-    return cell
-
-
-def fake_cell_update(self, context, cell_id, values):
-    cell = fake_cell_get(self, context, cell_id)
-    cell.update(values)
-    return cell
-
-
-def insecure_transport_url(url):
-    transport = rpc_driver.parse_transport_url(url)
-    return rpc_driver.unparse_transport_url(transport, False)
-
-
-def fake_cells_api_get_all_cell_info(*args):
-    cells = copy.deepcopy(FAKE_CELLS)
-    cells[0]['transport_url'] = insecure_transport_url(
-        cells[0]['transport_url'])
-    cells[1]['transport_url'] = insecure_transport_url(
-        cells[1]['transport_url'])
-    for i, cell in enumerate(cells):
-        cell['capabilities'] = FAKE_CAPABILITIES[i]
-    return cells
-
-
-class CellsTest(test.NoDBTestCase):
+class BaseCellsTest(test.NoDBTestCase):
     def setUp(self):
-        super(CellsTest, self).setUp()
+        super(BaseCellsTest, self).setUp()
+
+        self.fake_cells = [
+                dict(id=1, name='cell1', is_parent=True,
+                     weight_scale=1.0, weight_offset=0.0,
+                     transport_url='rabbit://bob:xxxx@r1.example.org/'),
+                dict(id=2, name='cell2', is_parent=False,
+                     weight_scale=1.0, weight_offset=0.0,
+                     transport_url='rabbit://alice:qwerty@r2.example.org/')]
+
+        self.fake_capabilities = [
+                {'cap1': '0,1', 'cap2': '2,3'},
+                {'cap3': '4,5', 'cap4': '5,6'}]
+
+        def fake_cell_get(_self, context, cell_name):
+            for cell in self.fake_cells:
+                if cell_name == cell['name']:
+                    return cell
+            else:
+                raise exception.CellNotFound(cell_name=cell_name)
+
+        def fake_cell_create(_self, context, values):
+            cell = dict(id=1)
+            cell.update(values)
+            return cell
+
+        def fake_cell_update(_self, context, cell_id, values):
+            cell = fake_cell_get(_self, context, cell_id)
+            cell.update(values)
+            return cell
+
+        def fake_cells_api_get_all_cell_info(*args):
+            return self._get_all_cell_info(*args)
+
         self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_get', fake_cell_get)
         self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_update', fake_cell_update)
         self.stubs.Set(cells_rpcapi.CellsAPI, 'cell_create', fake_cell_create)
         self.stubs.Set(cells_rpcapi.CellsAPI, 'get_cell_info_for_neighbors',
                 fake_cells_api_get_all_cell_info)
 
+    def _get_all_cell_info(self, *args):
+        def insecure_transport_url(url):
+            transport = rpc_driver.parse_transport_url(url)
+            return rpc_driver.unparse_transport_url(transport, False)
+
+        cells = copy.deepcopy(self.fake_cells)
+        cells[0]['transport_url'] = insecure_transport_url(
+                cells[0]['transport_url'])
+        cells[1]['transport_url'] = insecure_transport_url(
+                cells[1]['transport_url'])
+        for i, cell in enumerate(cells):
+                cell['capabilities'] = self.fake_capabilities[i]
+        return cells
+
+
+class CellsTest(BaseCellsTest):
+    def setUp(self):
+        super(CellsTest, self).setUp()
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = cells_ext.Controller(self.ext_mgr)
         self.context = context.get_admin_context()
@@ -103,7 +104,7 @@ class CellsTest(test.NoDBTestCase):
 
         self.assertEqual(len(res_dict['cells']), 2)
         for i, cell in enumerate(res_dict['cells']):
-            self.assertEqual(cell['name'], FAKE_CELLS[i]['name'])
+            self.assertEqual(cell['name'], self.fake_cells[i]['name'])
             self.assertNotIn('capabilitiles', cell)
             self.assertNotIn('password', cell)
 
@@ -113,8 +114,8 @@ class CellsTest(test.NoDBTestCase):
 
         self.assertEqual(len(res_dict['cells']), 2)
         for i, cell in enumerate(res_dict['cells']):
-            self.assertEqual(cell['name'], FAKE_CELLS[i]['name'])
-            self.assertEqual(cell['capabilities'], FAKE_CAPABILITIES[i])
+            self.assertEqual(cell['name'], self.fake_cells[i]['name'])
+            self.assertEqual(cell['capabilities'], self.fake_capabilities[i])
             self.assertNotIn('password', cell)
 
     def test_show_bogus_cell_raises(self):
@@ -430,9 +431,9 @@ class CellsTest(test.NoDBTestCase):
                 self.controller.sync_instances, req, body=body)
 
 
-class TestCellsXMLSerializer(test.NoDBTestCase):
+class TestCellsXMLSerializer(BaseCellsTest):
     def test_multiple_cells(self):
-        fixture = {'cells': fake_cells_api_get_all_cell_info()}
+        fixture = {'cells': self._get_all_cell_info()}
 
         serializer = cells_ext.CellsTemplate()
         output = serializer.serialize(fixture)
