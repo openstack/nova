@@ -21,7 +21,6 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.servicegroup import api
-from nova import utils
 
 
 CONF = cfg.CONF
@@ -66,7 +65,7 @@ class DbDriver(api.ServiceGroupDriver):
             # below does not (and will fail)
             last_heartbeat = last_heartbeat.replace(tzinfo=None)
         # Timestamps in DB are UTC.
-        elapsed = utils.total_seconds(timeutils.utcnow() - last_heartbeat)
+        elapsed = timeutils.delta_seconds(last_heartbeat, timeutils.utcnow())
         LOG.debug('DB_Driver.is_up last_heartbeat = %(lhb)s elapsed = %(el)s',
                   {'lhb': str(last_heartbeat), 'el': str(elapsed)})
         return abs(elapsed) <= CONF.service_down_time
