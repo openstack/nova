@@ -1003,6 +1003,21 @@ class PowerVMLocalVolumeAdapterTestCase(test.TestCase):
                           self.powervm_adapter.create_volume_from_image,
                           self.context, self.instance, self.image_id)
 
+    def test_create_volume_from_image_fails_uncompressed_not_found(self):
+
+        def fake_run_vios_command(cmd, check_exit_code=True):
+            if cmd.startswith('ls -o'):
+                return None
+            else:
+                return "fake"
+
+        self.stubs.Set(self.powervm_adapter, 'run_vios_command',
+                       fake_run_vios_command)
+
+        self.assertRaises(exception.PowerVMFileTransferFailed,
+                          self.powervm_adapter.create_volume_from_image,
+                          self.context, self.instance, self.image_id)
+
     def test_create_volume_from_image_fails_with_disk_name(self):
         """
         Tests that delete_volume is called to cleanup the volume after
