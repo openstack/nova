@@ -865,7 +865,8 @@ class HyperVAPITestCase(test.TestCase):
 
         if not boot_from_volume:
             m = vhdutils.VHDUtils.get_vhd_info(mox.Func(self._check_img_path))
-            m.AndReturn({'MaxInternalSize': 1024})
+            m.AndReturn({'MaxInternalSize': 1024, 'FileSize': 1024,
+                         'Type': 2})
 
             if cow:
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
@@ -873,8 +874,8 @@ class HyperVAPITestCase(test.TestCase):
                 vhdutils.VHDUtils.create_differencing_vhd(mox.IsA(str),
                                                           mox.IsA(str))
             else:
-                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
                 fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+                vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
 
         self._setup_create_instance_mocks(setup_vif_mocks_func,
                                           boot_from_volume,
