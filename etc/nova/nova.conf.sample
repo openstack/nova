@@ -2995,6 +2995,10 @@
 # Template file for PXE configuration (string value)
 #pxe_config_template=$pybasedir/nova/virt/baremetal/pxe_config.template
 
+# If True, enable file injection for network info, files and
+# admin password (boolean value)
+#use_file_injection=true
+
 # Timeout for PXE deployments. Default: 0 (unlimited) (integer
 # value)
 #pxe_deploy_timeout=0

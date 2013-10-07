@@ -54,6 +54,10 @@ pxe_opts = [
     cfg.StrOpt('pxe_config_template',
                default='$pybasedir/nova/virt/baremetal/pxe_config.template',
                help='Template file for PXE configuration'),
+    cfg.BoolOpt('use_file_injection',
+                help='If True, enable file injection for network info, '
+                'files and admin password',
+                default=True),
     cfg.IntOpt('pxe_deploy_timeout',
                 help='Timeout for PXE deployments. Default: 0 (unlimited)',
                 default=0),
@@ -339,8 +343,9 @@ class PXE(base.NodeDriver):
         self._cache_tftp_images(context, instance, tftp_image_info)
 
         self._cache_image(context, instance, image_meta)
-        self._inject_into_image(context, node, instance, network_info,
-                injected_files, admin_password)
+        if CONF.baremetal.use_file_injection:
+            self._inject_into_image(context, node, instance, network_info,
+                   injected_files, admin_password)
 
     def destroy_images(self, context, node, instance):
         """Delete instance's image file."""
