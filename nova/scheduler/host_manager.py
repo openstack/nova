@@ -187,6 +187,7 @@ class HostState(object):
         # overwrite any values, or get overwritten themselves. Store in self so
         # filters can schedule with them.
         self.stats = self._statmap(compute.get('stats', []))
+        self.hypervisor_version = compute['hypervisor_version']
 
         # Track number of instances on host
         self.num_instances = int(self.stats.get('num_instances', 0))

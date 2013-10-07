@@ -25,6 +25,7 @@ from nova.scheduler import host_manager
 from nova import test
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
+from nova import utils
 
 
 class FakeFilterClass1(filters.BaseHostFilter):
@@ -435,12 +436,14 @@ class HostStateTestCase(test.NoDBTestCase):
             dict(key='num_os_type_windoze', value='1'),
             dict(key='io_workload', value='42'),
         ]
+        hyper_ver_int = utils.convert_version_to_int('6.0.0')
         compute = dict(stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
                        updated_at=None, host_ip='127.0.0.1',
-                       hypervisor_type='htype', hypervisor_version='1.1',
+                       hypervisor_type='htype',
                        hypervisor_hostname='hostname', cpu_info='cpu_info',
-                       supported_instances='{}')
+                       supported_instances='{}',
+                       hypervisor_version=hyper_ver_int)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
@@ -459,10 +462,10 @@ class HostStateTestCase(test.NoDBTestCase):
 
         self.assertEqual('127.0.0.1', host.host_ip)
         self.assertEqual('htype', host.hypervisor_type)
-        self.assertEqual('1.1', host.hypervisor_version)
         self.assertEqual('hostname', host.hypervisor_hostname)
         self.assertEqual('cpu_info', host.cpu_info)
         self.assertEqual({}, host.supported_instances)
+        self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     def test_stat_consumption_from_compute_node_non_pci(self):
         stats = [
@@ -477,13 +480,16 @@ class HostStateTestCase(test.NoDBTestCase):
             dict(key='num_os_type_windoze', value='1'),
             dict(key='io_workload', value='42'),
         ]
+        hyper_ver_int = utils.convert_version_to_int('6.0.0')
         compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
-                       updated_at=None, host_ip='127.0.0.1')
+                       updated_at=None, host_ip='127.0.0.1',
+                       hypervisor_version=hyper_ver_int)
 
         host = host_manager.HostState("fakehost", "fakenode")
         host.update_from_compute_node(compute)
         self.assertEqual(None, host.pci_stats)
+        self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     def test_stat_consumption_from_instance(self):
         host = host_manager.HostState("fakehost", "fakenode")

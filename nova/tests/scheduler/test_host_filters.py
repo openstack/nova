@@ -31,6 +31,7 @@ from nova.scheduler.filters import trusted_filter
 from nova import servicegroup
 from nova import test
 from nova.tests.scheduler import fakes
+from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('my_ip', 'nova.netconf')
@@ -652,17 +653,19 @@ class HostFiltersTestCase(test.NoDBTestCase):
                 {'free_ram_mb': 1024, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_image_properties_filter_passes_same_inst_props(self):
+    def test_image_properties_filter_passes_same_inst_props_and_version(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['ImagePropertiesFilter']()
         img_props = {'properties': {'_architecture': 'x86_64',
                                     'hypervisor_type': 'kvm',
-                                    'vm_mode': 'hvm'}}
+                                    'vm_mode': 'hvm',
+                                    'hypervisor_version_requires': '>=6.0,<6.2'
+        }}
         filter_properties = {'request_spec': {'image': img_props}}
-        capabilities = {'supported_instances': [
-                                ('x86_64', 'kvm', 'hvm')]}
-        host = fakes.FakeHostState('host1', 'node1',
-                capabilities)
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_different_inst_props(self):
@@ -672,10 +675,25 @@ class HostFiltersTestCase(test.NoDBTestCase):
                                     'hypervisor_type': 'qemu',
                                     'vm_mode': 'hvm'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        capabilities = {'supported_instances': [
-                                ('x86_64', 'kvm', 'hvm')]}
-        host = fakes.FakeHostState('host1', 'node1',
-                capabilities)
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_image_properties_filter_fails_different_hyper_version(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ImagePropertiesFilter']()
+        img_props = {'properties': {'architecture': 'x86_64',
+                                    'hypervisor_type': 'kvm',
+                                    'vm_mode': 'hvm',
+                                    'hypervisor_version_requires': '>=6.2'}}
+        filter_properties = {'request_spec': {'image': img_props}}
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'enabled': True,
+                        'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_passes_partial_inst_props(self):
@@ -684,10 +702,10 @@ class HostFiltersTestCase(test.NoDBTestCase):
         img_props = {'properties': {'architecture': 'x86_64',
                                     'vm_mode': 'hvm'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        capabilities = {'supported_instances': [
-                                ('x86_64', 'kvm', 'hvm')]}
-        host = fakes.FakeHostState('host1', 'node1',
-                capabilities)
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_partial_inst_props(self):
@@ -696,20 +714,20 @@ class HostFiltersTestCase(test.NoDBTestCase):
         img_props = {'properties': {'architecture': 'x86_64',
                                     'vm_mode': 'hvm'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        capabilities = {'supported_instances': [
-                                ('x86_64', 'xen', 'xen')]}
-        host = fakes.FakeHostState('host1', 'node1',
-                capabilities)
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'xen', 'xen')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_passes_without_inst_props(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['ImagePropertiesFilter']()
         filter_properties = {'request_spec': {}}
-        capabilities = {'supported_instances': [
-                                ('x86_64', 'kvm', 'hvm')]}
-        host = fakes.FakeHostState('host1', 'node1',
-                capabilities)
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def test_image_properties_filter_fails_without_host_props(self):
@@ -719,7 +737,37 @@ class HostFiltersTestCase(test.NoDBTestCase):
                                     'hypervisor_type': 'kvm',
                                     'vm_mode': 'hvm'}}
         filter_properties = {'request_spec': {'image': img_props}}
-        host = fakes.FakeHostState('host1', 'node1', {})
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'enabled': True,
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_image_properties_filter_passes_without_hyper_version(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ImagePropertiesFilter']()
+        img_props = {'properties': {'architecture': 'x86_64',
+                                    'hypervisor_type': 'kvm',
+                                    'vm_mode': 'hvm',
+                                    'hypervisor_version_requires': '>=6.0'}}
+        filter_properties = {'request_spec': {'image': img_props}}
+        capabilities = {'enabled': True,
+                        'supported_instances': [('x86_64', 'kvm', 'hvm')]}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_image_properties_filter_fails_with_unsupported_hyper_ver(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ImagePropertiesFilter']()
+        img_props = {'properties': {'architecture': 'x86_64',
+                                    'hypervisor_type': 'kvm',
+                                    'vm_mode': 'hvm',
+                                    'hypervisor_version_requires': '>=6.0'}}
+        filter_properties = {'request_spec': {'image': img_props}}
+        capabilities = {'enabled': True,
+                        'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': 5000}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
     def _do_test_compute_filter_extra_specs(self, ecaps, especs, passes):
@@ -786,8 +834,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
 
         filter_properties = {'context': self.context, 'instance_type':
                 {'memory_mb': 1024}}
-        host = fakes.FakeHostState('host1', 'node1',
-                capabilities)
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def _create_aggregate_with_host(self, name='fake_aggregate',
