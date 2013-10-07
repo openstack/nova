@@ -1814,6 +1814,36 @@ class ModelsObjectComparatorMixin(object):
             self._assertEqualObjects(o1, objs2[o1['id']], ignored_keys)
 
 
+class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
+
+    """Tests for db.api.network_* methods."""
+
+    def setUp(self):
+        super(NetworkTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
+    def test_network_get_all_admin_user(self):
+        networks = db.network_get_all(self.ctxt, project_only=True)
+        network1 = db.network_create_safe(self.ctxt, {})
+        networks.append(network1)
+        network2 = db.network_create_safe(self.ctxt,
+                                          {'project_id': 'project1'})
+        networks.append(network2)
+        self._assertEqualListsOfObjects(networks,
+                                        db.network_get_all(self.ctxt,
+                                                           project_only=True))
+
+    def test_network_get_all_normal_user(self):
+        normal_ctxt = context.RequestContext('fake', 'fake')
+        db.network_create_safe(self.ctxt, {})
+        db.network_create_safe(self.ctxt, {'project_id': 'project1'})
+        network1 = db.network_create_safe(self.ctxt,
+                                          {'project_id': 'fake'})
+        network_db = db.network_get_all(normal_ctxt, project_only=True)
+        self.assertEqual(1, len(network_db))
+        self._assertEqualObjects(network1, network_db[0])
+
+
 class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(ServiceTestCase, self).setUp()
