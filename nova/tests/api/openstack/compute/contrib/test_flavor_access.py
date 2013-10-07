@@ -153,6 +153,20 @@ class FlavorAccessTest(test.NoDBTestCase):
         result = self.flavor_access_controller.index(self.req, '2')
         self.assertEqual(result, expected)
 
+    def test_list_with_no_context(self):
+        req = fakes.HTTPRequest.blank('/v2/flavors/fake/flavors')
+
+        def fake_authorize(context, target=None, action=None):
+            raise exception.PolicyNotAuthorized(action='index')
+
+        self.stubs.Set(flavor_access,
+                       'authorize',
+                       fake_authorize)
+
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.flavor_access_controller.index,
+                          req, 'fake')
+
     def test_list_flavor_with_admin_default_proj1(self):
         expected = {'flavors': [{'id': '0'}, {'id': '1'}]}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors',
@@ -264,6 +278,14 @@ class FlavorAccessTest(test.NoDBTestCase):
             _addTenantAccess(req, '3', body)
         self.assertEqual(result, expected)
 
+    def test_add_tenant_access_with_no_admin_user(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
+                                      use_admin_context=False)
+        body = {'addTenantAccess': {'tenant': 'proj2'}}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.flavor_action_controller._addTenantAccess,
+                          req, '2', body)
+
     def test_add_tenant_access_with_already_added_access(self):
         def stub_add_flavor_access(flavorid, projectid, ctxt=None):
             raise exception.FlavorAccessExists(flavor_id=flavorid,
@@ -289,6 +311,14 @@ class FlavorAccessTest(test.NoDBTestCase):
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_action_controller._removeTenantAccess,
                           self.req, '3', body)
+
+    def test_remove_tenant_access_with_no_admin_user(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
+                                      use_admin_context=False)
+        body = {'removeTenantAccess': {'tenant': 'proj2'}}
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.flavor_action_controller._removeTenantAccess,
+                          req, '2', body)
 
 
 class FlavorAccessSerializerTest(test.NoDBTestCase):
