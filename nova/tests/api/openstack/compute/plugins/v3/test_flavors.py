@@ -42,8 +42,9 @@ FAKE_FLAVORS = {
         "name": 'flavor 1',
         "memory_mb": '256',
         "root_gb": '10',
-        "swap": '512',
-        "ephemeral_gb": '1',
+        "swap": 0,
+        "ephemeral_gb": 0,
+        "vcpus": 0,
         "disabled": False,
     },
     'flavor 2': {
@@ -51,8 +52,9 @@ FAKE_FLAVORS = {
         "name": 'flavor 2',
         "memory_mb": '512',
         "root_gb": '20',
-        "swap": '1024',
-        "ephemeral_gb": '10',
+        "swap": 1024,
+        "ephemeral_gb": 10,
+        "vcpus": 0,
         "disabled": True,
     },
 }
@@ -133,9 +135,9 @@ class FlavorsTest(test.TestCase):
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
-                "vcpus": "",
-                "swap": '512',
-                "ephemeral": "1",
+                "vcpus": 0,
+                "swap": 0,
+                "ephemeral": 0,
                 "disabled": False,
                 "links": [
                     {
@@ -162,9 +164,9 @@ class FlavorsTest(test.TestCase):
                 "name": "flavor 1",
                 "ram": "256",
                 "disk": "10",
-                "vcpus": "",
-                "swap": '512',
-                "ephemeral": "1",
+                "vcpus": 0,
+                "swap": 0,
+                "ephemeral": 0,
                 "disabled": False,
                 "links": [
                     {
@@ -331,9 +333,9 @@ class FlavorsTest(test.TestCase):
                     "name": "flavor 1",
                     "ram": "256",
                     "disk": "10",
-                    "vcpus": "",
-                    "swap": '512',
-                    "ephemeral": "1",
+                    "vcpus": 0,
+                    "swap": 0,
+                    "ephemeral": 0,
                     "disabled": False,
                     "links": [
                         {
@@ -351,9 +353,9 @@ class FlavorsTest(test.TestCase):
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
-                    "vcpus": "",
-                    "swap": '1024',
-                    "ephemeral": "10",
+                    "vcpus": 0,
+                    "swap": 1024,
+                    "ephemeral": 10,
                     "disabled": True,
                     "links": [
                         {
@@ -453,9 +455,9 @@ class FlavorsTest(test.TestCase):
                     "name": "flavor 2",
                     "ram": "512",
                     "disk": "20",
-                    "vcpus": "",
-                    "swap": '1024',
-                    "ephemeral": "10",
+                    "vcpus": 0,
+                    "swap": 1024,
+                    "ephemeral": 10,
                     "disabled": True,
                     "links": [
                         {
@@ -539,7 +541,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
                 "name": "asdf",
                 "ram": "256",
                 "disk": "10",
-                "vcpus": "",
+                "vcpus": 0,
                 "swap": "512",
                 "ephemeral": "512",
                 "disabled": False,

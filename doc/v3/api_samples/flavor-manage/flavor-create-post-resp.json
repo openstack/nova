@@ -2,7 +2,7 @@
     "flavor": {
         "disabled": false,
         "disk": 10,
-        "ephemeral": "",
+        "ephemeral": 0,
         "id": "10",
         "links": [
             {
@@ -16,7 +16,7 @@
         ],
         "name": "test_flavor",
         "ram": 1024,
-        "swap": "",
+        "swap": 0,
         "vcpus": 2
     }
 }

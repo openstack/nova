@@ -16,7 +16,7 @@
         "ram": 1024,
         "vcpus": 2,
         "disabled": false,
-        "ephemeral": "",
-        "swap": ""
+        "ephemeral": 0,
+        "swap": 0
     }
 }

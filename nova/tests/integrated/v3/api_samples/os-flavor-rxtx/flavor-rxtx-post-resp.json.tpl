@@ -17,7 +17,7 @@
         "rxtx_factor": 2.0,
         "vcpus": 2,
         "disabled": false,
-        "ephemeral": "",
-        "swap": ""
+        "ephemeral": 0,
+        "swap": 0
     }
 }

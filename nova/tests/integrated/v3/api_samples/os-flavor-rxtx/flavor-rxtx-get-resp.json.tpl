@@ -2,7 +2,7 @@
     "flavor": {
         "disabled": false,
         "disk": 1,
-        "ephemeral": "",
+        "ephemeral": 0,
         "id": "1",
         "links": [
             {
@@ -17,7 +17,7 @@
         "name": "m1.tiny",
         "ram": 512,
         "rxtx_factor": 1.0,
-        "swap": "",
+        "swap": 0,
         "vcpus": 1
     }
 }
