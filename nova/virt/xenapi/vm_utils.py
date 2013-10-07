@@ -249,7 +249,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         'VCPUs_at_startup': vcpus,
         'VCPUs_max': vcpus,
         'VCPUs_params': vcpu_params,
-        'xenstore_data': {'allowvssprovider': 'false'}}
+        'xenstore_data': {'vm-data/allowvssprovider': 'false'}}
 
     # Complete VM configuration record according to the image type
     # non-raw/raw with PV kernel/raw in HVM mode
