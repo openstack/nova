@@ -849,7 +849,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         Passes straight through to the virtualization driver.
 
-        Synchronise the call beacuse we may still be in the middle of
+        Synchronise the call because we may still be in the middle of
         creating the instance.
         """
         @utils.synchronized(instance['uuid'])
@@ -1493,7 +1493,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                refresh_conn_info=False):
         """Transform volumes to the driver block_device format."""
 
-        # TODO(ndipanov): This method will allways hit the database
+        # TODO(ndipanov): This method will always hit the database
         #                 even though we could pass it bdms if we have
         #                 them already. this is so that we are sure we
         #                 always get the new-style format for now and
@@ -2490,7 +2490,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         #
         # The idea here is to provide the customer with a rescue environment
         # which they are familiar with. So, if they built their instance off of
-        # a Debian image, their rescue VM wil also be Debian.
+        # a Debian image, their rescue VM will also be Debian.
         if not rescue_image_ref:
             # 2. As a last resort, use instance's current image
             LOG.warn(_('Unable to find a different image to use for rescue VM,'
@@ -2800,8 +2800,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 migration, instance, True)
 
             # NOTE(mriedem): delete stashed old_vm_state information; we
-            # default to ACTIVE for backwards compability if old_vm_state is
-            # not set
+            # default to ACTIVE for backwards compatibility if old_vm_state
+            # is not set
             old_vm_state = sys_meta.pop('old_vm_state', vm_states.ACTIVE)
 
             instance.system_metadata = sys_meta
@@ -4794,7 +4794,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             elif vm_power_state == power_state.NOSTATE:
                 # Occasionally, depending on the status of the hypervisor,
                 # which could be restarting for example, an instance may
-                # not be found.  Therefore just log the condidtion.
+                # not be found.  Therefore just log the condition.
                 LOG.warn(_("Instance is unexpectedly not found. Ignore."),
                          instance=db_instance)
         elif vm_state == vm_states.STOPPED:

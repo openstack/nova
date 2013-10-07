@@ -187,7 +187,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                new-world instance objects
         2.36 - Made pause_instance() and unpause_instance() take new-world
                instance objects
-        2.37 - Added the leagacy_bdm_in_spec parameter to run_instance
+        2.37 - Added the legacy_bdm_in_spec parameter to run_instance
         2.38 - Made check_can_live_migrate_[destination|source] take
                new-world instance objects
         2.39 - Made revert_resize() and confirm_resize() take new-world
