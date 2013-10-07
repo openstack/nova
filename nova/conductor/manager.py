@@ -14,8 +14,6 @@
 
 """Handles database requests from other nova services."""
 
-import copy
-
 from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
@@ -578,7 +576,7 @@ class ConductorManager(manager.Manager):
 
     def object_action(self, context, objinst, objmethod, args, kwargs):
         """Perform an action on an object."""
-        oldobj = copy.copy(objinst)
+        oldobj = objinst.obj_clone()
         result = self._object_dispatch(objinst, objmethod, context,
                                        args, kwargs)
         updates = dict()
