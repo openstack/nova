@@ -29,6 +29,9 @@ from nova import utils
 
 ALIAS = "os-rescue"
 CONF = cfg.CONF
+CONF.import_opt('enable_instance_password',
+                'nova.api.openstack.compute.servers')
+
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
@@ -44,6 +47,7 @@ class RescueController(wsgi.Controller):
             msg = _("Server not found")
             raise exc.HTTPNotFound(msg)
 
+    @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('rescue')
     def _rescue(self, req, id, body):
@@ -69,7 +73,10 @@ class RescueController(wsgi.Controller):
             raise exc.HTTPBadRequest(
                 explanation=non_rescuable.format_message())
 
-        return {'admin_pass': password}
+        if CONF.enable_instance_password:
+            return {'admin_pass': password}
+        else:
+            return {}
 
     @extensions.expected_errors((404, 409))
     @wsgi.action('unrescue')

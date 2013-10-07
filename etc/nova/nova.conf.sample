@@ -491,8 +491,10 @@
 # Options defined in nova.api.openstack.compute.servers
 #
 
-# Allows use of instance password during server creation
-# (boolean value)
+# Enables returning of the instance password by the relevant
+# server API calls such as create, rebuild or rescue, If the
+# hypervisor does not support password injection then the
+# password returned will not be correct (boolean value)
 #enable_instance_password=true
 
 
