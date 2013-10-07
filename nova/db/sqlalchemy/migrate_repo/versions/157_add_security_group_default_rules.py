@@ -56,6 +56,6 @@ def downgrade(migrate_engine):
     try:
         security_group_default_rules.drop()
     except Exception:
-        msg = "Exception while droppping table 'security_group_default_rules'"
+        msg = "Exception while dropping table 'security_group_default_rules'"
         LOG.exception(msg)
         raise

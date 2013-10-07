@@ -191,7 +191,7 @@ def _upgrade_bdm_v2(meta, bdm_table, bdm_shadow_table):
         #                  with boot index, as we don't support it yet.
         #                  Also, make sure that instances started with
         #                  the old syntax of specifying an image *and*
-        #                  a bootable volume still have consistend data.
+        #                  a bootable volume still have consistent data.
         bootable = ((strip_dev(device_name) ==
                     strip_dev(instance_root_device))
                     and bdm_v2['source_type'] != 'blank')

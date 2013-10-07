@@ -27,7 +27,7 @@ def upgrade(migrate_engine):
     c_nodes = Table('compute_nodes', meta, autoload=True)
     services = Table('services', meta, autoload=True)
 
-    # set instances.node = compute_nodes.hypervisore_hostname
+    # set instances.node = compute_nodes.hypervisor_hostname
     q = select(
             [instances.c.id, c_nodes.c.hypervisor_hostname],
             whereclause=and_(
