@@ -186,7 +186,7 @@ class BareMetalDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             mountpoint = vol['mount_device']
             self.attach_volume(None,
-                    connection_info, instance['name'], mountpoint)
+                    connection_info, instance, mountpoint)
 
     def _detach_block_devices(self, instance, block_device_info):
         block_device_mapping = driver.\
@@ -195,7 +195,7 @@ class BareMetalDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             mountpoint = vol['mount_device']
             self.detach_volume(
-                    connection_info, instance['name'], mountpoint)
+                    connection_info, instance, mountpoint)
 
     def _start_firewall(self, instance, network_info):
         self.firewall_driver.setup_basic_filtering(
@@ -349,10 +349,10 @@ class BareMetalDriver(driver.ComputeDriver):
         return self.volume_driver.attach_volume(connection_info,
                                                 instance, mountpoint)
 
-    def detach_volume(self, connection_info, instance_name, mountpoint,
+    def detach_volume(self, connection_info, instance, mountpoint,
                       encryption=None):
         return self.volume_driver.detach_volume(connection_info,
-                                                instance_name, mountpoint)
+                                                instance, mountpoint)
 
     def get_info(self, instance):
         inst_uuid = instance.get('uuid')
