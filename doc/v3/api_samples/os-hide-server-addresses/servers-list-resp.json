@@ -1,0 +1,18 @@
+{
+    "servers": [
+        {
+            "id": "b2a7068b-8aed-41a4-aa74-af8feb984bae",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/v3/servers/b2a7068b-8aed-41a4-aa74-af8feb984bae",
+                    "rel": "self"
+                },
+                {
+                    "href": "http://openstack.example.com/servers/b2a7068b-8aed-41a4-aa74-af8feb984bae",
+                    "rel": "bookmark"
+                }
+            ],
+            "name": "new-server-test"
+        }
+    ]
+}
