@@ -55,7 +55,7 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                      target_address + ' ' + target_port +
                      ' * * * * * * * * * * * * *')
         #Listing targets
-        self.execute('iscsicli.exe ' + 'LisTargets')
+        self.execute('iscsicli.exe ' + 'ListTargets')
         #Sending login
         self.execute('iscsicli.exe ' + 'qlogintarget ' + target_iqn)
         #Waiting the disk to be mounted.
