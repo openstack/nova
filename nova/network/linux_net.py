@@ -21,10 +21,10 @@
 
 import calendar
 import inspect
-import netaddr
 import os
 import re
 
+import netaddr
 from oslo.config import cfg
 
 from nova import db

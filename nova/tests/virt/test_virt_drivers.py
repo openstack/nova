@@ -16,9 +16,10 @@
 
 import base64
 import fixtures
-import netaddr
 import sys
 import traceback
+
+import netaddr
 
 from nova.compute import manager
 from nova import exception
