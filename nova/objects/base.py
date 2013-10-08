@@ -25,6 +25,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common.rpc import common as rpc_common
 import nova.openstack.common.rpc.serializer
+from nova.openstack.common import versionutils
 
 
 LOG = logging.getLogger('object')
@@ -149,30 +150,6 @@ def remotable(fn):
     return wrapper
 
 
-# Object versioning rules
-#
-# Each service has its set of objects, each with a version attached. When
-# a client attempts to call an object method, the server checks to see if
-# the version of that object matches (in a compatible way) its object
-# implementation. If so, cool, and if not, fail.
-def check_object_version(server, client):
-    try:
-        client_major, _client_minor = client.split('.')
-        server_major, _server_minor = server.split('.')
-        client_minor = int(_client_minor)
-        server_minor = int(_server_minor)
-    except ValueError:
-        raise exception.IncompatibleObjectVersion(
-            _('Invalid version string'))
-
-    if client_major != server_major:
-        raise exception.IncompatibleObjectVersion(
-            dict(client=client_major, server=server_major))
-    if client_minor > server_minor:
-        raise exception.IncompatibleObjectVersion(
-            dict(client=client_minor, server=server_minor))
-
-
 class NovaObject(object):
     """Base class and object factory.
 
@@ -184,7 +161,12 @@ class NovaObject(object):
     """
     __metaclass__ = NovaObjectMetaclass
 
-    # Version of this object (see rules above check_object_version())
+    # Object versioning rules
+    #
+    # Each service has its set of objects, each with a version attached. When
+    # a client attempts to call an object method, the server checks to see if
+    # the version of that object matches (in a compatible way) its object
+    # implementation. If so, cool, and if not, fail.
     VERSION = '1.0'
 
     # The fields present in this object as key:field pairs. For example:
@@ -218,11 +200,9 @@ class NovaObject(object):
         for objclass in cls._obj_classes[objname]:
             if objclass.VERSION == objver:
                 return objclass
-            try:
-                check_object_version(objclass.VERSION, objver)
+
+            if versionutils.is_compatible(objver, objclass.VERSION):
                 compatible_match = objclass
-            except exception.IncompatibleObjectVersion:
-                pass
 
         if compatible_match:
             return compatible_match
