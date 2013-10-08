@@ -208,12 +208,6 @@ class VirtualPowerManager(base.PowerManager):
                 return True
         return False
 
-    def start_console(self):
-        pass
-
-    def stop_console(self):
-        pass
-
     def _run_command(self, cmd, check_exit_code=True):
         """Run a remote command using an active ssh connection.
 

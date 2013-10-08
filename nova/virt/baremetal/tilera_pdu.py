@@ -169,9 +169,3 @@ class Pdu(base.PowerManager):
 
     def is_power_on(self):
         return self._is_power(CONF.baremetal.tile_pdu_on)
-
-    def start_console(self):
-        pass
-
-    def stop_console(self):
-        pass
