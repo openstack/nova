@@ -151,7 +151,7 @@ class CellStateManager(base.Base):
         if cells_config:
             config_path = CONF.find_file(cells_config)
             if not config_path:
-                raise cfg.ConfigFilesNotFoundError(path=config_path)
+                raise cfg.ConfigFilesNotFoundError(config_files=[cells_config])
             return CellStateManagerFile(cell_state_cls, config_path)
 
         return CellStateManagerDB(cell_state_cls)
