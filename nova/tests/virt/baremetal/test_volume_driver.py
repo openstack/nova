@@ -19,6 +19,8 @@ from oslo.config import cfg
 
 from nova import test
 from nova.virt.baremetal import volume_driver
+from nova.virt import fake
+from nova.virt.libvirt import volume as libvirt_volume
 
 CONF = cfg.CONF
 
@@ -159,3 +161,33 @@ class BareMetalVolumeTestCase(test.NoDBTestCase):
         self.flags(iscsi_iqn_prefix='iqn.2012-12.a.b', group='baremetal')
         iqn = volume_driver._get_iqn('instname', '/dev/vdx')
         self.assertEquals('iqn.2012-12.a.b:instname-dev-vdx', iqn)
+
+
+class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
+
+    def setUp(self):
+        super(BareMetalLibVirtVolumeDriverTestCase, self).setUp()
+        self.flags(libvirt_volume_drivers=[
+                'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
+                'fake2=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
+                ])
+        self.driver = volume_driver.LibvirtVolumeDriver(fake.FakeVirtAPI())
+        self.disk_info = {
+            'dev': 'vdc',
+            'bus': 'baremetal',
+            'type': 'baremetal',
+            }
+        self.connection_info = {'driver_volume_type': 'fake'}
+
+    def test_init_loads_libvirt_volume_drivers(self):
+        self.assertEqual(type(self.driver.volume_drivers['fake']),
+                         libvirt_volume.LibvirtFakeVolumeDriver)
+        self.assertEqual(type(self.driver.volume_drivers['fake2']),
+                         libvirt_volume.LibvirtFakeVolumeDriver)
+        self.assertEqual(len(self.driver.volume_drivers), 2)
+
+    def test_fake_connect_volume(self):
+        """Check connect_volume returns without exceptions."""
+        self.driver._volume_driver_method('connect_volume',
+                                          self.connection_info,
+                                          self.disk_info)
