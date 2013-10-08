@@ -82,11 +82,11 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
         else:
             self.fail('instance failed to start')
         ip = reservations[0].instances[0].private_ip_address
-        self.failIf(ip == '0.0.0.0')
+        self.assertFalse(ip == '0.0.0.0')
         self.data['private_ip'] = ip
         if FLAGS.use_ipv6:
             ipv6 = reservations[0].instances[0].dns_name_v6
-            self.failIf(ipv6 is None)
+            self.assertFalse(ipv6 is None)
             self.data['ip_v6'] = ipv6
 
     def test_004_can_ssh_to_ipv6(self):
@@ -124,11 +124,11 @@ class InstanceTestsFromPublic(base.UserSmokeTestCase):
         else:
             self.fail('instance failed to start')
         ip = reservations[0].instances[0].private_ip_address
-        self.failIf(ip == '0.0.0.0')
+        self.assertFalse(ip == '0.0.0.0')
         self.data['private_ip'] = ip
         if FLAGS.use_ipv6:
             ipv6 = reservations[0].instances[0].dns_name_v6
-            self.failIf(ipv6 is None)
+            self.assertFalse(ipv6 is None)
             self.data['ip_v6'] = ipv6
 
     def test_014_can_not_ping_private_ip(self):

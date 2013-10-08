@@ -551,7 +551,7 @@ class LimiterTest(BaseLimitTestSuite):
 
         expected = 60.0 / 7.0
         results = self._check_sum(1, "POST", "/anything")
-        self.failUnlessAlmostEqual(expected, results, 8)
+        self.assertAlmostEqual(expected, results, 8)
 
     def test_delay_GET(self):
         # Ensure the 11th GET will result in NO delay.

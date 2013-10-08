@@ -166,10 +166,10 @@ class InstanceTests(base.UserSmokeTestCase):
             self.fail('instance failed to start')
         self.data['instance'].update()
         ip = self.data['instance'].private_ip_address
-        self.failIf(ip == '0.0.0.0')
+        self.assertFalse(ip == '0.0.0.0')
         if FLAGS.use_ipv6:
             ipv6 = self.data['instance'].dns_name_v6
-            self.failIf(ipv6 is None)
+            self.assertFalse(ipv6 is None)
 
     def test_004_can_ping_private_ip(self):
         if not self.wait_for_ping(self.data['instance'].private_ip_address):
