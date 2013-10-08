@@ -2180,6 +2180,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
 # delete=True behavior of instance_metadata_update(...)
 def _instance_metadata_update_in_place(context, instance, metadata_type, model,
                                        metadata, session):
+    metadata = dict(metadata)
     to_delete = []
     for keyvalue in instance[metadata_type]:
         key = keyvalue['key']
