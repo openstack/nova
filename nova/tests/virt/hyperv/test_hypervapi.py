@@ -178,6 +178,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_parent_path')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_info')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'resize_vhd')
+        self._mox.StubOutWithMock(vhdutils.VHDUtils,
+                                  'get_internal_vhd_size_by_file_size')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'validate_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'get_vhd_format')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'create_dynamic_vhd')
@@ -965,6 +967,11 @@ class HyperVAPITestCase(test.NoDBTestCase):
             m.AndReturn({'MaxInternalSize': 1024})
 
             fake.PathUtils.copyfile(mox.IsA(str), mox.IsA(str))
+
+            m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
+                mox.IsA(str), mox.IsA(object))
+            m.AndReturn(1025)
+
             vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
 
     def _setup_spawn_instance_mocks(self, cow, setup_vif_mocks_func=None,
@@ -1002,6 +1009,9 @@ class HyperVAPITestCase(test.NoDBTestCase):
                 m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
                 m.AndReturn({'MaxInternalSize': 1024, 'FileSize': 1024,
                              'Type': 2})
+                m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
+                    mox.IsA(str), mox.IsA(object))
+                m.AndReturn(1025)
                 vhdutils.VHDUtils.resize_vhd(mox.IsA(str), mox.IsA(object))
 
         self._setup_check_admin_permissions_mocks(
@@ -1432,6 +1442,9 @@ class HyperVAPITestCase(test.NoDBTestCase):
         m = vhdutils.VHDUtils.get_vhd_info(mox.IsA(str))
         m.AndReturn({'ParentPath': fake_parent_vhd_path,
                      'MaxInternalSize': 1})
+        m = vhdutils.VHDUtils.get_internal_vhd_size_by_file_size(
+            mox.IsA(str), mox.IsA(object))
+        m.AndReturn(1025)
 
         vhdutils.VHDUtils.reconnect_parent_vhd(mox.IsA(str), mox.IsA(str))
 
