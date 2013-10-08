@@ -109,6 +109,9 @@ def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
     if adapter_type == "busLogic":
         virtual_controller = client_factory.create(
                                 'ns0:VirtualBusLogicController')
+    elif adapter_type == "lsiLogicsas":
+        virtual_controller = client_factory.create(
+                                'ns0:VirtualLsiLogicSASController')
     else:
         virtual_controller = client_factory.create(
                                 'ns0:VirtualLsiLogicController')
@@ -265,7 +268,7 @@ def get_vmdk_path_and_adapter_type(hardware_devices):
         elif device.__class__.__name__ == "VirtualIDEController":
             adapter_type_dict[device.key] = "ide"
         elif device.__class__.__name__ == "VirtualLsiLogicSASController":
-            adapter_type_dict[device.key] = "lsiLogic"
+            adapter_type_dict[device.key] = "lsiLogicsas"
 
     adapter_type = adapter_type_dict.get(vmdk_controler_key, "")
 
@@ -286,11 +289,11 @@ def get_rdm_disk(hardware_devices, uuid):
             return device
 
 
-def get_copy_virtual_disk_spec(client_factory, adapter_type="lsilogic",
+def get_copy_virtual_disk_spec(client_factory, adapter_type="lsiLogic",
                                disk_type="preallocated"):
     """Builds the Virtual Disk copy spec."""
     dest_spec = client_factory.create('ns0:VirtualDiskSpec')
-    dest_spec.adapterType = adapter_type
+    dest_spec.adapterType = get_vmdk_adapter_type(adapter_type)
     dest_spec.diskType = disk_type
     return dest_spec
 
@@ -299,7 +302,7 @@ def get_vmdk_create_spec(client_factory, size_in_kb, adapter_type="lsiLogic",
                          disk_type="preallocated"):
     """Builds the virtual disk create spec."""
     create_vmdk_spec = client_factory.create('ns0:FileBackedVirtualDiskSpec')
-    create_vmdk_spec.adapterType = adapter_type
+    create_vmdk_spec.adapterType = get_vmdk_adapter_type(adapter_type)
     create_vmdk_spec.diskType = disk_type
     create_vmdk_spec.capacityKb = size_in_kb
     return create_vmdk_spec
@@ -309,7 +312,7 @@ def get_rdm_create_spec(client_factory, device, adapter_type="lsiLogic",
                         disk_type="rdmp"):
     """Builds the RDM virtual disk create spec."""
     create_vmdk_spec = client_factory.create('ns0:DeviceBackedVirtualDiskSpec')
-    create_vmdk_spec.adapterType = adapter_type
+    create_vmdk_spec.adapterType = get_vmdk_adapter_type(adapter_type)
     create_vmdk_spec.diskType = disk_type
     create_vmdk_spec.device = device
     return create_vmdk_spec
@@ -714,3 +717,17 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                 % datastore_regex.pattern)
     else:
         raise exception.DatastoreNotFound()
+
+
+def get_vmdk_adapter_type(adapter_type):
+    """Return the adapter type to be used in vmdk descriptor.
+
+    Adapter type in vmdk descriptor is same for LSI-SAS & LSILogic
+    because Virtual Disk Manager API does not recognize the newer controller
+    types.
+    """
+    if adapter_type == "lsiLogicsas":
+        vmdk_adapter_type = "lsiLogic"
+    else:
+        vmdk_adapter_type = adapter_type
+    return vmdk_adapter_type
