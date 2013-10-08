@@ -380,9 +380,9 @@ class VMwareVCDriver(VMwareESXDriver):
                 % CONF.vmware.datastore_regex)
         self._volumeops = volumeops.VMwareVolumeOps(self._session,
                                                     self._cluster_name)
-        self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
-                                        self._volumeops, self._cluster_name,
-                                        self._datastore_regex)
+        self._vmops = vmops.VMwareVCVMOps(self._session, self.virtapi,
+                                          self._volumeops, self._cluster_name,
+                                          self._datastore_regex)
         self._vc_state = None
 
     @property
