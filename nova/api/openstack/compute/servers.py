@@ -643,7 +643,7 @@ class Controller(wsgi.Controller):
                     network_uuid = None
                     if not utils.is_neutron():
                         # port parameter is only for neutron v2.0
-                        msg = _("Unknown argment : port")
+                        msg = _("Unknown argument : port")
                         raise exc.HTTPBadRequest(explanation=msg)
                     if not uuidutils.is_uuid_like(port_id):
                         msg = _("Bad port format: port uuid is "
@@ -669,7 +669,7 @@ class Controller(wsgi.Controller):
                     msg = _("Invalid fixed IP address (%s)") % address
                     raise exc.HTTPBadRequest(explanation=msg)
 
-                # For neutronv2, requestd_networks
+                # For neutronv2, requested_networks
                 # should be tuple of (network_uuid, fixed_ip, port_id)
                 if utils.is_neutron():
                     networks.append((network_uuid, address, port_id))

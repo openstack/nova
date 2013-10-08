@@ -27,7 +27,7 @@ LOG = logging.getLogger(__name__)
 
 
 def ec2_error_response(request_id, code, message, status=500):
-    """Helper to construct an EC2 compatible error reposne."""
+    """Helper to construct an EC2 compatible error response."""
     LOG.debug(_('EC2 error response: %(code)s: %(message)s') %
                 {'code': code, 'message': message})
     resp = webob.Response()

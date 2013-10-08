@@ -525,7 +525,7 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
                 env.pop(k)
         log_fun(_('Environment: %s') % jsonutils.dumps(env))
     if not message:
-        message = _('Unknown error occured.')
+        message = _('Unknown error occurred.')
     return faults.ec2_error_response(request_id, code, message, status=status)
 
 

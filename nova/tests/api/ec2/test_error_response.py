@@ -76,7 +76,7 @@ class Ec2ErrorResponseTestCase(test.NoDBTestCase):
             if msg:
                 self.assertEqual(message_e.text, msg)
             elif unknown_msg:
-                self.assertEqual(message_e.text, "Unknown error occured.",
+                self.assertEqual(message_e.text, "Unknown error occurred.",
                                  "Error message should be anonymous.")
         # RequestID
         requestid_e = root_e.find('RequestID')
