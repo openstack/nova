@@ -379,7 +379,7 @@ class Debug(Middleware):
         print(('*' * 40) + ' RESPONSE HEADERS')
         for (key, value) in resp.headers.iteritems():
             print(key, '=', value)
-        print
+        print()
 
         resp.app_iter = self.print_generator(resp.app_iter)
 

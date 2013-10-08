@@ -32,6 +32,8 @@ Due to the risk of false positives, the results from this need some human
 interpretation.
 """
 
+from __future__ import print_function
+
 import optparse
 import string
 import subprocess
@@ -39,12 +41,12 @@ import sys
 
 
 def run(cmd, fail_ok=False):
-    print "running: %s" % cmd
+    print("running: %s" % cmd)
     obj = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                            shell=True)
     obj.wait()
     if obj.returncode != 0 and not fail_ok:
-        print "The above command terminated with an error."
+        print("The above command terminated with an error.")
         sys.exit(obj.returncode)
     return obj.stdout.read()
 
@@ -95,13 +97,13 @@ def main():
         run("git checkout %s" % original_branch)
         run("git branch -D %s" % new_branch)
 
-    print expect_failure
-    print ""
-    print "*******************************"
+    print(expect_failure)
+    print("")
+    print("*******************************")
     if test_works:
-        print "FOUND a regression test"
+        print("FOUND a regression test")
     else:
-        print "NO regression test"
+        print("NO regression test")
         sys.exit(1)
 
 
