@@ -31,7 +31,7 @@ from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
             'Network', 'HostSystem', 'HostNetworkSystem', 'Task', 'session',
-            'files']
+            'files', 'ClusterComputeResource']
 
 _FAKE_FILE_SIZE = 1024
 
@@ -59,9 +59,11 @@ def reset():
     create_network()
     create_host_network_system()
     create_host()
+    create_host()
     create_datacenter()
     create_datastore()
     create_res_pool()
+    create_cluster('test_cluster')
 
 
 def cleanup():
@@ -75,11 +77,31 @@ def _create_object(table, table_obj):
     _db_content[table][table_obj.obj] = table_obj
 
 
+def _get_object(obj_ref):
+    """Get object for the give reference."""
+    return _db_content[obj_ref.type][obj_ref]
+
+
 def _get_objects(obj_type):
     """Get objects of the type."""
     lst_objs = []
     for key in _db_content[obj_type]:
         lst_objs.append(_db_content[obj_type][key])
+    return lst_objs
+
+
+def _convert_to_array_of_mor(mors):
+    """Wraps the given array into a DataObject."""
+    array_of_mors = DataObject()
+    array_of_mors.ManagedObjectReference = mors
+    return array_of_mors
+
+
+def _get_object_refs(obj_type):
+    """Get object References of the type."""
+    lst_objs = []
+    for key in _db_content[obj_type]:
+        lst_objs.append(key)
     return lst_objs
 
 
@@ -94,7 +116,7 @@ class Property(object):
 class ManagedObjectReference(object):
     """A managed object reference is a remote identifier."""
 
-    def __init__(self, value="object-123", _type="ManagedObject"):
+    def __init__(self, name="ManagedObject", value=None):
         super(ManagedObjectReference, self)
         # Managed Object Reference value attributes
         # typically have values like vm-123 or
@@ -104,7 +126,8 @@ class ManagedObjectReference(object):
         # attributes hold the name of the type
         # of the vCenter object the value
         # attribute is the identifier for
-        self._type = _type
+        self.type = name
+        self._type = name
 
 
 class ObjectContent(object):
@@ -134,23 +157,15 @@ class ObjectContent(object):
 
 class ManagedObject(object):
     """Managed Object base class."""
+    _counter = 0
 
-    def __init__(self, name="ManagedObject", obj_ref=None, value=None):
+    def __init__(self, mo_id_prefix="obj"):
         """Sets the obj property which acts as a reference to the object."""
-        super(ManagedObject, self).__setattr__('objName', name)
-
-        # A managed object is a local representation of a
-        # remote object that you can reference using the
-        # object reference.
-        if obj_ref is None:
-            if value is None:
-                value = 'obj-123'
-            obj_ref = ManagedObjectReference(value, name)
-
-        # we use __setattr__ here because below the
-        # default setter has been altered for this class.
-        object.__setattr__(self, 'obj', obj_ref)
+        object.__setattr__(self, 'mo_id', self._generate_moid(mo_id_prefix))
         object.__setattr__(self, 'propSet', [])
+        object.__setattr__(self, 'obj',
+                           ManagedObjectReference(self.__class__.__name__,
+                                                  self.mo_id))
 
     def set(self, attr, val):
         """
@@ -187,7 +202,12 @@ class ManagedObject(object):
                 return elem.val
         msg = _("Property %(attr)s not set for the managed object %(name)s")
         raise exception.NovaException(msg % {'attr': attr,
-                                             'name': self.objName})
+                                             'name': self.__class__.__name__})
+
+    def _generate_moid(self, prefix):
+        """Generates a new Managed Object ID."""
+        self.__class__._counter += 1
+        return prefix + "-" + str(self.__class__._counter)
 
 
 class DataObject(object):
@@ -246,14 +266,13 @@ class VirtualMachine(ManagedObject):
     """Virtual Machine class."""
 
     def __init__(self, **kwargs):
-        super(VirtualMachine, self).__init__("VirtualMachine", value='vm-10')
-        self.set("name", kwargs.get("name"))
+        super(VirtualMachine, self).__init__("vm")
+        self.set("name", kwargs.get("name", 'test-vm'))
         self.set("runtime.connectionState",
                  kwargs.get("conn_state", "connected"))
         self.set("summary.config.guestId", kwargs.get("guest", "otherGuest"))
-        ds_do = DataObject()
-        ds_do.ManagedObjectReference = [kwargs.get("ds").obj]
-        self.set("datastore", ds_do)
+        ds_do = kwargs.get("ds", None)
+        self.set("datastore", _convert_to_array_of_mor(ds_do))
         self.set("summary.guest.toolsStatus", kwargs.get("toolsstatus",
                                 "toolsOk"))
         self.set("summary.guest.toolsRunningStatus", kwargs.get(
@@ -264,8 +283,7 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("config.hardware.device", kwargs.get("virtual_device", None))
         self.set("config.extraConfig", kwargs.get("extra_config", None))
-        self.set('runtime.host',
-                 ManagedObjectReference(value='host-123', _type="HostSystem"))
+        self.set('runtime.host', kwargs.get("runtime_host", None))
         self.device = kwargs.get("virtual_device")
 
     def reconfig(self, factory, val):
@@ -300,23 +318,124 @@ class Network(ManagedObject):
     """Network class."""
 
     def __init__(self):
-        super(Network, self).__init__("Network")
+        super(Network, self).__init__("network")
         self.set("summary.name", "vmnet0")
 
 
 class ResourcePool(ManagedObject):
     """Resource Pool class."""
 
-    def __init__(self):
-        super(ResourcePool, self).__init__("ResourcePool")
-        self.set("name", "ResPool")
+    def __init__(self, name="test_ResPool", value="resgroup-test"):
+        super(ResourcePool, self).__init__("rp")
+        self.set("name", name)
+        summary = DataObject()
+        runtime = DataObject()
+        config = DataObject()
+        memory = DataObject()
+        cpu = DataObject()
+
+        memoryAllocation = DataObject()
+        cpuAllocation = DataObject()
+
+        memory.maxUsage = 1000 * 1024 * 1024
+        memory.overallUsage = 500 * 1024 * 1024
+        cpu.maxUsage = 10000
+        cpu.overallUsage = 1000
+        runtime.cpu = cpu
+        runtime.memory = memory
+        summary.runtime = runtime
+        cpuAllocation.limit = 10000
+        memoryAllocation.limit = 1024
+        memoryAllocation.reservation = 1024
+        config.memoryAllocation = memoryAllocation
+        config.cpuAllocation = cpuAllocation
+        self.set("summary", summary)
+        self.set("summary.runtime.memory", memory)
+        self.set("config", config)
+        parent = ManagedObjectReference(value=value,
+                                        name=name)
+        owner = ManagedObjectReference(value=value,
+                                       name=name)
+        self.set("parent", parent)
+        self.set("owner", owner)
+
+
+class ClusterComputeResource(ManagedObject):
+    """Cluster class."""
+
+    def __init__(self, name="test_cluster"):
+        super(ClusterComputeResource, self).__init__("domain")
+        self.set("name", name)
+        self.set("host", None)
+        self.set("datastore", None)
+        self.set("resourcePool", None)
+
+        summary = DataObject()
+        summary.numHosts = 0
+        summary.numCpuCores = 0
+        summary.numCpuThreads = 0
+        summary.numEffectiveHosts = 0
+        summary.totalMemory = 0
+        summary.effectiveMemory = 0
+        summary.effectiveCpu = 10000
+        self.set("summary", summary)
+
+    def _add_root_resource_pool(self, r_pool):
+        if r_pool:
+            self.set("resourcePool", r_pool)
+
+    def _add_host(self, host_sys):
+        if host_sys:
+            hosts = self.get("host")
+            if hosts is None:
+                hosts = DataObject()
+                hosts.ManagedObjectReference = []
+                self.set("host", hosts)
+            hosts.ManagedObjectReference.append(host_sys)
+            # Update summary every time a new host is added
+            self._update_summary()
+
+    def _add_datastore(self, datastore):
+        if datastore:
+            datastores = self.get("datastore")
+            if datastores is None:
+                datastores = DataObject()
+                datastores.ManagedObjectReference = []
+                self.set("datastore", datastores)
+            datastores.ManagedObjectReference.append(datastore)
+
+    # Method to update summary of a cluster upon host addition
+    def _update_summary(self):
+        summary = self.get("summary")
+        summary.numHosts = 0
+        summary.numCpuCores = 0
+        summary.numCpuThreads = 0
+        summary.numEffectiveHosts = 0
+        summary.totalMemory = 0
+        summary.effectiveMemory = 0
+
+        hosts = self.get("host")
+        # Compute the aggregate stats
+        summary.numHosts = len(hosts.ManagedObjectReference)
+        for host_ref in hosts.ManagedObjectReference:
+            host_sys = _get_object(host_ref)
+            connected = host_sys.get("connected")
+            host_summary = host_sys.get("summary")
+            summary.numCpuCores += host_summary.hardware.numCpuCores
+            summary.numCpuThreads += host_summary.hardware.numCpuThreads
+            summary.totalMemory += host_summary.hardware.memorySize
+            free_memory = (host_summary.hardware.memorySize / (1024 * 1024)
+                           - host_summary.quickStats.overallMemoryUsage)
+            summary.effectiveMemory += free_memory if connected else 0
+            summary.numEffectiveHosts += 1 if connected else 0
+        self.set("summary", summary)
 
 
 class Datastore(ManagedObject):
     """Datastore class."""
 
     def __init__(self, name="fake-ds"):
-        super(Datastore, self).__init__("Datastore")
+        super(Datastore, self).__init__("ds")
         self.set("summary.type", "VMFS")
         self.set("summary.name", name)
         self.set("summary.capacity", 1024 * 1024 * 1024 * 1024)
@@ -326,9 +445,9 @@ class Datastore(ManagedObject):
 class HostNetworkSystem(ManagedObject):
     """HostNetworkSystem class."""
 
-    def __init__(self):
-        super(HostNetworkSystem, self).__init__("HostNetworkSystem")
-        self.set("name", "networkSystem")
+    def __init__(self, name="networkSystem"):
+        super(HostNetworkSystem, self).__init__("ns")
+        self.set("name", name)
 
         pnic_do = DataObject()
         pnic_do.device = "vmnic0"
@@ -342,9 +461,9 @@ class HostNetworkSystem(ManagedObject):
 class HostSystem(ManagedObject):
     """Host System class."""
 
-    def __init__(self, obj_ref=None, value='host-123'):
-        super(HostSystem, self).__init__("HostSystem", obj_ref, value)
-        self.set("name", "ha-host")
+    def __init__(self, name="ha-host", connected=True):
+        super(HostSystem, self).__init__("host")
+        self.set("name", name)
         if _db_content.get("HostNetworkSystem", None) is None:
             create_host_network_system()
         host_net_key = _db_content["HostNetworkSystem"].keys()[0]
@@ -378,7 +497,9 @@ class HostSystem(ManagedObject):
         net_info_pnic.PhysicalNic = [pnic_do]
 
         self.set("summary", summary)
+        self.set("summary.hardware", hardware)
         self.set("config.network.pnic", net_info_pnic)
+        self.set("connected", connected)
 
         if _db_content.get("Network", None) is None:
             create_network()
@@ -438,9 +559,9 @@ class HostSystem(ManagedObject):
 class Datacenter(ManagedObject):
     """Datacenter class."""
 
-    def __init__(self):
-        super(Datacenter, self).__init__("Datacenter")
-        self.set("name", "ha-datacenter")
+    def __init__(self, name="ha-datacenter"):
+        super(Datacenter, self).__init__("dc")
+        self.set("name", name)
         self.set("vmFolder", "vm_folder_ref")
         if _db_content.get("Network", None) is None:
             create_network()
@@ -489,6 +610,15 @@ def create_res_pool():
 def create_network():
     network = Network()
     _create_object('Network', network)
+
+
+def create_cluster(name):
+    cluster = ClusterComputeResource(name=name)
+    cluster._add_host(_get_object_refs("HostSystem")[0])
+    cluster._add_host(_get_object_refs("HostSystem")[1])
+    cluster._add_datastore(_get_object_refs("Datastore")[0])
+    cluster._add_root_resource_pool(_get_object_refs("ResourcePool")[0])
+    _create_object('ClusterComputeResource', cluster)
 
 
 def create_task(task_name, state="running"):
@@ -593,6 +723,12 @@ class FakeVim(object):
         service_content.fileManager = "FileManager"
         service_content.rootFolder = "RootFolder"
         service_content.sessionManager = "SessionManager"
+
+        about_info = DataObject()
+        about_info.name = "VMware vCenter Server"
+        about_info.version = "5.1.0"
+        service_content.about = about_info
+
         self._service_content = service_content
 
     def get_service_content(self):
@@ -641,15 +777,17 @@ class FakeVim(object):
     def _create_vm(self, method, *args, **kwargs):
         """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
-        ds = _db_content["Datastore"][_db_content["Datastore"].keys()[0]]
+        ds = _db_content["Datastore"].keys()[0]
+        host = _db_content["HostSystem"].keys()[0]
         vm_dict = {"name": config_spec.name,
-                  "ds": ds,
+                  "ds": [ds],
+                  "runtime_host": host,
                   "powerstate": "poweredOff",
                   "vmPathName": config_spec.files.vmPathName,
                   "numCpu": config_spec.numCPUs,
                   "mem": config_spec.memoryMB,
-                  "virtual_device": config_spec.deviceChange,
-                  "extra_config": config_spec.extraConfig}
+                  "extra_config": config_spec.extraConfig,
+                  "virtual_device": config_spec.deviceChange}
         virtual_machine = VirtualMachine(**vm_dict)
         _create_object("VirtualMachine", virtual_machine)
         task_mdo = create_task(method, "success")
@@ -752,24 +890,19 @@ class FakeVim(object):
                 # This means that we are doing a search for the managed
                 # dataobjects of the type in the inventory
                 if obj_ref == "RootFolder":
-                    for mdo_ref in _db_content[type]:
-                        mdo = _db_content[type][mdo_ref]
-                        # Create a temp Managed object which has the same ref
-                        # as the parent object and copies just the properties
-                        # asked for. We need .obj along with the propSet of
-                        # just the properties asked for
-                        temp_mdo = ManagedObject(mdo.objName, mdo.obj)
-                        for prop in properties:
-                            temp_mdo.set(prop, mdo.get(prop))
-                        lst_ret_objs.append(temp_mdo)
+                    mdo_refs = _db_content[type]
                 else:
-                    if obj_ref in _db_content[type]:
-                        mdo = _db_content[type][obj_ref]
-                        temp_mdo = ManagedObject(mdo.objName, obj_ref)
-                        for prop in properties:
-                            temp_mdo.set(prop, mdo.get(prop))
-                        lst_ret_objs.append(temp_mdo)
-            except Exception, exc:
+                    mdo_refs = [obj_ref]
+
+                for mdo_ref in mdo_refs:
+                    mdo = _db_content[type][mdo_ref]
+                    prop_list = []
+                    for prop_name in properties:
+                        prop = Property(prop_name, mdo.get(prop_name))
+                        prop_list.append(prop)
+                    obj_content = ObjectContent(mdo.obj, prop_list)
+                    lst_ret_objs.append(obj_content)
+            except Exception as exc:
                 LOG.exception(exc)
                 continue
         return lst_ret_objs

@@ -637,6 +637,44 @@ def get_host_name_from_host_ref(host_ref):
         return p.val
 
 
+def get_stats_from_cluster(session, cluster):
+    """Get the aggregate resource stats of a cluster."""
+    cpu_info = {'vcpus': 0, 'cores': 0, 'vendor': [], 'model': []}
+    mem_info = {'total': 0, 'free': 0}
+    # Get the Host and Resource Pool Managed Object Refs
+    prop_dict = session._call_method(vim_util, "get_dynamic_properties",
+                                     cluster, "ClusterComputeResource",
+                                     ["host", "resourcePool"])
+    if prop_dict:
+        host_ret = prop_dict.get('host')
+        if host_ret:
+            host_mors = host_ret.ManagedObjectReference
+            result = session._call_method(vim_util,
+                         "get_properties_for_a_collection_of_objects",
+                         "HostSystem", host_mors, ["summary.hardware"])
+            for obj in result:
+                hardware_summary = obj.propSet[0].val
+                # Total vcpus is the sum of all pCPUs of individual hosts
+                # The overcommitment ratio is factored in by the scheduler
+                cpu_info['vcpus'] += hardware_summary.numCpuThreads
+                cpu_info['cores'] += hardware_summary.numCpuCores
+                cpu_info['vendor'].append(hardware_summary.vendor)
+                cpu_info['model'].append(hardware_summary.cpuModel)
+
+        res_mor = prop_dict.get('resourcePool')
+        if res_mor:
+            res_usage = session._call_method(vim_util, "get_dynamic_property",
+                            res_mor, "ResourcePool", "summary.runtime.memory")
+            if res_usage:
+                # maxUsage is the memory limit of the cluster available to VM's
+                mem_info['total'] = int(res_usage.maxUsage / (1024 * 1024))
+                # overallUsage is the hypervisor's view of memory usage by VM's
+                consumed = int(res_usage.overallUsage / (1024 * 1024))
+                mem_info['free'] = mem_info['total'] - consumed
+    stats = {'cpu': cpu_info, 'mem': mem_info}
+    return stats
+
+
 def get_cluster_ref_from_name(session, cluster_name):
     """Get reference to the cluster with the name specified."""
     cls = session._call_method(vim_util, "get_objects",

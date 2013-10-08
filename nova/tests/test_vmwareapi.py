@@ -29,6 +29,7 @@ from nova.compute import task_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.openstack.common import jsonutils
 from nova import test
 import nova.tests.image.fake
 from nova.tests import matchers
@@ -112,6 +113,7 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.flags(datastore_regex='.*', group='vmware')
         self.user_id = 'fake'
         self.project_id = 'fake'
+        self.node_name = 'test_url'
         self.context = context.RequestContext(self.user_id, self.project_id)
         vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -435,11 +437,13 @@ class VMwareAPIVMTestCase(test.TestCase):
                           self.instance)
 
     def test_get_vnc_console(self):
-        self._create_instance_in_the_db()
         self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine")[0]
+        fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
         vnc_dict = self.conn.get_vnc_console(self.instance)
         self.assertEquals(vnc_dict['host'], "ha-host")
-        self.assertEquals(vnc_dict['port'], 5910)
+        self.assertEquals(vnc_dict['port'], cfg.CONF.vnc_port +
+                          fake_vm_id % cfg.CONF.vnc_port_total)
 
     def test_host_ip_addr(self):
         self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
@@ -514,3 +518,32 @@ class VMwareAPIHostTestCase(test.TestCase):
                    use_linked_clone=False)
         self.flags(datastore_regex='fake-ds(01', group='vmware')
         self.assertRaises(exception.InvalidInput, driver.VMwareVCDriver, None)
+
+
+class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
+
+    def setUp(self):
+        super(VMwareAPIVCDriverTestCase, self).setUp()
+        self.flags(vmwareapi_cluster_name='test_cluster')
+        self.flags(vnc_enabled=False)
+        self.conn = driver.VMwareVCDriver(None, False)
+
+    def tearDown(self):
+        super(VMwareAPIVCDriverTestCase, self).tearDown()
+        vmwareapi_fake.cleanup()
+
+    def test_get_available_resource(self):
+        stats = self.conn.get_available_resource(self.node_name)
+        cpu_info = {"model": ["Intel(R) Xeon(R)", "Intel(R) Xeon(R)"],
+                    "vendor": ["Intel", "Intel"],
+                    "topology": {"cores": 16,
+                                 "threads": 32}}
+        self.assertEquals(stats['vcpus'], 32)
+        self.assertEquals(stats['local_gb'], 1024)
+        self.assertEquals(stats['local_gb_used'], 1024 - 500)
+        self.assertEquals(stats['memory_mb'], 1000)
+        self.assertEquals(stats['memory_mb_used'], 500)
+        self.assertEquals(stats['hypervisor_type'], 'VMware vCenter Server')
+        self.assertEquals(stats['hypervisor_version'], '5.1.0')
+        self.assertEquals(stats['hypervisor_hostname'], self.node_name)
+        self.assertEquals(stats['cpu_info'], jsonutils.dumps(cpu_info))
