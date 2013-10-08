@@ -3386,8 +3386,12 @@ class FlavorAccessSampleJsonTests(ApiSampleTestBaseV2):
         response = self._do_post('flavors/10/action',
                                  "flavor-access-remove-tenant-req",
                                  subs)
+        exp_subs = {
+            "tenant_id": self.api.project_id,
+            "flavor_id": "10"
+        }
         self._verify_response('flavor-access-remove-tenant-resp',
-                              {}, response, 200)
+                              exp_subs, response, 200)
 
 
 class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
