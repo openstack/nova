@@ -58,7 +58,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
         return 'polo'
 
     @base.remotable
-    def update_test(self, context):
+    def _update_test(self, context):
         if context.project_id == 'alternate':
             self.bar = 'alternate-context'
         else:
@@ -474,7 +474,7 @@ class _TestObject(object):
         ctxt1 = context.RequestContext('foo', 'foo')
         ctxt2 = context.RequestContext('bar', 'alternate')
         obj = MyObj.query(ctxt1)
-        obj.update_test(ctxt2)
+        obj._update_test(ctxt2)
         self.assertEqual(obj.bar, 'alternate-context')
         self.assertRemotes()
 
@@ -482,14 +482,14 @@ class _TestObject(object):
         obj = MyObj.query(self.context)
         obj._context = None
         self.assertRaises(exception.OrphanedObjectError,
-                          obj.update_test)
+                          obj._update_test)
         self.assertRemotes()
 
     def test_changed_1(self):
         obj = MyObj.query(self.context)
         obj.foo = 123
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
-        obj.update_test(self.context)
+        obj._update_test(self.context)
         self.assertEqual(obj.obj_what_changed(), set(['foo', 'bar']))
         self.assertEqual(obj.foo, 123)
         self.assertRemotes()
@@ -533,7 +533,7 @@ class _TestObject(object):
     def test_updates(self):
         obj = MyObj.query(self.context)
         self.assertEqual(obj.foo, 1)
-        obj.update_test()
+        obj._update_test()
         self.assertEqual(obj.bar, 'updated')
         self.assertRemotes()
 
