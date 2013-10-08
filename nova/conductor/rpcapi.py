@@ -111,6 +111,7 @@ class ConductorAPI(rpcclient.RpcProxy):
     1.57 - Remove migration_create()
     1.58 - Remove migration_get()
     1.59 - Remove instance_info_cache_update()
+    1.60 - Remove aggregate_metadata_add() and aggregate_metadata_delete()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -189,22 +190,6 @@ class ConductorAPI(rpcclient.RpcProxy):
     def aggregate_get_by_host(self, context, host, key=None):
         cctxt = self.client.prepare(version='1.7')
         return cctxt.call(context, 'aggregate_get_by_host', host=host, key=key)
-
-    def aggregate_metadata_add(self, context, aggregate, metadata,
-                               set_delete=False):
-        aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(version='1.7')
-        return cctxt.call(context, 'aggregate_metadata_add',
-                          aggregate=aggregate_p,
-                          metadata=metadata,
-                          set_delete=set_delete)
-
-    def aggregate_metadata_delete(self, context, aggregate, key):
-        aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(version='1.7')
-        return cctxt.call(context, 'aggregate_metadata_delete',
-                          aggregate=aggregate_p,
-                          key=key)
 
     def aggregate_metadata_get_by_host(self, context, host, key):
         cctxt = self.client.prepare(version='1.42')
