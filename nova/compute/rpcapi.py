@@ -202,6 +202,8 @@ class ComputeAPI(rpcclient.RpcProxy):
         2.45 - Made resize_instance() take new-world objects
         2.46 - Made finish_resize() take new-world objects
         2.47 - Made finish_revert_resize() take new-world objects
+        2.48 - Make add_aggregate_host() and remove_aggregate_host() take
+               new-world objects
     '''
 
     #
@@ -239,10 +241,14 @@ class ComputeAPI(rpcclient.RpcProxy):
         :param host: This is the host to send the message to.
         '''
 
-        aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(server=host, version='2.14')
+        if self.client.can_send_version('2.48'):
+            version = '2.48'
+        else:
+            version = '2.14'
+            aggregate = jsonutils.to_primitive(aggregate)
+        cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'add_aggregate_host',
-                   aggregate=aggregate_p, host=host_param,
+                   aggregate=aggregate, host=host_param,
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
@@ -555,10 +561,14 @@ class ComputeAPI(rpcclient.RpcProxy):
         :param host: This is the host to send the message to.
         '''
 
-        aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(server=host, version='2.15')
+        if self.client.can_send_version('2.48'):
+            version = '2.48'
+        else:
+            version = '2.15'
+            aggregate = jsonutils.to_primitive(aggregate)
+        cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'remove_aggregate_host',
-                   aggregate=aggregate_p, host=host_param,
+                   aggregate=aggregate, host=host_param,
                    slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
