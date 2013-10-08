@@ -388,6 +388,13 @@ def new_format_is_ephemeral(bdm):
     return False
 
 
+def get_root_bdm(bdms):
+    try:
+        return (bdm for bdm in bdms if bdm.get('boot_index', -1) == 0).next()
+    except StopIteration:
+        return None
+
+
 def mappings_prepend_dev(mappings):
     """Prepend '/dev/' to 'device' entry of swap/ephemeral virtual type."""
     for m in mappings:

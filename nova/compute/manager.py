@@ -1297,10 +1297,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         It also ensures that there is a root_device_name and is set to the
         first block device in the boot sequence (boot_index=0).
         """
-        try:
-            root_bdm = (bdm for bdm in block_devices
-                        if bdm['boot_index'] == 0).next()
-        except StopIteration:
+        root_bdm = block_device.get_root_bdm(block_devices)
+        if not root_bdm:
             return
 
         # Get the root_device_name from the root BDM or the instance

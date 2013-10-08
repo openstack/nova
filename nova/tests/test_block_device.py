@@ -129,6 +129,19 @@ class BlockDeviceTestCase(test.NoDBTestCase):
         _assert_volume_in_mapping('sdg', False)
         _assert_volume_in_mapping('sdh1', False)
 
+    def test_get_root_bdm(self):
+        root_bdm = {'device_name': 'vda', 'boot_index': 0}
+        bdms = [root_bdm,
+                {'device_name': 'vdb', 'boot_index': 1},
+                {'device_name': 'vdc', 'boot_index': -1},
+                {'device_name': 'vdd'}]
+        self.assertEqual(root_bdm, block_device.get_root_bdm(bdms))
+        self.assertEqual(root_bdm, block_device.get_root_bdm([bdms[0]]))
+        self.assertEqual(None, block_device.get_root_bdm(bdms[1:]))
+        self.assertEqual(None, block_device.get_root_bdm(bdms[2:]))
+        self.assertEqual(None, block_device.get_root_bdm(bdms[3:]))
+        self.assertEqual(None, block_device.get_root_bdm([]))
+
 
 class TestBlockDeviceDict(test.NoDBTestCase):
     def setUp(self):
