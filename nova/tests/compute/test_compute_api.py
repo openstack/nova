@@ -307,14 +307,6 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.stop,
                           self.context, instance)
 
-    def test_stop_a_stopped_inst(self):
-        params = {'vm_state': vm_states.STOPPED}
-        instance = self._create_instance_obj(params=params)
-
-        self.assertRaises(exception.InstanceInvalidState,
-                          self.compute_api.stop,
-                          self.context, instance)
-
     def test_stop_no_host(self):
         params = {'host': ''}
         instance = self._create_instance_obj(params=params)
