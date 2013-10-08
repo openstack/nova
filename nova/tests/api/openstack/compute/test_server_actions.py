@@ -858,6 +858,7 @@ class ServerActionsControllerTest(test.TestCase):
                          volume_size=1,
                          device_name='vda',
                          snapshot_id=1,
+                         boot_index=0,
                          delete_on_termination=False,
                          no_device=None)]
 
@@ -924,6 +925,7 @@ class ServerActionsControllerTest(test.TestCase):
                          volume_size=1,
                          device_name='vda',
                          snapshot_id=1,
+                         boot_index=0,
                          delete_on_termination=False,
                          no_device=None)]
 
@@ -946,7 +948,7 @@ class ServerActionsControllerTest(test.TestCase):
         volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
-        def fake_bdm_image_metadata(fd, context, bdms):
+        def fake_bdm_image_metadata(fd, context, bdms, legacy_bdm):
             return {'test_key1': 'test_value1',
                     'test_key2': 'test_value2'}
         req = fakes.HTTPRequest.blank(self.url)

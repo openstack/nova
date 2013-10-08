@@ -642,7 +642,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.conductor_api.block_device_mapping_get_all_by_instance(
-                self.context, instance_p).AndReturn(bdms)
+                self.context, instance_p, legacy=False).AndReturn(bdms)
         self.compute.compute_api.is_volume_backed_instance(
                 self.context, instance, bdms).AndReturn(is_volume_backed)
         self.compute.driver.check_can_live_migrate_source(

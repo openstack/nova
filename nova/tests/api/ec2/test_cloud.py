@@ -2270,6 +2270,7 @@ class CloudTestCase(test.TestCase):
                          device_name='sda1',
                          delete_on_termination=False,
                          no_device=None,
+                         boot_index=0,
                          connection_info='{"foo":"bar"}')]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',

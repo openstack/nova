@@ -6492,6 +6492,7 @@ class ComputeAPITestCase(BaseTestCase):
         def fake_get_instance_bdms(*args, **kwargs):
             return [{'device_name': '/dev/vda',
                      'source_type': 'volume',
+                     'boot_index': 0,
                      'destination_type': 'volume',
                      'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
 
@@ -7199,45 +7200,52 @@ class ComputeAPITestCase(BaseTestCase):
     def test_is_volume_backed_instance(self):
         ctxt = self.context
 
-        instance = self._create_fake_instance({'image_ref': None})
+        instance = self._create_fake_instance({'image_ref': ''})
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, None))
 
         instance = self._create_fake_instance({'root_device_name': 'vda'})
         self.assertFalse(
             self.compute_api.is_volume_backed_instance(ctxt, instance, []))
+
         bdms = [{'device_name': '/dev/vda',
-                 'volume_id': None,
+                 'volume_id': 'fake_volume_id',
+                 'boot_index': 0,
+                 'destination_type': 'volume'}]
+        self.assertTrue(
+            self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
+
+        bdms = [{'device_name': '/dev/vda',
+                 'volume_id': 'fake_volume_id',
+                 'destination_type': 'local',
+                 'boot_index': 0,
+                 'snapshot_id': None},
+                {'device_name': '/dev/vdb',
+                 'boot_index': 1,
+                 'destination_type': 'volume',
+                 'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
                  'snapshot_id': None}]
         self.assertFalse(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
         bdms = [{'device_name': '/dev/vda',
-                 'volume_id': None,
-                 'snapshot_id': None},
-                {'device_name': '/dev/vdb',
-                 'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
-                 'snapshot_id': None}]
-        self.assertFalse(
-            self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
-
-        bdms = [{'device_name': '/dev/vda',
-                 'volume_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
-                 'snapshot_id': None},
-                {'device_name': '/dev/vdb',
-                 'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
-                 'snapshot_id': None}]
+                 'snapshot_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
+                 'destination_type': 'volume',
+                 'boot_index': 0,
+                 'volume_id': None}]
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
-        bdms = [{'device_name': '/dev/vda',
-                 'volume_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
-                 'snapshot_id': 'f561c730-d75e-11e2-b505-5254009297d6'},
-                {'device_name': '/dev/vdb',
-                 'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
-                 'snapshot_id': None}]
-        self.assertTrue(
-            self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
+    def test_is_volume_backed_instance_no_bdms(self):
+        ctxt = self.context
+        instance = self._create_fake_instance()
+
+        self.mox.StubOutWithMock(self.compute_api, 'get_instance_bdms')
+        self.compute_api.get_instance_bdms(ctxt, instance,
+                                           legacy=False).AndReturn([])
+        self.mox.ReplayAll()
+
+        self.compute_api.is_volume_backed_instance(ctxt, instance, None)
 
     def test_reservation_id_one_instance(self):
         """Verify building an instance has a reservation_id that
