@@ -20,6 +20,7 @@
 """IPv6 address generation with account identifier embedded."""
 
 import hashlib
+
 import netaddr
 
 from nova.openstack.common.gettextutils import _

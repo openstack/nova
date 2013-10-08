@@ -15,6 +15,7 @@
 import contextlib
 import datetime
 import iso8601
+
 import netaddr
 
 from nova.conductor import rpcapi as conductor_rpcapi

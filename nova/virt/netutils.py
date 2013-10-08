@@ -25,7 +25,6 @@ import os
 
 import jinja2
 import netaddr
-
 from oslo.config import cfg
 
 from nova.network import model

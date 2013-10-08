@@ -16,9 +16,9 @@
 
 import copy
 import math
-import netaddr
 import uuid
 
+import netaddr
 from oslo.config import cfg
 import webob
 

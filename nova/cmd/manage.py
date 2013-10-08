@@ -55,10 +55,10 @@
 
 from __future__ import print_function
 
-import netaddr
 import os
 import sys
 
+import netaddr
 from oslo.config import cfg
 
 from nova.api.ec2 import ec2utils
