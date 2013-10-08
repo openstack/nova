@@ -1293,12 +1293,19 @@ class LibvirtDriver(driver.ComputeDriver):
         """Reboot a virtual machine, given an instance reference."""
         if reboot_type == 'SOFT':
             # NOTE(vish): This will attempt to do a graceful shutdown/restart.
-            if self._soft_reboot(instance):
+            try:
+                soft_reboot_success = self._soft_reboot(instance)
+            except libvirt.libvirtError as e:
+                LOG.debug(_("Instance soft reboot failed: %s"), e)
+                soft_reboot_success = False
+
+            if soft_reboot_success:
                 LOG.info(_("Instance soft rebooted successfully."),
                          instance=instance)
                 return
             else:
-                LOG.warn(_("Failed to soft reboot instance."),
+                LOG.warn(_("Failed to soft reboot instance. "
+                           "Trying hard reboot."),
                          instance=instance)
         return self._hard_reboot(context, instance, network_info,
                                  block_device_info)
