@@ -5016,9 +5016,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         if not aggregate:
             aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
 
-        # NOTE(danms): until the drivers support objects, use primitives
-        aggregate = obj_base.obj_to_primitive(aggregate)
-
         try:
             self.driver.add_to_aggregate(context, aggregate, host,
                                          slave_info=slave_info)
@@ -5039,9 +5036,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         """Removes a host from a physical hypervisor pool."""
         if not aggregate:
             aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
-
-        # NOTE(danms): until the drivers support objects, use primitives
-        aggregate = obj_base.obj_to_primitive(aggregate)
 
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,
