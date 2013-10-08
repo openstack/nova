@@ -20,6 +20,7 @@
 
 """Tests for the base baremetal driver class."""
 
+import mox
 from oslo.config import cfg
 
 from nova.compute import power_state
@@ -238,6 +239,41 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
         row = db.bm_node_get(self.context, node['node']['id'])
         self.assertEqual(row['task_state'], baremetal_states.DELETED)
+
+    def test_spawn_prepared(self):
+        node = self._create_node()
+
+        def update_2prepared(context, node, instance, state):
+            row = db.bm_node_get(context, node['id'])
+            self.assertEqual(row['task_state'], baremetal_states.BUILDING)
+            db.bm_node_update(
+                context, node['id'],
+                {'task_state': baremetal_states.PREPARED})
+
+        self.mox.StubOutWithMock(fake.FakeDriver, 'activate_node')
+        self.mox.StubOutWithMock(bm_driver, '_update_state')
+
+        bm_driver._update_state(
+            self.context,
+            mox.IsA(node['node']),
+            node['instance'],
+            baremetal_states.PREPARED).WithSideEffects(update_2prepared)
+        fake.FakeDriver.activate_node(
+            self.context,
+            mox.IsA(node['node']),
+            node['instance']).AndRaise(test.TestingException)
+        bm_driver._update_state(
+            self.context,
+            mox.IsA(node['node']),
+            node['instance'],
+            baremetal_states.ERROR).AndRaise(test.TestingException)
+        self.mox.ReplayAll()
+
+        self.assertRaises(test.TestingException,
+                          self.driver.spawn, **node['spawn_params'])
+
+        row = db.bm_node_get(self.context, node['node']['id'])
+        self.assertEqual(row['task_state'], baremetal_states.PREPARED)
 
     def test_spawn_fails_to_cleanup(self):
         node = self._create_node()

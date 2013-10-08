@@ -257,6 +257,8 @@ class BareMetalDriver(driver.ComputeDriver):
             self.power_off(instance, node)
             self.power_on(context, instance, network_info, block_device_info,
                           node)
+            _update_state(context, node, instance, baremetal_states.PREPARED)
+
             self.driver.activate_node(context, node, instance)
             _update_state(context, node, instance, baremetal_states.ACTIVE)
         except Exception:
