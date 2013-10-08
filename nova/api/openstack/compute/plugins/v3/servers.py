@@ -249,10 +249,10 @@ class ActionDeserializer(CommonDeserializer):
         if node.hasAttribute("admin_pass"):
             rebuild["admin_pass"] = node.getAttribute("admin_pass")
 
-        if node.hasAttribute("access_ipv4"):
+        if node.hasAttribute("access_ip_v4"):
             rebuild["access_ip_v4"] = node.getAttribute("access_ip_v4")
 
-        if node.hasAttribute("access_ipv6"):
+        if node.hasAttribute("access_ip_v6"):
             rebuild["access_ip_v6"] = node.getAttribute("access_ip_v6")
 
         if self.controller:
