@@ -131,6 +131,8 @@ def get_dev_prefix_for_disk_bus(disk_bus):
         return "sd"
     elif disk_bus == "usb":
         return "sd"
+    elif disk_bus == "fdc":
+        return "fd"
     elif disk_bus == "uml":
         return "ubd"
     elif disk_bus == "lxc":
@@ -191,8 +193,8 @@ def find_disk_dev_for_disk_bus(mapping, bus, last_device=False):
 
 def is_disk_bus_valid_for_virt(virt_type, disk_bus):
     valid_bus = {
-        'qemu': ['virtio', 'scsi', 'ide', 'usb'],
-        'kvm': ['virtio', 'scsi', 'ide', 'usb'],
+        'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc'],
+        'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc'],
         'xen': ['xen', 'ide'],
         'uml': ['uml'],
         'lxc': ['lxc'],
@@ -244,6 +246,8 @@ def get_disk_bus_for_device_type(virt_type,
             return "ide"
         elif device_type == "disk":
             return "virtio"
+        elif device_type == "floppy":
+            return "fdc"
 
     return None
 
@@ -271,6 +275,8 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
             return "scsi"
     elif disk_dev[:2] == 'vd':
         return "virtio"
+    elif disk_dev[:2] == 'fd':
+        return "fdc"
     elif disk_dev[:3] == 'xvd':
         return "xen"
     elif disk_dev[:3] == 'ubd':
