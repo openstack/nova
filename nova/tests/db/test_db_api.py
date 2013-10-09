@@ -2115,6 +2115,9 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def _create_action_values(self, uuid, action='run_instance', ctxt=None):
         if ctxt is None:
             ctxt = self.ctxt
+
+        db.instance_create(ctxt, {'uuid': uuid})
+
         return {
             'action': action,
             'instance_uuid': uuid,
@@ -2384,6 +2387,7 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         # Create a fault
         fault_values = self._create_fault_values(uuid)
+        db.instance_create(self.ctxt, {'uuid': uuid})
         fault = db.instance_fault_create(self.ctxt, fault_values)
 
         ignored_keys = ['deleted', 'created_at', 'updated_at',
@@ -2403,6 +2407,8 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         # Create faults
         for uuid in uuids:
+            db.instance_create(self.ctxt, {'uuid': uuid})
+
             expected[uuid] = []
             for code in fault_codes:
                 fault_values = self._create_fault_values(uuid, code)
