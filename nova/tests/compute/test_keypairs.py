@@ -25,6 +25,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova import quota
 from nova.tests.compute import test_compute
+from nova.tests import fake_notifier
 from nova.tests.objects import test_keypair
 
 CONF = cfg.CONF
@@ -47,6 +48,7 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
                         'HJAXVI+oCiyMMfffoTq16M1xfV58JstgtTqAXG+ZFpicGajREU'
                         'E/E3hO5MGgcHmyzIrWHKpe1n3oEGuz')
         self.fingerprint = '4e:48:c6:a0:4a:f9:dd:b5:4c:85:54:5a:af:43:47:5a'
+        self.key_destroyed = False
 
     def _keypair_db_call_stubs(self):
 
@@ -60,10 +62,11 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
             return dict(test_keypair.fake_keypair, **keypair)
 
         def db_key_pair_destroy(context, user_id, name):
-            pass
+            if name == self.existing_key_name:
+                self.key_destroyed = True
 
         def db_key_pair_get(context, user_id, name):
-            if name == self.existing_key_name:
+            if name == self.existing_key_name and not self.key_destroyed:
                 return dict(test_keypair.fake_keypair,
                             name=self.existing_key_name,
                             public_key=self.pub_key,
@@ -79,6 +82,25 @@ class KeypairAPITestCase(test_compute.BaseTestCase):
                        db_key_pair_destroy)
         self.stubs.Set(db, "key_pair_get",
                        db_key_pair_get)
+
+    def _check_notifications(self, action='create', key_name='foo'):
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+
+        n1 = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('INFO', n1.priority)
+        self.assertEqual('keypair.%s.start' % action, n1.event_type)
+        self.assertEqual('api.%s' % CONF.host, n1.publisher_id)
+        self.assertEqual('fake', n1.payload['user_id'])
+        self.assertEqual('fake', n1.payload['tenant_id'])
+        self.assertEqual(key_name, n1.payload['key_name'])
+
+        n2 = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual('INFO', n2.priority)
+        self.assertEqual('keypair.%s.end' % action, n2.event_type)
+        self.assertEqual('api.%s' % CONF.host, n2.publisher_id)
+        self.assertEqual('fake', n2.payload['user_id'])
+        self.assertEqual('fake', n2.payload['tenant_id'])
+        self.assertEqual(key_name, n2.payload['key_name'])
 
 
 class CreateImportSharedTestMixIn(object):
@@ -143,6 +165,7 @@ class CreateKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
         keypair, private_key = self.keypair_api.create_key_pair(
             self.ctxt, self.ctxt.user_id, 'foo')
         self.assertEqual('foo', keypair['name'])
+        self._check_notifications()
 
 
 class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
@@ -153,9 +176,11 @@ class ImportKeypairTestCase(KeypairAPITestCase, CreateImportSharedTestMixIn):
                                                    self.ctxt.user_id,
                                                    'foo',
                                                    self.pub_key)
+
         self.assertEqual('foo', keypair['name'])
         self.assertEqual(self.fingerprint, keypair['fingerprint'])
         self.assertEqual(self.pub_key, keypair['public_key'])
+        self._check_notifications(action='import')
 
     def test_bad_key_data(self):
         exc = self.assertRaises(exception.InvalidKeypair,
@@ -179,3 +204,17 @@ class GetKeypairsTestCase(KeypairAPITestCase):
         keypairs = self.keypair_api.get_key_pairs(self.ctxt, self.ctxt.user_id)
         self.assertEqual([self.existing_key_name],
                          [k['name'] for k in keypairs])
+
+
+class DeleteKeypairTestCase(KeypairAPITestCase):
+    def test_success(self):
+        keypair = self.keypair_api.get_key_pair(self.ctxt, self.ctxt.user_id,
+                                                self.existing_key_name)
+        self.keypair_api.delete_key_pair(self.ctxt, self.ctxt.user_id,
+                self.existing_key_name)
+        self.assertRaises(exception.KeypairNotFound,
+                self.keypair_api.get_key_pair, self.ctxt, self.ctxt.user_id,
+                self.existing_key_name)
+
+        self._check_notifications(action='delete',
+                key_name=self.existing_key_name)
