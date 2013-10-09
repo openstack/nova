@@ -508,15 +508,6 @@
 
 
 #
-# Options defined in nova.cells.opts
-#
-
-# The full class name of the compute API class to use
-# (deprecated) (string value)
-#compute_api_class=nova.compute.api.API
-
-
-#
 # Options defined in nova.cert.rpcapi
 #
 
@@ -2754,7 +2745,7 @@
 #reserve_percent=10.0
 
 # Type of cell: api or compute (string value)
-#cell_type=<None>
+#cell_type=compute
 
 # Number of seconds after which a lack of capability and
 # capacity updates signals the child cell is to be treated as
