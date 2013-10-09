@@ -3868,33 +3868,35 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         timeutils.utcnow().AndReturn(now)
         self.mox.ReplayAll()
 
-        expected_vol_usages = [{'volume_id': u'1',
-                                'instance_uuid': 'fake-instance-uuid1',
-                                'project_id': 'fake-project-uuid1',
-                                'user_id': 'fake-user-uuid1',
-                                'curr_reads': 1000,
-                                'curr_read_bytes': 2000,
-                                'curr_writes': 3000,
-                                'curr_write_bytes': 4000,
-                                'curr_last_refreshed': now,
-                                'tot_reads': 0,
-                                'tot_read_bytes': 0,
-                                'tot_writes': 0,
-                                'tot_write_bytes': 0,
-                                'tot_last_refreshed': None},
-                               {'volume_id': u'2',
-                                'instance_uuid': 'fake-instance-uuid2',
-                                'project_id': 'fake-project-uuid2',
-                                'user_id': 'fake-user-uuid2',
-                                'curr_reads': 100,
-                                'curr_read_bytes': 200,
-                                'curr_writes': 300,
-                                'curr_write_bytes': 400,
-                                'tot_reads': 0,
-                                'tot_read_bytes': 0,
-                                'tot_writes': 0,
-                                'tot_write_bytes': 0,
-                                'tot_last_refreshed': None}]
+        expected_vol_usages = {
+            u'1': {'volume_id': u'1',
+                   'instance_uuid': 'fake-instance-uuid1',
+                   'project_id': 'fake-project-uuid1',
+                   'user_id': 'fake-user-uuid1',
+                   'curr_reads': 1000,
+                   'curr_read_bytes': 2000,
+                   'curr_writes': 3000,
+                   'curr_write_bytes': 4000,
+                   'curr_last_refreshed': now,
+                   'tot_reads': 0,
+                   'tot_read_bytes': 0,
+                   'tot_writes': 0,
+                   'tot_write_bytes': 0,
+                   'tot_last_refreshed': None},
+            u'2': {'volume_id': u'2',
+                   'instance_uuid': 'fake-instance-uuid2',
+                   'project_id': 'fake-project-uuid2',
+                   'user_id': 'fake-user-uuid2',
+                   'curr_reads': 100,
+                   'curr_read_bytes': 200,
+                   'curr_writes': 300,
+                   'curr_write_bytes': 400,
+                   'tot_reads': 0,
+                   'tot_read_bytes': 0,
+                   'tot_writes': 0,
+                   'tot_write_bytes': 0,
+                   'tot_last_refreshed': None}
+        }
 
         def _compare(vol_usage, expected):
             for key, value in expected.items():
@@ -3924,8 +3926,8 @@ class VolumeUsageDBApiTestCase(test.TestCase):
 
         vol_usages = db.vol_get_usage_by_time(ctxt, start_time)
         self.assertEqual(len(vol_usages), 2)
-        _compare(vol_usages[0], expected_vol_usages[0])
-        _compare(vol_usages[1], expected_vol_usages[1])
+        for usage in vol_usages:
+            _compare(usage, expected_vol_usages[usage.volume_id])
 
     def test_vol_usage_update_totals_update(self):
         ctxt = context.get_admin_context()
@@ -4275,7 +4277,11 @@ class BlockDeviceMappingTestCase(test.TestCase):
         bdm2['device_name'] = '/dev/sdc'
         db.block_device_mapping_update_or_create(self.ctxt, bdm2, legacy=False)
 
-        bdm_real = db.block_device_mapping_get_all_by_instance(self.ctxt, uuid)
+        bdm_real = sorted(
+            db.block_device_mapping_get_all_by_instance(self.ctxt, uuid),
+            key=lambda bdm: bdm['device_name']
+        )
+
         self.assertEqual(len(bdm_real), 2)
         for bdm, device_name in zip(bdm_real, ['/dev/sdb', '/dev/sdc']):
             self.assertEqual(bdm['device_name'], device_name)
@@ -5871,30 +5877,32 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
         start_period = now - datetime.timedelta(seconds=10)
         uuid3_refreshed = now - datetime.timedelta(seconds=5)
 
-        expected_bw_usages = [{'uuid': 'fake_uuid1',
-                               'mac': 'fake_mac1',
-                               'start_period': start_period,
-                               'bw_in': 100,
-                               'bw_out': 200,
-                               'last_ctr_in': 12345,
-                               'last_ctr_out': 67890,
-                               'last_refreshed': now},
-                              {'uuid': 'fake_uuid2',
-                               'mac': 'fake_mac2',
-                               'start_period': start_period,
-                               'bw_in': 200,
-                               'bw_out': 300,
-                               'last_ctr_in': 22345,
-                               'last_ctr_out': 77890,
-                               'last_refreshed': now},
-                              {'uuid': 'fake_uuid3',
-                               'mac': 'fake_mac3',
-                               'start_period': start_period,
-                               'bw_in': 400,
-                               'bw_out': 500,
-                               'last_ctr_in': 32345,
-                               'last_ctr_out': 87890,
-                               'last_refreshed': uuid3_refreshed}]
+        expected_bw_usages = {
+            'fake_uuid1': {'uuid': 'fake_uuid1',
+                           'mac': 'fake_mac1',
+                           'start_period': start_period,
+                           'bw_in': 100,
+                           'bw_out': 200,
+                           'last_ctr_in': 12345,
+                           'last_ctr_out': 67890,
+                           'last_refreshed': now},
+            'fake_uuid2': {'uuid': 'fake_uuid2',
+                           'mac': 'fake_mac2',
+                           'start_period': start_period,
+                           'bw_in': 200,
+                           'bw_out': 300,
+                           'last_ctr_in': 22345,
+                           'last_ctr_out': 77890,
+                           'last_refreshed': now},
+            'fake_uuid3': {'uuid': 'fake_uuid3',
+                           'mac': 'fake_mac3',
+                           'start_period': start_period,
+                           'bw_in': 400,
+                           'bw_out': 500,
+                           'last_ctr_in': 32345,
+                           'last_ctr_out': 87890,
+                           'last_refreshed': uuid3_refreshed}
+        }
 
         bw_usages = db.bw_usage_get_by_uuids(self.ctxt,
                 ['fake_uuid1', 'fake_uuid2'], start_period)
@@ -5921,8 +5929,8 @@ class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
         bw_usages = db.bw_usage_get_by_uuids(self.ctxt,
                 ['fake_uuid1', 'fake_uuid2', 'fake_uuid3'], start_period)
         self.assertEqual(len(bw_usages), 3)
-        for i, expected in enumerate(expected_bw_usages):
-            self._assertEqualObjects(bw_usages[i], expected,
+        for usage in bw_usages:
+            self._assertEqualObjects(expected_bw_usages[usage['uuid']], usage,
                                      ignored_keys=self._ignored_keys)
 
     def test_bw_usage_get(self):
