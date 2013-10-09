@@ -649,10 +649,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_pause(self):
-        pass
+        # Tests that the VMwareESXDriver does not implement the pause method.
+        self.assertRaises(NotImplementedError, self.conn.pause, instance=None)
 
     def test_unpause(self):
-        pass
+        # Tests that the VMwareESXDriver does not implement the unpause method.
+        self.assertRaises(NotImplementedError, self.conn.unpause,
+                          instance=None)
 
     def test_get_diagnostics(self):
         # Simply tests that the VMwareESXDriver doesn't implement the
@@ -1220,3 +1223,14 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def test_confirm_migration(self):
         self._create_vm()
         self.conn.confirm_migration(self.context, self.instance, None)
+
+    def test_pause(self):
+        # Tests that the VMwareVCDriver does not implement the pause method.
+        self._create_instance_in_the_db()
+        self.assertRaises(NotImplementedError, self.conn.pause, self.instance)
+
+    def test_unpause(self):
+        # Tests that the VMwareVCDriver does not implement the unpause method.
+        self._create_instance_in_the_db()
+        self.assertRaises(NotImplementedError, self.conn.unpause,
+                          self.instance)
