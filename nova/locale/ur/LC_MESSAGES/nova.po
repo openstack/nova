@@ -1,4 +1,4 @@
-# Kannada translations for nova.
+# Urdu translations for nova.
 # Copyright (C) 2013 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
@@ -6,13 +6,13 @@
 msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
-"Report-Msgid-Bugs-To: https://bugs.launchpad.net/nova\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2013-10-09 06:09+0000\n"
-"PO-Revision-Date: 2013-09-17 14:44+0000\n"
-"Last-Translator: Tom Fifield <tom@openstack.org>\n"
-"Language-Team: Kannada "
-"(http://www.transifex.com/projects/p/openstack/language/kn/)\n"
-"Plural-Forms: nplurals=1; plural=0\n"
+"PO-Revision-Date: 2013-10-08 21:53+0000\n"
+"Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
+"Language-Team: Urdu "
+"(http://www.transifex.com/projects/p/openstack/language/ur/)\n"
+"Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -13201,127 +13201,4 @@ msgstr ""
 #, python-format
 msgid "formatting encrypted volume %s"
 msgstr ""
-
-#~ msgid "Unknown"
-#~ msgstr ""
-
-#~ msgid "%s - This rule already exists in group"
-#~ msgstr ""
-
-#~ msgid "Delete Failed"
-#~ msgstr ""
-
-#~ msgid "Attach Failed."
-#~ msgstr ""
-
-#~ msgid "Detach Volume Failed."
-#~ msgstr ""
-
-#~ msgid "No more floating IPs available"
-#~ msgstr ""
-
-#~ msgid "Unable to release IP Address."
-#~ msgstr ""
-
-#~ msgid "Floating ip is already associated."
-#~ msgstr ""
-
-#~ msgid "l3driver call to add floating ip failed."
-#~ msgstr ""
-
-#~ msgid "Error, unable to associate floating ip."
-#~ msgstr ""
-
-#~ msgid "Floating ip is not associated."
-#~ msgstr ""
-
-#~ msgid "Couldn't stop instance with in %d sec"
-#~ msgstr ""
-
-#~ msgid "Could not found metadata to be set in request body"
-#~ msgstr ""
-
-#~ msgid ""
-#~ msgstr ""
-
-#~ msgid "Updating host status"
-#~ msgstr ""
-
-#~ msgid "Unable to migrate %(instance_uuid)s to %(dest)s: Lack of memory"
-#~ msgstr ""
-
-#~ msgid "200 Role Match"
-#~ msgstr ""
-
-#~ msgid "200 No Roles"
-#~ msgstr ""
-
-#~ msgid "Exception no pxe bootfile-name path: %s"
-#~ msgstr ""
-
-#~ msgid "Cannot resize filesystem %s to a smaller size."
-#~ msgstr ""
-
-#~ msgid "Getting info for disk: %s"
-#~ msgstr ""
-
-#~ msgid "Cannot find boot VHD file: %s"
-#~ msgstr ""
-
-#~ msgid "Controller not found"
-#~ msgstr ""
-
-#~ msgid "Network injection is not supported by thePowerVM driver."
-#~ msgstr ""
-
-#~ msgid "VMware Cluster %s is not found"
-#~ msgstr ""
-
-#~ msgid "In vmwareapi:_create_session, got this exception: %s"
-#~ msgstr ""
-
-#~ msgid "Starting VM"
-#~ msgstr ""
-
-#~ msgid "No target id found for volume %(volume_id)s."
-#~ msgstr ""
-
-#~ msgid "Unavailable console type %(console_type)s"
-#~ msgstr ""
-
-#~ msgid "Instance %(instance_uuid)s has no metadata with key %(metadata_key)s."
-#~ msgstr ""
-
-#~ msgid "Could not load the module %(module)s"
-#~ msgstr ""
-
-#~ msgid "StdOut  : %s"
-#~ msgstr ""
-
-#~ msgid "StdErr  : %s"
-#~ msgstr ""
-
-#~ msgid "Removing node %s since its removed from nova.conf"
-#~ msgstr ""
-
-#~ msgid "Could not find VM with name %s"
-#~ msgstr ""
-
-#~ msgid "debug in callback: %s"
-#~ msgstr ""
-
-#~ msgid "timefunc: '%(name)s' took %(total_time).2f secs"
-#~ msgstr ""
-
-#~ msgid "plug_vifs called"
-#~ msgstr ""
-
-#~ msgid "unplug_vifs called"
-#~ msgstr ""
-
-#~ msgid "Network injection is not supported by the PowerVM driver."
-#~ msgstr ""
-
-#~ msgid "Re-scanning SR %s"
-#~ msgstr ""
 
