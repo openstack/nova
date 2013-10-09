@@ -635,8 +635,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_unpause(self):
         pass
 
-    def test_diagnostics(self):
-        pass
+    def test_get_diagnostics(self):
+        # Simply tests that the VMwareESXDriver doesn't implement the
+        # get_diagnostics API.
+        self.assertRaises(NotImplementedError, self.conn.get_diagnostics, None)
 
     def test_get_console_output(self):
         self._create_instance_in_the_db()
@@ -741,12 +743,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_power_off(self):
         self.assertRaises(NotImplementedError,
                           self._test_finish_migration, power_on=False)
-
-    def test_diagnostics_non_existent_vm(self):
-        self._create_instance_in_the_db()
-        self.assertRaises(exception.InstanceNotFound,
-                          self.conn.get_diagnostics,
-                          self.instance)
 
     def test_get_console_pool_info(self):
         info = self.conn.get_console_pool_info("console_type")
@@ -1151,3 +1147,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertRaises(NotImplementedError,
                           self.conn.unplug_vifs,
                           instance=self.instance, network_info=None)
+
+    def test_get_diagnostics(self):
+        # Tests that the VMwareVCDriver doesn't implement get_diagnostics.
+        self._create_instance_in_the_db()
+        self.assertRaises(NotImplementedError,
+                          self.conn.get_diagnostics,
+                          self.instance)
