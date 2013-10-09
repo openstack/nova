@@ -2243,8 +2243,17 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.acpi = True
             guest.apic = True
 
+        # NOTE(mikal): Microsoft Windows expects the clock to be in
+        # "localtime". If the clock is set to UTC, then you can use a
+        # registry key to let windows know, but Microsoft says this is
+        # buggy in http://support.microsoft.com/kb/2687252
         clk = vconfig.LibvirtConfigGuestClock()
-        clk.offset = "utc"
+        if instance['os_type'] == 'windows':
+            LOG.info(_('Configuring timezone for windows instance to '
+                       'localtime'), instance=instance)
+            clk.offset = 'localtime'
+        else:
+            clk.offset = 'utc'
         guest.set_clock(clk)
 
         if CONF.libvirt_type == "kvm":

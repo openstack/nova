@@ -434,6 +434,21 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEquals(cfg.clock.timers[1].tickpolicy,
                           "catchup")
 
+    def test_get_guest_config_windows(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref['os_type'] = 'windows'
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
+                                            instance_ref)
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info)
+
+        self.assertEquals(type(cfg.clock),
+                          vconfig.LibvirtConfigGuestClock)
+        self.assertEquals(cfg.clock.offset, "localtime")
+
     def test_get_guest_config_with_two_nics(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = db.instance_create(self.context, self.test_instance)
