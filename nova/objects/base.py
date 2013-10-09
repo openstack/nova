@@ -254,6 +254,14 @@ class NovaObject(object):
         return self
 
     def __deepcopy__(self, memo):
+        """Efficiently make a deep copy of this object."""
+
+        # NOTE(danms): A naive deepcopy would copy more than we need,
+        # and since we have knowledge of the volatile bits of the
+        # object, we can be smarter here. Also, nested entities within
+        # some objects may be uncopyable, so we can avoid those sorts
+        # of issues by copying only our field data.
+
         nobj = self.__class__()
         nobj._context = self._context
         for name in self.fields:
