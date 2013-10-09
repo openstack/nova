@@ -80,7 +80,7 @@ def upgrade(migrate_engine):
                                String(length=255),
                                nullable=False),
                         Column('resource',
-                               String(length=25),
+                               String(length=255),
                                nullable=False),
                         Column('hard_limit', Integer, nullable=True),
                         UniqueConstraint('user_id', 'project_id', 'resource',
