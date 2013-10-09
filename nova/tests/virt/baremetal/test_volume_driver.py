@@ -17,6 +17,7 @@
 
 from oslo.config import cfg
 
+from nova import exception
 from nova import test
 from nova.virt.baremetal import volume_driver
 from nova.virt import fake
@@ -184,8 +185,10 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
             }
         self.connection_info = {'driver_volume_type': 'fake'}
         self.mount_point = '/dev/vdc'
+        self.mount_device = 'vdc'
         self.source_path = '/dev/sdx'
-        self.instance = {'name': 'instance-00000001'}
+        self.instance = {'uuid': '12345678-1234-1234-1234-123467890123456',
+                         'name': 'instance-00000001'}
         self.fixed_ips = [{'address': '10.2.3.4'},
                           {'address': '172.16.17.18'},
                          ]
@@ -205,18 +208,44 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
                                           self.connection_info,
                                           self.disk_info)
 
-    def test_attach_volume(self):
-        self.mox.StubOutWithMock(volume_driver, '_get_fixed_ips')
+    def test_volume_driver_method_ok(self):
+        fake_driver = self.driver.volume_drivers['fake']
+        self.mox.StubOutWithMock(fake_driver, 'connect_volume')
+        fake_driver.connect_volume(self.connection_info, self.disk_info)
+        self.mox.ReplayAll()
+        self.driver._volume_driver_method('connect_volume',
+                                          self.connection_info,
+                                          self.disk_info)
+
+    def test_volume_driver_method_driver_type_not_found(self):
+        self.connection_info['driver_volume_type'] = 'qwerty'
+        self.assertRaises(exception.VolumeDriverNotFound,
+                          self.driver._volume_driver_method,
+                          'connect_volume',
+                          self.connection_info,
+                          self.disk_info)
+
+    def test_connect_volume(self):
         self.mox.StubOutWithMock(self.driver, '_volume_driver_method')
+        self.driver._volume_driver_method('connect_volume',
+                                          self.connection_info,
+                                          self.disk_info)
+        self.mox.ReplayAll()
+        self.driver._connect_volume(self.connection_info, self.disk_info)
+
+    def test_disconnect_volume(self):
+        self.mox.StubOutWithMock(self.driver, '_volume_driver_method')
+        self.driver._volume_driver_method('disconnect_volume',
+                                          self.connection_info,
+                                          self.mount_device)
+        self.mox.ReplayAll()
+        self.driver._disconnect_volume(self.connection_info, self.mount_device)
+
+    def test_publish_iscsi(self):
         self.mox.StubOutWithMock(volume_driver, '_get_iqn')
         self.mox.StubOutWithMock(volume_driver, '_get_next_tid')
         self.mox.StubOutWithMock(volume_driver, '_create_iscsi_export_tgtadm')
         self.mox.StubOutWithMock(volume_driver, '_allow_iscsi_tgtadm')
-        volume_driver._get_fixed_ips(self.instance).AndReturn(self.fixed_ips)
-        self.driver._volume_driver_method('connect_volume',
-                                          self.connection_info,
-                                          self.disk_info).\
-                AndReturn(FakeConf(self.source_path))
         volume_driver._get_iqn(self.instance['name'], self.mount_point).\
                 AndReturn(self.iqn)
         volume_driver._get_next_tid().AndReturn(self.tid)
@@ -228,6 +257,57 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
         volume_driver._allow_iscsi_tgtadm(self.tid,
                                           self.fixed_ips[1]['address'])
         self.mox.ReplayAll()
+        self.driver._publish_iscsi(self.instance,
+                                   self.mount_point,
+                                   self.fixed_ips,
+                                   self.source_path)
+
+    def test_depublish_iscsi_ok(self):
+        self.mox.StubOutWithMock(volume_driver, '_get_iqn')
+        self.mox.StubOutWithMock(volume_driver, '_find_tid')
+        self.mox.StubOutWithMock(volume_driver, '_delete_iscsi_export_tgtadm')
+        volume_driver._get_iqn(self.instance['name'], self.mount_point).\
+                AndReturn(self.iqn)
+        volume_driver._find_tid(self.iqn).AndReturn(self.tid)
+        volume_driver._delete_iscsi_export_tgtadm(self.tid)
+        self.mox.ReplayAll()
+        self.driver._depublish_iscsi(self.instance, self.mount_point)
+
+    def test_depublish_iscsi_do_nothing_if_tid_is_not_found(self):
+        self.mox.StubOutWithMock(volume_driver, '_get_iqn')
+        self.mox.StubOutWithMock(volume_driver, '_find_tid')
+        volume_driver._get_iqn(self.instance['name'], self.mount_point).\
+                AndReturn(self.iqn)
+        volume_driver._find_tid(self.iqn).AndReturn(None)
+        self.mox.ReplayAll()
+        self.driver._depublish_iscsi(self.instance, self.mount_point)
+
+    def test_attach_volume(self):
+        self.mox.StubOutWithMock(volume_driver, '_get_fixed_ips')
+        self.mox.StubOutWithMock(self.driver, '_connect_volume')
+        self.mox.StubOutWithMock(self.driver, '_publish_iscsi')
+        volume_driver._get_fixed_ips(self.instance).AndReturn(self.fixed_ips)
+        self.driver._connect_volume(self.connection_info, self.disk_info).\
+                AndReturn(FakeConf(self.source_path))
+        self.driver._publish_iscsi(self.instance, self.mount_point,
+                                   self.fixed_ips, self.source_path)
+        self.mox.ReplayAll()
         self.driver.attach_volume(self.connection_info,
+                                  self.instance,
+                                  self.mount_point)
+
+    def test_detach_volume(self):
+        self.mox.StubOutWithMock(volume_driver, '_get_iqn')
+        self.mox.StubOutWithMock(volume_driver, '_find_tid')
+        self.mox.StubOutWithMock(volume_driver, '_delete_iscsi_export_tgtadm')
+        self.mox.StubOutWithMock(self.driver, '_disconnect_volume')
+        volume_driver._get_iqn(self.instance['name'], self.mount_point).\
+                AndReturn(self.iqn)
+        volume_driver._find_tid(self.iqn).AndReturn(self.tid)
+        volume_driver._delete_iscsi_export_tgtadm(self.tid)
+        self.driver._disconnect_volume(self.connection_info,
+                                       self.mount_device)
+        self.mox.ReplayAll()
+        self.driver.detach_volume(self.connection_info,
                                   self.instance,
                                   self.mount_point)
