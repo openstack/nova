@@ -369,7 +369,7 @@ class VMwareVolumeOps(object):
                                                 'config.hardware.device')
         (vmdk_file_path, controller_key, adapter_type, disk_type,
          unit_number) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
-        # Attach the curremt volumet to the volume_ref
+        # Attach the current volume to the volume_ref
         volume_device = self.attach_disk_to_vm(volume_ref, instance,
                                                adapter_type, disk_type,
                                                vmdk_path=current_device_path,

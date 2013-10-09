@@ -302,7 +302,7 @@ class XenAPIBasedAgent(object):
 def find_guest_agent(base_dir):
     """
     tries to locate a guest agent at the path
-    specificed by agent_rel_path
+    specified by agent_rel_path
     """
     if CONF.xenapi_disable_agent:
         return False

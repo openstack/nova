@@ -36,7 +36,7 @@ TWENTY_FOUR_HOURS = 3600 * 24
 # or method.  If this needs to be used outside of compute.manager, it should
 # be refactored to eliminate this circular dependency loop.
 def register_storage_use(storage_path, hostname):
-    """Idenfity the id of this instance storage."""
+    """Identify the id of this instance storage."""
 
     # NOTE(morganfainberg): config option import is avoided here since it is
     # explicitly imported from compute.manager and may cause issues with

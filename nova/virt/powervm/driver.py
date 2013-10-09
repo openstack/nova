@@ -320,7 +320,7 @@ class PowerVMDriver(driver.ComputeDriver):
         # we reassign the original mac address, replacing the temp mac
         # on the old instance that will be started
         # NOTE(guochbo) We can't judge if a resize_revert on the same host
-        # due to the instance on destination host has been destoryed.
+        # due to the instance on destination host has been destroyed.
         # Original mac address is always kept in network_info, we can
         # reassign the original mac address here without negative effects
         # even the old instance kept the original mac address

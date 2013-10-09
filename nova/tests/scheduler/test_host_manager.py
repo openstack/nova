@@ -101,7 +101,7 @@ class HostManagerTestCase(test.NoDBTestCase):
                 fake_properties)
         self._verify_result(info, result)
 
-    def test_get_filtered_hosts_with_specificed_filters(self):
+    def test_get_filtered_hosts_with_specified_filters(self):
         fake_properties = {'moo': 1, 'cow': 2}
 
         specified_filters = ['FakeFilterClass1', 'FakeFilterClass2']

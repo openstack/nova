@@ -364,7 +364,7 @@ def teardown_container(container_dir):
         img = _DiskImage(image=None, mount_dir=container_dir)
         img.teardown()
     except Exception as exn:
-        LOG.exception(_('Failed to teardown ntainer filesystem: %s'), exn)
+        LOG.exception(_('Failed to teardown container filesystem: %s'), exn)
 
 
 def clean_lxc_namespace(container_dir):

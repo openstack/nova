@@ -101,7 +101,7 @@ class VirtAPI(object):
         raise NotImplementedError()
 
     def block_device_mapping_update(self, context, bdm_id, bdm_values):
-        """Update the databse for the passed block device mapping
+        """Update the database for the passed block device mapping
         :param context: security context
         :param bdm: the block device mapping dict
         """

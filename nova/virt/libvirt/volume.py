@@ -413,7 +413,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                    check_exit_code=[0, 255])
             except processutils.ProcessExecutionError as err:
                 #as this might be one of many paths,
-                #only set successfull logins to startup automatically
+                #only set successful logins to startup automatically
                 if err.exit_code in [15]:
                     self._iscsiadm_update(iscsi_properties,
                                           "node.startup",
@@ -665,7 +665,7 @@ class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
                                    check_exit_code=[0, 255])
             except processutils.ProcessExecutionError as err:
                 # as this might be one of many paths,
-                # only set successfull logins to startup automatically
+                # only set successful logins to startup automatically
                 if err.exit_code == 15:
                     self._iscsiadm_update(iser_properties,
                                           "node.startup",

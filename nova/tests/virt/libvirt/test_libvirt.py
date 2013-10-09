@@ -4404,16 +4404,16 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.assertEqual(actualvf, expect_vf)
 
-    def test_pci_device_assignbale(self):
+    def test_pci_device_assignable(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn.dev_filter, 'device_assignable', lambda x: True)
 
         fake_dev = {'dev_type': 'type-PF'}
-        self.assertFalse(conn._pci_device_assignbale(fake_dev))
+        self.assertFalse(conn._pci_device_assignable(fake_dev))
         fake_dev = {'dev_type': 'type-VF'}
-        self.assertTrue(conn._pci_device_assignbale(fake_dev))
+        self.assertTrue(conn._pci_device_assignable(fake_dev))
         fake_dev = {'dev_type': 'type-PCI'}
-        self.assertTrue(conn._pci_device_assignbale(fake_dev))
+        self.assertTrue(conn._pci_device_assignable(fake_dev))
 
     def test_get_pci_passthrough_devices(self):
 
