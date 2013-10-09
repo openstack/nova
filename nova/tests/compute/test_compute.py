@@ -8090,7 +8090,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.servicegroup_api, 'service_is_up',
                 fake_service_is_up)
 
-        self.assertRaises(exception.ComputeServiceUnavailable,
+        self.assertRaises(exception.ComputeServiceInUse,
                 self.compute_api.evacuate, self.context.elevated(), instance,
                 host='fake_dest_host', on_shared_storage=True,
                 admin_password=None)

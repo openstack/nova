@@ -392,6 +392,10 @@ class ComputeServiceUnavailable(ServiceUnavailable):
     msg_fmt = _("Compute service of %(host)s is unavailable at this time.")
 
 
+class ComputeServiceInUse(NovaException):
+    msg_fmt = _("Compute service of %(host)s is still in use.")
+
+
 class UnableToMigrateToSelf(Invalid):
     msg_fmt = _("Unable to migrate instance (%(instance_id)s) "
                 "to current host (%(host)s).")

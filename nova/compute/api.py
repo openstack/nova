@@ -2916,7 +2916,7 @@ class API(base.Base):
             msg = (_('Instance compute service state on %s '
                      'expected to be down, but it was up.') % inst_host)
             LOG.error(msg)
-            raise exception.ComputeServiceUnavailable(msg)
+            raise exception.ComputeServiceInUse(host=inst_host)
 
         instance = self.update(context, instance, expected_task_state=None,
                                task_state=task_states.REBUILDING)
