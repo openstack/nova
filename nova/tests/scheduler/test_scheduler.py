@@ -70,7 +70,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
     def test_1_correct_init(self):
         # Correct scheduler driver
         manager = self.manager
-        self.assertTrue(isinstance(manager.driver, self.driver_cls))
+        self.assertIsInstance(manager.driver, self.driver_cls)
 
     def test_update_service_capabilities(self):
         service_name = 'fake_service'

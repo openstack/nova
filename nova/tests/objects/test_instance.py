@@ -73,8 +73,7 @@ class _TestInstanceObject(object):
                     'nova_object.changes': ['uuid', 'launched_at']}
         self.assertEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
-        self.assertTrue(isinstance(inst2.launched_at,
-                        datetime.datetime))
+        self.assertIsInstance(inst2.launched_at, datetime.datetime)
         self.assertEqual(inst2.launched_at, red_letter_date)
 
     def test_ip_deserialization(self):
@@ -94,8 +93,8 @@ class _TestInstanceObject(object):
                                             'access_ip_v4']}
         self.assertEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
-        self.assertTrue(isinstance(inst2.access_ip_v4, netaddr.IPAddress))
-        self.assertTrue(isinstance(inst2.access_ip_v6, netaddr.IPAddress))
+        self.assertIsInstance(inst2.access_ip_v4, netaddr.IPAddress)
+        self.assertIsInstance(inst2.access_ip_v6, netaddr.IPAddress)
         self.assertEqual(inst2.access_ip_v4, netaddr.IPAddress('1.2.3.4'))
         self.assertEqual(inst2.access_ip_v6, netaddr.IPAddress('::1'))
 
@@ -458,8 +457,8 @@ class _TestInstanceObject(object):
             for key in group:
                 self.assertEqual(group[key],
                                  inst.security_groups[index][key])
-                self.assertTrue(isinstance(inst.security_groups[index],
-                                           security_group.SecurityGroup))
+                self.assertIsInstance(inst.security_groups[index],
+                                      security_group.SecurityGroup)
         self.assertEqual(inst.security_groups.obj_what_changed(), set())
         inst.security_groups[0].description = 'changed'
         inst.save()
@@ -733,8 +732,7 @@ class _TestInstanceListObject(object):
             expected_attrs=['metadata'])
 
         for i in range(0, len(fakes)):
-            self.assertTrue(isinstance(inst_list.objects[i],
-                                       instance.Instance))
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 
@@ -755,7 +753,7 @@ class _TestInstanceListObject(object):
             expected_attrs=['metadata'])
 
         self.assertEqual(1, len(inst_list))
-        self.assertTrue(isinstance(inst_list.objects[0], instance.Instance))
+        self.assertIsInstance(inst_list.objects[0], instance.Instance)
         self.assertEqual(inst_list.objects[0].uuid, fakes[1]['uuid'])
         self.assertRemotes()
 
@@ -768,8 +766,7 @@ class _TestInstanceListObject(object):
         self.mox.ReplayAll()
         inst_list = instance.InstanceList.get_by_host(self.context, 'foo')
         for i in range(0, len(fakes)):
-            self.assertTrue(isinstance(inst_list.objects[i],
-                                       instance.Instance))
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
             self.assertEqual(inst_list.objects[i]._context, self.context)
         self.assertEqual(inst_list.obj_what_changed(), set())
@@ -785,8 +782,7 @@ class _TestInstanceListObject(object):
         inst_list = instance.InstanceList.get_by_host_and_node(self.context,
                                                                'foo', 'bar')
         for i in range(0, len(fakes)):
-            self.assertTrue(isinstance(inst_list.objects[i],
-                                       instance.Instance))
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 
@@ -801,8 +797,7 @@ class _TestInstanceListObject(object):
         inst_list = instance.InstanceList.get_by_host_and_not_type(
             self.context, 'foo', 'bar')
         for i in range(0, len(fakes)):
-            self.assertTrue(isinstance(inst_list.objects[i],
-                                       instance.Instance))
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 
@@ -817,8 +812,7 @@ class _TestInstanceListObject(object):
         inst_list = instance.InstanceList.get_hung_in_rebooting(self.context,
                                                                 dt)
         for i in range(0, len(fakes)):
-            self.assertTrue(isinstance(inst_list.objects[i],
-                                       instance.Instance))
+            self.assertIsInstance(inst_list.objects[i], instance.Instance)
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 

@@ -433,7 +433,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             utils.change_deleted_column_type_to_id_type(engine, table_name)
 
             table = utils.get_table(engine, table_name)
-            self.assertTrue(isinstance(table.c.deleted.type, Integer))
+            self.assertIsInstance(table.c.deleted.type, Integer)
 
     def test_change_deleted_column_type_to_id_type_string(self):
         table_name = 'abc'
@@ -447,7 +447,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             utils.change_deleted_column_type_to_id_type(engine, table_name)
 
             table = utils.get_table(engine, table_name)
-            self.assertTrue(isinstance(table.c.deleted.type, String))
+            self.assertIsInstance(table.c.deleted.type, String)
 
     def test_change_deleted_column_type_to_id_type_custom(self):
         table_name = 'abc'
@@ -471,8 +471,8 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
         table = utils.get_table(engine, table_name)
         # NOTE(boris-42): There is no way to check has foo type CustomType.
         #                 but sqlalchemy will set it to NullType.
-        self.assertTrue(isinstance(table.c.foo.type, NullType))
-        self.assertTrue(isinstance(table.c.deleted.type, Integer))
+        self.assertIsInstance(table.c.foo.type, NullType)
+        self.assertIsInstance(table.c.deleted.type, Integer)
 
     def test_change_deleted_column_type_to_boolean(self):
         table_name = 'abc'
@@ -488,7 +488,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
             table = utils.get_table(engine, table_name)
             expected_type = Boolean if key != "mysql" else mysql.TINYINT
-            self.assertTrue(isinstance(table.c.deleted.type, expected_type))
+            self.assertIsInstance(table.c.deleted.type, expected_type)
 
     def test_change_deleted_column_type_to_boolean_type_custom(self):
         table_name = 'abc'
@@ -512,8 +512,8 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
         table = utils.get_table(engine, table_name)
         # NOTE(boris-42): There is no way to check has foo type CustomType.
         #                 but sqlalchemy will set it to NullType.
-        self.assertTrue(isinstance(table.c.foo.type, NullType))
-        self.assertTrue(isinstance(table.c.deleted.type, Boolean))
+        self.assertIsInstance(table.c.foo.type, NullType)
+        self.assertIsInstance(table.c.deleted.type, Boolean)
 
     def test_drop_unique_constraint_in_sqlite_fk_recreate(self):
         engine = self.engines['sqlite']

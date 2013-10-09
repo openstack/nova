@@ -64,14 +64,11 @@ class BareMetalDriverNoDBTestCase(test.NoDBTestCase):
         self.driver = bm_driver.BareMetalDriver(None)
 
     def test_validate_driver_loading(self):
-        self.assertTrue(isinstance(self.driver.driver,
-                                    fake.FakeDriver))
-        self.assertTrue(isinstance(self.driver.vif_driver,
-                                    fake.FakeVifDriver))
-        self.assertTrue(isinstance(self.driver.volume_driver,
-                                    fake.FakeVolumeDriver))
-        self.assertTrue(isinstance(self.driver.firewall_driver,
-                                    fake.FakeFirewallDriver))
+        self.assertIsInstance(self.driver.driver, fake.FakeDriver)
+        self.assertIsInstance(self.driver.vif_driver, fake.FakeVifDriver)
+        self.assertIsInstance(self.driver.volume_driver, fake.FakeVolumeDriver)
+        self.assertIsInstance(self.driver.firewall_driver,
+                              fake.FakeFirewallDriver)
 
 
 class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
@@ -137,7 +134,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
     def test_get_host_stats(self):
         node = self._create_node()
         stats = self.driver.get_host_stats()
-        self.assertTrue(isinstance(stats, list))
+        self.assertIsInstance(stats, list)
         self.assertEqual(len(stats), 1)
         stats = stats[0]
         self.assertEqual(stats['cpu_arch'], 'test')

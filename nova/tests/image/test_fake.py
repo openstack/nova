@@ -43,8 +43,8 @@ class FakeImageServiceTestCase(test.NoDBTestCase):
                                          'status', 'is_public', 'properties',
                                          'disk_format', 'container_format',
                                          'size']))
-            self.assertTrue(isinstance(image['created_at'], datetime.datetime))
-            self.assertTrue(isinstance(image['updated_at'], datetime.datetime))
+            self.assertIsInstance(image['created_at'], datetime.datetime)
+            self.assertIsInstance(image['updated_at'], datetime.datetime)
 
             if not (isinstance(image['deleted_at'], datetime.datetime) or
                                       image['deleted_at'] is None):

@@ -335,7 +335,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
 
     def test_limit_class(self):
         # Test that middleware selected correct limiter class.
-        assert isinstance(self.app._limiter, MockLimiter)
+        self.assertIsInstance(self.app._limiter, MockLimiter)
 
     def test_good_request(self):
         # Test successful GET request through middleware.
