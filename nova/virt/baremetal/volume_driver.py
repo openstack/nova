@@ -235,10 +235,15 @@ class LibvirtVolumeDriver(VolumeDriver):
                     'No fixed PXE IP is associated to %s') % instance['uuid'])
 
         mount_device = mountpoint.rpartition("/")[2]
-        self._volume_driver_method('connect_volume',
-                                   connection_info,
-                                   mount_device)
-        device_path = connection_info['data']['device_path']
+        disk_info = {
+            'dev': mount_device,
+            'bus': 'baremetal',
+            'type': 'baremetal',
+            }
+        conf = self._volume_driver_method('connect_volume',
+                                          connection_info,
+                                          disk_info)
+        device_path = conf.source_path
         iqn = _get_iqn(instance['name'], mountpoint)
         tid = _get_next_tid()
         _create_iscsi_export_tgtadm(device_path, tid, iqn)
