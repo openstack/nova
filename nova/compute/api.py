@@ -133,8 +133,8 @@ def check_instance_state(vm_state=None, task_state=(None,),
                          must_have_launched=True):
     """Decorator to check VM and/or task state before entry to API functions.
 
-    If the instance is in the wrong state, or has not been sucessfully started
-    at least once the wrapper will raise an exception.
+    If the instance is in the wrong state, or has not been successfully
+    started at least once the wrapper will raise an exception.
     """
 
     if vm_state is not None and not isinstance(vm_state, set):
@@ -3305,7 +3305,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     and security group rules
     """
 
-    # The nova seurity group api does not use a uuid for the id.
+    # The nova security group api does not use a uuid for the id.
     id_is_uuid = False
 
     def __init__(self, **kwargs):
@@ -3546,9 +3546,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
     def add_rules(self, context, id, name, vals):
         """Add security group rule(s) to security group.
 
-        Note: the Nova security group API doesn't support adding muliple
+        Note: the Nova security group API doesn't support adding multiple
         security group rules at once but the EC2 one does. Therefore,
-        this function is writen to support both.
+        this function is written to support both.
         """
 
         count = QUOTAS.count(context, 'security_group_rules', id)

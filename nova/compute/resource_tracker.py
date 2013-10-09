@@ -198,7 +198,7 @@ class ResourceTracker(object):
 
     def _set_instance_host_and_node(self, context, instance_ref):
         """Tag the instance as belonging to this host.  This should be done
-        while the COMPUTE_RESOURCES_SEMPAHORE is held so the resource claim
+        while the COMPUTE_RESOURCES_SEMAPHORE is held so the resource claim
         will not be lost if the audit process starts.
         """
         values = {'host': self.host, 'node': self.nodename,
@@ -583,7 +583,7 @@ class ResourceTracker(object):
         # purge old stats
         self.stats.clear()
 
-        # set some intiial values, reserve room for host/hypervisor:
+        # set some initial values, reserve room for host/hypervisor:
         resources['local_gb_used'] = CONF.reserved_host_disk_mb / 1024
         resources['memory_mb_used'] = CONF.reserved_host_memory_mb
         resources['vcpus_used'] = 0
