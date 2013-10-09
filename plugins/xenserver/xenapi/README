@@ -6,11 +6,3 @@ added files are executable. You can do this by running the following
 command (from dom0):
 
 chmod a+x /etc/xapi.d/plugins/*
-
-Otherwise, you can build an rpm as detailed in:
-
-$NOVA_ROOT/plugins/xenserver/xenapi/contrib/
-
-and install the rpm by running the following command (from dom0):
-
-rpm -i openstack-xen-plugins.rpm
