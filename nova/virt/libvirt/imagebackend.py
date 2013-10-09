@@ -173,7 +173,8 @@ class Image(object):
             self.create_image(call_if_not_exists, base, size,
                               *args, **kwargs)
 
-        if size and self.preallocate and self._can_fallocate():
+        if (size and self.preallocate and self._can_fallocate() and
+                os.access(self.path, os.W_OK)):
             utils.execute('fallocate', '-n', '-l', size, self.path)
 
     def _can_fallocate(self):
