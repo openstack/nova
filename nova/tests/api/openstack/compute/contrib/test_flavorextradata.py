@@ -63,7 +63,7 @@ class FlavorextradataTest(test.NoDBTestCase):
 
     def _verify_flavor_response(self, flavor, expected):
         for key in expected:
-            self.assertEquals(flavor[key], expected[key])
+            self.assertEqual(flavor[key], expected[key])
 
     def test_show(self):
         expected = {

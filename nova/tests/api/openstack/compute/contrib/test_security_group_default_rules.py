@@ -110,8 +110,8 @@ class TestSecurityGroupDefaultRules(test.TestCase):
                                           {'security_group_default_rule': sgr})
         security_group_default_rule = res_dict['security_group_default_rule']
         self.assertNotEquals(security_group_default_rule['id'], 0)
-        self.assertEquals(security_group_default_rule['ip_range']['cidr'],
-                          '0.0.0.0/0')
+        self.assertEqual(security_group_default_rule['ip_range']['cidr'],
+                         '0.0.0.0/0')
 
     def test_create_security_group_default_rule_with_blank_to_port(self):
         sgr = security_group_default_rule_template(to_port='')
@@ -146,8 +146,8 @@ class TestSecurityGroupDefaultRules(test.TestCase):
                                           {'security_group_default_rule': sgr})
         security_group_default_rule = res_dict['security_group_default_rule']
         self.assertNotEquals(security_group_default_rule['id'], 0)
-        self.assertEquals(security_group_default_rule['ip_range']['cidr'],
-                          '0.0.0.0/0')
+        self.assertEqual(security_group_default_rule['ip_range']['cidr'],
+                         '0.0.0.0/0')
 
     def test_create_security_group_default_rule_non_numerical_to_port(self):
         sgr = security_group_default_rule_template(to_port='invalid')
@@ -260,7 +260,7 @@ class TestSecurityGroupDefaultRules(test.TestCase):
             self.called = True
 
         def return_security_group_default_rule(context, id):
-            self.assertEquals(sgr['id'], id)
+            self.assertEqual(sgr['id'], id)
             return security_group_default_rule_db(sgr)
 
         self.stubs.Set(nova.db, 'security_group_default_rule_destroy',

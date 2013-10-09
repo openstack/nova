@@ -368,14 +368,14 @@ class MetadataXMLDeserializationTest(test.TestCase):
         </metadata>"""
         output = self.deserializer.deserialize(request_body, 'create')
         expected = {"body": {"metadata": {"123": "asdf", "567": "jkl;"}}}
-        self.assertEquals(output, expected)
+        self.assertEqual(output, expected)
 
     def test_create_empty(self):
         request_body = """
         <metadata xmlns="http://docs.openstack.org/compute/api/v1.1"/>"""
         output = self.deserializer.deserialize(request_body, 'create')
         expected = {"body": {"metadata": {}}}
-        self.assertEquals(output, expected)
+        self.assertEqual(output, expected)
 
     def test_update_all(self):
         request_body = """
@@ -385,7 +385,7 @@ class MetadataXMLDeserializationTest(test.TestCase):
         </metadata>"""
         output = self.deserializer.deserialize(request_body, 'update_all')
         expected = {"body": {"metadata": {"123": "asdf", "567": "jkl;"}}}
-        self.assertEquals(output, expected)
+        self.assertEqual(output, expected)
 
     def test_update(self):
         request_body = """
@@ -393,7 +393,7 @@ class MetadataXMLDeserializationTest(test.TestCase):
               key='123'>asdf</meta>"""
         output = self.deserializer.deserialize(request_body, 'update')
         expected = {"body": {"meta": {"123": "asdf"}}}
-        self.assertEquals(output, expected)
+        self.assertEqual(output, expected)
 
 
 class MetadataXMLSerializationTest(test.TestCase):

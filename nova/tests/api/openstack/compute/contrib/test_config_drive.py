@@ -44,7 +44,7 @@ class ConfigDriveTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/servers/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        self.assertEquals(response.status_int, 200)
+        self.assertEqual(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertIn('config_drive', res_dict['server'])
 

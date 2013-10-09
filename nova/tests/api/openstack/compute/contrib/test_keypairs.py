@@ -330,10 +330,10 @@ class KeypairsTest(test.TestCase):
         req = webob.Request.blank('/v2/fake/servers/1')
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
-        self.assertEquals(response.status_int, 200)
+        self.assertEqual(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertIn('key_name', res_dict['server'])
-        self.assertEquals(res_dict['server']['key_name'], '')
+        self.assertEqual(res_dict['server']['key_name'], '')
 
     def test_detail_servers(self):
         self.stubs.Set(db, 'instance_get_all_by_filters',
@@ -341,11 +341,11 @@ class KeypairsTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/detail')
         res = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         server_dicts = jsonutils.loads(res.body)['servers']
-        self.assertEquals(len(server_dicts), 5)
+        self.assertEqual(len(server_dicts), 5)
 
         for server_dict in server_dicts:
             self.assertIn('key_name', server_dict)
-            self.assertEquals(server_dict['key_name'], '')
+            self.assertEqual(server_dict['key_name'], '')
 
     def test_keypair_create_with_invalid_keypair_body(self):
         body = {'alpha': {'name': 'create_test'}}

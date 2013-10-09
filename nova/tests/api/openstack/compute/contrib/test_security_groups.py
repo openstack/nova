@@ -304,7 +304,7 @@ class TestSecurityGroups(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
         res_dict = self.controller.index(req)
 
-        self.assertEquals(res_dict, expected)
+        self.assertEqual(res_dict, expected)
 
     def test_get_security_group_list_all_tenants(self):
         all_groups = []
@@ -338,12 +338,12 @@ class TestSecurityGroups(test.TestCase):
 
         req = fakes.HTTPRequest.blank(path, use_admin_context=True)
         res_dict = self.controller.index(req)
-        self.assertEquals(res_dict, tenant_specific)
+        self.assertEqual(res_dict, tenant_specific)
 
         req = fakes.HTTPRequest.blank('%s?all_tenants=1' % path,
                                       use_admin_context=True)
         res_dict = self.controller.index(req)
-        self.assertEquals(res_dict, all)
+        self.assertEqual(res_dict, all)
 
     def test_get_security_group_by_instance(self):
         groups = []
@@ -357,14 +357,14 @@ class TestSecurityGroups(test.TestCase):
 
         def return_instance(context, server_id,
                             columns_to_join=None, use_slave=False):
-            self.assertEquals(server_id, FAKE_UUID1)
+            self.assertEqual(server_id, FAKE_UUID1)
             return return_server_by_uuid(context, server_id)
 
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_instance)
 
         def return_security_groups(context, instance_uuid):
-            self.assertEquals(instance_uuid, FAKE_UUID1)
+            self.assertEqual(instance_uuid, FAKE_UUID1)
             return [security_group_db(sg) for sg in groups]
 
         self.stubs.Set(nova.db, 'security_group_get_by_instance',
@@ -374,7 +374,7 @@ class TestSecurityGroups(test.TestCase):
                                       ('fake', FAKE_UUID1))
         res_dict = self.server_controller.index(req, FAKE_UUID1)
 
-        self.assertEquals(res_dict, expected)
+        self.assertEqual(res_dict, expected)
 
     def test_get_security_group_by_instance_non_existing(self):
         self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
@@ -394,7 +394,7 @@ class TestSecurityGroups(test.TestCase):
         sg = security_group_template(id=2, rules=[])
 
         def return_security_group(context, group_id):
-            self.assertEquals(sg['id'], group_id)
+            self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
         self.stubs.Set(nova.db, 'security_group_get',
@@ -404,7 +404,7 @@ class TestSecurityGroups(test.TestCase):
         res_dict = self.controller.show(req, '2')
 
         expected = {'security_group': sg}
-        self.assertEquals(res_dict, expected)
+        self.assertEqual(res_dict, expected)
 
     def test_get_security_group_by_invalid_id(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/invalid')
@@ -423,13 +423,13 @@ class TestSecurityGroups(test.TestCase):
                         name='update_name', description='update_desc')
 
         def return_security_group(context, group_id):
-            self.assertEquals(sg['id'], group_id)
+            self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
         def return_update_security_group(context, group_id, values):
-            self.assertEquals(sg_update['id'], group_id)
-            self.assertEquals(sg_update['name'], values['name'])
-            self.assertEquals(sg_update['description'], values['description'])
+            self.assertEqual(sg_update['id'], group_id)
+            self.assertEqual(sg_update['name'], values['name'])
+            self.assertEqual(sg_update['description'], values['description'])
             return security_group_db(sg_update)
 
         self.stubs.Set(nova.db, 'security_group_update',
@@ -442,13 +442,13 @@ class TestSecurityGroups(test.TestCase):
                                           {'security_group': sg_update})
 
         expected = {'security_group': sg_update}
-        self.assertEquals(res_dict, expected)
+        self.assertEqual(res_dict, expected)
 
     def test_update_security_group_name_to_default(self):
         sg = security_group_template(id=2, rules=[], name='default')
 
         def return_security_group(context, group_id):
-            self.assertEquals(sg['id'], group_id)
+            self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
         self.stubs.Set(nova.db, 'security_group_get',
@@ -474,7 +474,7 @@ class TestSecurityGroups(test.TestCase):
             self.called = True
 
         def return_security_group(context, group_id):
-            self.assertEquals(sg['id'], group_id)
+            self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
         self.stubs.Set(nova.db, 'security_group_destroy',
@@ -505,7 +505,7 @@ class TestSecurityGroups(test.TestCase):
             return True
 
         def return_security_group(context, group_id):
-            self.assertEquals(sg['id'], group_id)
+            self.assertEqual(sg['id'], group_id)
             return security_group_db(sg)
 
         self.stubs.Set(nova.db, 'security_group_in_use',
@@ -519,8 +519,8 @@ class TestSecurityGroups(test.TestCase):
 
     def test_associate_by_non_existing_security_group_name(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        self.assertEquals(return_server(None, '1'),
-                          nova.db.instance_get(None, '1'))
+        self.assertEqual(return_server(None, '1'),
+                         nova.db.instance_get(None, '1'))
         body = dict(addSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -610,8 +610,8 @@ class TestSecurityGroups(test.TestCase):
 
     def test_disassociate_by_non_existing_security_group_name(self):
         self.stubs.Set(nova.db, 'instance_get', return_server)
-        self.assertEquals(return_server(None, '1'),
-                          nova.db.instance_get(None, '1'))
+        self.assertEqual(return_server(None, '1'),
+                         nova.db.instance_get(None, '1'))
         body = dict(removeSecurityGroup=dict(name='non-existing'))
 
         req = fakes.HTTPRequest.blank('/v2/fake/servers/1/action')
@@ -747,10 +747,10 @@ class TestSecurityGroupRules(test.TestCase):
         res_dict = self.controller.create(req, {'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg2['id'])
-        self.assertEquals(security_group_rule['ip_range']['cidr'],
-                          "10.2.3.124/24")
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg2['id'])
+        self.assertEqual(security_group_rule['ip_range']['cidr'],
+                         "10.2.3.124/24")
 
     def test_create_by_group_id(self):
         rule = security_group_rule_template(group_id=self.sg1['id'],
@@ -761,8 +761,8 @@ class TestSecurityGroupRules(test.TestCase):
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg2['id'])
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg2['id'])
 
     def test_create_by_same_group_id(self):
         rule1 = security_group_rule_template(group_id=self.sg1['id'],
@@ -779,10 +779,10 @@ class TestSecurityGroupRules(test.TestCase):
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg2['id'])
-        self.assertEquals(security_group_rule['from_port'], 81)
-        self.assertEquals(security_group_rule['to_port'], 81)
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg2['id'])
+        self.assertEqual(security_group_rule['from_port'], 81)
+        self.assertEqual(security_group_rule['to_port'], 81)
 
     def test_create_none_value_from_to_port(self):
         rule = {'parent_group_id': self.sg1['id'],
@@ -792,9 +792,9 @@ class TestSecurityGroupRules(test.TestCase):
         security_group_rule = res_dict['security_group_rule']
         self.assertIsNone(security_group_rule['from_port'])
         self.assertIsNone(security_group_rule['to_port'])
-        self.assertEquals(security_group_rule['group']['name'], 'test')
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg1['id'])
+        self.assertEqual(security_group_rule['group']['name'], 'test')
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg1['id'])
 
     def test_create_none_value_from_to_port_icmp(self):
         rule = {'parent_group_id': self.sg1['id'],
@@ -803,12 +803,12 @@ class TestSecurityGroupRules(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
-        self.assertEquals(security_group_rule['ip_protocol'], 'ICMP')
-        self.assertEquals(security_group_rule['from_port'], -1)
-        self.assertEquals(security_group_rule['to_port'], -1)
-        self.assertEquals(security_group_rule['group']['name'], 'test')
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg1['id'])
+        self.assertEqual(security_group_rule['ip_protocol'], 'ICMP')
+        self.assertEqual(security_group_rule['from_port'], -1)
+        self.assertEqual(security_group_rule['to_port'], -1)
+        self.assertEqual(security_group_rule['group']['name'], 'test')
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg1['id'])
 
     def test_create_none_value_from_to_port_tcp(self):
         rule = {'parent_group_id': self.sg1['id'],
@@ -817,12 +817,12 @@ class TestSecurityGroupRules(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
-        self.assertEquals(security_group_rule['ip_protocol'], 'TCP')
-        self.assertEquals(security_group_rule['from_port'], 1)
-        self.assertEquals(security_group_rule['to_port'], 65535)
-        self.assertEquals(security_group_rule['group']['name'], 'test')
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg1['id'])
+        self.assertEqual(security_group_rule['ip_protocol'], 'TCP')
+        self.assertEqual(security_group_rule['from_port'], 1)
+        self.assertEqual(security_group_rule['to_port'], 65535)
+        self.assertEqual(security_group_rule['group']['name'], 'test')
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg1['id'])
 
     def test_create_by_invalid_cidr_json(self):
         rule = security_group_rule_template(
@@ -991,10 +991,10 @@ class TestSecurityGroupRules(test.TestCase):
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.parent_security_group['id'])
-        self.assertEquals(security_group_rule['ip_range']['cidr'],
-                          "0.0.0.0/0")
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.parent_security_group['id'])
+        self.assertEqual(security_group_rule['ip_range']['cidr'],
+                         "0.0.0.0/0")
 
     def test_create_with_invalid_group_id(self):
         rule = security_group_rule_template(group_id='invalid',
@@ -1027,10 +1027,10 @@ class TestSecurityGroupRules(test.TestCase):
         res_dict = self.controller.create(req, {'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.sg1['id'])
-        self.assertEquals(security_group_rule['group']['name'],
-                          self.sg1['name'])
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.sg1['id'])
+        self.assertEqual(security_group_rule['group']['name'],
+                         self.sg1['name'])
 
     def _test_create_with_no_ports_and_no_group(self, proto):
         rule = {'ip_protocol': proto, 'parent_group_id': self.sg2['id']}
@@ -1161,10 +1161,10 @@ class TestSecurityGroupRules(test.TestCase):
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.parent_security_group['id'])
-        self.assertEquals(security_group_rule['ip_range']['cidr'],
-                          "0.0.0.0/0")
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.parent_security_group['id'])
+        self.assertEqual(security_group_rule['ip_range']['cidr'],
+                         "0.0.0.0/0")
 
     def test_create_rule_cidr_ipv6_allow_all(self):
         rule = security_group_rule_template(cidr='::/0',
@@ -1175,10 +1175,10 @@ class TestSecurityGroupRules(test.TestCase):
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.parent_security_group['id'])
-        self.assertEquals(security_group_rule['ip_range']['cidr'],
-                          "::/0")
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.parent_security_group['id'])
+        self.assertEqual(security_group_rule['ip_range']['cidr'],
+                         "::/0")
 
     def test_create_rule_cidr_allow_some(self):
         rule = security_group_rule_template(cidr='15.0.0.0/8',
@@ -1189,10 +1189,10 @@ class TestSecurityGroupRules(test.TestCase):
 
         security_group_rule = res_dict['security_group_rule']
         self.assertNotEquals(security_group_rule['id'], 0)
-        self.assertEquals(security_group_rule['parent_group_id'],
-                          self.parent_security_group['id'])
-        self.assertEquals(security_group_rule['ip_range']['cidr'],
-                          "15.0.0.0/8")
+        self.assertEqual(security_group_rule['parent_group_id'],
+                         self.parent_security_group['id'])
+        self.assertEqual(security_group_rule['ip_range']['cidr'],
+                         "15.0.0.0/8")
 
     def test_create_rule_cidr_bad_netmask(self):
         rule = security_group_rule_template(cidr='15.0.0.0/0')
@@ -1228,7 +1228,7 @@ class TestSecurityGroupRulesXMLDeserializer(test.TestCase):
                 "cidr": "10.0.0.0/24",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_create_no_protocol_request(self):
         serial_request = """
@@ -1249,7 +1249,7 @@ class TestSecurityGroupRulesXMLDeserializer(test.TestCase):
                 "cidr": "10.0.0.0/24",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_corrupt_xml(self):
         """Should throw a 400 error on corrupt xml."""
@@ -1277,7 +1277,7 @@ class TestSecurityGroupXMLDeserializer(test.TestCase):
                 "description": "test",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_create_no_description_request(self):
         serial_request = """
@@ -1289,7 +1289,7 @@ class TestSecurityGroupXMLDeserializer(test.TestCase):
                 "name": "test",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_create_no_name_request(self):
         serial_request = """
@@ -1302,7 +1302,7 @@ class TestSecurityGroupXMLDeserializer(test.TestCase):
                 "description": "test",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_corrupt_xml(self):
         """Should throw a 400 error on corrupt xml."""

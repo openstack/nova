@@ -585,7 +585,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
                 "size": "1",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_display_name(self):
         self_request = """
@@ -599,7 +599,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
                 "display_name": "Volume-xml",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_display_description(self):
         self_request = """
@@ -615,7 +615,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
                 "display_description": "description",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_volume_type(self):
         self_request = """
@@ -634,7 +634,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
                 "volume_type": "289da7f8-6440-407c-9fb4-7db01ec49164",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_availability_zone(self):
         self_request = """
@@ -654,7 +654,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
                 "availability_zone": "us-east1",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_metadata(self):
         self_request = """
@@ -672,7 +672,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
                 },
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_full_volume(self):
         self_request = """
@@ -697,7 +697,7 @@ class TestVolumeCreateRequestXMLDeserializer(test.TestCase):
             },
         }
         self.maxDiff = None
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
 
 class CommonUnprocessableEntityTestCase(object):

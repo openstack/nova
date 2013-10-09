@@ -522,4 +522,4 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             availability_zone.ATTRIBUTE_NAME: "nova"
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)

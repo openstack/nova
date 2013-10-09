@@ -597,7 +597,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             },
         }
 
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_create_request_with_disk_config_disabled(self):
         serial_request = """
@@ -618,7 +618,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             },
         }
 
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_rebuild_request(self):
         serial_request = """
@@ -633,7 +633,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "os-disk-config:disk_config": "MANUAL",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_rebuild_request_with_disk_config_disabled(self):
         serial_request = """
@@ -647,7 +647,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "image_ref": "1",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_resize_request(self):
         serial_request = """
@@ -662,7 +662,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "os-disk-config:disk_config": "MANUAL",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_resize_request_with_disk_config_disabled(self):
         serial_request = """
@@ -676,4 +676,4 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)

@@ -214,14 +214,14 @@ class ServersControllerTest(ControllerTest):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEquals(res, [(None, None, port)])
+        self.assertEqual(res, [(None, None, port)])
 
     def test_requested_networks_neutronv2_enabled_with_network(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         requested_networks = [{'uuid': network}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEquals(res, [(network, None, None)])
+        self.assertEqual(res, [(network, None, None)])
 
     def test_requested_networks_neutronv2_enabled_with_network_and_port(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
@@ -229,7 +229,7 @@ class ServersControllerTest(ControllerTest):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEquals(res, [(None, None, port)])
+        self.assertEqual(res, [(None, None, port)])
 
     def test_requested_networks_neutronv2_enabled_conflict_on_fixed_ip(self):
         self.flags(network_api_class='nova.network.neutronv2.api.API')
@@ -258,7 +258,7 @@ class ServersControllerTest(ControllerTest):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'uuid': network, 'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEquals(res, [(None, None, port)])
+        self.assertEqual(res, [(None, None, port)])
 
     def test_requested_networks_neutronv2_subclass_with_port(self):
         cls = 'nova.tests.api.openstack.compute.test_servers.NeutronV2Subclass'
@@ -266,7 +266,7 @@ class ServersControllerTest(ControllerTest):
         port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         requested_networks = [{'port': port}]
         res = self.controller._get_requested_networks(requested_networks)
-        self.assertEquals(res, [(None, None, port)])
+        self.assertEqual(res, [(None, None, port)])
 
     def test_get_server_by_uuid(self):
         req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
@@ -2133,7 +2133,7 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(self.req, self.body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
-            self.assertEquals(e.explanation, expected_msg)
+            self.assertEqual(e.explanation, expected_msg)
 
     def test_create_instance_above_quota_instances(self):
         msg = _('Quota exceeded for instances: Requested 1, but'
@@ -2216,7 +2216,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "2",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_xml_create_exception(self):
         def fake_availablity_extract_xml_deserialize(self,
@@ -2253,7 +2253,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 'metadata': {"hello": "world"},
                 },
             }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_admin_pass(self):
         serial_request = """
@@ -2271,7 +2271,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "admin_pass": "1234",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_image_link(self):
         serial_request = """
@@ -2287,7 +2287,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "3",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_flavor_link(self):
         serial_request = """
@@ -2303,7 +2303,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "http://localhost:8774/v3/flavors/3",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_multiple_metadata_items(self):
         serial_request = """
@@ -2325,7 +2325,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "metadata": {"one": "two", "open": "snack"},
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_spec_request(self):
         image_bookmark_link = ("http://servers.api.openstack.org/1234/"
@@ -2349,7 +2349,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "metadata": {"My Server Name": "Apache1"},
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_empty_networks(self):
         serial_request = """
@@ -2364,7 +2364,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_one_network(self):
         serial_request = """
@@ -2381,7 +2381,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_two_networks(self):
         serial_request = """
@@ -2400,7 +2400,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
                              {"uuid": "2", "fixed_ip": "10.0.2.12"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_second_network_node_ignored(self):
         serial_request = """
@@ -2420,7 +2420,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_one_network_missing_id(self):
         serial_request = """
@@ -2437,7 +2437,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [{"fixed_ip": "10.0.1.12"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_one_network_missing_fixed_ip(self):
         serial_request = """
@@ -2454,7 +2454,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [{"uuid": "1"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_one_network_empty_id(self):
         serial_request = """
@@ -2471,7 +2471,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [{"uuid": "", "fixed_ip": "10.0.1.12"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_one_network_empty_fixed_ip(self):
         serial_request = """
@@ -2488,7 +2488,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "flavor_ref": "1",
                 "networks": [{"uuid": "1", "fixed_ip": ""}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_networks_duplicate_ids(self):
         serial_request = """
@@ -2507,7 +2507,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 "networks": [{"uuid": "1", "fixed_ip": "10.0.1.12"},
                              {"uuid": "1", "fixed_ip": "10.0.2.12"}],
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_corrupt_xml(self):
         """Should throw a 400 error on corrupt xml."""

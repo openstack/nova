@@ -264,4 +264,4 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 user_data.ATTRIBUTE_NAME: "IyEvYmluL2Jhc2gKL2Jpbi9"
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)

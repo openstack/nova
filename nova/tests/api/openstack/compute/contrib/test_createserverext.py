@@ -209,49 +209,49 @@ class CreateserverextTest(test.TestCase):
     def test_create_instance_with_no_networks(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(networks=None)
-        self.assertEquals(response.status_int, 202)
+        self.assertEqual(response.status_int, 202)
         self.assertIsNone(networks)
 
     def test_create_instance_with_no_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(networks=None)
-        self.assertEquals(response.status_int, 202)
+        self.assertEqual(response.status_int, 202)
         self.assertIsNone(networks)
 
     def test_create_instance_with_one_network(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst([FAKE_NETWORKS[0]])
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(networks, [FAKE_NETWORKS[0]])
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(networks, [FAKE_NETWORKS[0]])
 
     def test_create_instance_with_one_network_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst([FAKE_NETWORKS[0]])
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(networks, [FAKE_NETWORKS[0]])
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(networks, [FAKE_NETWORKS[0]])
 
     def test_create_instance_with_two_networks(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(FAKE_NETWORKS)
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(networks, FAKE_NETWORKS)
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(networks, FAKE_NETWORKS)
 
     def test_create_instance_with_two_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(FAKE_NETWORKS)
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(networks, FAKE_NETWORKS)
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(networks, FAKE_NETWORKS)
 
     def test_create_instance_with_duplicate_networks(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(DUPLICATE_NETWORKS)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_duplicate_networks_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(DUPLICATE_NETWORKS)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_network_no_id(self):
@@ -260,7 +260,7 @@ class CreateserverextTest(test.TestCase):
         request = self._get_create_request_json(body_dict)
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(self.networks)
 
     def test_create_instance_with_network_no_id_xml(self):
@@ -270,40 +270,40 @@ class CreateserverextTest(test.TestCase):
         request.body = request.body.replace(uuid, '')
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(self.networks)
 
     def test_create_instance_with_network_invalid_id(self):
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(INVALID_NETWORKS)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_network_invalid_id_xml(self):
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(INVALID_NETWORKS)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_network_empty_fixed_ip(self):
         networks = [('1', '')]
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(networks)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_network_non_string_fixed_ip(self):
         networks = [('1', 12345)]
         _create_inst = self._create_instance_with_networks_json
         request, response, networks = _create_inst(networks)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_network_empty_fixed_ip_xml(self):
         networks = [('1', '')]
         _create_inst = self._create_instance_with_networks_xml
         request, response, networks = _create_inst(networks)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(networks)
 
     def test_create_instance_with_network_no_fixed_ip(self):
@@ -312,9 +312,9 @@ class CreateserverextTest(test.TestCase):
         request = self._get_create_request_json(body_dict)
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(self.networks,
-                          [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(self.networks,
+                         [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
 
     def test_create_instance_with_network_no_fixed_ip_xml(self):
         body_dict = self._create_networks_request_dict([FAKE_NETWORKS[0]])
@@ -322,30 +322,30 @@ class CreateserverextTest(test.TestCase):
         request.body = request.body.replace(' fixed_ip="10.0.1.12"', '')
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(self.networks,
-                          [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(self.networks,
+                         [('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)])
 
     def test_create_instance_with_userdata(self):
         user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
         user_data_contents = base64.b64encode(user_data_contents)
         _create_inst = self._create_instance_with_user_data_json
         request, response, user_data = _create_inst(user_data_contents)
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(user_data, user_data_contents)
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(user_data, user_data_contents)
 
     def test_create_instance_with_userdata_none(self):
         user_data_contents = None
         _create_inst = self._create_instance_with_user_data_json
         request, response, user_data = _create_inst(user_data_contents)
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(user_data, user_data_contents)
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(user_data, user_data_contents)
 
     def test_create_instance_with_userdata_with_non_b64_content(self):
         user_data_contents = '#!/bin/bash\necho "Oh no!"\n'
         _create_inst = self._create_instance_with_user_data_json
         request, response, user_data = _create_inst(user_data_contents)
-        self.assertEquals(response.status_int, 400)
+        self.assertEqual(response.status_int, 400)
         self.assertIsNone(user_data)
 
     def test_create_instance_with_security_group_json(self):
@@ -358,8 +358,8 @@ class CreateserverextTest(test.TestCase):
         request = self._get_create_request_json(body_dict)
         response = request.get_response(fakes.wsgi_app(
             init_only=('servers', 'os-create-server-ext')))
-        self.assertEquals(response.status_int, 202)
-        self.assertEquals(self.security_group, security_groups)
+        self.assertEqual(response.status_int, 202)
+        self.assertEqual(self.security_group, security_groups)
 
     def test_get_server_by_id_verify_security_groups_json(self):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
@@ -368,11 +368,11 @@ class CreateserverextTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app(
             init_only=('os-create-server-ext', 'servers')))
-        self.assertEquals(response.status_int, 200)
+        self.assertEqual(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         expected_security_group = [{"name": "test"}]
-        self.assertEquals(res_dict['server'].get('security_groups'),
-                          expected_security_group)
+        self.assertEqual(res_dict['server'].get('security_groups'),
+                         expected_security_group)
 
     def test_get_server_by_id_verify_security_groups_xml(self):
         self.stubs.Set(db, 'instance_get', fakes.fake_instance_get())
@@ -381,7 +381,7 @@ class CreateserverextTest(test.TestCase):
         req.headers['Accept'] = 'application/xml'
         response = req.get_response(fakes.wsgi_app(
             init_only=('os-create-server-ext', 'servers')))
-        self.assertEquals(response.status_int, 200)
+        self.assertEqual(response.status_int, 200)
         dom = minidom.parseString(response.body)
         server = dom.childNodes[0]
         sec_groups = server.getElementsByTagName('security_groups')[0]

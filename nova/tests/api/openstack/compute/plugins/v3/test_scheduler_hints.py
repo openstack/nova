@@ -295,7 +295,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 }
             }
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_request_with_scheduler_hints(self):
         serial_request = """
@@ -324,4 +324,4 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                     ]
                 }
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)

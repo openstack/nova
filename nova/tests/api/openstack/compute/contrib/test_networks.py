@@ -213,7 +213,7 @@ class NetworksTest(test.NoDBTestCase):
         self.maxDiff = None
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
         res_dict = self.controller.index(req)
-        self.assertEquals(res_dict, {'networks': []})
+        self.assertEqual(res_dict, {'networks': []})
 
         project_id = req.environ["nova.context"].project_id
         cxt = req.environ["nova.context"]
@@ -225,7 +225,7 @@ class NetworksTest(test.NoDBTestCase):
         expected = [FAKE_USER_NETWORKS[0]]
         for network in expected:
             self.network_uuid_to_id(network)
-        self.assertEquals(res_dict, {'networks': expected})
+        self.assertEqual(res_dict, {'networks': expected})
 
     def test_network_list_all_as_admin(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
@@ -234,7 +234,7 @@ class NetworksTest(test.NoDBTestCase):
         expected = copy.deepcopy(FAKE_NETWORKS)
         for network in expected:
             self.network_uuid_to_id(network)
-        self.assertEquals(res_dict, {'networks': expected})
+        self.assertEqual(res_dict, {'networks': expected})
 
     def test_network_disassociate(self):
         uuid = FAKE_NETWORKS[0]['uuid']

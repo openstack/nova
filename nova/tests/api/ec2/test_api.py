@@ -336,7 +336,7 @@ class ApiEc2TestCase(test.TestCase):
         self.ec2.create_key_pair(keyname)
         rv = self.ec2.get_all_key_pairs()
         results = [k for k in rv if k.name == keyname]
-        self.assertEquals(len(results), 1)
+        self.assertEqual(len(results), 1)
 
     def test_create_duplicate_key_pair(self):
         """Test that, after successfully generating a keypair,
@@ -363,8 +363,8 @@ class ApiEc2TestCase(test.TestCase):
 
         rv = self.ec2.get_all_security_groups()
 
-        self.assertEquals(len(rv), 1)
-        self.assertEquals(rv[0].name, 'default')
+        self.assertEqual(len(rv), 1)
+        self.assertEqual(rv[0].name, 'default')
 
     def test_create_delete_security_group(self):
         # Test that we can create a security group.
@@ -380,7 +380,7 @@ class ApiEc2TestCase(test.TestCase):
         self.mox.ReplayAll()
 
         rv = self.ec2.get_all_security_groups()
-        self.assertEquals(len(rv), 2)
+        self.assertEqual(len(rv), 2)
         self.assertIn(security_group_name, [group.name for group in rv])
 
         self.expect_http()
@@ -511,11 +511,11 @@ class ApiEc2TestCase(test.TestCase):
 
         group = [grp for grp in rv if grp.name == security_group_name][0]
 
-        self.assertEquals(len(group.rules), 8)
-        self.assertEquals(int(group.rules[0].from_port), 80)
-        self.assertEquals(int(group.rules[0].to_port), 81)
-        self.assertEquals(len(group.rules[0].grants), 1)
-        self.assertEquals(str(group.rules[0].grants[0]), '0.0.0.0/0')
+        self.assertEqual(len(group.rules), 8)
+        self.assertEqual(int(group.rules[0].from_port), 80)
+        self.assertEqual(int(group.rules[0].to_port), 81)
+        self.assertEqual(len(group.rules[0].grants), 1)
+        self.assertEqual(str(group.rules[0].grants[0]), '0.0.0.0/0')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -570,11 +570,11 @@ class ApiEc2TestCase(test.TestCase):
         rv = self.ec2.get_all_security_groups()
 
         group = [grp for grp in rv if grp.name == security_group_name][0]
-        self.assertEquals(len(group.rules), 1)
-        self.assertEquals(int(group.rules[0].from_port), 80)
-        self.assertEquals(int(group.rules[0].to_port), 81)
-        self.assertEquals(len(group.rules[0].grants), 1)
-        self.assertEquals(str(group.rules[0].grants[0]), '::/0')
+        self.assertEqual(len(group.rules), 1)
+        self.assertEqual(int(group.rules[0].from_port), 80)
+        self.assertEqual(int(group.rules[0].to_port), 81)
+        self.assertEqual(len(group.rules[0].grants), 1)
+        self.assertEqual(str(group.rules[0].grants[0]), '::/0')
 
         self.expect_http()
         self.mox.ReplayAll()
@@ -635,10 +635,10 @@ class ApiEc2TestCase(test.TestCase):
         # be good enough for that.
         for group in rv:
             if group.name == security_group_name:
-                self.assertEquals(len(group.rules), 3)
-                self.assertEquals(len(group.rules[0].grants), 1)
-                self.assertEquals(str(group.rules[0].grants[0]), '%s-%s' %
-                                  (other_security_group_name, 'fake'))
+                self.assertEqual(len(group.rules), 3)
+                self.assertEqual(len(group.rules[0].grants), 1)
+                self.assertEqual(str(group.rules[0].grants[0]),
+                                 '%s-%s' % (other_security_group_name, 'fake'))
 
         self.expect_http()
         self.mox.ReplayAll()
