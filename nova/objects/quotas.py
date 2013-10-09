@@ -40,7 +40,6 @@ class Quotas(base.NovaObject):
 
     def __init__(self):
         super(Quotas, self).__init__()
-        self.quotas = quota.QUOTAS
         # Set up defaults.
         self.reservations = []
         self.project_id = None
@@ -66,10 +65,10 @@ class Quotas(base.NovaObject):
     @base.remotable
     def reserve(self, context, expire=None, project_id=None, user_id=None,
                 **deltas):
-        reservations = self.quotas.reserve(context, expire=expire,
-                                           project_id=project_id,
-                                           user_id=user_id,
-                                           **deltas)
+        reservations = quota.QUOTAS.reserve(context, expire=expire,
+                                            project_id=project_id,
+                                            user_id=user_id,
+                                            **deltas)
         self.reservations = reservations
         self.project_id = project_id
         self.user_id = user_id
@@ -81,9 +80,9 @@ class Quotas(base.NovaObject):
             return
         if context is None:
             context = self._context
-        self.quotas.commit(context, self.reservations,
-                           project_id=self.project_id,
-                           user_id=self.user_id)
+        quota.QUOTAS.commit(context, self.reservations,
+                            project_id=self.project_id,
+                            user_id=self.user_id)
         self.reservations = None
         self.obj_reset_changes()
 
@@ -94,8 +93,8 @@ class Quotas(base.NovaObject):
             return
         if context is None:
             context = self._context
-        self.quotas.rollback(context, self.reservations,
-                             project_id=self.project_id,
-                             user_id=self.user_id)
+        quota.QUOTAS.rollback(context, self.reservations,
+                              project_id=self.project_id,
+                              user_id=self.user_id)
         self.reservations = None
         self.obj_reset_changes()
