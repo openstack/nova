@@ -243,18 +243,16 @@ class FakeDriver(driver.ComputeDriver):
         self._mounts[instance_name][mountpoint] = new_connection_info
         return True
 
-    def attach_interface(self, instance, image_meta, network_info):
-        for vif in [network_info]:
-            if vif['id'] in self._interfaces:
-                raise exception.InterfaceAttachFailed('duplicate')
-            self._interfaces[vif['id']] = vif
+    def attach_interface(self, instance, image_meta, vif):
+        if vif['id'] in self._interfaces:
+            raise exception.InterfaceAttachFailed('duplicate')
+        self._interfaces[vif['id']] = vif
 
-    def detach_interface(self, instance, network_info):
-        for vif in network_info:
-            try:
-                del self._interfaces[vif['id']]
-            except KeyError:
-                raise exception.InterfaceDetachFailed('not attached')
+    def detach_interface(self, instance, vif):
+        try:
+            del self._interfaces[vif['id']]
+        except KeyError:
+            raise exception.InterfaceDetachFailed('not attached')
 
     def get_info(self, instance):
         if instance['name'] not in self.instances:
