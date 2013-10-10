@@ -19,6 +19,8 @@ import abc
 import contextlib
 import os
 
+import six
+
 from oslo.config import cfg
 
 from nova import exception
@@ -75,8 +77,8 @@ CONF.import_opt('preallocate_images', 'nova.virt.driver')
 LOG = logging.getLogger(__name__)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class Image(object):
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, source_type, driver_format, is_block_dev=False):
         """Image initialization.

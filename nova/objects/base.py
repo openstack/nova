@@ -18,6 +18,8 @@ import collections
 import copy
 import functools
 
+import six
+
 from nova import context
 from nova import exception
 from nova.objects import fields
@@ -150,6 +152,7 @@ def remotable(fn):
     return wrapper
 
 
+@six.add_metaclass(NovaObjectMetaclass)
 class NovaObject(object):
     """Base class and object factory.
 
@@ -159,7 +162,6 @@ class NovaObject(object):
     necessary "get" classmethod routines as well as "save" object methods
     as appropriate.
     """
-    __metaclass__ = NovaObjectMetaclass
 
     # Object versioning rules
     #

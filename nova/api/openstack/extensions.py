@@ -20,6 +20,7 @@ import abc
 import functools
 import os
 
+import six
 import webob.dec
 import webob.exc
 
@@ -403,6 +404,7 @@ def soft_extension_authorizer(api_name, extension_name):
     return authorize
 
 
+@six.add_metaclass(abc.ABCMeta)
 class V3APIExtensionBase(object):
     """Abstract base class for all V3 API extensions.
 
@@ -411,7 +413,6 @@ class V3APIExtensionBase(object):
     even if they just return an empty list. The extensions must also
     define the abstract properties.
     """
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, extension_info):
         self.extension_info = extension_info

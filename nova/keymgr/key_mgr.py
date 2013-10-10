@@ -20,15 +20,16 @@ Key manager API
 
 import abc
 
+import six
 
+
+@six.add_metaclass(abc.ABCMeta)
 class KeyManager(object):
     """Base Key Manager Interface
 
     A Key Manager is responsible for managing encryption keys for volumes. A
     Key Manager is responsible for creating, reading, and deleting keys.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def create_key(self, ctxt, algorithm='AES', length=256, expiration=None,
