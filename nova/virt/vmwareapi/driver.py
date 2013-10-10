@@ -32,6 +32,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
+from nova.openstack.common import uuidutils
 from nova.virt import driver
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
@@ -369,6 +370,11 @@ class VMwareESXDriver(driver.ComputeDriver):
     def unplug_vifs(self, instance, network_info):
         """Unplug VIFs from networks."""
         self._vmops.unplug_vifs(instance, network_info)
+
+    def list_instance_uuids(self):
+        """List VM instance UUIDs."""
+        uuids = self._vmops.list_instances()
+        return [uuid for uuid in uuids if uuidutils.is_uuid_like(uuid)]
 
 
 class VMwareVCDriver(VMwareESXDriver):
