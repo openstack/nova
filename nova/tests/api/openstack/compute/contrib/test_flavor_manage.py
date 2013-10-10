@@ -154,6 +154,54 @@ class FlavorManageTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_code, 400)
 
+    def test_create_flavor_name_is_whitespace(self):
+        request_dict = {
+            "flavor": {
+                "name": " ",
+                'id': "12345",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(request_dict)
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_code, 400)
+
+    def test_create_flavor_name_with_leading_trailing_whitespace(self):
+        request_dict = {
+            "flavor": {
+                "name": " test ",
+                'id': "12345",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(request_dict)
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_code, 200)
+        body = jsonutils.loads(res.body)
+        self.assertEqual("test", body["flavor"]["name"])
+
     def test_create_public_default(self):
         flavor = {
             "flavor": {
@@ -182,7 +230,6 @@ class FlavorManageTest(test.NoDBTestCase):
             }
         }
 
-        self.stubs.Set(db, "flavor_create", fake_create)
         url = '/v2/fake/flavors'
         req = webob.Request.blank(url)
         req.headers['Content-Type'] = 'application/json'
