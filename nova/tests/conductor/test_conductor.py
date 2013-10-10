@@ -865,6 +865,25 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.assertRaises(rpc_common.ClientException,
                           self._test_object_action, True, True)
 
+    def test_object_action_copies_object(self):
+        class TestObject(obj_base.NovaObject):
+            fields = {'dict': dict}
+
+            def touch_dict(self, context):
+                self.dict['foo'] = 'bar'
+                self.obj_reset_changes()
+
+        obj = TestObject()
+        obj.dict = {}
+        obj.obj_reset_changes()
+        updates, result = self.conductor.object_action(
+            self.context, obj, 'touch_dict', tuple(), {})
+        # NOTE(danms): If conductor did not properly copy the object, then
+        # the new and reference copies of the nested dict object will be
+        # the same, and thus 'dict' will not be reported as changed
+        self.assertIn('dict', updates)
+        self.assertEqual({'foo': 'bar'}, updates['dict'])
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""
