@@ -25,6 +25,7 @@ class GuestFS(object):
         self.files = {}
         self.auginit = False
         self.attach_method = 'libvirt'
+        self.root_mounted = False
 
     def launch(self):
         self.running = True
@@ -50,10 +51,17 @@ class GuestFS(object):
         return ["/dev/guestvgf/lv_root"]
 
     def inspect_get_mountpoints(self, dev):
-        return [["/", "/dev/mapper/guestvgf-lv_root"],
+        return [["/home", "/dev/mapper/guestvgf-lv_home"],
+                ["/", "/dev/mapper/guestvgf-lv_root"],
                 ["/boot", "/dev/vda1"]]
 
     def mount_options(self, options, device, mntpoint):
+        if mntpoint == "/":
+            self.root_mounted = True
+        else:
+            if not self.root_mounted:
+                raise RuntimeError(
+                    "mount: %s: No such file or directory" % mntpoint)
         self.mounts.append((options, device, mntpoint))
 
     def mkdir_p(self, path):
