@@ -66,7 +66,7 @@ xenapi_agent_opts = [
     cfg.BoolOpt('xenapi_disable_agent',
                default=False,
                help='Disables the use of the XenAPI agent in any image '
-                    'regardless of what image properties are present. '),
+                    'regardless of what image properties are present.'),
     cfg.BoolOpt('xenapi_use_agent_default',
                default=False,
                help='Determines if the xenapi agent should be used when '
