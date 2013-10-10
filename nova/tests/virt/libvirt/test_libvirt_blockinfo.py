@@ -133,6 +133,14 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.assertEqual(mapping['disk.config'],
                          {'dev': 'hdd', 'bus': 'ide', 'type': 'cdrom'})
 
+    def test_get_next_disk_dev_boot_index(self):
+        info = blockinfo.get_next_disk_info({}, 'virtio', boot_index=-1)
+        self.assertEqual(info, {'dev': 'vda', 'bus': 'virtio', 'type': 'disk'})
+
+        info = blockinfo.get_next_disk_info({}, 'virtio', boot_index=2)
+        self.assertEqual(info, {'dev': 'vda', 'bus': 'virtio',
+                                'type': 'disk', 'boot_index': '2'})
+
     def test_get_disk_mapping_simple(self):
         # The simplest possible disk mapping setup, all defaults
 
@@ -143,9 +151,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              "virtio", "ide")
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'}
             }
         self.assertEqual(mapping, expect)
 
@@ -163,9 +173,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            'disk': {'bus': 'scsi', 'dev': 'sda', 'type': 'disk'},
+            'disk': {'bus': 'scsi', 'dev': 'sda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
-            'root': {'bus': 'scsi', 'dev': 'sda', 'type': 'disk'}
+            'root': {'bus': 'scsi', 'dev': 'sda',
+                     'type': 'disk', 'boot_index': '1'}
             }
         self.assertEqual(mapping, expect)
 
@@ -180,9 +192,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              rescue=True)
 
         expect = {
-            'disk.rescue': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk.rescue': {'bus': 'virtio', 'dev': 'vda',
+                            'type': 'disk', 'boot_index': '1'},
             'disk': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -196,8 +210,10 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              "lxc", "lxc",
                                              None)
         expect = {
-            'disk': {'bus': 'lxc', 'dev': None, 'type': 'disk'},
-            'root': {'bus': 'lxc', 'dev': None, 'type': 'disk'}
+            'disk': {'bus': 'lxc', 'dev': None,
+                     'type': 'disk', 'boot_index': '1'},
+            'root': {'bus': 'lxc', 'dev': None,
+                     'type': 'disk', 'boot_index': '1'},
         }
         self.assertEqual(mapping, expect)
 
@@ -214,9 +230,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              image_meta)
 
         expect = {
-            'disk': {'bus': 'ide', 'dev': 'hda', 'type': 'cdrom'},
+            'disk': {'bus': 'ide', 'dev': 'hda',
+                     'type': 'cdrom', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
-            'root': {'bus': 'ide', 'dev': 'hda', 'type': 'cdrom'}
+            'root': {'bus': 'ide', 'dev': 'hda',
+                     'type': 'cdrom', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -231,10 +249,12 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              "virtio", "ide")
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vdc', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -250,10 +270,12 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              "virtio", "ide")
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
             'disk.config': {'bus': 'ide', 'dev': 'hdd', 'type': 'cdrom'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'}
             }
         self.assertEqual(mapping, expect)
 
@@ -270,10 +292,12 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              "virtio", "ide")
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
             'disk.config': {'bus': 'ide', 'dev': 'hdd', 'type': 'cdrom'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'}
             }
         self.assertEqual(expect, mapping)
 
@@ -290,10 +314,12 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              "virtio", "ide")
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
             'disk.config': {'bus': 'virtio', 'dev': 'vdz', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(expect, mapping)
 
@@ -318,13 +344,15 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
                           'type': 'disk', 'format': 'ext3'},
             'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
             'disk.eph2': {'bus': 'virtio', 'dev': 'vdd', 'type': 'floppy'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vde', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -343,9 +371,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -368,9 +398,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            '/dev/vda': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            '/dev/vda': {'bus': 'virtio', 'dev': 'vda',
+                         'type': 'disk', 'boot_index': '1'},
             'disk.local': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -392,9 +424,11 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             '/dev/vdb': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -426,10 +460,12 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            '/dev/vda': {'bus': 'scsi', 'dev': 'vda', 'type': 'disk'},
+            '/dev/vda': {'bus': 'scsi', 'dev': 'vda',
+                         'type': 'disk', 'boot_index': '1'},
             '/dev/vdb': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
             '/dev/vdc': {'bus': 'virtio', 'dev': 'vdc', 'type': 'cdrom'},
-            'root': {'bus': 'scsi', 'dev': 'vda', 'type': 'disk'}
+            'root': {'bus': 'scsi', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -451,6 +487,7 @@ class LibvirtBlockInfoTest(test.TestCase):
             'block_device_mapping': [
                 {'connection_info': "fake",
                  'mount_device': "/dev/vda",
+                 'boot_index': 1,
                  'delete_on_termination': True},
                 ]
             }
@@ -459,13 +496,16 @@ class LibvirtBlockInfoTest(test.TestCase):
                                              block_device_info)
 
         expect = {
-            'disk': {'bus': 'virtio', 'dev': 'vdf', 'type': 'disk'},
-            '/dev/vda': {'bus': 'virtio', 'dev': 'vda', 'type': 'disk'},
+            'disk': {'bus': 'virtio', 'dev': 'vdf',
+                     'type': 'disk', 'boot_index': '1'},
+            '/dev/vda': {'bus': 'virtio', 'dev': 'vda',
+                         'type': 'disk', 'boot_index': '2'},
             'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
                           'type': 'disk', 'format': 'ext3'},
             'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
             'disk.swap': {'bus': 'virtio', 'dev': 'vdy', 'type': 'disk'},
-            'root': {'bus': 'virtio', 'dev': 'vdf', 'type': 'disk'}
+            'root': {'bus': 'virtio', 'dev': 'vdf',
+                     'type': 'disk', 'boot_index': '1'},
             }
         self.assertEqual(mapping, expect)
 
@@ -571,18 +611,22 @@ class LibvirtBlockInfoTest(test.TestCase):
                  'mount_device': "/dev/sdr",
                  'disk_bus': 'lame_bus',
                  'device_type': 'cdrom',
+                 'boot_index': 0,
                  'delete_on_termination': True},
                 {'connection_info': "fake",
                  'mount_device': "/dev/vdo",
                  'disk_bus': 'scsi',
+                 'boot_index': 1,
                  'device_type': 'lame_type',
                  'delete_on_termination': True}]
         expected = [{'dev': 'vds', 'type': 'disk', 'bus': 'usb'},
                     {'dev': 'vdb', 'type': 'disk',
                      'bus': 'virtio', 'format': 'ext3'},
                     {'dev': 'vdc', 'type': 'disk', 'bus': 'ide'},
-                    {'dev': 'sdr', 'type': 'cdrom', 'bus': 'scsi'},
-                    {'dev': 'vdo', 'type': 'disk', 'bus': 'scsi'}]
+                    {'dev': 'sdr', 'type': 'cdrom',
+                     'bus': 'scsi', 'boot_index': '1'},
+                    {'dev': 'vdo', 'type': 'disk',
+                     'bus': 'scsi', 'boot_index': '2'}]
 
         for bdm, expected in zip(bdms, expected):
             self.assertEqual(expected,

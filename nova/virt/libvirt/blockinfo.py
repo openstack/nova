@@ -67,6 +67,8 @@ variables / types used
 
  * 'format': Which format to apply to the device if applicable
 
+ * 'boot_index': Number designating the boot order of the device
+
 """
 
 import itertools
@@ -289,7 +291,8 @@ def get_disk_bus_for_disk_dev(virt_type, disk_dev):
 
 def get_next_disk_info(mapping, disk_bus,
                        device_type='disk',
-                       last_device=False):
+                       last_device=False,
+                       boot_index=None):
     """Determine the disk info for the next device on disk_bus.
 
        Considering the disks already listed in the disk mapping,
@@ -302,9 +305,14 @@ def get_next_disk_info(mapping, disk_bus,
     disk_dev = find_disk_dev_for_disk_bus(mapping,
                                           disk_bus,
                                           last_device)
-    return {'bus': disk_bus,
+    info = {'bus': disk_bus,
             'dev': disk_dev,
             'type': device_type}
+
+    if boot_index is not None and boot_index >= 0:
+        info['boot_index'] = str(boot_index)
+
+    return info
 
 
 def get_eph_disk(index):
@@ -366,6 +374,11 @@ def get_info_from_bdm(virt_type, bdm, mapping={}, disk_bus=None,
     if bdm_format:
         bdm_info.update({'format': bdm_format})
 
+    boot_index = bdm.get('boot_index')
+    if boot_index is not None and boot_index >= 0:
+        # NOTE(ndipanov): libvirt starts ordering from 1, not 0
+        bdm_info['boot_index'] = str(boot_index + 1)
+
     return bdm_info
 
 
@@ -398,7 +411,8 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
 
         return {'bus': root_device_bus,
                 'type': root_device_type,
-                'dev': block_device.strip_dev(root_device_name)}
+                'dev': block_device.strip_dev(root_device_name),
+                'boot_index': '1'}
     else:
         if not get_device_name(root_bdm) and root_device_name:
             root_bdm = root_bdm.copy()
@@ -499,7 +513,8 @@ def get_disk_mapping(virt_type, instance,
 
         root_info = get_next_disk_info(mapping,
                                        root_disk_bus,
-                                       root_device_type)
+                                       root_device_type,
+                                       boot_index=1)
         mapping['root'] = root_info
         mapping['disk'] = root_info
 
@@ -507,7 +522,7 @@ def get_disk_mapping(virt_type, instance,
 
     if rescue:
         rescue_info = get_next_disk_info(mapping,
-                                         disk_bus)
+                                         disk_bus, boot_index=1)
         mapping['disk.rescue'] = rescue_info
         mapping['root'] = rescue_info
 
