@@ -77,9 +77,15 @@ class S3APITestCase(test.NoDBTestCase):
                                calling_format=s3.OrdinaryCallingFormat())
         self.conn = conn
 
-        def get_http_connection(host, is_secure):
+        def get_http_connection(*args):
             """Get a new S3 connection, don't attempt to reuse connections."""
-            return self.conn.new_http_connection(host, is_secure)
+            try:
+                # NOTE(danms): boto < 2.14
+                host, is_secure = args
+                return self.conn.new_http_connection(host, is_secure)
+            except ValueError:
+                host, port, is_secure = args
+                return self.conn.new_http_connection(host, port, is_secure)
 
         self.conn.get_http_connection = get_http_connection
 
