@@ -395,7 +395,8 @@ class Controller(object):
         deleted = body.pop('deleted', False)
         updated_since = body.pop('updated_since', None)
         if body:
-            msg = _("Only 'updated_since' and 'project_id' are understood.")
+            msg = _("Only 'updated_since', 'project_id' and 'deleted' are "
+                    "understood.")
             raise exc.HTTPBadRequest(explanation=msg)
         if updated_since:
             try:
