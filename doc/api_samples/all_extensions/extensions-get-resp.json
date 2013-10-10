@@ -134,7 +134,7 @@
             "links": [],
             "name": "AssistedVolumeSnapshots",
             "namespace": "http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2",
-            "updated": "2013-08-15T00:00:00-00:00"
+            "updated": "2013-08-29T00:00:00-00:00"
         },
         {
             "alias": "os-attach-interfaces",
@@ -151,6 +151,14 @@
             "name": "AvailabilityZone",
             "namespace": "http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1",
             "updated": "2012-12-21T00:00:00+00:00"
+        },
+        {
+            "alias": "os-baremetal-ext-status",
+            "description": "Add extended status in Baremetal Nodes v2 API.",
+            "links": [],
+            "name": "BareMetalExtStatus",
+            "namespace": "http://docs.openstack.org/compute/ext/baremetal_ext_status/api/v2",
+            "updated": "2013-08-27T00:00:00+00:00"
         },
         {
             "alias": "os-baremetal-nodes",

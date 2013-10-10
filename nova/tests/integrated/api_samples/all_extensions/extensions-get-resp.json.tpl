@@ -615,6 +615,14 @@
             "name": "Migrations",
             "namespace": "http://docs.openstack.org/compute/ext/migrations/api/v2.0",
             "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-baremetal-ext-status",
+            "description": "%(text)s",
+            "links": [],
+            "name": "BareMetalExtStatus",
+            "namespace": "http://docs.openstack.org/compute/ext/baremetal_ext_status/api/v2",
+            "updated": "%(timestamp)s"
         }
     ]
 }

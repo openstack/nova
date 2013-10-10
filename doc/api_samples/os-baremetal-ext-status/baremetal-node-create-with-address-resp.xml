@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<node instance_uuid="None" pm_address="10.1.2.3" task_state="None" uuid="cbed812a-7126-41a9-a6c1-f563e7f9af1f" pxe_config_path="None" cpus="8" updated_at="None" memory_mb="8192" service_host="host" local_gb="128" id="1" pm_user="pm_user" terminal_port="8000">
+  <interfaces>
+    <interface datapath_id="None" id="1" port_no="None" address="12:34:56:78:90:ab"/>
+  </interfaces>
+</node>
