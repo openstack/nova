@@ -1377,6 +1377,7 @@ class _BaseTaskTestCase(object):
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
+        filter_properties = {}
         system_metadata = instance.system_metadata
 
         self.mox.StubOutWithMock(self.conductor_manager, '_get_image')
@@ -1387,7 +1388,7 @@ class _BaseTaskTestCase(object):
         self.conductor_manager._get_image(self.context,
                 'fake_image_id').AndReturn('fake_image')
         self.conductor_manager._schedule_instances(self.context,
-                'fake_image', [], instance).AndReturn(
+                'fake_image', filter_properties, instance).AndReturn(
                         [{'host': 'fake_host'}])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
                 instance, 'fake_host', 'fake_image')
@@ -1404,6 +1405,7 @@ class _BaseTaskTestCase(object):
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
+        filter_properties = {}
         system_metadata = instance.system_metadata
 
         self.mox.StubOutWithMock(self.conductor_manager, '_get_image')
@@ -1414,7 +1416,7 @@ class _BaseTaskTestCase(object):
         self.conductor_manager._get_image(self.context,
                 'fake_image_id').AndReturn(None)
         self.conductor_manager._schedule_instances(self.context,
-                None, [], instance).AndReturn(
+                None, filter_properties, instance).AndReturn(
                         [{'host': 'fake_host'}])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
                 instance, 'fake_host', None)

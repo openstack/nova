@@ -785,7 +785,9 @@ class ComputeTaskManager(base.Base):
                     instance.vm_state = vm_states.ERROR
                     instance.save()
 
-            hosts = self._schedule_instances(context, image, [], instance)
+            filter_properties = {}
+            hosts = self._schedule_instances(context, image,
+                                             filter_properties, instance)
             host = hosts.pop(0)['host']
             self.compute_rpcapi.unshelve_instance(context, instance, host,
                     image)
