@@ -62,7 +62,7 @@ class UploadToGlanceAsRawTgz(object):
         readfile, writefile = self._create_pipe()
         size = self._get_virtual_size()
         producer = TarGzProducer(devpath, writefile, size, 'disk.raw')
-        consumer = UpdateGlanceImage(
+        consumer = glance.UpdateGlanceImage(
             self.context, self.image_id, producer.get_metadata(), readfile)
         pool = eventlet.GreenPool()
         pool.spawn(producer.start)
@@ -107,17 +107,3 @@ class TarGzProducer(object):
 
     def _open_file(self, *args):
         return open(*args)
-
-
-class UpdateGlanceImage(object):
-    def __init__(self, context, image_id, metadata, stream):
-        self.context = context
-        self.image_id = image_id
-        self.metadata = metadata
-        self.image_stream = stream
-
-    def start(self):
-        image_service, image_id = (
-            glance.get_remote_image_service(self.context, self.image_id))
-        image_service.update(self.context, image_id, self.metadata,
-                             self.image_stream, purge_props=False)
