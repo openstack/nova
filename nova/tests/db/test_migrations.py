@@ -3033,6 +3033,56 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 else:
                     self.assertNotIn((name, columns), index_data)
 
+    def _data_215(self):
+        ret = {"services": [{"host": "compute-host1", "id": 1,
+                             "binary": "nova-compute", "topic": "compute",
+                             "report_count": 1}],
+               "compute_nodes": [{"vcpus": 1, "cpu_info": "info",
+                                  "memory_mb": 1, "local_gb": 1,
+                                  "vcpus_used": 1, "memory_mb_used": 1,
+                                  "local_gb_used": 1, "deleted": 0,
+                                  "hypervisor_type": "fake_type",
+                                  "hypervisor_version": 1,
+                                  "service_id": 1, "id": 1},
+                                 {"vcpus": 1, "cpu_info": "info",
+                                  "memory_mb": 1, "local_gb": 1,
+                                  "vcpus_used": 1, "memory_mb_used": 1,
+                                  "local_gb_used": 1, "deleted": 2,
+                                  "hypervisor_type": "fake_type",
+                                  "hypervisor_version": 1,
+                                  "service_id": 1, "id": 2}],
+               "compute_node_stats": [{"id": 10, "compute_node_id": 1,
+                                       "key": "fake-1",
+                                       "deleted": 0},
+                                      {"id": 20, "compute_node_id": 2,
+                                       "key": "fake-2",
+                                       "deleted": 0}]}
+        return ret
+
+    def _pre_upgrade_215(self, engine):
+        tables = ["services", "compute_nodes", "compute_node_stats"]
+        change_tables = dict((i, db_utils.get_table(engine, i))
+                             for i in tables)
+        data = self._data_215()
+        for i in tables:
+            change_tables[i].delete().execute()
+            for v in data[i]:
+                change_tables[i].insert().values(v).execute()
+
+    def _check_215(self, engine, data):
+        stats = db_utils.get_table(engine, "compute_node_stats")
+
+        def get_(stat_id, deleted):
+            deleted_value = 0 if not deleted else stats.c.id
+            return stats.select().\
+                   where(stats.c.id == stat_id).\
+                   where(stats.c.deleted == deleted_value).\
+                   execute().\
+                   fetchall()
+
+        self.assertEqual(1, len(get_(10, False)))
+        self.assertEqual(1, len(get_(20, True)))
+
     def _data_216(self):
         ret = {'instances': [{'user_id': '1234', 'project_id': '5678',
                               'vcpus': 2, 'memory_mb': 256, 'uuid': 'uuid1',

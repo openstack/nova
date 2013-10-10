@@ -20,7 +20,7 @@ def upgrade(migration_engine):
     conn = migration_engine.connect()
     result = conn.execute(
         'update compute_node_stats set deleted = id, '
-        'deleted_at = current_timestamp where compute_node_id not in '
+        'deleted_at = current_timestamp where compute_node_id in '
         '(select id from compute_nodes where deleted <> 0)')
     result.close()
     conn.close()
