@@ -3,7 +3,7 @@ Cheetah>=2.4.4
 amqplib>=0.6.1
 anyjson>=0.2.4
 argparse
-boto>=2.4.0,<2.13.0
+boto
 eventlet>=0.9.17
 kombu>=1.0.4
 lxml>=2.3
