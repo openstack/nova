@@ -121,7 +121,13 @@ class Server(object):
         except Exception:
             family = socket.AF_INET
 
-        self._socket = eventlet.listen(bind_addr, family, backlog=backlog)
+        try:
+            self._socket = eventlet.listen(bind_addr, family, backlog=backlog)
+        except EnvironmentError:
+            LOG.error(_("Could not bind to %(host)s:%(port)s"),
+                      {'host': host, 'port': port})
+            raise
+
         (self.host, self.port) = self._socket.getsockname()[0:2]
         LOG.info(_("%(name)s listening on %(host)s:%(port)s") % self.__dict__)
 
