@@ -23,7 +23,6 @@ from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova import db
 from nova import exception
 from nova import network
 from nova.openstack.common import fileutils
@@ -146,7 +145,7 @@ class CloudpipeController(object):
             try:
                 result = self.cloudpipe.launch_vpn_instance(context)
                 instance = result[0][0]
-            except db.NoMoreNetworks:
+            except exception.NoMoreNetworks:
                 msg = _("Unable to claim IP for VPN instances, ensure it "
                         "isn't running, and try again in a few minutes")
                 raise exception.HTTPBadRequest(explanation=msg)

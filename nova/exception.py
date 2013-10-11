@@ -579,6 +579,10 @@ class NoNetworksFound(NotFound):
     msg_fmt = _("No networks defined.")
 
 
+class NoMoreNetworks(NovaException):
+    msg_fmt = _("No more available networks.")
+
+
 class NetworkNotFoundForProject(NotFound):
     msg_fmt = _("Either Network uuid %(network_uuid)s is not present or "
                 "is not assigned to the project %(project_id)s.")

@@ -46,7 +46,6 @@ these objects be simple dictionaries.
 from oslo.config import cfg
 
 from nova.cells import rpcapi as cells_rpcapi
-from nova import exception
 from nova.openstack.common.db import api as db_api
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -72,16 +71,6 @@ _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 
 IMPL = db_api.DBAPI(backend_mapping=_BACKEND_MAPPING)
 LOG = logging.getLogger(__name__)
-
-
-class NoMoreNetworks(exception.NovaException):
-    """No more available networks."""
-    pass
-
-
-class NoMoreTargets(exception.NovaException):
-    """No more available targets."""
-    pass
 
 
 ###################

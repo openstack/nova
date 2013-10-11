@@ -52,7 +52,6 @@ from nova import block_device
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.context
-from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
@@ -2439,7 +2438,7 @@ def network_associate(context, project_id, network_id=None, force=False):
             # get new network
             network_ref = network_query(None, network_id)
             if not network_ref:
-                raise db.NoMoreNetworks()
+                raise exception.NoMoreNetworks()
 
             # associate with network
             # NOTE(vish): if with_lockmode isn't supported, as in sqlite,
