@@ -3028,6 +3028,34 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
+    def test_create_images_and_backing(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
+        self.mox.StubOutWithMock(libvirt_driver.libvirt_utils, 'create_image')
+
+        libvirt_driver.libvirt_utils.create_image(mox.IgnoreArg(),
+                                                  mox.IgnoreArg(),
+                                                  mox.IgnoreArg())
+        conn._fetch_instance_kernel_ramdisk(self.context, self.test_instance)
+        self.mox.ReplayAll()
+
+        self.stubs.Set(os.path, 'exists', lambda *args: False)
+        disk_info_json = jsonutils.dumps([{'path': 'foo', 'type': None,
+                                           'disk_size': 0,
+                                           'backing_file': None}])
+        conn._create_images_and_backing(self.context, self.test_instance,
+                                        "/fake/instance/dir", disk_info_json)
+
+    def test_create_images_and_backing_disk_info_none(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
+
+        conn._fetch_instance_kernel_ramdisk(self.context, self.test_instance)
+        self.mox.ReplayAll()
+
+        conn._create_images_and_backing(self.context, self.test_instance,
+                                        "/fake/instance/dir", None)
+
     def test_pre_live_migration_works_correctly_mocked(self):
         # Creating testdata
         vol = {'block_device_mapping': [

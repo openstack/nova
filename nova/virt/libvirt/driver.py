@@ -4171,7 +4171,10 @@ class LibvirtDriver(driver.ComputeDriver):
             json strings specified in get_instance_disk_info
 
         """
-        disk_info = jsonutils.loads(disk_info_json)
+        if not disk_info_json:
+            disk_info = []
+        else:
+            disk_info = jsonutils.loads(disk_info_json)
 
         for info in disk_info:
             base = os.path.basename(info['path'])
