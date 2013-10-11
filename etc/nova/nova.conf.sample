@@ -306,6 +306,10 @@
 # socket. Not supported on OS X. (integer value)
 #tcp_keepidle=600
 
+# Size of the pool of greenthreads used by wsgi (integer
+# value)
+#wsgi_default_pool_size=1000
+
 
 #
 # Options defined in nova.api.auth
