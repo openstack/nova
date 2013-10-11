@@ -72,6 +72,7 @@ variables / types used
 """
 
 import itertools
+import operator
 
 from oslo.config import cfg
 
@@ -88,6 +89,7 @@ CONF = cfg.CONF
 
 
 SUPPORTED_DEVICE_TYPES = ('disk', 'cdrom', 'floppy', 'lun')
+BOOT_DEV_FOR_TYPE = {'disk': 'hd', 'cdrom': 'cdrom', 'floppy': 'fd'}
 
 
 def has_disk_dev(mapping, disk_dev):
@@ -631,3 +633,17 @@ def get_disk_info(virt_type, instance, block_device_info=None,
     return {'disk_bus': disk_bus,
             'cdrom_bus': cdrom_bus,
             'mapping': mapping}
+
+
+def get_boot_order(disk_info):
+    boot_mapping = (info for name, info in disk_info['mapping'].iteritems()
+                    if name != 'root' and info.get('boot_index') is not None)
+    boot_devs_dup = (BOOT_DEV_FOR_TYPE[dev['type']] for dev in
+                     sorted(boot_mapping,
+                            key=operator.itemgetter('boot_index')))
+
+    def uniq(lst):
+        s = set()
+        return [el for el in lst if el not in s and not s.add(el)]
+
+    return uniq(boot_devs_dup)

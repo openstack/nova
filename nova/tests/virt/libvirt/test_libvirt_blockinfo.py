@@ -698,6 +698,60 @@ class LibvirtBlockInfoTest(test.TestCase):
                                                'disk_bus': 'scsi',
                                                'device_type': 'disk'}, {})
 
+    def test_get_boot_order_simple(self):
+        disk_info = {
+            'disk_bus': 'virtio',
+            'cdrom_bus': 'ide',
+            'mapping': {
+            'disk': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            'root': {'bus': 'virtio', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            }
+        }
+        expected_order = ['hd']
+        self.assertEqual(expected_order, blockinfo.get_boot_order(disk_info))
+
+    def test_get_boot_order_complex(self):
+        disk_info = {
+            'disk_bus': 'virtio',
+            'cdrom_bus': 'ide',
+            'mapping': {
+                'disk': {'bus': 'virtio', 'dev': 'vdf',
+                         'type': 'disk', 'boot_index': '1'},
+                '/dev/hda': {'bus': 'ide', 'dev': 'hda',
+                             'type': 'cdrom', 'boot_index': '3'},
+                '/dev/fda': {'bus': 'fdc', 'dev': 'fda',
+                             'type': 'floppy', 'boot_index': '2'},
+                'disk.eph0': {'bus': 'virtio', 'dev': 'vdb',
+                              'type': 'disk', 'format': 'ext3'},
+                'disk.eph1': {'bus': 'ide', 'dev': 'vdc', 'type': 'disk'},
+                'disk.swap': {'bus': 'virtio', 'dev': 'vdy', 'type': 'disk'},
+                'root': {'bus': 'virtio', 'dev': 'vdf',
+                         'type': 'disk', 'boot_index': '1'},
+            }
+        }
+        expected_order = ['hd', 'fd', 'cdrom']
+        self.assertEqual(expected_order, blockinfo.get_boot_order(disk_info))
+
+    def test_get_boot_order_overlapping(self):
+        disk_info = {
+            'disk_bus': 'virtio',
+            'cdrom_bus': 'ide',
+            'mapping': {
+            '/dev/vda': {'bus': 'scsi', 'dev': 'vda',
+                         'type': 'disk', 'boot_index': '1'},
+            '/dev/vdb': {'bus': 'virtio', 'dev': 'vdb',
+                         'type': 'disk', 'boot_index': '2'},
+            '/dev/vdc': {'bus': 'virtio', 'dev': 'vdc',
+                         'type': 'cdrom', 'boot_index': '3'},
+            'root': {'bus': 'scsi', 'dev': 'vda',
+                     'type': 'disk', 'boot_index': '1'},
+            }
+        }
+        expected_order = ['hd', 'cdrom']
+        self.assertEqual(expected_order, blockinfo.get_boot_order(disk_info))
+
 
 class DefaultDeviceNamesTestCase(test.TestCase):
     def setUp(self):
