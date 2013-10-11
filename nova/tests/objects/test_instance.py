@@ -641,7 +641,7 @@ class _TestInstanceObject(object):
             secgroups.objects.append(secgroup)
         inst.security_groups = secgroups
         inst.info_cache = instance_info_cache.InstanceInfoCache()
-        inst.info_cache.network_info = []
+        inst.info_cache.network_info = network_model.NetworkInfo()
         inst.create(self.context)
 
     def test_destroy_stubbed(self):

@@ -17,7 +17,7 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova import db
 from nova import exception
 from nova.objects import base
-from nova.objects import utils
+from nova.objects import fields
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -33,8 +33,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.4'
 
     fields = {
-        'instance_uuid': utils.str_value,
-        'network_info': utils.network_model_or_none,
+        'instance_uuid': fields.UUIDField(),
+        'network_info': fields.Field(fields.NetworkModel(), nullable=True),
         }
 
     def _attr_network_info_to_primitive(self):
