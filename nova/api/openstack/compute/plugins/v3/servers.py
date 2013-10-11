@@ -1038,15 +1038,6 @@ class ServersController(wsgi.Controller):
 
         return common.get_id_from_href(flavor_ref)
 
-    def _validate_metadata(self, metadata):
-        """Ensure that we can work with the metadata given."""
-        try:
-            metadata.iteritems()
-        except AttributeError:
-            msg = _("Unable to parse metadata key/value pairs.")
-            LOG.debug(msg)
-            raise exc.HTTPBadRequest(explanation=msg)
-
     @wsgi.response(202)
     @wsgi.serializers(xml=FullServerTemplate)
     @wsgi.deserializers(xml=ActionDeserializer)
@@ -1118,8 +1109,6 @@ class ServersController(wsgi.Controller):
                     request_attribute]
             except (KeyError, TypeError):
                 pass
-
-        self._validate_metadata(rebuild_kwargs.get('metadata', {}))
 
         try:
             self.compute_api.rebuild(context,

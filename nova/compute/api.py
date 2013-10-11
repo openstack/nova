@@ -387,6 +387,9 @@ class API(base.Base):
         """Enforce quota limits on metadata properties."""
         if not metadata:
             metadata = {}
+        if not isinstance(metadata, dict):
+            msg = (_("Metadata type should be dict."))
+            raise exception.InvalidMetadata(reason=msg)
         num_metadata = len(metadata)
         try:
             QUOTAS.limit_check(context, metadata_items=num_metadata)
@@ -404,15 +407,12 @@ class API(base.Base):
         for k, v in metadata.iteritems():
             if len(k) == 0:
                 msg = _("Metadata property key blank")
-                LOG.warn(msg)
                 raise exception.InvalidMetadata(reason=msg)
             if len(k) > 255:
                 msg = _("Metadata property key greater than 255 characters")
-                LOG.warn(msg)
                 raise exception.InvalidMetadataSize(reason=msg)
             if len(v) > 255:
                 msg = _("Metadata property value greater than 255 characters")
-                LOG.warn(msg)
                 raise exception.InvalidMetadataSize(reason=msg)
 
     def _check_requested_secgroups(self, context, secgroups):
