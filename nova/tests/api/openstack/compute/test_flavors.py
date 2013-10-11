@@ -57,6 +57,9 @@ def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
 def fake_get_all_flavors_sorted_list(context=None, inactive=False,
                                      filters=None, sort_key='flavorid',
                                      sort_dir='asc', limit=None, marker=None):
+    if marker in ['99999']:
+        raise exception.MarkerNotFound(marker)
+
     def reject_min(db_attr, filter_attr):
         return (filter_attr in filters and
                 int(flavor[db_attr]) < int(filters[filter_attr]))
@@ -230,6 +233,11 @@ class FlavorsTest(test.TestCase):
             ]
         }
         self.assertThat(flavor, matchers.DictMatches(expected))
+
+    def test_get_flavor_list_with_invalid_marker(self):
+        req = fakes.HTTPRequest.blank('/v2/fake/flavors?marker=99999')
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
 
     def test_get_flavor_detail_with_limit(self):
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/detail?limit=1')

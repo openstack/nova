@@ -140,9 +140,13 @@ class Controller(wsgi.Controller):
                 msg = _('Invalid minDisk filter [%s]') % req.params['minDisk']
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        limited_flavors = flavors.get_all_flavors_sorted_list(context,
-            filters=filters, sort_key=sort_key, sort_dir=sort_dir,
-            limit=limit, marker=marker)
+        try:
+            limited_flavors = flavors.get_all_flavors_sorted_list(context,
+                filters=filters, sort_key=sort_key, sort_dir=sort_dir,
+                limit=limit, marker=marker)
+        except exception.MarkerNotFound:
+            msg = _('marker [%s] not found') % marker
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         return limited_flavors
 
