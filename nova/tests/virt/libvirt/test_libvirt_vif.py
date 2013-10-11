@@ -15,11 +15,14 @@
 #    under the License.
 
 from lxml import etree
+import mock
 from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import exception
+from nova.network import linux_net
 from nova.network import model as network_model
+from nova.openstack.common import processutils
 from nova import test
 from nova.tests.virt.libvirt import fakelibvirt
 from nova import utils
@@ -430,6 +433,40 @@ class LibvirtVifTestCase(test.TestCase):
         self._check_ovs_ethernet_driver(d,
                                         self.vif_ovs,
                                         "tap")
+
+    def test_unplug_ivs_ethernet(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(linux_net, 'delete_ivs_vif_port') as delete:
+            delete.side_effect = processutils.ProcessExecutionError
+            d.unplug_ivs_ethernet(None, self.vif_ovs)
+
+    def test_unplug_ivs_hybrid(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(utils, 'execute') as execute:
+            execute.side_effect = processutils.ProcessExecutionError
+            d.unplug_ivs_hybrid(None, self.vif_ivs)
+
+    def test_unplug_iovisor(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(utils, 'execute') as execute:
+            execute.side_effect = processutils.ProcessExecutionError
+            mynetwork = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                              label='mylabel')
+            myvif = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                      address='ca:fe:de:ad:be:ef',
+                                      network=mynetwork)
+            d.unplug_iovisor(None, myvif)
+
+    def test_plug_iovisor(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(utils, 'execute') as execute:
+            execute.side_effect = processutils.ProcessExecutionError
+            instance = {
+                'name': 'instance-name',
+                'uuid': 'instance-uuid',
+                'project_id': 'myproject'
+            }
+            d.plug_iovisor(instance, self.vif_ivs)
 
     def test_ivs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
