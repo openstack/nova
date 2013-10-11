@@ -280,6 +280,16 @@ class NovaObject(object):
         else:
             return getattr(self, attribute)
 
+    def __deepcopy__(self, memo):
+        nobj = self.__class__()
+        nobj._context = self._context
+        for name in self.fields:
+            if self.obj_attr_is_set(name):
+                nval = copy.deepcopy(getattr(self, name), memo)
+                setattr(nobj, name, nval)
+        nobj._changed_fields = set(self._changed_fields)
+        return nobj
+
     def obj_clone(self):
         """Create a copy."""
         return copy.deepcopy(self)
