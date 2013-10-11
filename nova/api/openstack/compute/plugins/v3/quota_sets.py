@@ -152,8 +152,9 @@ class QuotaSetsController(object):
                 try:
                     value = int(value)
                 except (ValueError, TypeError):
-                    msg = _("Quota '%(value)s' for %(key)s should be "
-                            "integer.") % {'value': value, 'key': key}
+                    msg = _("Quota value for key '%(key)s' should be an "
+                            "integer.  It is actually type '%(vtype)s'.")
+                    msg = msg % {'key': key, 'vtype': type(value)}
                     LOG.warn(msg)
                     raise webob.exc.HTTPBadRequest(explanation=msg)
 
