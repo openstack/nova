@@ -554,17 +554,33 @@ class ConductorManager(manager.Manager):
     def compute_unrescue(self, context, instance):
         self.compute_api.unrescue(context, instance)
 
+    def _object_dispatch(self, target, method, context, args, kwargs):
+        """Dispatch a call to an object method.
+
+        This ensures that object methods get called and any exception
+        that is raised gets wrapped in a ClientException for forwarding
+        back to the caller (without spamming the conductor logs).
+        """
+        try:
+            # NOTE(danms): Keep the getattr inside the try block since
+            # a missing method is really a client problem
+            return getattr(target, method)(context, *args, **kwargs)
+        except Exception:
+            raise rpc_common.ClientException()
+
     def object_class_action(self, context, objname, objmethod,
                             objver, args, kwargs):
         """Perform a classmethod action on an object."""
         objclass = nova_object.NovaObject.obj_class_from_name(objname,
                                                               objver)
-        return getattr(objclass, objmethod)(context, *args, **kwargs)
+        return self._object_dispatch(objclass, objmethod, context,
+                                     args, kwargs)
 
     def object_action(self, context, objinst, objmethod, args, kwargs):
         """Perform an action on an object."""
         oldobj = copy.copy(objinst)
-        result = getattr(objinst, objmethod)(context, *args, **kwargs)
+        result = self._object_dispatch(objinst, objmethod, context,
+                                       args, kwargs)
         updates = dict()
         # NOTE(danms): Diff the object with the one passed to us and
         # generate a list of changes to forward back
