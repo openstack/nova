@@ -63,6 +63,17 @@ class BareMetalIPMITestCase(test.NoDBTestCase):
         finally:
             os.unlink(pw_file)
 
+    def test_make_empty_password_file(self):
+        pw_file = ipmi._make_password_file('')
+        try:
+            self.assertTrue(os.path.isfile(pw_file))
+            self.assertEqual(os.stat(pw_file)[stat.ST_MODE] & 0o777, 0o600)
+            with open(pw_file, "rb") as f:
+                pm_password = f.read()
+            self.assertEqual(b"\0", pm_password)
+        finally:
+            os.unlink(pw_file)
+
     def test_exec_ipmitool(self):
         pw_file = '/tmp/password_file'
 
