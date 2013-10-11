@@ -14,7 +14,7 @@
 
 from nova import db
 from nova.objects import base
-from nova.objects import utils
+from nova.objects import fields
 
 
 class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
@@ -23,11 +23,11 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.1'
 
     fields = {
-        'id': int,
-        'name': utils.str_value,
-        'description': utils.str_value,
-        'user_id': utils.str_value,
-        'project_id': utils.str_value,
+        'id': fields.IntegerField(),
+        'name': fields.StringField(),
+        'description': fields.StringField(),
+        'user_id': fields.StringField(),
+        'project_id': fields.StringField(),
         }
 
     @staticmethod
