@@ -2252,7 +2252,7 @@
 #xenapi_agent_path=usr/sbin/xe-update-networking
 
 # Disables the use of the XenAPI agent in any image regardless
-# of what image properties are present.  (boolean value)
+# of what image properties are present. (boolean value)
 #xenapi_disable_agent=false
 
 # Determines if the xenapi agent should be used when the image
