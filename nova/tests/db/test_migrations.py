@@ -3182,6 +3182,26 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             self.assertEqual(1, len(rows))
             self.assertEqual(per_project[resource], rows[0]['in_use'])
 
+    def _check_227(self, engine, data):
+        if engine.name == 'sqlite':
+            return
+
+        table = db_utils.get_table(engine, 'project_user_quotas')
+        quota = table.select(table.c.id == 4).execute().first()
+        self.assertEqual(quota['resource'], 'instances')
+
+        # Insert fake_quotas with the longest resource name.
+        fake_quotas = {'id': 5,
+                       'project_id': 'fake_project',
+                       'user_id': 'fake_user',
+                       'resource': 'injected_file_content_bytes',
+                       'hard_limit': 10}
+        table.insert().execute(fake_quotas)
+
+        # Check we can get the longest resource name.
+        quota = table.select(table.c.id == 5).execute().first()
+        self.assertEqual(quota['resource'], 'injected_file_content_bytes')
+
 
 class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
