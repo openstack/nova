@@ -418,7 +418,7 @@ class VMOps(object):
                 self._resize_up_root_vdi(instance, root_vdi)
 
             self._attach_disks(instance, vm_ref, name_label, vdis,
-                               disk_image_type, admin_password,
+                               disk_image_type, network_info, admin_password,
                                injected_files)
             if not first_boot:
                 self._attach_mapped_block_devices(instance,
@@ -545,7 +545,8 @@ class VMOps(object):
         return vm_ref
 
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
-                      disk_image_type, admin_password=None, files=None):
+                      disk_image_type, network_info,
+                      admin_password=None, files=None):
         ctx = nova_context.get_admin_context()
         instance_type = flavors.extract_flavor(instance)
 
@@ -604,6 +605,7 @@ class VMOps(object):
         if configdrive.required_by(instance):
             vm_utils.generate_configdrive(self._session, instance, vm_ref,
                                           DEVICE_CONFIGDRIVE,
+                                          network_info,
                                           admin_password=admin_password,
                                           files=files)
 

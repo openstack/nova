@@ -291,7 +291,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._update_instance_progress(context, instance, step, steps)
 
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
-                          admin_password, injected_files)
+                          network_info, admin_password, injected_files)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -396,7 +396,7 @@ class SpawnTestCase(VMOpsTestBase):
         if resize_instance:
             self.vmops._resize_up_root_vdi(instance, root_vdi)
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
-                                 None, None)
+                                 network_info, None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
 
         self.vmops._inject_instance_metadata(instance, vm_ref)

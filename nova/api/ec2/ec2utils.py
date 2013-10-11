@@ -142,6 +142,9 @@ def image_ec2_id(image_id, image_type='ami'):
 
 
 def get_ip_info_for_instance_from_nw_info(nw_info):
+    if not isinstance(nw_info, network_model.NetworkInfo):
+        nw_info = network_model.NetworkInfo.hydrate(nw_info)
+
     ip_info = {}
     fixed_ips = nw_info.fixed_ips()
     ip_info['fixed_ips'] = [ip['address'] for ip in fixed_ips
@@ -165,8 +168,6 @@ def get_ip_info_for_instance(context, instance):
         # Make sure empty response is turned into the model
         if not nw_info:
             nw_info = []
-        if not isinstance(nw_info, network_model.NetworkInfo):
-            nw_info = network_model.NetworkInfo.hydrate(nw_info)
     return get_ip_info_for_instance_from_nw_info(nw_info)
 
 
