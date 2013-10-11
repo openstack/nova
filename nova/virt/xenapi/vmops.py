@@ -414,9 +414,8 @@ class VMOps(object):
                     LOG.warning(_('ipxe_boot is True but no ISO image found'),
                                 instance=instance)
 
-            root_vdi = vdis.get('root')
-            if root_vdi and resize:
-                self._resize_up_root_vdi(instance, root_vdi)
+            if resize:
+                self._resize_up_vdis(instance, vdis)
 
             self._attach_disks(instance, vm_ref, name_label, vdis,
                                disk_image_type, network_info, admin_password,
@@ -1061,59 +1060,15 @@ class VMOps(object):
             self._volumeops.detach_volume(connection_info, name_label,
                                           mount_device)
 
-    def _resize_up_root_vdi(self, instance, root_vdi):
-        """Resize an instances root disk."""
-
-        new_disk_size = instance['root_gb'] * unit.Gi
-        if not new_disk_size:
-            return
-
-        # Get current size of VDI
-        virtual_size = self._session.call_xenapi('VDI.get_virtual_size',
-                                                 root_vdi['ref'])
-        virtual_size = int(virtual_size)
-
-        old_gb = virtual_size / unit.Gi
+    def _resize_up_vdis(self, instance, vdis):
+        root_vdi = vdis.get('root')
         new_gb = instance['root_gb']
+        if root_vdi and new_gb:
+            vdi_ref = root_vdi['ref']
+            vm_utils.update_vdi_virtual_size(self._session, instance,
+                                             vdi_ref, new_gb)
 
-        if virtual_size < new_disk_size:
-            # Resize up. Simple VDI resize will do the trick
-            vdi_uuid = root_vdi['uuid']
-            LOG.debug(_("Resizing up VDI %(vdi_uuid)s from %(old_gb)dGB to "
-                        "%(new_gb)dGB"),
-                      {'vdi_uuid': vdi_uuid, 'old_gb': old_gb,
-                       'new_gb': new_gb}, instance=instance)
-            resize_func_name = self.check_resize_func_name()
-            self._session.call_xenapi(resize_func_name, root_vdi['ref'],
-                    str(new_disk_size))
-            LOG.debug(_("Resize complete"), instance=instance)
-
-    def check_resize_func_name(self):
-        """Check the function name used to resize an instance based
-        on product_brand and product_version.
-        """
-
-        brand = self._session.product_brand
-        version = self._session.product_version
-
-        # To maintain backwards compatibility. All recent versions
-        # should use VDI.resize
-        if bool(version) and bool(brand):
-            xcp = brand == 'XCP'
-            r1_2_or_above = (
-                (
-                    version[0] == 1
-                    and version[1] > 1
-                )
-                or version[0] > 1)
-
-            xenserver = brand == 'XenServer'
-            r6_or_above = version[0] > 5
-
-            if (xcp and not r1_2_or_above) or (xenserver and not r6_or_above):
-                return 'VDI.resize_online'
-
-        return 'VDI.resize'
+        #TODO(johngarbutt) resize ephemeral disks too
 
     def reboot(self, instance, reboot_type, bad_volumes_callback=None):
         """Reboot VM instance."""

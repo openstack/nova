@@ -1562,6 +1562,57 @@ class CallXenAPIHelpersTestCase(VMUtilsTestBase):
         session.call_xenapi.assert_called_once_with("VDI.snapshot",
                                                     "vdi_ref", {})
 
+    def test_vdi_get_virtual_size(self):
+        session = mock.Mock()
+        session.call_xenapi.return_value = "123"
+        self.assertEqual(123, vm_utils._vdi_get_virtual_size(session, "ref"))
+        session.call_xenapi.assert_called_once_with("VDI.get_virtual_size",
+                                                    "ref")
+
+    @mock.patch.object(vm_utils, '_get_resize_func_name')
+    def test_vdi_resize(self, mock_get_resize_func_name):
+        session = mock.Mock()
+        mock_get_resize_func_name.return_value = "VDI.fake"
+        vm_utils._vdi_resize(session, "ref", 123)
+        session.call_xenapi.assert_called_once_with("VDI.fake", "ref", "123")
+
+    @mock.patch.object(vm_utils, '_vdi_resize')
+    @mock.patch.object(vm_utils, '_vdi_get_virtual_size')
+    def test_update_vdi_virtual_size_works(self, mock_get_size, mock_resize):
+        mock_get_size.return_value = (1024 ** 3) - 1
+        instance = {"uuid": "a"}
+
+        vm_utils.update_vdi_virtual_size("s", instance, "ref", 1)
+
+        mock_get_size.assert_called_once_with("s", "ref")
+        mock_resize.assert_called_once_with("s", "ref", 1024 ** 3)
+
+    @mock.patch.object(vm_utils, '_vdi_resize')
+    @mock.patch.object(vm_utils, '_vdi_get_virtual_size')
+    def test_update_vdi_virtual_size_skips_resize_down(self, mock_get_size,
+                                                       mock_resize):
+        mock_get_size.return_value = 1024 ** 3
+        instance = {"uuid": "a"}
+
+        vm_utils.update_vdi_virtual_size("s", instance, "ref", 1)
+
+        mock_get_size.assert_called_once_with("s", "ref")
+        self.assertFalse(mock_resize.called)
+
+    @mock.patch.object(vm_utils, '_vdi_resize')
+    @mock.patch.object(vm_utils, '_vdi_get_virtual_size')
+    def test_update_vdi_virtual_size_raise_if_disk_big(self, mock_get_size,
+                                                       mock_resize):
+        mock_get_size.return_value = 1024 ** 3 + 1
+        instance = {"uuid": "a"}
+
+        self.assertRaises(exception.ResizeError,
+                          vm_utils.update_vdi_virtual_size,
+                          "s", instance, "ref", 1)
+
+        mock_get_size.assert_called_once_with("s", "ref")
+        self.assertFalse(mock_resize.called)
+
 
 @mock.patch.object(vm_utils, '_vdi_get_rec')
 @mock.patch.object(vm_utils, '_vbd_get_rec')
@@ -1932,3 +1983,47 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
             'ha_always_run': False}
 
         session.call_xenapi.assert_called_with('VM.create', expected_vm_rec)
+
+
+class ResizeFunctionTestCase(test.NoDBTestCase):
+    def _call_get_resize_func_name(self, brand, version):
+        session = mock.Mock()
+        session.product_brand = brand
+        session.product_version = version
+
+        return vm_utils._get_resize_func_name(session)
+
+    def _test_is_resize(self, brand, version):
+        result = self._call_get_resize_func_name(brand, version)
+        self.assertEqual("VDI.resize", result)
+
+    def _test_is_resize_online(self, brand, version):
+        result = self._call_get_resize_func_name(brand, version)
+        self.assertEqual("VDI.resize_online", result)
+
+    def test_xenserver_5_5(self):
+        self._test_is_resize_online("XenServer", (5, 5, 0))
+
+    def test_xenserver_6_0(self):
+        self._test_is_resize("XenServer", (6, 0, 0))
+
+    def test_xcp_1_1(self):
+        self._test_is_resize_online("XCP", (1, 1, 0))
+
+    def test_xcp_1_2(self):
+        self._test_is_resize("XCP", (1, 2, 0))
+
+    def test_xcp_2_0(self):
+        self._test_is_resize("XCP", (2, 0, 0))
+
+    def test_random_brand(self):
+        self._test_is_resize("asfd", (1, 1, 0))
+
+    def test_default(self):
+        self._test_is_resize(None, None)
+
+    def test_empty(self):
+        self._test_is_resize("", "")
+
+    def test_bad_version(self):
+        self._test_is_resize("XenServer", "asdf")

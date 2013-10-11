@@ -73,11 +73,6 @@ class VMOpsTestCase(VMOpsTestBase):
         mock_session.product_version = product_version
         return mock_session
 
-    def test_check_resize_func_name_defaults_to_VDI_resize(self):
-        self.assertEqual(
-            'VDI.resize',
-            self._vmops.check_resize_func_name())
-
     def _test_finish_revert_migration_after_crash(self, backup_made, new_made,
                                                   vm_shutdown=True):
         instance = {'name': 'foo',
@@ -216,7 +211,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(vm_utils, 'determine_disk_image_type')
         self.mox.StubOutWithMock(vm_utils, 'get_vdis_for_instance')
         self.mox.StubOutWithMock(vm_utils, 'safe_destroy_vdis')
-        self.mox.StubOutWithMock(self.vmops, '_resize_up_root_vdi')
+        self.mox.StubOutWithMock(self.vmops, '_resize_up_vdis')
         self.mox.StubOutWithMock(vm_utils,
                                  'create_kernel_and_ramdisk')
         self.mox.StubOutWithMock(vm_utils, 'destroy_kernel_ramdisk')
@@ -278,8 +273,7 @@ class SpawnTestCase(VMOpsTestBase):
         vm_utils.get_vdis_for_instance(context, session, instance, name_label,
                     "image_id", di_type,
                     block_device_info=block_device_info).AndReturn(vdis)
-        if include_root_vdi:
-            self.vmops._resize_up_root_vdi(instance, vdis["root"])
+        self.vmops._resize_up_vdis(instance, vdis)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -405,7 +399,7 @@ class SpawnTestCase(VMOpsTestBase):
                 ramdisk_file, image_meta).AndReturn(vm_ref)
 
         if resize_instance:
-            self.vmops._resize_up_root_vdi(instance, root_vdi)
+            self.vmops._resize_up_vdis(instance, vdis)
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
                                  network_info, None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
@@ -814,3 +808,17 @@ class BootableTestCase(VMOpsTestBase):
         self.vmops.set_bootable(self.instance, False)
         blocked = self._get_blocked()
         self.assertIn('start', blocked)
+
+
+@mock.patch.object(vm_utils, 'update_vdi_virtual_size')
+class ResizeVdisTestCase(VMOpsTestBase):
+    def test_resize_up_vdis_root(self, mock_resize):
+        instance = {"root_gb": 20}
+        self.vmops._resize_up_vdis(instance, {"root": {"ref": "vdi_ref"}})
+        mock_resize.assert_called_once_with(self.vmops._session, instance,
+                                            "vdi_ref", 20)
+
+    def test_resize_up_vdis_root_gb_zero(self, mock_resize):
+        instance = {"root_gb": 0}
+        self.vmops._resize_up_vdis(instance, {"root": {}})
+        self.assertFalse(mock_resize.called)

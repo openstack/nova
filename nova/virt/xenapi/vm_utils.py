@@ -907,6 +907,62 @@ def _find_cached_image(session, image_id, sr_ref):
         return recs.keys()[0]
 
 
+def _get_resize_func_name(session):
+    brand = session.product_brand
+    version = session.product_version
+
+    # To maintain backwards compatibility. All recent versions
+    # should use VDI.resize
+    if version and brand:
+        xcp = brand == 'XCP'
+        r1_2_or_above = (version[0] == 1 and version[1] > 1) or version[0] > 1
+
+        xenserver = brand == 'XenServer'
+        r6_or_above = version[0] > 5
+
+        if (xcp and not r1_2_or_above) or (xenserver and not r6_or_above):
+            return 'VDI.resize_online'
+
+    return 'VDI.resize'
+
+
+def _vdi_get_virtual_size(session, vdi_ref):
+    size = session.call_xenapi('VDI.get_virtual_size', vdi_ref)
+    return int(size)
+
+
+def _vdi_resize(session, vdi_ref, new_size):
+    resize_func_name = _get_resize_func_name(session)
+    session.call_xenapi(resize_func_name, vdi_ref, str(new_size))
+
+
+def update_vdi_virtual_size(session, instance, vdi_ref, new_gb):
+    virtual_size = _vdi_get_virtual_size(session, vdi_ref)
+    new_disk_size = new_gb * unit.Gi
+
+    msg = _("Resizing up VDI %(vdi_ref)s from %(virtual_size)d "
+            "to %(new_disk_size)d")
+    LOG.debug(msg, {'vdi_ref': vdi_ref, 'virtual_size': virtual_size,
+                    'new_disk_size': new_disk_size},
+              instance=instance)
+
+    if virtual_size < new_disk_size:
+        # For resize up. Simple VDI resize will do the trick
+        _vdi_resize(session, vdi_ref, new_disk_size)
+
+    elif virtual_size == new_disk_size:
+        LOG.debug(_("No need to change vdi virtual size."),
+                  instance=instance)
+
+    else:
+        # NOTE(johngarbutt): we should never get here
+        # but if we don't raise an exception, a user might be able to use
+        # more storage than allowed by their chosen instance flavor
+        LOG.error(_("VDI %s is bigger than requested resize up size."),
+                  vdi_ref, instance=instance)
+        raise exception.ResizeError(_("VDI too big for requested resize up."))
+
+
 def resize_disk(session, instance, vdi_ref, flavor):
     size_gb = flavor['root_gb']
     if size_gb == 0:
