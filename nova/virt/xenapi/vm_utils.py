@@ -37,6 +37,7 @@ from nova import block_device
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_mode
 from nova import exception
 from nova.network import model as network_model
 from nova.openstack.common import excutils
@@ -1444,48 +1445,24 @@ def determine_disk_image_type(image_meta):
     return image_type
 
 
-def determine_is_pv(session, vdi_ref, disk_image_type, os_type):
-    """
-    Determine whether the VM will use a paravirtualized kernel or if it
-    will use hardware virtualization.
+def determine_vm_mode(instance, disk_image_type):
+    current_mode = vm_mode.get_from_instance(instance)
+    if current_mode == vm_mode.XEN or current_mode == vm_mode.HVM:
+        return current_mode
 
-        1. Glance (VHD): if `os_type` is windows, HVM, otherwise PV
+    os_type = instance['os_type']
+    if os_type == "linux":
+        return vm_mode.XEN
+    if os_type == "windows":
+        return vm_mode.HVM
 
-        2. Glance (DISK_RAW): HVM
+    # disk_image_type specific default for backwards compatibility
+    if disk_image_type == ImageType.DISK_VHD or \
+            disk_image_type == ImageType.DISK:
+        return vm_mode.XEN
 
-        3. Glance (DISK): PV
-
-        4. Glance (DISK_ISO): HVM
-
-        5. Boot From Volume - without image metadata (None): use HVM
-           NOTE: if disk_image_type is not specified, instances launched
-           from remote volumes will have to include kernel and ramdisk
-           because external kernel and ramdisk will not be fetched.
-    """
-
-    LOG.debug(_("Looking up vdi %s for PV kernel"), vdi_ref)
-    if disk_image_type == ImageType.DISK_VHD:
-        # 1. VHD
-        if os_type == 'windows':
-            is_pv = False
-        else:
-            is_pv = True
-    elif disk_image_type == ImageType.DISK_RAW:
-        # 2. RAW
-        is_pv = False
-    elif disk_image_type == ImageType.DISK:
-        # 3. Disk
-        is_pv = True
-    elif disk_image_type == ImageType.DISK_ISO:
-        # 4. ISO
-        is_pv = False
-    elif not disk_image_type:
-        is_pv = False
-    else:
-        raise exception.NovaException(_("Unknown image format %s") %
-                                      disk_image_type)
-
-    return is_pv
+    # most images run OK as HVM
+    return vm_mode.HVM
 
 
 def set_vm_name_label(session, vm_ref, name_label):

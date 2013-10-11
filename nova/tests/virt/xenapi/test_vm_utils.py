@@ -25,6 +25,7 @@ import mox
 from oslo.config import cfg
 
 from nova.compute import flavors
+from nova.compute import vm_mode
 from nova import context
 from nova import db
 from nova import exception
@@ -1372,3 +1373,40 @@ class AllowVSSProviderTest(stubs.XenAPITestBase):
         self.stubs.Set(self.session, 'call_xenapi', fake_call_xenapi)
         vm_utils.create_vm(self.session, self.instance, "label",
                            "kernel", "ramdisk")
+
+
+class DetermineVmModeTestCase(test.TestCase):
+    def test_determine_vm_mode_returns_xen_mode(self):
+        instance = {"vm_mode": "xen"}
+        self.assertEquals(vm_mode.XEN,
+            vm_utils.determine_vm_mode(instance, None))
+
+    def test_determine_vm_mode_returns_hvm_mode(self):
+        instance = {"vm_mode": "hvm"}
+        self.assertEquals(vm_mode.HVM,
+            vm_utils.determine_vm_mode(instance, None))
+
+    def test_determine_vm_mode_returns_xen_for_linux(self):
+        instance = {"vm_mode": None, "os_type": "linux"}
+        self.assertEquals(vm_mode.XEN,
+            vm_utils.determine_vm_mode(instance, None))
+
+    def test_determine_vm_mode_returns_hvm_for_windows(self):
+        instance = {"vm_mode": None, "os_type": "windows"}
+        self.assertEquals(vm_mode.HVM,
+            vm_utils.determine_vm_mode(instance, None))
+
+    def test_determine_vm_mode_returns_hvm_by_default(self):
+        instance = {"vm_mode": None, "os_type": None}
+        self.assertEquals(vm_mode.HVM,
+            vm_utils.determine_vm_mode(instance, None))
+
+    def test_determine_vm_mode_returns_xen_for_VHD(self):
+        instance = {"vm_mode": None, "os_type": None}
+        self.assertEquals(vm_mode.XEN,
+            vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK_VHD))
+
+    def test_determine_vm_mode_returns_xen_for_DISK(self):
+        instance = {"vm_mode": None, "os_type": None}
+        self.assertEquals(vm_mode.XEN,
+            vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK))

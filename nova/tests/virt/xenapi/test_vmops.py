@@ -18,7 +18,6 @@
 
 from nova.compute import power_state
 from nova.compute import task_states
-from nova.compute import vm_mode
 from nova import exception
 from nova import test
 from nova.tests.virt.xenapi import stubs
@@ -110,77 +109,6 @@ class VMOpsTestCase(test.NoDBTestCase):
 
     def test_finish_revert_migration_after_crash_before_backup(self):
         self._test_finish_revert_migration_after_crash(False, False)
-
-    def test_determine_vm_mode_returns_xen(self):
-        self.mox.StubOutWithMock(vm_mode, 'get_from_instance')
-
-        fake_instance = "instance"
-        vm_mode.get_from_instance(fake_instance).AndReturn(vm_mode.XEN)
-
-        self.mox.ReplayAll()
-        self.assertEquals(vm_mode.XEN,
-            self._vmops._determine_vm_mode(fake_instance, None, None))
-        self.mox.VerifyAll()
-
-    def test_determine_vm_mode_returns_hvm(self):
-        self.mox.StubOutWithMock(vm_mode, 'get_from_instance')
-
-        fake_instance = "instance"
-        vm_mode.get_from_instance(fake_instance).AndReturn(vm_mode.HVM)
-
-        self.mox.ReplayAll()
-        self.assertEquals(vm_mode.HVM,
-            self._vmops._determine_vm_mode(fake_instance, None, None))
-        self.mox.VerifyAll()
-
-    def test_determine_vm_mode_returns_is_pv(self):
-        self.mox.StubOutWithMock(vm_mode, 'get_from_instance')
-        self.mox.StubOutWithMock(vm_utils, 'determine_is_pv')
-
-        fake_instance = {"os_type": "foo"}
-        fake_vdis = {'root': {"ref": 'fake'}}
-        fake_disk_type = "disk"
-        vm_mode.get_from_instance(fake_instance).AndReturn(None)
-        vm_utils.determine_is_pv(self._session, "fake", fake_disk_type,
-            "foo").AndReturn(True)
-
-        self.mox.ReplayAll()
-        self.assertEquals(vm_mode.XEN,
-            self._vmops._determine_vm_mode(fake_instance, fake_vdis,
-                                     fake_disk_type))
-        self.mox.VerifyAll()
-
-    def test_determine_vm_mode_returns_is_not_pv(self):
-        self.mox.StubOutWithMock(vm_mode, 'get_from_instance')
-        self.mox.StubOutWithMock(vm_utils, 'determine_is_pv')
-
-        fake_instance = {"os_type": "foo"}
-        fake_vdis = {'root': {"ref": 'fake'}}
-        fake_disk_type = "disk"
-        vm_mode.get_from_instance(fake_instance).AndReturn(None)
-        vm_utils.determine_is_pv(self._session, "fake", fake_disk_type,
-            "foo").AndReturn(False)
-
-        self.mox.ReplayAll()
-        self.assertEquals(vm_mode.HVM,
-            self._vmops._determine_vm_mode(fake_instance, fake_vdis,
-                                     fake_disk_type))
-        self.mox.VerifyAll()
-
-    def test_determine_vm_mode_returns_is_not_pv_no_root_disk(self):
-        self.mox.StubOutWithMock(vm_mode, 'get_from_instance')
-        self.mox.StubOutWithMock(vm_utils, 'determine_is_pv')
-
-        fake_instance = {"os_type": "foo"}
-        fake_vdis = {'iso': {"ref": 'fake'}}
-        fake_disk_type = "disk"
-        vm_mode.get_from_instance(fake_instance).AndReturn(None)
-
-        self.mox.ReplayAll()
-        self.assertEquals(vm_mode.HVM,
-            self._vmops._determine_vm_mode(fake_instance, fake_vdis,
-                                     fake_disk_type))
-        self.mox.VerifyAll()
 
     def test_xsm_sr_check_relaxed_cached(self):
         self.make_plugin_call_count = 0
@@ -357,7 +285,7 @@ class SpawnTestCase(VMOpsTestBase):
         vm_ref = "fake_vm_ref"
         self.vmops._ensure_instance_name_unique(name_label)
         self.vmops._ensure_enough_free_mem(instance)
-        self.vmops._create_vm_record(context, instance, name_label, vdis,
+        self.vmops._create_vm_record(context, instance, name_label,
                 di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
@@ -462,7 +390,7 @@ class SpawnTestCase(VMOpsTestBase):
                 instance, name_label).AndReturn((kernel_file, ramdisk_file))
 
         vm_ref = "fake_vm_ref"
-        self.vmops._create_vm_record(context, instance, name_label, vdis,
+        self.vmops._create_vm_record(context, instance, name_label,
                 di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
 
         if resize_instance:
