@@ -443,6 +443,8 @@ class VMOps(object):
         def inject_instance_data_step(undo_mgr, vm_ref, vdis):
             self._inject_instance_metadata(instance, vm_ref)
             self._inject_auto_disk_config(instance, vm_ref)
+            # NOTE: We add the hostname here so windows PV tools
+            # can pick it up during booting
             if first_boot:
                 self._inject_hostname(instance, vm_ref, rescue)
             self._file_inject_vm_settings(instance, vm_ref, vdis, network_info)
@@ -1577,12 +1579,14 @@ class VMOps(object):
             for vif in network_info:
                 self.vif_driver.unplug(instance, vif)
 
-    def reset_network(self, instance):
+    def reset_network(self, instance, rescue=False):
         """Calls resetnetwork method in agent."""
         if self.agent_enabled(instance):
             vm_ref = self._get_vm_opaque_ref(instance)
             agent = self._get_agent(instance, vm_ref)
+            self._inject_hostname(instance, vm_ref, rescue)
             agent.resetnetwork()
+            self._remove_hostname(instance, vm_ref)
         else:
             raise NotImplementedError()
 
@@ -1596,12 +1600,23 @@ class VMOps(object):
             # NOTE(jk0): Windows hostnames can only be <= 15 chars.
             hostname = hostname[:15]
 
-        LOG.debug(_("Injecting hostname to xenstore"), instance=instance)
-        self._add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
+        LOG.debug(_("Injecting hostname (%s) into xenstore") % hostname,
+                  instance=instance)
+
+        @utils.synchronized('xenstore-' + instance['uuid'])
+        def update_hostname():
+            self._add_to_param_xenstore(vm_ref, 'vm-data/hostname', hostname)
+
+        update_hostname()
 
     def _remove_hostname(self, instance, vm_ref):
         LOG.debug(_("Removing hostname from xenstore"), instance=instance)
-        self._remove_from_param_xenstore(vm_ref, 'vm-data/hostname')
+
+        @utils.synchronized('xenstore-' + instance['uuid'])
+        def update_hostname():
+            self._remove_from_param_xenstore(vm_ref, 'vm-data/hostname')
+
+        update_hostname()
 
     def _write_to_xenstore(self, instance, path, value, vm_ref=None):
         """

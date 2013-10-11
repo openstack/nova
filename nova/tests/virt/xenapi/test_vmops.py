@@ -454,6 +454,32 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._remove_hostname(instance, vm_ref)
         self.mox.VerifyAll()
 
+    def test_reset_network(self):
+        class mock_agent(object):
+            def __init__(self):
+                self.called = False
+
+            def resetnetwork(self):
+                self.called = True
+
+        vm, vm_ref = self.create_vm("dummy")
+        instance = {"name": "dummy", "uuid": "1234", "auto_disk_config": None}
+        agent = mock_agent()
+
+        self.mox.StubOutWithMock(self.vmops, 'agent_enabled')
+        self.mox.StubOutWithMock(self.vmops, '_get_agent')
+        self.mox.StubOutWithMock(self.vmops, '_inject_hostname')
+        self.mox.StubOutWithMock(self.vmops, '_remove_hostname')
+
+        self.vmops.agent_enabled(instance).AndReturn(True)
+        self.vmops._get_agent(instance, vm_ref).AndReturn(agent)
+        self.vmops._inject_hostname(instance, vm_ref, False)
+        self.vmops._remove_hostname(instance, vm_ref)
+        self.mox.ReplayAll()
+        self.vmops.reset_network(instance)
+        self.assertTrue(agent.called)
+        self.mox.VerifyAll()
+
     def test_inject_hostname(self):
         instance = {"hostname": "dummy", "os_type": "fake", "uuid": "uuid"}
         vm_ref = "vm_ref"
