@@ -174,6 +174,7 @@ def get_partition_sizes(instance):
     instance_type = flavors.extract_flavor(instance)
     root_mb = instance_type['root_gb'] * 1024
     swap_mb = instance_type['swap']
+    ephemeral_mb = instance_type['ephemeral_gb'] * 1024
 
     # NOTE(deva): For simpler code paths on the deployment side,
     #             we always create a swap partition. If the flavor
@@ -181,7 +182,7 @@ def get_partition_sizes(instance):
     if swap_mb < 1:
         swap_mb = 1
 
-    return (root_mb, swap_mb)
+    return (root_mb, swap_mb, ephemeral_mb)
 
 
 def get_pxe_mac_path(mac):
@@ -376,7 +377,7 @@ class PXE(base.NodeDriver):
         instance_type = self.virtapi.instance_type_get(
             context, instance['instance_type_id'])
         image_info = get_tftp_image_info(instance, instance_type)
-        (root_mb, swap_mb) = get_partition_sizes(instance)
+        (root_mb, swap_mb, ephemeral_mb) = get_partition_sizes(instance)
         pxe_config_file_path = get_pxe_config_file_path(instance)
         image_file_path = get_image_file_path(instance)
 
@@ -387,7 +388,8 @@ class PXE(base.NodeDriver):
                  'image_path': image_file_path,
                  'pxe_config_path': pxe_config_file_path,
                  'root_mb': root_mb,
-                 'swap_mb': swap_mb})
+                 'swap_mb': swap_mb,
+                 'ephemeral_mb': ephemeral_mb})
         pxe_config = build_pxe_config(
                     node['id'],
                     deployment_key,

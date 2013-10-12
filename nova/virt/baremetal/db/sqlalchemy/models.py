@@ -50,8 +50,11 @@ class BareMetalNode(BASE, models.NovaBase):
     image_path = Column(String(255))
     pxe_config_path = Column(String(255))
     deploy_key = Column(String(255))
+    # root_mb, swap_mb and ephemeral_mb are cached flavor values for the
+    # current deployment not attributes of the node.
     root_mb = Column(Integer)
     swap_mb = Column(Integer)
+    ephemeral_mb = Column(Integer)
 
 
 class BareMetalInterface(BASE, models.NovaBase):
