@@ -125,8 +125,8 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.make_path("/some/dir")
         vfs.make_path("/other/dir")
 
-        self.assertTrue("/some/dir" in vfs.handle.files)
-        self.assertTrue("/other/dir" in vfs.handle.files)
+        self.assertIn("/some/dir", vfs.handle.files)
+        self.assertIn("/other/dir", vfs.handle.files)
         self.assertTrue(vfs.handle.files["/some/dir"]["isdir"])
         self.assertTrue(vfs.handle.files["/other/dir"]["isdir"])
 
@@ -137,7 +137,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
         vfs.append_file("/some/file", " Goodbye")
 
-        self.assertTrue("/some/file" in vfs.handle.files)
+        self.assertIn("/some/file", vfs.handle.files)
         self.assertEqual(vfs.handle.files["/some/file"]["content"],
                          "Hello World Goodbye")
 
@@ -148,7 +148,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
         vfs.replace_file("/some/file", "Goodbye")
 
-        self.assertTrue("/some/file" in vfs.handle.files)
+        self.assertIn("/some/file", vfs.handle.files)
         self.assertEqual(vfs.handle.files["/some/file"]["content"],
                          "Goodbye")
 

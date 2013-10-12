@@ -196,7 +196,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.imgdir = "/scratch/dir"
         vfs.append_file("/some/file", " Goodbye")
 
-        self.assertTrue("/scratch/dir/some/file" in files)
+        self.assertIn("/scratch/dir/some/file", files)
         self.assertEquals(files["/scratch/dir/some/file"]["content"],
                           "Hello World Goodbye")
 
@@ -222,7 +222,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.imgdir = "/scratch/dir"
         vfs.replace_file("/some/file", "Goodbye")
 
-        self.assertTrue("/scratch/dir/some/file" in files)
+        self.assertIn("/scratch/dir/some/file", files)
         self.assertEquals(files["/scratch/dir/some/file"]["content"],
                           "Goodbye")
 
