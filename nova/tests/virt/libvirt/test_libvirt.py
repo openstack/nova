@@ -2861,6 +2861,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
         conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref['name']).AndReturn('[]')
 
         self.mox.StubOutWithMock(conn, "_assert_dest_node_has_enough_disk")
         conn._assert_dest_node_has_enough_disk(
@@ -2881,11 +2883,31 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
         conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref['name']).AndReturn('[]')
         self.mox.ReplayAll()
         ret = conn.check_can_live_migrate_source(self.context, instance_ref,
                                                  dest_check_data)
         self.assertTrue(type(ret) == dict)
         self.assertTrue('is_shared_storage' in ret)
+
+    def test_check_can_live_migrate_source_vol_backed_w_disk_raises(self):
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        dest_check_data = {"filename": "file",
+                           "block_migration": False,
+                           "disk_over_commit": False,
+                           "disk_available_mb": 1024,
+                           "is_volume_backed": True}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
+        conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref['name']).AndReturn(
+                '[{"fake_disk_attr": "fake_disk_val"}]')
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InvalidSharedStorage,
+                          conn.check_can_live_migrate_source, self.context,
+                          instance_ref, dest_check_data)
 
     def test_check_can_live_migrate_source_vol_backed_fails(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -2897,6 +2919,9 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
         conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref['name']).AndReturn(
+                '[{"fake_disk_attr": "fake_disk_val"}]')
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidSharedStorage,
                           conn.check_can_live_migrate_source, self.context,
@@ -2912,6 +2937,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
         conn._check_shared_storage_test_file("file").AndReturn(True)
+        self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref['name']).AndReturn('[]')
 
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidLocalStorage,
@@ -2928,6 +2955,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(conn, "_check_shared_storage_test_file")
         conn._check_shared_storage_test_file("file").AndReturn(False)
+        self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref['name']).AndReturn('[]')
 
         self.mox.ReplayAll()
         self.assertRaises(exception.InvalidSharedStorage,
@@ -2942,6 +2971,8 @@ class LibvirtConnTestCase(test.TestCase):
         conn._check_shared_storage_test_file("file").AndReturn(False)
 
         self.mox.StubOutWithMock(conn, "get_instance_disk_info")
+        conn.get_instance_disk_info(instance_ref["name"]).AndReturn(
+                                            '[{"virt_disk_size":2}]')
         conn.get_instance_disk_info(instance_ref["name"]).AndReturn(
                                             '[{"virt_disk_size":2}]')
 

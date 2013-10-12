@@ -3812,6 +3812,8 @@ class LibvirtDriver(driver.ComputeDriver):
         filename = dest_check_data["filename"]
         block_migration = dest_check_data["block_migration"]
         is_volume_backed = dest_check_data.get('is_volume_backed', False)
+        has_local_disks = bool(
+                jsonutils.loads(self.get_instance_disk_info(instance['name'])))
 
         shared = self._check_shared_storage_test_file(filename)
 
@@ -3824,7 +3826,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                     dest_check_data['disk_available_mb'],
                                     dest_check_data['disk_over_commit'])
 
-        elif not shared and not is_volume_backed:
+        elif not shared and (not is_volume_backed or has_local_disks):
             reason = _("Live migration can not be used "
                        "without shared storage.")
             raise exception.InvalidSharedStorage(reason=reason, path=source)
