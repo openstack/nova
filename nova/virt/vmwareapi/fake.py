@@ -325,6 +325,38 @@ class VirtualMachine(ManagedObject):
         self.set("config.extraConfig", kwargs.get("extra_config", None))
         self.set('runtime.host', kwargs.get("runtime_host", None))
         self.device = kwargs.get("virtual_device")
+        # Sample of diagnostics data is below.
+        config = [
+            ('template', False),
+            ('vmPathName', 'fake_path'),
+            ('memorySizeMB', 512),
+            ('cpuReservation', 0),
+            ('memoryReservation', 0),
+            ('numCpu', 1),
+            ('numEthernetCards', 1),
+            ('numVirtualDisks', 1)]
+        self.set("summary.config", config)
+
+        quickStats = [
+            ('overallCpuUsage', 0),
+            ('overallCpuDemand', 0),
+            ('guestMemoryUsage', 0),
+            ('hostMemoryUsage', 141),
+            ('balloonedMemory', 0),
+            ('consumedOverheadMemory', 20)]
+        self.set("summary.quickStats", quickStats)
+
+        key1 = {'key': 'cpuid.AES'}
+        key2 = {'key': 'cpuid.AVX'}
+        runtime = [
+            ('connectionState', 'connected'),
+            ('powerState', 'poweredOn'),
+            ('toolsInstallerMounted', False),
+            ('suspendInterval', 0),
+            ('memoryOverhead', 21417984),
+            ('maxCpuUsage', 2000),
+            ('featureRequirement', [key1, key2])]
+        self.set("summary.runtime", runtime)
 
     def reconfig(self, factory, val):
         """
