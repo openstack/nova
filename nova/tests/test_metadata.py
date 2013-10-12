@@ -328,7 +328,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.assertEqual(result, mdinst.lookup("/openstack/"))
 
         # the 'content' should not show up in directory listing
-        self.assertTrue(base.CONTENT_DIR not in result)
+        self.assertNotIn(base.CONTENT_DIR, result)
         self.assertTrue('2012-08-10' in result)
         self.assertTrue('latest' in result)
 
@@ -409,7 +409,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         # since this instance had no user-data it should not be there.
-        self.assertFalse('user_data' in mdinst.lookup("/openstack/2012-08-10"))
+        self.assertNotIn('user_data', mdinst.lookup("/openstack/2012-08-10"))
 
         self.assertRaises(base.InvalidMetadataPath,
             mdinst.lookup, "/openstack/2012-08-10/user_data")
@@ -427,7 +427,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         # verify that older version do not have it
         mdjson = mdinst.lookup("/openstack/2012-08-10/meta_data.json")
-        self.assertFalse("random_seed" in json.loads(mdjson))
+        self.assertNotIn("random_seed", json.loads(mdjson))
 
     def test_no_dashes_in_metadata(self):
         # top level entries in meta_data should not contain '-' in their name
@@ -447,7 +447,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         # verify that older version do not have it
         result = mdinst.lookup("/openstack/2013-04-04")
-        self.assertFalse('vendor_data.json' in result)
+        self.assertNotIn('vendor_data.json', result)
 
     def test_vendor_data_response(self):
         inst = copy.copy(self.instance)

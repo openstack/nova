@@ -8401,7 +8401,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         def fake_remove_aggregate_host(*args, **kwargs):
             hosts = kwargs["aggregate"]["hosts"]
-            self.assertFalse(host_to_remove in hosts)
+            self.assertNotIn(host_to_remove, hosts)
 
         self.stubs.Set(self.api.compute_rpcapi, 'remove_aggregate_host',
                        fake_remove_aggregate_host)

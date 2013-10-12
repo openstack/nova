@@ -60,5 +60,5 @@ class TestNoAuthMiddlewareV3(test.NoDBTestCase):
         req.headers['X-Auth-Project-Id'] = 'user1_project'
         result = req.get_response(fakes.wsgi_app_v3(use_no_auth=True))
         self.assertEqual(result.status, '204 No Content')
-        self.assertFalse('X-CDN-Management-Url' in result.headers)
-        self.assertFalse('X-Storage-Url' in result.headers)
+        self.assertNotIn('X-CDN-Management-Url', result.headers)
+        self.assertNotIn('X-Storage-Url', result.headers)

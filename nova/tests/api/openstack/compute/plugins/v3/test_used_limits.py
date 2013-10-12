@@ -224,7 +224,7 @@ class UsedLimitsTestCase(test.NoDBTestCase):
 
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
-        self.assertFalse('totalRAMUsed' in abs_limits)
+        self.assertNotIn('totalRAMUsed', abs_limits)
 
     def test_used_limits_xmlns(self):
         fake_req = FakeRequest(self.fake_context)

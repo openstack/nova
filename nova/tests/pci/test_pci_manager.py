@@ -208,11 +208,11 @@ class PciDevTrackerTestCase(test.TestCase):
         self.tracker.update_pci_for_migration(self.inst)
         self.assertEqual(len(self.tracker.free_devs), 1)
         self.assertEqual(len(self.tracker.claims['fake-inst-uuid']), 2)
-        self.assertFalse('fake-inst-uuid' in self.tracker.allocations)
+        self.assertNotIn('fake-inst-uuid', self.tracker.allocations)
         self.inst.task_state = task_states.RESIZE_FINISH
         self.tracker.update_pci_for_instance(self.inst)
         self.assertEqual(len(self.tracker.allocations['fake-inst-uuid']), 2)
-        self.assertFalse('fake-inst-uuid' in self.tracker.claims)
+        self.assertNotIn('fake-inst-uuid', self.tracker.claims)
 
     def test_update_pci_for_migration_in(self):
         self.pci_requests = fake_pci_requests

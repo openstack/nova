@@ -1523,7 +1523,7 @@ class TestNeutronv2(TestNeutronv2Base):
     def test_nw_info_build_network_ovs(self):
         net, iid = self._test_nw_info_build_network(model.VIF_TYPE_OVS)
         self.assertEqual(net['bridge'], CONF.neutron_ovs_bridge)
-        self.assertFalse('should_create_bridge' in net)
+        self.assertNotIn('should_create_bridge', net)
         self.assertEqual(iid, 'port-id')
 
     def test_nw_info_build_network_bridge(self):
@@ -1535,7 +1535,7 @@ class TestNeutronv2(TestNeutronv2Base):
     def test_nw_info_build_network_other(self):
         net, iid = self._test_nw_info_build_network(None)
         self.assertEqual(net['bridge'], None)
-        self.assertFalse('should_create_bridge' in net)
+        self.assertNotIn('should_create_bridge', net)
         self.assertEqual(iid, None)
 
     def test_build_network_info_model(self):

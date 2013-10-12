@@ -661,7 +661,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self.assertEqual(executes, expected)
         for inp in expected_inputs:
-            self.assertFalse(inp in inputs[0])
+            self.assertNotIn(inp, inputs[0])
 
     def test_isolated_host_iptables_logdrop(self):
         # Ensure that a different drop action for iptables doesn't change
@@ -752,7 +752,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         ]
         self.assertEqual(executes, expected)
         for inp in expected_inputs:
-            self.assertFalse(inp in inputs[0])
+            self.assertNotIn(inp, inputs[0])
 
     def _test_initialize_gateway(self, existing, expected, routes=''):
         self.flags(fake_network=False)

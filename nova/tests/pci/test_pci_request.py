@@ -292,6 +292,6 @@ class AliasTestCase(test.NoDBTestCase):
     def test_delete_flavor_pci_info(self):
         meta = {"pci_requests": "fake", "old_pci_requests": "fake"}
         pci_request.delete_flavor_pci_info(meta, '')
-        self.assertTrue('pci_requests' not in meta)
+        self.assertNotIn('pci_requests', meta)
         pci_request.delete_flavor_pci_info(meta, 'old_')
-        self.assertTrue('old_pci_requests' not in meta)
+        self.assertNotIn('old_pci_requests', meta)

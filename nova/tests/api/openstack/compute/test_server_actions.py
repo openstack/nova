@@ -322,7 +322,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertTrue("adminPass" not in body['server'])
+        self.assertNotIn("adminPass", body['server'])
 
         self.assertEqual(robj['location'], self_href)
 
@@ -434,7 +434,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
-        self.assertTrue('personality' not in body['server'])
+        self.assertNotIn('personality', body['server'])
 
     def test_rebuild_admin_pass(self):
         return_server = fakes.fake_instance_get(image_ref='2',
@@ -474,7 +474,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertTrue('adminPass' not in body['server'])
+        self.assertNotIn('adminPass', body['server'])
 
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id, columns_to_join=None):

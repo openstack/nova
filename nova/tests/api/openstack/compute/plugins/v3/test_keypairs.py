@@ -177,7 +177,7 @@ class KeypairsTest(test.TestCase):
         # FIXME(ja): sholud we check that public_key was sent to create?
         res_dict = jsonutils.loads(res.body)
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
-        self.assertFalse('private_key' in res_dict['keypair'])
+        self.assertNotIn('private_key', res_dict['keypair'])
 
     def test_keypair_import_quota_limit(self):
 

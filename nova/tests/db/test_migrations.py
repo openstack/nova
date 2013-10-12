@@ -1339,7 +1339,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(rows[0]['instance_uuid'], None)
         self.assertEqual(rows[0]['project_id'], None)
         self.assertEqual(rows[0]['user_id'], None)
-        self.assertFalse('instance_id' in rows[0])
+        self.assertNotIn('instance_id', rows[0])
 
     def _post_downgrade_175(self, engine):
         volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
@@ -1347,9 +1347,9 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         rows = volume_usage_cache.select().execute().fetchall()
         self.assertEqual(len(rows), 1)
 
-        self.assertFalse('instance_uuid' in rows[0])
-        self.assertFalse('project_id' in rows[0])
-        self.assertFalse('user_id' in rows[0])
+        self.assertNotIn('instance_uuid', rows[0])
+        self.assertNotIn('project_id', rows[0])
+        self.assertNotIn('user_id', rows[0])
         self.assertEqual(rows[0]['instance_id'], None)
 
     def _check_176(self, engine, data):
@@ -1366,7 +1366,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         rows = volume_usage_cache.select().execute().fetchall()
         self.assertEqual(len(rows), 1)
 
-        self.assertFalse('availability_zone' in rows[0])
+        self.assertNotIn('availability_zone', rows[0])
 
     def _pre_upgrade_177(self, engine):
         floating_ips = db_utils.get_table(engine, 'floating_ips')
@@ -1748,7 +1748,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_188(self, engine):
         services = db_utils.get_table(engine, 'services')
         rows = services.select().execute().fetchall()
-        self.assertFalse('disabled_reason' in rows[0])
+        self.assertNotIn('disabled_reason', rows[0])
 
     def _pre_upgrade_189(self, engine):
         cells = db_utils.get_table(engine, 'cells')
@@ -2572,8 +2572,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         quota_usage = quota_usages.select().execute().first()
         reservation = reservations.select().execute().first()
 
-        self.assertFalse('user_id' in quota_usage)
-        self.assertFalse('user_id' in reservation)
+        self.assertNotIn('user_id', quota_usage)
+        self.assertNotIn('user_id', reservation)
         self.assertFalse(table_exist)
         # Check indexes are gone
         if engine.name == 'mysql' or engine.name == 'postgresql':
@@ -2650,7 +2650,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         for table_name in ['instances', 'shadow_instances']:
             table = db_utils.get_table(engine, table_name)
             rows = table.select().execute().fetchall()
-            self.assertFalse('locked_by' in rows[0])
+            self.assertNotIn('locked_by', rows[0])
 
     def _pre_upgrade_206(self, engine):
         instances = db_utils.get_table(engine, 'instances')
@@ -2817,7 +2817,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         data = self._data_209()
         for i in tables:
             dump_table_name = 'dump_' + i
-            self.assertFalse(dump_table_name in check_tables)
+            self.assertNotIn(dump_table_name, check_tables)
             table = change_tables[i]
             table.insert().values(data[i]).execute()
             self.assertEqual(len(table.select().execute().fetchall()), 2)

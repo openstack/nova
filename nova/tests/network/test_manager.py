@@ -1461,7 +1461,7 @@ class CommonNetworkTestCase(test.TestCase):
                      '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
             self.assertTrue(exp_cidr in cidrs)
-        self.assertFalse('192.168.2.0/24' in cidrs)
+        self.assertNotIn('192.168.2.0/24', cidrs)
 
     def test_validate_cidrs_smaller_subnet_in_use(self):
         manager = fake_network.FakeNetworkManager()
@@ -1493,7 +1493,7 @@ class CommonNetworkTestCase(test.TestCase):
                      '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
             self.assertTrue(exp_cidr in cidrs)
-        self.assertFalse('192.168.2.0/24' in cidrs)
+        self.assertNotIn('192.168.2.0/24', cidrs)
 
     def test_validate_cidrs_split_smaller_cidr_in_use2(self):
         manager = fake_network.FakeNetworkManager()
@@ -1510,7 +1510,7 @@ class CommonNetworkTestCase(test.TestCase):
         exp_cidrs = ['192.168.2.32/27', '192.168.2.64/27', '192.168.2.96/27']
         for exp_cidr in exp_cidrs:
             self.assertTrue(exp_cidr in cidrs)
-        self.assertFalse('192.168.2.0/27' in cidrs)
+        self.assertNotIn('192.168.2.0/27', cidrs)
 
     def test_validate_cidrs_split_all_in_use(self):
         manager = fake_network.FakeNetworkManager()
