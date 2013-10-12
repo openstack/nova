@@ -559,7 +559,7 @@ class CloudTestCase(test.TestCase):
                            'ipRanges': [],
                            'toPort': 80}]
         for rule in expected_rules:
-            self.assertTrue(rule in actual_rules)
+            self.assertIn(rule, actual_rules)
 
         db.security_group_destroy(self.context, sec3['id'])
         db.security_group_destroy(self.context, sec2['id'])
@@ -1311,9 +1311,9 @@ class CloudTestCase(test.TestCase):
     def assertDictListUnorderedMatch(self, L1, L2, key):
         self.assertEqual(len(L1), len(L2))
         for d1 in L1:
-            self.assertTrue(key in d1)
+            self.assertIn(key, d1)
             for d2 in L2:
-                self.assertTrue(key in d2)
+                self.assertIn(key, d2)
                 if d1[key] == d2[key]:
                     self.assertThat(d1, matchers.DictMatches(d2))
 
@@ -1402,11 +1402,11 @@ class CloudTestCase(test.TestCase):
     def _assertImageSet(self, result, root_device_type, root_device_name):
         self.assertEqual(1, len(result['imagesSet']))
         result = result['imagesSet'][0]
-        self.assertTrue('rootDeviceType' in result)
+        self.assertIn('rootDeviceType', result)
         self.assertEqual(result['rootDeviceType'], root_device_type)
-        self.assertTrue('rootDeviceName' in result)
+        self.assertIn('rootDeviceName', result)
         self.assertEqual(result['rootDeviceName'], root_device_name)
-        self.assertTrue('blockDeviceMapping' in result)
+        self.assertIn('blockDeviceMapping', result)
 
         return result
 
@@ -2294,10 +2294,10 @@ class CloudTestCase(test.TestCase):
         created_image = self.cloud.describe_images(self.context,
                                                    ec2_ids)['imagesSet'][0]
 
-        self.assertTrue('blockDeviceMapping' in created_image)
+        self.assertIn('blockDeviceMapping', created_image)
         bdm = created_image['blockDeviceMapping'][0]
         self.assertEquals(bdm.get('deviceName'), 'sda1')
-        self.assertTrue('ebs' in bdm)
+        self.assertIn('ebs', bdm)
         self.assertEquals(bdm['ebs'].get('snapshotId'),
                           ec2utils.id_to_ec2_snap_id(snapshots[0]))
         self.assertEquals(created_image.get('kernelId'), 'aki-00000001')

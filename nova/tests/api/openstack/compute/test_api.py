@@ -96,7 +96,7 @@ class APITest(test.NoDBTestCase):
         #api.application = raise_api_fault
         api = self._wsgi_app(raise_api_fault)
         resp = webob.Request.blank('/').get_response(api)
-        self.assertTrue('itemNotFound' in resp.body, resp.body)
+        self.assertIn('itemNotFound', resp.body)
         self.assertEqual(resp.status_int, 404, resp.body)
 
     def test_exceptions_are_converted_to_faults_exception(self):
@@ -107,7 +107,7 @@ class APITest(test.NoDBTestCase):
         #api.application = fail
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
-        self.assertTrue('{"computeFault' in resp.body, resp.body)
+        self.assertIn('{"computeFault', resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
     def test_exceptions_are_converted_to_faults_exception_xml(self):
@@ -118,7 +118,7 @@ class APITest(test.NoDBTestCase):
         #api.application = fail
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/.xml').get_response(api)
-        self.assertTrue('<computeFault' in resp.body, resp.body)
+        self.assertIn('<computeFault', resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
     def _do_test_exception_safety_reflected_in_faults(self, expose):
@@ -131,11 +131,11 @@ class APITest(test.NoDBTestCase):
 
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
-        self.assertTrue('{"computeFault' in resp.body, resp.body)
+        self.assertIn('{"computeFault', resp.body)
         expected = ('ExceptionWithSafety: some explanation' if expose else
                     'The server has either erred or is incapable '
                     'of performing the requested operation.')
-        self.assertTrue(expected in resp.body, resp.body)
+        self.assertIn(expected, resp.body)
         self.assertEqual(resp.status_int, 500, resp.body)
 
     def test_safe_exceptions_are_described_in_faults(self):
@@ -151,12 +151,12 @@ class APITest(test.NoDBTestCase):
 
         api = self._wsgi_app(fail)
         resp = webob.Request.blank('/').get_response(api)
-        self.assertTrue(msg in resp.body, resp.body)
+        self.assertIn(msg, resp.body)
         self.assertEqual(resp.status_int, exception_type.code, resp.body)
 
         if hasattr(exception_type, 'headers'):
             for (key, value) in exception_type.headers.iteritems():
-                self.assertTrue(key in resp.headers)
+                self.assertIn(key, resp.headers)
                 self.assertEquals(resp.headers[key], str(value))
 
     def test_quota_error_mapping(self):

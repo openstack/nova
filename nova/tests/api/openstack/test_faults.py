@@ -159,7 +159,7 @@ class TestFaults(test.NoDBTestCase):
         resp = req.get_response(raiser)
         self.assertEqual(resp.content_type, "application/xml")
         self.assertEqual(resp.status_int, 404)
-        self.assertTrue('whut?' in resp.body)
+        self.assertIn('whut?', resp.body)
 
     def test_raise_403(self):
         # Ensure the ability to raise :class:`Fault` in WSGI-ified methods.
@@ -172,7 +172,7 @@ class TestFaults(test.NoDBTestCase):
         self.assertEqual(resp.content_type, "application/xml")
         self.assertEqual(resp.status_int, 403)
         self.assertNotIn('resizeNotAllowed', resp.body)
-        self.assertTrue('forbidden' in resp.body)
+        self.assertIn('forbidden', resp.body)
 
     def test_raise_localize_explanation(self):
         msgid = "String with params: %s"
@@ -188,7 +188,7 @@ class TestFaults(test.NoDBTestCase):
         resp = req.get_response(raiser)
         self.assertEqual(resp.content_type, "application/xml")
         self.assertEqual(resp.status_int, 404)
-        self.assertTrue((msgid % params) in resp.body)
+        self.assertIn((msgid % params), resp.body)
 
     def test_fault_has_status_int(self):
         # Ensure the status_int is set correctly on faults.
@@ -203,7 +203,7 @@ class TestFaults(test.NoDBTestCase):
         fault = wsgi.Fault(webob.exc.HTTPBadRequest(explanation='scram'))
         response = request.get_response(fault)
 
-        self.assertTrue(common.XML_NS_V11 in response.body)
+        self.assertIn(common.XML_NS_V11, response.body)
         self.assertEqual(response.content_type, "application/xml")
         self.assertEqual(response.status_int, 400)
 
