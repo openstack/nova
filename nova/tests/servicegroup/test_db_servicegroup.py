@@ -103,11 +103,11 @@ class DBServiceGroupTestCase(test.TestCase):
 
         services = self.servicegroup_api.get_all(self._topic)
 
-        self.assertTrue(service_ref1['host'] in services)
-        self.assertTrue(service_ref2['host'] in services)
+        self.assertIn(service_ref1['host'], services)
+        self.assertIn(service_ref2['host'], services)
 
         service_id = self.servicegroup_api.get_one(self._topic)
-        self.assertTrue(service_id in services)
+        self.assertIn(service_id, services)
 
     def test_service_is_up(self):
         fts_func = datetime.datetime.fromtimestamp

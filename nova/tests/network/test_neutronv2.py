@@ -907,7 +907,7 @@ class TestNeutronv2(TestNeutronv2Base):
         try:
             api.validate_networks(self.context, requested_networks)
         except exception.NetworkNotFound as ex:
-            self.assertTrue("my_netid2" in str(ex))
+            self.assertIn("my_netid2", str(ex))
 
     def test_validate_networks_ex_2(self):
         requested_networks = [('my_netid1', 'test', None),
@@ -922,7 +922,7 @@ class TestNeutronv2(TestNeutronv2Base):
         try:
             api.validate_networks(self.context, requested_networks)
         except exception.NetworkNotFound as ex:
-            self.assertTrue("my_netid2, my_netid3" in str(ex))
+            self.assertIn("my_netid2, my_netid3", str(ex))
 
     def test_validate_networks_duplicate(self):
         """Verify that the correct exception is thrown when duplicate

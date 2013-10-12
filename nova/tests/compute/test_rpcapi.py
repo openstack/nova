@@ -40,7 +40,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self.fake_instance = jsonutils.to_primitive(inst)
 
     def test_serialized_instance_has_name(self):
-        self.assertTrue('name' in self.fake_instance)
+        self.assertIn('name', self.fake_instance)
 
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')

@@ -194,7 +194,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
             self.assertEqual(len(real_ids), len(expected_ids))
             for id_ in expected_ids:
-                self.assertTrue(id_ in real_ids)
+                self.assertIn(id_, real_ids)
 
     def test_drop_old_duplicate_entries_from_table_soft_delete(self):
         table_name = "__test_tmp_table__"
@@ -227,7 +227,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                             engine.execute(rows_select).fetchall()]
             self.assertEqual(len(row_ids), len(expected_values))
             for value in expected_values:
-                self.assertTrue(value['id'] in row_ids)
+                self.assertIn(value['id'], row_ids)
 
             deleted_rows_select = base_select.\
                                     where(table.c.deleted == table.c.id)
@@ -236,7 +236,7 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             self.assertEqual(len(deleted_rows_ids),
                              len(values) - len(row_ids))
             for value in soft_deleted_values:
-                self.assertTrue(value['id'] in deleted_rows_ids)
+                self.assertIn(value['id'], deleted_rows_ids)
 
     def test_check_shadow_table(self):
         table_name = 'abc'

@@ -1191,7 +1191,7 @@ class ConductorAPITestCase(_BaseTestCase, test.TestCase):
         self.conductor.wait_until_ready(self.context)
 
         self.assertEqual(timeouts.count(10), 10)
-        self.assertTrue(None in timeouts)
+        self.assertIn(None, timeouts)
 
     def test_security_groups_trigger_handler(self):
         self.mox.StubOutWithMock(self.conductor_manager.security_group_api,

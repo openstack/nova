@@ -277,7 +277,7 @@ class NotificationsTestCase(test.TestCase):
     def test_payload_has_fixed_ip_labels(self):
         info = notifications.info_from_instance(self.context, self.instance,
                                                   self.net_info, None)
-        self.assertTrue("fixed_ips" in info)
+        self.assertIn("fixed_ips", info)
         self.assertEquals(info["fixed_ips"][0]["label"], "test1")
 
     def test_send_access_ip_update(self):

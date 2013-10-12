@@ -636,7 +636,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
              '-s 192.168.1.1 -j DROP' % iface,
         ]
         for inp in expected_inputs:
-            self.assertTrue(inp in inputs[0])
+            self.assertIn(inp, inputs[0])
 
         executes = []
         inputs = []
@@ -727,7 +727,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
               '-s 192.168.1.1 -j LOGDROP' % iface),
         ]
         for inp in expected_inputs:
-            self.assertTrue(inp in inputs[0])
+            self.assertIn(inp, inputs[0])
 
         executes = []
         inputs = []

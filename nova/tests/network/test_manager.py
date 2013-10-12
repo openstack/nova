@@ -1433,7 +1433,7 @@ class CommonNetworkTestCase(test.TestCase):
                                        None, None)
         self.assertEqual(1, len(nets))
         cidrs = [str(net['cidr']) for net in nets]
-        self.assertTrue('192.168.0.0/24' in cidrs)
+        self.assertIn('192.168.0.0/24', cidrs)
 
     def test_validate_cidrs_split_exact_in_half(self):
         manager = fake_network.FakeNetworkManager()
@@ -1442,8 +1442,8 @@ class CommonNetworkTestCase(test.TestCase):
                                        None, None)
         self.assertEqual(2, len(nets))
         cidrs = [str(net['cidr']) for net in nets]
-        self.assertTrue('192.168.0.0/25' in cidrs)
-        self.assertTrue('192.168.0.128/25' in cidrs)
+        self.assertIn('192.168.0.0/25', cidrs)
+        self.assertIn('192.168.0.128/25', cidrs)
 
     def test_validate_cidrs_split_cidr_in_use_middle_of_range(self):
         manager = fake_network.FakeNetworkManager()
@@ -1460,7 +1460,7 @@ class CommonNetworkTestCase(test.TestCase):
         exp_cidrs = ['192.168.0.0/24', '192.168.1.0/24', '192.168.3.0/24',
                      '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
-            self.assertTrue(exp_cidr in cidrs)
+            self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/24', cidrs)
 
     def test_validate_cidrs_smaller_subnet_in_use(self):
@@ -1492,7 +1492,7 @@ class CommonNetworkTestCase(test.TestCase):
         exp_cidrs = ['192.168.0.0/24', '192.168.1.0/24', '192.168.3.0/24',
                      '192.168.4.0/24']
         for exp_cidr in exp_cidrs:
-            self.assertTrue(exp_cidr in cidrs)
+            self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/24', cidrs)
 
     def test_validate_cidrs_split_smaller_cidr_in_use2(self):
@@ -1509,7 +1509,7 @@ class CommonNetworkTestCase(test.TestCase):
         cidrs = [str(net['cidr']) for net in nets]
         exp_cidrs = ['192.168.2.32/27', '192.168.2.64/27', '192.168.2.96/27']
         for exp_cidr in exp_cidrs:
-            self.assertTrue(exp_cidr in cidrs)
+            self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/27', cidrs)
 
     def test_validate_cidrs_split_all_in_use(self):
@@ -1563,8 +1563,8 @@ class CommonNetworkTestCase(test.TestCase):
                                        False, 2, 256, None, None, None, None,
                                        None)
         returned_cidrs = [str(net['cidr']) for net in nets]
-        self.assertTrue('192.168.0.0/24' in returned_cidrs)
-        self.assertTrue('192.168.1.0/24' in returned_cidrs)
+        self.assertIn('192.168.0.0/24', returned_cidrs)
+        self.assertIn('192.168.1.0/24', returned_cidrs)
 
     def test_validate_cidrs_conflict_existing_supernet(self):
         manager = fake_network.FakeNetworkManager()
@@ -1856,7 +1856,7 @@ class CommonNetworkTestCase(test.TestCase):
 
         # Compare the expected rules against the actual ones
         for line in expected_lines:
-            self.assertTrue(line in new_lines)
+            self.assertIn(line, new_lines)
 
         # Add an additional network and ensure the rules get configured
         new_network = {'id': 2,
@@ -1910,7 +1910,7 @@ class CommonNetworkTestCase(test.TestCase):
 
         # Compare the expected rules (with new network) against the actual ones
         for line in expected_lines:
-            self.assertTrue(line in new_lines)
+            self.assertIn(line, new_lines)
 
     def test_flatdhcpmanager_dynamic_fixed_range(self):
         """Test FlatDHCPManager NAT rules for fixed_range."""

@@ -176,7 +176,7 @@ class CinderTestCase(test.NoDBTestCase):
     def test_volume_with_image_metadata(self):
         volume = self.api.get(self.context, '5678')
         self.assert_called('GET', '/volumes/5678')
-        self.assertTrue('volume_image_metadata' in volume)
+        self.assertIn('volume_image_metadata', volume)
         self.assertEqual(volume['volume_image_metadata'], _image_metadata)
 
     def test_cinder_api_insecure(self):

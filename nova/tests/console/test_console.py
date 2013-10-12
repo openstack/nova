@@ -100,7 +100,7 @@ class ConsoleTestCase(test.TestCase):
                 self.console.driver.console_type)
 
         console_instances = [con['instance_uuid'] for con in pool['consoles']]
-        self.assertTrue(instance['uuid'] in console_instances)
+        self.assertIn(instance['uuid'], console_instances)
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_add_console_does_not_duplicate(self):
