@@ -261,7 +261,7 @@ class API(base.Base):
     @refresh_cache
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
-                              conductor_api=None, security_groups=None,
+                              security_groups=None,
                               dhcp_options=None):
         """Allocates all network structures for an instance.
 
@@ -273,7 +273,6 @@ class API(base.Base):
         :param macs: None or a set of MAC addresses that the instance
             should use. macs is supplied by the hypervisor driver (contrast
             with requested_networks which is user supplied).
-        :param conductor_api: The conductor api.
         :param security_groups: None or security groups to allocate for
             instance.
         :param dhcp_options: None or a set of key/value pairs that should
@@ -318,13 +317,11 @@ class API(base.Base):
 
     # NOTE(danms): Here for neutron compatibility
     def allocate_port_for_instance(self, context, instance, port_id,
-                                   network_id=None, requested_ip=None,
-                                   conductor_api=None):
+                                   network_id=None, requested_ip=None):
         raise NotImplementedError()
 
     # NOTE(danms): Here for neutron compatibility
-    def deallocate_port_for_instance(self, context, instance, port_id,
-                                     conductor_api=None):
+    def deallocate_port_for_instance(self, context, instance, port_id):
         raise NotImplementedError()
 
     # NOTE(danms): Here for neutron compatibility
@@ -337,8 +334,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @refresh_cache
-    def add_fixed_ip_to_instance(self, context, instance, network_id,
-                                 conductor_api=None):
+    def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Adds a fixed ip to instance from specified network."""
         instance_type = flavors.extract_flavor(instance)
         args = {'instance_id': instance['uuid'],
@@ -349,8 +345,7 @@ class API(base.Base):
 
     @wrap_check_policy
     @refresh_cache
-    def remove_fixed_ip_from_instance(self, context, instance, address,
-                                      conductor_api=None):
+    def remove_fixed_ip_from_instance(self, context, instance, address):
         """Removes a fixed ip from instance from specified network."""
 
         instance_type = flavors.extract_flavor(instance)

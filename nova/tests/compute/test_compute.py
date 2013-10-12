@@ -2958,7 +2958,6 @@ class ComputeTestCase(BaseTestCase):
             mox.IgnoreArg(),
             requested_networks=None,
             vpn=False, macs=macs,
-            conductor_api=self.compute.conductor_api,
             security_groups=[], dhcp_options=None).AndReturn(
                 fake_network.fake_get_instance_nw_info(self.stubs, 1, 1))
 
@@ -2980,7 +2979,6 @@ class ComputeTestCase(BaseTestCase):
                 mox.IgnoreArg(),
                 requested_networks=None,
                 vpn=False, macs=None,
-                conductor_api=self.compute.conductor_api,
                 security_groups=[], dhcp_options=None
                 ).AndRaise(rpc_common.RemoteError())
         self.compute.network_api.deallocate_for_instance(
@@ -4955,8 +4953,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'instance_info_cache_update')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'instance_get_by_uuid')
 
@@ -7550,8 +7546,8 @@ class ComputeAPITestCase(BaseTestCase):
         port_id = nwinfo[0]['id']
         req_ip = '1.2.3.4'
         self.compute.network_api.allocate_port_for_instance(
-            self.context, instance, port_id, network_id, req_ip,
-            conductor_api=self.compute.conductor_api).AndReturn(nwinfo)
+            self.context, instance, port_id, network_id, req_ip
+            ).AndReturn(nwinfo)
         self.mox.ReplayAll()
         vif = self.compute.attach_interface(self.context,
                                             instance,
@@ -7567,7 +7563,7 @@ class ComputeAPITestCase(BaseTestCase):
                        lambda *a, **k: nwinfo)
         self.stubs.Set(self.compute.network_api,
                        'deallocate_port_for_instance',
-                       lambda a, b, c, conductor_api=None: [])
+                       lambda a, b, c: [])
         self.compute.detach_interface(self.context, {}, port_id)
         self.assertEqual(self.compute.driver._interfaces, {})
 

@@ -368,6 +368,8 @@ class ConductorManager(manager.Manager):
     def instance_info_cache_delete(self, context, instance):
         self.db.instance_info_cache_delete(context, instance['uuid'])
 
+    # NOTE(hanlind): This method is now deprecated and can be removed in
+    # version v2.0 of the RPC API.
     def instance_info_cache_update(self, context, instance, values):
         self.db.instance_info_cache_update(context, instance['uuid'],
                                            values)
