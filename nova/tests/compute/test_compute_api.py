@@ -371,7 +371,16 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_reboot_type(vm_states.ACTIVE, 'SOFT')
 
     def test_reboot_soft_error(self):
-        self._test_reboot_type(vm_states.ERROR, 'SOFT')
+        self._test_reboot_type_fails('SOFT', vm_state=vm_states.ERROR)
+
+    def test_reboot_soft_paused(self):
+        self._test_reboot_type_fails('SOFT', vm_state=vm_states.PAUSED)
+
+    def test_reboot_soft_stopped(self):
+        self._test_reboot_type_fails('SOFT', vm_state=vm_states.STOPPED)
+
+    def test_reboot_soft_suspended(self):
+        self._test_reboot_type_fails('SOFT', vm_state=vm_states.SUSPENDED)
 
     def test_reboot_soft_rebooting(self):
         self._test_reboot_type_fails('SOFT', task_state=task_states.REBOOTING)
