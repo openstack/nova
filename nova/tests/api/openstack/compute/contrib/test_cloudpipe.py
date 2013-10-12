@@ -138,7 +138,7 @@ class CloudpipesXMLSerializerTest(test.NoDBTestCase):
         tree = etree.fromstring(text)
         self.assertEqual('cloudpipe', tree.tag)
         for child in tree:
-            self.assertTrue(child.tag in exemplar['cloudpipe'])
+            self.assertIn(child.tag, exemplar['cloudpipe'])
             self.assertEqual(child.text, exemplar['cloudpipe'][child.tag])
 
     def test_index_serializer(self):
@@ -163,7 +163,7 @@ class CloudpipesXMLSerializerTest(test.NoDBTestCase):
         for idx, cl_pipe in enumerate(tree):
             kp_data = exemplar['cloudpipes'][idx]
             for child in cl_pipe:
-                self.assertTrue(child.tag in kp_data)
+                self.assertIn(child.tag, kp_data)
                 self.assertEqual(child.text, kp_data[child.tag])
 
     def test_deserializer(self):

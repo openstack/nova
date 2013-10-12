@@ -62,7 +62,7 @@ class SnapshotApiTest(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 200)
         resp_dict = jsonutils.loads(resp.body)
-        self.assertTrue('snapshot' in resp_dict)
+        self.assertIn('snapshot', resp_dict)
         self.assertEqual(resp_dict['snapshot']['displayName'],
                         snapshot['display_name'])
         self.assertEqual(resp_dict['snapshot']['displayDescription'],
@@ -85,7 +85,7 @@ class SnapshotApiTest(test.NoDBTestCase):
         self.assertEqual(resp.status_int, 200)
 
         resp_dict = jsonutils.loads(resp.body)
-        self.assertTrue('snapshot' in resp_dict)
+        self.assertIn('snapshot', resp_dict)
         self.assertEqual(resp_dict['snapshot']['displayName'],
                         snapshot['display_name'])
         self.assertEqual(resp_dict['snapshot']['displayDescription'],
@@ -129,7 +129,7 @@ class SnapshotApiTest(test.NoDBTestCase):
 
         self.assertEqual(resp.status_int, 200)
         resp_dict = jsonutils.loads(resp.body)
-        self.assertTrue('snapshot' in resp_dict)
+        self.assertIn('snapshot', resp_dict)
         self.assertEqual(resp_dict['snapshot']['id'], str(snapshot_id))
 
     def test_snapshot_show_invalid_id(self):
@@ -146,7 +146,7 @@ class SnapshotApiTest(test.NoDBTestCase):
         self.assertEqual(resp.status_int, 200)
 
         resp_dict = jsonutils.loads(resp.body)
-        self.assertTrue('snapshots' in resp_dict)
+        self.assertIn('snapshots', resp_dict)
         resp_snapshots = resp_dict['snapshots']
         self.assertEqual(len(resp_snapshots), 3)
 

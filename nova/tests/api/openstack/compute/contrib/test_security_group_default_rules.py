@@ -417,7 +417,7 @@ class TestSecurityGroupDefaultRuleXMLSerializer(test.TestCase):
             if child_tag == 'ip_range':
                 for gr_child in child:
                     gr_child_tag = self._tag(gr_child)
-                    self.assertTrue(gr_child_tag in raw_rule[child_tag])
+                    self.assertIn(gr_child_tag, raw_rule[child_tag])
                     seen.add('%s/%s' % (child_tag, gr_child_tag))
                     self.assertEqual(gr_child.text,
                                      raw_rule[child_tag][gr_child_tag])

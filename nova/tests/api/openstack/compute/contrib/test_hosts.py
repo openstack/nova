@@ -160,13 +160,13 @@ class HostTestCase(test.TestCase):
     def test_list_hosts(self):
         """Verify that the compute hosts are returned."""
         result = self.controller.index(self.req)
-        self.assertTrue('hosts' in result)
+        self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST, hosts)
 
     def test_list_hosts_with_zone(self):
         result = self.controller.index(FakeRequestWithNovaZone())
-        self.assertTrue('hosts' in result)
+        self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
 
@@ -321,7 +321,7 @@ class HostTestCase(test.TestCase):
         column = ['host', 'project', 'cpu', 'memory_mb', 'disk_gb']
         self.assertEqual(len(result['host']), 3)
         for resource in result['host']:
-            self.assertTrue(resource['resource']['project'] in proj)
+            self.assertIn(resource['resource']['project'], proj)
             self.assertEqual(len(resource['resource']), 5)
             self.assertTrue(set(resource['resource'].keys()) == set(column))
         db.service_destroy(ctxt, s_ref['id'])
@@ -340,7 +340,7 @@ class HostTestCase(test.TestCase):
         column = ['host', 'project', 'cpu', 'memory_mb', 'disk_gb']
         self.assertEqual(len(result['host']), 5)
         for resource in result['host']:
-            self.assertTrue(resource['resource']['project'] in proj)
+            self.assertIn(resource['resource']['project'], proj)
             self.assertEqual(len(resource['resource']), 5)
             self.assertTrue(set(resource['resource'].keys()) == set(column))
         db.service_destroy(ctxt, s_ref['id'])

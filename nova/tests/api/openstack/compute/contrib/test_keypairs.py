@@ -332,7 +332,7 @@ class KeypairsTest(test.TestCase):
         response = req.get_response(fakes.wsgi_app(init_only=('servers',)))
         self.assertEquals(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
-        self.assertTrue('key_name' in res_dict['server'])
+        self.assertIn('key_name', res_dict['server'])
         self.assertEquals(res_dict['server']['key_name'], '')
 
     def test_detail_servers(self):
@@ -344,7 +344,7 @@ class KeypairsTest(test.TestCase):
         self.assertEquals(len(server_dicts), 5)
 
         for server_dict in server_dicts:
-            self.assertTrue('key_name' in server_dict)
+            self.assertIn('key_name', server_dict)
             self.assertEquals(server_dict['key_name'], '')
 
     def test_keypair_create_with_invalid_keypair_body(self):
@@ -394,7 +394,7 @@ class KeypairPolicyTest(test.TestCase):
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
         res = self.KeyPairController.index(req)
-        self.assertTrue('keypairs' in res)
+        self.assertIn('keypairs', res)
 
     def test_keypair_show_fail_policy(self):
         rules = policy.Rules({'compute_extension:keypairs:show':
@@ -411,7 +411,7 @@ class KeypairPolicyTest(test.TestCase):
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
         res = self.KeyPairController.show(req, 'FAKE')
-        self.assertTrue('keypair' in res)
+        self.assertIn('keypair', res)
 
     def test_keypair_create_fail_policy(self):
         rules = policy.Rules({'compute_extension:keypairs:create':
@@ -431,7 +431,7 @@ class KeypairPolicyTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
         req.method = 'POST'
         res = self.KeyPairController.create(req, body)
-        self.assertTrue('keypair' in res)
+        self.assertIn('keypair', res)
 
     def test_keypair_delete_fail_policy(self):
         rules = policy.Rules({'compute_extension:keypairs:delete':
@@ -472,7 +472,7 @@ class KeypairsXMLSerializerTest(test.TestCase):
 
         self.assertEqual('keypair', tree.tag)
         for child in tree:
-            self.assertTrue(child.tag in exemplar['keypair'])
+            self.assertIn(child.tag, exemplar['keypair'])
             self.assertEqual(child.text, exemplar['keypair'][child.tag])
 
     def test_index_serializer(self):
@@ -496,7 +496,7 @@ class KeypairsXMLSerializerTest(test.TestCase):
             self.assertEqual('keypair', keypair.tag)
             kp_data = exemplar['keypairs'][idx]['keypair']
             for child in keypair:
-                self.assertTrue(child.tag in kp_data)
+                self.assertIn(child.tag, kp_data)
                 self.assertEqual(child.text, kp_data[child.tag])
 
     def test_deserializer(self):

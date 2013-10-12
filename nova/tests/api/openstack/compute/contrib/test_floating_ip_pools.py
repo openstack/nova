@@ -39,7 +39,7 @@ class FloatingIpPoolTest(test.NoDBTestCase):
     def test_translate_floating_ip_pools_view(self):
         pools = fake_get_floating_ip_pools(None, self.context)
         view = floating_ip_pools._translate_floating_ip_pools_view(pools)
-        self.assertTrue('floating_ip_pools' in view)
+        self.assertIn('floating_ip_pools', view)
         self.assertEqual(view['floating_ip_pools'][0]['name'],
                          pools[0]['name'])
         self.assertEqual(view['floating_ip_pools'][1]['name'],

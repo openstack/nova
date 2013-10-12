@@ -171,7 +171,7 @@ class FloatingIpTest(test.TestCase):
         floating_ip = db.floating_ip_get(self.context, floating_ip['id'])
         self.controller._normalize_ip(floating_ip)
         view = floating_ips._translate_floating_ip_view(floating_ip)
-        self.assertTrue('floating_ip' in view)
+        self.assertIn('floating_ip', view)
         self.assertTrue(view['floating_ip']['id'])
         self.assertEqual(view['floating_ip']['ip'], self.floating_ip)
         self.assertEqual(view['floating_ip']['fixed_ip'], None)
@@ -182,7 +182,7 @@ class FloatingIpTest(test.TestCase):
                        'fixed_ip': None}
         self.controller._normalize_ip(floating_ip)
         view = floating_ips._translate_floating_ip_view(floating_ip)
-        self.assertTrue('floating_ip' in view)
+        self.assertIn('floating_ip', view)
 
     def test_floating_ips_list(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')

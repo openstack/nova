@@ -80,5 +80,5 @@ class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
         self.assertEqual(len(tree), len(exemplar))
         for child in tree:
             tag = self._tag(child)
-            self.assertTrue(tag in exemplar)
+            self.assertIn(tag, exemplar)
             self.assertEqual(child.text, exemplar[tag])
