@@ -306,6 +306,19 @@ class PciDevTrackerTestCase(test.TestCase):
             set([dev['vendor_id'] for dev in self.tracker.free_devs]),
             set(['v', 'v1']))
 
+    def test_clean_usage_no_request_match_no_claims(self):
+        # Tests the case that there is no match for the request so the
+        # claims mapping is set to None for the instance when the tracker
+        # calls clean_usage.
+        self.pci_requests = None
+        self.tracker.update_pci_for_migration(instance=self.inst, sign=1)
+        self.assertEqual(3, len(self.tracker.free_devs))
+        self.tracker.clean_usage([], [], [])
+        self.assertEqual(3, len(self.tracker.free_devs))
+        self.assertEqual(
+            set([dev['address'] for dev in self.tracker.free_devs]),
+            set(['0000:00:00.1', '0000:00:00.2', '0000:00:00.3']))
+
 
 class PciGetInstanceDevs(test.TestCase):
     def test_get_devs_non_object(self):
