@@ -4299,13 +4299,13 @@ class LibvirtDriver(driver.ComputeDriver):
             path = path_node.get('file')
             target = target_nodes[cnt].attrib['dev']
 
-            if disk_type != 'file':
-                LOG.debug(_('skipping %s since it looks like volume'), path)
-                continue
-
             if not path:
                 LOG.debug(_('skipping disk for %s as it does not have a path'),
                           instance_name)
+                continue
+
+            if disk_type != 'file':
+                LOG.debug(_('skipping %s since it looks like volume'), path)
                 continue
 
             if target in volume_devices:
