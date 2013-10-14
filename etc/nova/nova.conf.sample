@@ -406,7 +406,7 @@
 # Options defined in nova.api.metadata.vendordata_json
 #
 
-# File to load json formated vendor data from (string value)
+# File to load json formatted vendor data from (string value)
 #vendordata_jsonfile_path=<None>
 
 
