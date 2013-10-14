@@ -221,6 +221,15 @@ def write_stored_info(target, field=None, value=None):
     write_file(info_file, field, value)
 
 
+def _hash_file(filename):
+    """Generate a hash for the contents of a file."""
+    checksum = hashlib.sha1()
+    with open(filename) as f:
+        for chunk in iter(lambda: f.read(32768), b''):
+            checksum.update(chunk)
+    return checksum.hexdigest()
+
+
 def read_stored_checksum(target, timestamped=True):
     """Read the checksum.
 
@@ -231,10 +240,7 @@ def read_stored_checksum(target, timestamped=True):
 
 def write_stored_checksum(target):
     """Write a checksum to disk for a file in _base."""
-
-    with open(target, 'r') as img_file:
-        checksum = utils.hash_file(img_file)
-    write_stored_info(target, field='sha1', value=checksum)
+    write_stored_info(target, field='sha1', value=_hash_file(target))
 
 
 class ImageCacheManager(object):
@@ -416,8 +422,7 @@ class ImageCacheManager(object):
                     write_stored_info(base_file, field='sha1',
                                       value=stored_checksum)
 
-                with open(base_file, 'r') as f:
-                    current_checksum = utils.hash_file(f)
+                current_checksum = _hash_file(base_file)
 
                 if current_checksum != stored_checksum:
                     LOG.error(_('image %(id)s at (%(base_file)s): image '
