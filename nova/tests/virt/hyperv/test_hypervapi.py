@@ -273,17 +273,17 @@ class HyperVAPITestCase(test.NoDBTestCase):
         dic = self._conn.get_available_resource(None)
         self._mox.VerifyAll()
 
-        self.assertEquals(dic['vcpus'], cpu_info['NumberOfLogicalProcessors'])
-        self.assertEquals(dic['hypervisor_hostname'], platform.node())
-        self.assertEquals(dic['memory_mb'], tot_mem_kb / 1024)
-        self.assertEquals(dic['memory_mb_used'],
-                          tot_mem_kb / 1024 - free_mem_kb / 1024)
-        self.assertEquals(dic['local_gb'], tot_hdd_b / 1024 ** 3)
-        self.assertEquals(dic['local_gb_used'],
-                          tot_hdd_b / 1024 ** 3 - free_hdd_b / 1024 ** 3)
-        self.assertEquals(dic['hypervisor_version'],
-                          windows_version.replace('.', ''))
-        self.assertEquals(dic['supported_instances'],
+        self.assertEqual(dic['vcpus'], cpu_info['NumberOfLogicalProcessors'])
+        self.assertEqual(dic['hypervisor_hostname'], platform.node())
+        self.assertEqual(dic['memory_mb'], tot_mem_kb / 1024)
+        self.assertEqual(dic['memory_mb_used'],
+                         tot_mem_kb / 1024 - free_mem_kb / 1024)
+        self.assertEqual(dic['local_gb'], tot_hdd_b / 1024 ** 3)
+        self.assertEqual(dic['local_gb_used'],
+                         tot_hdd_b / 1024 ** 3 - free_hdd_b / 1024 ** 3)
+        self.assertEqual(dic['hypervisor_version'],
+                         windows_version.replace('.', ''))
+        self.assertEqual(dic['supported_instances'],
                 '[["i686", "hyperv", "hvm"], ["x86_64", "hyperv", "hvm"]]')
 
     def test_get_host_stats(self):
@@ -303,17 +303,17 @@ class HyperVAPITestCase(test.NoDBTestCase):
         dic = self._conn.get_host_stats(True)
         self._mox.VerifyAll()
 
-        self.assertEquals(dic['disk_total'], tot_hdd_b / 1024 ** 3)
-        self.assertEquals(dic['disk_available'], free_hdd_b / 1024 ** 3)
+        self.assertEqual(dic['disk_total'], tot_hdd_b / 1024 ** 3)
+        self.assertEqual(dic['disk_available'], free_hdd_b / 1024 ** 3)
 
-        self.assertEquals(dic['host_memory_total'], tot_mem_kb / 1024)
-        self.assertEquals(dic['host_memory_free'], free_mem_kb / 1024)
+        self.assertEqual(dic['host_memory_total'], tot_mem_kb / 1024)
+        self.assertEqual(dic['host_memory_free'], free_mem_kb / 1024)
 
-        self.assertEquals(dic['disk_total'],
-                          dic['disk_used'] + dic['disk_available'])
-        self.assertEquals(dic['host_memory_total'],
-                          dic['host_memory_overhead'] +
-                          dic['host_memory_free'])
+        self.assertEqual(dic['disk_total'],
+                         dic['disk_used'] + dic['disk_available'])
+        self.assertEqual(dic['host_memory_total'],
+                         dic['host_memory_overhead'] +
+                         dic['host_memory_free'])
 
     def test_list_instances(self):
         fake_instances = ['fake1', 'fake2']
@@ -323,7 +323,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
         instances = self._conn.list_instances()
         self._mox.VerifyAll()
 
-        self.assertEquals(instances, fake_instances)
+        self.assertEqual(instances, fake_instances)
 
     def test_get_info(self):
         self._instance_data = self._get_instance_data()
@@ -344,7 +344,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
         info = self._conn.get_info(self._instance_data)
         self._mox.VerifyAll()
 
-        self.assertEquals(info["state"], power_state.RUNNING)
+        self.assertEqual(info["state"], power_state.RUNNING)
 
     def test_get_info_instance_not_found(self):
         # Tests that InstanceNotFound is raised if the instance isn't found
@@ -1051,12 +1051,12 @@ class HyperVAPITestCase(test.NoDBTestCase):
         self._spawn_instance(cow, ephemeral_storage=ephemeral_storage)
         self._mox.VerifyAll()
 
-        self.assertEquals(len(self._instance_ide_disks), expected_ide_disks)
-        self.assertEquals(len(self._instance_ide_dvds), expected_ide_dvds)
+        self.assertEqual(len(self._instance_ide_disks), expected_ide_disks)
+        self.assertEqual(len(self._instance_ide_dvds), expected_ide_dvds)
 
         vhd_path = os.path.join(self._test_instance_dir, 'root.' +
                                 vhd_format.lower())
-        self.assertEquals(vhd_path, self._instance_ide_disks[0])
+        self.assertEqual(vhd_path, self._instance_ide_disks[0])
 
     def _mock_get_mounted_disk_from_lun(self, target_iqn, target_lun,
                                         fake_mounted_disk,
@@ -1219,7 +1219,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                  mount_point)
         self._mox.VerifyAll()
 
-        self.assertEquals(len(self._instance_volume_disks), 1)
+        self.assertEqual(len(self._instance_volume_disks), 1)
 
     def _mock_detach_volume(self, target_iqn, target_lun):
         mount_point = '/dev/sdc'
@@ -1269,7 +1269,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
         self._spawn_instance(False, block_device_info)
         self._mox.VerifyAll()
 
-        self.assertEquals(len(self._instance_volume_disks), 1)
+        self.assertEqual(len(self._instance_volume_disks), 1)
 
     def test_get_volume_connector(self):
         self._instance_data = self._get_instance_data()
@@ -1289,9 +1289,9 @@ class HyperVAPITestCase(test.NoDBTestCase):
         data = self._conn.get_volume_connector(instance)
         self._mox.VerifyAll()
 
-        self.assertEquals(fake_my_ip, data.get('ip'))
-        self.assertEquals(fake_host, data.get('host'))
-        self.assertEquals(fake_initiator, data.get('initiator'))
+        self.assertEqual(fake_my_ip, data.get('ip'))
+        self.assertEqual(fake_host, data.get('host'))
+        self.assertEqual(fake_initiator, data.get('initiator'))
 
     def _setup_test_migrate_disk_and_power_off_mocks(self, same_host=False,
                                                      copy_exception=False,
