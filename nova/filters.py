@@ -35,7 +35,7 @@ class BaseFilter(object):
     def filter_all(self, filter_obj_list, filter_properties):
         """Yield objects that pass the filter.
 
-        Can be overriden in a subclass, if you need to base filtering
+        Can be overridden in a subclass, if you need to base filtering
         decisions on all objects.  Otherwise, one can just override
         _filter_one() to filter a single object.
         """

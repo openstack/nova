@@ -34,7 +34,7 @@ class BaseWeigher(object):
     """Base class for pluggable weighers."""
     def _weight_multiplier(self):
         """How weighted this weigher should be.  Normally this would
-        be overriden in a subclass based on a config value.
+        be overridden in a subclass based on a config value.
         """
         return 1.0
 

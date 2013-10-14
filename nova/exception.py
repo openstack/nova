@@ -663,7 +663,7 @@ class FloatingIpExists(NovaException):
 
 
 class FloatingIpNotFound(NotFound):
-    ec2_code = "UnsupportedOpperation"
+    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Floating ip not found for id %(id)s.")
 
 
@@ -694,7 +694,7 @@ class NoMoreFloatingIps(FloatingIpNotFound):
 
 
 class FloatingIpAssociated(NovaException):
-    ec2_code = "UnsupportedOpperation"
+    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Floating ip %(address)s is associated.")
 
 
@@ -707,12 +707,12 @@ class NoFloatingIpsDefined(NotFound):
 
 
 class NoFloatingIpInterface(NotFound):
-    ec2_code = "UnsupportedOpperation"
+    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Interface %(interface)s not found.")
 
 
 class CannotDisassociateAutoAssignedFloatingIP(NovaException):
-    ec2_code = "UnsupportedOpperation"
+    ec2_code = "UnsupportedOperation"
     msg_fmt = _("Cannot disassociate auto assigned floating ip")
 
 
