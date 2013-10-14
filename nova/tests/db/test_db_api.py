@@ -660,6 +660,33 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
         self.assertEqual(2, len(result))
         self.assertEqual(types.UnicodeType, type(result[0]))
 
+    def test_instance_get_active_by_window_joined(self):
+        now = datetime.datetime(2013, 10, 10, 17, 16, 37, 156701)
+        start_time = now - datetime.timedelta(minutes=10)
+        now1 = now + datetime.timedelta(minutes=1)
+        now2 = now + datetime.timedelta(minutes=2)
+        now3 = now + datetime.timedelta(minutes=3)
+        ctxt = context.get_admin_context()
+        self.create_instance_with_args(launched_at=now)
+        self.create_instance_with_args(launched_at=now1, terminated_at=now2)
+        self.create_instance_with_args(launched_at=now2, terminated_at=now3)
+        self.create_instance_with_args(launched_at=now3, terminated_at=None)
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=now)
+        self.assertEqual(4, len(result))
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=now3)
+        self.assertEqual(2, len(result))
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=start_time, end=now)
+        self.assertEqual(0, len(result))
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=start_time, end=now2)
+        self.assertEqual(2, len(result))
+        result = sqlalchemy_api.instance_get_active_by_window_joined(
+            ctxt, begin=now2, end=now3)
+        self.assertEqual(2, len(result))
+
 
 class MigrationTestCase(test.TestCase):
 
