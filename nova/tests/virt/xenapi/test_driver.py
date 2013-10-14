@@ -22,7 +22,7 @@ from nova.virt import fake
 from nova.virt import xenapi
 
 
-class XenAPIDriverTestCase(stubs.XenAPITestBase):
+class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for Driver operations."""
 
     def host_stats(self, refresh=True):
