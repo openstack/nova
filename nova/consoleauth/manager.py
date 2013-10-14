@@ -59,6 +59,13 @@ class ConsoleAuthManager(manager.Manager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
+    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
+        if not additional_apis:
+            additional_apis = []
+        additional_apis.append(_ConsoleAuthManagerV2Proxy(self))
+        return super(ConsoleAuthManager, self).create_rpc_dispatcher(
+                backdoor_port, additional_apis)
+
     def _get_tokens_for_instance(self, instance_uuid):
         tokens_str = self.mc.get(instance_uuid.encode('UTF-8'))
         if not tokens_str:
@@ -132,3 +139,25 @@ class ConsoleAuthManager(manager.Manager):
     # deprecated in favor of the method in the base API.
     def get_backdoor_port(self, context):
         return self.backdoor_port
+
+
+class _ConsoleAuthManagerV2Proxy(object):
+    # Notes for changes since 1.X
+    # - removed get_backdoor_port()
+    # - instance_uuid required for authorize_console()
+
+    RPC_API_VERSION = '2.0'
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def authorize_console(self, context, token, console_type, host, port,
+                          internal_access_path, instance_uuid):
+        self.manager.authorize_console(context, token, console_type, host,
+                port, internal_access_path, instance_uuid)
+
+    def check_token(self, context, token):
+        self.manager.check_token(context, token)
+
+    def delete_tokens_for_instance(self, ctxt, instance_uuid):
+        self.manager.delete_tokens_for_instance(ctxt, instance_uuid)
