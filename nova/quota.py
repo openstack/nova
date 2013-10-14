@@ -405,11 +405,22 @@ class DbQuotaDriver(object):
         # Check the quotas and construct a list of the resources that
         # would be put over limit by the desired values
         overs = [key for key, val in values.items()
-                 if (quotas[key] >= 0 and quotas[key] < val) or
+                 if quotas[key] >= 0 and quotas[key] < val or
                  (user_quotas[key] >= 0 and user_quotas[key] < val)]
         if overs:
+            headroom = {}
+            # Check project_quotas:
+            for key in quotas:
+                if quotas[key] >= 0 and quotas[key] < val:
+                    headroom[key] = quotas[key]
+            # Check user quotas:
+            for key in user_quotas:
+                if (user_quotas[key] >= 0 and user_quotas[key] < val and
+                        headroom.get(key) > user_quotas[key]):
+                    headroom[key] = user_quotas[key]
+
             raise exception.OverQuota(overs=sorted(overs), quotas=quotas,
-                                      usages={})
+                                      usages={}, headroom=headroom)
 
     def reserve(self, context, resources, deltas, expire=None,
                 project_id=None, user_id=None):

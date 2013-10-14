@@ -134,11 +134,14 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, "limit_check")
         self.mox.StubOutWithMock(quota.QUOTAS, "reserve")
 
-        quota_exception = exception.OverQuota(
-            quotas={'instances': 1, 'cores': 1, 'ram': 1},
-            usages=dict((r, {'in_use': 1, 'reserved': 1}) for r in
-                        ['instances', 'cores', 'ram']),
-            overs=['instances'])
+        quotas = {'instances': 1, 'cores': 1, 'ram': 1}
+        usages = dict((r, {'in_use': 1, 'reserved': 1}) for r in
+                    ['instances', 'cores', 'ram'])
+        headroom = dict((res, quotas[res] -
+                       (usages[res]['in_use'] + usages[res]['reserved']))
+                    for res in quotas.keys())
+        quota_exception = exception.OverQuota(quotas=quotas,
+            usages=usages, overs=['instances'], headroom=headroom)
 
         for _unused in range(2):
             self.compute_api._get_image(self.context, image_href).AndReturn(
@@ -1029,9 +1032,16 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_flavor,
                 current_flavor).AndReturn(deltas)
         usage = dict(in_use=0, reserved=0)
-        over_quota_args = dict(quotas={'resource': 0},
-                               usages={'resource': usage},
-                               overs=['resource'])
+        quotas = {'resource': 0}
+        usages = {'resource': usage}
+        overs = ['resource']
+        headroom = {'resource': quotas['resource'] -
+            (usages['resource']['in_use'] + usages['resource']['reserved'])}
+        over_quota_args = dict(quotas=quotas,
+                               usages=usages,
+                               overs=overs,
+                               headroom=headroom)
+
         self.compute_api._reserve_quota_delta(self.context, deltas,
                 project_id=fake_inst['project_id']).AndRaise(
                         exception.OverQuota(**over_quota_args))
