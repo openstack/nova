@@ -27,7 +27,7 @@ from nova import test
 
 
 class MyObj(base.NovaPersistentObject, base.NovaObject):
-    version = '1.5'
+    VERSION = '1.5'
     fields = {'foo': int,
               'bar': str,
               'missing': str,
@@ -630,17 +630,17 @@ class TestObject(_LocalTest, _TestObject):
 
 class TestRemoteObject(_RemoteTest, _TestObject):
     def test_major_version_mismatch(self):
-        MyObj2.version = '2.0'
+        MyObj2.VERSION = '2.0'
         self.assertRaises(exception.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
     def test_minor_version_greater(self):
-        MyObj2.version = '1.6'
+        MyObj2.VERSION = '1.6'
         self.assertRaises(exception.IncompatibleObjectVersion,
                           MyObj2.query, self.context)
 
     def test_minor_version_less(self):
-        MyObj2.version = '1.2'
+        MyObj2.VERSION = '1.2'
         obj = MyObj2.query(self.context)
         self.assertEqual(obj.bar, 'bar')
         self.assertRemotes()
