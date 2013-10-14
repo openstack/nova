@@ -418,16 +418,13 @@ class API(base.Base):
 
     @refresh_cache
     def allocate_port_for_instance(self, context, instance, port_id,
-                                   network_id=None, requested_ip=None,
-                                   conductor_api=None):
+                                   network_id=None, requested_ip=None):
         """Allocate a port for the instance."""
         return self.allocate_for_instance(context, instance,
-                requested_networks=[(network_id, requested_ip, port_id)],
-                conductor_api=conductor_api)
+                requested_networks=[(network_id, requested_ip, port_id)])
 
     @refresh_cache
-    def deallocate_port_for_instance(self, context, instance, port_id,
-                                     conductor_api=None):
+    def deallocate_port_for_instance(self, context, instance, port_id):
         """Remove a specified port from the instance.
 
         Return network information for the instance
@@ -464,8 +461,7 @@ class API(base.Base):
         return network_model.NetworkInfo.hydrate(nw_info)
 
     @refresh_cache
-    def add_fixed_ip_to_instance(self, context, instance, network_id,
-                                 conductor_api=None):
+    def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Add a fixed ip to the instance from specified network."""
         search_opts = {'network_id': network_id}
         data = neutronv2.get_client(context).list_subnets(**search_opts)
@@ -500,8 +496,7 @@ class API(base.Base):
                 instance_id=instance['uuid'])
 
     @refresh_cache
-    def remove_fixed_ip_from_instance(self, context, instance, address,
-                                      conductor_api=None):
+    def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed ip from the instance."""
         zone = 'compute:%s' % instance['availability_zone']
         search_opts = {'device_id': instance['uuid'],

@@ -67,7 +67,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             nwapi.allocate_for_instance(
                     self.context, instance, vpn=is_vpn,
                     requested_networks=req_networks, macs=macs,
-                    conductor_api=self.compute.conductor_api,
                     security_groups=sec_groups,
                     dhcp_options=dhcp_options).AndRaise(
                             test.TestingException())
@@ -76,7 +75,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         nwapi.allocate_for_instance(
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
-                conductor_api=self.compute.conductor_api,
                 security_groups=sec_groups,
                 dhcp_options=dhcp_options).AndReturn(final_result)
 
@@ -106,7 +104,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         nwapi.allocate_for_instance(
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
-                conductor_api=self.compute.conductor_api,
                 security_groups=sec_groups,
                 dhcp_options=dhcp_options).AndRaise(test.TestingException())
 
@@ -134,7 +131,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         nwapi.allocate_for_instance(
                 self.context, instance, vpn=is_vpn,
                 requested_networks=req_networks, macs=macs,
-                conductor_api=self.compute.conductor_api,
                 security_groups=sec_groups,
                 dhcp_options=dhcp_options).AndRaise(test.TestingException())
 

@@ -1225,7 +1225,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                         context, instance, vpn=is_vpn,
                         requested_networks=requested_networks,
                         macs=macs,
-                        conductor_api=self.conductor_api,
                         security_groups=security_groups,
                         dhcp_options=dhcp_options)
                 LOG.debug(_('Instance network_info: |%s|'), nwinfo,
@@ -3168,7 +3167,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "create_ip.start")
 
         self.network_api.add_fixed_ip_to_instance(context, instance,
-                network_id, conductor_api=self.conductor_api)
+                                                  network_id)
 
         inst_obj = instance_obj.Instance._from_db_object(
                 context, instance_obj.Instance(), instance)
@@ -3194,7 +3193,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 context, instance, "delete_ip.start")
 
         self.network_api.remove_fixed_ip_from_instance(context, instance,
-                address, conductor_api=self.conductor_api)
+                                                       address)
 
         inst_obj = instance_obj.Instance._from_db_object(
                 context, instance_obj.Instance(), instance)
@@ -3867,8 +3866,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                          requested_ip=None):
         """Use hotplug to add an network adapter to an instance."""
         network_info = self.network_api.allocate_port_for_instance(
-            context, instance, port_id, network_id, requested_ip,
-            conductor_api=self.conductor_api)
+            context, instance, port_id, network_id, requested_ip)
         if len(network_info) != 1:
             LOG.error(_('allocate_port_for_instance returned %(ports)s ports')
                       % dict(ports=len(network_info)))
@@ -3897,7 +3895,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                            "attached") % port_id)
 
         self.network_api.deallocate_port_for_instance(context, instance,
-            port_id, conductor_api=self.conductor_api)
+                                                      port_id)
         self.driver.detach_interface(instance, condemned)
 
     def _get_compute_info(self, context, host):

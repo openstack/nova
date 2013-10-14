@@ -110,6 +110,7 @@ class ConductorAPI(rpcclient.RpcProxy):
                   migration_get_unconfirmed_by_dest_compute
     1.57 - Remove migration_create()
     1.58 - Remove migration_get()
+    1.59 - Remove instance_info_cache_update()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -359,12 +360,6 @@ class ConductorAPI(rpcclient.RpcProxy):
         values_p = jsonutils.to_primitive(values)
         cctxt = self.client.prepare(version='1.25')
         return cctxt.call(context, 'action_event_finish', values=values_p)
-
-    def instance_info_cache_update(self, context, instance, values):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.26')
-        return cctxt.call(context, 'instance_info_cache_update',
-                          instance=instance_p, values=values)
 
     def service_create(self, context, values):
         cctxt = self.client.prepare(version='1.27')
