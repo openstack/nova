@@ -71,7 +71,7 @@ class SchedulerAPI(rpcclient.RpcProxy):
         2.8 - Deprecate prep_resize() -- JUST KIDDING.  It is still used
               by the compute manager for retries.
         2.9 - Added the legacy_bdm_in_spec parameter to run_instance()
-        2.10 - Deprecated live_migration() call, moved to conductor
+        ... - Deprecated live_migration() call, moved to conductor
     '''
 
     #
