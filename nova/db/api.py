@@ -188,7 +188,7 @@ def compute_node_get_all(context, no_date_fields=False):
 
     :param context: The security context
     :param no_date_fields: If set to True, excludes 'created_at', 'updated_at',
-                           'deteled_at' and 'deleted' fields from the output,
+                           'deleted_at' and 'deleted' fields from the output,
                            thus significantly reducing its size.
                            Set to False by default
 
@@ -483,7 +483,7 @@ def fixed_ip_disassociate_all_by_timeout(context, host, time):
 def fixed_ip_get(context, id, get_network=False):
     """Get fixed ip by id or raise if it does not exist.
 
-    If get_network is true, also return the assocated network.
+    If get_network is true, also return the associated network.
     """
     return IMPL.fixed_ip_get(context, id, get_network)
 

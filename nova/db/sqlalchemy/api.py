@@ -5635,7 +5635,7 @@ def instance_group_update(context, group_uuid, values):
     """Update the attributes of an group.
 
     If values contains a metadata key, it updates the aggregate metadata
-    too. Similary for the policies and members.
+    too. Similarly for the policies and members.
     """
     session = get_session()
     with session.begin():

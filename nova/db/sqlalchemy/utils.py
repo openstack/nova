@@ -169,7 +169,7 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
                            **col_name_col_instance):
     """
     This method drops UC from table and works for mysql, postgresql and sqlite.
-    In mysql and postgresql we are able to use "alter table" constuction. In
+    In mysql and postgresql we are able to use "alter table" construction. In
     sqlite is only one way to drop UC:
         1) Create new table with same columns, indexes and constraints
            (except one that we want to drop).
@@ -178,9 +178,9 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
         4) Rename new table to the name of old table.
 
     :param migrate_engine: sqlalchemy engine
-    :param table_name:     name of table that contains uniq constarint.
+    :param table_name:     name of table that contains uniq constraint.
     :param uc_name:        name of uniq constraint that will be dropped.
-    :param columns:        columns that are in uniq constarint.
+    :param columns:        columns that are in uniq constraint.
     :param col_name_col_instance:   contains pair column_name=column_instance.
                             column_instance is instance of Column. These params
                             are required only for columns that have unsupported

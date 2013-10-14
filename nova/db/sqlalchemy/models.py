@@ -738,7 +738,7 @@ class Migration(BASE, NovaBase):
     # NOTE(tr3buchet): the ____compute variables are instance['host']
     source_compute = Column(String(255))
     dest_compute = Column(String(255))
-    # nodes are equivalent to a compute node's 'hypvervisor_hostname'
+    # nodes are equivalent to a compute node's 'hypervisor_hostname'
     source_node = Column(String(255))
     dest_node = Column(String(255))
     # NOTE(tr3buchet): dest_host, btw, is an ip address
