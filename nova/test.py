@@ -35,9 +35,7 @@ import tempfile
 import uuid
 
 import fixtures
-import mox
 from oslo.config import cfg
-import stubout
 import testtools
 
 from nova import context
@@ -46,6 +44,7 @@ from nova.db import migration
 from nova.network import manager as network_manager
 from nova.objects import base as objects_base
 from nova.openstack.common.db.sqlalchemy import session
+from nova.openstack.common.fixture import moxstubout
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import paths
@@ -177,21 +176,6 @@ class ServiceFixture(fixtures.Fixture):
         self.addCleanup(self.service.kill)
 
 
-class MoxStubout(fixtures.Fixture):
-    """Deal with code around mox and stubout as a fixture."""
-
-    def setUp(self):
-        super(MoxStubout, self).setUp()
-        # emulate some of the mox stuff, we can't use the metaclass
-        # because it screws with our generators
-        self.mox = mox.Mox()
-        self.stubs = stubout.StubOutForTesting()
-        self.addCleanup(self.stubs.UnsetAll)
-        self.addCleanup(self.stubs.SmartUnsetAll)
-        self.addCleanup(self.mox.UnsetStubs)
-        self.addCleanup(self.mox.VerifyAll)
-
-
 class TranslationFixture(fixtures.Fixture):
     """Use gettext NullTranslation objects in tests."""
 
@@ -260,7 +244,7 @@ class TestCase(testtools.TestCase):
             objects_base.NovaObject._obj_classes)
         self.addCleanup(self._restore_obj_registry)
 
-        mox_fixture = self.useFixture(MoxStubout())
+        mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
         self.stubs = mox_fixture.stubs
         self.addCleanup(self._clear_attrs)
