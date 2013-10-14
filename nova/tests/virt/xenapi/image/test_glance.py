@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import time
 
 from nova import context
 from nova import exception
@@ -130,12 +131,15 @@ class TestGlanceStore(stubs.XenAPITestBase):
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
+        self.mox.StubOutWithMock(time, 'sleep')
         error_details = ["", "", "RetryableError", ""]
         error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        time.sleep(0.5)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        time.sleep(1)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
         self.mox.ReplayAll()
@@ -151,15 +155,18 @@ class TestGlanceStore(stubs.XenAPITestBase):
         params = self._get_upload_params()
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
+        self.mox.StubOutWithMock(time, 'sleep')
         error_details = ["", "task signaled", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        time.sleep(0.5)
         # Note(johngarbutt) XenServer 6.1 and later has this error
         error_details = ["", "signal: SIGTERM", "", ""]
         error = self.session.XenAPI.Failure(details=error_details)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params).AndRaise(error)
+        time.sleep(1)
         self.session.call_plugin_serialized('glance', 'upload_vhd',
                                             **params)
         self.mox.ReplayAll()
