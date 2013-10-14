@@ -810,8 +810,13 @@ class XenAPISession(object):
                      {'plugin': plugin, 'fn': fn, 'attempt': attempt,
                       'attempts': attempts})
             try:
+                if attempt > 1:
+                    time.sleep(sleep_time)
+                    sleep_time = min(2 * sleep_time, 15)
+
                 if callback:
                     callback(kwargs)
+
                 return self.call_plugin_serialized(plugin, fn, *args, **kwargs)
             except self.XenAPI.Failure as exc:
                 if self._is_retryable_exception(exc):
@@ -819,9 +824,6 @@ class XenAPISession(object):
                              % {'plugin': plugin, 'fn': fn})
                 else:
                     raise
-
-            time.sleep(sleep_time)
-            sleep_time = min(2 * sleep_time, 15)
 
         raise exception.PluginRetriesExceeded(num_retries=num_retries)
 
