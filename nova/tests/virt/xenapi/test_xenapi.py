@@ -1626,44 +1626,6 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
                        fake_inject_instance_metadata)
 
-    def test_resize_xenserver_6(self):
-        instance = db.instance_create(self.context, self.instance_values)
-        called = {'resize': False}
-
-        def fake_vdi_resize(*args, **kwargs):
-            called['resize'] = True
-
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       "VDI_resize", fake_vdi_resize)
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
-                              product_version=(6, 0, 0),
-                              product_brand='XenServer')
-        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
-        vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_up_vdis(instance,
-                {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}})
-        self.assertEqual(called['resize'], True)
-
-    def test_resize_xcp(self):
-        instance = db.instance_create(self.context, self.instance_values)
-        called = {'resize': False}
-
-        def fake_vdi_resize(*args, **kwargs):
-            called['resize'] = True
-
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       "VDI_resize", fake_vdi_resize)
-        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests,
-                              product_version=(1, 4, 99),
-                              product_brand='XCP')
-        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
-        vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_up_vdis(instance,
-                {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}})
-        self.assertEqual(called['resize'], True)
-
     def test_migrate_disk_and_power_off(self):
         instance = db.instance_create(self.context, self.instance_values)
         xenapi_fake.create_vm(instance['name'], 'Running')

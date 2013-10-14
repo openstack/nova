@@ -1108,7 +1108,8 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
                               run_as_root=True)
 
         # 4. Create VBD between instance VM and VDI
-        create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False)
+        if vm_ref:
+            create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False)
     except Exception:
         with excutils.save_and_reraise_exception():
             destroy_vdi(session, vdi_ref)
@@ -1142,7 +1143,10 @@ def get_ephemeral_disk_sizes(total_size_gb):
 
 
 def generate_single_ephemeral(session, instance, vm_ref, userdevice,
-                              instance_name_label, size_gb):
+                              size_gb, instance_name_label=None):
+    if instance_name_label is None:
+        instance_name_label = instance["name"]
+
     name_label = "%s ephemeral" % instance_name_label
     #TODO(johngarbutt) need to move DEVICE_EPHEMERAL from vmops to use it here
     label_number = int(userdevice) - 4
@@ -1164,8 +1168,8 @@ def generate_ephemeral(session, instance, vm_ref, first_userdevice,
     try:
         for userdevice, size_gb in enumerate(sizes, start=first_userdevice):
             ref = generate_single_ephemeral(session, instance, vm_ref,
-                                            userdevice, instance_name_label,
-                                            size_gb)
+                                            userdevice, size_gb,
+                                            instance_name_label)
             vdi_refs.append(ref)
     except Exception as exc:
         with excutils.save_and_reraise_exception():

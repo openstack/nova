@@ -1000,12 +1000,12 @@ class VMOps(object):
         name_label = self._get_orig_vm_name_label(instance)
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
-    def _ensure_not_resize_ephemeral(self, instance, flavor):
+    def _ensure_not_resize_down_ephemeral(self, instance, flavor):
         old_gb = instance["ephemeral_gb"]
         new_gb = flavor["ephemeral_gb"]
 
-        if old_gb != new_gb:
-            reason = _("Unable to resize ephemeral disks")
+        if old_gb > new_gb:
+            reason = _("Can't resize down ephemeral disks.")
             raise exception.ResizeError(reason)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
@@ -1017,7 +1017,7 @@ class VMOps(object):
         :param dest: the destination host machine.
         :param flavor: flavor to resize to
         """
-        self._ensure_not_resize_ephemeral(instance, flavor)
+        self._ensure_not_resize_down_ephemeral(instance, flavor)
 
         # 0. Zero out the progress to begin
         self._update_instance_progress(context, instance,
@@ -1061,14 +1061,32 @@ class VMOps(object):
                                           mount_device)
 
     def _resize_up_vdis(self, instance, vdis):
+        new_root_gb = instance['root_gb']
         root_vdi = vdis.get('root')
-        new_gb = instance['root_gb']
-        if root_vdi and new_gb:
+        if new_root_gb and root_vdi:
             vdi_ref = root_vdi['ref']
             vm_utils.update_vdi_virtual_size(self._session, instance,
-                                             vdi_ref, new_gb)
+                                             vdi_ref, new_root_gb)
 
-        #TODO(johngarbutt) resize ephemeral disks too
+        total_ephemeral_gb = instance['ephemeral_gb']
+        if total_ephemeral_gb:
+            sizes = vm_utils.get_ephemeral_disk_sizes(total_ephemeral_gb)
+            ephemeral_vdis = vdis.get('ephemerals')
+            for userdevice, new_size in enumerate(sizes,
+                                                  start=int(DEVICE_EPHEMERAL)):
+                vdi = ephemeral_vdis.get(str(userdevice))
+                if vdi:
+                    vdi_ref = vdi['ref']
+                    vm_utils.update_vdi_virtual_size(self._session, instance,
+                                                     vdi_ref, new_size)
+                else:
+                    LOG.debug("Generating new ephemeral vdi %d during resize",
+                              userdevice, instance=instance)
+                    # NOTE(johngarbutt) we generate but don't attach
+                    # the new disk to make up any additional ephemeral space
+                    vdi_ref = vm_utils.generate_single_ephemeral(
+                        self._session, instance, None, userdevice, new_size)
+                    vdis[str(userdevice)] = {'ref': vdi_ref, 'generated': True}
 
     def reboot(self, instance, reboot_type, bad_volumes_callback=None):
         """Reboot VM instance."""
