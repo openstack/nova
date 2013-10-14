@@ -791,8 +791,15 @@ def _find_cached_images(session, sr_ref):
 
 def _find_cached_image(session, image_id, sr_ref):
     """Returns the vdi-ref of the cached image."""
-    cached_images = _find_cached_images(session, sr_ref)
-    return cached_images.get(image_id)
+    name_label = _get_image_vdi_label(image_id)
+    recs = session.call_xenapi("VDI.get_all_records_where",
+                               'field "name__label"="%s"'
+                               % name_label)
+    number_found = len(recs)
+    if number_found > 0:
+        if number_found > 1:
+            LOG.warn(_("Multiple base images for image: %s") % image_id)
+        return recs.keys()[0]
 
 
 def resize_disk(session, instance, vdi_ref, instance_type):
@@ -1087,43 +1094,60 @@ def destroy_kernel_ramdisk(session, instance, kernel, ramdisk):
         session.call_plugin('kernel', 'remove_kernel_ramdisk', args)
 
 
+def _get_image_vdi_label(image_id):
+    return 'Glance Image %s' % image_id
+
+
 def _create_cached_image(context, session, instance, name_label,
                          image_id, image_type):
     sr_ref = safe_find_sr(session)
     sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
-    vdis = {}
 
     if CONF.use_cow_images and sr_type != "ext":
         LOG.warning(_("Fast cloning is only supported on default local SR "
                       "of type ext. SR on this system was found to be of "
                       "type %s. Ignoring the cow flag."), sr_type)
 
-    cache_vdi_ref = _find_cached_image(session, image_id, sr_ref)
-    if cache_vdi_ref is None:
-        vdis = _fetch_image(context, session, instance, name_label,
-                            image_id, image_type)
+    @utils.synchronized('xenapi-image-cache' + image_id)
+    def _create_cached_image_impl(context, session, instance, name_label,
+                                  image_id, image_type, sr_ref):
+        cache_vdi_ref = _find_cached_image(session, image_id, sr_ref)
+        if cache_vdi_ref is None:
+            vdis = _fetch_image(context, session, instance, name_label,
+                                image_id, image_type)
 
-        cache_vdi_ref = session.call_xenapi(
-                'VDI.get_by_uuid', vdis['root']['uuid'])
+            cache_vdi_ref = session.call_xenapi(
+                    'VDI.get_by_uuid', vdis['root']['uuid'])
 
-        session.call_xenapi('VDI.set_name_label', cache_vdi_ref,
-                            'Glance Image %s' % image_id)
-        session.call_xenapi('VDI.set_name_description', cache_vdi_ref, 'root')
-        session.call_xenapi('VDI.add_to_other_config',
-                            cache_vdi_ref, 'image-id', str(image_id))
+            session.call_xenapi('VDI.set_name_label', cache_vdi_ref,
+                                _get_image_vdi_label(image_id))
+            session.call_xenapi('VDI.set_name_description', cache_vdi_ref,
+                                'root')
+            session.call_xenapi('VDI.add_to_other_config',
+                                cache_vdi_ref, 'image-id', str(image_id))
 
-    if CONF.use_cow_images and sr_type == 'ext':
-        new_vdi_ref = _clone_vdi(session, cache_vdi_ref)
-    elif sr_type == 'ext':
-        new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance, cache_vdi_ref)
-    else:
-        new_vdi_ref = session.call_xenapi("VDI.copy", cache_vdi_ref, sr_ref)
+        if CONF.use_cow_images and sr_type == 'ext':
+            new_vdi_ref = _clone_vdi(session, cache_vdi_ref)
+        elif sr_type == 'ext':
+            new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance,
+                                         cache_vdi_ref)
+        else:
+            new_vdi_ref = session.call_xenapi("VDI.copy", cache_vdi_ref,
+                                              sr_ref)
 
-    session.call_xenapi('VDI.remove_from_other_config',
-                        new_vdi_ref, 'image-id')
+        session.call_xenapi('VDI.set_name_label', cache_vdi_ref, '')
+        session.call_xenapi('VDI.set_name_description', cache_vdi_ref, '')
+        session.call_xenapi('VDI.remove_from_other_config',
+                            new_vdi_ref, 'image-id')
 
+        vdi_uuid = session.call_xenapi('VDI.get_uuid', new_vdi_ref)
+        return vdi_uuid
+
+    vdi_uuid = _create_cached_image_impl(context, session, instance,
+            name_label, image_id, image_type, sr_ref)
+
+    vdis = {}
     vdi_type = ImageType.get_role(image_type)
-    vdi_uuid = session.call_xenapi('VDI.get_uuid', new_vdi_ref)
     vdis[vdi_type] = dict(uuid=vdi_uuid, file=None)
     return vdis
 
