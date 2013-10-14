@@ -30,7 +30,7 @@ from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
 
 
-class VMOpsTestBase(stubs.XenAPITestBase):
+class VMOpsTestBase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(VMOpsTestBase, self).setUp()
         self._setup_mock_vmops()
@@ -55,7 +55,7 @@ class VMOpsTestBase(stubs.XenAPITestBase):
             xenapi_fake.destroy_vm(vm)
 
 
-class VMOpsTestCase(test.NoDBTestCase):
+class VMOpsTestCase(VMOpsTestBase):
     def setUp(self):
         super(VMOpsTestCase, self).setUp()
         self._setup_mock_vmops()

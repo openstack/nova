@@ -348,10 +348,17 @@ class FakeSessionForFailedMigrateTests(FakeSessionForVMTests):
         raise fake.Failure("XenAPI VM.migrate_send failed")
 
 
+# FIXME(sirp): XenAPITestBase is deprecated, all tests should be converted
+# over to use XenAPITestBaseNoDB
 class XenAPITestBase(test.TestCase):
     def setUp(self):
         super(XenAPITestBase, self).setUp()
-
         self.useFixture(test.ReplaceModule('XenAPI', fake))
+        fake.reset()
 
+
+class XenAPITestBaseNoDB(test.NoDBTestCase):
+    def setUp(self):
+        super(XenAPITestBaseNoDB, self).setUp()
+        self.useFixture(test.ReplaceModule('XenAPI', fake))
         fake.reset()
