@@ -1176,11 +1176,13 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         real_security_group1 = db.security_group_get_by_name(
                                 self.ctxt,
                                 security_group1['project_id'],
-                                security_group1['name'])
+                                security_group1['name'],
+                                columns_to_join=None)
         real_security_group2 = db.security_group_get_by_name(
                                 self.ctxt,
                                 security_group2['project_id'],
-                                security_group2['name'])
+                                security_group2['name'],
+                                columns_to_join=None)
         self._assertEqualObjects(security_group1, real_security_group1)
         self._assertEqualObjects(security_group2, real_security_group2)
 
