@@ -15,6 +15,7 @@
 import datetime
 
 import iso8601
+import mock
 import mox
 import netaddr
 
@@ -32,6 +33,7 @@ from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
 from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_objects
+from nova.tests.objects import test_security_group
 
 
 class _TestInstanceObject(object):
@@ -851,6 +853,26 @@ class _TestInstanceListObject(object):
         self.assertEqual(inst_list[1].fault, None)
         for inst in inst_list:
             self.assertEqual(inst.obj_what_changed(), set())
+
+    def test_get_by_security_group(self):
+        fake_secgroup = dict(test_security_group.fake_secgroup)
+        fake_secgroup['instances'] = [
+            fake_instance.fake_db_instance(id=1,
+                                           system_metadata={'foo': 'bar'}),
+            fake_instance.fake_db_instance(id=2),
+            ]
+
+        with mock.patch.object(db, 'security_group_get') as sgg:
+            sgg.return_value = fake_secgroup
+            secgroup = security_group.SecurityGroup()
+            secgroup.id = fake_secgroup['id']
+            instances = instance.InstanceList.get_by_security_group(
+                self.context, secgroup)
+
+        self.assertEqual(2, len(instances))
+        self.assertEqual([1, 2], [x.id for x in instances])
+        self.assertTrue(instances[0].obj_attr_is_set('system_metadata'))
+        self.assertEqual({'foo': 'bar'}, instances[0].system_metadata)
 
 
 class TestInstanceListObject(test_objects._LocalTest,
