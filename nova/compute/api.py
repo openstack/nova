@@ -1261,7 +1261,6 @@ class API(base.Base):
 
         if image:
             image_props = image.get("properties", {})
-            LOG.error(image_props)
             auto_disk_config_img = \
                 utils.get_auto_disk_config_from_image_props(image_props)
             image_ref = image.get("id")
