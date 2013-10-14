@@ -31,24 +31,25 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
         }
 
     @staticmethod
-    def _from_db_object(secgroup, db_secgroup):
+    def _from_db_object(context, secgroup, db_secgroup):
         # NOTE(danms): These are identical right now
         for field in secgroup.fields:
             secgroup[field] = db_secgroup[field]
+        secgroup._context = context
         secgroup.obj_reset_changes()
         return secgroup
 
     @base.remotable_classmethod
     def get(cls, context, secgroup_id):
         db_secgroup = db.security_group_get(context, secgroup_id)
-        return cls._from_db_object(cls(), db_secgroup)
+        return cls._from_db_object(context, cls(), db_secgroup)
 
     @base.remotable_classmethod
     def get_by_name(cls, context, project_id, group_name):
         db_secgroup = db.security_group_get_by_name(context,
                                                     project_id,
                                                     group_name)
-        return cls._from_db_object(cls(), db_secgroup)
+        return cls._from_db_object(context, cls(), db_secgroup)
 
     @base.remotable
     def in_use(self, context):
@@ -59,12 +60,12 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
         updates = self.obj_get_changes()
         if updates:
             db_secgroup = db.security_group_update(context, self.id, updates)
-            SecurityGroup._from_db_object(self, db_secgroup)
+            SecurityGroup._from_db_object(context, self, db_secgroup)
         self.obj_reset_changes()
 
     @base.remotable
     def refresh(self, context):
-        SecurityGroup._from_db_object(self,
+        SecurityGroup._from_db_object(context, self,
                                       db.security_group_get(context,
                                                             self.id))
 
@@ -72,7 +73,8 @@ class SecurityGroup(base.NovaPersistentObject, base.NovaObject):
 def _make_secgroup_list(context, secgroup_list, db_secgroup_list):
     secgroup_list.objects = []
     for db_secgroup in db_secgroup_list:
-        secgroup = SecurityGroup._from_db_object(SecurityGroup(), db_secgroup)
+        secgroup = SecurityGroup._from_db_object(context, SecurityGroup(),
+                                                 db_secgroup)
         secgroup._context = context
         secgroup_list.objects.append(secgroup)
     secgroup_list.obj_reset_changes()
