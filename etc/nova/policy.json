@@ -21,6 +21,8 @@
     "compute:volume_snapshot_delete": "",
 
     "admin_api": "is_admin:True",
+    "compute_extension:v3:os-access-ips:discoverable": "",
+    "compute_extension:v3:os-access-ips": "",
     "compute_extension:accounts": "rule:admin_api",
     "compute_extension:admin_actions": "rule:admin_api",
     "compute_extension:admin_actions:pause": "rule:admin_or_owner",
