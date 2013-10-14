@@ -2615,7 +2615,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         all_flavors = db.flavor_get_all(self.ctxt)
 
         # Set the 3rd result as the marker
-        marker_flavorid = all_flavors[2]['id']
+        marker_flavorid = all_flavors[2]['flavorid']
         marked_flavors = db.flavor_get_all(self.ctxt, marker=marker_flavorid)
         # We expect everything /after/ the 3rd result
         expected_results = all_flavors[3:]
