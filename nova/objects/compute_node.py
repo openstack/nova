@@ -90,6 +90,10 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
 
 class ComputeNodeList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('ComputeNode'),
+        }
+
     @base.remotable_classmethod
     def get_all(cls, context):
         db_computes = db.compute_node_get_all(context)

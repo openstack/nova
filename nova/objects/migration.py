@@ -86,6 +86,10 @@ def _make_list(context, list_obj, item_cls, db_list):
 
 
 class MigrationList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('Migration'),
+        }
+
     @base.remotable_classmethod
     def get_unconfirmed_by_dest_compute(cls, context, confirm_window,
                                         dest_compute):

@@ -324,14 +324,19 @@ class Dict(CompoundFieldType):
 
 
 class Object(FieldType):
-    def __init__(self, objtype, **kwargs):
-        self._objtype = objtype
+    def __init__(self, obj_name, **kwargs):
+        self._obj_name = obj_name
         super(Object, self).__init__(**kwargs)
 
     def coerce(self, obj, attr, value):
-        if not isinstance(value, self._objtype):
+        try:
+            obj_name = value.obj_name()
+        except AttributeError:
+            obj_name = ""
+
+        if obj_name != self._obj_name:
             raise ValueError(_('An object of type %s is required here') %
-                             self._objtype.obj_name())
+                             self._obj_name)
         return value
 
     def to_primitive(self, obj, attr, value):
@@ -343,7 +348,7 @@ class Object(FieldType):
         return obj_base.NovaObject.obj_from_primitive(value, obj._context)
 
     def describe(self):
-        return "Object<%s>" % self._objtype.obj_name()
+        return "Object<%s>" % self._obj_name
 
 
 class NetworkModel(FieldType):

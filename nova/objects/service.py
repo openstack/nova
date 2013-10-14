@@ -40,7 +40,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         'disabled': fields.BooleanField(),
         'disabled_reason': fields.StringField(nullable=True),
         'availability_zone': fields.StringField(nullable=True),
-        'compute_node': fields.ObjectField(compute_node.ComputeNode),
+        'compute_node': fields.ObjectField('ComputeNode'),
         }
 
     @staticmethod
@@ -124,6 +124,10 @@ class Service(base.NovaPersistentObject, base.NovaObject):
 
 
 class ServiceList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('Service'),
+        }
+
     @base.remotable_classmethod
     def get_by_topic(cls, context, topic):
         db_services = db.service_get_all_by_topic(context, topic)

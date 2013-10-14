@@ -58,6 +58,10 @@ def _make_fault_list(faultlist, db_faultlist):
 
 
 class InstanceFaultList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('InstanceFault'),
+        }
+
     @base.remotable_classmethod
     def get_by_instance_uuids(cls, context, instance_uuids):
         db_faults = db.instance_fault_get_by_instance_uuids(context,

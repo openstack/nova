@@ -123,6 +123,9 @@ def _make_instance_group_list(context, inst_list, db_list):
 
 
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('InstanceGroup'),
+        }
 
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):

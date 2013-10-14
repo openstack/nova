@@ -149,6 +149,10 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
     # Version 1.1: Added key argument to get_by_host()
     VERSION = '1.1'
 
+    fields = {
+        'objects': fields.ListOfObjectsField('Aggregate'),
+        }
+
     @base.remotable_classmethod
     def get_all(cls, context):
         db_aggregates = db.aggregate_get_all(context)

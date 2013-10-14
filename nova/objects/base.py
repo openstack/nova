@@ -410,7 +410,7 @@ class ObjectListBase(object):
     serialization of the list of objects automatically.
     """
     fields = {
-        'objects': fields.ListOfObjectsField(NovaObject),
+        'objects': fields.ListOfObjectsField('NovaObject'),
         }
 
     def __iter__(self):

@@ -59,6 +59,10 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject):
 
 
 class KeyPairList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('KeyPair'),
+        }
+
     @base.remotable_classmethod
     def get_by_user(cls, context, user_id):
         db_keypairs = db.key_pair_get_all_by_user(context, user_id)

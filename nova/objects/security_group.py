@@ -82,6 +82,10 @@ def _make_secgroup_list(context, secgroup_list, db_secgroup_list):
 
 
 class SecurityGroupList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('SecurityGroup'),
+        }
+
     def __init__(self):
         super(SecurityGroupList, self).__init__()
         self.objects = []
