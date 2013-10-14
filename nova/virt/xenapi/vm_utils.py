@@ -1141,25 +1141,32 @@ def get_ephemeral_disk_sizes(total_size_gb):
         left_to_allocate -= size_gb
 
 
+def generate_single_ephemeral(session, instance, vm_ref, userdevice,
+                              instance_name_label, size_gb):
+    name_label = "%s ephemeral" % instance_name_label
+    #TODO(johngarbutt) need to move DEVICE_EPHEMERAL from vmops to use it here
+    label_number = int(userdevice) - 4
+    if label_number > 0:
+        name_label = "%s (%d)" % (name_label, label_number)
+
+    return _generate_disk(session, instance, vm_ref, str(userdevice),
+                          name_label, 'ephemeral', size_gb * 1024,
+                          CONF.default_ephemeral_format)
+
+
 def generate_ephemeral(session, instance, vm_ref, first_userdevice,
                        instance_name_label, total_size_gb):
     # NOTE(johngarbutt): max possible size of a VHD disk is 2043GB
-
+    sizes = get_ephemeral_disk_sizes(total_size_gb)
     first_userdevice = int(first_userdevice)
-    userdevice = first_userdevice
-    initial_name_label = instance_name_label + " ephemeral"
-    name_label = initial_name_label
 
     vdi_refs = []
     try:
-        for size_gb in get_ephemeral_disk_sizes(total_size_gb):
-            ref = _generate_disk(session, instance, vm_ref, str(userdevice),
-                                 name_label, 'ephemeral', size_gb * 1024,
-                                 CONF.default_ephemeral_format)
+        for userdevice, size_gb in enumerate(sizes, start=first_userdevice):
+            ref = generate_single_ephemeral(session, instance, vm_ref,
+                                            userdevice, instance_name_label,
+                                            size_gb)
             vdi_refs.append(ref)
-            userdevice += 1
-            label_number = userdevice - first_userdevice
-            name_label = "%s (%d)" % (initial_name_label, label_number)
     except Exception as exc:
         with excutils.save_and_reraise_exception():
             LOG.debug(_("Error when generating ephemeral disk. "
