@@ -110,6 +110,11 @@ class ConductorAPI(rpcclient.RpcProxy):
                   migration_get_unconfirmed_by_dest_compute
     1.57 - Remove migration_create()
     1.58 - Remove migration_get()
+
+        ... Havana supports message version 1.58.  So, any changes to existing
+        methods in 1.x after that point should be done such that they can
+        handle the version_cap being set to 1.58.
+
     1.59 - Remove instance_info_cache_update()
     1.60 - Remove aggregate_metadata_add() and aggregate_metadata_delete()
     """
@@ -118,6 +123,7 @@ class ConductorAPI(rpcclient.RpcProxy):
 
     VERSION_ALIASES = {
         'grizzly': '1.48',
+        'havana': '1.58',
     }
 
     def __init__(self):

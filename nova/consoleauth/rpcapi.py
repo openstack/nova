@@ -39,9 +39,9 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
         1.2 - Added instance_uuid to authorize_console, and
               delete_tokens_for_instance
 
-        ... Grizzly supports message version 1.2.  So, any changes to existing
-        methods in 2.x after that point should be done such that they can
-        handle the version_cap being set to 1.2.
+        ... Grizzly and Havana support message version 1.2.  So, any changes
+        to existing methods in 2.x after that point should be done such that
+        they can handle the version_cap being set to 1.2.
     '''
 
     #
@@ -56,6 +56,7 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
 
     VERSION_ALIASES = {
         'grizzly': '1.2',
+        'havana': '1.2',
     }
 
     def __init__(self):

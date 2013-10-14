@@ -44,9 +44,9 @@ class CertAPI(rpcclient.RpcProxy):
         1.0 - Initial version.
         1.1 - Added get_backdoor_port()
 
-        ... Grizzly supports message version 1.1.  So, any changes to existing
-        methods in 2.x after that point should be done such that they can
-        handle the version_cap being set to 1.1.
+        ... Grizzly and Havana support message version 1.1.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.1.
     '''
 
     #
@@ -61,6 +61,7 @@ class CertAPI(rpcclient.RpcProxy):
 
     VERSION_ALIASES = {
         'grizzly': '1.1',
+        'havana': '1.1',
     }
 
     def __init__(self):
