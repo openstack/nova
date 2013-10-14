@@ -1435,22 +1435,6 @@ class VMwareVMOps(object):
         vm_folder_ref = dc_objs.objects[0].propSet[0].val
         return vm_folder_ref
 
-    def _get_res_pool_ref(self):
-        # Get the resource pool. Taking the first resource pool coming our
-        # way. Assuming that is the default resource pool.
-        if self._cluster is None:
-            results = self._session._call_method(vim_util, "get_objects",
-                    "ResourcePool")
-            vm_util._cancel_retrieve_if_necessary(self._session, results)
-            res_pool_ref = results.objects[0].obj
-        else:
-            res_pool_ref = self._session._call_method(vim_util,
-                                                      "get_dynamic_property",
-                                                      self._cluster,
-                                                      "ClusterComputeResource",
-                                                      "resourcePool")
-        return res_pool_ref
-
     def _path_exists(self, ds_browser, ds_path):
         """Check if the path exists on the datastore."""
         search_task = self._session._call_method(self._session._get_vim(),
