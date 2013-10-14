@@ -1981,6 +1981,16 @@ class API(base.Base):
                                       task_states.SUSPENDING])
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
+        if (reboot_type == 'SOFT' and
+                (instance['vm_state'] in [vm_states.STOPPED,
+                                          vm_states.PAUSED,
+                                          vm_states.SUSPENDED,
+                                          vm_states.ERROR])):
+            raise exception.InstanceInvalidState(
+                attr='vm_state',
+                instance_uuid=instance['uuid'],
+                state=instance['vm_state'],
+                method='reboot')
         if ((reboot_type == 'SOFT' and
                 instance['task_state'] == task_states.REBOOTING) or
             (reboot_type == 'HARD' and
