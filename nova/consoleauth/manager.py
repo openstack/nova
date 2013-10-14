@@ -50,7 +50,7 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 class ConsoleAuthManager(manager.Manager):
     """Manages token based authentication."""
 
-    RPC_API_VERSION = '1.2'
+    RPC_API_VERSION = '2.0'
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(service_name='consoleauth',
@@ -58,13 +58,6 @@ class ConsoleAuthManager(manager.Manager):
         self.mc = memorycache.get_client()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
-
-    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
-        if not additional_apis:
-            additional_apis = []
-        additional_apis.append(_ConsoleAuthManagerV2Proxy(self))
-        return super(ConsoleAuthManager, self).create_rpc_dispatcher(
-                backdoor_port, additional_apis)
 
     def _get_tokens_for_instance(self, instance_uuid):
         tokens_str = self.mc.get(instance_uuid.encode('UTF-8'))
@@ -75,7 +68,7 @@ class ConsoleAuthManager(manager.Manager):
         return tokens
 
     def authorize_console(self, context, token, console_type, host, port,
-                          internal_access_path, instance_uuid=None):
+                          internal_access_path, instance_uuid):
 
         token_dict = {'token': token,
                       'instance_uuid': instance_uuid,
@@ -86,16 +79,15 @@ class ConsoleAuthManager(manager.Manager):
                       'last_activity_at': time.time()}
         data = jsonutils.dumps(token_dict)
         self.mc.set(token.encode('UTF-8'), data, CONF.console_token_ttl)
-        if instance_uuid is not None:
-            tokens = self._get_tokens_for_instance(instance_uuid)
-            # Remove the expired tokens from cache.
-            for tok in tokens:
-                token_str = self.mc.get(tok.encode('UTF-8'))
-                if not token_str:
-                    tokens.remove(tok)
-            tokens.append(token)
-            self.mc.set(instance_uuid.encode('UTF-8'),
-                        jsonutils.dumps(tokens))
+        tokens = self._get_tokens_for_instance(instance_uuid)
+        # Remove the expired tokens from cache.
+        for tok in tokens:
+            token_str = self.mc.get(tok.encode('UTF-8'))
+            if not token_str:
+                tokens.remove(tok)
+        tokens.append(token)
+        self.mc.set(instance_uuid.encode('UTF-8'),
+                    jsonutils.dumps(tokens))
 
         LOG.audit(_("Received Token: %(token)s, %(token_dict)s"),
                   {'token': token, 'token_dict': token_dict})
@@ -134,30 +126,3 @@ class ConsoleAuthManager(manager.Manager):
         for token in tokens:
             self.mc.delete(token.encode('UTF-8'))
         self.mc.delete(instance_uuid.encode('UTF-8'))
-
-    # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
-    # deprecated in favor of the method in the base API.
-    def get_backdoor_port(self, context):
-        return self.backdoor_port
-
-
-class _ConsoleAuthManagerV2Proxy(object):
-    # Notes for changes since 1.X
-    # - removed get_backdoor_port()
-    # - instance_uuid required for authorize_console()
-
-    RPC_API_VERSION = '2.0'
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    def authorize_console(self, context, token, console_type, host, port,
-                          internal_access_path, instance_uuid):
-        self.manager.authorize_console(context, token, console_type, host,
-                port, internal_access_path, instance_uuid)
-
-    def check_token(self, context, token):
-        return self.manager.check_token(context, token)
-
-    def delete_tokens_for_instance(self, ctxt, instance_uuid):
-        self.manager.delete_tokens_for_instance(ctxt, instance_uuid)
