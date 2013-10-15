@@ -144,13 +144,6 @@ class LocalAPI(object):
                                              last_refreshed,
                                              update_cells=update_cells)
 
-    def security_group_get_by_instance(self, context, instance):
-        return self._manager.security_group_get_by_instance(context, instance)
-
-    def security_group_rule_get_by_security_group(self, context, secgroup):
-        return self._manager.security_group_rule_get_by_security_group(
-            context, secgroup)
-
     def provider_fw_rule_get_all(self, context):
         return self._manager.provider_fw_rule_get_all(context)
 

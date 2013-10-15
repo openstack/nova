@@ -257,11 +257,13 @@ class ConductorManager(manager.Manager):
     def get_backdoor_port(self, context):
         return self.backdoor_port
 
+    # NOTE(danms): This method can be removed in version 2.0 of this API.
     def security_group_get_by_instance(self, context, instance):
         group = self.db.security_group_get_by_instance(context,
                                                        instance['uuid'])
         return jsonutils.to_primitive(group)
 
+    # NOTE(danms): This method can be removed in version 2.0 of this API.
     def security_group_rule_get_by_security_group(self, context, secgroup):
         rules = self.db.security_group_rule_get_by_security_group(
             context, secgroup['id'])
