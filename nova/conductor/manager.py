@@ -520,8 +520,8 @@ class ConductorManager(manager.Manager):
         ec2_ids['ami-id'] = ec2utils.glance_id_to_ec2_id(context,
                                                          instance['image_ref'])
         for image_type in ['kernel', 'ramdisk']:
-            if '%s_id' % image_type in instance:
-                image_id = instance['%s_id' % image_type]
+            image_id = instance.get('%s_id' % image_type)
+            if image_id is not None:
                 ec2_image_type = ec2utils.image_type(image_type)
                 ec2_id = ec2utils.glance_id_to_ec2_id(context, image_id,
                                                       ec2_image_type)
