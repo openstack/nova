@@ -30,7 +30,9 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
     # Version 1.2: Added new() and update_cells kwarg to save().
     # Version 1.3: Added delete()
     # Version 1.4: String attributes updated to support unicode
-    VERSION = '1.4'
+    # Version 1.5: Actually set the deleted, created_at, updated_at, and
+    #              deleted_at attributes
+    VERSION = '1.5'
 
     fields = {
         'instance_uuid': fields.UUIDField(),
@@ -39,8 +41,8 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
 
     @staticmethod
     def _from_db_object(context, info_cache, db_obj):
-        info_cache.instance_uuid = db_obj['instance_uuid']
-        info_cache.network_info = db_obj['network_info']
+        for field in info_cache.fields:
+            info_cache[field] = db_obj[field]
         info_cache.obj_reset_changes()
         info_cache._context = context
         return info_cache

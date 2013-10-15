@@ -417,7 +417,15 @@ def create_info_cache(nw_cache):
     if not isinstance(nw_cache, basestring):
         nw_cache = jsonutils.dumps(nw_cache)
 
-    return {"info_cache": {"network_info": nw_cache}}
+    return {
+        "info_cache": {
+            "network_info": nw_cache,
+            "deleted": False,
+            "created_at": None,
+            "deleted_at": None,
+            "updated_at": None,
+            }
+        }
 
 
 def get_fake_uuid(token=0):
