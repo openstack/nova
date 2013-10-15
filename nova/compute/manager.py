@@ -388,16 +388,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                                               instance_uuid,
                                               **updates)
 
-    def security_group_get_by_instance(self, context, instance):
-        return self._compute.conductor_api.security_group_get_by_instance(
-            context, instance)
-
-    def security_group_rule_get_by_security_group(self, context,
-                                                  security_group):
-        return (self._compute.conductor_api.
-                security_group_rule_get_by_security_group(context,
-                                                          security_group))
-
     def provider_fw_rule_get_all(self, context):
         return self._compute.conductor_api.provider_fw_rule_get_all(context)
 
