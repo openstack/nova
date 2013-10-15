@@ -190,26 +190,8 @@ class ComputeCellsAPI(compute_api.API):
     def soft_delete(self, context, instance):
         self._handle_cell_delete(context, instance, 'soft_delete')
 
-    def _do_soft_delete(self, context, instance, bdms, reservations=None,
-                        local=False):
-        super(ComputeCellsAPI, self)._do_soft_delete(context, instance, bdms,
-                                                     reservations=reservations,
-                                                     local=local)
-        if local:
-            self.compute_rpcapi.soft_delete_instance(context, instance,
-                                                     reservations=reservations)
-
     def delete(self, context, instance):
         self._handle_cell_delete(context, instance, 'delete')
-
-    def _do_delete(self, context, instance, bdms, reservations=None,
-                   local=False):
-        super(ComputeCellsAPI, self)._do_delete(context, instance, bdms,
-                                                reservations=reservations,
-                                                local=local)
-        if local:
-            self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                                                   reservations=reservations)
 
     def _handle_cell_delete(self, context, instance, method_name):
         if not instance['cell_name']:
