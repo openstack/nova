@@ -18,6 +18,7 @@
 
 """Unit tests for the API endpoint."""
 
+import pkg_resources
 import random
 import StringIO
 
@@ -241,10 +242,11 @@ class ApiEc2TestCase(test.TestCase):
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
         # pylint: disable=E1103
-        if boto.Version >= '2.13':
+        boto_version = pkg_resources.parse_version(boto.Version)
+        if boto_version >= pkg_resources.parse_version('2.13'):
             self.ec2.new_http_connection(host or self.host, 8773,
                 is_secure).AndReturn(self.http)
-        elif boto.Version >= '2':
+        elif boto_version >= pkg_resources.parse_version('2'):
             self.ec2.new_http_connection(host or '%s:8773' % (self.host),
                 is_secure).AndReturn(self.http)
         else:
