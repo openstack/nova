@@ -31,6 +31,9 @@ Run like:
 
     ./tools/db/schema_diff.py mysql master:latest my_branch:82
 """
+
+from __future__ import print_function
+
 import datetime
 import glob
 import os
@@ -191,19 +194,19 @@ def git_has_uncommited_changes():
 
 
 def die(msg):
-    print >> sys.stderr, "ERROR: %s" % msg
+    print("ERROR: %s" % msg, file=sys.stderr)
     sys.exit(1)
 
 
 def usage(msg=None):
     if msg:
-        print >> sys.stderr, "ERROR: %s" % msg
+        print("ERROR: %s" % msg, file=sys.stderr)
 
     prog = "schema_diff.py"
     args = ["<mysql|postgres>", "<orig-branch:orig-version>",
             "<new-branch:new-version>"]
 
-    print >> sys.stderr, "usage: %s %s" % (prog, ' '.join(args))
+    print("usage: %s %s" % (prog, ' '.join(args)), file=sys.stderr)
     sys.exit(1)
 
 

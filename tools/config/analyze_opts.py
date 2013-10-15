@@ -21,6 +21,9 @@ find_unused_options.py
 Compare the nova.conf file with the nova.conf.sample file to find any unused
 options or default values in nova.conf
 '''
+
+from __future__ import print_function
+
 import argparse
 import os
 import sys
@@ -74,7 +77,7 @@ if __name__ == '__main__':
 
     for k, v in sorted(conf_file_options.items()):
         if k not in sample_conf_file_options:
-            print "Unused:", k
+            print("Unused:", k)
     for k, v in sorted(conf_file_options.items()):
         if k in sample_conf_file_options and v == sample_conf_file_options[k]:
-            print "Default valued:", k
+            print("Default valued:", k)

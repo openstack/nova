@@ -117,6 +117,7 @@ class CoverageController(wsgi.Controller):
     def _start_coverage_telnet(self, tn, service):
         data_file = os.path.join(self.data_path,
                                 '.nova-coverage.%s' % str(service))
+        tn.write('from __future__ import print_function\n')
         tn.write('import sys\n')
         tn.write('from coverage import coverage\n')
         tn.write("coverInst = coverage(data_file='%s') "
@@ -124,7 +125,7 @@ class CoverageController(wsgi.Controller):
                  "else coverInst\n" % data_file)
         tn.write('coverInst.skipModules = sys.modules.keys()\n')
         tn.write("coverInst.start()\n")
-        tn.write("print 'finished'\n")
+        tn.write("print('finished')\n")
         tn.expect([re.compile('finished')])
 
     def _check_coverage_module_loaded(self):
@@ -172,7 +173,7 @@ class CoverageController(wsgi.Controller):
     def _stop_coverage_telnet(self, tn):
         tn.write("coverInst.stop()\n")
         tn.write("coverInst.save()\n")
-        tn.write("print 'finished'\n")
+        tn.write("print('finished')\n")
         tn.expect([re.compile('finished')])
 
     def _check_coverage(self):
@@ -199,14 +200,14 @@ class CoverageController(wsgi.Controller):
         if xml:
             execute = str("coverInst.xml_report(outfile='%s')\n" % path)
             tn.write(execute)
-            tn.write("print 'finished'\n")
+            tn.write("print('finished')\n")
             tn.expect([re.compile('finished')])
         else:
             execute = str("output = open('%s', 'w')\n" % path)
             tn.write(execute)
             tn.write("coverInst.report(file=output)\n")
             tn.write("output.close()\n")
-            tn.write("print 'finished'\n")
+            tn.write("print('finished')\n")
             tn.expect([re.compile('finished')])
         tn.close()
 
@@ -277,7 +278,7 @@ class CoverageController(wsgi.Controller):
 
     def _reset_coverage_telnet(self, tn):
         tn.write("coverInst.erase()\n")
-        tn.write("print 'finished'\n")
+        tn.write("print('finished')\n")
         tn.expect([re.compile('finished')])
 
     @extensions.expected_errors(503)

@@ -1097,7 +1097,7 @@ class AgentBuildCommands(object):
                              agent_build.version, agent_build.md5hash))
                 print('    %s' % agent_build.url)
 
-            print
+            print()
 
     @args('--os', metavar='<os>', help='os')
     @args('--architecture', dest='architecture',
