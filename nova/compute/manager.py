@@ -61,6 +61,7 @@ from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import notifier
+from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
@@ -355,6 +356,22 @@ def object_compat(function):
     return decorated_function
 
 
+# TODO(danms): Remove me after Icehouse
+def aggregate_object_compat(function):
+    """Wraps a method that expects a new-world aggregate."""
+
+    @functools.wraps(function)
+    def decorated_function(self, context, *args, **kwargs):
+        aggregate = kwargs.get('aggregate')
+        if isinstance(aggregate, dict):
+            aggregate = aggregate_obj.Aggregate._from_db_object(
+                context.elevated(), aggregate_obj.Aggregate(),
+                aggregate)
+            kwargs['aggregate'] = aggregate
+        return function(self, context, *args, **kwargs)
+    return decorated_function
+
+
 def _get_image_meta(context, image_ref):
     image_service, image_id = glance.get_remote_image_service(context,
                                                               image_ref)
@@ -419,7 +436,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.47'
+    RPC_API_VERSION = '2.48'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4991,12 +5008,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                 self._quota_rollback(context, reservations)
                 self._set_instance_error_state(context, instance_uuid)
 
+    @aggregate_object_compat
     @wrap_exception()
     def add_aggregate_host(self, context, host, slave_info=None,
                            aggregate=None, aggregate_id=None):
         """Notify hypervisor of change (for hypervisor pools)."""
         if not aggregate:
-            aggregate = self.conductor_api.aggregate_get(context, aggregate_id)
+            aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+
+        # NOTE(danms): until the drivers support objects, use primitives
+        aggregate = obj_base.obj_to_primitive(aggregate)
 
         try:
             self.driver.add_to_aggregate(context, aggregate, host,
@@ -5011,12 +5032,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                                     self.conductor_api.aggregate_host_delete,
                                     aggregate, host)
 
+    @aggregate_object_compat
     @wrap_exception()
     def remove_aggregate_host(self, context, host, slave_info=None,
                               aggregate=None, aggregate_id=None):
         """Removes a host from a physical hypervisor pool."""
         if not aggregate:
-            aggregate = self.conductor_api.aggregate_get(context, aggregate_id)
+            aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+
+        # NOTE(danms): until the drivers support objects, use primitives
+        aggregate = obj_base.obj_to_primitive(aggregate)
 
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,

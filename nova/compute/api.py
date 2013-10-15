@@ -3200,8 +3200,7 @@ class AggregateAPI(base.Base):
         aggregate.add_host(context, host_name)
         #NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
-                aggregate=obj_base.obj_to_primitive(aggregate),
-                host_param=host_name, host=host_name)
+                aggregate=aggregate, host_param=host_name, host=host_name)
         aggregate_payload.update({'name': aggregate['name']})
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.end",
@@ -3221,8 +3220,7 @@ class AggregateAPI(base.Base):
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
         aggregate.delete_host(host_name)
         self.compute_rpcapi.remove_aggregate_host(context,
-                aggregate=obj_base.obj_to_primitive(aggregate),
-                host_param=host_name, host=host_name)
+                aggregate=aggregate, host_param=host_name, host=host_name)
         compute_utils.notify_about_aggregate_update(context,
                                                     "removehost.end",
                                                     aggregate_payload)
