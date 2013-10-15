@@ -1373,7 +1373,8 @@ class Controller(wsgi.Controller):
 
         instance = self._get_server(context, req, id)
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = self.compute_api.get_instance_bdms(context, instance,
+                                                  legacy=False)
 
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
@@ -1385,7 +1386,8 @@ class Controller(wsgi.Controller):
                     # device is set to 'vda'. It needs to be fixed later,
                     # but tentatively we use it here.
                     image_meta = {'properties': self.compute_api.
-                                    _get_bdm_image_metadata(context, bdms)}
+                                    _get_bdm_image_metadata(context, bdms,
+                                                            legacy_bdm=False)}
                 else:
                     src_image = self.compute_api.image_service.\
                                                 show(context, img)

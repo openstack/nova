@@ -2366,8 +2366,7 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.SHELVE)
 
         image_id = None
-        bdms = self.get_instance_bdms(context, instance)
-        if not self.is_volume_backed_instance(context, instance, bdms):
+        if not self.is_volume_backed_instance(context, instance):
             name = '%s-shelved' % instance['name']
             image_meta = self._create_image(context, instance, name,
                     'snapshot')
@@ -2471,7 +2470,7 @@ class API(base.Base):
     def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
 
-        bdms = self.get_instance_bdms(context, instance)
+        bdms = self.get_instance_bdms(context, instance, legacy=False)
         for bdm in bdms:
             if bdm['volume_id']:
                 volume = self.volume_api.get(context, bdm['volume_id'])
@@ -2479,7 +2478,7 @@ class API(base.Base):
         # TODO(ndipanov): This check can be generalized as a decorator to
         # check for valid combinations of src and dests - for now check
         # if it's booted from volume only
-        if self.is_volume_backed_instance(context, instance, None):
+        if self.is_volume_backed_instance(context, instance, bdms):
             reason = _("Cannot rescue a volume-backed instance")
             raise exception.InstanceNotRescuable(instance_id=instance['uuid'],
                                                  reason=reason)
@@ -2872,24 +2871,16 @@ class API(base.Base):
             return block_device.legacy_mapping(bdms)
         return bdms
 
-    def is_volume_backed_instance(self, context, instance, bdms):
+    def is_volume_backed_instance(self, context, instance, bdms=None):
         if not instance['image_ref']:
             return True
 
-        if instance.get('root_device_name') is None:
-            return False
-
         if bdms is None:
-            bdms = self.get_instance_bdms(context, instance)
+            bdms = self.get_instance_bdms(context, instance, legacy=False)
 
-        for bdm in bdms:
-            if ((block_device.strip_dev(bdm['device_name']) ==
-                 block_device.strip_dev(instance['root_device_name']))
-                and
-                (bdm['volume_id'] is not None or
-                 bdm['snapshot_id'] is not None)):
+        root_bdm = block_device.get_root_bdm(bdms)
+        if root_bdm and root_bdm.get('destination_type') == 'volume':
                 return True
-
         return False
 
     @check_instance_cell

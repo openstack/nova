@@ -3964,7 +3964,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         capi = self.conductor_api
         instance_p = obj_base.obj_to_primitive(instance)
-        bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance_p)
+        bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance_p,
+                                                             legacy=False)
 
         is_volume_backed = self.compute_api.is_volume_backed_instance(ctxt,
                                                                       instance,

@@ -1642,11 +1642,8 @@ class CloudController(object):
         instance = self.compute_api.get(context, instance_uuid,
                                         want_objects=True)
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
-
         # CreateImage only supported for the analogue of EBS-backed instances
-        if not self.compute_api.is_volume_backed_instance(context, instance,
-                                                          bdms):
+        if not self.compute_api.is_volume_backed_instance(context, instance):
             msg = _("Invalid value '%(ec2_instance_id)s' for instanceId. "
                     "Instance does not have a volume attached at root "
                     "(%(root)s)") % {'root': instance['root_device_name'],
