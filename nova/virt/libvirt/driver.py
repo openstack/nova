@@ -930,6 +930,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                       disk_dev)
 
         if destroy_disks:
+            #NOTE(GuanQiang): teardown lxc container to avoid resource leak
+            if CONF.libvirt_type == 'lxc':
+                inst_path = libvirt_utils.get_instance_path(instance)
+                container_dir = os.path.join(inst_path, 'rootfs')
+                container_root_device = instance.get('root_device_name')
+                disk.teardown_container(container_dir, container_root_device)
+
             self._delete_instance_files(instance)
 
             self._cleanup_lvm(instance)
@@ -3126,9 +3133,17 @@ class LibvirtDriver(driver.ComputeDriver):
             container_dir = os.path.join(inst_path, 'rootfs')
             fileutils.ensure_tree(container_dir)
             image = self.image_backend.image(instance, 'disk')
-            disk.setup_container(image.path,
-                                 container_dir=container_dir,
-                                 use_cow=CONF.use_cow_images)
+            container_root_device = disk.setup_container(image.path,
+                                                container_dir=container_dir,
+                                                use_cow=CONF.use_cow_images)
+
+            #Note(GuanQiang): save container root device name here, used for
+            #                 detaching the linked image device when deleting
+            #                 the lxc instance.
+            if container_root_device:
+                self.virtapi.instance_update(
+                    nova_context.get_admin_context(), instance['uuid'],
+                    {'root_device_name': container_root_device})
 
         if xml:
             try:
