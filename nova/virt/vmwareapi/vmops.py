@@ -270,8 +270,7 @@ class VMwareVMOps(object):
         # Set the vnc configuration of the instance, vnc port starts from 5900
         if CONF.vnc_enabled:
             vnc_port = self._get_vnc_port(vm_ref)
-            vnc_pass = CONF.vmware.vnc_password or ''
-            self._set_vnc_config(client_factory, instance, vnc_port, vnc_pass)
+            self._set_vnc_config(client_factory, instance, vnc_port)
 
         def _create_virtual_disk():
             """Create a virtual disk of the size of flat vmdk file."""
@@ -1389,14 +1388,14 @@ class VMwareVMOps(object):
         LOG.debug(_("Reconfigured VM instance to set the machine id"),
                   instance=instance)
 
-    def _set_vnc_config(self, client_factory, instance, port, password):
+    def _set_vnc_config(self, client_factory, instance, port):
         """
         Set the vnc configuration of the VM.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         vnc_config_spec = vm_util.get_vnc_config_spec(
-                                      client_factory, port, password)
+                                      client_factory, port)
 
         LOG.debug(_("Reconfiguring VM instance to enable vnc on "
                   "port - %(port)s") % {'port': port},

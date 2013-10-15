@@ -768,10 +768,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_get_vnc_console(self):
         self._test_get_vnc_console()
 
-    def test_get_vnc_console_with_password(self):
-        self.flags(vnc_password='vmware', group='vmware')
-        self._test_get_vnc_console()
-
     def test_host_ip_addr(self):
         self.assertEqual(self.conn.get_host_ip_addr(), "test_url")
 
