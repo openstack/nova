@@ -133,7 +133,7 @@ class _TestAggregateObject(object):
 
     def test_by_host(self):
         self.mox.StubOutWithMock(db, 'aggregate_get_by_host')
-        db.aggregate_get_by_host(self.context, 'fake-host'
+        db.aggregate_get_by_host(self.context, 'fake-host', key=None,
                                  ).AndReturn([fake_aggregate])
         self.mox.ReplayAll()
         aggs = aggregate.AggregateList.get_by_host(self.context, 'fake-host')

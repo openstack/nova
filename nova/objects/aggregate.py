@@ -145,6 +145,10 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
 
 class AggregateList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added key argument to get_by_host()
+    VERSION = '1.1'
+
     @base.remotable_classmethod
     def get_all(cls, context):
         db_aggregates = db.aggregate_get_all(context)
@@ -152,7 +156,7 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
                                   db_aggregates)
 
     @base.remotable_classmethod
-    def get_by_host(cls, context, host):
-        db_aggregates = db.aggregate_get_by_host(context, host)
+    def get_by_host(cls, context, host, key=None):
+        db_aggregates = db.aggregate_get_by_host(context, host, key=key)
         return base.obj_make_list(context, AggregateList(), Aggregate,
                                   db_aggregates)
