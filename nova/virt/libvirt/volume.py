@@ -321,7 +321,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
               self).disconnect_volume(connection_info, disk_dev)
 
         if CONF.libvirt_iscsi_use_multipath and multipath_device:
-            return self._disconnect_volume_multipath_iscsi(iscsi_properties)
+            return self._disconnect_volume_multipath_iscsi(iscsi_properties,
+                                                           multipath_device)
 
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
@@ -333,7 +334,22 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         if not devices:
             self._disconnect_from_iscsi_portal(iscsi_properties)
 
-    def _disconnect_volume_multipath_iscsi(self, iscsi_properties):
+    def _remove_multipath_device_descriptor(self, disk_descriptor):
+        disk_descriptor = disk_descriptor.replace('/dev/mapper/', '')
+        try:
+            self._run_multipath(['-f', disk_descriptor],
+                                check_exit_code=[0, 1])
+        except exception.ProcessExecutionError as exc:
+            # Because not all cinder drivers need to remove the dev mapper,
+            # here just logs a warning to avoid affecting those drivers in
+            # exceptional cases.
+            LOG.warn(_('Failed to remove multipath device descriptor '
+                       '%(dev_mapper)s. Exception message: %(msg)s')
+                     % {'dev_mapper': disk_descriptor,
+                        'msg': exc.message})
+
+    def _disconnect_volume_multipath_iscsi(self, iscsi_properties,
+                                           multipath_device):
         self._rescan_iscsi()
         self._rescan_multipath()
         block_devices = self.connection.get_all_block_devices()
@@ -360,7 +376,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             return
 
         # else do not disconnect iscsi portals,
-        # as they are used for other luns
+        # as they are used for other luns,
+        # just remove multipath mapping device descriptor
+        self._remove_multipath_device_descriptor(multipath_device)
         return
 
     def _connect_to_iscsi_portal(self, iscsi_properties):
@@ -598,7 +616,8 @@ class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
                                                   disk_dev)
 
         if CONF.libvirt_iser_use_multipath and multipath_device:
-            return self._disconnect_volume_multipath_iscsi(iser_properties)
+            return self._disconnect_volume_multipath_iscsi(iser_properties,
+                                                           multipath_device)
 
         # NOTE(vish): Only disconnect from the target if no luns from the
         #             target are in use.
