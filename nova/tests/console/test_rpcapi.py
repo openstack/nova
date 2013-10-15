@@ -59,6 +59,16 @@ class ConsoleRpcAPITestCase(test.NoDBTestCase):
         self._test_console_api('add_console', instance_id='i',
                                rpc_method='cast')
 
+        # NOTE(russellb) Havana compat
+        self.flags(console='havana', group='upgrade_levels')
+        self._test_console_api('add_console', instance_id='i',
+                               rpc_method='cast', version='1.0')
+
     def test_remove_console(self):
         self._test_console_api('remove_console', console_id='i',
                                rpc_method='cast')
+
+        # NOTE(russellb) Havana compat
+        self.flags(console='havana', group='upgrade_levels')
+        self._test_console_api('remove_console', console_id='i',
+                               rpc_method='cast', version='1.0')
