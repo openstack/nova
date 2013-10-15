@@ -185,7 +185,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
         uuid = 'b21f957d-a72f-4b93-b5a5-45b1161abb02'
         conn.defineXML(get_vm_xml(uuid=uuid))
         dom = conn.lookupByName('testname')
-        self.assertEquals(dom.UUIDString(), uuid)
+        self.assertEqual(dom.UUIDString(), uuid)
 
     def test_createWithFlags(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
@@ -202,22 +202,22 @@ class FakeLibvirtTests(test.NoDBTestCase):
         dom = conn.lookupByName('testname')
         self.assertFalse(dom.isActive(), 'Defined domain was running.')
         dom.createWithFlags(0)
-        self.assertEquals(dom.hasManagedSaveImage(0), 0)
+        self.assertEqual(dom.hasManagedSaveImage(0), 0)
         dom.managedSave(0)
-        self.assertEquals(dom.hasManagedSaveImage(0), 1)
+        self.assertEqual(dom.hasManagedSaveImage(0), 1)
         dom.managedSaveRemove(0)
-        self.assertEquals(dom.hasManagedSaveImage(0), 0)
+        self.assertEqual(dom.hasManagedSaveImage(0), 0)
 
     def test_listDomainsId_and_lookupById(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        self.assertEquals(conn.listDomainsID(), [])
+        self.assertEqual(conn.listDomainsID(), [])
         conn.defineXML(get_vm_xml())
         dom = conn.lookupByName('testname')
         dom.createWithFlags(0)
-        self.assertEquals(len(conn.listDomainsID()), 1)
+        self.assertEqual(len(conn.listDomainsID()), 1)
 
         dom_id = conn.listDomainsID()[0]
-        self.assertEquals(conn.lookupByID(dom_id), dom)
+        self.assertEqual(conn.lookupByID(dom_id), dom)
 
         dom_id = conn.listDomainsID()[0]
         try:
@@ -231,7 +231,7 @@ class FakeLibvirtTests(test.NoDBTestCase):
 
     def test_define_and_retrieve(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        self.assertEquals(conn.listDomainsID(), [])
+        self.assertEqual(conn.listDomainsID(), [])
         conn.defineXML(get_vm_xml())
         dom = conn.lookupByName('testname')
         xml = dom.XMLDesc(0)
@@ -239,13 +239,13 @@ class FakeLibvirtTests(test.NoDBTestCase):
 
     def _test_accepts_source_type(self, source_type):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        self.assertEquals(conn.listDomainsID(), [])
+        self.assertEqual(conn.listDomainsID(), [])
         conn.defineXML(get_vm_xml(source_type=source_type))
         dom = conn.lookupByName('testname')
         xml = dom.XMLDesc(0)
         tree = etree.fromstring(xml)
         elem = tree.find('./devices/disk/source')
-        self.assertEquals(elem.get('file'), '/somefile')
+        self.assertEqual(elem.get('file'), '/somefile')
 
     def test_accepts_source_dev(self):
         self._test_accepts_source_type('dev')
@@ -261,19 +261,19 @@ class FakeLibvirtTests(test.NoDBTestCase):
 
     def _test_network_type_sticks(self, network_type):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        self.assertEquals(conn.listDomainsID(), [])
+        self.assertEqual(conn.listDomainsID(), [])
         conn.defineXML(get_vm_xml(interface_type=network_type))
         dom = conn.lookupByName('testname')
         xml = dom.XMLDesc(0)
         tree = etree.fromstring(xml)
         elem = tree.find('./devices/interface')
-        self.assertEquals(elem.get('type'), network_type)
+        self.assertEqual(elem.get('type'), network_type)
         elem = elem.find('./source')
-        self.assertEquals(elem.get(network_type), 'br100')
+        self.assertEqual(elem.get(network_type), 'br100')
 
     def test_getType(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        self.assertEquals(conn.getType(), 'QEMU')
+        self.assertEqual(conn.getType(), 'QEMU')
 
     def test_getVersion(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
