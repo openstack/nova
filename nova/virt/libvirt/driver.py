@@ -1740,8 +1740,8 @@ class LibvirtDriver(driver.ComputeDriver):
             msg = _('Unable to locate disk matching id: %s') % volume_id
             raise exception.NovaException(msg)
 
-        LOG.debug("found dev, it's %s, with active disk: %s" %
-                  (my_dev, active_disk))
+        LOG.debug(_("found dev, it's %(dev)s, with active disk: %(disk)s"),
+                  {'dev': my_dev, 'disk': active_disk})
 
         if delete_info['merge_target_file'] is None:
             # pull via blockRebase()
