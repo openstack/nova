@@ -54,7 +54,7 @@ class ConsoleProxyManager(manager.Manager):
 
     """
 
-    RPC_API_VERSION = '1.1'
+    RPC_API_VERSION = '2.0'
 
     def __init__(self, console_driver=None, *args, **kwargs):
         if not console_driver:
@@ -65,31 +65,22 @@ class ConsoleProxyManager(manager.Manager):
         self.driver.host = self.host
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
-    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
-        additional_apis = additional_apis or []
-        additional_apis.append(_ConsoleV2Proxy(self))
-        return super(ConsoleProxyManager, self).create_rpc_dispatcher(
-                backdoor_port, additional_apis)
-
     def init_host(self):
         self.driver.init_host()
 
-    def add_console(self, context, instance_id, password=None,
-                    port=None, **kwargs):
+    def add_console(self, context, instance_id):
         instance = self.db.instance_get(context, instance_id)
         host = instance['host']
         name = instance['name']
-        pool = self.get_pool_for_instance_host(context, host)
+        pool = self._get_pool_for_instance_host(context, host)
         try:
             console = self.db.console_get_by_pool_instance(context,
                                                            pool['id'],
                                                            instance['uuid'])
         except exception.NotFound:
             LOG.debug(_('Adding console'), instance=instance)
-            if not password:
-                password = utils.generate_password(8)
-            if not port:
-                port = self.driver.get_port(context)
+            password = utils.generate_password(8)
+            port = self.driver.get_port(context)
             console_data = {'instance_name': name,
                             'instance_uuid': instance['uuid'],
                             'password': password,
@@ -101,7 +92,7 @@ class ConsoleProxyManager(manager.Manager):
 
         return console['id']
 
-    def remove_console(self, context, console_id, **_kwargs):
+    def remove_console(self, context, console_id):
         try:
             console = self.db.console_get(context, console_id)
         except exception.NotFound:
@@ -112,7 +103,7 @@ class ConsoleProxyManager(manager.Manager):
         self.db.console_delete(context, console_id)
         self.driver.teardown_console(context, console)
 
-    def get_pool_for_instance_host(self, context, instance_host):
+    def _get_pool_for_instance_host(self, context, instance_host):
         context = context.elevated()
         console_type = self.driver.console_type
         try:
@@ -139,22 +130,3 @@ class ConsoleProxyManager(manager.Manager):
             pool_info['compute_host'] = instance_host
             pool = self.db.console_pool_create(context, pool_info)
         return pool
-
-    # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
-    # deprecated in favor of the method in the base API.
-    def get_backdoor_port(self, context):
-        return self.backdoor_port
-
-
-class _ConsoleV2Proxy(object):
-
-    RPC_API_VERSION = '2.0'
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    def add_console(self, context, instance_id):
-        self.manager.add_console(context, instance_id)
-
-    def remove_console(self, context, console_id):
-        self.manager.remove_console(context, console_id)
