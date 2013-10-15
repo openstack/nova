@@ -376,7 +376,7 @@ class FakeDriver(driver.ComputeDriver):
         return
 
     def pre_live_migration(self, context, instance_ref, block_device_info,
-                           network_info, migrate_data=None):
+                           network_info, disk, migrate_data=None):
         return
 
     def unfilter_instance(self, instance_ref, network_info):

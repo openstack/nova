@@ -19,7 +19,6 @@ import copy
 import errno
 import eventlet
 import fixtures
-import json
 import mox
 import os
 import re
@@ -2358,6 +2357,11 @@ class LibvirtConnTestCase(test.TestCase):
             def fixed_ips(self):
                 return ["test_ip_addr"]
 
+        def fake_none(*args, **kwargs):
+            return
+
+        self.stubs.Set(conn, '_create_images_and_backing', fake_none)
+
         inst_ref = {'id': 'foo'}
         c = context.get_admin_context()
         nw_info = FakeNetworkInfo()
@@ -2380,7 +2384,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.plug_vifs(mox.IsA(inst_ref), nw_info)
 
         self.mox.ReplayAll()
-        result = conn.pre_live_migration(c, inst_ref, vol, nw_info)
+        result = conn.pre_live_migration(c, inst_ref, vol, nw_info, None)
         self.assertEqual(result, None)
 
     def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
@@ -2391,6 +2395,11 @@ class LibvirtConnTestCase(test.TestCase):
                   {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
                   {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+            def fake_none(*args, **kwargs):
+                return
+
+            self.stubs.Set(conn, '_create_images_and_backing', fake_none)
 
             class FakeNetworkInfo():
                 def fixed_ips(self):
@@ -2417,49 +2426,12 @@ class LibvirtConnTestCase(test.TestCase):
                             'block_migration': False,
                             'instance_relative_path': inst_ref['name']
                             }
-            ret = conn.pre_live_migration(c, inst_ref, vol, nw_info,
+            ret = conn.pre_live_migration(c, inst_ref, vol, nw_info, None,
                                           migrate_data)
             self.assertEqual(ret, None)
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
                                                        inst_ref['name'])))
         db.instance_destroy(self.context, inst_ref['uuid'])
-
-    def test_pre_block_migration_works_correctly(self):
-        # Replace instances_path since this testcase creates tmpfile
-        with utils.tempdir() as tmpdir:
-            self.flags(instances_path=tmpdir)
-
-            # Test data
-            instance_ref = db.instance_create(self.context, self.test_instance)
-            dummy_info = [{'path': '%s/disk' % tmpdir,
-                           'disk_size': 10737418240,
-                           'type': 'raw',
-                           'backing_file': ''},
-                          {'backing_file': 'otherdisk_1234567',
-                           'path': '%s/otherdisk' % tmpdir,
-                           'virt_disk_size': 10737418240}]
-            dummyjson = json.dumps(dummy_info)
-
-            # qemu-img should be mockd since test environment might not have
-            # large disk space.
-            self.mox.StubOutWithMock(imagebackend.Image, 'cache')
-            imagebackend.Image.cache(context=mox.IgnoreArg(),
-                                     fetch_func=mox.IgnoreArg(),
-                                     filename='otherdisk',
-                                     image_id=self.test_instance['image_ref'],
-                                     project_id='fake',
-                                     size=10737418240L,
-                                     user_id=None).AndReturn(None)
-            self.mox.ReplayAll()
-
-            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-            conn.pre_block_migration(self.context, instance_ref,
-                                     dummyjson)
-
-            self.assertTrue(os.path.exists('%s/%s/' %
-                                           (tmpdir, instance_ref['uuid'])))
-
-        db.instance_destroy(self.context, instance_ref['uuid'])
 
     def test_get_instance_disk_info_works_correctly(self):
         # Test data

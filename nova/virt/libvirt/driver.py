@@ -1385,7 +1385,9 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE (rmk): Re-populate any missing backing files.
         disk_info_json = self.get_instance_disk_info(instance['name'], xml,
                                                      block_device_info)
-        self._create_images_and_backing(context, instance, disk_info_json)
+        instance_dir = libvirt_utils.get_instance_path(instance)
+        self._create_images_and_backing(context, instance, instance_dir,
+                                        disk_info_json)
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
@@ -3199,7 +3201,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                           instance['project_id'])
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, migrate_data=None):
+                           network_info, disk_info, migrate_data=None):
         """Preparation live migration."""
         # Steps for volume backed instance live migration w/o shared storage.
         is_shared_storage = True
@@ -3225,6 +3227,10 @@ class LibvirtDriver(driver.ComputeDriver):
             if os.path.exists(instance_dir):
                 raise exception.DestinationDiskExists(path=instance_dir)
             os.mkdir(instance_dir)
+
+            # Ensure images and backing files are present.
+            self._create_images_and_backing(context, instance, instance_dir,
+                                            disk_info)
 
         if is_volume_backed and not (is_block_migration or is_shared_storage):
             # Touch the console.log file, required by libvirt.
@@ -3271,28 +3277,21 @@ class LibvirtDriver(driver.ComputeDriver):
                              instance=instance)
                     greenthread.sleep(1)
 
-    def pre_block_migration(self, ctxt, instance, disk_info_json):
-        """Preparation for block migration."""
-        # NOTE (rmk): When preparing for a block migration, the instance dir
-        #             should not exist on the destination hypervisor.
-        instance_dir = libvirt_utils.get_instance_path(instance)
-        if os.path.exists(instance_dir):
-            raise exception.DestinationDiskExists(path=instance_dir)
-        os.mkdir(instance_dir)
-        self._create_images_and_backing(ctxt, instance, disk_info_json)
-
-    def _create_images_and_backing(self, ctxt, instance, disk_info_json):
+    def _create_images_and_backing(self, ctxt, instance, instance_dir,
+                                   disk_info_json):
         """
         :params ctxt: security context
         :params instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
+        :params instance_dir:
+            instance path to use, calculated externally to handle block
+            migrating an instance with an old style instance path
         :params disk_info_json:
             json strings specified in get_instance_disk_info
 
         """
         disk_info = jsonutils.loads(disk_info_json)
-        instance_dir = libvirt_utils.get_instance_path(instance)
 
         for info in disk_info:
             base = os.path.basename(info['path'])

@@ -115,7 +115,7 @@ class HyperVDriver(driver.ComputeDriver):
                                               block_migration, migrate_data)
 
     def pre_live_migration(self, context, instance, block_device_info,
-                           network_info, migrate_data=None):
+                           network_info, disk, migrate_data=None):
         self._livemigrationops.pre_live_migration(context, instance,
                                                   block_device_info,
                                                   network_info)
