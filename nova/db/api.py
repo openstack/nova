@@ -1195,9 +1195,11 @@ def security_group_get(context, security_group_id, columns_to_join=None):
                                    columns_to_join)
 
 
-def security_group_get_by_name(context, project_id, group_name):
+def security_group_get_by_name(context, project_id, group_name,
+                               columns_to_join=None):
     """Returns a security group with the specified name from a project."""
-    return IMPL.security_group_get_by_name(context, project_id, group_name)
+    return IMPL.security_group_get_by_name(context, project_id, group_name,
+                                           columns_to_join=None)
 
 
 def security_group_get_by_project(context, project_id):
