@@ -2367,7 +2367,7 @@ class API(base.Base):
 
         image_id = None
         if not self.is_volume_backed_instance(context, instance):
-            name = '%s-shelved' % instance['name']
+            name = '%s-shelved' % instance['display_name']
             image_meta = self._create_image(context, instance, name,
                     'snapshot')
             image_id = image_meta['id']

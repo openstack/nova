@@ -315,11 +315,27 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 class ShelveComputeAPITestCase(test_compute.BaseTestCase):
     def test_shelve(self):
         # Ensure instance can be shelved.
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        fake_instance = self._create_fake_instance({'display_name': 'vm01'})
+        instance = jsonutils.to_primitive(fake_instance)
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
         self.assertEqual(instance['task_state'], None)
+
+        def fake_init(self2):
+            # In original _FakeImageService.__init__(), some fake images are
+            # created. To verify the snapshot name of this test only, here
+            # sets a fake method.
+            self2.images = {}
+
+        def fake_create(self2, ctxt, metadata):
+            self.assertEqual(metadata['name'], 'vm01-shelved')
+            metadata['id'] = '8b24ed3f-ee57-43bc-bc2e-fb2e9482bc42'
+            return metadata
+
+        fake_image.stub_out_image_service(self.stubs)
+        self.stubs.Set(fake_image._FakeImageService, '__init__', fake_init)
+        self.stubs.Set(fake_image._FakeImageService, 'create', fake_create)
 
         inst_obj = instance_obj.Instance.get_by_uuid(self.context,
                                                      instance_uuid)
