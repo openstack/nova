@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from eventlet import greenthread
 import mock
 
 from nova.compute import power_state
@@ -524,7 +525,9 @@ class SpawnTestCase(VMOpsTestBase):
         vm_ref = "vm_ref"
 
         self.mox.StubOutWithMock(self.vmops, 'get_info')
+        self.mox.StubOutWithMock(greenthread, 'sleep')
         self.vmops.get_info(instance, vm_ref).AndReturn({"state": "asdf"})
+        greenthread.sleep(0.5)
         self.vmops.get_info(instance, vm_ref).AndReturn({
                                             "state": power_state.RUNNING})
 
