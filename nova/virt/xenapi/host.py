@@ -24,6 +24,7 @@ from nova.compute import vm_states
 from nova import conductor
 from nova import context
 from nova import exception
+from nova.objects import aggregate as aggregate_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -79,7 +80,7 @@ class Host(object):
                     instance = instance_obj.Instance.get_by_uuid(ctxt, uuid)
                     vm_counter = vm_counter + 1
 
-                    aggregate = self._virtapi.aggregate_get_by_host(
+                    aggregate = aggregate_obj.AggregateList.get_by_host(
                         ctxt, host, key=pool_states.POOL_FLAG)
                     if not aggregate:
                         msg = _('Aggregate for host %(host)s count not be'

@@ -49,6 +49,7 @@ from oslo.config import cfg
 
 from nova import context
 from nova import exception
+from nova.objects import aggregate as aggregate_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -717,7 +718,7 @@ class XenAPISession(object):
 
     def _get_host_uuid(self):
         if self.is_slave:
-            aggr = self._virtapi.aggregate_get_by_host(
+            aggr = aggregate_obj.AggregateList.get_by_host(
                 context.get_admin_context(),
                 CONF.host, key=pool_states.POOL_FLAG)[0]
             if not aggr:

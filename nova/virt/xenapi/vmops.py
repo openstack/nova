@@ -37,6 +37,7 @@ from nova.compute import vm_mode
 from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
+from nova.objects import aggregate as aggregate_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -1726,12 +1727,12 @@ class VMOps(object):
                                                network_info=network_info)
 
     def _get_host_uuid_from_aggregate(self, context, hostname):
-        current_aggregate = self._virtapi.aggregate_get_by_host(
+        current_aggregate = aggregate_obj.AggregateList.get_by_host(
             context, CONF.host, key=pool_states.POOL_FLAG)[0]
         if not current_aggregate:
             raise exception.AggregateHostNotFound(host=CONF.host)
         try:
-            return current_aggregate.metadetails[hostname]
+            return current_aggregate.metadata[hostname]
         except KeyError:
             reason = _('Destination host:%s must be in the same '
                        'aggregate as the source server') % hostname

@@ -37,6 +37,7 @@ from nova import context
 from nova import crypto
 from nova import db
 from nova import exception
+from nova.objects import aggregate as aggregate_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -48,6 +49,7 @@ from nova.tests import fake_network
 from nova.tests import fake_processutils
 import nova.tests.image.fake as fake_image
 from nova.tests import matchers
+from nova.tests.objects import test_aggregate
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt.xenapi import agent
@@ -1397,10 +1399,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         def fake_aggregate_get(context, host, key):
             if find_aggregate:
-                return [{'fake': 'aggregate'}]
+                return [test_aggregate.fake_aggregate]
             else:
                 return []
-        self.stubs.Set(self.conn.virtapi, 'aggregate_get_by_host',
+        self.stubs.Set(db, 'aggregate_get_by_host',
                        fake_aggregate_get)
 
         def fake_host_find(context, session, src, dst):
@@ -1454,7 +1456,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         def fake_aggregate_get_by_host(self, *args, **kwargs):
             was['called'] = True
             raise test.TestingException()
-        self.stubs.Set(self.conn._session._virtapi, "aggregate_get_by_host",
+        self.stubs.Set(db, "aggregate_get_by_host",
                        fake_aggregate_get_by_host)
 
         self.stubs.Set(self.conn._session, "is_slave", True)
@@ -2981,18 +2983,17 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                        fake_pool_set_name_label)
         self.conn._session.call_xenapi("pool.create", {"name": "asdf"})
 
-        values = {"name": 'fake_aggregate',
-                  'metadata': {'availability_zone': 'fake_zone'}}
-        result = db.aggregate_create(self.context, values)
         metadata = {'availability_zone': 'fake_zone',
                     pool_states.POOL_FLAG: "XenAPI",
                     pool_states.KEY: pool_states.CREATED}
-        db.aggregate_metadata_add(self.context, result['id'], metadata)
 
-        db.aggregate_host_add(self.context, result['id'], "host")
-        aggregate = db.aggregate_get(self.context, result['id'])
-        self.assertEqual(["host"], aggregate['hosts'])
-        self.assertEqual(metadata, aggregate['metadetails'])
+        aggregate = aggregate_obj.Aggregate()
+        aggregate.name = 'fake_aggregate'
+        aggregate.metadata = dict(metadata)
+        aggregate.create(self.context)
+        aggregate.add_host('host')
+        self.assertEqual(["host"], aggregate.hosts)
+        self.assertEqual(metadata, aggregate.metadata)
 
         self.conn._pool.add_to_aggregate(self.context, aggregate, "host")
         self.assertTrue(fake_pool_set_name_label.called)
@@ -3053,18 +3054,18 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                          aggr_zone='fake_zone',
                          aggr_state=pool_states.CREATED,
                          hosts=['host'], metadata=None):
-        values = {"name": aggr_name}
-        result = db.aggregate_create(self.context, values,
-                metadata={'availability_zone': aggr_zone})
-        pool_flag = {pool_states.POOL_FLAG: "XenAPI",
-                    pool_states.KEY: aggr_state}
-        db.aggregate_metadata_add(self.context, result['id'], pool_flag)
-
-        for host in hosts:
-            db.aggregate_host_add(self.context, result['id'], host)
+        aggregate = aggregate_obj.Aggregate()
+        aggregate.name = aggr_name
+        aggregate.metadata = {'availability_zone': aggr_zone,
+                              pool_states.POOL_FLAG: 'XenAPI',
+                              pool_states.KEY: aggr_state,
+                              }
         if metadata:
-            db.aggregate_metadata_add(self.context, result['id'], metadata)
-        return db.aggregate_get(self.context, result['id'])
+            aggregate.metadata.update(metadata)
+        aggregate.create(self.context)
+        for host in hosts:
+            aggregate.add_host(host)
+        return aggregate
 
     def test_add_host_to_aggregate_invalid_changing_status(self):
         """Ensure InvalidAggregateAction is raised when adding host while
@@ -3200,7 +3201,7 @@ class HypervisorPoolTestCase(test.NoDBTestCase):
     fake_aggregate = {
         'id': 98,
         'hosts': [],
-        'metadetails': {
+        'metadata': {
             'master_compute': 'master',
             pool_states.POOL_FLAG: {},
             pool_states.KEY: {}
@@ -3443,13 +3444,10 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        class fake_aggregate:
-            def __init__(self):
-                self.metadetails = {"host": "test_host_uuid"}
-
         def fake_aggregate_get_by_host(context, host, key=None):
             self.assertEqual(CONF.host, host)
-            return [fake_aggregate()]
+            return [dict(test_aggregate.fake_aggregate,
+                         metadetails={"host": "test_host_uuid"})]
 
         self.stubs.Set(db, "aggregate_get_by_host",
                 fake_aggregate_get_by_host)
@@ -3460,13 +3458,10 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        class fake_aggregate:
-            def __init__(self):
-                self.metadetails = {"dest_other": "test_host_uuid"}
-
         def fake_aggregate_get_by_host(context, host, key=None):
             self.assertEqual(CONF.host, host)
-            return [fake_aggregate()]
+            return [dict(test_aggregate.fake_aggregate,
+                         metadetails={"dest_other": "test_host_uuid"})]
 
         self.stubs.Set(db, "aggregate_get_by_host",
                       fake_aggregate_get_by_host)
