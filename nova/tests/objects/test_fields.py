@@ -212,3 +212,18 @@ class TestNetworkModel(TestField):
         self.coerce_bad_values = [[], 'foo']
         self.to_primitive_values = [(model, model.json())]
         self.from_primitive_values = [(model.json(), model)]
+
+
+class TestCIDR(TestField):
+    def setUp(self):
+        super(TestCIDR, self).setUp()
+        self.field = fields.Field(fields.CIDR())
+        good = ['192.168.0.1/24', '192.168.0.0/16', '192.168.0.0/8',
+                '192.168.0.0/0', '1.2.3.4/32', '1.2.3.4/22', '0/0',
+                '::1/128', '::1/64', '::1/0']
+        self.coerce_good_values = [(x, x) for x in good]
+        self.coerce_bad_values = ['192.168.0.0', '192.168.0.0/f',
+                                  '192.168.0.0/foo', '192.168.0.0/33',
+                                  '::1/129', '192.168.0.0/-1']
+        self.to_primitive_values = [(x, x) for x in good]
+        self.from_primitive_values = self.to_primitive_values

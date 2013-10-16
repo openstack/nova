@@ -363,6 +363,29 @@ class NetworkModel(FieldType):
         return network_model.NetworkInfo.hydrate(value)
 
 
+class CIDR(FieldType):
+    def coerce(self, obj, attr, value):
+        try:
+            network, length = value.split('/')
+        except (ValueError, AttributeError):
+            raise ValueError(_('CIDR "%s" is not in proper form') % value)
+        try:
+            network = netaddr.IPAddress(network)
+        except netaddr.AddrFormatError:
+            raise ValueError(_('Network "%s is not valid') % network)
+        try:
+            length = int(length)
+            assert (length >= 0)
+        except (ValueError, AssertionError):
+            raise ValueError(_('Netmask length "%s" is not valid') % length)
+        if ((network.version == 4 and length > 32) or
+                (network.version == 6 and length > 128)):
+            raise ValueError(_('Netmask length "%(length)s" is not valid '
+                               'for IPv%(version)i address') %
+                             {'length': length, 'version': network.version})
+        return value
+
+
 class AutoTypedField(Field):
     AUTO_TYPE = None
 
