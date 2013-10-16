@@ -32,6 +32,7 @@ from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import context
 from nova import crypto
@@ -1182,7 +1183,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
         self.assertTrue(fake_resetnetwork.called)
 
-    def _test_spawn_fails_with(self, trigger, expected_exception):
+    def _test_spawn_fails_silently_with(self, trigger, expected_exception):
         self.flags(xenapi_use_agent_default=True)
         self.flags(agent_version_timeout=0)
         actual_injected_files = []
@@ -1193,18 +1194,26 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        '_plugin_agent_version', fake_agent_version)
 
-        self.assertRaises(expected_exception, self._test_spawn,
-                IMAGE_VHD, None, None, os_type="linux", architecture="x86-64")
+        def fake_add_instance_fault(*args, **kwargs):
+            self.assertEqual(expected_exception, args[3])
+
+        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
+                       fake_add_instance_fault)
+
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
 
     def test_spawn_fails_with_agent_timeout(self):
-        self._test_spawn_fails_with("TIMEOUT:fake", exception.AgentTimeout)
+        self._test_spawn_fails_silently_with("TIMEOUT:fake",
+                                             exception.AgentTimeout)
 
     def test_spawn_fails_with_agent_not_implemented(self):
-        self._test_spawn_fails_with("NOT IMPLEMENTED:fake",
-                                    exception.AgentNotImplemented)
+        self._test_spawn_fails_silently_with("NOT IMPLEMENTED:fake",
+                                             exception.AgentNotImplemented)
 
     def test_spawn_fails_with_agent_error(self):
-        self._test_spawn_fails_with("fake_error", exception.AgentError)
+        self._test_spawn_fails_silently_with("fake_error",
+                                             exception.AgentError)
 
     def test_spawn_fails_with_agent_bad_return(self):
         self.flags(xenapi_use_agent_default=True)
@@ -1216,8 +1225,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        '_plugin_agent_version', fake_agent_version)
 
-        self.assertRaises(exception.AgentError, self._test_spawn,
-                IMAGE_VHD, None, None, os_type="linux", architecture="x86-64")
+        exception.AgentError
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
 
     def test_spawn_fails_agent_not_implemented(self):
         # Test spawning with injected_files.
@@ -1230,8 +1240,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(stubs.FakeSessionForVMTests,
                        '_plugin_agent_version', fake_agent_version)
 
-        self.assertRaises(exception.AgentNotImplemented, self._test_spawn,
-                IMAGE_VHD, None, None, os_type="linux", architecture="x86-64")
+        exception.AgentNotImplemented
+        self._test_spawn(IMAGE_VHD, None, None,
+                         os_type="linux", architecture="x86-64")
 
     def test_rescue(self):
         instance = self._create_instance()
@@ -2039,28 +2050,6 @@ class XenAPIDetermineDiskImageTestCase(test.NoDBTestCase):
     def test_none(self):
         image_meta = None
         self.assert_disk_type(image_meta, None)
-
-
-class CompareVersionTestCase(test.NoDBTestCase):
-    def test_less_than(self):
-        # Test that cmp_version compares a as less than b.
-        self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.5') < 0)
-
-    def test_greater_than(self):
-        # Test that cmp_version compares a as greater than b.
-        self.assertTrue(vmops.cmp_version('1.2.3.5', '1.2.3.4') > 0)
-
-    def test_equal(self):
-        # Test that cmp_version compares a as equal to b.
-        self.assertTrue(vmops.cmp_version('1.2.3.4', '1.2.3.4') == 0)
-
-    def test_non_lexical(self):
-        # Test that cmp_version compares non-lexically.
-        self.assertTrue(vmops.cmp_version('1.2.3.10', '1.2.3.4') > 0)
-
-    def test_length(self):
-        # Test that cmp_version compares by length as last resort.
-        self.assertTrue(vmops.cmp_version('1.2.3', '1.2.3.4') < 0)
 
 
 class XenAPIHostTestCase(stubs.XenAPITestBase):
