@@ -267,7 +267,8 @@ class PciDevTracker(object):
         uuid = instance['uuid']
         if sign == 1 and uuid not in self.claims:
             devs = self._claim_instance(instance, 'new_')
-            self.claims[uuid] = devs
+            if devs:
+                self.claims[uuid] = devs
         if sign == -1 and uuid in self.claims:
             self._free_instance(instance)
 
@@ -282,11 +283,13 @@ class PciDevTracker(object):
 
         for uuid in self.claims.keys():
             if uuid not in existed:
-                for dev in self.claims.pop(uuid):
+                devs = self.claims.pop(uuid, [])
+                for dev in devs:
                     self._free_device(dev)
         for uuid in self.allocations.keys():
             if uuid not in existed:
-                for dev in self.allocations.pop(uuid):
+                devs = self.allocations.pop(uuid, [])
+                for dev in devs:
                     self._free_device(dev)
 
     def set_compute_node_id(self, node_id):
