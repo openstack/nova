@@ -468,7 +468,7 @@ class ServersController(wsgi.Controller):
         self.update_extension_manager = \
             stevedore.enabled.EnabledExtensionManager(
                 namespace=self.EXTENSION_UPDATE_NAMESPACE,
-                check_func=_check_load_extension('server_resize'),
+                check_func=_check_load_extension('server_update'),
                 invoke_on_load=True,
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
