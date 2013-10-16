@@ -206,6 +206,36 @@ class AgentsTest(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           req, body)
 
+    def _test_agents_create_with_invalid_length(self, key):
+        req = FakeRequest()
+        body = {'agent': {'hypervisor': 'kvm',
+                'os': 'win',
+                'architecture': 'x86',
+                'version': '7.0',
+                'url': 'xxx://xxxx/xxx/xxx',
+                'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+        body['agent'][key] = 'x' * 256
+        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
+                          req, body)
+
+    def test_agents_create_with_invalid_length_hypervisor(self):
+        self._test_agents_create_with_invalid_length('hypervisor')
+
+    def test_agents_create_with_invalid_length_os(self):
+        self._test_agents_create_with_invalid_length('os')
+
+    def test_agents_create_with_invalid_length_architecture(self):
+        self._test_agents_create_with_invalid_length('architecture')
+
+    def test_agents_create_with_invalid_length_version(self):
+        self._test_agents_create_with_invalid_length('version')
+
+    def test_agents_create_with_invalid_length_url(self):
+        self._test_agents_create_with_invalid_length('url')
+
+    def test_agents_create_with_invalid_length_md5hash(self):
+        self._test_agents_create_with_invalid_length('md5hash')
+
     def test_agents_delete(self):
         req = FakeRequest()
         self.controller.delete(req, 1)
@@ -300,3 +330,21 @@ class AgentsTest(test.NoDBTestCase):
         body = {}
         self.assertRaises(exc.HTTPBadRequest, self.controller.update,
                           req, 1, body)
+
+    def _test_agents_update_with_invalid_length(self, key):
+        req = FakeRequest()
+        body = {'agent': {'version': '7.0',
+                'url': 'xxx://xxxx/xxx/xxx',
+                'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+        body['agent'][key] = 'x' * 256
+        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+                          req, 1, body)
+
+    def test_agents_update_with_invalid_length_version(self):
+        self._test_agents_update_with_invalid_length('version')
+
+    def test_agents_update_with_invalid_length_url(self):
+        self._test_agents_update_with_invalid_length('url')
+
+    def test_agents_update_with_invalid_length_md5hash(self):
+        self._test_agents_update_with_invalid_length('md5hash')

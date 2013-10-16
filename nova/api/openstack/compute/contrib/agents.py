@@ -22,6 +22,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import db
 from nova import exception
+from nova import utils
 
 
 authorize = extensions.extension_authorizer('compute', 'agents')
@@ -102,6 +103,13 @@ class AgentController(object):
             raise webob.exc.HTTPUnprocessableEntity()
 
         try:
+            utils.check_string_length(url, 'url', max_length=255)
+            utils.check_string_length(md5hash, 'md5hash', max_length=255)
+            utils.check_string_length(version, 'version', max_length=255)
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+
+        try:
             db.agent_build_update(context, id,
                                 {'version': version,
                                  'url': url,
@@ -137,6 +145,17 @@ class AgentController(object):
             md5hash = agent['md5hash']
         except (TypeError, KeyError):
             raise webob.exc.HTTPUnprocessableEntity()
+
+        try:
+            utils.check_string_length(hypervisor, 'hypervisor', max_length=255)
+            utils.check_string_length(os, 'os', max_length=255)
+            utils.check_string_length(architecture, 'architecture',
+                                      max_length=255)
+            utils.check_string_length(version, 'version', max_length=255)
+            utils.check_string_length(url, 'url', max_length=255)
+            utils.check_string_length(md5hash, 'md5hash', max_length=255)
+        except exception.InvalidInput as exc:
+            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
 
         try:
             agent_build_ref = db.agent_build_create(context,
