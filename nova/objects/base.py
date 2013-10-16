@@ -177,9 +177,11 @@ class NovaObject(object):
     fields = {}
     obj_extra_fields = []
 
-    def __init__(self):
+    def __init__(self, context=None, **kwargs):
         self._changed_fields = set()
-        self._context = None
+        self._context = context
+        for key in kwargs.keys():
+            self[key] = kwargs[key]
 
     @classmethod
     def obj_name(cls):
