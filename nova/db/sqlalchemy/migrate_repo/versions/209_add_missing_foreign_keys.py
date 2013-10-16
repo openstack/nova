@@ -47,7 +47,8 @@ def upgrade(migrate_engine):
         table_dump.create()
         for column, ref_table_name, ref_column_name in indexes:
             ref_table = load_tables[ref_table_name]
-            subq = select([getattr(ref_table.c, ref_column_name)])
+            subq = select([getattr(ref_table.c, ref_column_name)]).where(
+                           getattr(ref_table.c, ref_column_name) != None)
             sql = utils.InsertFromSelect(table_dump, table.select().where(
                 ~ getattr(table.c, column).in_(subq)))
             sql_del = table.delete().where(

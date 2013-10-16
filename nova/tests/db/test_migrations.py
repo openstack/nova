@@ -2785,6 +2785,17 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             change_tables[i].delete().execute()
             change_tables[i].insert().values(data[i]).execute()
 
+        # NOTE(jhesketh): Add instance with NULL uuid to check the backups
+        #                 still work correctly and avoid violating the foreign
+        #                 key constraint. If there are NULL values in a NOT IN
+        #                 () set the result is always false. Therefore having
+        #                 this instance inserted here causes migration 209 to
+        #                 fail unless the IN set sub-query is modified
+        #                 appropriately. See bug/1240325
+        db_utils.get_table(engine, 'instances').insert(
+            {'uuid': None}
+        ).execute()
+
     def _check_209(self, engine, data):
         if engine.name == 'sqlite':
             return
