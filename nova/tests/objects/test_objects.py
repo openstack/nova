@@ -647,6 +647,12 @@ class _TestObject(object):
         obj = TestObj()
         self.assertEqual(['foo', 'bar'], obj.obj_fields)
 
+    def test_obj_constructor(self):
+        obj = MyObj(context=self.context, foo=123, bar='abc')
+        self.assertEqual(123, obj.foo)
+        self.assertEqual('abc', obj.bar)
+        self.assertEqual(set(['foo', 'bar']), obj.obj_what_changed())
+
 
 class TestObject(_LocalTest, _TestObject):
     pass
