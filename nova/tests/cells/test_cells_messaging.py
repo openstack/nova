@@ -24,6 +24,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.network import model as network_model
 from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
 from nova.objects import instance as instance_obj
@@ -1396,10 +1397,10 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.assertFalse(self.mid_methods_cls._at_the_top())
         self.assertFalse(self.src_methods_cls._at_the_top())
 
-    def test_instance_update_at_top(self):
+    def _test_instance_update_at_top(self, net_info):
         fake_info_cache = {'id': 1,
                            'instance': 'fake_instance',
-                           'other': 'moo'}
+                           'network_info': net_info}
         fake_sys_metadata = [{'id': 1,
                               'key': 'key1',
                               'value': 'value1'},
@@ -1418,7 +1419,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                          'other': 'meow'}
         expected_sys_metadata = {'key1': 'value1',
                                  'key2': 'value2'}
-        expected_info_cache = {'other': 'moo'}
+        expected_info_cache = {'network_info': "[]"}
         expected_cell_name = 'api-cell!child-cell2!grandchild-cell1'
         expected_instance = {'system_metadata': expected_sys_metadata,
                              'cell_name': expected_cell_name,
@@ -1444,6 +1445,15 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.mox.ReplayAll()
 
         self.src_msg_runner.instance_update_at_top(self.ctxt, fake_instance)
+
+    def test_instance_update_at_top(self):
+        self._test_instance_update_at_top("[]")
+
+    def test_instance_update_at_top_netinfo_list(self):
+        self._test_instance_update_at_top([])
+
+    def test_instance_update_at_top_netinfo_model(self):
+        self._test_instance_update_at_top(network_model.NetworkInfo())
 
     def test_instance_update_at_top_with_building_state(self):
         fake_info_cache = {'id': 1,

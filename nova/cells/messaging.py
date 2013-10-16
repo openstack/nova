@@ -37,6 +37,7 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova.db import base
 from nova import exception
+from nova.network import model as network_model
 from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common import excutils
@@ -994,6 +995,12 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
                 self.db.instance_create(message.ctxt, instance,
                                         legacy=False)
         if info_cache:
+            network_info = info_cache.get('network_info')
+            if isinstance(network_info, list):
+                if not isinstance(network_info, network_model.NetworkInfo):
+                    network_info = network_model.NetworkInfo.hydrate(
+                            network_info)
+                info_cache['network_info'] = network_info.json()
             try:
                 self.db.instance_info_cache_update(
                         message.ctxt, instance_uuid, info_cache)
