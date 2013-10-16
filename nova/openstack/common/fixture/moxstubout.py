@@ -19,7 +19,6 @@
 
 import fixtures
 import mox
-import stubout
 
 
 class MoxStubout(fixtures.Fixture):
@@ -30,8 +29,6 @@ class MoxStubout(fixtures.Fixture):
         # emulate some of the mox stuff, we can't use the metaclass
         # because it screws with our generators
         self.mox = mox.Mox()
-        self.stubs = stubout.StubOutForTesting()
+        self.stubs = self.mox.stubs
         self.addCleanup(self.mox.UnsetStubs)
-        self.addCleanup(self.stubs.UnsetAll)
-        self.addCleanup(self.stubs.SmartUnsetAll)
         self.addCleanup(self.mox.VerifyAll)

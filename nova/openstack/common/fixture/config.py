@@ -17,6 +17,7 @@
 #    under the License.
 import fixtures
 from oslo.config import cfg
+import six
 
 
 class Config(fixtures.Fixture):
@@ -41,5 +42,5 @@ class Config(fixtures.Fixture):
 
     def config(self, **kw):
         group = kw.pop('group', None)
-        for k, v in kw.iteritems():
+        for k, v in six.iteritems(kw):
             self.conf.set_override(k, v, group)

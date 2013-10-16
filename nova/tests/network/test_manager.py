@@ -969,7 +969,7 @@ class VlanNetworkTestCase(test.TestCase):
                                               'fakeiface',
                                               'fakenet')
 
-    def test_floating_ip_init_host(self):
+    def _test_floating_ip_init_host(self, public_interface, expected_arg):
 
         def get_all_by_host(_context, _host):
             return [{'interface': 'foo',
@@ -990,26 +990,23 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network.db, 'fixed_ip_get', fixed_ip_get)
 
         self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
-        self.flags(public_interface=False)
+        self.flags(public_interface=public_interface)
         self.network.l3driver.add_floating_ip('fakefloat',
                                               'fakefixed',
-                                              'fakeiface',
+                                              expected_arg,
                                               'fakenet')
         self.mox.ReplayAll()
         self.network.init_host_floating_ips()
         self.mox.UnsetStubs()
         self.mox.VerifyAll()
 
-        self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
-        self.flags(public_interface='fooiface')
-        self.network.l3driver.add_floating_ip('fakefloat',
-                                              'fakefixed',
-                                              'fooiface',
-                                              'fakenet')
-        self.mox.ReplayAll()
-        self.network.init_host_floating_ips()
-        self.mox.UnsetStubs()
-        self.mox.VerifyAll()
+    def test_floating_ip_init_host_without_public_interface(self):
+        self._test_floating_ip_init_host(public_interface=False,
+                                         expected_arg='fakeiface')
+
+    def test_floating_ip_init_host_with_public_interface(self):
+        self._test_floating_ip_init_host(public_interface='fooiface',
+                                         expected_arg='fooiface')
 
     def test_disassociate_floating_ip(self):
         ctxt = context.RequestContext('testuser', 'testproject',
