@@ -3234,6 +3234,15 @@ class AggregateAPI(base.Base):
 class KeypairAPI(base.Base):
     """Subset of the Compute Manager API for managing key pairs."""
 
+    def _notify(self, context, event_suffix, keypair_name):
+        payload = {
+            'tenant_id': context.project_id,
+            'user_id': context.user_id,
+            'key_name': keypair_name,
+        }
+        notify = notifier.get_notifier(service='api')
+        notify.info(context, 'keypair.%s' % event_suffix, payload)
+
     def _validate_new_key_pair(self, context, user_id, key_name):
         safe_chars = "_- " + string.digits + string.ascii_letters
         clean_value = "".join(x for x in key_name if x in safe_chars)
@@ -3252,9 +3261,12 @@ class KeypairAPI(base.Base):
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
+    @exception.wrap_exception(notifier=notifier.get_notifier(service='api'))
     def import_key_pair(self, context, user_id, key_name, public_key):
         """Import a key pair using an existing public key."""
         self._validate_new_key_pair(context, user_id, key_name)
+
+        self._notify(context, 'import.start', key_name)
 
         fingerprint = crypto.generate_fingerprint(public_key)
 
@@ -3265,11 +3277,16 @@ class KeypairAPI(base.Base):
         keypair.public_key = public_key
         keypair.create(context)
 
+        self._notify(context, 'import.end', key_name)
+
         return keypair
 
+    @exception.wrap_exception(notifier=notifier.get_notifier(service='api'))
     def create_key_pair(self, context, user_id, key_name):
         """Create a new key pair."""
         self._validate_new_key_pair(context, user_id, key_name)
+
+        self._notify(context, 'create.start', key_name)
 
         private_key, public_key, fingerprint = crypto.generate_key_pair()
 
@@ -3280,11 +3297,16 @@ class KeypairAPI(base.Base):
         keypair.public_key = public_key
         keypair.create(context)
 
+        self._notify(context, 'create.end', key_name)
+
         return keypair, private_key
 
+    @exception.wrap_exception(notifier=notifier.get_notifier(service='api'))
     def delete_key_pair(self, context, user_id, key_name):
         """Delete a keypair by name."""
+        self._notify(context, 'delete.start', key_name)
         keypair_obj.KeyPair.destroy_by_name(context, user_id, key_name)
+        self._notify(context, 'delete.end', key_name)
 
     def get_key_pairs(self, context, user_id):
         """List key pairs."""
