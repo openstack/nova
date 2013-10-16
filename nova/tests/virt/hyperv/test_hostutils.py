@@ -18,12 +18,30 @@ from nova import test
 from nova.virt.hyperv import hostutils
 
 
+class FakeCPUSpec(object):
+    """Fake CPU Spec for unit tests."""
+
+    Architecture = mock.sentinel.cpu_arch
+    Name = mock.sentinel.cpu_name
+    Manufacturer = mock.sentinel.cpu_man
+    NumberOfCores = mock.sentinel.cpu_cores
+    NumberOfLogicalProcessors = mock.sentinel.cpu_procs
+
+
 class HostUtilsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V hostutils class."""
+
+    _FAKE_MEMORY_TOTAL = 1024L
+    _FAKE_MEMORY_FREE = 512L
+    _FAKE_DISK_SIZE = 1024L
+    _FAKE_DISK_FREE = 512L
+    _FAKE_VERSION_GOOD = '6.2.0'
+    _FAKE_VERSION_BAD = '6.1.9'
 
     def setUp(self):
         self._hostutils = hostutils.HostUtils()
         self._hostutils._conn_cimv2 = mock.MagicMock()
+
         super(HostUtilsTestCase, self).setUp()
 
     @mock.patch('nova.virt.hyperv.hostutils.ctypes')
@@ -32,3 +50,48 @@ class HostUtilsTestCase(test.NoDBTestCase):
         mock_ctypes.windll.kernel32.GetTickCount64.return_value = tick_count64
         response = self._hostutils.get_host_tick_count64()
         self.assertEqual(tick_count64, response)
+
+    def test_get_cpus_info(self):
+        cpu = mock.MagicMock(spec=FakeCPUSpec)
+        self._hostutils._conn_cimv2.query.return_value = [cpu]
+        cpu_list = self._hostutils.get_cpus_info()
+        self.assertEqual([cpu._mock_children], cpu_list)
+
+    def test_get_memory_info(self):
+        memory = mock.MagicMock()
+        type(memory).TotalVisibleMemorySize = mock.PropertyMock(
+            return_value=self._FAKE_MEMORY_TOTAL)
+        type(memory).FreePhysicalMemory = mock.PropertyMock(
+            return_value=self._FAKE_MEMORY_FREE)
+
+        self._hostutils._conn_cimv2.query.return_value = [memory]
+        total_memory, free_memory = self._hostutils.get_memory_info()
+
+        self.assertEqual(self._FAKE_MEMORY_TOTAL, total_memory)
+        self.assertEqual(self._FAKE_MEMORY_FREE, free_memory)
+
+    def test_get_volume_info(self):
+        disk = mock.MagicMock()
+        type(disk).Size = mock.PropertyMock(return_value=self._FAKE_DISK_SIZE)
+        type(disk).FreeSpace = mock.PropertyMock(
+            return_value=self._FAKE_DISK_FREE)
+
+        self._hostutils._conn_cimv2.query.return_value = [disk]
+        (total_memory, free_memory) = self._hostutils.get_volume_info(
+            mock.sentinel.FAKE_DRIVE)
+
+        self.assertEqual(self._FAKE_DISK_SIZE, total_memory)
+        self.assertEqual(self._FAKE_DISK_FREE, free_memory)
+
+    def test_check_min_windows_version_true(self):
+        self._test_check_min_windows_version(self._FAKE_VERSION_GOOD, True)
+
+    def test_check_min_windows_version_false(self):
+        self._test_check_min_windows_version(self._FAKE_VERSION_BAD, False)
+
+    def _test_check_min_windows_version(self, version, expected):
+        os = mock.MagicMock()
+        os.Version = version
+        self._hostutils._conn_cimv2.Win32_OperatingSystem.return_value = [os]
+        self.assertEqual(expected,
+                         self._hostutils.check_min_windows_version(6, 2))
