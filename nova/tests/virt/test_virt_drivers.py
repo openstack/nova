@@ -19,6 +19,7 @@ import fixtures
 import sys
 import traceback
 
+from mock import MagicMock
 import netaddr
 
 from nova.compute import manager
@@ -706,6 +707,14 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # Point _VirtDriverTestCase at the right module
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
+        self.stubs.Set(self.connection,
+                                 'set_host_enabled', MagicMock())
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.context.get_admin_context',
+            self._fake_admin_context))
+
+    def _fake_admin_context(self, *args, **kwargs):
+        return self.ctxt
 
     def test_force_hard_reboot(self):
         self.flags(libvirt_wait_soft_reboot_seconds=0)
@@ -715,3 +724,19 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # there is lack of fake stuff to execute this method. so pass.
         self.skipTest("Test nothing, but this method"
                       " needed to override superclass.")
+
+    def test_set_host_enabled(self):
+        self.mox.UnsetStubs()
+        service_mock = MagicMock()
+
+        # Previous status of the service: disabled: False
+        service_mock.__getitem__.return_value = False
+        from nova.objects import service as service_obj
+        self.mox.StubOutWithMock(service_obj.Service,
+                                 'get_by_compute_host')
+        service_obj.Service.get_by_compute_host(self.ctxt,
+                                    'fake-mini').AndReturn(service_mock)
+        self.mox.ReplayAll()
+        self.connection.set_host_enabled('my_test_host', 'ERROR!')
+        self.assertTrue(service_mock.disabled and
+                        service_mock.disabled_reason == 'ERROR!')
