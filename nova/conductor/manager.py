@@ -74,7 +74,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.58'
+    RPC_API_VERSION = '1.60'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -218,6 +218,8 @@ class ConductorManager(manager.Manager):
                                                    host, key)
         return jsonutils.to_primitive(aggregates)
 
+    # NOTE(danms): This method is now deprecated and can be removed in
+    # version 2.0 of the RPC API
     def aggregate_metadata_add(self, context, aggregate, metadata,
                                set_delete=False):
         new_metadata = self.db.aggregate_metadata_add(context.elevated(),
@@ -225,6 +227,8 @@ class ConductorManager(manager.Manager):
                                                       metadata, set_delete)
         return jsonutils.to_primitive(new_metadata)
 
+    # NOTE(danms): This method is now deprecated and can be removed in
+    # version 2.0 of the RPC API
     @rpc_common.client_exceptions(exception.AggregateMetadataNotFound)
     def aggregate_metadata_delete(self, context, aggregate, key):
         self.db.aggregate_metadata_delete(context.elevated(),

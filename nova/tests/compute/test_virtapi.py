@@ -45,17 +45,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
         self.assertExpected('instance_update', 'fake-uuid',
                             dict(host='foohost'))
 
-    def test_aggregate_get_by_host(self):
-        self.assertExpected('aggregate_get_by_host', 'fake-host', key=None)
-
-    def test_aggregate_metadata_add(self):
-        self.assertExpected('aggregate_metadata_add', {'id': 'fake'},
-                            {'foo': 'bar'}, set_delete=False)
-
-    def test_aggregate_metadata_delete(self):
-        self.assertExpected('aggregate_metadata_delete', {'id': 'fake'},
-                            'foo')
-
     def test_security_group_get_by_instance(self):
         self.assertExpected('security_group_get_by_instance',
                             {'uuid': 'fake-id'})
