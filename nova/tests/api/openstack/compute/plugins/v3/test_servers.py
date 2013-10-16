@@ -697,6 +697,85 @@ class ServersControllerTest(ControllerTest):
 
         self.assertIn('servers', res)
 
+    def test_all_tenants_param_normal(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertIn('all_tenants', filters)
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?all_tenants',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertIn('servers', res)
+
+    def test_all_tenants_param_one(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertIn('all_tenants', filters)
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?all_tenants=1',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertIn('servers', res)
+
+    def test_all_tenants_param_zero(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertNotIn('all_tenants', filters)
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?all_tenants=0',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertIn('servers', res)
+
+    def test_all_tenants_param_false(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertNotIn('all_tenants', filters)
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?all_tenants=false',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+
+        self.assertIn('servers', res)
+
+    def test_all_tenants_param_invalid(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertNotIn('all_tenants', filters)
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?all_tenants=xxx',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.index, req)
+
     def test_admin_restricted_tenant(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
