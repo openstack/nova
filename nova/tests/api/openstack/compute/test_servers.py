@@ -2206,36 +2206,6 @@ class ServersControllerCreateTest(test.TestCase):
         # The fact that the action doesn't raise is enough validation
         self.controller.create(self.req, self.body)
 
-    def test_create_instance_invalid_personality(self):
-
-        def fake_create(*args, **kwargs):
-            codec = 'utf8'
-            content = 'b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=='
-            start_position = 19
-            end_position = 20
-            msg = 'invalid start byte'
-            raise UnicodeDecodeError(codec, content, start_position,
-                                     end_position, msg)
-
-        self.stubs.Set(compute_api.API,
-                       'create',
-                       fake_create)
-
-        self.body['server']['personality'][0]["contents"] = \
-            "b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA=="
-
-        self.req.body = jsonutils.dumps(self.body)
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, self.req, self.body)
-
-    def test_create_location(self):
-        selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
-        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
-        self.req.body = jsonutils.dumps(self.body)
-        robj = self.controller.create(self.req, self.body)
-
-        self.assertEqual(robj['Location'], selfhref)
-
     def _do_test_create_instance_above_quota(self, resource, allowed, quota,
                                              expected_msg):
         fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
@@ -2930,31 +2900,6 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params)
 
-    def test_create_instance_with_config_drive_disabled(self):
-        config_drive = [{'config_drive': 'foo'}]
-        params = {'config_drive': config_drive}
-        old_create = compute_api.API.create
-
-        def create(*args, **kwargs):
-            self.assertEqual(kwargs['config_drive'], None)
-            return old_create(*args, **kwargs)
-
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
-
-    def test_create_instance_local_href(self):
-        self.req.body = jsonutils.dumps(self.body)
-        res = self.controller.create(self.req, self.body).obj
-        server = res['server']
-        self.assertEqual(FAKE_UUID, server['id'])
-
-    def test_create_instance_admin_pass_empty(self):
-        self.body['server']['flavorRef'] = 3
-        self.body['server']['adminPass'] = ''
-        self.req.body = jsonutils.dumps(self.body)
-        # The fact that the action doesn't raise is enough validation
-        self.controller.create(self.req, self.body)
-
     def test_create_instance_invalid_personality(self):
 
         def fake_create(*args, **kwargs):
@@ -2978,7 +2923,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_location(self):
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
-        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
         image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['imageRef'] = image_href
         self.req.body = jsonutils.dumps(self.body)
