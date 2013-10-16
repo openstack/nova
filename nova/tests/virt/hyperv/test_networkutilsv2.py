@@ -14,53 +14,32 @@
 
 import mock
 
-from nova import test
+from nova.tests.virt.hyperv import test_networkutils
 from nova.virt.hyperv import networkutilsv2
-from nova.virt.hyperv import vmutils
 
 
-class NetworkUtilsV2TestCase(test.NoDBTestCase):
+class NetworkUtilsV2TestCase(test_networkutils.NetworkUtilsTestCase):
     """Unit tests for the Hyper-V NetworkUtilsV2 class."""
 
-    _FAKE_VSWITCH_NAME = "fake_vswitch_name"
-    _FAKE_VSWITCH_PATH = "fake_vswitch_path"
+    _MSVM_VIRTUAL_SWITCH = 'Msvm_VirtualEthernetSwitch'
 
     def setUp(self):
+        super(NetworkUtilsV2TestCase, self).setUp()
         self._networkutils = networkutilsv2.NetworkUtilsV2()
         self._networkutils._conn = mock.MagicMock()
 
-        super(NetworkUtilsV2TestCase, self).setUp()
-
-    def test_get_external_vswitch(self):
-        mock_vswitch = mock.MagicMock()
-        mock_vswitch.path_.return_value = self._FAKE_VSWITCH_PATH
-        self._networkutils._conn.Msvm_VirtualEthernetSwitch.return_value = [
-            mock_vswitch]
-
-        switch_path = self._networkutils.get_external_vswitch(
-            self._FAKE_VSWITCH_NAME)
-
-        self.assertEqual(self._FAKE_VSWITCH_PATH, switch_path)
-
-    def test_get_external_vswitch_not_found(self):
-        mock_vswitch = mock.MagicMock()
-        mock_vswitch.path_.return_value = self._FAKE_VSWITCH_PATH
-        self._networkutils._conn.Msvm_VirtualEthernetSwitch.return_value = []
-
-        self.assertRaises(vmutils.HyperVException,
-                          self._networkutils.get_external_vswitch,
-                          self._FAKE_VSWITCH_NAME)
-
-    def test_get_external_vswitch_no_name(self):
-        mock_vswitch = mock.MagicMock()
-        mock_vswitch.path_.return_value = self._FAKE_VSWITCH_PATH
-
-        mock_ext_port = self._networkutils._conn.Msvm_ExternalEthernetPort()[0]
+    def _prepare_external_port(self, mock_vswitch, mock_ext_port):
         mock_lep = mock_ext_port.associators()[0]
         mock_lep1 = mock_lep.associators()[0]
         mock_esw = mock_lep1.associators()[0]
         mock_esw.associators.return_value = [mock_vswitch]
 
-        switch_path = self._networkutils.get_external_vswitch(None)
+    def test_create_vswitch_port(self):
+        self.assertRaises(
+            NotImplementedError,
+            self._networkutils.create_vswitch_port,
+            mock.sentinel.FAKE_VSWITCH_PATH,
+            mock.sentinel.FAKE_PORT_NAME)
 
-        self.assertEqual(self._FAKE_VSWITCH_PATH, switch_path)
+    def test_vswitch_port_needed(self):
+        self.assertFalse(self._networkutils.vswitch_port_needed())
