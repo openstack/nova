@@ -160,6 +160,8 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
+        if not utils.is_int_like(id):
+            raise exception.InvalidID(id=id)
         return self.db.floating_ip_get(context, id)
 
     @wrap_check_policy
