@@ -14,6 +14,7 @@ import iso8601
 import mox
 from oslo.config import cfg
 
+from nova.compute import claims
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import db
@@ -161,6 +162,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance.save()
         image = {'id': 'fake_id'}
         host = 'fake-mini'
+        node = test_compute.NODENAME
+        limits = {}
+        filter_properties = {'limits': limits}
         cur_time = timeutils.utcnow()
         cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(cur_time)
@@ -168,14 +172,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = image['id']
         sys_meta['shelved_host'] = host
-        hypervisor_hostname = 'fake_hypervisor_hostname'
-        fake_compute_info = {'hypervisor_hostname': hypervisor_hostname}
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
+        self.mox.StubOutWithMock(self.rt, 'instance_claim')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         self.deleted_image_id = None
@@ -188,12 +190,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
-        self.compute._get_compute_info(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndReturn(
-                                                        fake_compute_info)
         db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'task_state': task_states.SPAWNING, 'host': host,
-                 'node': hypervisor_hostname},
+                {'task_state': task_states.SPAWNING},
                 update_cells=False,
                 columns_to_join=['metadata', 'system_metadata'],
                 ).AndReturn((db_instance, db_instance))
@@ -201,6 +199,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 []).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
+        self.rt.instance_claim(self.context, instance, limits).AndReturn(
+                claims.Claim(db_instance, self.rt))
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
@@ -221,14 +221,17 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'unshelve.end')
         self.mox.ReplayAll()
 
-        self.compute.unshelve_instance(self.context, instance,
-                image=image)
+        self.compute.unshelve_instance(self.context, instance, image=image,
+                filter_properties=filter_properties, node=node)
         self.assertEqual(image['id'], self.deleted_image_id)
         self.assertEqual(instance.host, self.compute.host)
 
     def test_unshelve_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         host = 'fake-mini'
+        node = test_compute.NODENAME
+        limits = {}
+        filter_properties = {'limits': limits}
         cur_time = timeutils.utcnow()
         cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(cur_time)
@@ -243,24 +246,18 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
         sys_meta['shelved_image_id'] = None
         sys_meta['shelved_host'] = host
-        hypervisor_hostname = 'fake_hypervisor_hostname'
-        fake_compute_info = {'hypervisor_hostname': hypervisor_hostname}
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
-        self.mox.StubOutWithMock(self.compute, '_get_compute_info')
+        self.mox.StubOutWithMock(self.rt, 'instance_claim')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'unshelve.start')
-        self.compute._get_compute_info(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndReturn(
-                                                        fake_compute_info)
         db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'task_state': task_states.SPAWNING, 'host': host,
-                 'node': hypervisor_hostname},
+                {'task_state': task_states.SPAWNING},
                 update_cells=False,
                 columns_to_join=['metadata', 'system_metadata']
                 ).AndReturn((db_instance, db_instance))
@@ -268,6 +265,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 []).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
+        self.rt.instance_claim(self.context, instance, limits).AndReturn(
+                claims.Claim(db_instance, self.rt))
         self.compute.driver.spawn(self.context, instance, None,
                 injected_files=[], admin_password=None,
                 network_info=[],
@@ -288,7 +287,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 'unshelve.end')
         self.mox.ReplayAll()
 
-        self.compute.unshelve_instance(self.context, instance, image=None)
+        self.compute.unshelve_instance(self.context, instance, image=None,
+                filter_properties=filter_properties, node=node)
 
     def test_shelved_poll_none_exist(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())

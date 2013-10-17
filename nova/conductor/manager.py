@@ -829,9 +829,13 @@ class ComputeTaskManager(base.Base):
                     hosts = self._schedule_instances(context, image,
                                                      filter_properties,
                                                      instance)
-                    host = hosts.pop(0)['host']
-                    self.compute_rpcapi.unshelve_instance(context, instance,
-                                                          host, image)
+                    host_state = hosts[0]
+                    scheduler_utils.populate_filter_properties(
+                            filter_properties, host_state)
+                    (host, node) = (host_state['host'], host_state['nodename'])
+                    self.compute_rpcapi.unshelve_instance(
+                            context, instance, host, image=image,
+                            filter_properties=filter_properties, node=node)
             except exception.NoValidHost as ex:
                 instance.task_state = None
                 instance.save()

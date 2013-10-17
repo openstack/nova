@@ -1485,9 +1485,12 @@ class _BaseTaskTestCase(object):
                 'fake_image_id').AndReturn('fake_image')
         self.conductor_manager._schedule_instances(self.context,
                 'fake_image', filter_properties, instance).AndReturn(
-                        [{'host': 'fake_host'}])
+                        [{'host': 'fake_host',
+                          'nodename': 'fake_node',
+                          'limits': {}}])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
-                instance, 'fake_host', 'fake_image')
+                instance, 'fake_host', image='fake_image',
+                filter_properties={'limits': {}}, node='fake_node')
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()
@@ -1539,9 +1542,12 @@ class _BaseTaskTestCase(object):
                 'fake_image_id').AndReturn(None)
         self.conductor_manager._schedule_instances(self.context,
                 None, filter_properties, instance).AndReturn(
-                        [{'host': 'fake_host'}])
+                        [{'host': 'fake_host',
+                          'nodename': 'fake_node',
+                          'limits': {}}])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
-                instance, 'fake_host', None)
+                instance, 'fake_host', image=None,
+                filter_properties={'limits': {}}, node='fake_node')
         self.mox.ReplayAll()
 
         system_metadata['shelved_at'] = timeutils.utcnow()

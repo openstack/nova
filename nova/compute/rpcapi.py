@@ -228,6 +228,7 @@ class ComputeAPI(object):
         3.12 - Update add_fixed_ip_to_instance() to take an object
         3.13 - Update remove_fixed_ip_from_instance() to take an object
         3.14 - Update post_live_migration_at_destination() to take an object
+        3.15 - Adds filter_properties and node to unshelve_instance()
     '''
 
     VERSION_ALIASES = {
@@ -880,12 +881,18 @@ class ComputeAPI(object):
                 version=version)
         cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance)
 
-    def unshelve_instance(self, ctxt, instance, host, image=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.31')
+    def unshelve_instance(self, ctxt, instance, host, image=None,
+                          filter_properties=None, node=None):
+        msg_kwargs = {'instance': instance, 'image': image}
+        if self.client.can_send_version('3.15'):
+            version = '3.15'
+            msg_kwargs['filter_properties'] = filter_properties
+            msg_kwargs['node'] = node
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.31')
         cctxt = self.client.prepare(server=host, version=version)
-        cctxt.cast(ctxt, 'unshelve_instance',
-                   instance=instance, image=image)
+        cctxt.cast(ctxt, 'unshelve_instance', **msg_kwargs)
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
