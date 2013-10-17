@@ -2425,6 +2425,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # File injection only if needed
         elif inject_files and CONF.libvirt_inject_partition != -2:
+
+            if booted_from_volume:
+                LOG.warn(_('File injection into a boot from volume '
+                           'instance is not supported'), instance=instance)
+
             target_partition = None
             if not instance['kernel_id']:
                 target_partition = CONF.libvirt_inject_partition
