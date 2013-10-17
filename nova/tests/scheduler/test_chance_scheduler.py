@@ -140,42 +140,6 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver.schedule_run_instance(
                 ctxt, request_spec, None, None, None, None, {}, False)
 
-    def test_select_hosts(self):
-        ctxt = context.RequestContext('fake', 'fake', False)
-        ctxt_elevated = 'fake-context-elevated'
-        instance_opts = {'fake_opt1': 'meow', 'launch_index': -1}
-        request_spec = {'instance_uuids': ['fake-uuid1', 'fake-uuid2'],
-                        'instance_properties': instance_opts}
-
-        self.mox.StubOutWithMock(ctxt, 'elevated')
-        self.mox.StubOutWithMock(self.driver, 'hosts_up')
-        self.mox.StubOutWithMock(random, 'choice')
-
-        ctxt.elevated().AndReturn(ctxt_elevated)
-
-        # instance 1
-        hosts_full = ['host1', 'host2', 'host3', 'host4']
-        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
-        random.choice(hosts_full).AndReturn('host3')
-
-        # instance 2
-        ctxt.elevated().AndReturn(ctxt_elevated)
-        self.driver.hosts_up(ctxt_elevated, 'compute').AndReturn(hosts_full)
-        random.choice(hosts_full).AndReturn('host1')
-
-        self.mox.ReplayAll()
-        hosts = self.driver.select_hosts(ctxt, request_spec, {})
-        self.assertEqual(['host3', 'host1'], hosts)
-
-    def test_select_hosts_no_valid_host(self):
-
-        def _return_no_host(*args, **kwargs):
-            return []
-
-        self.stubs.Set(self.driver, '_schedule', _return_no_host)
-        self.assertRaises(exception.NoValidHost,
-                          self.driver.select_hosts, self.context, {}, {})
-
     def test_select_destinations(self):
         ctxt = context.RequestContext('fake', 'fake', False)
         ctxt_elevated = 'fake-context-elevated'

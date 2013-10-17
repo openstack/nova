@@ -277,13 +277,15 @@ class SchedulerManager(manager.Manager):
     def get_backdoor_port(self, context):
         return self.backdoor_port
 
+    # NOTE(hanlind): This method can be removed in v4.0 of the RPC API.
     @rpc_common.client_exceptions(exception.NoValidHost)
     def select_hosts(self, context, request_spec, filter_properties):
         """Returns host(s) best suited for this request_spec
         and filter_properties.
         """
-        hosts = self.driver.select_hosts(context, request_spec,
+        dests = self.driver.select_destinations(context, request_spec,
             filter_properties)
+        hosts = [dest['host'] for dest in dests]
         return jsonutils.to_primitive(hosts)
 
     @rpc_common.client_exceptions(exception.NoValidHost)

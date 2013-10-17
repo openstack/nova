@@ -64,15 +64,6 @@ class ChanceScheduler(driver.Scheduler):
 
         return random.choice(hosts)
 
-    def select_hosts(self, context, request_spec, filter_properties):
-        """Selects a set of random hosts."""
-        hosts = [self._schedule(context, CONF.compute_topic,
-            request_spec, filter_properties)
-            for instance_uuid in request_spec.get('instance_uuids', [])]
-        if not hosts:
-            raise exception.NoValidHost(reason="")
-        return hosts
-
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects random destinations."""
         num_instances = request_spec['num_instances']
