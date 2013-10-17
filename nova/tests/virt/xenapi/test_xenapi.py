@@ -194,62 +194,29 @@ def create_instance_with_system_metadata(context, instance_values):
     return db.instance_create(context, instance_values)
 
 
-# FIXME(sirp): convert this to XenAPITestBaseNoDB
-class XenAPIVolumeTestCase(stubs.XenAPITestBase):
+class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for Volume operations."""
     def setUp(self):
         super(XenAPIVolumeTestCase, self).setUp()
-        self.user_id = 'fake'
-        self.project_id = 'fake'
-        self.context = context.RequestContext(self.user_id, self.project_id)
         self.flags(disable_process_locking=True,
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    xenapi_connection_url='test_url',
                    xenapi_connection_password='test_pass')
-        db_fakes.stub_out_db_instance_api(self.stubs)
-        self.instance_values = {'id': 1,
-                  'project_id': self.user_id,
-                  'user_id': 'fake',
-                  'image_ref': 1,
-                  'kernel_id': 2,
-                  'ramdisk_id': 3,
-                  'root_gb': 80,
-                  'ephemeral_gb': 0,
-                  'instance_type_id': '3',  # m1.large
-                  'os_type': 'linux',
-                  'architecture': 'x86-64'}
 
-    def _create_volume(self, size=0):
-        """Create a volume object."""
-        vol = {}
-        vol['size'] = size
-        vol['user_id'] = 'fake'
-        vol['project_id'] = 'fake'
-        vol['host'] = 'localhost'
-        vol['availability_zone'] = CONF.default_availability_zone
-        vol['status'] = "creating"
-        vol['attach_status'] = "detached"
-        return db.volume_create(self.context, vol)
-
-    @staticmethod
-    def _make_connection_data():
-        return {
-            'volume_id': 1,
-            'target_iqn': 'iqn.2010-10.org.openstack:volume-00000001',
-            'target_portal': '127.0.0.1:3260,fake',
-            'target_lun': None,
-            'auth_method': 'CHAP',
-            'auth_username': 'username',
-            'auth_password': 'password',
-        }
+        self.instance = fake_instance.fake_db_instance(name='foo')
 
     @classmethod
     def _make_connection_info(cls):
-        return {
-            'driver_volume_type': 'iscsi',
-            'data': cls._make_connection_data()
-        }
+        target_iqn = 'iqn.2010-10.org.openstack:volume-00000001'
+        return {'driver_volume_type': 'iscsi',
+                'data': {'volume_id': 1,
+                         'target_iqn': target_iqn,
+                         'target_portal': '127.0.0.1:3260,fake',
+                         'target_lun': None,
+                         'auth_method': 'CHAP',
+                         'auth_username': 'username',
+                         'auth_password': 'password'}}
 
     def test_mountpoint_to_number(self):
         cases = {
@@ -273,8 +240,8 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
                     '%s yielded %s, not %s' % (input, actual, expected))
 
     def test_parse_volume_info_parsing_auth_details(self):
-        result = volume_utils.parse_volume_info(
-            self._make_connection_data())
+        conn_info = self._make_connection_info()
+        result = volume_utils.parse_volume_info(conn_info['data'])
 
         self.assertEqual('username', result['chapuser'])
         self.assertEqual('password', result['chappassword'])
@@ -289,10 +256,10 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         # This shows how to test Ops classes' methods.
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        instance = db.instance_create(self.context, self.instance_values)
-        vm = xenapi_fake.create_vm(instance['name'], 'Running')
-        result = conn.attach_volume(None, self._make_connection_info(),
-                                    instance, '/dev/sdc')
+        vm = xenapi_fake.create_vm(self.instance['name'], 'Running')
+        conn_info = self._make_connection_info()
+        result = conn.attach_volume(
+                None, conn_info, self.instance, '/dev/sdc')
 
         # check that the VM has a VBD attached to it
         # Get XenAPI record for VBD
@@ -306,12 +273,11 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForVolumeFailedTests)
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-        instance = db.instance_create(self.context, self.instance_values)
-        xenapi_fake.create_vm(instance['name'], 'Running')
+        xenapi_fake.create_vm(self.instance['name'], 'Running')
         self.assertRaises(exception.VolumeDriverNotFound,
                           conn.attach_volume,
                           None, {'driver_volume_type': 'nonexist'},
-                          instance, '/dev/sdc')
+                          self.instance, '/dev/sdc')
 
 
 # FIXME(sirp): convert this to use XenAPITestBaseNoDB
