@@ -60,8 +60,9 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
     def test_filter_datastores_simple(self):
         datastores = self.build_result_set(self.data)
-        best_match = vm_util.DSRecord(datastore=None, name=None,
-                              capacity=None, freespace=0)
+        best_match = vm_util.DSRecord(
+            datastore=None, name=None, capacity=None, freespace=0, type=None,
+            accessible=True)
         rec = vm_util._select_datastore(datastores, best_match)
 
         self.assertIsNotNone(rec[0], "could not find datastore!")
@@ -74,8 +75,9 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         data = []
         datastores = self.build_result_set(data)
 
-        best_match = vm_util.DSRecord(datastore=None, name=None,
-                              capacity=None, freespace=0)
+        best_match = vm_util.DSRecord(
+            datastore=None, name=None, type=None, capacity=None, freespace=0,
+            accessible=False)
         rec = vm_util._select_datastore(datastores, best_match)
 
         self.assertEqual(rec, best_match)
@@ -84,8 +86,9 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         datastores = self.build_result_set(self.data)
         datastore_regex = re.compile('no_match.*')
 
-        best_match = vm_util.DSRecord(datastore=None, name=None,
-                              capacity=None, freespace=0)
+        best_match = vm_util.DSRecord(
+            datastore=None, name=None, type=None, capacity=None, freespace=0,
+            accessible=False)
         rec = vm_util._select_datastore(datastores,
                                         best_match,
                                         datastore_regex)
@@ -105,8 +108,9 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         datastores = self.build_result_set(data)
         datastore_regex = re.compile('.*-good$')
 
-        best_match = vm_util.DSRecord(datastore=None, name=None,
-                              capacity=None, freespace=0)
+        best_match = vm_util.DSRecord(
+            datastore=None, name=None, type=None, capacity=None, freespace=0,
+            accessible=False)
         rec = vm_util._select_datastore(datastores,
                                         best_match,
                                         datastore_regex)
@@ -131,8 +135,9 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         prop_names = ['summary.type', 'summary.name',
                       'summary.capacity', 'summary.freeSpace']
         datastores = self.build_result_set(data, prop_names)
-        best_match = vm_util.DSRecord(datastore=None, name=None,
-                              capacity=None, freespace=0)
+        best_match = vm_util.DSRecord(
+            datastore=None, name=None, capacity=None, freespace=None,
+            type=None, accessible=False)
 
         rec = vm_util._select_datastore(datastores, best_match)
         self.assertEqual(rec, best_match, "no matches were expected")
@@ -150,9 +155,22 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         datastore_regex = re.compile('.*-good$')
 
         # the current best match is better than all candidates
-        best_match = vm_util.DSRecord(datastore='ds-100', name='best-ds-good',
-                              capacity=20 * units.Gi, freespace=19 * units.Gi)
+        best_match = vm_util.DSRecord(
+            datastore='ds-100', name='best-ds-good', type='VMFS',
+            capacity=20 * units.Gi, freespace=19 * units.Gi, accessible=True)
         rec = vm_util._select_datastore(datastores,
                                         best_match,
                                         datastore_regex)
         self.assertEqual(rec, best_match, "did not match datastore properly")
+
+    def test_is_valid_ds_record(self):
+        data = [
+            ['VMFS', 'spam-good', True, 20 * units.Gi, 10 * units.Gi],
+            ['NFS', 'eggs-good', True, 40 * units.Gi, 15 * units.Gi],
+            ['CFS', 'some-name-good', True, 50 * units.Gi, 5 * units.Gi],
+            ['NFS', 'some-other-good', False, 10 * units.Gi, 10 * units.Gi],
+        ]
+        validated_recs = [vm_util._is_valid_ds_record(vm_util.DSRecord(
+            datastore='ds-100', type=row[0], name=row[1], accessible=row[2],
+            capacity=row[3], freespace=row[4])) for row in data]
+        self.assertEqual([True, True, False, False], validated_recs)

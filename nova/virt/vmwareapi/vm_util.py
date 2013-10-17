@@ -35,7 +35,8 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 DSRecord = collections.namedtuple(
-    'DSRecord', ['datastore', 'name', 'capacity', 'freespace'])
+    'DSRecord', ['datastore', 'name', 'capacity', 'freespace', 'type',
+                 'accessible'])
 
 # A cache for VM references. The key will be the VM name
 # and the value is the VM reference. The VM name is unique. This
@@ -962,10 +963,26 @@ def get_vm_state_from_name(session, vm_name):
     return vm_state
 
 
-def get_stats_from_cluster(session, cluster):
+def _is_valid_ds_record(ds, datastore_regex=None):
+    """Checks if the given datastore record is valid.
+
+    :param ds: a datastore record
+    :param datastore_regex: an optional regular expression to match names
+    :return: True if a valid datastore record
+    """
+    # Local storage identifier vSphere doesn't support CIFS or
+    # vfat for datastores, therefore filtered
+    if ds.accessible and ds.type in ['VMFS', 'NFS']:
+        if datastore_regex is None or datastore_regex.match(ds.name):
+            return True
+    return False
+
+
+def get_stats_from_cluster(session, cluster, datastore_regex=None):
     """Get the aggregate resource stats of a cluster."""
     cpu_info = {'vcpus': 0, 'cores': 0, 'vendor': [], 'model': []}
     mem_info = {'total': 0, 'free': 0}
+    ds_info = {'total': 0, 'free': 0}
     # Get the Host and Resource Pool Managed Object Refs
     prop_dict = session._call_method(vim_util, "get_dynamic_properties",
                                      cluster, "ClusterComputeResource",
@@ -979,15 +996,17 @@ def get_stats_from_cluster(session, cluster):
                          "HostSystem", host_mors,
                          ["summary.hardware", "summary.runtime"])
             for obj in result.objects:
-                hardware_summary = obj.propSet[0].val
-                runtime_summary = obj.propSet[1].val
-                if runtime_summary.connectionState == "connected":
-                    # Total vcpus is the sum of all pCPUs of individual hosts
-                    # The overcommitment ratio is factored in by the scheduler
-                    cpu_info['vcpus'] += hardware_summary.numCpuThreads
-                    cpu_info['cores'] += hardware_summary.numCpuCores
-                    cpu_info['vendor'].append(hardware_summary.vendor)
-                    cpu_info['model'].append(hardware_summary.cpuModel)
+                if hasattr(obj, 'propSet'):
+                    hardware_summary = obj.propSet[0].val
+                    runtime_summary = obj.propSet[1].val
+                    if runtime_summary.connectionState == "connected":
+                        # Total vcpus is the sum of all pCPUs of individual
+                        # hosts. The overcommitment ratio is factored in by the
+                        # scheduler
+                        cpu_info['vcpus'] += hardware_summary.numCpuThreads
+                        cpu_info['cores'] += hardware_summary.numCpuCores
+                        cpu_info['vendor'].append(hardware_summary.vendor)
+                        cpu_info['model'].append(hardware_summary.cpuModel)
 
         res_mor = prop_dict.get('resourcePool')
         if res_mor:
@@ -999,7 +1018,34 @@ def get_stats_from_cluster(session, cluster):
                 # overallUsage is the hypervisor's view of memory usage by VM's
                 consumed = int(res_usage.overallUsage / units.Mi)
                 mem_info['free'] = mem_info['total'] - consumed
-    stats = {'cpu': cpu_info, 'mem': mem_info}
+    # Calculate disk stats
+    properties = ["summary.type", "summary.name", "summary.capacity",
+                  "summary.freeSpace", "summary.accessible"]
+    data_stores = session._call_method(
+        vim_util, "get_inner_objects", cluster, 'datastore', 'Datastore',
+        properties)
+    while data_stores:
+        for obj_content in data_stores.objects:
+            if hasattr(obj_content, 'propSet'):
+                propdict = propset_dict(obj_content.propSet)
+                new_ds = DSRecord(
+                    datastore=obj_content.obj,
+                    name=propdict['summary.name'],
+                    type=propdict['summary.type'],
+                    capacity=propdict['summary.capacity'],
+                    freespace=propdict['summary.freeSpace'],
+                    accessible=propdict['summary.accessible'])
+                if _is_valid_ds_record(new_ds, datastore_regex):
+                    ds_info['total'] += new_ds.capacity / units.Gi
+                    ds_info['free'] += new_ds.freespace / units.Gi
+        token = _get_token(data_stores)
+        if not token:
+            break
+        data_stores = session._call_method(vim_util,
+                                           "continue_to_get_objects",
+                                           token)
+
+    stats = {'cpu': cpu_info, 'mem': mem_info, 'disk': ds_info}
     return stats
 
 
@@ -1068,21 +1114,19 @@ def _select_datastore(data_stores, best_match, datastore_regex=None):
             continue
 
         propdict = propset_dict(obj_content.propSet)
-        # Local storage identifier vSphere doesn't support CIFS or
-        # vfat for datastores, therefore filtered
         ds_type = propdict['summary.type']
         ds_name = propdict['summary.name']
-        if ((ds_type == 'VMFS' or ds_type == 'NFS') and
-                propdict.get('summary.accessible')):
-            if datastore_regex is None or datastore_regex.match(ds_name):
-                new_ds = DSRecord(
+        new_ds = DSRecord(
                     datastore=obj_content.obj,
                     name=ds_name,
+                    freespace=propdict['summary.freeSpace'],
                     capacity=propdict['summary.capacity'],
-                    freespace=propdict['summary.freeSpace'])
-                # favor datastores with more free space
-                if new_ds.freespace > best_match.freespace:
-                    best_match = new_ds
+                    type=ds_type,
+                    accessible=propdict.get('summary.accessible'))
+        if _is_valid_ds_record(new_ds, datastore_regex):
+            # favor datastores with more free space
+            if new_ds.freespace > best_match.freespace:
+                best_match = new_ds
 
     return best_match
 
@@ -1116,8 +1160,8 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                 ["summary.type", "summary.name",
                                  "summary.capacity", "summary.freeSpace",
                                  "summary.accessible"])
-    best_match = DSRecord(datastore=None, name=None,
-                          capacity=None, freespace=0)
+    best_match = DSRecord(datastore=None, name=None, capacity=None,
+                          freespace=None, type=None, accessible=False)
     while data_stores:
         best_match = _select_datastore(data_stores, best_match,
                                        datastore_regex)
@@ -1128,7 +1172,8 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                            "continue_to_get_objects",
                                            token)
     if best_match.datastore:
-        return best_match
+        return (best_match.datastore, best_match.name, best_match.capacity,
+                best_match.freespace)
     if datastore_regex:
         raise exception.DatastoreNotFound(
             _("Datastore regex %s did not match any datastores")
