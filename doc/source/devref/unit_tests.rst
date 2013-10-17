@@ -12,10 +12,10 @@ Run the unit tests by doing::
 
     ./run_tests.sh
 
-This script is a wrapper around the `nose`_ testrunner and the `pep8`_ checker.
+This script is a wrapper around the `testr`_ testrunner and the `flake8`_ checker.
 
-.. _nose: http://code.google.com/p/python-nose/
-.. _pep8: https://github.com/jcrocholl/pep8
+.. _testr: https://code.launchpad.net/testrepository
+.. _flake8: https://github.com/bmcustodio/flake8
 
 Flags
 -----
@@ -30,22 +30,33 @@ This will show the following help information::
     Usage: ./run_tests.sh [OPTION]...
     Run Nova's test suite(s)
 
-      -V, --virtual-env        Always use virtualenv.  Install automatically if not present
-      -N, --no-virtual-env     Don't use virtualenv.  Run tests in local environment
-      -s, --no-site-packages   Isolate the virtualenv from the global Python environment
-      -x, --stop               Stop running tests after the first error or failure.
-      -f, --force              Force a clean re-build of the virtual environment. Useful when dependencies have been added.
-      -p, --pep8               Just run pep8
-      -P, --no-pep8            Don't run pep8
-      -c, --coverage           Generate coverage report
-      -h, --help               Print this usage message
-      --hide-elapsed           Don't print the elapsed time for each test along with slow test list
+      -V, --virtual-env           Always use virtualenv.  Install automatically if not present
+      -N, --no-virtual-env        Don't use virtualenv.  Run tests in local environment
+      -s, --no-site-packages      Isolate the virtualenv from the global Python environment
+      -f, --force                 Force a clean re-build of the virtual environment. Useful when dependencies have been added.
+      -u, --update                Update the virtual environment with any newer package versions
+      -p, --pep8                  Just run PEP8 and HACKING compliance check
+      -P, --no-pep8               Don't run static code checks
+      -c, --coverage              Generate coverage report
+      -d, --debug                 Run tests with testtools instead of testr. This allows you to use the debugger.
+      -h, --help                  Print this usage message
+      --hide-elapsed              Don't print the elapsed time for each test along with slow test list
+      --virtual-env-path <path>   Location of the virtualenv directory
+                                   Default: $(pwd)
+      --virtual-env-name <name>   Name of the virtualenv directory
+                                   Default: .venv
+      --tools-path <dir>          Location of the tools directory
+                                   Default: $(pwd)
 
-Because ``run_tests.sh`` is a wrapper around nose, it also accepts the same
-flags as nosetests. See the `nose options documentation`_ for details about
+   Note: with no options specified, the script will try to run the tests in a virtual environment,
+         If no virtualenv is found, the script will ask if you would like to create one.  If you
+         prefer to run tests NOT in a virtual environment, simply pass the -N option.
+
+Because ``run_tests.sh`` is a wrapper around testrepository, it also accepts the same
+flags as testr. See the `testr user manual`_ for details about
 these additional flags.
 
-.. _nose options documentation: http://readthedocs.org/docs/nose/en/latest/usage.html#options
+.. _testr user manual: https://testrepository.readthedocs.org/en/latest/MANUAL.html
 
 Running a subset of tests
 -------------------------
@@ -57,34 +68,19 @@ To run the tests in the ``nova/tests/scheduler`` directory::
 
     ./run_tests.sh scheduler
 
-To run the tests in the ``nova/tests/test_libvirt.py`` file::
+To run the tests in the ``nova/tests/virt/libvirt/test_libvirt.py`` file::
 
     ./run_tests.sh test_libvirt
 
-To run the tests in the `HostStateTestCase` class in
-``nova/tests/test_libvirt.py``::
+To run the tests in the ``CacheConcurrencyTestCase`` class in
+``nova/tests/virt/libvirt/test_libvirt.py``::
 
-    ./run_tests.sh test_libvirt:HostStateTestCase
+    ./run_tests.sh test_libvirt.CacheConcurrencyTestCase
 
-To run the `ToPrimitiveTestCase.test_dict` test method in
+To run the `ValidateIntegerTestCase.test_invalid_inputs` test method in
 ``nova/tests/test_utils.py``::
 
-    ./run_tests.sh test_utils:ToPrimitiveTestCase.test_dict
-
-
-Suppressing logging output when tests fail
-------------------------------------------
-
-By default, when one or more unit test fails, all of the data sent to the
-logger during the failed tests will appear on standard output, which typically
-consists of many lines of texts. The logging output can make it difficult to
-identify which specific tests have failed, unless your terminal has a large
-scrollback buffer or you have redirected output to a file.
-
-You can suppress the logging output by calling ``run_tests.sh`` with the nose
-flag::
-
-    --nologcapture
+    ./run_tests.sh test_utils.ValidateIntegerTestCase.test_invalid_inputs
 
 Virtualenv
 ----------
@@ -114,21 +110,6 @@ If you do not wish to use a virtualenv at all, use the flag::
 
     -N, --no-virtual-env
 
-Database
---------
-
-Some of the unit tests make queries against an sqlite database [#f3]_. By
-default, the test database (``tests.sqlite``) is deleted and recreated each
-time ``run_tests.sh`` is invoked (This is equivalent to using the
-``-r, --recreate-db`` flag). To reduce testing time if a database already
-exists it can be reused by using the flag::
-
-    -n, --no-recreate-db
-
-Reusing an existing database may cause tests to fail if the schema has
-changed. If any files in the ``nova/db/sqlalchemy`` have changed, it's a good
-idea to recreate the test database.
-
 Gotchas
 -------
 
@@ -137,7 +118,7 @@ Gotchas
 If you are running the unit tests from a shared folder, you may see tests start
 to fail or stop completely as a result of Python lockfile issues [#f4]_. You
 can get around this by manually setting or updating the following line in
-``nova/tests/fake_flags.py``::
+``nova/tests/conf_fixture.py``::
 
     FLAGS['lock_path'].SetDefault('/tmp')
 
