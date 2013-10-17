@@ -79,11 +79,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.shelve_instance(self.context, instance,
                 image_id=image_id)
 
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-        self.compute.terminate_instance(self.context, instance=instance)
-
     def test_shelve_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=db_instance)
@@ -125,11 +120,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.ReplayAll()
 
         self.compute.shelve_offload_instance(self.context, instance)
-
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_unshelve(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
@@ -198,11 +188,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 image=image)
         self.assertEqual(image['id'], self.deleted_image_id)
 
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-        self.compute.terminate_instance(self.context, instance=instance)
-
     def test_unshelve_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         host = 'fake-mini'
@@ -258,11 +243,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.mox.ReplayAll()
 
         self.compute.unshelve_instance(self.context, instance, image=None)
-
-        self.mox.VerifyAll()
-        self.mox.UnsetStubs()
-
-        self.compute.terminate_instance(self.context, instance=instance)
 
     def test_shelved_poll_none_exist(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
