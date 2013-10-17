@@ -59,6 +59,11 @@
         "os-extended-status:task_state": null,
         "os-extended-status:vm_state": "active",
         "os-extended-volumes:volumes_attached": [],
+        "os-pci:pci_devices": [
+            {
+                "id": 1
+            }
+        ],
         "os-server-usage:launched_at": "2013-09-23T13:37:00.880302",
         "os-server-usage:terminated_at": null,
         "progress": 0,
@@ -69,7 +74,7 @@
         ],
         "status": "ACTIVE",
         "tenant_id": "openstack",
-        "updated": "2013-09-23T13:37:00Z",
+        "updated": "2013-10-31T07:31:30Z",
         "user_id": "fake"
     }
 }

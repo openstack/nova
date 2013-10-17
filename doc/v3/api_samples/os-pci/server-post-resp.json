@@ -1,0 +1,16 @@
+{
+    "server": {
+        "admin_password": "8C5KEgw2cQxu",
+        "id": "fb947804-6a43-499d-9526-3eac8adf7271",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/fb947804-6a43-499d-9526-3eac8adf7271",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/fb947804-6a43-499d-9526-3eac8adf7271",
+                "rel": "bookmark"
+            }
+        ]
+    }
+}

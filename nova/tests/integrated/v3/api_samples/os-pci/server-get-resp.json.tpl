@@ -1,7 +1,5 @@
 {
     "server": {
-        "os-access-ips:access_ip_v4": "",
-        "os-access-ips:access_ip_v6": "",
         "addresses": {
             "private": [
                 {
@@ -17,18 +15,18 @@
             "id": "1",
             "links": [
                 {
-                    "href": "%(host)s/flavors/1",
+                    "href":  "%(host)s/flavors/1",
                     "rel": "bookmark"
                 }
             ]
         },
-        "host_id": "%(hostid)s",
+        "host_id":  "%(hostid)s",
         "id": "%(id)s",
         "image": {
             "id": "%(uuid)s",
             "links": [
                 {
-                    "href": "%(glance_host)s/images/%(uuid)s",
+                    "href":  "%(glance_host)s/images/%(uuid)s",
                     "rel": "bookmark"
                 }
             ]
@@ -48,26 +46,12 @@
             "My Server Name": "Apache1"
         },
         "name": "new-server-test",
-        "os-config-drive:config_drive": "",
-        "os-disk-config:disk_config": "AUTO",
-        "os-extended-availability-zone:availability_zone": "nova",
-        "os-extended-server-attributes:host": "%(compute_host)s",
-        "os-extended-server-attributes:hypervisor_hostname": "%(hypervisor_hostname)s",
-        "os-extended-server-attributes:instance_name": "instance-00000001",
-        "os-extended-status:locked_by": null,
-        "os-extended-status:power_state": 1,
-        "os-extended-status:task_state": null,
-        "os-extended-status:vm_state": "active",
-        "os-extended-volumes:volumes_attached": [],
-        "os-pci:pci_devices": [{"id": 1}],
-        "os-server-usage:launched_at": "%(timestamp)s",
-        "os-server-usage:terminated_at": null,
-        "progress": 0,
-        "security_groups": [
+        "os-pci:pci_devices": [
             {
-                "name": "default"
+                "id": 1
             }
         ],
+        "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
         "updated": "%(timestamp)s",

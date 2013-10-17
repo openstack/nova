@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<servers xmlns:os-pci="http://docs.openstack.org/compute/ext/os-pci/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
+  <server status="ACTIVE" updated="2013-11-26T08:34:20Z" user_id="fake" name="new-server-test" created="2013-11-26T08:34:19Z" tenant_id="openstack" progress="0" host_id="80bdb19a508d377edcd9cc0c86a3559294bb24375bffc54068054261" id="09f64ffb-6bfa-4749-9ebc-308548e231a3" key_name="None">
+    <image id="70a599e0-31e7-49b7-b260-868f441e862b">
+      <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
+    </image>
+    <flavor id="1">
+      <atom:link href="http://openstack.example.com/flavors/1" rel="bookmark"/>
+    </flavor>
+    <metadata>
+      <meta key="My Server Name">Apache1</meta>
+    </metadata>
+    <addresses>
+      <network id="private">
+        <ip version="4" type="fixed" addr="192.168.0.3" mac_addr="aa:bb:cc:dd:ee:ff"/>
+      </network>
+    </addresses>
+    <atom:link href="http://openstack.example.com/v3/servers/09f64ffb-6bfa-4749-9ebc-308548e231a3" rel="self"/>
+    <atom:link href="http://openstack.example.com/servers/09f64ffb-6bfa-4749-9ebc-308548e231a3" rel="bookmark"/>
+    <os-pci:pci_devices xmlns:os-pci="os-pci">
+      <os-pci:pci_device id="1"/>
+    </os-pci:pci_devices>
+  </server>
+</servers>
