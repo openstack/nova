@@ -189,7 +189,7 @@ def get_dynamic_properties(vim, mobj, type, property_names):
         # The object may have information useful for logging
         if hasattr(obj_content.objects[0], 'missingSet'):
             for m in obj_content.objects[0].missingSet:
-                LOG.warning(_("Unable to retrieve value for %(path). "
+                LOG.warning(_("Unable to retrieve value for %(path)s "
                               "Reason: %(reason)s"),
                             {'path': m.path,
                              'reason': m.fault.localizedMessage})
