@@ -97,7 +97,7 @@
 
 # Top-level directory for maintaining nova's state (string
 # value)
-#state_path=$pybasedir
+#state_path=/var/lib/nova
 
 
 #
