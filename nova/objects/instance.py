@@ -183,6 +183,35 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             changes.add('system_metadata')
         return changes
 
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = (int(target_version.split('.')[0]),
+                          int(target_version.split('.')[1]))
+        unicode_attributes = ['user_id', 'project_id', 'image_ref',
+                              'kernel_id', 'ramdisk_id', 'hostname',
+                              'key_name', 'key_data', 'host', 'node',
+                              'user_data', 'availability_zone',
+                              'display_name', 'display_description',
+                              'launched_on', 'locked_by', 'os_type',
+                              'architecture', 'vm_mode', 'root_device_name',
+                              'default_ephemeral_device',
+                              'default_swap_device', 'config_drive',
+                              'cell_name']
+        if target_version < (1, 10) and 'info_cache' in primitive:
+            # NOTE(danms): Instance <= 1.9 (havana) had info_cache 1.4
+            self.info_cache.obj_make_compatible(primitive['info_cache'],
+                                                '1.4')
+            primitive['info_cache']['nova_object.version'] = '1.4'
+        if target_version < (1, 7):
+            # NOTE(danms): Before 1.7, we couldn't handle unicode in
+            # string fields, so squash it here
+            for field in [x for x in unicode_attributes if x in primitive
+                          and primitive[x] is not None]:
+                primitive[field] = primitive[field].encode('ascii', 'replace')
+        if target_version < (1, 6):
+            # NOTE(danms): Before 1.6 there was no pci_devices list
+            if 'pci_devices' in primitive:
+                del primitive['pci_devices']
+
     @property
     def name(self):
         try:
