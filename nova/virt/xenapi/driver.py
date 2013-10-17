@@ -53,6 +53,7 @@ from nova.objects import aggregate as aggregate_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import versionutils
 from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi import host
@@ -678,18 +679,14 @@ class XenAPISession(object):
         self._verify_plugin_version()
 
     def _verify_plugin_version(self):
-        # Verify that we're using the right version of the plugins
-        returned_version = self.call_plugin_serialized(
+        requested_version = self.PLUGIN_REQUIRED_VERSION
+        current_version = self.call_plugin_serialized(
             'nova_plugin_version', 'get_version')
 
-        # Can't use vmops.cmp_version because that tolerates differences in
-        # major version
-        req_maj, req_min = self.PLUGIN_REQUIRED_VERSION.split('.')
-        got_maj, got_min = returned_version.split('.')
-        if req_maj != got_maj or req_min > got_min:
+        if not versionutils.is_compatible(requested_version, current_version):
             raise self.XenAPI.Failure(
                 _("Plugin version mismatch (Expected %(exp)s, got %(got)s)") %
-                {'exp': self.PLUGIN_REQUIRED_VERSION, 'got': returned_version})
+                {'exp': requested_version, 'got': current_version})
 
     def _create_first_session(self, url, user, pw, exception):
         try:
