@@ -577,8 +577,13 @@ class ConductorManager(manager.Manager):
         """Perform a classmethod action on an object."""
         objclass = nova_object.NovaObject.obj_class_from_name(objname,
                                                               objver)
-        return self._object_dispatch(objclass, objmethod, context,
-                                     args, kwargs)
+        result = self._object_dispatch(objclass, objmethod, context,
+                                       args, kwargs)
+        # NOTE(danms): The RPC layer will convert to primitives for us,
+        # but in this case, we need to honor the version the client is
+        # asking for, so we do it before returning here.
+        return (result.obj_to_primitive(target_version=objver)
+                if isinstance(result, nova_object.NovaObject) else result)
 
     def object_action(self, context, objinst, objmethod, args, kwargs):
         """Perform an action on an object."""

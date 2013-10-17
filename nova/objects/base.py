@@ -257,7 +257,23 @@ class NovaObject(object):
         """Create a copy."""
         return copy.deepcopy(self)
 
-    def obj_to_primitive(self):
+    def obj_make_compatible(self, primitive, target_version):
+        """Make an object representation compatible with a target version.
+
+        This is responsible for taking the primitive representation of
+        an object and making it suitable for the given target_version.
+        This may mean converting the format of object attributes, removing
+        attributes that have been added since the target version, etc.
+
+        :param:primitive: The result of self.obj_to_primitive()
+        :param:target_version: The version string requested by the recipient
+                               of the object.
+        :param:raises: nova.exception.UnsupportedObjectError if conversion
+                       is not possible for some reason.
+        """
+        pass
+
+    def obj_to_primitive(self, target_version=None):
         """Simple base-case dehydration.
 
         This calls to_primitive() for each item in fields.
@@ -267,9 +283,11 @@ class NovaObject(object):
             if self.obj_attr_is_set(name):
                 primitive[name] = field.to_primitive(self, name,
                                                      getattr(self, name))
+        if target_version:
+            self.obj_make_compatible(primitive, target_version)
         obj = {'nova_object.name': self.obj_name(),
                'nova_object.namespace': 'nova',
-               'nova_object.version': self.VERSION,
+               'nova_object.version': target_version or self.VERSION,
                'nova_object.data': primitive}
         if self.obj_what_changed():
             obj['nova_object.changes'] = list(self.obj_what_changed())
