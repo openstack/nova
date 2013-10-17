@@ -208,8 +208,8 @@ class PowerVMDriverTestCase(test.TestCase):
         LPAR is the uuid of the instance
         """
         self.fake_create_lpar_instance_called = True
-        self.assertEquals(self.instance, instance)
-        self.assertEquals(self.fake_network_info, network_info)
+        self.assertEqual(self.instance, instance)
+        self.assertEqual(self.fake_network_info, network_info)
         return self.powervm_connection._powervm._operator.get_lpar(
                                                             instance['uuid'])
 
@@ -306,10 +306,10 @@ class PowerVMDriverTestCase(test.TestCase):
             self._loc_expected_task_state == task_states.IMAGE_PENDING_UPLOAD)
 
         snapshot = image_service.show(context, recv_meta['id'])
-        self.assertEquals(snapshot['properties']['image_state'], 'available')
-        self.assertEquals(snapshot['properties']['architecture'], arch)
-        self.assertEquals(snapshot['status'], 'active')
-        self.assertEquals(snapshot['name'], snapshot_name)
+        self.assertEqual(snapshot['properties']['image_state'], 'available')
+        self.assertEqual(snapshot['properties']['architecture'], arch)
+        self.assertEqual(snapshot['status'], 'active')
+        self.assertEqual(snapshot['name'], snapshot_name)
 
     def _set_get_info_stub(self, state):
         def fake_get_instance(instance_name):
@@ -648,8 +648,8 @@ class PowerVMDriverTestCase(test.TestCase):
                                            power_on=True):
             self.fake_deploy_from_migrated_file_called = True
             # assert the lpar is the one created for this test
-            self.assertEquals(self.instance['uuid'], lpar['name'])
-            self.assertEquals(fake_file_path, file_path)
+            self.assertEqual(self.instance['uuid'], lpar['name'])
+            self.assertEqual(fake_file_path, file_path)
             # this tests that the 20GB fake_flavor was used
             self.assertEqual(fake_flavor['root_gb'] * pow(1024, 3), size)
             self.assertTrue(power_on)
@@ -723,12 +723,12 @@ class PowerVMDriverTestCase(test.TestCase):
         self.fake_destroy_called = False
 
         def fake_get_resize_name(instance_name):
-            self.assertEquals(self.instance['name'], instance_name)
+            self.assertEqual(self.instance['name'], instance_name)
             return resize_name
 
         def fake_destroy(instance_name, destroy_disks=True):
             self.fake_destroy_called = True
-            self.assertEquals(resize_name, instance_name)
+            self.assertEqual(resize_name, instance_name)
             self.assertTrue(destroy_disks)
 
         self.stubs.Set(self.powervm_connection, '_get_resize_name',
@@ -742,43 +742,43 @@ class PowerVMDriverTestCase(test.TestCase):
     def test_get_host_stats(self):
         host_stats = self.powervm_connection.get_host_stats(True)
         self.assertIsNotNone(host_stats)
-        self.assertEquals(host_stats['vcpus'], 8.0)
-        self.assertEquals(round(host_stats['vcpus_used'], 1), 1.7)
-        self.assertEquals(host_stats['host_memory_total'], 65536)
-        self.assertEquals(host_stats['host_memory_free'], 46336)
-        self.assertEquals(host_stats['disk_total'], 10168)
-        self.assertEquals(host_stats['disk_used'], 0)
-        self.assertEquals(host_stats['disk_available'], 10168)
-        self.assertEquals(host_stats['disk_total'],
-                          host_stats['disk_used'] +
-                          host_stats['disk_available'])
+        self.assertEqual(host_stats['vcpus'], 8.0)
+        self.assertEqual(round(host_stats['vcpus_used'], 1), 1.7)
+        self.assertEqual(host_stats['host_memory_total'], 65536)
+        self.assertEqual(host_stats['host_memory_free'], 46336)
+        self.assertEqual(host_stats['disk_total'], 10168)
+        self.assertEqual(host_stats['disk_used'], 0)
+        self.assertEqual(host_stats['disk_available'], 10168)
+        self.assertEqual(host_stats['disk_total'],
+                         host_stats['disk_used'] +
+                         host_stats['disk_available'])
 
-        self.assertEquals(host_stats['cpu_info'], ('ppc64', 'powervm', '3940'))
-        self.assertEquals(host_stats['hypervisor_type'], 'powervm')
-        self.assertEquals(host_stats['hypervisor_version'], '7.1')
+        self.assertEqual(host_stats['cpu_info'], ('ppc64', 'powervm', '3940'))
+        self.assertEqual(host_stats['hypervisor_type'], 'powervm')
+        self.assertEqual(host_stats['hypervisor_version'], '7.1')
 
-        self.assertEquals(host_stats['hypervisor_hostname'], "fake-powervm")
-        self.assertEquals(host_stats['supported_instances'][0][0], "ppc64")
-        self.assertEquals(host_stats['supported_instances'][0][1], "powervm")
-        self.assertEquals(host_stats['supported_instances'][0][2], "hvm")
+        self.assertEqual(host_stats['hypervisor_hostname'], "fake-powervm")
+        self.assertEqual(host_stats['supported_instances'][0][0], "ppc64")
+        self.assertEqual(host_stats['supported_instances'][0][1], "powervm")
+        self.assertEqual(host_stats['supported_instances'][0][2], "hvm")
 
     def test_get_available_resource(self):
         res = self.powervm_connection.get_available_resource(nodename='fake')
         self.assertIsNotNone(res)
-        self.assertEquals(8.0, res.pop('vcpus'))
-        self.assertEquals(65536, res.pop('memory_mb'))
-        self.assertEquals((10168 / 1024), res.pop('local_gb'))
-        self.assertEquals(1.7, round(res.pop('vcpus_used'), 1))
-        self.assertEquals((65536 - 46336), res.pop('memory_mb_used'))
-        self.assertEquals(0, res.pop('local_gb_used'))
-        self.assertEquals('powervm', res.pop('hypervisor_type'))
-        self.assertEquals('7.1', res.pop('hypervisor_version'))
-        self.assertEquals('fake-powervm', res.pop('hypervisor_hostname'))
-        self.assertEquals('ppc64,powervm,3940', res.pop('cpu_info'))
-        self.assertEquals(10168, res.pop('disk_available_least'))
-        self.assertEquals('[["ppc64", "powervm", "hvm"]]',
+        self.assertEqual(8.0, res.pop('vcpus'))
+        self.assertEqual(65536, res.pop('memory_mb'))
+        self.assertEqual((10168 / 1024), res.pop('local_gb'))
+        self.assertEqual(1.7, round(res.pop('vcpus_used'), 1))
+        self.assertEqual((65536 - 46336), res.pop('memory_mb_used'))
+        self.assertEqual(0, res.pop('local_gb_used'))
+        self.assertEqual('powervm', res.pop('hypervisor_type'))
+        self.assertEqual('7.1', res.pop('hypervisor_version'))
+        self.assertEqual('fake-powervm', res.pop('hypervisor_hostname'))
+        self.assertEqual('ppc64,powervm,3940', res.pop('cpu_info'))
+        self.assertEqual(10168, res.pop('disk_available_least'))
+        self.assertEqual('[["ppc64", "powervm", "hvm"]]',
                 res.pop('supported_instances'))
-        self.assertEquals(0, len(res), 'Did not test all keys.')
+        self.assertEqual(0, len(res), 'Did not test all keys.')
 
     def test_get_host_uptime(self):
         # Tests that the get_host_uptime method issues the proper sysstat
@@ -795,7 +795,7 @@ class PowerVMDriverTestCase(test.TestCase):
 
         # the host parameter isn't used so we just pass None
         uptime = self.powervm_connection.get_host_uptime(None)
-        self.assertEquals(output[0], uptime)
+        self.assertEqual(output[0], uptime)
 
     def test_plug_vifs(self):
         # Check to make sure the method raises NotImplementedError.
@@ -1020,7 +1020,7 @@ class PowerVMLocalVolumeAdapterTestCase(test.TestCase):
         self.delete_volume_called = False
 
         def fake_delete_volume(volume_info):
-            self.assertEquals(disk_name, volume_info)
+            self.assertEqual(disk_name, volume_info)
             self.delete_volume_called = True
 
         self.stubs.Set(self.powervm_adapter, '_copy_image_file',
