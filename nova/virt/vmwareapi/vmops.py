@@ -803,22 +803,6 @@ class VMwareVMOps(object):
 
         _clean_temp_data()
 
-    def _get_values_from_object_properties(self, props, query):
-        while props:
-            token = vm_util._get_token(props)
-            for elem in props.objects:
-                for prop in elem.propSet:
-                    for key in query.keys():
-                        if prop.name == key:
-                            query[key] = prop.val
-                            break
-            if token:
-                props = self._session._call_method(vim_util,
-                                                   "continue_to_get_objects",
-                                                   token)
-            else:
-                break
-
     def reboot(self, instance, network_info):
         """Reboot a VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
@@ -827,10 +811,8 @@ class VMwareVMOps(object):
         props = self._session._call_method(vim_util, "get_object_properties",
                            None, vm_ref, "VirtualMachine",
                            lst_properties)
-        query = {'runtime.powerState': None,
-                 'summary.guest.toolsStatus': None,
-                 'summary.guest.toolsRunningStatus': False}
-        self._get_values_from_object_properties(props, query)
+        query = vm_util.get_values_from_object_properties(self._session, props,
+                                                          lst_properties)
         pwr_state = query['runtime.powerState']
         tools_status = query['summary.guest.toolsStatus']
         tools_running_status = query['summary.guest.toolsRunningStatus']
@@ -869,10 +851,8 @@ class VMwareVMOps(object):
             props = self._session._call_method(vim_util,
                         "get_object_properties",
                         None, vm_ref, "VirtualMachine", lst_properties)
-            query = {'runtime.powerState': None,
-                     'config.files.vmPathName': None,
-                     'datastore': None}
-            self._get_values_from_object_properties(props, query)
+            query = vm_util.get_values_from_object_properties(
+                    self._session, props, lst_properties)
             pwr_state = query['runtime.powerState']
             vm_config_pathname = query['config.files.vmPathName']
             datastore_name = None
@@ -1258,33 +1238,14 @@ class VMwareVMOps(object):
         vm_props = self._session._call_method(vim_util,
                     "get_object_properties", None, vm_ref, "VirtualMachine",
                     lst_properties)
-        query = {'summary.config.numCpu': 0,
-                 'summary.config.memorySizeMB': 0,
-                 'runtime.powerState': None}
-        self._get_values_from_object_properties(vm_props, query)
+        query = vm_util.get_values_from_object_properties(
+                self._session, vm_props, lst_properties)
         max_mem = int(query['summary.config.memorySizeMB']) * 1024
         return {'state': VMWARE_POWER_STATES[query['runtime.powerState']],
                 'max_mem': max_mem,
                 'mem': max_mem,
                 'num_cpu': int(query['summary.config.numCpu']),
                 'cpu_time': 0}
-
-    def _get_diagnostic_from_object_properties(self, props, wanted_props):
-        diagnostics = {}
-        while props:
-            for elem in props.objects:
-                for prop in elem.propSet:
-                    if prop.name in wanted_props:
-                        prop_dict = vim.object_to_dict(prop.val, list_depth=1)
-                        diagnostics.update(prop_dict)
-            token = vm_util._get_token(props)
-            if not token:
-                break
-
-            props = self._session._call_method(vim_util,
-                                               "continue_to_get_objects",
-                                               token)
-        return diagnostics
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
@@ -1295,8 +1256,14 @@ class VMwareVMOps(object):
         vm_props = self._session._call_method(vim_util,
                     "get_object_properties", None, vm_ref, "VirtualMachine",
                     lst_properties)
-        data = self._get_diagnostic_from_object_properties(vm_props,
-                                                           set(lst_properties))
+        query = vm_util.get_values_from_object_properties(self._session,
+                                                          vm_props,
+                                                          lst_properties)
+        data = {}
+        # All of values received are objects. Convert them to dictionaries
+        for value in query.values():
+            prop_dict = vim.object_to_dict(value, list_depth=1)
+            data.update(prop_dict)
         # Add a namespace to all of the diagnostsics
         return dict([('vmware:' + k, v) for k, v in data.items()])
 
