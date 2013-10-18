@@ -264,13 +264,15 @@ def get_cdrom_attach_config_spec(client_factory,
     return config_spec
 
 
-def get_vmdk_detach_config_spec(client_factory, device):
+def get_vmdk_detach_config_spec(client_factory, device,
+                                destroy_disk=False):
     """Builds the vmdk detach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
     device_config_spec = []
-    virtual_device_config_spec = delete_virtual_disk_spec(client_factory,
-                                                          device)
+    virtual_device_config_spec = detach_virtual_disk_spec(client_factory,
+                                                          device,
+                                                          destroy_disk)
 
     device_config_spec.append(virtual_device_config_spec)
 
@@ -470,14 +472,15 @@ def create_virtual_disk_spec(client_factory, controller_key,
     return virtual_device_config
 
 
-def delete_virtual_disk_spec(client_factory, device):
+def detach_virtual_disk_spec(client_factory, device, destroy_disk=False):
     """
-    Builds spec for the deletion of an already existing Virtual Disk from VM.
+    Builds spec for the detach of an already existing Virtual Disk from VM.
     """
     virtual_device_config = client_factory.create(
                             'ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "remove"
-    virtual_device_config.fileOperation = "destroy"
+    if destroy_disk:
+        virtual_device_config.fileOperation = "destroy"
     virtual_device_config.device = device
 
     return virtual_device_config
