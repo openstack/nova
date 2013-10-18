@@ -204,6 +204,53 @@ class FileInjectionTestCase(AgentTestCaseBase):
         agent.inject_files(files)
 
 
+class SetAdminPasswordTestCase(AgentTestCaseBase):
+    @mock.patch.object(agent.XenAPIBasedAgent, '_call_agent')
+    @mock.patch("nova.virt.xenapi.agent.SimpleDH")
+    def test_exchange_key_with_agent(self, mock_simple_dh, mock_call_agent):
+        agent = self._create_agent(None)
+        instance_mock = mock_simple_dh()
+        instance_mock.get_public.return_value = 4321
+        mock_call_agent.return_value = "1234"
+
+        result = agent._exchange_key_with_agent()
+
+        mock_call_agent.assert_called_once_with('key_init', {"pub": "4321"},
+                                                success_codes=['D0'],
+                                                ignore_errors=False)
+        result.compute_shared.assert_called_once_with(1234)
+
+    @mock.patch.object(agent.XenAPIBasedAgent, '_call_agent')
+    @mock.patch.object(agent.XenAPIBasedAgent,
+                       '_save_instance_password_if_sshkey_present')
+    @mock.patch.object(agent.XenAPIBasedAgent, '_exchange_key_with_agent')
+    def test_set_admin_password_works(self, mock_exchange, mock_save,
+                                      mock_call_agent):
+        mock_dh = mock.Mock(spec_set=agent.SimpleDH)
+        mock_dh.encrypt.return_value = "enc_pass"
+        mock_exchange.return_value = mock_dh
+        agent_inst = self._create_agent(None)
+
+        agent_inst.set_admin_password("new_pass")
+
+        mock_dh.encrypt.assert_called_once_with("new_pass\n")
+        mock_call_agent.assert_called_once_with('password',
+                                                {'enc_pass': 'enc_pass'})
+        mock_save.assert_called_once_with("new_pass")
+
+    @mock.patch.object(agent.XenAPIBasedAgent, '_add_instance_fault')
+    @mock.patch.object(agent.XenAPIBasedAgent, '_exchange_key_with_agent')
+    def test_set_admin_password_silently_fails(self, mock_exchange,
+                                               mock_add_fault):
+        error = exception.AgentTimeout(method="fake")
+        mock_exchange.side_effect = error
+        agent_inst = self._create_agent(None)
+
+        agent_inst.set_admin_password("new_pass")
+
+        mock_add_fault.assert_called_once_with(error, mock.ANY)
+
+
 class UpgradeRequiredTestCase(test.NoDBTestCase):
     def test_less_than(self):
         self.assertTrue(agent.is_upgrade_required('1.2.3.4', '1.2.3.5'))
