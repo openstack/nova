@@ -111,7 +111,8 @@ class VMwareVolumeOps(object):
                 if option.key == volume_option:
                     return option.value
 
-    def detach_disk_from_vm(self, vm_ref, instance, device):
+    def detach_disk_from_vm(self, vm_ref, instance, device,
+                            destroy_disk=False):
         """
         Detach disk from VM by reconfiguration.
         """
@@ -119,7 +120,7 @@ class VMwareVolumeOps(object):
         instance_uuid = instance['uuid']
         client_factory = self._session._get_vim().client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(
-                                    client_factory, device)
+                                    client_factory, device, destroy_disk)
         disk_key = device.key
         LOG.debug(_("Reconfiguring VM instance %(instance_name)s to detach "
                     "disk %(disk_key)s"),
@@ -359,7 +360,8 @@ class VMwareVolumeOps(object):
         self._relocate_vmdk_volume(volume_ref, res_pool, datastore)
 
         # Delete the original disk from the volume_ref
-        self.detach_disk_from_vm(volume_ref, instance, original_device)
+        self.detach_disk_from_vm(volume_ref, instance, original_device,
+                                 destroy_disk=True)
         # Attach the current disk to the volume_ref
         # Get details required for adding disk device such as
         # adapter_type, unit_number, controller_key
@@ -433,7 +435,7 @@ class VMwareVolumeOps(object):
         device = vm_util.get_rdm_disk(hardware_devices, uuid)
         if device is None:
             raise volume_util.StorageError(_("Unable to find volume"))
-        self.detach_disk_from_vm(vm_ref, instance, device)
+        self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
         LOG.info(_("Mountpoint %(mountpoint)s detached from "
                    "instance %(instance_name)s"),
                  {'mountpoint': mountpoint, 'instance_name': instance_name})
