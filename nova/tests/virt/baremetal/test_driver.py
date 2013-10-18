@@ -25,6 +25,7 @@ import mox
 from oslo.config import cfg
 
 from nova.compute import power_state
+from nova import db as main_db
 from nova import exception
 from nova import test
 from nova.tests.image import fake as fake_image
@@ -36,6 +37,7 @@ from nova.virt.baremetal import db
 from nova.virt.baremetal import driver as bm_driver
 from nova.virt.baremetal import fake
 from nova.virt.baremetal import pxe
+from nova.virt import fake as fake_virt
 
 
 CONF = cfg.CONF
@@ -80,10 +82,10 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
         fake_image.stub_out_image_service(self.stubs)
         self.context = utils.get_test_admin_context()
-        self.driver = bm_driver.BareMetalDriver(None)
+        self.driver = bm_driver.BareMetalDriver(fake_virt.FakeVirtAPI())
         self.addCleanup(fake_image.FakeImageService_reset)
 
-    def _create_node(self, node_info=None, nic_info=None):
+    def _create_node(self, node_info=None, nic_info=None, ephemeral=True):
         result = {}
         if node_info is None:
             node_info = bm_db_utils.new_bm_node(
@@ -111,7 +113,11 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                                     nic['datapath_id'],
                                     nic['port_no'],
                 )
-        result['instance'] = utils.get_test_instance()
+        if ephemeral:
+            result['instance'] = utils.get_test_instance()
+        else:
+            flavor = utils.get_test_instance_type(options={'ephemeral_gb': 0})
+            result['instance'] = utils.get_test_instance(instance_type=flavor)
         result['instance']['node'] = result['node']['uuid']
         result['spawn_params'] = dict(
                 admin_password='test_pass',
@@ -152,6 +158,20 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(row['task_state'], baremetal_states.ACTIVE)
         self.assertEqual(row['instance_uuid'], node['instance']['uuid'])
         self.assertEqual(row['instance_name'], node['instance']['hostname'])
+        instance = main_db.instance_get_by_uuid(self.context,
+                node['instance']['uuid'])
+        self.assertEqual(instance['default_ephemeral_device'], '/dev/sda1')
+
+    def test_spawn_no_ephemeral_ok(self):
+        node = self._create_node(ephemeral=False)
+        self.driver.spawn(**node['spawn_params'])
+        row = db.bm_node_get(self.context, node['node']['id'])
+        self.assertEqual(row['task_state'], baremetal_states.ACTIVE)
+        self.assertEqual(row['instance_uuid'], node['instance']['uuid'])
+        self.assertEqual(row['instance_name'], node['instance']['hostname'])
+        instance = main_db.instance_get_by_uuid(self.context,
+                node['instance']['uuid'])
+        self.assertEqual(instance['default_ephemeral_device'], None)
 
     def test_macs_from_nic_for_instance(self):
         node = self._create_node()
