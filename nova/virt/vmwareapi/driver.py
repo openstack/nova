@@ -412,6 +412,15 @@ class VMwareVCDriver(VMwareESXDriver):
         self._volumeops = self._resources.get(first_cluster).get('volumeops')
         self._vc_state = self._resources.get(first_cluster).get('vcstate')
 
+    def list_instances(self):
+        """List VM instances from all nodes."""
+        instances = []
+        nodes = self.get_available_nodes()
+        for node in nodes:
+            vmops = self._get_vmops_for_compute_node(node)
+            instances.extend(vmops.list_instances())
+        return instances
+
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
                                    block_device_info=None):

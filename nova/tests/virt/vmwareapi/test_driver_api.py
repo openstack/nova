@@ -1834,6 +1834,22 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
 
+    def test_list_instances(self):
+        instances = self.conn.list_instances()
+        self.assertEqual(0, len(instances))
+
+    def test_list_instances_from_nodes(self):
+        # Create instance on node1
+        self._create_vm(self.node_name)
+        # Create instances on the other node
+        self._create_vm(self.node_name2, num_instances=2)
+        self._create_vm(self.node_name2, num_instances=3)
+        node1_vmops = self.conn._get_vmops_for_compute_node(self.node_name)
+        node2_vmops = self.conn._get_vmops_for_compute_node(self.node_name2)
+        self.assertEqual(1, len(node1_vmops.list_instances()))
+        self.assertEqual(2, len(node2_vmops.list_instances()))
+        self.assertEqual(3, len(self.conn.list_instances()))
+
     def _setup_mocks_for_session(self, mock_init):
         mock_init.return_value = None
 
