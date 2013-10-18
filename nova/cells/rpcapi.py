@@ -81,11 +81,16 @@ class CellsAPI(rpcclient.RpcProxy):
         1.22 - Adds reset_network()
         1.23 - Adds inject_network_info()
         1.24 - Adds backup_instance() and snapshot_instance()
+
+        ... Havana supports message version 1.24.  So, any changes to existing
+        methods in 1.x after that point should be done such that they can
+        handle the version_cap being set to 1.24.
     '''
     BASE_RPC_API_VERSION = '1.0'
 
     VERSION_ALIASES = {
-        'grizzly': '1.6'
+        'grizzly': '1.6',
+        'havana': '1.24',
     }
 
     def __init__(self):

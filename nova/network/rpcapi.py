@@ -57,11 +57,16 @@ class NetworkAPI(rpcclient.RpcProxy):
         1.8 - Adds macs to allocate_for_instance
         1.9 - Adds rxtx_factor to [add|remove]_fixed_ip, removes instance_uuid
               from allocate_for_instance and instance_get_nw_info
-        1.10- Adds (optional) requested_networks to deallocate_for_instance
 
         ... Grizzly supports message version 1.9.  So, any changes to existing
-        methods in 2.x after that point should be done such that they can
+        methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.9.
+
+        1.10- Adds (optional) requested_networks to deallocate_for_instance
+
+        ... Havana supports message version 1.10.  So, any changes to existing
+        methods in 1.x after that point should be done such that they can
+        handle the version_cap being set to 1.10.
     '''
 
     #
@@ -76,6 +81,7 @@ class NetworkAPI(rpcclient.RpcProxy):
 
     VERSION_ALIASES = {
         'grizzly': '1.9',
+        'havana': '1.10',
     }
 
     def __init__(self, topic=None):

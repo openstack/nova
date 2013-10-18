@@ -202,6 +202,11 @@ class ComputeAPI(rpcclient.RpcProxy):
         2.45 - Made resize_instance() take new-world objects
         2.46 - Made finish_resize() take new-world objects
         2.47 - Made finish_revert_resize() take new-world objects
+
+        ... Havana supports message version 2.47.  So, any changes to existing
+        methods in 2.x after that point should be done such that they can
+        handle the version_cap being set to 2.47.
+
         2.48 - Make add_aggregate_host() and remove_aggregate_host() take
                new-world objects
     '''
@@ -218,6 +223,7 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     VERSION_ALIASES = {
         'grizzly': '2.27',
+        'havana': '2.47',
     }
 
     def __init__(self):
