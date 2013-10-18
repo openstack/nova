@@ -42,7 +42,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                    host_password='test_pass',
                    use_linked_clone=False, group='vmware')
         self.flags(vnc_enabled=False)
-        vmwareapi_fake.reset()
+        vmwareapi_fake.reset(vc=True)
         stubs.set_stubs(self.stubs)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
@@ -113,6 +113,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_create_config_drive')
         self.mox.StubOutWithMock(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
         self.conn._vmops._create_config_drive(self.instance,
+                                               mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
