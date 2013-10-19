@@ -63,6 +63,11 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
 
+    def cleanup(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
+        """Cleanup after instance being destroyed by Hypervisor."""
+        pass
+
     def get_info(self, instance):
         return self._vmops.get_info(instance)
 

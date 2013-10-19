@@ -162,6 +162,11 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Destroy VM instance."""
         self._vmops.destroy(instance, network_info, destroy_disks)
 
+    def cleanup(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
+        """Cleanup after instance being destroyed by Hypervisor."""
+        pass
+
     def pause(self, instance):
         """Pause VM instance."""
         self._vmops.pause(instance)

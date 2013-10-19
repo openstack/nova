@@ -4270,7 +4270,7 @@ class ComputeManager(manager.Manager):
         if migrate_data:
             is_shared_storage = migrate_data.get('is_shared_storage', True)
         if block_migration or not is_shared_storage:
-            self.driver.destroy(ctxt, instance_ref, network_info)
+            self.driver.cleanup(ctxt, instance_ref, network_info)
         else:
             # self.driver.destroy() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
