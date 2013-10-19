@@ -194,6 +194,36 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertEqual('200', tree.find('./iotune/read_iops_sec').text)
         self.assertEqual('200', tree.find('./iotune/write_iops_sec').text)
 
+    def test_libvirt_volume_driver_readonly(self):
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
+        connection_info = {
+            'driver_volume_type': 'fake',
+            'data': {
+                "device_path": "/foo",
+                'access_mode': 'bar',
+                },
+            }
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+        self.assertRaises(exception.InvalidVolumeAccessMode,
+                          libvirt_driver.connect_volume,
+                          connection_info, self.disk_info)
+
+        connection_info['data']['access_mode'] = 'rw'
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        readonly = tree.find('./readonly')
+        self.assertEqual(readonly, None)
+
+        connection_info['data']['access_mode'] = 'ro'
+        conf = libvirt_driver.connect_volume(connection_info, disk_info)
+        tree = conf.format_dom()
+        readonly = tree.find('./readonly')
+        self.assertNotEqual(readonly, None)
+
     def iscsi_connection(self, volume, location, iqn):
         return {
                 'driver_volume_type': 'iscsi',

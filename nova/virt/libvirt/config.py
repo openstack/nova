@@ -479,6 +479,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.disk_total_iops_sec = None
         self.logical_block_size = None
         self.physical_block_size = None
+        self.readonly = False
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -572,6 +573,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 blockio.set('physical_block_size', self.physical_block_size)
 
             dev.append(blockio)
+
+        if self.readonly:
+            dev.append(etree.Element("readonly"))
 
         return dev
 
