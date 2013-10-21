@@ -41,6 +41,7 @@ from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
+from nova.virt.vmwareapi import vmware_images
 from nova.virt.vmwareapi import volume_util
 
 
@@ -249,10 +250,10 @@ class VMwareAPIVMTestCase(test.TestCase):
         self.assertIsNone(func_call_matcher.match())
 
     def test_snapshot(self):
-        # Ensure VMwareVCVMOps's _get_copy_virtual_disk_spec is getting called
+        # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
         self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
-                                 '_get_copy_virtual_disk_spec')
-        self.conn._vmops._get_copy_virtual_disk_spec(
+                                 'get_copy_virtual_disk_spec')
+        self.conn._vmops.get_copy_virtual_disk_spec(
                 mox.IgnoreArg(),
                 mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(None)
@@ -547,3 +548,37 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(stats['hypervisor_version'], '5.1.0')
         self.assertEquals(stats['hypervisor_hostname'], self.node_name)
         self.assertEquals(stats['cpu_info'], jsonutils.dumps(cpu_info))
+
+    def test_snapshot(self):
+        # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
+        # two times
+        self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
+                                 'get_copy_virtual_disk_spec')
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
+        self.mox.ReplayAll()
+
+        self._test_snapshot()
+
+    def test_spawn_with_sparse_image(self):
+        # Only a sparse disk image triggers the copy
+        self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
+        result = [1024, {"vmware_ostype": "otherGuest",
+                         "vmware_adaptertype": "lsiLogic",
+                         "vmware_disktype": "sparse"}]
+        vmware_images.get_vmdk_size_and_properties(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(result)
+
+        # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
+        # two times
+        self.mox.StubOutWithMock(vmops.VMwareVCVMOps,
+                                 'get_copy_virtual_disk_spec')
+        self.conn._vmops.get_copy_virtual_disk_spec(
+                mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(None)
+        self.mox.ReplayAll()
+        self._create_vm()
+        info = self.conn.get_info({'uuid': 'fake-uuid'})
+        self._check_vm_info(info, power_state.RUNNING)
