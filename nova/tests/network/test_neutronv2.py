@@ -99,6 +99,7 @@ class TestNeutronClient(test.TestCase):
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
+            auth_strategy=None,
             endpoint_url=CONF.neutron_url,
             token=my_context.auth_token,
             timeout=CONF.neutron_url_timeout,
@@ -106,6 +107,12 @@ class TestNeutronClient(test.TestCase):
             ca_cert=None).AndReturn(None)
         self.mox.ReplayAll()
         neutronv2.get_client(my_context)
+
+    def test_withouttoken(self):
+        my_context = context.RequestContext('userid', 'my_tenantid')
+        self.assertRaises(exceptions.Unauthorized,
+                          neutronv2.get_client,
+                          my_context)
 
     def test_withouttoken_keystone_connection_error(self):
         self.flags(neutron_auth_strategy='keystone')
@@ -122,13 +129,20 @@ class TestNeutronClient(test.TestCase):
         my_context = context.RequestContext('userid', 'my_tenantid')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
+            auth_url=CONF.neutron_admin_auth_url,
+            password=CONF.neutron_admin_password,
+            tenant_name=CONF.neutron_admin_tenant_name,
+            username=CONF.neutron_admin_username,
             endpoint_url=CONF.neutron_url,
             auth_strategy=None,
             timeout=CONF.neutron_url_timeout,
             insecure=False,
             ca_cert=None).AndReturn(None)
         self.mox.ReplayAll()
-        neutronv2.get_client(my_context)
+
+        # Note that the context is not elevated, but the True is passed in
+        # which will force an elevation to admin credentials
+        neutronv2.get_client(my_context, True)
 
 
 class TestNeutronv2Base(test.TestCase):
