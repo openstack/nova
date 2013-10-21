@@ -2903,6 +2903,18 @@
 
 
 #
+# Options defined in nova.virt.xenapi.client.session
+#
+
+# Timeout in seconds for XenAPI login. (integer value)
+#login_timeout=10
+
+# Maximum number of concurrent XenAPI connections. Used only
+# if compute_driver=xenapi.XenAPIDriver (integer value)
+#connection_concurrent=5
+
+
+#
 # Options defined in nova.virt.xenapi.driver
 #
 
@@ -2921,10 +2933,6 @@
 # Used only if compute_driver=xenapi.XenAPIDriver (string
 # value)
 #connection_password=<None>
-
-# Maximum number of concurrent XenAPI connections. Used only
-# if compute_driver=xenapi.XenAPIDriver (integer value)
-#connection_concurrent=5
 
 # The interval used for polling of coalescing vhds. Used only
 # if compute_driver=xenapi.XenAPIDriver (floating point value)
@@ -2957,9 +2965,6 @@
 # Specify prefix to remap VBD dev to (ex. /dev/xvdb ->
 # /dev/sdb) (string value)
 #remap_vbd_dev_prefix=sd
-
-# Timeout in seconds for XenAPI login. (integer value)
-#login_timeout=10
 
 
 #

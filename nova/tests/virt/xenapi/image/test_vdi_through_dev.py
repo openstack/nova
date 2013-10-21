@@ -21,7 +21,7 @@ import tarfile
 
 from nova.image import glance
 from nova import test
-from nova.virt.xenapi import driver
+from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi.image import vdi_through_dev
 
 
@@ -102,7 +102,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
         store._perform_upload('devpath')
 
     def test__get_vdi_ref(self):
-        session = self.mox.CreateMock(driver.XenAPISession)
+        session = self.mox.CreateMock(xenapi_session.XenAPISession)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', session, 'instance', ['vdi0', 'vdi1'], 'id')
         session.call_xenapi('VDI.get_by_uuid', 'vdi0').AndReturn('vdi_ref')
@@ -112,7 +112,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
         self.assertEqual('vdi_ref', store._get_vdi_ref())
 
     def test__get_virtual_size(self):
-        session = self.mox.CreateMock(driver.XenAPISession)
+        session = self.mox.CreateMock(xenapi_session.XenAPISession)
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', session, 'instance', ['vdi0', 'vdi1'], 'id')
         self.mox.StubOutWithMock(store, '_get_vdi_ref')
