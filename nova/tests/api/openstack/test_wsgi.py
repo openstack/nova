@@ -1087,11 +1087,11 @@ class TestSanitize(test.NoDBTestCase):
         payload = """{ 'adminPass' : 'mypassword' }"""
         expected = """{ 'adminPass' : '****' }"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """{'admin_pass':'mypassword'}"""
-        expected = """{'admin_pass':'****'}"""
+        payload = """{'admin_password':'mypassword'}"""
+        expected = """{'admin_password':'****'}"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """{ 'admin_pass' : 'mypassword' }"""
-        expected = """{ 'admin_pass' : '****' }"""
+        payload = """{ 'admin_password' : 'mypassword' }"""
+        expected = """{ 'admin_password' : '****' }"""
         self.assertEqual(expected, wsgi.sanitize(payload))
 
     def test_xml(self):
@@ -1103,13 +1103,13 @@ class TestSanitize(test.NoDBTestCase):
                      </adminPass>"""
         expected = """<adminPass>****</adminPass>"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """<admin_pass>mypassword</admin_pass>"""
-        expected = """<admin_pass>****</admin_pass>"""
+        payload = """<admin_password>mypassword</admin_password>"""
+        expected = """<admin_password>****</admin_password>"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """<admin_pass>
+        payload = """<admin_password>
                         mypassword
-                     </admin_pass>"""
-        expected = """<admin_pass>****</admin_pass>"""
+                     </admin_password>"""
+        expected = """<admin_password>****</admin_password>"""
         self.assertEqual(expected, wsgi.sanitize(payload))
 
     def test_xml_attribute(self):
@@ -1122,22 +1122,22 @@ class TestSanitize(test.NoDBTestCase):
         payload = """adminPass = "mypassword\""""
         expected = """adminPass = "****\""""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """admin_pass='mypassword'"""
-        expected = """admin_pass='****'"""
+        payload = """admin_password='mypassword'"""
+        expected = """admin_password='****'"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """admin_pass = 'mypassword'"""
-        expected = """admin_pass = '****'"""
+        payload = """admin_password = 'mypassword'"""
+        expected = """admin_password = '****'"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """admin_pass = "mypassword\""""
-        expected = """admin_pass = "****\""""
+        payload = """admin_password = "mypassword\""""
+        expected = """admin_password = "****\""""
         self.assertEqual(expected, wsgi.sanitize(payload))
 
     def test_json_message(self):
         payload = """body: {"changePassword": {"adminPass": "1234567"}}"""
         expected = """body: {"changePassword": {"adminPass": "****"}}"""
         self.assertEqual(expected, wsgi.sanitize(payload))
-        payload = """body: {"rescue": {"admin_pass": "1234567"}}"""
-        expected = """body: {"rescue": {"admin_pass": "****"}}"""
+        payload = """body: {"rescue": {"admin_password": "1234567"}}"""
+        expected = """body: {"rescue": {"admin_password": "****"}}"""
         self.assertEqual(expected, wsgi.sanitize(payload))
 
     def test_xml_message(self):
@@ -1168,8 +1168,8 @@ class TestSanitize(test.NoDBTestCase):
         self.assertEqual(expected, wsgi.sanitize(payload))
         payload = """<?xml version="1.0" encoding="UTF-8"?>
 <rescue xmlns="http://docs.openstack.org/compute/api/v1.1"
-    admin_pass="MySecretPass"/>"""
+    admin_password="MySecretPass"/>"""
         expected = """<?xml version="1.0" encoding="UTF-8"?>
 <rescue xmlns="http://docs.openstack.org/compute/api/v1.1"
-    admin_pass="****"/>"""
+    admin_password="****"/>"""
         self.assertEqual(expected, wsgi.sanitize(payload))

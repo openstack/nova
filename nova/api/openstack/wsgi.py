@@ -74,15 +74,16 @@ _ROUTES_METHODS = [
     'update',
 ]
 
-_SANITIZE_KEYS = ['adminPass', 'admin_pass']
+_SANITIZE_KEYS = ['adminPass', 'admin_password']
 
 _SANITIZE_PATTERNS = [
     re.compile(r'(adminPass\s*[=]\s*[\"\']).*?([\"\'])', re.DOTALL),
-    re.compile(r'(admin_pass\s*[=]\s*[\"\']).*?([\"\'])', re.DOTALL),
+    re.compile(r'(admin_password\s*[=]\s*[\"\']).*?([\"\'])', re.DOTALL),
     re.compile(r'(<adminPass>).*?(</adminPass>)', re.DOTALL),
-    re.compile(r'(<admin_pass>).*?(</admin_pass>)', re.DOTALL),
+    re.compile(r'(<admin_password>).*?(</admin_password>)', re.DOTALL),
     re.compile(r'([\"\']adminPass[\"\']\s*:\s*[\"\']).*?([\"\'])', re.DOTALL),
-    re.compile(r'([\"\']admin_pass[\"\']\s*:\s*[\"\']).*?([\"\'])', re.DOTALL)
+    re.compile(r'([\"\']admin_password[\"\']\s*:\s*[\"\']).*?([\"\'])',
+               re.DOTALL)
 ]
 
 

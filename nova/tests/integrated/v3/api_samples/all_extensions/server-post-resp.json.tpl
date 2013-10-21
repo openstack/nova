@@ -1,6 +1,6 @@
 {
     "server": {
-        "admin_pass": "%(password)s",
+        "admin_password": "%(password)s",
         "id": "%(id)s",
         "links": [
             {

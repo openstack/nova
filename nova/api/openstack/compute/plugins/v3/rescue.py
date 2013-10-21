@@ -55,8 +55,8 @@ class RescueController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
 
-        if body['rescue'] and 'admin_pass' in body['rescue']:
-            password = body['rescue']['admin_pass']
+        if body['rescue'] and 'admin_password' in body['rescue']:
+            password = body['rescue']['admin_password']
         else:
             password = utils.generate_password()
 
@@ -74,7 +74,7 @@ class RescueController(wsgi.Controller):
                 explanation=non_rescuable.format_message())
 
         if CONF.enable_instance_password:
-            return {'admin_pass': password}
+            return {'admin_password': password}
         else:
             return {}
 

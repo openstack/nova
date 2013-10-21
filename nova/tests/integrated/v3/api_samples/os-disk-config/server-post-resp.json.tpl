@@ -1,6 +1,6 @@
 {
     "server": {
-        "admin_pass": "%(password)s",
+        "admin_password": "%(password)s",
         "id": "%(id)s",
         "os-disk-config:disk_config": "AUTO",
         "links": [

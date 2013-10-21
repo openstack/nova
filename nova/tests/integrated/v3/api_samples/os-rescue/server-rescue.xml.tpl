@@ -1,2 +1,2 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<admin_pass>%(password)s</admin_pass>
+<admin_password>%(password)s</admin_password>

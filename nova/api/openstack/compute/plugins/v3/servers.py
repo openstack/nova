@@ -129,7 +129,7 @@ class ServersTemplate(xmlutil.TemplateBuilder):
 class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
     def construct(self):
         root = xmlutil.TemplateElement('server')
-        root.set('admin_pass')
+        root.set('admin_password')
         return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
 
 
@@ -157,7 +157,7 @@ class CommonDeserializer(wsgi.MetadataXMLDeserializer):
         server = {}
         server_node = self.find_first_child_named(node, 'server')
 
-        attributes = ["name", "image_ref", "flavor_ref", "admin_pass",
+        attributes = ["name", "image_ref", "flavor_ref", "admin_password",
                       "key_name"]
         for attr in attributes:
             if server_node.getAttribute(attr):
@@ -245,8 +245,8 @@ class ActionDeserializer(CommonDeserializer):
             raise AttributeError("No image_ref was specified in request")
         rebuild["image_ref"] = node.getAttribute("image_ref")
 
-        if node.hasAttribute("admin_pass"):
-            rebuild["admin_pass"] = node.getAttribute("admin_pass")
+        if node.hasAttribute("admin_password"):
+            rebuild["admin_password"] = node.getAttribute("admin_password")
 
         if self.controller:
             self.controller.server_rebuild_xml_deserialize(node, rebuild)
@@ -821,7 +821,7 @@ class ServersController(wsgi.Controller):
         server = self._view_builder.create(req, instances[0])
 
         if CONF.enable_instance_password:
-            server['server']['admin_pass'] = password
+            server['server']['admin_password'] = password
 
         robj = wsgi.ResponseObject(server)
 
@@ -1135,10 +1135,10 @@ class ServersController(wsgi.Controller):
 
         view = self._view_builder.show(req, instance)
 
-        # Add on the admin_pass attribute since the view doesn't do it
+        # Add on the admin_password attribute since the view doesn't do it
         # unless instance passwords are disabled
         if CONF.enable_instance_password:
-            view['server']['admin_pass'] = password
+            view['server']['admin_password'] = password
 
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)
@@ -1218,12 +1218,12 @@ class ServersController(wsgi.Controller):
     def _get_server_admin_password(self, server):
         """Determine the admin password for a server on creation."""
         try:
-            password = server['admin_pass']
+            password = server['admin_password']
             self._validate_admin_password(password)
         except KeyError:
             password = utils.generate_password()
         except ValueError:
-            raise exc.HTTPBadRequest(explanation=_("Invalid admin_pass"))
+            raise exc.HTTPBadRequest(explanation=_("Invalid admin_password"))
 
         return password
 

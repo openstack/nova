@@ -1679,14 +1679,14 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.method = 'POST'
         self.req.headers["content-type"] = "application/json"
 
-    def _check_admin_pass_len(self, server_dict):
-        """utility function - check server_dict for admin_pass length."""
+    def _check_admin_password_len(self, server_dict):
+        """utility function - check server_dict for admin_password length."""
         self.assertEqual(CONF.password_length,
-                         len(server_dict["admin_pass"]))
+                         len(server_dict["admin_password"]))
 
-    def _check_admin_pass_missing(self, server_dict):
-        """utility function - check server_dict for absence of admin_pass."""
-        self.assertNotIn("admin_pass", server_dict)
+    def _check_admin_password_missing(self, server_dict):
+        """utility function - check server_dict for admin_password absence."""
+        self.assertNotIn("admin_password", server_dict)
 
     def _test_create_instance(self, flavor=2):
         image_uuid = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -1694,7 +1694,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['flavor_ref'] = flavor
         self.req.body = jsonutils.dumps(self.body)
         server = self.controller.create(self.req, self.body).obj['server']
-        self._check_admin_pass_len(server)
+        self._check_admin_password_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_private_flavor(self):
@@ -1898,7 +1898,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self._check_admin_pass_missing(server)
+        self._check_admin_password_missing(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_name_too_long(self):
@@ -1949,7 +1949,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self._check_admin_pass_len(server)
+        self._check_admin_password_len(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_extension_create_exception(self):
@@ -1990,7 +1990,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self._check_admin_pass_missing(server)
+        self._check_admin_password_missing(server)
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_too_much_metadata(self):
@@ -2053,7 +2053,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(self.req, self.body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
-        self._check_admin_pass_len(res["server"])
+        self._check_admin_password_len(res["server"])
 
     def test_create_instance_invalid_flavor_href(self):
         image_href = 'http://localhost/v2/images/2'
@@ -2097,29 +2097,29 @@ class ServersControllerCreateTest(test.TestCase):
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
 
-    def test_create_instance_admin_pass(self):
+    def test_create_instance_admin_password(self):
         self.body['server']['flavor_ref'] = 3,
-        self.body['server']['admin_pass'] = 'testpass'
+        self.body['server']['admin_password'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self.assertEqual(server['admin_pass'],
-                         self.body['server']['admin_pass'])
+        self.assertEqual(server['admin_password'],
+                         self.body['server']['admin_password'])
 
-    def test_create_instance_admin_pass_pass_disabled(self):
+    def test_create_instance_admin_password_pass_disabled(self):
         self.flags(enable_instance_password=False)
         self.body['server']['flavor_ref'] = 3,
-        self.body['server']['admin_pass'] = 'testpass'
+        self.body['server']['admin_password'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, self.body).obj
 
         server = res['server']
-        self.assertIn('admin_pass', self.body['server'])
+        self.assertIn('admin_password', self.body['server'])
 
-    def test_create_instance_admin_pass_empty(self):
+    def test_create_instance_admin_password_empty(self):
         self.body['server']['flavor_ref'] = 3,
-        self.body['server']['admin_pass'] = ''
+        self.body['server']['admin_password'] = ''
         self.req.body = jsonutils.dumps(self.body)
 
         # The fact that the action doesn't raise is enough validation
@@ -2264,20 +2264,20 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
             }
         self.assertEqual(request['body'], expected)
 
-    def test_admin_pass(self):
+    def test_admin_password(self):
         serial_request = """
 <server xmlns="http://docs.openstack.org/compute/api/v2"
         name="new-server-test"
         image_ref="1"
         flavor_ref="2"
-        admin_pass="1234"/>"""
+        admin_password="1234"/>"""
         request = self.deserializer.deserialize(serial_request)
         expected = {
             "server": {
                 "name": "new-server-test",
                 "image_ref": "1",
                 "flavor_ref": "2",
-                "admin_pass": "1234",
+                "admin_password": "1234",
             },
         }
         self.assertEqual(request['body'], expected)
@@ -3268,7 +3268,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "host_id": "e4d909c290d0fb1ca068ffaddf22cbd0",
-                "admin_pass": "test_password",
+                "admin_password": "test_password",
                 "image": {
                     "id": "5",
                     "links": [
@@ -3341,7 +3341,8 @@ class ServerXMLSerializationTest(test.TestCase):
         server_dict = fixture['server']
 
         for key in ['name', 'id', 'created',
-                    'updated', 'progress', 'status', 'host_id', 'admin_pass']:
+                    'updated', 'progress', 'status', 'host_id',
+                    'admin_password']:
             self.assertEqual(root.get(key), str(server_dict[key]))
 
         link_nodes = root.findall('{0}link'.format(ATOMNS))
@@ -3881,7 +3882,7 @@ class ServerXMLSerializationTest(test.TestCase):
                 "name": "test_server",
                 "status": "BUILD",
                 "host_id": "e4d909c290d0fb1ca068ffaddf22cbd0",
-                "admin_pass": "test_password",
+                "admin_password": "test_password",
                 "image": {
                     "id": "5",
                     "links": [
@@ -3954,7 +3955,8 @@ class ServerXMLSerializationTest(test.TestCase):
         server_dict = fixture['server']
 
         for key in ['name', 'id', 'created',
-                    'updated', 'progress', 'status', 'host_id', 'admin_pass']:
+                    'updated', 'progress', 'status', 'host_id',
+                    'admin_password']:
             self.assertEqual(root.get(key), str(server_dict[key]))
 
         link_nodes = root.findall('{0}link'.format(ATOMNS))
