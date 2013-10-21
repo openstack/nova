@@ -14,14 +14,14 @@ greenlet>=0.3.2
 PasteDeploy>=1.5.0
 Paste
 sqlalchemy-migrate>=0.7.2
-netaddr
+netaddr>=0.7.6
 suds>=0.4
 paramiko>=1.8.0
 pyasn1
 Babel>=1.3
-iso8601>=0.1.4
+iso8601>=0.1.4,!=0.1.5,!=0.1.6
 jsonschema>=1.3.0,!=1.4.0
-python-cinderclient>=1.0.5
+python-cinderclient>=1.0.6
 python-neutronclient>=2.3.0,<3
 python-glanceclient>=0.9.0
 python-keystoneclient>=0.4.1
