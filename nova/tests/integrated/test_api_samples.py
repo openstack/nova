@@ -1712,6 +1712,7 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
         self.stubs.Set(db, "service_get_all",
                        test_services.fake_db_api_service_get_all)
         self.stubs.Set(timeutils, "utcnow", test_services.fake_utcnow)
+        self.stubs.Set(timeutils, "utcnow_ts", test_services.fake_utcnow_ts)
         self.stubs.Set(db, "service_get_by_args",
                        test_services.fake_service_get_by_host_binary)
         self.stubs.Set(db, "service_update",

@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+import calendar
 import datetime
 import webob.exc
 
@@ -123,6 +123,11 @@ def fake_utcnow():
     return datetime.datetime(2012, 10, 29, 13, 42, 11)
 
 
+def fake_utcnow_ts():
+    d = fake_utcnow()
+    return calendar.timegm(d.utctimetuple())
+
+
 class ServicesTest(test.TestCase):
 
     def setUp(self):
@@ -133,6 +138,7 @@ class ServicesTest(test.TestCase):
         self.stubs.Set(self.controller.host_api, "service_get_all",
                        fake_host_api_service_get_all)
         self.stubs.Set(timeutils, "utcnow", fake_utcnow)
+        self.stubs.Set(timeutils, "utcnow_ts", fake_utcnow_ts)
         self.stubs.Set(db, "service_get_by_args",
                        fake_service_get_by_host_binary)
         self.stubs.Set(db, "service_update", fake_service_update)
