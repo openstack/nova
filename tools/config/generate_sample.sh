@@ -73,6 +73,7 @@ then
 fi
 
 BASEDIRESC=`echo $BASEDIR | sed -e 's/\//\\\\\//g'`
+find $TARGETDIR -type f -name "*.pyc" -delete
 FILES=$(find $TARGETDIR -type f -name "*.py" ! -path "*/tests/*" \
         -exec grep -l "Opt(" {} + | sed -e "s/^$BASEDIRESC\///g" | sort -u)
 
