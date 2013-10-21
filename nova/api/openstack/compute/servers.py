@@ -568,7 +568,12 @@ class Controller(wsgi.Controller):
             except ValueError as err:
                 raise exception.InvalidInput(str(err))
 
-        if 'all_tenants' not in search_opts:
+        if 'all_tenants' in search_opts:
+            policy.enforce(context, 'compute:get_all_tenants',
+                           {'project_id': context.project_id,
+                            'user_id': context.user_id})
+            del search_opts['all_tenants']
+        else:
             if context.project_id:
                 search_opts['project_id'] = context.project_id
             else:
