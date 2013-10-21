@@ -333,7 +333,7 @@ class VMwareVMOps(object):
                          'data_store_name': data_store_name},
                       instance=instance)
 
-        def _copy_virtual_disk():
+        def _copy_virtual_disk(source, dest):
             """Copy a sparse virtual disk to a thin virtual disk."""
             # Copy a sparse virtual disk to a thin virtual disk. This is also
             # done to generate the meta-data file whose specifics
@@ -355,9 +355,9 @@ class VMwareVMOps(object):
                 self._session._get_vim(),
                 "CopyVirtualDisk_Task",
                 service_content.virtualDiskManager,
-                sourceName=sparse_uploaded_vmdk_path,
+                sourceName=source,
                 sourceDatacenter=self._get_datacenter_ref_and_name()[0],
-                destName=uploaded_vmdk_path,
+                destName=dest,
                 destSpec=vmdk_copy_spec)
             self._session._wait_for_task(instance['uuid'], vmdk_copy_task)
             LOG.debug(_("Copied Virtual Disk of size %(vmdk_file_size_in_kb)s"
@@ -372,20 +372,17 @@ class VMwareVMOps(object):
                 self._default_root_device, block_device_info)
 
         if not ebs_root:
+
             linked_clone = CONF.use_linked_clone
-            if linked_clone:
-                upload_folder = self._instance_path_base
-                upload_name = instance['image_ref']
-            else:
-                upload_folder = instance['uuid']
-                upload_name = instance['name']
+            upload_folder = self._instance_path_base
+            upload_name = instance['image_ref']
 
             # The vmdk meta-data file
             uploaded_vmdk_name = "%s/%s.vmdk" % (upload_folder, upload_name)
             uploaded_vmdk_path = vm_util.build_datastore_path(data_store_name,
                                                 uploaded_vmdk_name)
 
-            if not (linked_clone and self._check_if_folder_file_exists(
+            if not (self._check_if_folder_file_exists(
                                         data_store_ref, data_store_name,
                                         upload_folder, upload_name + ".vmdk")):
 
@@ -417,7 +414,8 @@ class VMwareVMOps(object):
                 if disk_type == "sparse":
                     # Copy the sparse virtual disk to a thin virtual disk.
                     disk_type = "thin"
-                    _copy_virtual_disk()
+                    _copy_virtual_disk(sparse_uploaded_vmdk_path,
+                                       uploaded_vmdk_path)
                     _delete_disk_file(sparse_uploaded_vmdk_path)
             else:
                 # linked clone base disk exists
@@ -426,7 +424,18 @@ class VMwareVMOps(object):
 
             # Extend the disk size if necessary
             if not linked_clone:
-                root_vmdk_path = uploaded_vmdk_path
+                # If we are not using linked_clone, copy the image from
+                # the cache into the instance directory.  If we are using
+                # linked clone it is references from the cache directory
+                dest_folder = instance['uuid']
+                dest_name = instance['name']
+                dest_vmdk_name = "%s/%s.vmdk" % (dest_folder,
+                                                         dest_name)
+                dest_vmdk_path = vm_util.build_datastore_path(
+                    data_store_name, dest_vmdk_name)
+                _copy_virtual_disk(uploaded_vmdk_path, dest_vmdk_path)
+
+                root_vmdk_path = dest_vmdk_path
                 if root_gb_in_kb > vmdk_file_size_in_kb:
                     self._extend_virtual_disk(instance, root_gb_in_kb,
                                               root_vmdk_path, dc_ref)
