@@ -3612,8 +3612,9 @@ def security_group_get(context, security_group_id, columns_to_join=None):
 
     if columns_to_join is None:
         columns_to_join = []
-    if 'instances' in columns_to_join:
-        query = query.options(joinedload_all('instances'))
+    for column in columns_to_join:
+        if column.startswith('instances'):
+            query = query.options(joinedload_all(column))
 
     result = query.first()
     if not result:
