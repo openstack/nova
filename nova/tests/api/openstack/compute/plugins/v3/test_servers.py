@@ -697,6 +697,42 @@ class ServersControllerTest(ControllerTest):
 
         self.assertIn('servers', res)
 
+    def test_tenant_id_filter_no_admin_context(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertNotEqual(filters, None)
+            self.assertEqual(filters['project_id'], 'fake')
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?tenant_id=newfake')
+        res = self.controller.index(req)
+        self.assertTrue('servers' in res)
+
+    def test_tenant_id_filter_implies_all_tenants(self):
+        def fake_get_all(context, filters=None, sort_key=None,
+                         sort_dir='desc', limit=None, marker=None,
+                         columns_to_join=None):
+            self.assertNotEqual(filters, None)
+            # The project_id assertion checks that the project_id
+            # filter is set to that specified in the request url and
+            # not that of the context, verifying that the all_tenants
+            # flag was enabled
+            self.assertEqual(filters['project_id'], 'newfake')
+            self.assertFalse(filters.get('tenant_id'))
+            return [fakes.stub_instance(100)]
+
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?tenant_id=newfake',
+                                      use_admin_context=True)
+        res = self.controller.index(req)
+        self.assertTrue('servers' in res)
+
     def test_all_tenants_param_normal(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
