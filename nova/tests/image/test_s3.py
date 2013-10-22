@@ -109,9 +109,9 @@ class TestS3ImageService(test.TestCase):
         key = keys[0]
         for x in list0:
             self.assertEqual(len(x), len(keys))
-            self.assertTrue(key in x)
+            self.assertIn(key, x)
             for y in list1:
-                self.assertTrue(key in y)
+                self.assertIn(key, y)
                 if x[key] == y[key]:
                     for k in keys:
                         self.assertEqual(x[k], y[k])
@@ -172,10 +172,10 @@ class TestS3ImageService(test.TestCase):
             self.context, metadata, ami_manifest_xml)
 
         ret_image = self.image_service.show(self.context, image['id'])
-        self.assertTrue('properties' in ret_image)
+        self.assertIn('properties', ret_image)
         properties = ret_image['properties']
 
-        self.assertTrue('mappings' in properties)
+        self.assertIn('mappings', properties)
         mappings = properties['mappings']
         expected_mappings = [
             {"device": "sda1", "virtual": "ami"},

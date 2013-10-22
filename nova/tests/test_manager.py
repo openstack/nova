@@ -32,4 +32,4 @@ class ManagerTestCase(test.NoDBTestCase):
         dispatch = m.create_rpc_dispatcher(additional_apis=[api])
 
         self.assertEqual(len(dispatch.callbacks), 3)
-        self.assertTrue(api in dispatch.callbacks)
+        self.assertIn(api, dispatch.callbacks)

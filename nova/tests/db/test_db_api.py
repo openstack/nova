@@ -370,7 +370,7 @@ class AggregateDBApiTestCase(test.TestCase):
         r1 = db.aggregate_metadata_get_by_metadata_key(ctxt, aggr['id'],
                                                         'availability_zone')
         self.assertEqual(r1['availability_zone'], set(['az1']))
-        self.assertTrue('availability_zone' in r1)
+        self.assertIn('availability_zone', r1)
         self.assertNotIn('name', r1)
 
     def test_aggregate_metadata_get_by_host_with_key(self):
@@ -1470,7 +1470,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
         meta = sqlalchemy_api._instance_metadata_get_multi(self.ctxt, uuids)
         for row in meta:
-            self.assertTrue(row['instance_uuid'] in uuids)
+            self.assertIn(row['instance_uuid'], uuids)
 
     def test_instance_metadata_get_multi_no_uuids(self):
         self.mox.StubOutWithMock(query.Query, 'filter')
@@ -1482,7 +1482,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         sys_meta = sqlalchemy_api._instance_system_metadata_get_multi(
                 self.ctxt, uuids)
         for row in sys_meta:
-            self.assertTrue(row['instance_uuid'] in uuids)
+            self.assertIn(row['instance_uuid'], uuids)
 
     def test_instance_system_metadata_get_multi_no_uuids(self):
         self.mox.StubOutWithMock(query.Query, 'filter')
@@ -6006,7 +6006,7 @@ class Ec2TestCase(test.TestCase):
             try:
                 method(self.ctxt, value)
             except exception.NotFound as exc:
-                self.assertTrue(unicode(value) in unicode(exc))
+                self.assertIn(unicode(value), unicode(exc))
 
         check_exc_format(db.get_ec2_volume_id_by_uuid, 'fake')
         check_exc_format(db.get_volume_uuid_by_ec2_id, 123456)

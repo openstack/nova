@@ -422,22 +422,22 @@ class NetworkInfoTests(test.NoDBTestCase):
             self.assertTrue(template is None)
         else:
             if use_ipv4:
-                self.assertTrue('auto eth0' in template)
-                self.assertTrue('iface eth0 inet static' in template)
-                self.assertTrue('address 10.10.0.2' in template)
-                self.assertTrue('netmask 255.255.255.0' in template)
-                self.assertTrue('broadcast 10.10.0.255' in template)
+                self.assertIn('auto eth0', template)
+                self.assertIn('iface eth0 inet static', template)
+                self.assertIn('address 10.10.0.2', template)
+                self.assertIn('netmask 255.255.255.0', template)
+                self.assertIn('broadcast 10.10.0.255', template)
                 if gateway:
-                    self.assertTrue('gateway 10.10.0.1' in template)
+                    self.assertIn('gateway 10.10.0.1', template)
                 else:
                     self.assertNotIn('gateway', template)
-                self.assertTrue('dns-nameservers 1.2.3.4 2.3.4.5' in template)
+                self.assertIn('dns-nameservers 1.2.3.4 2.3.4.5', template)
             if use_ipv6:
-                self.assertTrue('iface eth0 inet6 static' in template)
-                self.assertTrue('address 1234:567::2' in template)
-                self.assertTrue('netmask 48' in template)
+                self.assertIn('iface eth0 inet6 static', template)
+                self.assertIn('address 1234:567::2', template)
+                self.assertIn('netmask 48', template)
                 if gateway:
-                    self.assertTrue('gateway 1234:567::1' in template)
+                    self.assertIn('gateway 1234:567::1', template)
             if not use_ipv4 and not use_ipv6:
                 self.assertTrue(template is None)
 

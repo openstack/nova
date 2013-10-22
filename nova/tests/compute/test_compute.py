@@ -1731,13 +1731,13 @@ class ComputeTestCase(BaseTestCase):
             self.assertEquals(payload['instance_type'], 'm1.tiny')
             type_id = flavors.get_flavor_by_name('m1.tiny')['id']
             self.assertEquals(str(payload['instance_type_id']), str(type_id))
-            self.assertTrue('display_name' in payload)
-            self.assertTrue('created_at' in payload)
-            self.assertTrue('launched_at' in payload)
+            self.assertIn('display_name', payload)
+            self.assertIn('created_at', payload)
+            self.assertIn('launched_at', payload)
             image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
             self.assertEquals(payload['image_ref_url'], image_ref_url)
         msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertTrue('rescue_image_name' in msg.payload)
+        self.assertIn('rescue_image_name', msg.payload)
 
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -1771,9 +1771,9 @@ class ComputeTestCase(BaseTestCase):
             self.assertEquals(payload['instance_type'], 'm1.tiny')
             type_id = flavors.get_flavor_by_name('m1.tiny')['id']
             self.assertEquals(str(payload['instance_type_id']), str(type_id))
-            self.assertTrue('display_name' in payload)
-            self.assertTrue('created_at' in payload)
-            self.assertTrue('launched_at' in payload)
+            self.assertIn('display_name', payload)
+            self.assertIn('created_at', payload)
+            self.assertIn('launched_at', payload)
             image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
             self.assertEquals(payload['image_ref_url'], image_ref_url)
 
@@ -2812,10 +2812,10 @@ class ComputeTestCase(BaseTestCase):
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
         self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertEquals(payload['state'], 'active')
-        self.assertTrue('display_name' in payload)
-        self.assertTrue('created_at' in payload)
-        self.assertTrue('launched_at' in payload)
-        self.assertTrue('fixed_ips' in payload)
+        self.assertIn('display_name', payload)
+        self.assertIn('created_at', payload)
+        self.assertIn('launched_at', payload)
+        self.assertIn('fixed_ips', payload)
         self.assertTrue(payload['launched_at'])
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
@@ -2925,11 +2925,11 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
         self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
-        self.assertTrue('display_name' in payload)
-        self.assertTrue('created_at' in payload)
-        self.assertTrue('launched_at' in payload)
-        self.assertTrue('terminated_at' in payload)
-        self.assertTrue('deleted_at' in payload)
+        self.assertIn('display_name', payload)
+        self.assertIn('created_at', payload)
+        self.assertIn('launched_at', payload)
+        self.assertIn('terminated_at', payload)
+        self.assertIn('deleted_at', payload)
         self.assertEqual(payload['terminated_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
@@ -3422,7 +3422,7 @@ class ComputeTestCase(BaseTestCase):
 
         # NOTE(mriedem): make sure prep_resize set old_vm_state correctly
         sys_meta = instance.system_metadata
-        self.assertTrue('old_vm_state' in sys_meta)
+        self.assertIn('old_vm_state', sys_meta)
         if power_on:
             self.assertEqual(vm_states.ACTIVE, sys_meta['old_vm_state'])
         else:
@@ -3773,9 +3773,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
         self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
-        self.assertTrue('display_name' in payload)
-        self.assertTrue('created_at' in payload)
-        self.assertTrue('launched_at' in payload)
+        self.assertIn('display_name', payload)
+        self.assertIn('created_at', payload)
+        self.assertIn('launched_at', payload)
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         self.assertEquals(payload['image_ref_url'], new_image_ref_url)
         self.compute.terminate_instance(self.context,
@@ -3830,9 +3830,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(payload['instance_type'], 'm1.small')
         self.assertEquals(str(payload['instance_type_id']), str(new_type_id))
         self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
-        self.assertTrue('display_name' in payload)
-        self.assertTrue('created_at' in payload)
-        self.assertTrue('launched_at' in payload)
+        self.assertIn('display_name', payload)
+        self.assertIn('created_at', payload)
+        self.assertIn('launched_at', payload)
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
@@ -3880,9 +3880,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertEquals(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
         self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
-        self.assertTrue('display_name' in payload)
-        self.assertTrue('created_at' in payload)
-        self.assertTrue('launched_at' in payload)
+        self.assertIn('display_name', payload)
+        self.assertIn('created_at', payload)
+        self.assertIn('launched_at', payload)
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance=instance)
@@ -4569,7 +4569,7 @@ class ComputeTestCase(BaseTestCase):
         migrate_data = {'is_shared_storage': False}
         self.compute._post_live_migration(c, inst_ref, dest,
                                           migrate_data=migrate_data)
-        self.assertTrue('destroyed' in result)
+        self.assertIn('destroyed', result)
         self.assertTrue(result['destroyed'] == True)
 
     def test_post_live_migration_working_correctly(self):
@@ -4757,7 +4757,7 @@ class ComputeTestCase(BaseTestCase):
         exc_info = None
 
         def fake_db_fault_create(ctxt, values):
-            self.assertTrue('raise NotImplementedError' in values['details'])
+            self.assertIn('raise NotImplementedError', values['details'])
             del values['details']
 
             expected = {
@@ -5991,7 +5991,7 @@ class ComputeAPITestCase(BaseTestCase):
                      'image_ramdisk_id': 'fake_ramdisk_id',
                      'image_something_else': 'meow', }
             for key, value in image_props.iteritems():
-                self.assertTrue(key in sys_metadata)
+                self.assertIn(key, sys_metadata)
                 self.assertEqual(value, sys_metadata[key])
 
         finally:
@@ -6012,7 +6012,7 @@ class ComputeAPITestCase(BaseTestCase):
                                    'rxtx_factor', 'vcpu_weight']
             for key in instance_type_props:
                 sys_meta_key = "instance_type_%s" % key
-                self.assertTrue(sys_meta_key in sys_metadata)
+                self.assertIn(sys_meta_key, sys_metadata)
                 self.assertEqual(str(instance_type[key]),
                                  str(sys_metadata[sys_meta_key]))
 
@@ -6587,27 +6587,27 @@ class ComputeAPITestCase(BaseTestCase):
                 search_opts={'name': '^woo.*'})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance1['uuid'] in instance_uuids)
-        self.assertTrue(instance2['uuid'] in instance_uuids)
+        self.assertIn(instance1['uuid'], instance_uuids)
+        self.assertIn(instance2['uuid'], instance_uuids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': '^woot.*'})
         instance_uuids = [instance['uuid'] for instance in instances]
         self.assertEqual(len(instances), 1)
-        self.assertTrue(instance1['uuid'] in instance_uuids)
+        self.assertIn(instance1['uuid'], instance_uuids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': '.*oot.*'})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance1['uuid'] in instance_uuids)
-        self.assertTrue(instance3['uuid'] in instance_uuids)
+        self.assertIn(instance1['uuid'], instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': '^n.*'})
         self.assertEqual(len(instances), 1)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance3['uuid'] in instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
 
         instances = self.compute_api.get_all(c,
                 search_opts={'name': 'noth.*'})
@@ -6689,8 +6689,8 @@ class ComputeAPITestCase(BaseTestCase):
         instances = self.compute_api.get_all(c, search_opts={'image': '4567'})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance2['uuid'] in instance_uuids)
-        self.assertTrue(instance3['uuid'] in instance_uuids)
+        self.assertIn(instance2['uuid'], instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
 
         # Test passing a list as search arg
         instances = self.compute_api.get_all(c,
@@ -6734,8 +6734,8 @@ class ComputeAPITestCase(BaseTestCase):
         instances = self.compute_api.get_all(c, search_opts={'flavor': 1})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance2['uuid'] in instance_uuids)
-        self.assertTrue(instance3['uuid'] in instance_uuids)
+        self.assertIn(instance2['uuid'], instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
 
         db.instance_destroy(c, instance1['uuid'])
         db.instance_destroy(c, instance2['uuid'])
@@ -6768,8 +6768,8 @@ class ComputeAPITestCase(BaseTestCase):
                 search_opts={'power_state': power_state.RUNNING})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance2['uuid'] in instance_uuids)
-        self.assertTrue(instance3['uuid'] in instance_uuids)
+        self.assertIn(instance2['uuid'], instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
 
         # Test passing a list as search arg
         instances = self.compute_api.get_all(c,
@@ -6821,8 +6821,8 @@ class ComputeAPITestCase(BaseTestCase):
                 search_opts={'metadata': {'key3': 'value3'}})
         self.assertEqual(len(instances), 2)
         instance_uuids = [instance['uuid'] for instance in instances]
-        self.assertTrue(instance3['uuid'] in instance_uuids)
-        self.assertTrue(instance4['uuid'] in instance_uuids)
+        self.assertIn(instance3['uuid'], instance_uuids)
+        self.assertIn(instance4['uuid'], instance_uuids)
 
         # multiple criteria as a dict
         instances = self.compute_api.get_all(c,
@@ -6899,7 +6899,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
         payload = msg.payload
-        self.assertTrue('metadata' in payload)
+        self.assertIn('metadata', payload)
         self.assertEquals(payload['metadata'], metadata)
 
         new_metadata = {'key2': 'bah', 'key3': 'value3'}
@@ -6916,7 +6916,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[1]
         payload = msg.payload
-        self.assertTrue('metadata' in payload)
+        self.assertIn('metadata', payload)
         self.assertEquals(payload['metadata'], metadata)
 
         self.compute_api.delete_instance_metadata(_context, instance, 'key2')
@@ -6927,7 +6927,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
         msg = fake_notifier.NOTIFICATIONS[2]
         payload = msg.payload
-        self.assertTrue('metadata' in payload)
+        self.assertIn('metadata', payload)
         self.assertEquals(payload['metadata'], {})
 
         db.instance_destroy(_context, instance['uuid'])
@@ -8298,7 +8298,7 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         def fake_add_aggregate_host(*args, **kwargs):
             hosts = kwargs["aggregate"]["hosts"]
-            self.assertTrue(fake_host in hosts)
+            self.assertIn(fake_host, hosts)
 
         self.stubs.Set(self.api.compute_rpcapi, 'add_aggregate_host',
                        fake_add_aggregate_host)

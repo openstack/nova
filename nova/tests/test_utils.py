@@ -681,10 +681,10 @@ class WrappedCodeTestCase(test.NoDBTestCase):
         func = utils.get_wrapped_function(wrapped)
         func_code = func.func_code
         self.assertEqual(4, len(func_code.co_varnames))
-        self.assertTrue('self' in func_code.co_varnames)
-        self.assertTrue('instance' in func_code.co_varnames)
-        self.assertTrue('red' in func_code.co_varnames)
-        self.assertTrue('blue' in func_code.co_varnames)
+        self.assertIn('self', func_code.co_varnames)
+        self.assertIn('instance', func_code.co_varnames)
+        self.assertIn('red', func_code.co_varnames)
+        self.assertIn('blue', func_code.co_varnames)
 
     def test_double_wrapped(self):
         @self._wrapper
@@ -695,10 +695,10 @@ class WrappedCodeTestCase(test.NoDBTestCase):
         func = utils.get_wrapped_function(wrapped)
         func_code = func.func_code
         self.assertEqual(4, len(func_code.co_varnames))
-        self.assertTrue('self' in func_code.co_varnames)
-        self.assertTrue('instance' in func_code.co_varnames)
-        self.assertTrue('red' in func_code.co_varnames)
-        self.assertTrue('blue' in func_code.co_varnames)
+        self.assertIn('self', func_code.co_varnames)
+        self.assertIn('instance', func_code.co_varnames)
+        self.assertIn('red', func_code.co_varnames)
+        self.assertIn('blue', func_code.co_varnames)
 
     def test_triple_wrapped(self):
         @self._wrapper
@@ -710,10 +710,10 @@ class WrappedCodeTestCase(test.NoDBTestCase):
         func = utils.get_wrapped_function(wrapped)
         func_code = func.func_code
         self.assertEqual(4, len(func_code.co_varnames))
-        self.assertTrue('self' in func_code.co_varnames)
-        self.assertTrue('instance' in func_code.co_varnames)
-        self.assertTrue('red' in func_code.co_varnames)
-        self.assertTrue('blue' in func_code.co_varnames)
+        self.assertIn('self', func_code.co_varnames)
+        self.assertIn('instance', func_code.co_varnames)
+        self.assertIn('red', func_code.co_varnames)
+        self.assertIn('blue', func_code.co_varnames)
 
 
 class StringLengthTestCase(test.NoDBTestCase):
@@ -891,7 +891,7 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
             self.assertEqual(image[key], sys_meta.get(sys_key))
 
         # Verify that we inherit the rest of metadata as properties
-        self.assertTrue("properties" in image)
+        self.assertIn("properties", image)
 
         for key, value in image["properties"].iteritems():
             sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, key)

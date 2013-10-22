@@ -141,7 +141,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # It should also be in the all-servers list
         servers = self.api.get_servers()
         server_ids = [s['id'] for s in servers]
-        self.assertTrue(created_server_id in server_ids)
+        self.assertIn(created_server_id, server_ids)
 
         found_server = self._wait_for_state_change(found_server, 'BUILD')
         # It should be available...
@@ -149,8 +149,8 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual('ACTIVE', found_server['status'])
         servers = self.api.get_servers(detail=True)
         for server in servers:
-            self.assertTrue("image" in server)
-            self.assertTrue("flavor" in server)
+            self.assertIn("image", server)
+            self.assertIn("flavor", server)
 
         self._delete_server(created_server_id)
 

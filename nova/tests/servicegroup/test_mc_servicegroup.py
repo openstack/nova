@@ -123,12 +123,12 @@ class MemcachedServiceGroupTestCase(test.TestCase):
 
         services = self.servicegroup_api.get_all(self._topic)
 
-        self.assertTrue(host1 in services)
-        self.assertTrue(host2 in services)
+        self.assertIn(host1, services)
+        self.assertIn(host2, services)
         self.assertNotIn(host3, services)
 
         service_id = self.servicegroup_api.get_one(self._topic)
-        self.assertTrue(service_id in services)
+        self.assertIn(service_id, services)
 
     def test_service_is_up(self):
         serv = self.useFixture(

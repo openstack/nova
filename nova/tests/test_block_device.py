@@ -277,15 +277,15 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         dev_dict = block_device.BlockDeviceDict({'field1': 'foo',
                                                  'field2': 'bar',
                                                  'db_field1': 'baz'})
-        self.assertTrue('field1' in dev_dict)
-        self.assertTrue('field2' in dev_dict)
-        self.assertTrue('db_field1' in dev_dict)
+        self.assertIn('field1', dev_dict)
+        self.assertIn('field2', dev_dict)
+        self.assertIn('db_field1', dev_dict)
         self.assertFalse('db_field2'in dev_dict)
 
         # Make sure all expected fields are defaulted
         dev_dict = block_device.BlockDeviceDict({'field1': 'foo'})
-        self.assertTrue('field1' in dev_dict)
-        self.assertTrue('field2' in dev_dict)
+        self.assertIn('field1', dev_dict)
+        self.assertIn('field2', dev_dict)
         self.assertTrue(dev_dict['field2'] is None)
         self.assertNotIn('db_field1', dev_dict)
         self.assertFalse('db_field2'in dev_dict)
@@ -293,7 +293,7 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         # Unless they are not meant to be
         dev_dict = block_device.BlockDeviceDict({'field1': 'foo'},
             do_not_default=set(['field2']))
-        self.assertTrue('field1' in dev_dict)
+        self.assertIn('field1', dev_dict)
         self.assertNotIn('field2', dev_dict)
         self.assertNotIn('db_field1', dev_dict)
         self.assertFalse('db_field2'in dev_dict)

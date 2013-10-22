@@ -80,7 +80,7 @@ class FloatingIpCommandsTestCase(test.TestCase):
     def test_address_to_hosts(self):
         def assert_loop(result, expected):
             for ip in result:
-                self.assertTrue(str(ip) in expected)
+                self.assertIn(str(ip), expected)
 
         address_to_hosts = self.commands.address_to_hosts
         # /32 and /31

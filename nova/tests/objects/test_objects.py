@@ -453,7 +453,7 @@ class _TestObject(object):
         except NotImplementedError as ex:
             raised = True
         self.assertTrue(raised)
-        self.assertTrue('foobar' in str(ex))
+        self.assertIn('foobar', str(ex))
 
     def test_loaded_in_primitive(self):
         obj = MyObj(foo=1)
@@ -471,7 +471,7 @@ class _TestObject(object):
         obj = MyObj(foo=123)
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
         primitive = obj.obj_to_primitive()
-        self.assertTrue('nova_object.changes' in primitive)
+        self.assertIn('nova_object.changes', primitive)
         obj2 = MyObj.obj_from_primitive(primitive)
         self.assertEqual(obj2.obj_what_changed(), set(['foo']))
         obj2.obj_reset_changes()
@@ -570,7 +570,7 @@ class _TestObject(object):
         obj = MyObj()
         self.assertNotIn('foo', obj)
         obj.foo = 1
-        self.assertTrue('foo' in obj)
+        self.assertIn('foo', obj)
         self.assertNotIn('does_not_exist', obj)
 
     def test_obj_attr_is_set(self):
@@ -715,7 +715,7 @@ class TestObjectSerializer(_BaseTestCase):
         ser = base.NovaObjectSerializer()
         obj = MyObj()
         primitive = ser.serialize_entity(self.context, obj)
-        self.assertTrue('nova_object.name' in primitive)
+        self.assertIn('nova_object.name', primitive)
         obj2 = ser.deserialize_entity(self.context, primitive)
         self.assertIsInstance(obj2, MyObj)
         self.assertEqual(self.context, obj2._context)

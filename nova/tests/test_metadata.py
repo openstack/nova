@@ -353,8 +353,8 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         # the 'content' should not show up in directory listing
         self.assertNotIn(base.CONTENT_DIR, result)
-        self.assertTrue('2012-08-10' in result)
-        self.assertTrue('latest' in result)
+        self.assertIn('2012-08-10', result)
+        self.assertIn('latest', result)
 
     def test_version_content_listing(self):
         # request for /openstack/<version>/ should show metadata.json
@@ -362,7 +362,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdinst = fake_InstanceMetadata(self.stubs, inst)
 
         listing = mdinst.lookup("/openstack/2012-08-10")
-        self.assertTrue("meta_data.json" in listing)
+        self.assertIn("meta_data.json", listing)
 
     def test_metadata_json(self):
         inst = copy.copy(self.instance)
@@ -379,13 +379,13 @@ class OpenStackMetadataTestCase(test.TestCase):
         mddict = json.loads(mdjson)
 
         self.assertEqual(mddict['uuid'], self.instance['uuid'])
-        self.assertTrue('files' in mddict)
+        self.assertIn('files', mddict)
 
-        self.assertTrue('public_keys' in mddict)
+        self.assertIn('public_keys', mddict)
         self.assertEqual(mddict['public_keys'][self.instance['key_name']],
             self.instance['key_data'])
 
-        self.assertTrue('launch_index' in mddict)
+        self.assertIn('launch_index', mddict)
         self.assertEqual(mddict['launch_index'], self.instance['launch_index'])
 
         # verify that each of the things we put in content
@@ -427,7 +427,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.assertEqual(USER_DATA_STRING, userdata_found)
 
         # since we had user-data in this instance, it should be in listing
-        self.assertTrue('user_data' in mdinst.lookup("/openstack/2012-08-10"))
+        self.assertIn('user_data', mdinst.lookup("/openstack/2012-08-10"))
 
         del inst['user_data']
         mdinst = fake_InstanceMetadata(self.stubs, inst)
@@ -446,7 +446,7 @@ class OpenStackMetadataTestCase(test.TestCase):
         mdjson = mdinst.lookup("/openstack/2013-04-04/meta_data.json")
         mddict = json.loads(mdjson)
 
-        self.assertTrue("random_seed" in mddict)
+        self.assertIn("random_seed", mddict)
         self.assertEqual(len(base64.b64decode(mddict["random_seed"])), 512)
 
         # verify that older version do not have it
@@ -467,7 +467,7 @@ class OpenStackMetadataTestCase(test.TestCase):
 
         # verify that 2013-10-17 has the vendor_data.json file
         result = mdinst.lookup("/openstack/2013-10-17")
-        self.assertTrue('vendor_data.json' in result)
+        self.assertIn('vendor_data.json', result)
 
         # verify that older version do not have it
         result = mdinst.lookup("/openstack/2013-04-04")
