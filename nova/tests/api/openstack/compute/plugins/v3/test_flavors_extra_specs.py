@@ -62,7 +62,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.controller = flavors_extraspecs.FlavorExtraSpecsController()
 
     def test_index(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'flavor_extra_specs_get',
                        return_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs')
@@ -71,7 +71,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
 
     def test_index_no_data(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'flavor_extra_specs_get',
                        return_empty_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs')
@@ -80,7 +80,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual(0, len(res_dict['extra_specs']))
 
     def test_show(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_get_item',
+        self.stubs.Set(nova.db, 'flavor_extra_specs_get_item',
                        return_flavor_extra_specs_item)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs/key5')
@@ -89,7 +89,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value5', res_dict['key5'])
 
     def test_show_spec_not_found(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_get',
+        self.stubs.Set(nova.db, 'flavor_extra_specs_get',
                        return_empty_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs/key6')
@@ -97,7 +97,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
                           req, 1, 'key6')
 
     def test_delete(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_delete',
+        self.stubs.Set(nova.db, 'flavor_extra_specs_delete',
                        delete_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs/key5',
@@ -105,7 +105,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.controller.delete(req, 1, 'key5')
 
     def test_delete_no_admin(self):
-        self.stubs.Set(nova.db, 'instance_type_extra_specs_delete',
+        self.stubs.Set(nova.db, 'flavor_extra_specs_delete',
                        delete_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs/key5')
@@ -120,7 +120,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_create(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         body = {"extra_specs": {"key1": "value1"}}
 
@@ -133,7 +133,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_create_no_admin(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         body = {"extra_specs": {"key1": "value1"}}
 
@@ -143,7 +143,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_create_empty_body(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs',
@@ -153,7 +153,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_item(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         body = {"key1": "value1"}
 
@@ -165,7 +165,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_item_no_admin(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         body = {"key1": "value1"}
 
@@ -175,7 +175,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_item_empty_body(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
 
         req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs/key1',
@@ -185,7 +185,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_item_too_many_keys(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         body = {"key1": "value1", "key2": "value2"}
 
@@ -196,7 +196,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
     def test_update_item_body_uri_mismatch(self):
         self.stubs.Set(nova.db,
-                       'instance_type_extra_specs_update_or_create',
+                       'flavor_extra_specs_update_or_create',
                        return_create_flavor_extra_specs)
         body = {"key1": "value1"}
 

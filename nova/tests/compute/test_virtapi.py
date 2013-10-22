@@ -85,6 +85,10 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             # NOTE(danms): instance_update actually becomes the other variant
             # in FakeVirtAPI
             db_method = 'instance_update_and_get_original'
+        elif method == 'instance_type_get':
+            # TODO(mriedem): Remove this once virtapi renames instance_type_get
+            # to flavor_get.
+            db_method = 'flavor_get'
         else:
             db_method = method
         self.mox.StubOutWithMock(db, db_method)

@@ -1373,10 +1373,6 @@ def flavor_create(context, values):
     """Create a new instance type."""
     return IMPL.flavor_create(context, values)
 
-#NOTE(jogo): leave this and similar lines below in until they are unused.
-# These are in to make the switch from instance_type to flavor easier.
-instance_type_create = flavor_create
-
 
 def flavor_get_all(context, inactive=False, filters=None, sort_key='flavorid',
                    sort_dir='asc', limit=None, marker=None):
@@ -1385,78 +1381,55 @@ def flavor_get_all(context, inactive=False, filters=None, sort_key='flavorid',
         context, inactive=inactive, filters=filters, sort_key=sort_key,
         sort_dir=sort_dir, limit=limit, marker=marker)
 
-instance_type_get_all = flavor_get_all
-
 
 def flavor_get(context, id):
     """Get instance type by id."""
     return IMPL.flavor_get(context, id)
-
-instance_type_get = flavor_get
 
 
 def flavor_get_by_name(context, name):
     """Get instance type by name."""
     return IMPL.flavor_get_by_name(context, name)
 
-instance_type_get_by_name = flavor_get_by_name
-
 
 def flavor_get_by_flavor_id(context, id, read_deleted=None):
     """Get instance type by flavor id."""
     return IMPL.flavor_get_by_flavor_id(context, id, read_deleted)
-
-instance_type_get_by_flavor_id = flavor_get_by_flavor_id
 
 
 def flavor_destroy(context, name):
     """Delete an instance type."""
     return IMPL.flavor_destroy(context, name)
 
-instance_type_destroy = flavor_destroy
-
 
 def flavor_access_get_by_flavor_id(context, flavor_id):
     """Get flavor access by flavor id."""
     return IMPL.flavor_access_get_by_flavor_id(context, flavor_id)
-
-instance_type_access_get_by_flavor_id = flavor_access_get_by_flavor_id
 
 
 def flavor_access_add(context, flavor_id, project_id):
     """Add flavor access for project."""
     return IMPL.flavor_access_add(context, flavor_id, project_id)
 
-instance_type_access_add = flavor_access_add
-
 
 def flavor_access_remove(context, flavor_id, project_id):
     """Remove flavor access for project."""
     return IMPL.flavor_access_remove(context, flavor_id, project_id)
-
-instance_type_access_remove = flavor_access_remove
 
 
 def flavor_extra_specs_get(context, flavor_id):
     """Get all extra specs for an instance type."""
     return IMPL.flavor_extra_specs_get(context, flavor_id)
 
-instance_type_extra_specs_get = flavor_extra_specs_get
-
 
 def flavor_extra_specs_get_item(context, flavor_id, key):
     """Get extra specs by key and flavor_id."""
     return IMPL.flavor_extra_specs_get_item(context, flavor_id, key)
 
-instance_type_extra_specs_get_item = flavor_extra_specs_get_item
-
 
 def flavor_extra_specs_delete(context, flavor_id, key):
     """Delete the given extra specs item."""
     IMPL.flavor_extra_specs_delete(context, flavor_id, key)
-
-
-instance_type_extra_specs_delete = flavor_extra_specs_delete
 
 
 def flavor_extra_specs_update_or_create(context, flavor_id,
@@ -1468,9 +1441,6 @@ def flavor_extra_specs_update_or_create(context, flavor_id,
     """
     IMPL.flavor_extra_specs_update_or_create(context, flavor_id,
                                                     extra_specs)
-
-instance_type_extra_specs_update_or_create = \
-        flavor_extra_specs_update_or_create
 
 ####################
 

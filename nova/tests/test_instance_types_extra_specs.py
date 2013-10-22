@@ -55,7 +55,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
                               self.flavorid)
         self.assertEquals(self.specs, actual_specs)
 
-    def test_instance_type_extra_specs_delete(self):
+    def test_flavor_extra_specs_delete(self):
         del self.specs["xpu_model"]
         db.flavor_extra_specs_delete(self.context,
                                      self.flavorid,
