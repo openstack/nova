@@ -60,9 +60,7 @@ class _TestInstanceObject(object):
     def test_datetime_deserialization(self):
         red_letter_date = timeutils.parse_isotime(
             timeutils.isotime(datetime.datetime(1955, 11, 5)))
-        inst = instance.Instance()
-        inst.uuid = 'fake-uuid'
-        inst.launched_at = red_letter_date
+        inst = instance.Instance(uuid='fake-uuid', launched_at=red_letter_date)
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
@@ -70,17 +68,15 @@ class _TestInstanceObject(object):
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
-                    'nova_object.changes': ['uuid', 'launched_at']}
+                    'nova_object.changes': ['launched_at', 'uuid']}
         self.assertEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
         self.assertIsInstance(inst2.launched_at, datetime.datetime)
         self.assertEqual(inst2.launched_at, red_letter_date)
 
     def test_ip_deserialization(self):
-        inst = instance.Instance()
-        inst.uuid = 'fake-uuid'
-        inst.access_ip_v4 = '1.2.3.4'
-        inst.access_ip_v6 = '::1'
+        inst = instance.Instance(uuid='fake-uuid', access_ip_v4='1.2.3.4',
+                                 access_ip_v6='::1')
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
@@ -89,8 +85,8 @@ class _TestInstanceObject(object):
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
                          'access_ip_v6': '::1'},
-                    'nova_object.changes': ['uuid', 'access_ip_v6',
-                                            'access_ip_v4']}
+                    'nova_object.changes': ['access_ip_v4', 'uuid',
+                                            'access_ip_v6']}
         self.assertEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
         self.assertIsInstance(inst2.access_ip_v4, netaddr.IPAddress)
@@ -169,9 +165,7 @@ class _TestInstanceObject(object):
         self.assertRemotes()
 
     def test_load_invalid(self):
-        inst = instance.Instance()
-        inst._context = self.context
-        inst.uuid = 'fake-uuid'
+        inst = instance.Instance(context=self.context, uuid='fake-uuid')
         self.assertRaises(exception.ObjectActionError,
                           inst.obj_load_attr, 'foo')
 
@@ -215,10 +209,8 @@ class _TestInstanceObject(object):
         self.assertEqual(set([]), inst.obj_what_changed())
 
     def test_refresh_does_not_recurse(self):
-        inst = instance.Instance()
-        inst._context = self.context
-        inst.uuid = 'fake-uuid'
-        inst.metadata = {}
+        inst = instance.Instance(context=self.context, uuid='fake-uuid',
+                                 metadata={})
         inst_copy = instance.Instance()
         inst_copy.uuid = inst.uuid
         self.mox.StubOutWithMock(instance.Instance, 'get_by_uuid')
@@ -555,16 +547,14 @@ class _TestInstanceObject(object):
 
     def test_iteritems_with_extra_attrs(self):
         self.stubs.Set(instance.Instance, 'name', 'foo')
-        inst = instance.Instance()
-        inst.uuid = 'fake-uuid'
+        inst = instance.Instance(uuid='fake-uuid')
         self.assertEqual(inst.items(),
                          {'uuid': 'fake-uuid',
                           'name': 'foo',
                           }.items())
 
     def _test_metadata_change_tracking(self, which):
-        inst = instance.Instance()
-        inst.uuid = 'fake-uuid'
+        inst = instance.Instance(uuid='fake-uuid')
         setattr(inst, which, {})
         inst.obj_reset_changes()
         getattr(inst, which)['foo'] = 'bar'
@@ -586,10 +576,8 @@ class _TestInstanceObject(object):
         fake_inst = fake_instance.fake_db_instance(**vals)
         db.instance_create(self.context, vals).AndReturn(fake_inst)
         self.mox.ReplayAll()
-        inst = instance.Instance()
-        inst.host = 'foo-host'
-        inst.memory_mb = 128
-        inst.system_metadata = {'foo': 'bar'}
+        inst = instance.Instance(host='foo-host', memory_mb=128,
+                                 system_metadata={'foo': 'bar'})
         inst.create(self.context)
 
     def test_create(self):
@@ -601,22 +589,18 @@ class _TestInstanceObject(object):
         self.assertEqual(self.fake_instance['id'], inst.id)
 
     def test_create_with_values(self):
-        inst1 = instance.Instance()
-        values = {'user_id': self.context.user_id,
-                  'project_id': self.context.project_id,
-                  'host': 'foo-host'}
-        inst1.update(values)
+        inst1 = instance.Instance(user_id=self.context.user_id,
+                                  project_id=self.context.project_id,
+                                  host='foo-host')
         inst1.create(self.context)
         self.assertEqual(inst1.host, 'foo-host')
         inst2 = instance.Instance.get_by_uuid(self.context, inst1.uuid)
         self.assertEqual(inst2.host, 'foo-host')
 
     def test_recreate_fails(self):
-        inst = instance.Instance()
-        values = {'user_id': self.context.user_id,
-                  'project_id': self.context.project_id,
-                  'host': 'foo-host'}
-        inst.update(values)
+        inst = instance.Instance(user_id=self.context.user_id,
+                                 project_id=self.context.project_id,
+                                 host='foo-host')
         inst.create(self.context)
         self.assertRaises(exception.ObjectActionError, inst.create,
                           self.context)
@@ -631,36 +615,30 @@ class _TestInstanceObject(object):
                             }
                            ).AndReturn(fake_inst)
         self.mox.ReplayAll()
-        inst = instance.Instance()
-        inst.host = 'foo-host'
         secgroups = security_group.SecurityGroupList()
         secgroups.objects = []
         for name in ('foo', 'bar'):
             secgroup = security_group.SecurityGroup()
             secgroup.name = name
             secgroups.objects.append(secgroup)
-        inst.security_groups = secgroups
-        inst.info_cache = instance_info_cache.InstanceInfoCache()
-        inst.info_cache.network_info = network_model.NetworkInfo()
+        info_cache = instance_info_cache.InstanceInfoCache()
+        info_cache.network_info = network_model.NetworkInfo()
+        inst = instance.Instance(host='foo-host', security_groups=secgroups,
+                                 info_cache=info_cache)
         inst.create(self.context)
 
     def test_destroy_stubbed(self):
         self.mox.StubOutWithMock(db, 'instance_destroy')
         db.instance_destroy(self.context, 'fake-uuid', constraint=None)
         self.mox.ReplayAll()
-        inst = instance.Instance()
-        inst.id = 1
-        inst.uuid = 'fake-uuid'
-        inst.host = 'foo'
+        inst = instance.Instance(id=1, uuid='fake-uuid', host='foo')
         inst.destroy(self.context)
 
     def test_destroy(self):
         values = {'user_id': self.context.user_id,
                   'project_id': self.context.project_id}
         db_inst = db.instance_create(self.context, values)
-        inst = instance.Instance()
-        inst.id = db_inst['id']
-        inst.uuid = db_inst['uuid']
+        inst = instance.Instance(id=db_inst['id'], uuid=db_inst['uuid'])
         inst.destroy(self.context)
         self.assertRaises(exception.InstanceNotFound,
                           db.instance_get_by_uuid, self.context,
@@ -840,10 +818,8 @@ class _TestInstanceListObject(object):
     def test_fill_faults(self):
         self.mox.StubOutWithMock(db, 'instance_fault_get_by_instance_uuids')
 
-        inst1 = instance.Instance()
-        inst1.uuid = 'uuid1'
-        inst2 = instance.Instance()
-        inst2.uuid = 'uuid2'
+        inst1 = instance.Instance(uuid='uuid1')
+        inst2 = instance.Instance(uuid='uuid2')
         insts = [inst1, inst2]
         for inst in insts:
             inst.obj_reset_changes()

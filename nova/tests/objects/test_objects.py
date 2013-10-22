@@ -49,9 +49,7 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def query(cls, context):
-        obj = cls()
-        obj.foo = 1
-        obj.bar = 'bar'
+        obj = cls(foo=1, bar='bar')
         obj.obj_reset_changes()
         return obj
 
@@ -249,9 +247,7 @@ class TestUtils(test.TestCase):
                          [x['foo'] for x in base.obj_to_primitive(mylist)])
 
     def test_obj_to_primitive_dict(self):
-        myobj = MyObj()
-        myobj.foo = 1
-        myobj.bar = 'foo'
+        myobj = MyObj(foo=1, bar='foo')
         self.assertEqual({'foo': 1, 'bar': 'foo'},
                          base.obj_to_primitive(myobj))
 
@@ -259,8 +255,7 @@ class TestUtils(test.TestCase):
         class MyList(base.ObjectListBase, base.NovaObject):
             pass
 
-        mylist = MyList()
-        mylist.objects = [MyObj(), MyObj()]
+        mylist = MyList(objects=[MyObj(), MyObj()])
         for i, value in enumerate(mylist):
             value.foo = i
         self.assertEqual([{'foo': 0}, {'foo': 1}],
@@ -421,14 +416,12 @@ class _TestObject(object):
                     'nova_object.namespace': 'nova',
                     'nova_object.version': '1.5',
                     'nova_object.data': {'foo': 1}}
-        obj = MyObj()
-        obj.foo = 1
+        obj = MyObj(foo=1)
         obj.obj_reset_changes()
         self.assertEqual(obj.obj_to_primitive(), expected)
 
     def test_object_property(self):
-        obj = MyObj()
-        obj.foo = 1
+        obj = MyObj(foo=1)
         self.assertEqual(obj.foo, 1)
 
     def test_object_property_type_error(self):
@@ -439,9 +432,7 @@ class _TestObject(object):
         self.assertRaises(ValueError, fail)
 
     def test_object_dict_syntax(self):
-        obj = MyObj()
-        obj.foo = 123
-        obj.bar = 'bar'
+        obj = MyObj(foo=123, bar='bar')
         self.assertEqual(obj['foo'], 123)
         self.assertEqual(sorted(obj.items(), key=lambda x: x[0]),
                          [('bar', 'bar'), ('foo', 123)])
@@ -466,8 +457,7 @@ class _TestObject(object):
         self.assertTrue('foobar' in str(ex))
 
     def test_loaded_in_primitive(self):
-        obj = MyObj()
-        obj.foo = 1
+        obj = MyObj(foo=1)
         obj.obj_reset_changes()
         self.assertEqual(obj.bar, 'loaded!')
         expected = {'nova_object.name': 'MyObj',
@@ -479,8 +469,7 @@ class _TestObject(object):
         self.assertEqual(obj.obj_to_primitive(), expected)
 
     def test_changes_in_primitive(self):
-        obj = MyObj()
-        obj.foo = 123
+        obj = MyObj(foo=123)
         self.assertEqual(obj.obj_what_changed(), set(['foo']))
         primitive = obj.obj_to_primitive()
         self.assertTrue('nova_object.changes' in primitive)
@@ -562,11 +551,8 @@ class _TestObject(object):
 
     def test_base_attributes(self):
         dt = datetime.datetime(1955, 11, 5)
-        obj = MyObj()
-        obj.created_at = dt
-        obj.updated_at = dt
-        obj.deleted_at = None
-        obj.deleted = False
+        obj = MyObj(created_at=dt, updated_at=dt, deleted_at=None,
+                    deleted=False)
         expected = {'nova_object.name': 'MyObj',
                     'nova_object.namespace': 'nova',
                     'nova_object.version': '1.5',
@@ -589,15 +575,13 @@ class _TestObject(object):
         self.assertNotIn('does_not_exist', obj)
 
     def test_obj_attr_is_set(self):
-        obj = MyObj()
-        obj.foo = 1
+        obj = MyObj(foo=1)
         self.assertTrue(obj.obj_attr_is_set('foo'))
         self.assertFalse(obj.obj_attr_is_set('bar'))
         self.assertRaises(AttributeError, obj.obj_attr_is_set, 'bang')
 
     def test_get(self):
-        obj = MyObj()
-        obj.foo = 1
+        obj = MyObj(foo=1)
         # Foo has value, should not get the default
         self.assertEqual(obj.get('foo', 2), 1)
         # Foo has value, should return the value without error
@@ -689,9 +673,8 @@ class TestObjectListBase(test.TestCase):
             fields = {'objects': fields.Field(fields.List(
                         fields.Field(fields.Object(MyElement))))}
 
-        objlist = Foo()
-        objlist._context = 'foo'
-        objlist.objects = [MyElement(1), MyElement(2), MyElement(3)]
+        objlist = Foo(context='foo',
+                      objects=[MyElement(1), MyElement(2), MyElement(3)])
         self.assertEqual(list(objlist), objlist.objects)
         self.assertEqual(len(objlist), 3)
         self.assertIn(objlist.objects[0], objlist)
@@ -708,11 +691,9 @@ class TestObjectListBase(test.TestCase):
         class Bar(base.NovaObject):
             fields = {'foo': fields.Field(fields.String())}
 
-        obj = Foo()
-        obj.objects = []
+        obj = Foo(objects=[])
         for i in 'abc':
-            bar = Bar()
-            bar.foo = i
+            bar = Bar(foo=i)
             obj.objects.append(bar)
 
         obj2 = base.NovaObject.obj_from_primitive(obj.obj_to_primitive())
