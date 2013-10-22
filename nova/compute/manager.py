@@ -1560,7 +1560,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             except Exception:
                 # Should not reach here.
                 self._set_instance_error_state(context, instance['uuid'])
-                msg = 'Unexpected build failure, not rescheduling build.'
+                msg = _('Unexpected build failure, not rescheduling build.')
                 LOG.exception(msg, instance=instance)
 
         do_build_and_run_instance(context, instance, image, request_spec,
@@ -1591,7 +1591,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             raise exception.RescheduledException(
                     instance_uuid=instance['uuid'], reason='')
         except Exception:
-            LOG.exception('Instance failed to spawn', instance=instance)
+            LOG.exception(_('Instance failed to spawn'), instance=instance)
             raise exception.RescheduledException(
                     instance_uuid=instance['uuid'], reason='')
 
@@ -2704,8 +2704,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             vm_state = None
             if p_state == power_state.SHUTDOWN:
                 vm_state = vm_states.STOPPED
-                LOG.debug("Resized/migrated instance is powered off. "
-                          "Setting vm_state to '%s'." % vm_state,
+                LOG.debug(_("Resized/migrated instance is powered off. "
+                          "Setting vm_state to '%s'."), vm_state,
                           instance=instance)
             else:
                 vm_state = vm_states.ACTIVE
@@ -2890,7 +2890,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(mriedem): Stash the old vm_state so we can set the
         # resized/reverted instance back to the same state later.
         vm_state = instance['vm_state']
-        LOG.debug('Stashing vm_state: %s' % vm_state, instance=instance)
+        LOG.debug(_('Stashing vm_state: %s'), vm_state, instance=instance)
         sys_meta['old_vm_state'] = vm_state
         instance.save()
 
