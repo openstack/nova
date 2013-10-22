@@ -28,6 +28,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import quota
+from nova import utils
 
 
 ALIAS = "os-quota-sets"
@@ -162,13 +163,12 @@ class QuotaSetsController(wsgi.Controller):
                 force_update = strutils.bool_from_string(value)
             elif key != 'force' and value:
                 try:
-                    value = int(value)
-                except (ValueError, TypeError):
-                    msg = _("Quota value for key '%(key)s' should be an "
-                            "integer.  It is actually type '%(vtype)s'.")
-                    msg = msg % {'key': key, 'vtype': type(value)}
-                    LOG.warn(msg)
-                    raise webob.exc.HTTPBadRequest(explanation=msg)
+                    value = utils.validate_integer(
+                        value, key)
+                except exception.InvalidInput as e:
+                    LOG.warn(e.format_message())
+                    raise webob.exc.HTTPBadRequest(
+                        explanation=e.format_message())
 
         if len(bad_keys) > 0:
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)

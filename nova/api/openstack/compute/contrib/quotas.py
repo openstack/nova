@@ -28,6 +28,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import quota
+from nova import utils
 
 
 QUOTAS = quota.QUOTAS
@@ -152,12 +153,11 @@ class QuotaSetsController(wsgi.Controller):
                 force_update = strutils.bool_from_string(value)
             elif key not in NON_QUOTA_KEYS and value:
                 try:
-                    value = int(value)
-                except (ValueError, TypeError):
-                    msg = _("Quota '%(value)s' for %(key)s should be "
-                            "integer.") % {'value': value, 'key': key}
-                    LOG.warn(msg)
-                    raise webob.exc.HTTPBadRequest(explanation=msg)
+                    value = utils.validate_integer(value, key)
+                except exception.InvalidInput as e:
+                    LOG.warn(e.format_message())
+                    raise webob.exc.HTTPBadRequest(
+                        explanation=e.format_message())
 
         LOG.debug(_("force update quotas: %s") % force_update)
 
