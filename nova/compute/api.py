@@ -1830,6 +1830,7 @@ class API(base.Base):
             None if rotation shouldn't be used (as in the case of snapshots)
         :param extra_properties: dict of extra image properties to include
                                  when creating the image.
+        :returns: A dict containing image metadata
         """
         props_copy = dict(extra_properties, backup_type=backup_type)
         image_meta = self._create_image(context, instance, name,
@@ -1885,7 +1886,6 @@ class API(base.Base):
         :param instance: nova.db.sqlalchemy.models.Instance
         :param name: string for name of the snapshot
         :param image_type: snapshot | backup
-        :param backup_type: daily | weekly
         :param extra_properties: dict of extra image properties to include
 
         """
