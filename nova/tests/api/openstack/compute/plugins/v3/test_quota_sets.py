@@ -354,7 +354,7 @@ class QuotaXMLSerializerTest(test.TestCase):
         self.assertEqual('project_id', tree.get('id'))
         self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
         for child in tree:
-            self.assertTrue(child.tag in exemplar['quota_set'])
+            self.assertIn(child.tag, exemplar['quota_set'])
             self.assertEqual(int(child.text), exemplar['quota_set'][child.tag])
 
     def test_detail_serializer(self):
@@ -381,7 +381,7 @@ class QuotaXMLSerializerTest(test.TestCase):
         self.assertEqual('project_id', tree.get('id'))
         self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
         for child in tree:
-            self.assertTrue(child.tag in exemplar['quota_set'])
+            self.assertIn(child.tag, exemplar['quota_set'])
             for k in child.attrib.keys():
                 self.assertEqual(int(child.attrib[k]),
                                  exemplar['quota_set'][child.tag][k])

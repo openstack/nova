@@ -166,7 +166,7 @@ class QuotaTemplateXMLSerializerTest(test.TestCase):
         self.assertEqual('test_class', tree.get('id'))
         self.assertEqual(len(exemplar['quota_class_set']) - 1, len(tree))
         for child in tree:
-            self.assertTrue(child.tag in exemplar['quota_class_set'])
+            self.assertIn(child.tag, exemplar['quota_class_set'])
             self.assertEqual(int(child.text),
                              exemplar['quota_class_set'][child.tag])
 

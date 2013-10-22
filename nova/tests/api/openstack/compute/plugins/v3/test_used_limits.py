@@ -201,7 +201,7 @@ class UsedLimitsTestCase(test.NoDBTestCase):
 
         self.controller.index(fake_req, res)
         abs_limits = res.obj['limits']['absolute']
-        self.assertTrue('totalRAMUsed' in abs_limits)
+        self.assertIn('totalRAMUsed', abs_limits)
         self.assertEqual(abs_limits['totalRAMUsed'], 256)
 
     def test_no_ram_quota(self):
@@ -247,4 +247,4 @@ class UsedLimitsTestCase(test.NoDBTestCase):
 
         self.controller.index(fake_req, res)
         response = res.serialize(None, 'xml')
-        self.assertTrue(used_limits.XMLNS in response.body)
+        self.assertIn(used_limits.XMLNS, response.body)

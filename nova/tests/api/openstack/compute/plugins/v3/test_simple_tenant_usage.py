@@ -229,7 +229,7 @@ class SimpleTenantUsageTest(test.TestCase):
             uptime = delta.days * 24 * 3600 + delta.seconds
             self.assertEqual(int(servers[j]['uptime']), uptime)
             self.assertEqual(int(servers[j]['hours']), HOURS)
-            self.assertTrue(servers[j]['instance_id'] in uuids)
+            self.assertIn(servers[j]['instance_id'], uuids)
 
     def test_verify_show_cant_view_other_tenant(self):
         req = webob.Request.blank(
@@ -281,7 +281,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         not_seen = set(raw_usage.keys())
 
         for child in tree:
-            self.assertTrue(child.tag in not_seen)
+            self.assertIn(child.tag, not_seen)
             not_seen.remove(child.tag)
             self.assertEqual(str(raw_usage[child.tag]), child.text)
 
@@ -294,7 +294,7 @@ class SimpleTenantUsageSerializerTest(test.TestCase):
         not_seen = set(raw_usage.keys())
 
         for child in tree:
-            self.assertTrue(child.tag in not_seen)
+            self.assertIn(child.tag, not_seen)
             not_seen.remove(child.tag)
             if child.tag == 'server_usages':
                 for idx, gr_child in enumerate(child):

@@ -130,7 +130,7 @@ class AvailabilityZoneApiTest(test.TestCase):
         self.assertEqual(resp.status_int, 200)
         resp_dict = jsonutils.loads(resp.body)
 
-        self.assertTrue('availability_zone_info' in resp_dict)
+        self.assertIn('availability_zone_info', resp_dict)
         zones = resp_dict['availability_zone_info']
         self.assertEqual(len(zones), 2)
         self.assertEqual(zones[0]['zone_name'], u'zone-1')
@@ -178,7 +178,7 @@ class AvailabilityZoneApiTest(test.TestCase):
         req.environ['nova.context'] = context.get_admin_context()
         resp_dict = availabilityZone.detail(req)
 
-        self.assertTrue('availability_zone_info' in resp_dict)
+        self.assertIn('availability_zone_info', resp_dict)
         zones = resp_dict['availability_zone_info']
         self.assertEqual(len(zones), 3)
 
@@ -256,10 +256,10 @@ class AvailabilityZoneSerializerTest(test.TestCase):
                              tree[0].get('available'))
 
             for _idx, host_child in enumerate(tree[1]):
-                self.assertTrue(host_child.get('name') in zone_dict['hosts'])
+                self.assertIn(host_child.get('name'), zone_dict['hosts'])
                 svcs = zone_dict['hosts'][host_child.get('name')]
                 for _idx, svc_child in enumerate(host_child[0]):
-                    self.assertTrue(svc_child.get('name') in svcs)
+                    self.assertIn(svc_child.get('name'), svcs)
                     svc = svcs[svc_child.get('name')]
                     self.assertEqual(len(svc_child), 1)
 
