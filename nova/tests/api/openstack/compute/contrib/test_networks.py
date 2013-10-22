@@ -334,7 +334,7 @@ class NetworksTest(test.NoDBTestCase):
     def test_network_create(self):
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks')
         res_dict = self.controller.create(req, NEW_NETWORK)
-        self.assertTrue('network' in res_dict)
+        self.assertIn('network', res_dict)
         uuid = res_dict['network']['id']
         req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s' % uuid)
         res_dict = self.controller.show(req, uuid)

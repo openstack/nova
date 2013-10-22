@@ -1336,12 +1336,12 @@ class TestSecurityGroupXMLSerializer(test.TestCase):
 
         for child in tree:
             child_tag = self._tag(child)
-            self.assertTrue(child_tag in raw_rule)
+            self.assertIn(child_tag, raw_rule)
             seen.add(child_tag)
             if child_tag in ('group', 'ip_range'):
                 for gr_child in child:
                     gr_child_tag = self._tag(gr_child)
-                    self.assertTrue(gr_child_tag in raw_rule[child_tag])
+                    self.assertIn(gr_child_tag, raw_rule[child_tag])
                     seen.add('%s/%s' % (child_tag, gr_child_tag))
                     self.assertEqual(gr_child.text,
                                      raw_rule[child_tag][gr_child_tag])

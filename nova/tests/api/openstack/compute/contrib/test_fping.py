@@ -51,10 +51,10 @@ class FpingTest(test.TestCase):
     def test_fping_index(self):
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping")
         res_dict = self.controller.index(req)
-        self.assertTrue("servers" in res_dict)
+        self.assertIn("servers", res_dict)
         for srv in res_dict["servers"]:
             for key in "project_id", "id", "alive":
-                self.assertTrue(key in srv)
+                self.assertIn(key, srv)
 
     def test_fping_index_policy(self):
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping?all_tenants=1")
@@ -62,7 +62,7 @@ class FpingTest(test.TestCase):
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping?all_tenants=1")
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.index(req)
-        self.assertTrue("servers" in res_dict)
+        self.assertIn("servers", res_dict)
 
     def test_fping_index_include(self):
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping")
@@ -86,7 +86,7 @@ class FpingTest(test.TestCase):
     def test_fping_show(self):
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping/%s" % FAKE_UUID)
         res_dict = self.controller.show(req, FAKE_UUID)
-        self.assertTrue("server" in res_dict)
+        self.assertIn("server", res_dict)
         srv = res_dict["server"]
         for key in "project_id", "id", "alive":
-            self.assertTrue(key in srv)
+            self.assertIn(key, srv)
