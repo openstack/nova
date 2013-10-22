@@ -1287,6 +1287,31 @@ class LibvirtDriver(driver.ComputeDriver):
                          instance=instance)
                 raise exception.InterfaceDetachFailed(instance)
 
+    def _create_snapshot_metadata(self, base, instance, img_fmt, snp_name):
+        metadata = {'is_public': False,
+                    'status': 'active',
+                    'name': snp_name,
+                    'properties': {
+                                   'kernel_id': instance['kernel_id'],
+                                   'image_location': 'snapshot',
+                                   'image_state': 'available',
+                                   'owner_id': instance['project_id'],
+                                   'ramdisk_id': instance['ramdisk_id'],
+                                   }
+                    }
+        if instance['os_type']:
+            metadata['properties']['os_type'] = instance['os_type']
+
+        # NOTE(vish): glance forces ami disk format to be ami
+        if base.get('disk_format') == 'ami':
+            metadata['disk_format'] = 'ami'
+        else:
+            metadata['disk_format'] = img_fmt
+
+        metadata['container_format'] = base.get('container_format', 'bare')
+
+        return metadata
+
     def snapshot(self, context, instance, image_href, update_task_state):
         """Create snapshot from a running VM instance.
 
@@ -1307,19 +1332,6 @@ class LibvirtDriver(driver.ComputeDriver):
         snapshot_image_service, snapshot_image_id = _image_service
         snapshot = snapshot_image_service.show(context, snapshot_image_id)
 
-        metadata = {'is_public': False,
-                    'status': 'active',
-                    'name': snapshot['name'],
-                    'properties': {
-                                   'kernel_id': instance['kernel_id'],
-                                   'image_location': 'snapshot',
-                                   'image_state': 'available',
-                                   'owner_id': instance['project_id'],
-                                   'ramdisk_id': instance['ramdisk_id'],
-                                   'os_type': instance['os_type'],
-                                   }
-                    }
-
         disk_path = libvirt_utils.find_disk(virt_dom)
         source_format = libvirt_utils.get_disk_type(disk_path)
 
@@ -1329,13 +1341,10 @@ class LibvirtDriver(driver.ComputeDriver):
         if image_format == 'lvm' or image_format == 'rbd':
             image_format = 'raw'
 
-        # NOTE(vish): glance forces ami disk format to be ami
-        if base.get('disk_format') == 'ami':
-            metadata['disk_format'] = 'ami'
-        else:
-            metadata['disk_format'] = image_format
-
-        metadata['container_format'] = base.get('container_format', 'bare')
+        metadata = self._create_snapshot_metadata(base,
+                                                  instance,
+                                                  image_format,
+                                                  snapshot['name'])
 
         snapshot_name = uuid.uuid4().hex
 

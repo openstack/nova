@@ -2302,6 +2302,43 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(snapshot['status'], 'active')
         self.assertEqual(snapshot['name'], snapshot_name)
 
+    def test__create_snapshot_metadata(self):
+        base = {}
+        instance = {'kernel_id': 'kernel',
+                    'project_id': 'prj_id',
+                    'ramdisk_id': 'ram_id',
+                    'os_type': None}
+        img_fmt = 'raw'
+        snp_name = 'snapshot_name'
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        ret = conn._create_snapshot_metadata(base, instance, img_fmt, snp_name)
+        expected = {'is_public': False,
+                    'status': 'active',
+                    'name': snp_name,
+                    'properties': {
+                                   'kernel_id': instance['kernel_id'],
+                                   'image_location': 'snapshot',
+                                   'image_state': 'available',
+                                   'owner_id': instance['project_id'],
+                                   'ramdisk_id': instance['ramdisk_id'],
+                                   },
+                    'disk_format': img_fmt,
+                    'container_format': base.get('container_format', 'bare')
+                    }
+        self.assertEqual(ret, expected)
+
+        # simulate an instance with os_type field defined
+        # disk format equals to ami
+        # container format not equals to bare
+        instance['os_type'] = 'linux'
+        base['disk_format'] = 'ami'
+        base['container_format'] = 'test_container'
+        expected['properties']['os_type'] = instance['os_type']
+        expected['disk_format'] = base['disk_format']
+        expected['container_format'] = base.get('container_format', 'bare')
+        ret = conn._create_snapshot_metadata(base, instance, img_fmt, snp_name)
+        self.assertEqual(ret, expected)
+
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
