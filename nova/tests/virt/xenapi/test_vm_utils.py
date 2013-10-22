@@ -1379,7 +1379,7 @@ class AllowVSSProviderTest(VMUtilsTestBase):
 
         def fake_call_xenapi(command, rec):
             xenstore_data = rec.get('xenstore_data')
-            self.assertTrue('vm-data/allowvssprovider' in xenstore_data)
+            self.assertIn('vm-data/allowvssprovider', xenstore_data)
 
         self.stubs.Set(flavors, 'extract_flavor', fake_extract_flavor)
         self.stubs.Set(self.session, 'call_xenapi', fake_call_xenapi)

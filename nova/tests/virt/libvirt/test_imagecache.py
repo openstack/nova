@@ -136,12 +136,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         expected = os.path.join(base_dir,
                                 'e97222e91fc4241f49a7f520d1dcf446751129b3')
-        self.assertTrue(expected in image_cache_manager.unexplained_images)
+        self.assertIn(expected, image_cache_manager.unexplained_images)
 
         expected = os.path.join(base_dir,
                                 '17d1b00b81642842e514494a78e804e9a511637c_'
                                 '10737418240')
-        self.assertTrue(expected in image_cache_manager.unexplained_images)
+        self.assertIn(expected, image_cache_manager.unexplained_images)
 
         unexpected = os.path.join(base_dir, '00000004')
         self.assertNotIn(unexpected, image_cache_manager.unexplained_images)
@@ -153,7 +153,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         expected = os.path.join(base_dir,
                                 '17d1b00b81642842e514494a78e804e9a511637c')
-        self.assertTrue(expected in image_cache_manager.originals)
+        self.assertIn(expected, image_cache_manager.originals)
 
         unexpected = os.path.join(base_dir,
                                   '17d1b00b81642842e514494a78e804e9a511637c_'
@@ -197,8 +197,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertTrue(image_cache_manager.used_images['22'] ==
                         (0, 1, ['inst-3']))
 
-        self.assertTrue('inst-1' in image_cache_manager.instance_names)
-        self.assertTrue('123' in image_cache_manager.instance_names)
+        self.assertIn('inst-1', image_cache_manager.instance_names)
+        self.assertIn('123', image_cache_manager.instance_names)
 
         self.assertEqual(len(image_cache_manager.image_popularity), 4)
         self.assertEqual(image_cache_manager.image_popularity['1'], 1)
@@ -720,7 +720,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                     fq_path('e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm'),
                     fq_path(hashed_42),
                     fq_path('%s_10737418240' % hashed_1)]:
-            self.assertTrue(rem in image_cache_manager.removable_base_files)
+            self.assertIn(rem, image_cache_manager.removable_base_files)
 
         # Ensure there are no "corrupt" images as well
         self.assertEqual(len(image_cache_manager.corrupt_base_files), 0)

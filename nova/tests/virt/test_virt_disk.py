@@ -75,10 +75,10 @@ class VirtDiskTest(test.NoDBTestCase):
 
         diskapi._inject_key_into_fs("mysshkey", vfs)
 
-        self.assertTrue("/root/.ssh" in vfs.handle.files)
+        self.assertIn("/root/.ssh", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh"],
                           {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0o700})
-        self.assertTrue("/root/.ssh/authorized_keys" in vfs.handle.files)
+        self.assertIn("/root/.ssh/authorized_keys", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh/authorized_keys"],
                           {'isdir': False,
                            'content': "Hello World\n# The following ssh " +
@@ -98,7 +98,7 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs.make_path("etc/rc.d")
         diskapi._inject_key_into_fs("mysshkey", vfs)
 
-        self.assertTrue("/etc/rc.d/rc.local" in vfs.handle.files)
+        self.assertIn("/etc/rc.d/rc.local", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/etc/rc.d/rc.local"],
                           {'isdir': False,
                            'content': "Hello World#!/bin/sh\n# Added by " +
@@ -109,10 +109,10 @@ class VirtDiskTest(test.NoDBTestCase):
                            'uid': 100,
                            'mode': 0o700})
 
-        self.assertTrue("/root/.ssh" in vfs.handle.files)
+        self.assertIn("/root/.ssh", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh"],
                           {'isdir': True, 'gid': 0, 'uid': 0, 'mode': 0o700})
-        self.assertTrue("/root/.ssh/authorized_keys" in vfs.handle.files)
+        self.assertIn("/root/.ssh/authorized_keys", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/root/.ssh/authorized_keys"],
                           {'isdir': False,
                            'content': "Hello World\n# The following ssh " +
@@ -133,7 +133,7 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs.make_path("etc/rc.d")
         diskapi._inject_key_into_fs("mysshkey", vfs)
 
-        self.assertTrue("/etc/rc.d/rc.local" in vfs.handle.files)
+        self.assertIn("/etc/rc.d/rc.local", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/etc/rc.d/rc.local"],
                 {'isdir': False,
                  'content': "#!/bin/sh\necho done\n# Added "
@@ -152,7 +152,7 @@ class VirtDiskTest(test.NoDBTestCase):
 
         diskapi._inject_net_into_fs("mynetconfig", vfs)
 
-        self.assertTrue("/etc/network/interfaces" in vfs.handle.files)
+        self.assertIn("/etc/network/interfaces", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/etc/network/interfaces"],
                           {'content': 'mynetconfig',
                            'gid': 100,
@@ -170,7 +170,7 @@ class VirtDiskTest(test.NoDBTestCase):
                                           {"key": "eek",
                                            "value": "wizz"}], vfs)
 
-        self.assertTrue("/meta.js" in vfs.handle.files)
+        self.assertIn("/meta.js", vfs.handle.files)
         self.assertEquals(vfs.handle.files["/meta.js"],
                           {'content': '{"foo": "bar", ' +
                                       '"eek": "wizz"}',

@@ -224,8 +224,8 @@ class PowerVMDriverTestCase(test.TestCase):
 
     def test_list_instances(self):
         instances = self.powervm_connection.list_instances()
-        self.assertTrue('instance-00000001' in instances)
-        self.assertTrue('instance-00000002' in instances)
+        self.assertIn('instance-00000001', instances)
+        self.assertIn('instance-00000002', instances)
 
     def test_instance_exists(self):
         name = self.instance['name']

@@ -2889,7 +2889,7 @@ class LibvirtConnTestCase(test.TestCase):
         ret = conn.check_can_live_migrate_source(self.context, instance_ref,
                                                  dest_check_data)
         self.assertTrue(type(ret) == dict)
-        self.assertTrue('is_shared_storage' in ret)
+        self.assertIn('is_shared_storage', ret)
 
     def test_check_can_live_migrate_source_vol_backed_w_disk_raises(self):
         instance_ref = db.instance_create(self.context, self.test_instance)
@@ -5115,7 +5115,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         def fake_error(msg):
             self.log_error_called = True
-            self.assertTrue(fake_xml in msg)
+            self.assertIn(fake_xml, msg)
 
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
 
@@ -5140,7 +5140,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         def fake_error(msg):
             self.log_error_called = True
-            self.assertTrue(fake_xml in msg)
+            self.assertIn(fake_xml, msg)
 
         self.stubs.Set(fake_domain, 'createWithFlags', fake_createWithFlags)
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
@@ -5168,7 +5168,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         def fake_error(msg):
             self.log_error_called = True
-            self.assertTrue(fake_xml in msg)
+            self.assertIn(fake_xml, msg)
 
         self.stubs.Set(nova.virt.libvirt.driver.LOG, 'error', fake_error)
 
@@ -5805,7 +5805,7 @@ class IptablesFirewallTestCase(test.TestCase):
         # should have a chain with 0 rules
         network_info = _fake_network_info(self.stubs, 1)
         self.fw.setup_basic_filtering(instance_ref, network_info)
-        self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
+        self.assertIn('provider', self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
         self.assertEqual(0, len(rules))

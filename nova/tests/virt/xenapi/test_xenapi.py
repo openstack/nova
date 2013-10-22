@@ -2126,7 +2126,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def test_supported_instances_is_included_in_host_state(self):
         stats = self.conn.get_host_stats()
-        self.assertTrue('supported_instances' in stats)
+        self.assertIn('supported_instances', stats)
 
     def test_supported_instances_is_calculated_by_to_supported_instances(self):
 
@@ -2748,7 +2748,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
         network_info = fake_network.fake_get_instance_nw_info(self.stubs, 1, 1)
         self.fw.prepare_instance_filter(instance_ref, network_info)
-        self.assertTrue('provider' in self.fw.iptables.ipv4['filter'].chains)
+        self.assertIn('provider', self.fw.iptables.ipv4['filter'].chains)
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
         self.assertEqual(0, len(rules))
@@ -2915,7 +2915,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.conn.add_to_aggregate("CONTEXT", "AGGREGATE", "HOST",
                                    slave_info="SLAVEINFO")
 
-        self.assertTrue(pool_add_to_aggregate in calls)
+        self.assertIn(pool_add_to_aggregate, calls)
 
     def test_pool_remove_from_aggregate_called_by_driver(self):
 
@@ -2935,7 +2935,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
         self.conn.remove_from_aggregate("CONTEXT", "AGGREGATE", "HOST",
                                         slave_info="SLAVEINFO")
 
-        self.assertTrue(pool_remove_from_aggregate in calls)
+        self.assertIn(pool_remove_from_aggregate, calls)
 
     def test_add_to_aggregate_for_first_host_sets_metadata(self):
         def fake_init_pool(id, name):
