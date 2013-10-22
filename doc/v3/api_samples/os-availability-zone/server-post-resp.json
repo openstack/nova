@@ -1,0 +1,16 @@
+{
+    "server": {
+        "admin_password": "a2apKsfp7Rom",
+        "id": "e88c3898-e971-42e5-8325-b7ff921efb15",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/e88c3898-e971-42e5-8325-b7ff921efb15",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/e88c3898-e971-42e5-8325-b7ff921efb15",
+                "rel": "bookmark"
+            }
+        ]
+    }
+}
