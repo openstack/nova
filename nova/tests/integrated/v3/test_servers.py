@@ -74,3 +74,38 @@ class ServersSampleAllExtensionJsonTest(ServersSampleJsonTest):
 
 class ServersSampleAllExtensionXmlTest(ServersSampleXmlTest):
     all_extensions = True
+
+
+class ServersActionsJsonTest(ServersSampleBase):
+    sample_dir = 'servers'
+
+    def _test_server_action(self, uuid, action,
+                            subs={}, resp_tpl=None, code=202):
+        subs.update({'action': action,
+                     'glance_host': self._get_glance_host()})
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-%s' % action.replace('_',
+                                                                     '-'),
+                                 subs)
+        if resp_tpl:
+            subs.update(self._get_regexes())
+            self._verify_response(resp_tpl, subs, response, code)
+        else:
+            self.assertEqual(response.status, code)
+            self.assertEqual(response.read(), "")
+
+    def test_server_resize(self):
+        self.flags(allow_resize_to_same_host=True)
+        uuid = self._post_server()
+        self._test_server_action(uuid, "resize",
+                                 {"id": 2,
+                                  "host": self._get_host()})
+        return uuid
+
+    def test_server_confirm_resize(self):
+        uuid = self.test_server_resize()
+        self._test_server_action(uuid, "confirm_resize")
+
+
+class ServersActionsXmlTest(ServersActionsJsonTest):
+    ctype = 'xml'
