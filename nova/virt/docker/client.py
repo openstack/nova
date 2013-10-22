@@ -172,6 +172,12 @@ class DockerHTTPClient(object):
             '/v1.4/containers/{0}/stop?t={1}'.format(container_id, timeout))
         return (resp.code == 204)
 
+    def kill_container(self, container_id):
+        resp = self.make_request(
+            'POST',
+            '/v1.4/containers/{0}/kill'.format(container_id))
+        return (resp.code == 204)
+
     def destroy_container(self, container_id):
         resp = self.make_request(
             'DELETE',

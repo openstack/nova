@@ -294,6 +294,22 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
+    def test_kill_container(self):
+        mock_conn = self.mox.CreateMockAnything()
+
+        mock_conn.request('POST', '/v1.4/containers/XXX/kill',
+                          headers={'Content-Type': 'application/json'})
+        response = FakeResponse(204,
+                                headers={'Content-Type': 'application/json'})
+        mock_conn.getresponse().AndReturn(response)
+
+        self.mox.ReplayAll()
+
+        client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
+        self.assertEqual(True, client.kill_container('XXX'))
+
+        self.mox.VerifyAll()
+
     def test_stop_container_bad_return_code(self):
         mock_conn = self.mox.CreateMockAnything()
 
@@ -306,6 +322,21 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
         self.assertEqual(False, client.stop_container('XXX'))
+
+        self.mox.VerifyAll()
+
+    def test_kill_container_bad_return_code(self):
+        mock_conn = self.mox.CreateMockAnything()
+
+        mock_conn.request('POST', '/v1.4/containers/XXX/kill',
+                          headers={'Content-Type': 'application/json'})
+        response = FakeResponse(400)
+        mock_conn.getresponse().AndReturn(response)
+
+        self.mox.ReplayAll()
+
+        client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
+        self.assertEqual(False, client.kill_container('XXX'))
 
         self.mox.VerifyAll()
 

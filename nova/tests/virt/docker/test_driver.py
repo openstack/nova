@@ -185,6 +185,13 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
         container_info = self.connection.docker.inspect_container(container_id)
         self.assertEqual(vcpus * 1024, container_info['Config']['CpuShares'])
 
+    @mock.patch('nova.virt.docker.driver.DockerDriver._setup_network',
+                side_effect=Exception)
+    def test_create_container_net_setup_fails(self, mock_setup_network):
+        self.assertRaises(exception.InstanceDeployFailure,
+                          self.test_create_container)
+        self.assertEqual(0, len(self.mock_client.list_containers()))
+
     def test_create_container_wrong_image(self):
         instance_href = utils.get_test_instance()
         image_info = utils.get_test_image_info(None, instance_href)

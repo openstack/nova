@@ -125,9 +125,20 @@ class MockClient(object):
         self._containers[container_id]['running'] = False
         return True
 
+    def kill_container(self, container_id):
+        if container_id not in self._containers:
+            return False
+        self._containers[container_id]['running'] = False
+        return True
+
     def destroy_container(self, container_id):
         if container_id not in self._containers:
             return False
+
+        # Docker doesn't allow to destroy a running container.
+        if self._containers[container_id]['running']:
+            return False
+
         del self._containers[container_id]
         return True
 
