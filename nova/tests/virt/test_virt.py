@@ -197,6 +197,24 @@ class TestVirtDisk(test.NoDBTestCase):
 
         self.stubs.Set(utils, 'execute', fake_execute)
 
+    def test_lxc_setup_container(self):
+        image = '/tmp/fake-image'
+        container_dir = '/mnt/fake_rootfs/'
+
+        def proc_mounts(self, mount_point):
+            return None
+
+        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+            return FakeMount(imgfile, mountdir, partition)
+
+        self.stubs.Set(os.path, 'exists', lambda _: True)
+        self.stubs.Set(disk_api._DiskImage, '_device_for_path', proc_mounts)
+        self.stubs.Set(mount.Mount, 'instance_for_format',
+                       staticmethod(fake_instance_for_format))
+
+        self.assertEqual(disk_api.setup_container(image, container_dir),
+                         '/dev/fake')
+
     def test_lxc_teardown_container(self):
 
         def proc_mounts(self, mount_point):

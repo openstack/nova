@@ -814,6 +814,12 @@ class LibvirtDriver(driver.ComputeDriver):
         for vif in network_info:
             self.vif_driver.unplug(instance, vif)
 
+    def _teardown_container(self, instance):
+        inst_path = libvirt_utils.get_instance_path(instance)
+        container_dir = os.path.join(inst_path, 'rootfs')
+        container_root_device = instance.get('root_device_name')
+        disk.teardown_container(container_dir, container_root_device)
+
     def _destroy(self, instance):
         try:
             virt_dom = self._lookup_by_name(instance['name'])
@@ -827,6 +833,11 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 old_domid = virt_dom.ID()
                 virt_dom.destroy()
+
+                # NOTE(GuanQiang): teardown container to avoid resource leak
+                if CONF.libvirt.virt_type == 'lxc':
+                    self._teardown_container(instance)
+
             except libvirt.libvirtError as e:
                 is_okay = False
                 errcode = e.get_error_code()
@@ -1004,13 +1015,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                  instance=instance)
 
         if destroy_disks:
-            #NOTE(GuanQiang): teardown lxc container to avoid resource leak
-            if CONF.libvirt.virt_type == 'lxc':
-                inst_path = libvirt_utils.get_instance_path(instance)
-                container_dir = os.path.join(inst_path, 'rootfs')
-                container_root_device = instance.get('root_device_name')
-                disk.teardown_container(container_dir, container_root_device)
-
             self._delete_instance_files(instance)
 
             self._cleanup_lvm(instance)
