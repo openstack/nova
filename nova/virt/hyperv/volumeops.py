@@ -106,6 +106,7 @@ class VolumeOps(object):
         Attach a volume to the SCSI controller or to the IDE controller if
         ebs_root is True
         """
+        target_iqn = None
         LOG.debug(_("Attach_volume: %(connection_info)s to %(instance_name)s"),
                   {'connection_info': connection_info,
                    'instance_name': instance_name})
@@ -138,7 +139,8 @@ class VolumeOps(object):
                                                       mounted_disk_path)
         except Exception as exn:
             LOG.exception(_('Attach volume failed: %s'), exn)
-            self._volutils.logout_storage_target(target_iqn)
+            if target_iqn:
+                self._volutils.logout_storage_target(target_iqn)
             raise vmutils.HyperVException(_('Unable to attach volume '
                                             'to instance %s') % instance_name)
 
