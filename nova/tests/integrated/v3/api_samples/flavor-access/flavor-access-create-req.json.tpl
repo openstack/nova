@@ -5,6 +5,6 @@
         "vcpus": 2,
         "disk": 10,
         "id": "%(flavor_id)s",
-        "os-flavor-access:is_public": false
+        "flavor-access:is_public": false
     }
 }

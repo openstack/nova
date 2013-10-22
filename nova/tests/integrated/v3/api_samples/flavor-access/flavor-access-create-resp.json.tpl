@@ -13,7 +13,7 @@
             }
         ],
         "name": "%(flavor_name)s",
-        "os-flavor-access:is_public": false,
+        "flavor-access:is_public": false,
         "ram": 1024,
         "vcpus": 2,
         "disabled": false,

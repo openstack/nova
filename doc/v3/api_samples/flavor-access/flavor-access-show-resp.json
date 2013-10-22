@@ -3,6 +3,7 @@
         "disabled": false,
         "disk": 1,
         "ephemeral": 0,
+        "flavor-access:is_public": true,
         "id": "1",
         "links": [
             {
@@ -15,7 +16,6 @@
             }
         ],
         "name": "m1.tiny",
-        "os-flavor-access:is_public": true,
         "ram": 512,
         "swap": 0,
         "vcpus": 1

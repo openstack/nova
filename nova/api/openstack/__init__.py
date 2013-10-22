@@ -64,7 +64,7 @@ CONF.register_opts(api_opts, api_opts_group)
 API_V3_CORE_EXTENSIONS = set(['consoles', 'extensions', 'flavors', 'ips',
                               'limits', 'servers', 'server-metadata',
                               'keypairs', 'console-output', 'versions',
-                              'flavor-manage'])
+                              'flavor-manage', 'flavor-access'])
 
 
 class FaultWrapper(base_wsgi.Middleware):

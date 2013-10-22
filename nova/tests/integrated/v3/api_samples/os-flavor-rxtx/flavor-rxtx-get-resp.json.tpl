@@ -15,6 +15,7 @@
             }
         ],
         "name": "m1.tiny",
+        "flavor-access:is_public": true,
         "ram": 512,
         "rxtx_factor": 1.0,
         "swap": 0,

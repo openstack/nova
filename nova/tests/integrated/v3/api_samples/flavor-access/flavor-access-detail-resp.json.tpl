@@ -7,16 +7,16 @@
             "id": "1",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/flavors/1",
+                    "href": "%(host)s/v3/flavors/1",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/flavors/1",
+                    "href": "%(host)s/flavors/1",
                     "rel": "bookmark"
                 }
             ],
             "name": "m1.tiny",
-            "os-flavor-access:is_public": true,
+            "flavor-access:is_public": true,
             "ram": 512,
             "swap": 0,
             "vcpus": 1
@@ -28,16 +28,16 @@
             "id": "2",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/flavors/2",
+                    "href": "%(host)s/v3/flavors/2",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/flavors/2",
+                    "href": "%(host)s/flavors/2",
                     "rel": "bookmark"
                 }
             ],
             "name": "m1.small",
-            "os-flavor-access:is_public": true,
+            "flavor-access:is_public": true,
             "ram": 2048,
             "swap": 0,
             "vcpus": 1
@@ -49,16 +49,16 @@
             "id": "3",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/flavors/3",
+                    "href": "%(host)s/v3/flavors/3",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/flavors/3",
+                    "href": "%(host)s/flavors/3",
                     "rel": "bookmark"
                 }
             ],
             "name": "m1.medium",
-            "os-flavor-access:is_public": true,
+            "flavor-access:is_public": true,
             "ram": 4096,
             "swap": 0,
             "vcpus": 2
@@ -70,16 +70,16 @@
             "id": "4",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/flavors/4",
+                    "href": "%(host)s/v3/flavors/4",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/flavors/4",
+                    "href": "%(host)s/flavors/4",
                     "rel": "bookmark"
                 }
             ],
             "name": "m1.large",
-            "os-flavor-access:is_public": true,
+            "flavor-access:is_public": true,
             "ram": 8192,
             "swap": 0,
             "vcpus": 4
@@ -91,16 +91,16 @@
             "id": "5",
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/flavors/5",
+                    "href": "%(host)s/v3/flavors/5",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/flavors/5",
+                    "href": "%(host)s/flavors/5",
                     "rel": "bookmark"
                 }
             ],
             "name": "m1.xlarge",
-            "os-flavor-access:is_public": true,
+            "flavor-access:is_public": true,
             "ram": 16384,
             "swap": 0,
             "vcpus": 8
