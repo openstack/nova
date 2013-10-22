@@ -745,7 +745,7 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
         db_flavorids = set(i['flavorid'] for i in self.inst_types)
         disabled_flavorid = str(self.disabled_type['flavorid'])
 
-        self.assertTrue(disabled_flavorid in db_flavorids)
+        self.assertIn(disabled_flavorid, db_flavorids)
         self.assertEqual(db_flavorids - set([disabled_flavorid]),
                          api_flavorids)
 
@@ -758,7 +758,7 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
         db_flavorids = set(i['flavorid'] for i in self.inst_types)
         disabled_flavorid = str(self.disabled_type['flavorid'])
 
-        self.assertTrue(disabled_flavorid in db_flavorids)
+        self.assertIn(disabled_flavorid, db_flavorids)
         self.assertEqual(db_flavorids, api_flavorids)
 
     def test_show_should_include_disabled_flavor_for_user(self):

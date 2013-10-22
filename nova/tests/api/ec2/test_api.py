@@ -307,8 +307,8 @@ class ApiEc2TestCase(test.TestCase):
         # Any request should be fine
         self.ec2.get_all_instances()
         self.assertTrue(self.ec2.APIVersion in self.http.getresponsebody(),
-                       'The version in the xmlns of the response does '
-                       'not match the API version given in the request.')
+                        'The version in the xmlns of the response does '
+                        'not match the API version given in the request.')
 
     def test_describe_instances(self):
         """Test that, after creating a user and a project, the describe
@@ -381,7 +381,7 @@ class ApiEc2TestCase(test.TestCase):
 
         rv = self.ec2.get_all_security_groups()
         self.assertEquals(len(rv), 2)
-        self.assertTrue(security_group_name in [group.name for group in rv])
+        self.assertIn(security_group_name, [group.name for group in rv])
 
         self.expect_http()
         self.mox.ReplayAll()
