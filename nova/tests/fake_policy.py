@@ -102,6 +102,7 @@ policy_data = """
     "compute:volume_snapshot_create": "",
     "compute:volume_snapshot_delete": "",
 
+    "compute_extension:v3:os-access-ips": "",
     "compute_extension:accounts": "",
     "compute_extension:admin_actions:pause": "",
     "compute_extension:admin_actions:unpause": "",
