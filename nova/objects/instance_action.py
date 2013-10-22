@@ -77,6 +77,10 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
 
 
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('InstanceAction'),
+        }
+
     @base.remotable_classmethod
     def get_by_instance_uuid(cls, context, instance_uuid):
         db_actions = db.actions_get(context, instance_uuid)
@@ -150,6 +154,10 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
 
 
 class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('InstanceActionEvent'),
+        }
+
     @base.remotable_classmethod
     def get_by_action(cls, context, action_id):
         db_events = db.action_events_get(context, action_id)

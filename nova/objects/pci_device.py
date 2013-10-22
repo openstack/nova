@@ -251,6 +251,10 @@ def _make_pci_list(context, pci_list, db_list):
 
 
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('PciDevice'),
+        }
+
     def __init__(self):
         super(PciDeviceList, self).__init__()
         self.objects = []

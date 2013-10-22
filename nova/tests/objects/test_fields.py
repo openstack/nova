@@ -195,7 +195,7 @@ class TestObject(TestField):
 
         test_inst = TestableObject()
         super(TestObject, self).setUp()
-        self.field = fields.Field(fields.Object(TestableObject))
+        self.field = fields.Field(fields.Object('TestableObject'))
         self.coerce_good_values = [(test_inst, test_inst)]
         self.coerce_bad_values = [OtherTestableObject(), 1, 'foo']
         self.to_primitive_values = [(test_inst, test_inst.obj_to_primitive())]

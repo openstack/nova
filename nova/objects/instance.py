@@ -144,19 +144,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'metadata': fields.DictOfStringsField(),
         'system_metadata': fields.DictOfNullableStringsField(),
 
-        'info_cache': fields.ObjectField(
-            instance_info_cache.InstanceInfoCache, nullable=True),
+        'info_cache': fields.ObjectField('InstanceInfoCache',
+                                         nullable=True),
 
-        'security_groups': fields.ObjectField(
-            security_group.SecurityGroupList),
+        'security_groups': fields.ObjectField('SecurityGroupList'),
 
-        'fault': fields.ObjectField(instance_fault.InstanceFault,
-                                    nullable=True),
+        'fault': fields.ObjectField('InstanceFault', nullable=True),
 
         'cleaned': fields.BooleanField(default=False),
 
-        'pci_devices': fields.ObjectField(pci_device.PciDeviceList,
-                                          nullable=True),
+        'pci_devices': fields.ObjectField('PciDeviceList', nullable=True),
         }
 
     obj_extra_fields = ['name']
@@ -490,6 +487,10 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 
 
 class InstanceList(base.ObjectListBase, base.NovaObject):
+    fields = {
+        'objects': fields.ListOfObjectsField('Instance'),
+        }
+
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
                        sort_key='created_at', sort_dir='desc', limit=None,

@@ -238,8 +238,7 @@ class TestUtils(test.TestCase):
                 self.foo = foo
 
         class MyList(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.Field(fields.List(
-                        fields.Field(fields.Object(MyObjElement))))}
+            fields = {'objects': fields.ListOfObjectsField('MyObjElement')}
 
         mylist = MyList()
         mylist.objects = [MyObjElement(1), MyObjElement(2), MyObjElement(3)]
@@ -253,7 +252,7 @@ class TestUtils(test.TestCase):
 
     def test_obj_to_primitive_recursive(self):
         class MyList(base.ObjectListBase, base.NovaObject):
-            pass
+            fields = {'objects': fields.ListOfObjectsField('MyObj')}
 
         mylist = MyList(objects=[MyObj(), MyObj()])
         for i, value in enumerate(mylist):
@@ -670,8 +669,7 @@ class TestObjectListBase(test.TestCase):
                 self.foo = foo
 
         class Foo(base.ObjectListBase, base.NovaObject):
-            fields = {'objects': fields.Field(fields.List(
-                        fields.Field(fields.Object(MyElement))))}
+            fields = {'objects': fields.ListOfObjectsField('MyElement')}
 
         objlist = Foo(context='foo',
                       objects=[MyElement(1), MyElement(2), MyElement(3)])
@@ -686,7 +684,7 @@ class TestObjectListBase(test.TestCase):
 
     def test_serialization(self):
         class Foo(base.ObjectListBase, base.NovaObject):
-            pass
+            fields = {'objects': fields.ListOfObjectsField('Bar')}
 
         class Bar(base.NovaObject):
             fields = {'foo': fields.Field(fields.String())}
