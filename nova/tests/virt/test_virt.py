@@ -20,6 +20,7 @@ import os
 from nova import test
 from nova import utils
 from nova.virt.disk import api as disk_api
+from nova.virt.disk.mount import api as mount
 from nova.virt import driver
 
 
@@ -80,6 +81,87 @@ class TestVirtDriver(test.NoDBTestCase):
                                                 'swap_size': 0}))
         self.assertTrue(driver.swap_is_usable({'device_name': '/dev/sdb',
                                                 'swap_size': 1}))
+
+
+class FakeMount(object):
+    def __init__(self, image, mount_dir, partition=None, device=None):
+        self.image = image
+        self.partition = partition
+        self.mount_dir = mount_dir
+
+        self.linked = self.mapped = self.mounted = False
+        self.device = device
+
+    def do_mount(self):
+        self.linked = True
+        self.mapped = True
+        self.mounted = True
+        self.device = '/dev/fake'
+        return True
+
+    def do_umount(self):
+        self.linked = True
+        self.mounted = False
+
+    def do_teardown(self):
+        self.linked = False
+        self.mapped = False
+        self.mounted = False
+        self.device = None
+
+
+class TestDiskImage(test.NoDBTestCase):
+    def setUp(self):
+        super(TestDiskImage, self).setUp()
+
+    def test_mount(self):
+        image = '/tmp/fake-image'
+        mountdir = '/mnt/fake_rootfs'
+        fakemount = FakeMount(image, mountdir, None)
+
+        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+            return fakemount
+
+        self.stubs.Set(mount.Mount, 'instance_for_format',
+                       staticmethod(fake_instance_for_format))
+        diskimage = disk_api._DiskImage(image=image, mount_dir=mountdir)
+        dev = diskimage.mount()
+        self.assertEqual(diskimage._mounter, fakemount)
+        self.assertEqual(dev, '/dev/fake')
+
+    def test_umount(self):
+        image = '/tmp/fake-image'
+        mountdir = '/mnt/fake_rootfs'
+        fakemount = FakeMount(image, mountdir, None)
+
+        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+            return fakemount
+
+        self.stubs.Set(mount.Mount, 'instance_for_format',
+                       staticmethod(fake_instance_for_format))
+        diskimage = disk_api._DiskImage(image=image, mount_dir=mountdir)
+        dev = diskimage.mount()
+        self.assertEqual(diskimage._mounter, fakemount)
+        self.assertEqual(dev, '/dev/fake')
+        diskimage.umount()
+        self.assertEqual(diskimage._mounter, None)
+
+    def test_teardown(self):
+        image = '/tmp/fake-image'
+        mountdir = '/mnt/fake_rootfs'
+        fakemount = FakeMount(image, mountdir, None)
+
+        def fake_instance_for_format(imgfile, mountdir, partition, imgfmt):
+            return fakemount
+
+        self.stubs.Set(mount.Mount, 'instance_for_format',
+                       staticmethod(fake_instance_for_format))
+        diskimage = disk_api._DiskImage(image=image, mount_dir=mountdir)
+        dev = diskimage.mount()
+        self.assertEqual(diskimage._mounter, fakemount)
+        self.assertEqual(dev, '/dev/fake')
+        diskimage.teardown()
+        self.assertEqual(diskimage._mounter, None)
 
 
 class TestVirtDisk(test.NoDBTestCase):
