@@ -290,7 +290,7 @@ def remove_version_from_href(href):
 
 
 def check_img_metadata_properties_quota(context, metadata):
-    if metadata is None:
+    if not metadata:
         return
     try:
         QUOTAS.limit_check(context, metadata_items=len(metadata))
