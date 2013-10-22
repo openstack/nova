@@ -1539,6 +1539,14 @@ class ServersControllerUpdateTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPNotFound, self.controller.update,
                           req, FAKE_UUID, body)
 
+    def test_update_server_policy_fail(self):
+        rule = {'compute:update': common_policy.parse_rule('role:admin')}
+        common_policy.set_rules(common_policy.Rules(rule))
+        body = {'server': {'name': 'server_test'}}
+        req = self._get_request(body, {'name': 'server_test'})
+        self.assertRaises(exception.PolicyNotAuthorized,
+                self.controller.update, req, FAKE_UUID, body)
+
 
 class ServerStatusTest(test.TestCase):
 
