@@ -164,11 +164,23 @@ class LibvirtVifTestCase(test.TestCase):
                                                   subnet_bridge_6],
                                          interface='eth0')
 
+    network_midonet = network_model.Network(id='network-id-xxx-yyy-zzz',
+                                            label=None,
+                                            bridge=None,
+                                            subnets=[subnet_bridge_4],
+                                            interface='eth0')
+
     vif_mlnx = network_model.VIF(id='vif-xxx-yyy-zzz',
                                  address='ca:fe:de:ad:be:ef',
                                  network=network_mlnx,
                                  type=network_model.VIF_TYPE_MLNX_DIRECT,
                                  devname='tap-xxx-yyy-zzz')
+
+    vif_midonet = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                    address='ca:fe:de:ad:be:ef',
+                                    network=network_midonet,
+                                    type=network_model.VIF_TYPE_MIDONET,
+                                    devname='tap-xxx-yyy-zzz')
 
     instance = {
         'name': 'instance-name',
@@ -513,6 +525,15 @@ class LibvirtVifTestCase(test.TestCase):
                                "mode", "passthrough")
         self._assertMacEquals(node, self.vif_mlnx)
         self._assertModel(xml, "virtio")
+
+    def test_midonet_ethernet_vif_driver(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn())
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        br_want = self.vif_midonet['devname']
+        xml = self._get_instance_xml(d, self.vif_midonet)
+        node = self._get_node(xml)
+        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                     self.vif_midonet, br_want)
 
     def test_generic_8021qbh_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
