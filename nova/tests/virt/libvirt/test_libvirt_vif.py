@@ -387,25 +387,11 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
                                      self.vif_bridge, br_want, 1)
 
-    def test_bridge_driver(self):
-        d = vif.LibvirtBridgeDriver(self._get_conn())
-        self._check_bridge_driver(d,
-                                  self.vif_bridge,
-                                  self.vif_bridge['network']['bridge'])
-
     def test_generic_driver_bridge(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         self._check_bridge_driver(d,
                                   self.vif_bridge,
                                   self.vif_bridge['network']['bridge'])
-
-    def test_neutron_bridge_driver(self):
-        d = vif.NeutronLinuxBridgeVIFDriver(self._get_conn())
-        br_want = 'brq' + self.vif_bridge_neutron['network']['id']
-        br_want = br_want[:network_model.NIC_NAME_LEN]
-        self._check_bridge_driver(d,
-                                  self.vif_bridge_neutron,
-                                  br_want)
 
     def _check_ivs_ethernet_driver(self, d, vif, dev_prefix):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
@@ -461,13 +447,6 @@ class LibvirtVifTestCase(test.TestCase):
 
         self.assertTrue(iface_id_found)
 
-    def test_ovs_virtualport_driver(self):
-        d = vif.LibvirtOpenVswitchVirtualPortDriver(self._get_conn(ver=9011))
-        want_iface_id = 'vif-xxx-yyy-zzz'
-        self._check_ovs_virtualport_driver(d,
-                                           self.vif_ovs_legacy,
-                                           want_iface_id)
-
     def test_generic_ovs_virtualport_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9011))
         want_iface_id = self.vif_ovs['ovs_interfaceid']
@@ -488,14 +467,6 @@ class LibvirtVifTestCase(test.TestCase):
         node = self._get_node(xml)
         self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
                                      vif, br_want, 1)
-
-    def test_quantum_hybrid_driver(self):
-        br_want = "qbr" + self.vif_ovs['id']
-        br_want = br_want[:network_model.NIC_NAME_LEN]
-        d = vif.LibvirtHybridOVSBridgeDriver(self._get_conn())
-        self._check_neutron_hybrid_driver(d,
-                                          self.vif_ovs_legacy,
-                                          br_want)
 
     def test_generic_hybrid_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
