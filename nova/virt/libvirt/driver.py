@@ -683,6 +683,7 @@ class LibvirtDriver(driver.ComputeDriver):
             notifier.get_notifier('compute').error(
                 nova_context.get_admin_context(),
                 'compute.libvirt.error', payload)
+            raise exception.HypervisorUnavailable(host=CONF.host)
 
     def get_num_instances(self):
         """Efficient override of base instance_exists method."""

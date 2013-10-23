@@ -392,6 +392,10 @@ class ComputeResourcesUnavailable(ServiceUnavailable):
     msg_fmt = _("Insufficient compute resources.")
 
 
+class HypervisorUnavailable(NovaException):
+    msg_fmt = _("Connection to the hypervisor is broken on host: %(host)s")
+
+
 class ComputeServiceUnavailable(ServiceUnavailable):
     msg_fmt = _("Compute service of %(host)s is unavailable at this time.")
 

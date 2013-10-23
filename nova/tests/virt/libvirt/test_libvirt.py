@@ -3820,6 +3820,21 @@ class LibvirtConnTestCase(test.TestCase):
 
             self.mox.UnsetStubs()
 
+    def test_command_with_broken_connection(self):
+        self.mox.UnsetStubs()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(libvirt, "openAuth")
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
+        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_domain")
+        libvirt.openAuth(mox.IgnoreArg(), mox.IgnoreArg(),
+                         mox.IgnoreArg()).AndRaise(
+                                     libvirt.libvirtError("fake failure"))
+
+        self.mox.ReplayAll()
+        conn._close_callback(conn._wrapped_conn, 'ERROR', '')
+        self.assertRaises(exception.HypervisorUnavailable,
+                          conn.get_num_instances)
+
     def test_immediate_delete(self):
         def fake_lookup_by_name(instance_name):
             raise exception.InstanceNotFound(instance_id=instance_name)
