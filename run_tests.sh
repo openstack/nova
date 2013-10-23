@@ -23,6 +23,8 @@ function usage {
   echo "                               Default: .venv"
   echo "  --tools-path <dir>          Location of the tools directory"
   echo "                               Default: \$(pwd)"
+  echo "  --concurrency <concurrency> How many processes to use when running the tests. A value of 0 autodetects concurrency from your CPU count"
+  echo "                               Default: 0"
   echo ""
   echo "Note: with no options specified, the script will try to run the tests in a virtual environment,"
   echo "      If no virtualenv is found, the script will ask if you would like to create one.  If you "
@@ -56,6 +58,10 @@ function process_options {
         (( i++ ))
         tools_path=${!i}
         ;;
+      --concurrency)
+        (( i++ ))
+        concurrency=${!i}
+        ;;
       -*) testropts="$testropts ${!i}";;
       *) testrargs="$testrargs ${!i}"
     esac
@@ -80,6 +86,7 @@ no_pep8=0
 coverage=0
 debug=0
 update=0
+concurrency=0
 
 LANG=en_US.UTF-8
 LANGUAGE=en_US:en
@@ -124,7 +131,7 @@ function run_tests {
   # Just run the test suites in current environment
   set +e
   testrargs=`echo "$testrargs" | sed -e's/^\s*\(.*\)\s*$/\1/'`
-  TESTRTESTS="$TESTRTESTS --testr-args='--subunit $testropts $testrargs'"
+  TESTRTESTS="$TESTRTESTS --testr-args='--subunit --concurrency $concurrency $testropts $testrargs'"
   if [ setup.cfg -nt nova.egg-info/entry_points.txt ]
   then
     ${wrapper} python setup.py egg_info
