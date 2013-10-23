@@ -929,7 +929,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.resize(self.context, fake_inst, **extra_kwargs)
 
     def _test_migrate(self, *args, **kwargs):
-        self._test_resize(*args, flavor_id_passed=True, **kwargs)
+        self._test_resize(*args, flavor_id_passed=False, **kwargs)
 
     def test_resize(self):
         self._test_resize()
