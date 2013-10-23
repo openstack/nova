@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import webob.exc
 
 from nova.api.openstack.compute.contrib import agents
 from nova import context
@@ -116,6 +117,36 @@ class AgentsTest(test.NoDBTestCase):
         res_dict = self.controller.create(req, body)
         self.assertEqual(res_dict, response)
 
+    def _test_agents_create_with_invalid_length(self, key):
+        req = FakeRequest()
+        body = {'agent': {'hypervisor': 'kvm',
+                'os': 'win',
+                'architecture': 'x86',
+                'version': '7.0',
+                'url': 'xxx://xxxx/xxx/xxx',
+                'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+        body['agent'][key] = 'x' * 256
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, body)
+
+    def test_agents_create_with_invalid_length_hypervisor(self):
+        self._test_agents_create_with_invalid_length('hypervisor')
+
+    def test_agents_create_with_invalid_length_os(self):
+        self._test_agents_create_with_invalid_length('os')
+
+    def test_agents_create_with_invalid_length_architecture(self):
+        self._test_agents_create_with_invalid_length('architecture')
+
+    def test_agents_create_with_invalid_length_version(self):
+        self._test_agents_create_with_invalid_length('version')
+
+    def test_agents_create_with_invalid_length_url(self):
+        self._test_agents_create_with_invalid_length('url')
+
+    def test_agents_create_with_invalid_length_md5hash(self):
+        self._test_agents_create_with_invalid_length('md5hash')
+
     def test_agents_delete(self):
         req = FakeRequest()
         self.controller.delete(req, 1)
@@ -179,3 +210,21 @@ class AgentsTest(test.NoDBTestCase):
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         res_dict = self.controller.update(req, 1, body)
         self.assertEqual(res_dict, response)
+
+    def _test_agents_update_with_invalid_length(self, key):
+        req = FakeRequest()
+        body = {'para': {'version': '7.0',
+                'url': 'xxx://xxxx/xxx/xxx',
+                'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
+        body['para'][key] = 'x' * 256
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update, req, 1, body)
+
+    def test_agents_update_with_invalid_length_version(self):
+        self._test_agents_update_with_invalid_length('version')
+
+    def test_agents_update_with_invalid_length_url(self):
+        self._test_agents_update_with_invalid_length('url')
+
+    def test_agents_update_with_invalid_length_md5hash(self):
+        self._test_agents_update_with_invalid_length('md5hash')
