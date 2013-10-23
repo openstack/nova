@@ -25,6 +25,7 @@ from nova.compute import flavors
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import unit
 from nova import utils
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vhdutilsv2
@@ -64,7 +65,7 @@ class ImageCache(object):
         vhd_size = vhd_info['MaxInternalSize']
 
         root_vhd_size_gb = self._get_root_vhd_size_gb(instance)
-        root_vhd_size = root_vhd_size_gb * 1024 ** 3
+        root_vhd_size = root_vhd_size_gb * unit.Gi
 
         # NOTE(lpetrut): Checking the namespace is needed as the following
         # method is not yet implemented in the vhdutilsv2 module.

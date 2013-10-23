@@ -28,6 +28,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
+from nova import unit
 from nova.virt import images
 from nova.virt.powervm import command
 from nova.virt.powervm import common
@@ -181,7 +182,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
         # we respect the minimum root device size in constants
         instance_type = flavors.extract_flavor(instance)
         size_gb = max(instance_type['root_gb'], constants.POWERVM_MIN_ROOT_GB)
-        size = size_gb * 1024 * 1024 * 1024
+        size = size_gb * unit.Gi
 
         disk_name = None
         try:
@@ -317,7 +318,7 @@ class PowerVMLocalVolumeAdapter(PowerVMDiskAdapter):
 
         # If it's not a multiple of 1MB we get the next
         # multiple and use it as the megabyte_size.
-        megabyte = 1024 * 1024
+        megabyte = unit.Mi
         if (size % megabyte) != 0:
             megabyte_size = int(size / megabyte) + 1
         else:

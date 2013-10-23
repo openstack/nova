@@ -33,6 +33,7 @@ from nova.image import glance
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log
+from nova import unit
 from nova import utils
 import nova.virt.docker.client
 from nova.virt.docker import hostinfo
@@ -152,11 +153,11 @@ class DockerDriver(driver.ComputeDriver):
         stats = {
             'vcpus': 1,
             'vcpus_used': 0,
-            'memory_mb': memory['total'] / (1024 ** 2),
-            'memory_mb_used': memory['used'] / (1024 ** 2),
-            'local_gb': disk['total'] / (1024 ** 3),
-            'local_gb_used': disk['used'] / (1024 ** 3),
-            'disk_available_least': disk['available'] / (1024 ** 3),
+            'memory_mb': memory['total'] / unit.Mi,
+            'memory_mb_used': memory['used'] / unit.Mi,
+            'local_gb': disk['total'] / unit.Gi,
+            'local_gb_used': disk['used'] / unit.Gi,
+            'disk_available_least': disk['available'] / unit.Gi,
             'hypervisor_type': 'docker',
             'hypervisor_version': '1.0',
             'hypervisor_hostname': self._nodename,
@@ -260,7 +261,7 @@ class DockerDriver(driver.ComputeDriver):
             if metadata['deleted']:
                 continue
             if metadata['key'] == 'instance_type_memory_mb':
-                return int(metadata['value']) * 1024 * 1024
+                return int(metadata['value']) * unit.Mi
         return 0
 
     def _get_image_name(self, context, instance, image):

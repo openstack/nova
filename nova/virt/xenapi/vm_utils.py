@@ -48,6 +48,7 @@ from nova.openstack.common import processutils
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import xmlutils
+from nova import unit
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -77,7 +78,7 @@ xenapi_vm_utils_opts = [
                default=10,
                help='Time to wait for a block device to be created'),
     cfg.IntOpt('max_kernel_ramdisk_size',
-               default=16 * 1024 * 1024,
+               default=16 * unit.Mi,
                help='Maximum size in bytes of kernel or ramdisk images'),
     cfg.StrOpt('sr_matching_filter',
                default='default-sr:true',
@@ -205,7 +206,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         3. Using hardware virtualization
     """
     instance_type = flavors.extract_flavor(instance)
-    mem = str(long(instance_type['memory_mb']) * 1024 * 1024)
+    mem = str(long(instance_type['memory_mb']) * unit.Mi)
     vcpus = str(instance_type['vcpus'])
 
     vcpu_weight = instance_type['vcpu_weight']
@@ -325,7 +326,7 @@ def is_vm_shutdown(session, vm_ref):
 
 def is_enough_free_mem(session, instance):
     instance_type = flavors.extract_flavor(instance)
-    mem = long(instance_type['memory_mb']) * 1024 * 1024
+    mem = long(instance_type['memory_mb']) * unit.Mi
     host = session.get_xenapi_host()
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
                                              host))
@@ -836,7 +837,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
         _auto_configure_disk(session, clone_ref, size_gb)
 
         # Create new VDI
-        vdi_size = size_gb * 1024 * 1024 * 1024
+        vdi_size = size_gb * unit.Gi
         # NOTE(johannes): No resizing allowed for rescue instances, so
         # using instance['name'] is safe here
         new_ref = create_vdi(session, sr_ref, instance, instance['name'],
@@ -845,7 +846,7 @@ def resize_disk(session, instance, vdi_ref, instance_type):
         new_uuid = session.call_xenapi('VDI.get_uuid', new_ref)
 
         # Manually copy contents over
-        virtual_size = size_gb * 1024 * 1024 * 1024
+        virtual_size = size_gb * unit.Gi
         _copy_partition(session, clone_ref, new_ref, 1, virtual_size)
 
         return new_ref, new_uuid
@@ -882,7 +883,7 @@ def _auto_configure_disk(session, vdi_ref, new_gb):
 
         _num, start, old_sectors, ptype = partitions[0]
         if ptype in ('ext3', 'ext4'):
-            new_sectors = new_gb * 1024 * 1024 * 1024 / SECTOR_SIZE
+            new_sectors = new_gb * unit.Gi / SECTOR_SIZE
             _resize_part_and_fs(dev, start, old_sectors, new_sectors)
         else:
             reason = _('Disk contains a filesystem '
@@ -945,7 +946,7 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
     """
     # 1. Create VDI
     sr_ref = safe_find_sr(session)
-    ONE_MEG = 1024 * 1024
+    ONE_MEG = unit.Mi
     virtual_size = size_mb * ONE_MEG
     vdi_ref = create_vdi(session, sr_ref, instance, name_label, disk_type,
                          virtual_size)
@@ -1363,7 +1364,7 @@ def _get_vdi_chain_size(session, vdi_uuid):
 def _check_vdi_size(context, session, instance, vdi_uuid):
     instance_type = flavors.extract_flavor(instance)
     allowed_size = (instance_type['root_gb'] +
-                    VHD_SIZE_CHECK_FUDGE_FACTOR_GB) * (1024 ** 3)
+                    VHD_SIZE_CHECK_FUDGE_FACTOR_GB) * unit.Gi
 
     if not instance_type['root_gb']:
         # root_gb=0 indicates that we're disabling size checks

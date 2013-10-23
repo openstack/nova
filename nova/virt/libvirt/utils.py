@@ -30,6 +30,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
+from nova import unit
 from nova import utils
 from nova.virt import images
 
@@ -237,7 +238,7 @@ def create_lvm_image(vg, lv, size, sparse=False):
                                 'lv': lv})
 
     if sparse:
-        preallocated_space = 64 * 1024 * 1024
+        preallocated_space = 64 * unit.Mi
         check_size(vg, lv, preallocated_space)
         if free_space < size:
             LOG.warning(_('Volume group %(vg)s will not be able'
@@ -357,7 +358,7 @@ def clear_logical_volume(path):
     # for more or less security conscious setups.
 
     vol_size = logical_volume_size(path)
-    bs = 1024 * 1024
+    bs = unit.Mi
     direct_flags = ('oflag=direct',)
     sync_flags = ()
     remaining_bytes = vol_size

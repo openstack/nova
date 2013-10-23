@@ -29,6 +29,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import unit
 from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
@@ -382,8 +383,8 @@ class ResourcePool(ManagedObject):
         memoryAllocation = DataObject()
         cpuAllocation = DataObject()
 
-        memory.maxUsage = 1000 * 1024 * 1024
-        memory.overallUsage = 500 * 1024 * 1024
+        memory.maxUsage = 1000 * unit.Mi
+        memory.overallUsage = 500 * unit.Mi
         cpu.maxUsage = 10000
         cpu.overallUsage = 1000
         runtime.cpu = cpu
@@ -480,7 +481,7 @@ class ClusterComputeResource(ManagedObject):
             summary.numCpuCores += host_summary.hardware.numCpuCores
             summary.numCpuThreads += host_summary.hardware.numCpuThreads
             summary.totalMemory += host_summary.hardware.memorySize
-            free_memory = (host_summary.hardware.memorySize / (1024 * 1024)
+            free_memory = (host_summary.hardware.memorySize / unit.Mi
                            - host_summary.quickStats.overallMemoryUsage)
             summary.effectiveMemory += free_memory if connected else 0
             summary.numEffectiveHosts += 1 if connected else 0
@@ -494,8 +495,8 @@ class Datastore(ManagedObject):
         super(Datastore, self).__init__("ds")
         self.set("summary.type", "VMFS")
         self.set("summary.name", name)
-        self.set("summary.capacity", 1024 * 1024 * 1024 * 1024)
-        self.set("summary.freeSpace", 500 * 1024 * 1024 * 1024)
+        self.set("summary.capacity", unit.Ti)
+        self.set("summary.freeSpace", 500 * unit.Gi)
         self.set("summary.accessible", True)
 
 
@@ -546,7 +547,7 @@ class HostSystem(ManagedObject):
         hardware.vendor = "Intel"
         hardware.cpuModel = "Intel(R) Xeon(R)"
         hardware.uuid = "host-uuid"
-        hardware.memorySize = 1024 * 1024 * 1024
+        hardware.memorySize = unit.Gi
         summary.hardware = hardware
 
         quickstats = DataObject()

@@ -45,6 +45,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
+from nova import unit
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
@@ -1052,7 +1053,7 @@ class VMOps(object):
     def _resize_up_root_vdi(self, instance, root_vdi):
         """Resize an instances root disk."""
 
-        new_disk_size = instance['root_gb'] * 1024 * 1024 * 1024
+        new_disk_size = instance['root_gb'] * unit.Gi
         if not new_disk_size:
             return
 
@@ -1061,7 +1062,7 @@ class VMOps(object):
                                                  root_vdi['ref'])
         virtual_size = int(virtual_size)
 
-        old_gb = virtual_size / (1024 * 1024 * 1024)
+        old_gb = virtual_size / unit.Gi
         new_gb = instance['root_gb']
 
         if virtual_size < new_disk_size:
@@ -2036,7 +2037,7 @@ class VMOps(object):
             uuid = _get_uuid(vm_rec)
 
             if _is_active(vm_rec) and uuid is not None:
-                memory_mb = int(vm_rec['memory_static_max']) / 1024 / 1024
+                memory_mb = int(vm_rec['memory_static_max']) / unit.Mi
                 usage[uuid] = {'memory_mb': memory_mb, 'uuid': uuid}
 
         return usage
