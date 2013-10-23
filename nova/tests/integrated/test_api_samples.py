@@ -2766,11 +2766,16 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
     extension_name = ('nova.api.openstack.compute.contrib.baremetal_nodes.'
                       'Baremetal_nodes')
 
+    def _get_subs(self):
+        subs = {}
+        return subs
+
     def _create_node(self):
         response = self._do_post("os-baremetal-nodes",
                                  "baremetal-node-create-req",
                                  {})
-        subs = {'node_id': '(?P<id>\d+)'}
+        subs = self._get_subs()
+        subs.update({'node_id': '(?P<id>\d+)'})
         return self._verify_response("baremetal-node-create-resp", subs,
                                      response, 200)
 
@@ -2780,9 +2785,11 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
         response = self._do_post("os-baremetal-nodes",
                                  "baremetal-node-create-with-address-req",
                                  req_subs)
-        subs = {'node_id': '(?P<id>\d+)',
-                'interface_id': '\d+',
-                'address': address}
+        subs = self._get_subs()
+        subs.update({'node_id': '(?P<id>\d+)',
+                     'interface_id': '\d+',
+                     'address': address,
+                     })
         self._verify_response("baremetal-node-create-with-address-resp",
                               subs, response, 200)
 
@@ -2796,10 +2803,11 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
         node_id = self._create_node()
         interface_id = self._add_interface(node_id)
         response = self._do_get('os-baremetal-nodes')
-        subs = {'node_id': node_id,
-                'interface_id': interface_id,
-                'address': 'aa:aa:aa:aa:aa:aa',
-                }
+        subs = self._get_subs()
+        subs.update({'node_id': node_id,
+                     'interface_id': interface_id,
+                     'address': 'aa:aa:aa:aa:aa:aa',
+                     })
         self._verify_response('baremetal-node-list-resp', subs,
                               response, 200)
 
@@ -2807,10 +2815,11 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
         node_id = self._create_node()
         interface_id = self._add_interface(node_id)
         response = self._do_get('os-baremetal-nodes/%s' % node_id)
-        subs = {'node_id': node_id,
-                'interface_id': interface_id,
-                'address': 'aa:aa:aa:aa:aa:aa',
-                }
+        subs = self._get_subs()
+        subs.update({'node_id': node_id,
+                     'interface_id': interface_id,
+                     'address': 'aa:aa:aa:aa:aa:aa',
+                    })
         self._verify_response('baremetal-node-show-resp', subs, response, 200)
 
     def test_delete_node(self):
@@ -2841,6 +2850,29 @@ class BareMetalNodesJsonTest(ApiSampleTestBaseV2, bm_db_base.BMDBTestCase):
 
 
 class BareMetalNodesXmlTest(BareMetalNodesJsonTest):
+    ctype = 'xml'
+
+
+class BareMetalExtStatusJsonTest(BareMetalNodesJsonTest):
+    extension_name = ('nova.api.openstack.compute.contrib.'
+                      'baremetal_ext_status.Baremetal_ext_status')
+
+    def _get_flags(self):
+        f = super(BareMetalExtStatusJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # BareMetalExtStatus extension also needs BareMetalNodes to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.baremetal_nodes.'
+            'Baremetal_nodes')
+        return f
+
+    def _get_subs(self):
+        vanilla_regexes = self._get_regexes()
+        subs = {'node_uuid': vanilla_regexes['uuid']}
+        return subs
+
+
+class BareMetalExtStatusXmlTest(BareMetalExtStatusJsonTest):
     ctype = 'xml'
 
 

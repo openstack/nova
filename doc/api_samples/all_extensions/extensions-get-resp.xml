@@ -52,7 +52,7 @@
   <extension alias="os-aggregates" updated="2012-01-12T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/aggregates/api/v1.1" name="Aggregates">
     <description>Admin-only aggregate administration.</description>
   </extension>
-  <extension alias="os-assisted-volume-snapshots" updated="2013-08-15T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2" name="AssistedVolumeSnapshots">
+  <extension alias="os-assisted-volume-snapshots" updated="2013-08-29T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2" name="AssistedVolumeSnapshots">
     <description>Assisted volume snapshots.</description>
   </extension>
   <extension alias="os-attach-interfaces" updated="2012-07-22T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/interfaces/api/v1.1" name="AttachInterfaces">
@@ -62,6 +62,9 @@
     <description>1. Add availability_zone to the Create Server v1.1 API.
        2. Add availability zones describing.
     </description>
+  </extension>
+  <extension alias="os-baremetal-ext-status" updated="2013-08-27T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/baremetal_ext_status/api/v2" name="BareMetalExtStatus">
+    <description>Add extended status in Baremetal Nodes v2 API.</description>
   </extension>
   <extension alias="os-baremetal-nodes" updated="2013-01-04T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2" name="BareMetalNodes">
     <description>Admin-only bare-metal node administration.</description>
