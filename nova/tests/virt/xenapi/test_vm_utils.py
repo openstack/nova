@@ -977,7 +977,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
             utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
                           'msdos', check_exit_code=False, run_as_root=True)
             utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
-                          'primary', '0', '10',
+                          'primary', '0', '-0',
                           check_exit_code=False, run_as_root=True)
             vm_utils.os.path.exists('/dev/mapper/fakedev1').AndReturn(True)
             utils.trycmd('kpartx', '-a', '/dev/fakedev',
@@ -986,7 +986,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
             utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
                           'msdos', check_exit_code=True, run_as_root=True)
             utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
-                          'primary', '0', '10',
+                          'primary', '0', '-0',
                           check_exit_code=True, run_as_root=True)
 
     def _check_vdi(self, vdi_ref):

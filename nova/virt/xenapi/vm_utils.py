@@ -954,12 +954,11 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
         # 2. Attach VDI to compute worker (VBD hotplug)
         with vdi_attached_here(session, vdi_ref, read_only=False) as dev:
             # 3. Create partition
-            partition_start = 0
-            partition_end = size_mb
+            partition_start = "0"
+            partition_end = "-0"
 
             partition_path = _make_partition(session, dev,
-                                             "%d" % partition_start,
-                                             "%d" % partition_end)
+                                             partition_start, partition_end)
 
             if fs_type == 'linux-swap':
                 utils.execute('mkswap', partition_path, run_as_root=True)
