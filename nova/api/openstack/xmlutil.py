@@ -18,6 +18,7 @@
 import os.path
 
 from lxml import etree
+import six
 from xml.dom import minidom
 from xml.parsers import expat
 from xml import sax
@@ -207,7 +208,7 @@ class TemplateElement(object):
     def __getitem__(self, idx):
         """Retrieve a child node by index or name."""
 
-        if isinstance(idx, basestring):
+        if isinstance(idx, six.string_types):
             # Allow access by node name
             return self._childmap[idx]
         else:

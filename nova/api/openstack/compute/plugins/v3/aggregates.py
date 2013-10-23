@@ -18,6 +18,7 @@
 import datetime
 import functools
 
+import six
 from webob import exc
 
 from nova.api.openstack import extensions
@@ -48,7 +49,7 @@ def get_host_from_body(fn):
             raise exc.HTTPBadRequest(
                 explanation=_("Could not find host to be set in "
                               "request body"))
-        if not isinstance(host, basestring):
+        if not isinstance(host, six.string_types):
             raise exc.HTTPBadRequest(
                 explanation=_("The value of host must be a string"))
         return fn(self, req, id, host, *args, **kwargs)
