@@ -21,8 +21,8 @@ import re
 from oslo.config import cfg
 
 from nova import context as nova_context
-from nova.db import api as nova_db_api
 from nova import exception
+from nova import network
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -174,6 +174,13 @@ def _get_iqn(instance_name, mountpoint):
     return iqn
 
 
+def _get_fixed_ips(instance):
+    context = nova_context.get_admin_context()
+    nw_info = network.API().get_instance_nw_info(context, instance)
+    ips = nw_info.fixed_ips()
+    return ips
+
+
 class VolumeDriver(object):
 
     def __init__(self, virtapi):
@@ -221,8 +228,7 @@ class LibvirtVolumeDriver(VolumeDriver):
         return method(connection_info, *args, **kwargs)
 
     def attach_volume(self, connection_info, instance, mountpoint):
-        ctx = nova_context.get_admin_context()
-        fixed_ips = nova_db_api.fixed_ip_get_by_instance(ctx, instance['uuid'])
+        fixed_ips = _get_fixed_ips(instance)
         if not fixed_ips:
             if not CONF.baremetal.use_unsafe_iscsi:
                 raise exception.NovaException(_(
