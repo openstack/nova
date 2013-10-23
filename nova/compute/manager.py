@@ -4230,7 +4230,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_volume_block_device_info(
                             ctxt, instance_ref)
-        self.driver.post_live_migration(ctxt, instance_ref, block_device_info)
+        self.driver.post_live_migration(ctxt, instance_ref, block_device_info,
+                                        migrate_data)
 
         # Detaching volumes.
         connector = self.driver.get_volume_connector(instance_ref)

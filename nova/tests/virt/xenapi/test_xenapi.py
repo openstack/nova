@@ -3278,13 +3278,17 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        fake_instance = "instance"
+        fake_instance = {"name": "name"}
         fake_network_info = "network_info"
 
         def fake_fw(instance, network_info):
             self.assertEqual(instance, fake_instance)
             self.assertEqual(network_info, fake_network_info)
             fake_fw.call_count += 1
+
+        def fake_create_kernel_and_ramdisk(context, session, instance,
+                                           name_label):
+            return "fake-kernel-file", "fake-ramdisk-file"
 
         fake_fw.call_count = 0
         _vmops = self.conn._vmops
@@ -3294,6 +3298,8 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                        'prepare_instance_filter', fake_fw)
         self.stubs.Set(_vmops.firewall_driver,
                        'apply_instance_filter', fake_fw)
+        self.stubs.Set(vm_utils, "create_kernel_and_ramdisk",
+                       fake_create_kernel_and_ramdisk)
 
         def fake_get_vm_opaque_ref(instance):
             fake_get_vm_opaque_ref.called = True
@@ -3367,12 +3373,17 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         def fake_get_vm_opaque_ref(instance):
             return "fake_vm"
 
+        def fake_lookup_kernel_ramdisk(session, vm):
+            return ("fake_PV_kernel", "fake_PV_ramdisk")
+
         self.stubs.Set(conn._vmops, "_generate_vdi_map",
                        fake_generate_vdi_map)
         self.stubs.Set(conn._vmops, "_get_iscsi_srs",
                        fake_get_iscsi_srs)
         self.stubs.Set(conn._vmops, "_get_vm_opaque_ref",
                        fake_get_vm_opaque_ref)
+        self.stubs.Set(vm_utils, "lookup_kernel_ramdisk",
+                       fake_lookup_kernel_ramdisk)
 
     def test_check_can_live_migrate_source_with_block_migrate(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3505,7 +3516,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                        fake_get_host_opaque_ref)
 
         def post_method(context, instance, destination_hostname,
-                        block_migration):
+                        block_migration, migrate_data):
             post_method.called = True
 
         self.conn.live_migration(self.conn, None, None, post_method, None)
@@ -3546,7 +3557,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self._add_default_live_migrate_stubs(self.conn)
 
         def post_method(context, instance, destination_hostname,
-                        block_migration):
+                        block_migration, migrate_data):
             post_method.called = True
 
         # pass block_migration = True and migrate data
@@ -3573,7 +3584,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                        fake_forget_sr)
 
         def post_method(context, instance, destination_hostname,
-                        block_migration):
+                        block_migration, migrate_data):
             post_method.called = True
 
         migrate_data = {"destination_sr_ref": "foo",
@@ -3588,10 +3599,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
-        def fake_get_vm_opaque_ref(instance):
-            return "fake_vm"
-        self.stubs.Set(self.conn._vmops, "_get_vm_opaque_ref",
-                       fake_get_vm_opaque_ref)
+        self._add_default_live_migrate_stubs(self.conn)
 
         def recover_method(context, instance, destination_hostname,
                            block_migration):

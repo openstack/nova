@@ -4557,7 +4557,7 @@ class ComputeTestCase(BaseTestCase):
             self.compute._post_live_migration(c, inst_ref, dest)
 
             post_live_migration.assert_has_calls([
-                mock.call(c, inst_ref, {'block_device_mapping': []})])
+                mock.call(c, inst_ref, {'block_device_mapping': []}, None)])
             unfilter_instance.assert_has_calls([mock.call(inst_ref, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }

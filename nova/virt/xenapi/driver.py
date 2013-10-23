@@ -573,6 +573,17 @@ class XenAPIDriver(driver.ComputeDriver):
                  self._vmops.attach_block_device_volumes(block_device_info)
         return pre_live_migration_result
 
+    def post_live_migration(self, ctxt, instance_ref, block_device_info,
+                            migrate_data=None):
+        """Post operation of live migration at source host.
+
+        :param ctxt: security context
+        :instance_ref: instance object that was migrated
+        :block_device_info: instance block device information
+        :param migrate_data: if not None, it is a dict which has data
+        """
+        self._vmops.post_live_migration(ctxt, instance_ref, migrate_data)
+
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration,
                                            block_device_info=None):
