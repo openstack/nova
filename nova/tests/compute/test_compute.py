@@ -7439,7 +7439,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc_msg2 = {'method': 'authorize_console',
                     'namespace': None,
                     'args': fake_connect_info,
-                    'version': '1.2'}
+                    'version': '2.0'}
 
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg1, None).AndReturn(fake_connect_info2)
@@ -7486,7 +7486,7 @@ class ComputeAPITestCase(BaseTestCase):
         rpc_msg2 = {'method': 'authorize_console',
                     'namespace': None,
                     'args': fake_connect_info,
-                    'version': '1.2'}
+                    'version': '2.0'}
 
         rpc.call(self.context, 'compute.%s' % fake_instance['host'],
                 rpc_msg1, None).AndReturn(fake_connect_info2)

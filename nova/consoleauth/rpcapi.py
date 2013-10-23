@@ -42,6 +42,8 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
         ... Grizzly and Havana support message version 1.2.  So, any changes
         to existing methods in 2.x after that point should be done such that
         they can handle the version_cap being set to 1.2.
+
+        2.0 - Major API rev for Icehouse
     '''
 
     #
@@ -52,7 +54,7 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
     # about rpc API versioning, see the docs in
     # openstack/common/rpc/dispatcher.py.
     #
-    BASE_RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '2.0'
 
     VERSION_ALIASES = {
         'grizzly': '1.2',
@@ -69,11 +71,10 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
         self.client = self.get_client()
 
     def authorize_console(self, ctxt, token, console_type, host, port,
-                          internal_access_path, instance_uuid=None):
+                          internal_access_path, instance_uuid):
         # The remote side doesn't return anything, but we want to block
         # until it completes.
-        cctxt = self.client.prepare(version='1.2')
-        return cctxt.call(ctxt,
+        return self.client.call(ctxt,
                           'authorize_console',
                           token=token, console_type=console_type,
                           host=host, port=port,
@@ -84,7 +85,6 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
         return self.client.call(ctxt, 'check_token', token=token)
 
     def delete_tokens_for_instance(self, ctxt, instance_uuid):
-        cctxt = self.client.prepare(version='1.2')
-        return cctxt.cast(ctxt,
+        return self.client.cast(ctxt,
                           'delete_tokens_for_instance',
                           instance_uuid=instance_uuid)
