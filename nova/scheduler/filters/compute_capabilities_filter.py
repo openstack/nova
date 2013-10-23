@@ -60,7 +60,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                     return False
             if not extra_specs_ops.match(str(cap), req):
                 LOG.debug(_("extra_spec requirement '%(req)s' does not match "
-                    "%(cap)s'"), {'req': req, 'cap': cap})
+                    "'%(cap)s'"), {'req': req, 'cap': cap})
                 return False
         return True
 
