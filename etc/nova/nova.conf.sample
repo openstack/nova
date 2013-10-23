@@ -1871,9 +1871,7 @@
 
 # mkfs commands for ephemeral device. The format is
 # <os_type>=<mkfs command> (multi valued)
-#virt_mkfs=default=mkfs.ext3 -L %(fs_label)s -F %(target)s
-#virt_mkfs=linux=mkfs.ext3 -L %(fs_label)s -F %(target)s
-#virt_mkfs=windows=mkfs.ntfs --force --fast --label %(fs_label)s %(target)s
+#virt_mkfs=
 
 # Attempt to resize the filesystem by accessing the image over
 # a block device. This is done by the host and may not be
