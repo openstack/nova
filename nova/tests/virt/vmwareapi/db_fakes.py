@@ -69,7 +69,7 @@ def stub_out_db_instance_api(stubs):
             'id': values['id'],
             'uuid': values['uuid'],
             'reservation_id': utils.generate_uid('r'),
-            'image_ref': values['image_ref'],
+            'image_ref': values.get('image_ref'),
             'kernel_id': values['kernel_id'],
             'ramdisk_id': values['ramdisk_id'],
             'vm_state': vm_states.BUILDING,
