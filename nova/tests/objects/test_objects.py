@@ -17,6 +17,7 @@ import datetime
 import iso8601
 
 import netaddr
+import six
 from testtools import matchers
 
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -103,8 +104,8 @@ class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
 class TestMetaclass(test.TestCase):
     def test_obj_tracking(self):
 
+        @six.add_metaclass(base.NovaObjectMetaclass)
         class NewBaseClass(object):
-            __metaclass__ = base.NovaObjectMetaclass
             fields = {}
 
             @classmethod

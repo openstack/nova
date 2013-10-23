@@ -25,11 +25,12 @@ from Java.
 
 import abc
 
+import six
 
+
+@six.add_metaclass(abc.ABCMeta)
 class Key(object):
     """Base class to represent all keys."""
-
-    __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
     def get_algorithm(self):

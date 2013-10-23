@@ -18,12 +18,15 @@
 
 import abc
 
+import six
+
 from nova import keymgr
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class VolumeEncryptor(object):
     """Base class to support encrypted volumes.
 
@@ -32,8 +35,6 @@ class VolumeEncryptor(object):
     immediately following detaching the volume from an instance. This class
     performs no actions for either hook.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     def __init__(self, connection_info, **kwargs):
         self._key_manager = keymgr.API()
