@@ -81,6 +81,12 @@ class MyObj(base.NovaPersistentObject, base.NovaObject):
         self.save()
         self.foo = 42
 
+    def obj_make_compatible(self, primitive, target_version):
+        # NOTE(danms): Simulate an older version that had a different
+        # format for the 'bar' attribute
+        if target_version == '1.1':
+            primitive['bar'] = 'old%s' % primitive['bar']
+
 
 class MyObj2(object):
     @classmethod
@@ -363,7 +369,8 @@ class _RemoteTest(_BaseTestCase):
                                              kwargs.get('objmethod')))
             with things_temporarily_local():
                 result = orig_object_class_action(*args, **kwargs)
-            return result
+            return (base.NovaObject.obj_from_primitive(result, context=args[0])
+                    if isinstance(result, base.NovaObject) else result)
         self.stubs.Set(self.conductor_service.manager, 'object_class_action',
                        fake_object_class_action)
 
@@ -658,6 +665,11 @@ class TestRemoteObject(_RemoteTest, _TestObject):
         obj = MyObj2.query(self.context)
         self.assertEqual(obj.bar, 'bar')
         self.assertRemotes()
+
+    def test_compat(self):
+        MyObj2.VERSION = '1.1'
+        obj = MyObj2.query(self.context)
+        self.assertEqual('oldbar', obj.bar)
 
 
 class TestObjectListBase(test.TestCase):
