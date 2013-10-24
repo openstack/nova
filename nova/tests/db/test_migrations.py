@@ -3194,12 +3194,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
             self.assertEqual(per_project[resource], rows[0]['in_use'])
 
     def _check_227(self, engine, data):
-        if engine.name == 'sqlite':
-            return
-
         table = db_utils.get_table(engine, 'project_user_quotas')
-        quota = table.select(table.c.id == 4).execute().first()
-        self.assertEqual(quota['resource'], 'instances')
 
         # Insert fake_quotas with the longest resource name.
         fake_quotas = {'id': 5,
