@@ -2261,18 +2261,16 @@ class LibvirtDriver(driver.ComputeDriver):
                       fs_format=None, label=None):
         """Create a blank image of specified size."""
 
-        if not fs_format:
-            fs_format = CONF.default_ephemeral_format
+        libvirt_utils.create_image('raw', target,
+                                    '%d%c' % (local_size, unit))
 
-        if not CONF.libvirt_images_type == "lvm":
-            libvirt_utils.create_image('raw', target,
-                                       '%d%c' % (local_size, unit))
-        if fs_format:
-            utils.mkfs(fs_format, target, label)
+    def _create_ephemeral(self, target, ephemeral_size,
+                          fs_label, os_type, is_block_dev=False):
+        if not is_block_dev:
+            self._create_local(target, ephemeral_size)
 
-    def _create_ephemeral(self, target, ephemeral_size, fs_label, os_type):
-        self._create_local(target, ephemeral_size)
-        disk.mkfs(os_type, fs_label, target)
+        # Run as root only for block devices.
+        disk.mkfs(os_type, fs_label, target, run_as_root=is_block_dev)
 
     @staticmethod
     def _create_swap(target, swap_mb):
@@ -2376,28 +2374,32 @@ class LibvirtDriver(driver.ComputeDriver):
 
         ephemeral_gb = instance['ephemeral_gb']
         if 'disk.local' in disk_mapping:
+            disk_image = image('disk.local')
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral0',
-                                   os_type=instance["os_type"])
+                                   os_type=instance["os_type"],
+                                   is_block_dev=disk_image.is_block_dev)
             fname = "ephemeral_%s_%s" % (ephemeral_gb, os_type_with_default)
             size = ephemeral_gb * 1024 * 1024 * 1024
-            image('disk.local').cache(fetch_func=fn,
-                                      filename=fname,
-                                      size=size,
-                                      ephemeral_size=ephemeral_gb)
+            disk_image.cache(fetch_func=fn,
+                             filename=fname,
+                             size=size,
+                             ephemeral_size=ephemeral_gb)
 
         for idx, eph in enumerate(driver.block_device_info_get_ephemerals(
                 block_device_info)):
+            disk_image = image(blockinfo.get_eph_disk(idx))
             fn = functools.partial(self._create_ephemeral,
                                    fs_label='ephemeral%d' % idx,
-                                   os_type=instance["os_type"])
+                                   os_type=instance["os_type"],
+                                   is_block_dev=disk_image.is_block_dev)
             size = eph['size'] * 1024 * 1024 * 1024
             fname = "ephemeral_%s_%s" % (eph['size'], os_type_with_default)
-            image(blockinfo.get_eph_disk(idx)).cache(
-                fetch_func=fn,
-                filename=fname,
-                size=size,
-                ephemeral_size=eph['size'])
+            disk_image.cache(
+                             fetch_func=fn,
+                             filename=fname,
+                             size=size,
+                             ephemeral_size=eph['size'])
 
         if 'disk.swap' in disk_mapping:
             mapping = disk_mapping['disk.swap']

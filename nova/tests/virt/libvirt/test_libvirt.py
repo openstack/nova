@@ -135,7 +135,7 @@ _fake_NodeDevXml = \
     </device>"""}
 
 
-def _concurrency(signal, wait, done, target):
+def _concurrency(signal, wait, done, target, is_block_dev=False):
     signal.send()
     wait.wait()
     done.send()
@@ -3579,8 +3579,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         def fake_image(self, instance, name, image_type=''):
             class FakeImage(imagebackend.Image):
-                def __init__(self, instance, name):
+                def __init__(self, instance, name, is_block_dev=False):
                     self.path = os.path.join(instance['name'], name)
+                    self.is_block_dev = is_block_dev
 
                 def create_image(self, prepare_template, base,
                                  size, *args, **kwargs):
@@ -3638,8 +3639,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         def fake_image(self, instance, name, image_type=''):
             class FakeImage(imagebackend.Image):
-                def __init__(self, instance, name):
+                def __init__(self, instance, name, is_block_dev=False):
                     self.path = os.path.join(instance['name'], name)
+                    self.is_block_dev = is_block_dev
 
                 def create_image(self, prepare_template, base,
                                  size, *args, **kwargs):
@@ -3695,6 +3697,36 @@ class LibvirtConnTestCase(test.TestCase):
              'size': 500 * 1024 * 1024},
             ]
         self.assertEqual(gotFiles, wantFiles)
+
+    def test_create_ephemeral_default(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs', '-t', 'ext3', '-F', '-L', 'myVol',
+                      '/dev/something', run_as_root=True)
+        self.mox.ReplayAll()
+        conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               is_block_dev=True)
+
+    def test_create_ephemeral_with_conf(self):
+        CONF.set_override('default_ephemeral_format', 'ext4')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'myVol',
+                      '/dev/something', run_as_root=True)
+        self.mox.ReplayAll()
+        conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               is_block_dev=True)
+
+    def test_create_ephemeral_with_arbitrary(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
+                       {'linux': 'mkfs.ext3 --label %(fs_label)s %(target)s'})
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs.ext3', '--label', 'myVol', '/dev/something',
+                      run_as_root=True)
+        self.mox.ReplayAll()
+        conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               is_block_dev=True)
 
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'
