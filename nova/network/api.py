@@ -357,7 +357,6 @@ class API(base.Base):
     def associate(self, context, network_uuid, host=_sentinel,
                   project=_sentinel):
         """Associate or disassociate host or project to network."""
-        associations = {}
         network_id = self.get(context, network_uuid)['id']
         if host is not API._sentinel:
             if host is None:
@@ -367,7 +366,6 @@ class API(base.Base):
             else:
                 self.db.network_set_host(context, network_id, host)
         if project is not API._sentinel:
-            project = associations['project']
             if project is None:
                 self.db.network_disassociate(context, network_id,
                                              disassociate_host=False,
