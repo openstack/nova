@@ -33,7 +33,7 @@ class ConsoleauthTestCase(test.TestCase):
 
     def setUp(self):
         super(ConsoleauthTestCase, self).setUp()
-        self.manager = manager.ConsoleAuthManager()
+        self.manager_api = self.manager = manager.ConsoleAuthManager()
         self.context = context.get_admin_context()
         self.instance = db.instance_create(self.context, {})
 
@@ -45,12 +45,12 @@ class ConsoleauthTestCase(test.TestCase):
 
         self._stub_validate_console_port(True)
 
-        self.manager.authorize_console(self.context, token, 'novnc',
+        self.manager_api.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
                                          self.instance['uuid'])
-        self.assertTrue(self.manager.check_token(self.context, token))
+        self.assertTrue(self.manager_api.check_token(self.context, token))
         timeutils.advance_time_seconds(1)
-        self.assertFalse(self.manager.check_token(self.context, token))
+        self.assertFalse(self.manager_api.check_token(self.context, token))
 
     def _stub_validate_console_port(self, result):
         def fake_validate_console_port(ctxt, instance, port, console_type):
@@ -66,20 +66,20 @@ class ConsoleauthTestCase(test.TestCase):
         self._stub_validate_console_port(True)
 
         for token in tokens:
-            self.manager.authorize_console(self.context, token, 'novnc',
+            self.manager_api.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
                                           self.instance['uuid'])
 
         for token in tokens:
-            self.assertTrue(self.manager.check_token(self.context, token))
+            self.assertTrue(self.manager_api.check_token(self.context, token))
 
     def test_delete_tokens_for_instance(self):
         tokens = [u"token" + str(i) for i in xrange(10)]
         for token in tokens:
-            self.manager.authorize_console(self.context, token, 'novnc',
+            self.manager_api.authorize_console(self.context, token, 'novnc',
                                           '127.0.0.1', '8080', 'host',
                                           self.instance['uuid'])
-        self.manager.delete_tokens_for_instance(self.context,
+        self.manager_api.delete_tokens_for_instance(self.context,
                 self.instance['uuid'])
         stored_tokens = self.manager._get_tokens_for_instance(
                 self.instance['uuid'])
@@ -87,23 +87,23 @@ class ConsoleauthTestCase(test.TestCase):
         self.assertEqual(len(stored_tokens), 0)
 
         for token in tokens:
-            self.assertFalse(self.manager.check_token(self.context, token))
+            self.assertFalse(self.manager_api.check_token(self.context, token))
 
     def test_wrong_token_has_port(self):
         token = u'mytok'
 
         self._stub_validate_console_port(False)
 
-        self.manager.authorize_console(self.context, token, 'novnc',
+        self.manager_api.authorize_console(self.context, token, 'novnc',
                                         '127.0.0.1', '8080', 'host',
                                         instance_uuid=self.instance['uuid'])
-        self.assertFalse(self.manager.check_token(self.context, token))
+        self.assertFalse(self.manager_api.check_token(self.context, token))
 
     def test_console_no_instance_uuid(self):
-        self.manager.authorize_console(self.context, u"token", 'novnc',
+        self.manager_api.authorize_console(self.context, u"token", 'novnc',
                                         '127.0.0.1', '8080', 'host',
                                         instance_uuid=None)
-        self.assertFalse(self.manager.check_token(self.context, u"token"))
+        self.assertFalse(self.manager_api.check_token(self.context, u"token"))
 
     def test_delete_expired_tokens(self):
         self.useFixture(test.TimeOverride())
@@ -112,14 +112,14 @@ class ConsoleauthTestCase(test.TestCase):
 
         self._stub_validate_console_port(True)
 
-        self.manager.authorize_console(self.context, token, 'novnc',
+        self.manager_api.authorize_console(self.context, token, 'novnc',
                                          '127.0.0.1', '8080', 'host',
                                          self.instance['uuid'])
         timeutils.advance_time_seconds(1)
-        self.assertFalse(self.manager.check_token(self.context, token))
+        self.assertFalse(self.manager_api.check_token(self.context, token))
 
         token1 = u'mytok2'
-        self.manager.authorize_console(self.context, token1, 'novnc',
+        self.manager_api.authorize_console(self.context, token1, 'novnc',
                                        '127.0.0.1', '8080', 'host',
                                        self.instance['uuid'])
         stored_tokens = self.manager._get_tokens_for_instance(
@@ -127,6 +127,14 @@ class ConsoleauthTestCase(test.TestCase):
         # when trying to store token1, expired token is removed fist.
         self.assertEqual(len(stored_tokens), 1)
         self.assertEqual(stored_tokens[0], token1)
+
+
+class ConsoleauthV2TestCase(ConsoleauthTestCase):
+    """Test Case for consoleauth."""
+
+    def setUp(self):
+        super(ConsoleauthV2TestCase, self).setUp()
+        self.manager_api = manager._ConsoleAuthManagerV2Proxy(self.manager)
 
 
 class ControlauthMemcacheEncodingTestCase(test.TestCase):

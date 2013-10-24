@@ -157,7 +157,7 @@ class _ConsoleAuthManagerV2Proxy(object):
                 port, internal_access_path, instance_uuid)
 
     def check_token(self, context, token):
-        self.manager.check_token(context, token)
+        return self.manager.check_token(context, token)
 
     def delete_tokens_for_instance(self, ctxt, instance_uuid):
         self.manager.delete_tokens_for_instance(ctxt, instance_uuid)
