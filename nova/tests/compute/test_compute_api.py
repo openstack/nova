@@ -858,7 +858,8 @@ class _ComputeAPIUnitTestMixIn(object):
         else:
             new_flavor = current_flavor
 
-        if not (flavor_id_passed and same_flavor):
+        if (self.cell_type == 'compute' or
+                not (flavor_id_passed and same_flavor)):
             resvs = ['resvs']
 
             self.compute_api._upsize_quota_delta(
@@ -945,10 +946,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_resize_different_project_id(self):
         self._test_resize(project_id='different')
-
-    def test_resize_same_flavor_fails(self):
-        self.assertRaises(exception.CannotResizeToSameFlavor,
-                          self._test_resize, same_flavor=True)
 
     def test_migrate(self):
         self._test_migrate()
@@ -1492,6 +1489,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.compute_api = compute_api.API()
         self.cell_type = None
 
+    def test_resize_same_flavor_fails(self):
+        self.assertRaises(exception.CannotResizeToSameFlavor,
+                          self._test_resize, same_flavor=True)
+
 
 class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
                                     test.NoDBTestCase):
@@ -1501,6 +1502,10 @@ class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
         self.compute_api = compute_cells_api.ComputeCellsAPI()
         self.cell_type = 'api'
 
+    def test_resize_same_flavor_fails(self):
+        self.assertRaises(exception.CannotResizeToSameFlavor,
+                          self._test_resize, same_flavor=True)
+
 
 class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,
                                         test.NoDBTestCase):
@@ -1509,3 +1514,6 @@ class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,
         self.flags(cell_type='compute', enable=True, group='cells')
         self.compute_api = compute_api.API()
         self.cell_type = 'compute'
+
+    def test_resize_same_flavor_passes(self):
+        self._test_resize(same_flavor=True)

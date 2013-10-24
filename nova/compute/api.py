@@ -2304,7 +2304,7 @@ class API(base.Base):
         if not same_instance_type and new_instance_type.get('disabled'):
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 
-        if same_instance_type and flavor_id:
+        if same_instance_type and flavor_id and self.cell_type != 'compute':
             raise exception.CannotResizeToSameFlavor()
 
         # ensure there is sufficient headroom for upsizes
