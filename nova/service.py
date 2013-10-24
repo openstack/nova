@@ -353,8 +353,8 @@ class WSGIService(object):
         if self.manager:
             self.manager.init_host()
             self.manager.pre_start_hook()
-        if self.backdoor_port is not None:
-            self.manager.backdoor_port = self.backdoor_port
+            if self.backdoor_port is not None:
+                self.manager.backdoor_port = self.backdoor_port
         self.server.start()
         if self.manager:
             self.manager.post_start_hook()
