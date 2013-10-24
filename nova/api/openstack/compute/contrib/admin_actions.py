@@ -132,6 +132,8 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate')
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except Exception as e:
             LOG.exception(_("Error in migrate %s"), e)
             raise exc.HTTPBadRequest()
@@ -301,6 +303,8 @@ class AdminActionsController(wsgi.Controller):
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message())
+        except exception.InstanceNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
         except Exception:
             if host is None:
                 msg = _("Live migration of instance %s to another host "

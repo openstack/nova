@@ -169,8 +169,12 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions_with_non_existed_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume',
                    'resetNetwork', 'injectNetworkInfo', 'lock',
-                   'unlock', 'os-resetState']
-        body_map = {'os-resetState': {'state': 'active'}}
+                   'unlock', 'os-resetState', 'migrate']
+        body_map = {'os-resetState': {'state': 'active'},
+                    'os-migrateLive':
+                                  {'host': 'hostname',
+                                   'block_migration': False,
+                                   'disk_over_commit': False}}
         for action in actions:
             self._test_non_existing_instance(action,
                                              body_map=body_map)
