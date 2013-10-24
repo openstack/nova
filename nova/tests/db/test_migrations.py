@@ -471,8 +471,8 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         if self.migration is None:
             self.migration = __import__('nova.db.migration',
-                    globals(), locals(), ['INIT_VERSION'], -1)
-            self.INIT_VERSION = self.migration.INIT_VERSION
+                    globals(), locals(), ['db_initial_version'], -1)
+            self.INIT_VERSION = self.migration.db_initial_version()
         if self.migration_api is None:
             temp = __import__('nova.db.sqlalchemy.migration',
                     globals(), locals(), ['versioning_api'], -1)
@@ -3235,8 +3235,8 @@ class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
 
         if self.migration is None:
             self.migration = __import__('nova.virt.baremetal.db.migration',
-                    globals(), locals(), ['INIT_VERSION'], -1)
-            self.INIT_VERSION = self.migration.INIT_VERSION
+                    globals(), locals(), ['db_initial_version'], -1)
+            self.INIT_VERSION = self.migration.db_initial_version()
         if self.migration_api is None:
             temp = __import__('nova.virt.baremetal.db.sqlalchemy.migration',
                     globals(), locals(), ['versioning_api'], -1)
