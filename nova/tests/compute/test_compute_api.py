@@ -828,7 +828,8 @@ class _ComputeAPIUnitTestMixIn(object):
                      same_host=False, allow_same_host=False,
                      allow_mig_same_host=False,
                      project_id=None,
-                     extra_kwargs=None):
+                     extra_kwargs=None,
+                     same_flavor=False):
         if extra_kwargs is None:
             extra_kwargs = {}
 
@@ -854,70 +855,75 @@ class _ComputeAPIUnitTestMixIn(object):
         if flavor_id_passed:
             new_flavor = dict(id=200, flavorid='new-flavor-id',
                               name='new_flavor', disabled=False)
+            if same_flavor:
+                cur_flavor = flavors.extract_flavor(fake_inst)
+                new_flavor['id'] = cur_flavor['id']
             flavors.get_flavor_by_flavor_id(
                     'new-flavor-id',
                     read_deleted='no').AndReturn(new_flavor)
         else:
             new_flavor = current_flavor
 
-        resvs = ['resvs']
+        if not (flavor_id_passed and same_flavor):
+            resvs = ['resvs']
 
-        self.compute_api._upsize_quota_delta(
-                self.context, new_flavor,
-                current_flavor).AndReturn('deltas')
-        self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                project_id=fake_inst['project_id']).AndReturn(resvs)
+            self.compute_api._upsize_quota_delta(
+                    self.context, new_flavor,
+                    current_flavor).AndReturn('deltas')
+            self.compute_api._reserve_quota_delta(self.context, 'deltas',
+                    project_id=fake_inst['project_id']).AndReturn(resvs)
 
-        def _check_state(expected_task_state=None):
-            self.assertEqual(task_states.RESIZE_PREP, fake_inst.task_state)
-            self.assertEqual(fake_inst.progress, 0)
-            for key, value in extra_kwargs.items():
-                self.assertEqual(value, getattr(fake_inst, key))
+            def _check_state(expected_task_state=None):
+                self.assertEqual(task_states.RESIZE_PREP,
+                                 fake_inst.task_state)
+                self.assertEqual(fake_inst.progress, 0)
+                for key, value in extra_kwargs.items():
+                    self.assertEqual(value, getattr(fake_inst, key))
 
-        fake_inst.save(expected_task_state=None).WithSideEffects(
-                _check_state)
+            fake_inst.save(expected_task_state=None).WithSideEffects(
+                    _check_state)
 
-        if allow_same_host:
-            filter_properties = {'ignore_hosts': []}
-        else:
-            filter_properties = {'ignore_hosts': [fake_inst['host']]}
+            if allow_same_host:
+                filter_properties = {'ignore_hosts': []}
+            else:
+                filter_properties = {'ignore_hosts': [fake_inst['host']]}
 
-        if not flavor_id_passed and not allow_mig_same_host:
-            filter_properties['ignore_hosts'].append(fake_inst['host'])
+            if not flavor_id_passed and not allow_mig_same_host:
+                filter_properties['ignore_hosts'].append(fake_inst['host'])
 
-        if self.is_cells:
-            quota.QUOTAS.commit(self.context, resvs,
-                                project_id=fake_inst['project_id'])
-            resvs = []
-            mig = migration_obj.Migration()
+            if self.is_cells:
+                quota.QUOTAS.commit(self.context, resvs,
+                                    project_id=fake_inst['project_id'])
+                resvs = []
+                mig = migration_obj.Migration()
 
-            def _get_migration():
-                return mig
+                def _get_migration():
+                    return mig
 
-            def _check_mig(ctxt):
-                self.assertEqual(fake_inst.uuid, mig.instance_uuid)
-                self.assertEqual(current_flavor['id'],
-                                 mig.old_instance_type_id)
-                self.assertEqual(new_flavor['id'],
-                                 mig.new_instance_type_id)
-                self.assertEqual('finished', mig.status)
+                def _check_mig(ctxt):
+                    self.assertEqual(fake_inst.uuid, mig.instance_uuid)
+                    self.assertEqual(current_flavor['id'],
+                                     mig.old_instance_type_id)
+                    self.assertEqual(new_flavor['id'],
+                                     mig.new_instance_type_id)
+                    self.assertEqual('finished', mig.status)
 
-            self.stubs.Set(migration_obj, 'Migration', _get_migration)
-            self.mox.StubOutWithMock(self.context, 'elevated')
-            self.mox.StubOutWithMock(mig, 'create')
+                self.stubs.Set(migration_obj, 'Migration', _get_migration)
+                self.mox.StubOutWithMock(self.context, 'elevated')
+                self.mox.StubOutWithMock(mig, 'create')
 
-            self.context.elevated().AndReturn(self.context)
-            mig.create(self.context).WithSideEffects(_check_mig)
+                self.context.elevated().AndReturn(self.context)
+                mig.create(self.context).WithSideEffects(_check_mig)
 
-        self.compute_api._record_action_start(self.context, fake_inst,
-                                              'resize')
+            self.compute_api._record_action_start(self.context, fake_inst,
+                                                  'resize')
 
-        scheduler_hint = {'filter_properties': filter_properties}
+            scheduler_hint = {'filter_properties': filter_properties}
 
-        self.compute_api.compute_task_api.resize_instance(
-                self.context, fake_inst, extra_kwargs,
-                scheduler_hint=scheduler_hint,
-                flavor=new_flavor, reservations=resvs)
+            self.compute_api.compute_task_api.resize_instance(
+                    self.context, fake_inst, extra_kwargs,
+                    scheduler_hint=scheduler_hint,
+                    flavor=new_flavor, reservations=resvs)
 
         self.mox.ReplayAll()
 
@@ -945,6 +951,10 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_resize_different_project_id(self):
         self._test_resize(project_id='different')
+
+    def test_resize_same_flavor_fails(self):
+        self.assertRaises(exception.CannotResizeToSameFlavor,
+                          self._test_resize, same_flavor=True)
 
     def test_migrate(self):
         self._test_migrate()
@@ -1005,30 +1015,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.FlavorNotFound,
                           self.compute_api.resize, self.context,
                           fake_inst, flavor_id='flavor-id')
-
-    def test_resize_same_flavor_fails(self):
-        self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
-        # Should never reach these.
-        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
-        self.mox.StubOutWithMock(self.compute_api, 'update')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
-        self.mox.StubOutWithMock(self.compute_api.compute_task_api,
-                                 'resize_instance')
-
-        fake_inst = obj_base.obj_to_primitive(self._create_instance_obj())
-        fake_flavor = flavors.extract_flavor(fake_inst)
-
-        flavors.get_flavor_by_flavor_id(
-                fake_flavor['flavorid'],
-                read_deleted='no').AndReturn(fake_flavor)
-
-        self.mox.ReplayAll()
-
-        # Pass in flavor_id.. same as current flavor.
-        self.assertRaises(exception.CannotResizeToSameFlavor,
-                          self.compute_api.resize, self.context,
-                          fake_inst, flavor_id=fake_flavor['flavorid'])
 
     def test_resize_quota_exceeds_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
