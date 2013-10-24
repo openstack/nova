@@ -334,17 +334,17 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
         # activate and deactivate the bootloader
         # and check the deployment task_state in the database
         row = db.bm_node_get(self.context, 1)
-        self.assertTrue(row['deploy_key'] is None)
+        self.assertIsNone(row['deploy_key'])
 
         self.driver.activate_bootloader(self.context, self.node, self.instance,
                                         network_info=self.test_network_info)
         row = db.bm_node_get(self.context, 1)
-        self.assertTrue(row['deploy_key'] is not None)
+        self.assertIsNotNone(row['deploy_key'])
 
         self.driver.deactivate_bootloader(self.context, self.node,
                                             self.instance)
         row = db.bm_node_get(self.context, 1)
-        self.assertTrue(row['deploy_key'] is None)
+        self.assertIsNone(row['deploy_key'])
 
         self.mox.VerifyAll()
 

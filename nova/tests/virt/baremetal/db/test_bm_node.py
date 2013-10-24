@@ -178,14 +178,14 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         # check memory_mb
         fn = db.bm_node_find_free(self.context, 'host2',
                                   memory_mb=2001, cpus=2, local_gb=1000)
-        self.assertTrue(fn is None)
+        self.assertIsNone(fn)
 
         # check cpus
         fn = db.bm_node_find_free(self.context, 'host2',
                                   memory_mb=2000, cpus=3, local_gb=1000)
-        self.assertTrue(fn is None)
+        self.assertIsNone(fn)
 
         # check local_gb
         fn = db.bm_node_find_free(self.context, 'host2',
                                   memory_mb=2000, cpus=2, local_gb=1001)
-        self.assertTrue(fn is None)
+        self.assertIsNone(fn)

@@ -131,7 +131,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         tree = conf.format_dom()
         self.assertEqual('block', tree.get('type'))
         self.assertEqual('fake_serial', tree.find('./serial').text)
-        self.assertEqual(None, tree.find('./blockio'))
+        self.assertIsNone(tree.find('./blockio'))
 
     def test_libvirt_volume_driver_blockio(self):
         libvirt_driver = volume.LibvirtVolumeDriver(self.fake_conn)
@@ -173,7 +173,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         tree = conf.format_dom()
         iotune = tree.find('./iotune')
         # ensure invalid qos_specs is ignored
-        self.assertEqual(iotune, None)
+        self.assertIsNone(iotune)
 
         specs = {
             'total_bytes_sec': '102400',
@@ -216,13 +216,13 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         conf = libvirt_driver.connect_volume(connection_info, disk_info)
         tree = conf.format_dom()
         readonly = tree.find('./readonly')
-        self.assertEqual(readonly, None)
+        self.assertIsNone(readonly)
 
         connection_info['data']['access_mode'] = 'ro'
         conf = libvirt_driver.connect_volume(connection_info, disk_info)
         tree = conf.format_dom()
         readonly = tree.find('./readonly')
-        self.assertNotEqual(readonly, None)
+        self.assertIsNotNone(readonly)
 
     def iscsi_connection(self, volume, location, iqn):
         return {
@@ -347,7 +347,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./source/auth'), None)
+        self.assertIsNone(tree.find('./source/auth'))
         self.assertEqual('1048576', tree.find('./iotune/total_bytes_sec').text)
         self.assertEqual('500', tree.find('./iotune/read_iops_sec').text)
         libvirt_driver.disconnect_volume(connection_info, "vde")
@@ -362,7 +362,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./source/auth'), None)
+        self.assertIsNone(tree.find('./source/auth'))
         found_hosts = tree.findall('./source/host')
         self.assertEqual([host.get('name') for host in found_hosts], hosts)
         self.assertEqual([host.get('port') for host in found_hosts], ports)
@@ -419,7 +419,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
         self._assertNetworkAndProtocolEquals(tree)
-        self.assertEqual(tree.find('./auth'), None)
+        self.assertIsNone(tree.find('./auth'))
         libvirt_driver.disconnect_volume(connection_info, "vde")
 
     def test_libvirt_rbd_driver_auth_disabled_flags_override(self):

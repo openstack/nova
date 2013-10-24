@@ -742,9 +742,9 @@ class HyperVAPITestCase(test.NoDBTestCase):
         self._mox.VerifyAll()
 
         if cow:
-            self.assertTrue(self._fetched_image is not None)
+            self.assertIsNotNone(self._fetched_image)
         else:
-            self.assertTrue(self._fetched_image is None)
+            self.assertIsNone(self._fetched_image)
 
     def test_snapshot_with_update_failure(self):
         (snapshot_name, func_call_matcher) = self._setup_snapshot_mocks()

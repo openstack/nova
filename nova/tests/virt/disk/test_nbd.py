@@ -75,14 +75,14 @@ class NbdTestCase(test.NoDBTestCase):
         self.stubs.Set(nbd.NbdMount, '_detect_nbd_devices',
                        _fake_detect_nbd_devices_none)
         n = nbd.NbdMount(None, tempdir)
-        self.assertEquals(None, n._allocate_nbd())
+        self.assertIsNone(n._allocate_nbd())
 
     def test_nbd_no_free_devices(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
         n = nbd.NbdMount(None, tempdir)
         self.useFixture(fixtures.MonkeyPatch('os.path.exists',
                                              _fake_exists_all_used))
-        self.assertEquals(None, n._allocate_nbd())
+        self.assertIsNone(n._allocate_nbd())
 
     def test_nbd_not_loaded(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
@@ -98,7 +98,7 @@ class NbdTestCase(test.NoDBTestCase):
         # This should fail, as we don't have the module "loaded"
         # TODO(mikal): work out how to force english as the gettext language
         # so that the error check always passes
-        self.assertEquals(None, n._allocate_nbd())
+        self.assertIsNone(n._allocate_nbd())
         self.assertEquals('nbd unavailable: module not loaded', n.error)
 
     def test_nbd_allocation(self):
@@ -215,7 +215,7 @@ class NbdTestCase(test.NoDBTestCase):
         n.unget_dev()
         self.assertFalse(n.linked)
         self.assertEquals('', n.error)
-        self.assertEquals(None, n.device)
+        self.assertIsNone(n.device)
 
     def test_unget_dev_simple(self):
         # This test is just checking we don't get an exception when we unget
@@ -245,7 +245,7 @@ class NbdTestCase(test.NoDBTestCase):
         n.unget_dev()
         self.assertFalse(n.linked)
         self.assertEquals('', n.error)
-        self.assertEquals(None, n.device)
+        self.assertIsNone(n.device)
 
     def test_get_dev_timeout(self):
         # Always fail to get a device

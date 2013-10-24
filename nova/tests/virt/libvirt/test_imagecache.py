@@ -65,7 +65,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     def test_read_stored_checksum_missing(self):
         self.stubs.Set(os.path, 'exists', lambda x: False)
         csum = imagecache.read_stored_checksum('/tmp/foo', timestamped=False)
-        self.assertEqual(csum, None)
+        self.assertIsNone(csum)
 
     def test_read_stored_checksum(self):
         with utils.tempdir() as tmpdir:
@@ -871,7 +871,7 @@ class VerifyChecksumTestCase(test.NoDBTestCase):
         with utils.tempdir() as tmpdir:
             image_cache_manager, fname = self._check_body(tmpdir, "csum valid")
             res = image_cache_manager._verify_checksum(self.img, fname)
-            self.assertTrue(res is None)
+            self.assertIsNone(res)
 
     def test_verify_checksum_invalid_json(self):
         with intercept_log_messages() as stream:
@@ -894,7 +894,7 @@ class VerifyChecksumTestCase(test.NoDBTestCase):
                 self._check_body(tmpdir, "csum invalid, not json"))
             res = image_cache_manager._verify_checksum(
                 self.img, fname, create_if_missing=True)
-            self.assertTrue(res is None)
+            self.assertIsNone(res)
 
     def test_verify_checksum_invalid(self):
         with intercept_log_messages() as stream:
@@ -915,7 +915,7 @@ class VerifyChecksumTestCase(test.NoDBTestCase):
 
             image_cache_manager = imagecache.ImageCacheManager()
             res = image_cache_manager._verify_checksum('aaa', fname)
-            self.assertEqual(res, None)
+            self.assertIsNone(res)
 
             # Checksum requests for a file with no checksum now have the
             # side effect of creating the checksum

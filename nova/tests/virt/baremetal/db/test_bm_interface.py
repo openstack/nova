@@ -35,7 +35,7 @@ class BareMetalInterfaceTestCase(base.BMDBTestCase):
         db.bm_interface_destroy(self.context, pif1_id)
         pif2_id = db.bm_interface_create(self.context, 2, '11:11:11:11:11:11',
                                          '0x2', 2)
-        self.assertTrue(pif2_id is not None)
+        self.assertIsNotNone(pif2_id)
 
     def test_unique_vif_uuid(self):
         pif1_id = db.bm_interface_create(self.context, 1, '11:11:11:11:11:11',

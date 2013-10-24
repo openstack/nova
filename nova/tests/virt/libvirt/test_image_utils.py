@@ -76,7 +76,7 @@ disk size: 96K
                       'qemu-img', 'info', path).AndReturn((output, ''))
         self.mox.ReplayAll()
         d_backing = libvirt_utils.get_disk_backing_file(path)
-        self.assertEqual(None, d_backing)
+        self.assertIsNone(d_backing)
 
     def test_disk_size(self):
         path = '/myhome/disk.config'

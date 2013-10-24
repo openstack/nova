@@ -1244,7 +1244,7 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigNodeDevice()
         obj.parse_str(xmlin)
 
-        self.assertEqual(obj.pci_capability, None)
+        self.assertIsNone(obj.pci_capability)
 
     def test_config_virt_device(self):
         xmlin = """

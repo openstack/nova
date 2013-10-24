@@ -139,7 +139,7 @@ class VPDClassMethodsTestCase(BareMetalVPDTestCase):
         self.assertEqual(self.pm.connection_data.host, '127.0.0.1')
         self.assertEqual(self.pm.connection_data.username, 'user')
         self.assertEqual(self.pm.connection_data.password, 'password')
-        self.assertEqual(self.pm.connection_data.keyfile, None)
+        self.assertIsNone(self.pm.connection_data.keyfile)
         self.mox.VerifyAll()
 
     def test_get_conn_success_key(self):

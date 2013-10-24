@@ -53,7 +53,7 @@ class LoopTestCase(test.NoDBTestCase):
         l.unget_dev()
         self.assertFalse(l.linked)
         self.assertEquals('', l.error)
-        self.assertEquals(None, l.device)
+        self.assertIsNone(l.device)
 
     def test_inner_get_dev_fails(self):
         tempdir = self.useFixture(fixtures.TempDir()).path
@@ -65,12 +65,12 @@ class LoopTestCase(test.NoDBTestCase):
         self.assertFalse(l._inner_get_dev())
         self.assertFalse(l.linked)
         self.assertNotEquals('', l.error)
-        self.assertEquals(None, l.device)
+        self.assertIsNone(l.device)
 
         # Free
         l.unget_dev()
         self.assertFalse(l.linked)
-        self.assertEquals(None, l.device)
+        self.assertIsNone(l.device)
 
     def test_get_dev_timeout(self):
         tempdir = self.useFixture(fixtures.TempDir()).path

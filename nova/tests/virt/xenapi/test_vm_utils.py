@@ -96,7 +96,7 @@ class LookupTestCase(VMUtilsTestBase):
     def test_no_result(self):
         self._do_mock([])
         result = vm_utils.lookup(self.session, self.name_label)
-        self.assertEqual(None, result)
+        self.assertIsNone(result)
 
     def test_too_many(self):
         self._do_mock(['a', 'b'])
@@ -425,11 +425,11 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 class TestImageCompression(VMUtilsTestBase):
     def test_image_compression(self):
         # Testing for nova.conf, too low, negative, and a correct value.
-        self.assertEqual(vm_utils.get_compression_level(), None)
+        self.assertIsNone(vm_utils.get_compression_level())
         self.flags(xenapi_image_compression_level=0)
-        self.assertEqual(vm_utils.get_compression_level(), None)
+        self.assertIsNone(vm_utils.get_compression_level())
         self.flags(xenapi_image_compression_level=-6)
-        self.assertEqual(vm_utils.get_compression_level(), None)
+        self.assertIsNone(vm_utils.get_compression_level())
         self.flags(xenapi_image_compression_level=6)
         self.assertEqual(vm_utils.get_compression_level(), 6)
 
@@ -654,7 +654,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
 
         vdi_uuid = vm_utils.get_vdi_uuid_for_volume(
                 driver._session, connection_data)
-        self.assertNotEqual(vdi_uuid, None)
+        self.assertIsNotNone(vdi_uuid)
 
 
 class VMRefOrRaiseVMFoundTestCase(VMUtilsTestBase):
@@ -1533,7 +1533,7 @@ class SnapshotAttachedHereTestCase(VMUtilsTestBase):
             self.assertEqual("vm_ref", vm_ref)
             self.assertEqual("label", label)
             self.assertEqual('0', userdevice)
-            self.assertEqual(None, post_snapshot_callback)
+            self.assertIsNone(post_snapshot_callback)
             yield "fake"
 
         mock_impl.side_effect = fake_impl

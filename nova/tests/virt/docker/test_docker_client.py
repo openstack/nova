@@ -147,7 +147,7 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
         container_id = client.create_container({})
-        self.assertEqual(None, container_id)
+        self.assertIsNone(container_id)
 
         self.mox.VerifyAll()
 
@@ -164,7 +164,7 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
         container_id = client.create_container({})
-        self.assertEqual(None, container_id)
+        self.assertIsNone(container_id)
 
         self.mox.VerifyAll()
 
@@ -230,7 +230,7 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
         image = client.inspect_image('XXX')
-        self.assertEqual(None, image)
+        self.assertIsNone(image)
 
         self.mox.VerifyAll()
 
@@ -263,7 +263,7 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
         container = client.inspect_container('XXX')
-        self.assertEqual(None, container)
+        self.assertIsNone(container)
 
         self.mox.VerifyAll()
 
@@ -479,6 +479,6 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
         logs = client.get_container_logs('XXX')
-        self.assertEqual(None, logs)
+        self.assertIsNone(logs)
 
         self.mox.VerifyAll()
