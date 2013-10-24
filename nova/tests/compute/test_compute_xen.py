@@ -27,7 +27,7 @@ CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 
 
-class ComputeXenTestCase(stubs.XenAPITestBase):
+class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(ComputeXenTestCase, self).setUp()
         self.flags(compute_driver='xenapi.XenAPIDriver',

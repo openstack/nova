@@ -26,7 +26,7 @@ from nova.virt.xenapi.image import glance
 from nova.virt.xenapi import vm_utils
 
 
-class TestGlanceStore(stubs.XenAPITestBase):
+class TestGlanceStore(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(TestGlanceStore, self).setUp()
         self.store = glance.GlanceStore()

@@ -29,7 +29,7 @@ from nova.virt.xenapi.image import bittorrent
 from nova.virt.xenapi import vm_utils
 
 
-class TestBittorrentStore(stubs.XenAPITestBase):
+class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(TestBittorrentStore, self).setUp()
         self.store = bittorrent.BittorrentStore()
