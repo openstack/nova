@@ -334,7 +334,7 @@ class ServicesTest(test.TestCase):
 
     def test_services_enable(self):
         def _service_update(context, service_id, values):
-            self.assertEqual(values['disabled_reason'], None)
+            self.assertIsNone(values['disabled_reason'])
             return dict(test_service.fake_service, **values)
 
         self.stubs.Set(db, "service_update", _service_update)

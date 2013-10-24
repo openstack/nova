@@ -405,13 +405,13 @@ class CellsTest(BaseCellsTest):
         req = self._get_request("cells/sync_instances")
         body = {}
         self.controller.sync_instances(req, body=body)
-        self.assertEqual(call_info['project_id'], None)
-        self.assertEqual(call_info['updated_since'], None)
+        self.assertIsNone(call_info['project_id'])
+        self.assertIsNone(call_info['updated_since'])
 
         body = {'project_id': 'test-project'}
         self.controller.sync_instances(req, body=body)
         self.assertEqual(call_info['project_id'], 'test-project')
-        self.assertEqual(call_info['updated_since'], None)
+        self.assertIsNone(call_info['updated_since'])
 
         expected = timeutils.utcnow().isoformat()
         if not expected.endswith("+00:00"):
@@ -419,7 +419,7 @@ class CellsTest(BaseCellsTest):
 
         body = {'updated_since': expected}
         self.controller.sync_instances(req, body=body)
-        self.assertEqual(call_info['project_id'], None)
+        self.assertIsNone(call_info['project_id'])
         self.assertEqual(call_info['updated_since'], expected)
 
         body = {'updated_since': 'skjdfkjsdkf'}
@@ -459,7 +459,7 @@ class TestCellsXMLSerializer(BaseCellsTest):
         self.assertEqual(res_tree.tag, '{%s}cell' % xmlutil.XMLNS_V10)
         self.assertEqual(res_tree.get('name'), 'darksecret')
         self.assertEqual(res_tree.get('username'), 'meow')
-        self.assertEqual(res_tree.get('password'), None)
+        self.assertIsNone(res_tree.get('password'))
         self.assertEqual(len(res_tree), 1)
 
         child = res_tree[0]
@@ -486,7 +486,7 @@ class TestCellsXMLSerializer(BaseCellsTest):
         self.assertEqual(res_tree.tag, '{%s}cell' % xmlutil.XMLNS_V10)
         self.assertEqual(res_tree.get('name'), 'darksecret')
         self.assertEqual(res_tree.get('username'), 'woof')
-        self.assertEqual(res_tree.get('password'), None)
+        self.assertIsNone(res_tree.get('password'))
         self.assertEqual(len(res_tree), 0)
 
 

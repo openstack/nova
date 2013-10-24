@@ -138,7 +138,7 @@ class EvacuateTest(test.NoDBTestCase):
         res = req.get_response(app)
         self.assertEqual(res.status_int, 200)
         resp_json = jsonutils.loads(res.body)
-        self.assertEqual(resp_json['admin_password'], None)
+        self.assertIsNone(resp_json['admin_password'])
 
     def test_evacuate_with_active_service(self):
         req, app = self._gen_request_with_app({'host': 'my_host',

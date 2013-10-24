@@ -174,8 +174,8 @@ class FloatingIpTest(test.TestCase):
         self.assertIn('floating_ip', view)
         self.assertTrue(view['floating_ip']['id'])
         self.assertEqual(view['floating_ip']['ip'], self.floating_ip)
-        self.assertEqual(view['floating_ip']['fixed_ip'], None)
-        self.assertEqual(view['floating_ip']['instance_id'], None)
+        self.assertIsNone(view['floating_ip']['fixed_ip'])
+        self.assertIsNone(view['floating_ip']['instance_id'])
 
     def test_translate_floating_ip_view_dict(self):
         floating_ip = {'id': 0, 'address': '10.0.0.10', 'pool': 'nova',
@@ -243,7 +243,7 @@ class FloatingIpTest(test.TestCase):
 
         self.assertEqual(res_dict['floating_ip']['id'], 1)
         self.assertEqual(res_dict['floating_ip']['ip'], '10.10.10.10')
-        self.assertEqual(res_dict['floating_ip']['instance_id'], None)
+        self.assertIsNone(res_dict['floating_ip']['instance_id'])
 
     def test_floating_ip_show_not_found(self):
         def fake_get_floating_ip(*args, **kwargs):

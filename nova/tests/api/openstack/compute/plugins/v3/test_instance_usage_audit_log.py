@@ -119,7 +119,7 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         self.host_api = self.controller.host_api
 
         def fake_service_get_all(context, disabled):
-            self.assertTrue(disabled is None)
+            self.assertIsNone(disabled)
             return TEST_COMPUTE_SERVICES
 
         self.stubs.Set(utils, 'last_completed_audit_period',
