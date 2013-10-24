@@ -294,7 +294,7 @@ def get_vm_extra_config_spec(client_factory, extra_opts):
     return config_spec
 
 
-def get_vmdk_path_and_adapter_type(hardware_devices):
+def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
     """Gets the vmdk file path and the storage adapter type."""
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
@@ -308,7 +308,11 @@ def get_vmdk_path_and_adapter_type(hardware_devices):
         if device.__class__.__name__ == "VirtualDisk":
             if device.backing.__class__.__name__ == \
                     "VirtualDiskFlatVer2BackingInfo":
-                vmdk_file_path = device.backing.fileName
+                if uuid:
+                    if uuid in device.backing.fileName:
+                        vmdk_file_path = device.backing.fileName
+                else:
+                    vmdk_file_path = device.backing.fileName
                 vmdk_controller_key = device.controllerKey
                 if getattr(device.backing, 'thinProvisioned', False):
                     disk_type = "thin"
