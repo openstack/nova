@@ -1247,11 +1247,14 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                     'user_id': 'fake_user1',
                     'project_id': 'fake_proj1',
         }
+
         updated_group = db.security_group_update(self.ctxt,
-                                                 security_group['id'],
-                                                 new_values)
+                                    security_group['id'],
+                                    new_values,
+                                    columns_to_join=['rules.grantee_group'])
         for key, value in new_values.iteritems():
             self.assertEqual(updated_group[key], value)
+        self.assertEqual(updated_group['rules'], [])
 
     def test_security_group_update_to_duplicate(self):
         security_group1 = self._create_security_group(
