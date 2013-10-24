@@ -22,6 +22,7 @@ import hmac
 import os
 
 from oslo.config import cfg
+import six
 import webob.dec
 import webob.exc
 
@@ -154,7 +155,7 @@ class MetadataRequestHandler(wsgi.Application):
 
         if instance_id is None:
             msg = _('X-Instance-ID header is missing from request.')
-        elif not isinstance(instance_id, basestring):
+        elif not isinstance(instance_id, six.string_types):
             msg = _('Multiple X-Instance-ID headers found within request.')
         else:
             msg = None

@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -58,7 +59,7 @@ class AdminPasswordController(wsgi.Controller):
             msg = _("No admin_password was specified")
             raise exc.HTTPBadRequest(explanation=msg)
         password = body['change_password']['admin_password']
-        if not isinstance(password, basestring):
+        if not isinstance(password, six.string_types):
             msg = _("Invalid admin password")
             raise exc.HTTPBadRequest(explanation=msg)
         try:

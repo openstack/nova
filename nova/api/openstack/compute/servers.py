@@ -19,6 +19,7 @@ import os
 import re
 
 from oslo.config import cfg
+import six
 import webob
 from webob import exc
 
@@ -598,7 +599,7 @@ class Controller(wsgi.Controller):
 
     def _check_string_length(self, value, name, max_length=None):
         try:
-            if isinstance(value, basestring):
+            if isinstance(value, six.string_types):
                 value = value.strip()
             utils.check_string_length(value, name, min_length=1,
                                       max_length=max_length)
@@ -1209,7 +1210,7 @@ class Controller(wsgi.Controller):
             msg = _("No adminPass was specified")
             raise exc.HTTPBadRequest(explanation=msg)
         password = body['changePassword']['adminPass']
-        if not isinstance(password, basestring):
+        if not isinstance(password, six.string_types):
             msg = _("Invalid adminPass")
             raise exc.HTTPBadRequest(explanation=msg)
         server = self._get_server(context, req, id)
@@ -1434,7 +1435,7 @@ class Controller(wsgi.Controller):
         return password
 
     def _validate_admin_password(self, password):
-        if not isinstance(password, basestring):
+        if not isinstance(password, six.string_types):
             raise ValueError()
 
     def _get_server_search_options(self):

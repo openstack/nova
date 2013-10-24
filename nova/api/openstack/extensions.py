@@ -258,7 +258,7 @@ class ExtensionManager(object):
 
         LOG.debug(_("Loading extension %s"), ext_factory)
 
-        if isinstance(ext_factory, basestring):
+        if isinstance(ext_factory, six.string_types):
             # Load the factory
             factory = importutils.import_class(ext_factory)
         else:

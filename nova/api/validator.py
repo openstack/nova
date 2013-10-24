@@ -19,6 +19,8 @@
 import base64
 import re
 
+import six
+
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -44,7 +46,7 @@ VALIDATE_PATH_RE = _get_path_validator_regex()
 def validate_str(max_length=None):
 
     def _do(val):
-        if not isinstance(val, basestring):
+        if not isinstance(val, six.string_types):
             return False
         if max_length and len(val) > max_length:
             return False
