@@ -1145,6 +1145,16 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self._assertEqualObjects(security_group1,
                                  real_security_group)
 
+    def test_security_group_get_with_instance_columns(self):
+        instance = db.instance_create(self.ctxt,
+                                      {'system_metadata': {'foo': 'bar'}})
+        secgroup = self._create_security_group({'instances': [instance]})
+        secgroup = db.security_group_get(
+            self.ctxt, secgroup['id'],
+            columns_to_join=['instances.system_metadata'])
+        inst = secgroup.instances[0]
+        self.assertIn('system_metadata', dict(inst.iteritems()).keys())
+
     def test_security_group_get_no_instances(self):
         instance = db.instance_create(self.ctxt, {})
         sid = self._create_security_group({'instances': [instance]})['id']
