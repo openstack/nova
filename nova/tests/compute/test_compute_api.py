@@ -169,7 +169,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -197,7 +197,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -227,7 +227,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.START)
 
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -268,7 +268,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.STOP)
 
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -329,7 +329,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._record_action_start(self.context, inst,
                                               instance_actions.REBOOT)
 
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -472,7 +472,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
         self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
@@ -501,7 +501,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         cast = True
         commit_quotas = True
-        if not self.is_cells:
+        if self.cell_type != 'api':
             if inst.vm_state == vm_states.RESIZED:
                 self._test_delete_resized_part(inst)
 
@@ -522,7 +522,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 commit_quotas = False
 
         if cast:
-            if not self.is_cells:
+            if self.cell_type != 'api':
                 self.compute_api._record_action_start(self.context, inst,
                                                       instance_actions.DELETE)
             if commit_quotas:
@@ -537,7 +537,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                           reservations=cast_reservations)
 
         if commit_quotas:
-            # Local delete or when is_cells is True.
+            # Local delete or when we're testing API cell.
             quota.QUOTAS.commit(self.context, reservations,
                                 project_id=inst.project_id,
                                 user_id=inst.user_id)
@@ -586,7 +586,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -600,7 +600,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                               inst.project_id, inst.user_id
                                               ).AndReturn(None)
 
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi.terminate_instance(self.context, inst, [],
                                       reservations=None)
         else:
@@ -644,19 +644,13 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'terminate_connection')
         self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
 
-        if self.is_cells:
-            rpcapi = self.compute_api.cells_rpcapi
-        else:
-            rpcapi = self.compute_api.compute_rpcapi
-        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
-
         inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
                                                   self.context,
                                                    inst,
                                                    'delete.start')
         self.context.elevated().MultipleTimes().AndReturn(self.context)
-        if not self.is_cells:
+        if self.cell_type != 'api':
             self.compute_api.network_api.deallocate_for_instance(
                         self.context, inst)
         db.instance_system_metadata_get(self.context, inst.uuid
@@ -739,7 +733,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         fake_mig.save().WithSideEffects(_check_mig)
 
-        if self.is_cells:
+        if self.cell_type:
             quota.QUOTAS.commit(self.context, resvs)
             resvs = []
 
@@ -807,7 +801,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         fake_mig.save().WithSideEffects(_check_mig)
 
-        if self.is_cells:
+        if self.cell_type:
             quota.QUOTAS.commit(self.context, resvs)
             resvs = []
 
@@ -891,7 +885,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if not flavor_id_passed and not allow_mig_same_host:
                 filter_properties['ignore_hosts'].append(fake_inst['host'])
 
-            if self.is_cells:
+            if self.cell_type == 'api':
                 quota.QUOTAS.commit(self.context, resvs,
                                     project_id=fake_inst['project_id'])
                 resvs = []
@@ -1060,7 +1054,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -1088,7 +1082,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
-        if self.is_cells:
+        if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         else:
             rpcapi = self.compute_api.compute_rpcapi
@@ -1496,12 +1490,22 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
     def setUp(self):
         super(ComputeAPIUnitTestCase, self).setUp()
         self.compute_api = compute_api.API()
-        self.is_cells = False
+        self.cell_type = None
 
 
-class ComputeCellsAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
+class ComputeAPIAPICellUnitTestCase(_ComputeAPIUnitTestMixIn,
+                                    test.NoDBTestCase):
     def setUp(self):
-        super(ComputeCellsAPIUnitTestCase, self).setUp()
+        super(ComputeAPIAPICellUnitTestCase, self).setUp()
         self.flags(cell_type='api', enable=True, group='cells')
         self.compute_api = compute_cells_api.ComputeCellsAPI()
-        self.is_cells = True
+        self.cell_type = 'api'
+
+
+class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,
+                                        test.NoDBTestCase):
+    def setUp(self):
+        super(ComputeAPIComputeCellUnitTestCase, self).setUp()
+        self.flags(cell_type='compute', enable=True, group='cells')
+        self.compute_api = compute_api.API()
+        self.cell_type = 'compute'
