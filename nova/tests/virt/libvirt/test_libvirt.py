@@ -5471,6 +5471,54 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual('foo', conn.get_hypervisor_hostname())
         self.assertEqual('foo', conn.get_hypervisor_hostname())
 
+    def test_get_connection_serial(self):
+
+        def get_conn_currency(driver):
+            driver._conn.getLibVersion()
+
+        def connect_with_block(*a, **k):
+            # enough to allow another connect to run
+            eventlet.sleep(0)
+            self.calls += 1
+            return self.conn
+
+        self.calls = 0
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       '_connect', connect_with_block)
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        # call serially
+        get_conn_currency(driver)
+        get_conn_currency(driver)
+        self.assertEqual(self.calls, 1)
+
+    def test_get_connection_concurrency(self):
+
+        def get_conn_currency(driver):
+            driver._conn.getLibVersion()
+
+        def connect_with_block(*a, **k):
+            # enough to allow another connect to run
+            eventlet.sleep(0)
+            self.calls += 1
+            return self.conn
+
+        self.calls = 0
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       '_connect', connect_with_block)
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        # call concurrently
+        thr1 = eventlet.spawn(get_conn_currency, driver=driver)
+        thr2 = eventlet.spawn(get_conn_currency, driver=driver)
+
+        # let threads run
+        eventlet.sleep(0)
+
+        thr1.wait()
+        thr2.wait()
+        self.assertEqual(self.calls, 1)
+
 
 class HostStateTestCase(test.TestCase):
 
