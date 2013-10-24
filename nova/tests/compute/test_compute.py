@@ -3262,8 +3262,6 @@ class ComputeTestCase(BaseTestCase):
             ("stop_instance", task_states.POWERING_OFF),
             ("start_instance", task_states.POWERING_ON),
             ("terminate_instance", task_states.DELETING),
-            ("power_off_instance", task_states.POWERING_OFF),
-            ("power_on_instance", task_states.POWERING_ON),
             ("soft_delete_instance", task_states.SOFT_DELETING),
             ("restore_instance", task_states.RESTORING),
             ("rebuild_instance", task_states.REBUILDING,
@@ -7500,7 +7498,7 @@ class ComputeAPITestCase(BaseTestCase):
                     'namespace': None,
                     'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
-                   'version': '2.24'}
+                   'version': '3.0'}
         rpc_msg2 = {'method': 'authorize_console',
                     'namespace': None,
                     'args': fake_connect_info,
