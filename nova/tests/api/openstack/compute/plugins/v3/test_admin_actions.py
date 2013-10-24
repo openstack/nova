@@ -147,6 +147,7 @@ class CommonMixin(object):
         res = self._make_request('/servers/%s/action' % instance['uuid'],
                                  {action: None})
         self.assertEqual(409, res.status_int)
+        self.assertIn('Instance %s is locked' % instance['uuid'], res.body)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
