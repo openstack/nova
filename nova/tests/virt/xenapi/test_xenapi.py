@@ -194,6 +194,7 @@ def create_instance_with_system_metadata(context, instance_values):
     return db.instance_create(context, instance_values)
 
 
+# FIXME(sirp): convert this to XenAPITestBaseNoDB
 class XenAPIVolumeTestCase(stubs.XenAPITestBase):
     """Unit tests for Volume operations."""
     def setUp(self):
@@ -313,6 +314,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBase):
                           instance, '/dev/sdc')
 
 
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIVMTestCase(stubs.XenAPITestBase):
     """Unit tests for VM operations."""
     def setUp(self):
@@ -1597,6 +1599,7 @@ class XenAPIDiffieHellmanTestCase(test.NoDBTestCase):
         self._test_encryption(''.join(['abcd' for i in xrange(1024)]))
 
 
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIMigrateInstance(stubs.XenAPITestBase):
     """Unit test for verifying migration-related actions."""
 
@@ -2050,6 +2053,7 @@ class XenAPIDetermineDiskImageTestCase(test.NoDBTestCase):
         self.assert_disk_type(image_meta, None)
 
 
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIHostTestCase(stubs.XenAPITestBase):
     """Tests HostState, which holds metrics from XenServer that get
     reported back to the Schedulers.
@@ -2193,6 +2197,7 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
         )
 
 
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIAutoDiskConfigTestCase, self).setUp()
@@ -2287,6 +2292,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.assertIsPartitionCalled(True)
 
 
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIGenerateLocal(stubs.XenAPITestBase):
     """Test generating of local disks, like swap and ephemeral."""
     def setUp(self):
@@ -2388,7 +2394,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
         self.assertCalled(instance, vm_utils.ImageType.DISK_ISO)
 
 
-class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
+class XenAPIBWCountersTestCase(stubs.XenAPITestBaseNoDB):
     FAKE_VMS = {'test1:ref': dict(name_label='test1',
                                    other_config=dict(nova_uuid='hash'),
                                    domid='12',
@@ -2478,6 +2484,7 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBase):
 # nova.tests.virt.test_libvirt.IPTablesFirewallDriverTestCase share a lot of
 # code.  Consider abstracting common code in a base class for firewall driver
 # testing.
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
     _in_rules = [
@@ -2797,7 +2804,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
         self.assertEqual(1, len(rules))
 
 
-class XenAPISRSelectionTestCase(stubs.XenAPITestBase):
+class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for testing we find the right SR."""
     def test_safe_find_sr_raise_exception(self):
         # Ensure StorageRepositoryNotFound is raise when wrong filter.
@@ -2867,6 +2874,7 @@ def _create_service_entries(context, values={'avail_zone1': ['fake_host1',
     return values
 
 
+# FIXME(sirp): convert this to use XenAPITestBaseNoDB
 class XenAPIAggregateTestCase(stubs.XenAPITestBase):
     """Unit tests for aggregate operations."""
     def setUp(self):
@@ -3240,7 +3248,7 @@ class SwapXapiHostTestCase(test.NoDBTestCase):
                 "http://someserver", 'otherserver'))
 
 
-class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
+class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for live_migration."""
     def setUp(self):
         super(XenAPILiveMigrateTestCase, self).setUp()
@@ -3671,7 +3679,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBase):
                            "vdi1": "dest_sr_ref"}, result)
 
 
-class XenAPIInjectMetadataTestCase(stubs.XenAPITestBase):
+class XenAPIInjectMetadataTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(XenAPIInjectMetadataTestCase, self).setUp()
         self.flags(xenapi_connection_url='test_url',
