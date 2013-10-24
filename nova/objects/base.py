@@ -140,6 +140,7 @@ def remotable(fn):
             for key, value in updates.iteritems():
                 if key in self.fields:
                     self[key] = self._attr_from_primitive(key, value)
+            self.obj_reset_changes()
             self._changed_fields = set(updates.get('obj_what_changed', []))
             return result
         else:
