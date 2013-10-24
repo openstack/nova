@@ -260,7 +260,8 @@ class _TestInstanceObject(object):
         db.instance_update_and_get_original(
                 self.context, fake_uuid, expected_updates,
                 update_cells=False,
-                columns_to_join=['info_cache', 'security_groups']
+                columns_to_join=['info_cache', 'security_groups',
+                    'system_metadata']
                 ).AndReturn((old_ref, new_ref))
         if cell_type == 'api':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
@@ -330,7 +331,8 @@ class _TestInstanceObject(object):
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
                 self.context, fake_uuid, expected_updates, update_cells=False,
-                columns_to_join=['info_cache', 'security_groups']
+                columns_to_join=['info_cache', 'security_groups',
+                    'system_metadata']
                 ).AndReturn((old_ref, new_ref))
         notifications.send_update(self.context, mox.IgnoreArg(),
                                   mox.IgnoreArg())
