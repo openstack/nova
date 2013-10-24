@@ -564,7 +564,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                           vif['network']['label'] + "_" + iface_id,
                           vif['address'], 'pgtag2=%s' % net_id,
                           'pgtag1=%s' % tenant_id, run_as_root=True)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging vif"), instance=instance)
 
     def plug(self, instance, vif):
@@ -658,7 +658,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         try:
             linux_net.delete_ivs_vif_port(self.get_vif_devname(vif))
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ivs_hybrid(self, instance, vif):
@@ -679,7 +679,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                           run_as_root=True)
             utils.execute('brctl', 'delbr', br_name, run_as_root=True)
             linux_net.delete_ivs_vif_port(v2_name)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ivs(self, instance, vif):
@@ -743,7 +743,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             utils.execute('ifc_ctl', 'gateway', 'del_port', dev,
                           run_as_root=True)
             linux_net.delete_net_dev(dev)
-        except exception.ProcessExecutionError:
+        except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug(self, instance, vif):
