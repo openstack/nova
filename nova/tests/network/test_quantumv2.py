@@ -475,9 +475,62 @@ class TestQuantumv2(TestQuantumv2Base):
                              admin=True).MultipleTimes().AndReturn(
             self.moxed_client)
         self.mox.ReplayAll()
+        self.instance['info_cache'] = {'network_info': []}
         nw_inf = api.get_instance_nw_info(self.context,
                                           self.instance,
                                           networks=self.nets1)
+        self._verify_nw_info(nw_inf, 0)
+
+    def test_get_instance_nw_info_with_nets_and_info_cache(self):
+        # This tests that adding an interface to an instance does not
+        # remove the first instance from the instance.
+        api = quantumapi.API()
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
+        api.db.instance_info_cache_update(
+            mox.IgnoreArg(),
+            self.instance['uuid'], mox.IgnoreArg())
+        self.moxed_client.list_ports(
+            tenant_id=self.instance['project_id'],
+            device_id=self.instance['uuid']).AndReturn(
+                {'ports': self.port_data1})
+        port_data = self.port_data1
+        for ip in port_data[0]['fixed_ips']:
+            self.moxed_client.list_floatingips(
+                fixed_ip_address=ip['ip_address'],
+                port_id=port_data[0]['id']).AndReturn(
+                    {'floatingips': self.float_data1})
+        self.moxed_client.list_subnets(
+            id=mox.SameElementsAs(['my_subid1'])).AndReturn(
+                {'subnets': self.subnet_data1})
+        self.moxed_client.list_ports(
+            network_id='my_netid1',
+            device_owner='network:dhcp').AndReturn(
+                {'ports': self.dhcp_port_data1})
+        quantumv2.get_client(mox.IgnoreArg(),
+                             admin=True).MultipleTimes().AndReturn(
+            self.moxed_client)
+        self.mox.ReplayAll()
+        network_model = model.Network(id='network_id',
+                                      bridge='br-int',
+                                      injected='injected',
+                                      label='fake_network',
+                                      tenant_name='fake_tenant')
+
+        self.instance['info_cache'] = {
+            'network_info': [{'id': 'port_id',
+                              'address': 'mac_address',
+                              'network': network_model,
+                              'type': 'ovs',
+                              'ovs_interfaceid': 'ovs_interfaceid',
+                              'devname': 'devname'}]}
+        nw_inf = api.get_instance_nw_info(self.context,
+                                          self.instance,
+                                          networks=self.nets1)
+        self.assertEqual(2, len(nw_inf))
+        for k, v in self.instance['info_cache']['network_info'][0].iteritems():
+            self.assertEqual(nw_inf[0][k], v)
+        # remove first inf and verify that the second interface is correct
+        del nw_inf[0]
         self._verify_nw_info(nw_inf, 0)
 
     def test_get_instance_nw_info_without_subnet(self):
@@ -1295,7 +1348,6 @@ class TestQuantumv2(TestQuantumv2Base):
         floatingips = api._get_floating_ips_by_fixed_and_port(
             self.moxed_client, '1.1.1.1', 1)
         self.assertEqual(floatingips, [])
-
 
 class TestQuantumv2ModuleMethods(test.TestCase):
     def test_ensure_requested_network_ordering_no_preference_ids(self):
