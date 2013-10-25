@@ -15,7 +15,6 @@
 #    under the License.
 
 import base64
-import os
 import re
 import stevedore
 
@@ -33,6 +32,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import flavors
 from nova import exception
+from nova.image import glance
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -1274,10 +1274,7 @@ class ServersController(wsgi.Controller):
 
         # build location of newly-created image entity
         image_id = str(image['id'])
-        image_ref = os.path.join(req.application_url,
-                                 context.project_id,
-                                 'images',
-                                 image_id)
+        image_ref = glance.generate_image_url(image_id)
 
         resp = webob.Response(status_int=202)
         resp.headers['Location'] = image_ref

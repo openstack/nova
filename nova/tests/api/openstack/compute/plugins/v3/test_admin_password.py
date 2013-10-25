@@ -70,6 +70,12 @@ class AdminPasswordTest(test.NoDBTestCase):
         res = self._make_request(url, body)
         self.assertEqual(res.status_int, 204)
 
+    def test_change_password_empty_string(self):
+        url = '/v3/servers/1/action'
+        body = {'change_password': {'admin_password': ''}}
+        res = self._make_request(url, body)
+        self.assertEqual(res.status_int, 204)
+
     def test_change_password_with_non_implement(self):
         url = '/v3/servers/1/action'
         body = {'change_password': {'admin_password': 'test'}}
@@ -85,6 +91,12 @@ class AdminPasswordTest(test.NoDBTestCase):
         res = self._make_request(url, body)
         self.assertEqual(res.status_int, 404)
 
+    def test_change_password_with_non_string_password(self):
+        url = '/v3/servers/1/action'
+        body = {'change_password': {'admin_password': 1234}}
+        res = self._make_request(url, body)
+        self.assertEqual(res.status_int, 400)
+
     def test_change_password_failed(self):
         url = '/v3/servers/1/action'
         body = {'change_password': {'admin_password': 'test'}}
@@ -99,18 +111,49 @@ class AdminPasswordTest(test.NoDBTestCase):
         res = self._make_request(url, body)
         self.assertEqual(res.status_int, 400)
 
+    def test_change_password_none(self):
+        url = '/v3/servers/1/action'
+        body = {'change_password': None}
+        res = self._make_request(url, body)
+        self.assertEqual(res.status_int, 400)
+
 
 class AdminPasswordXMLTest(test.NoDBTestCase):
+    def setUp(self):
+        super(AdminPasswordXMLTest, self).setUp()
+        self.deserializer = admin_password.ChangePasswordDeserializer()
+
     def test_change_password_deserializer(self):
-        deserializer = admin_password.ChangePasswordDeserializer()
         request = '<change_password admin_password="1"></change_password>'
         expected = {'body': {'change_password': {'admin_password': '1'}}}
-        res = deserializer.default(request)
+        res = self.deserializer.default(request)
         self.assertEqual(res, expected)
 
     def test_change_password_deserializer_without_admin_password(self):
-        deserializer = admin_password.ChangePasswordDeserializer()
         request = '<change_password></change_password>'
         expected = {'body': {'change_password': None}}
-        res = deserializer.default(request)
+        res = self.deserializer.default(request)
         self.assertEqual(res, expected)
+
+    def test_change_pass_no_pass(self):
+        request = """<?xml version="1.0" encoding="UTF-8"?>
+                <change_password
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"/> """
+        request = self.deserializer.default(request)
+        expected = {
+            "change_password": None
+        }
+        self.assertEqual(request['body'], expected)
+
+    def test_change_pass_empty_pass(self):
+        request = """<?xml version="1.0" encoding="UTF-8"?>
+                <change_password
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    admin_password=""/> """
+        request = self.deserializer.default(request)
+        expected = {
+            "change_password": {
+                "admin_password": "",
+            },
+        }
+        self.assertEqual(request['body'], expected)
