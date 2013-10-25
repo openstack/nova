@@ -162,6 +162,7 @@ class HypervisorsController(object):
         context = req.environ['nova.context']
         authorize(context)
         compute_nodes = self.host_api.compute_node_get_all(context)
+        req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(hyp, False)
                                  for hyp in compute_nodes])
 
@@ -171,6 +172,7 @@ class HypervisorsController(object):
         context = req.environ['nova.context']
         authorize(context)
         compute_nodes = self.host_api.compute_node_get_all(context)
+        req.cache_db_compute_nodes(compute_nodes)
         return dict(hypervisors=[self._view_hypervisor(hyp, True)
                                  for hyp in compute_nodes])
 
@@ -181,6 +183,7 @@ class HypervisorsController(object):
         authorize(context)
         try:
             hyp = self.host_api.compute_node_get(context, id)
+            req.cache_db_compute_node(hyp)
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)
@@ -193,6 +196,7 @@ class HypervisorsController(object):
         authorize(context)
         try:
             hyp = self.host_api.compute_node_get(context, id)
+            req.cache_db_compute_node(hyp)
         except (ValueError, exception.ComputeHostNotFound):
             msg = _("Hypervisor with ID '%s' could not be found.") % id
             raise webob.exc.HTTPNotFound(explanation=msg)

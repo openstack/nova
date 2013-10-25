@@ -98,6 +98,27 @@ class RequestTest(test.NoDBTestCase):
                  'uuid1': instances[1],
                  'uuid2': instances[2]})
 
+    def test_cache_and_retrieve_compute_nodes(self):
+        request = wsgi.Request.blank('/foo')
+        compute_nodes = []
+        for x in xrange(3):
+            compute_nodes.append({'id': 'id%s' % x})
+        # Store 2
+        request.cache_db_compute_nodes(compute_nodes[:2])
+        # Store 1
+        request.cache_db_compute_node(compute_nodes[2])
+        self.assertEqual(request.get_db_compute_node('id0'),
+                compute_nodes[0])
+        self.assertEqual(request.get_db_compute_node('id1'),
+                compute_nodes[1])
+        self.assertEqual(request.get_db_compute_node('id2'),
+                compute_nodes[2])
+        self.assertEqual(request.get_db_compute_node('id3'), None)
+        self.assertEqual(request.get_db_compute_nodes(),
+                {'id0': compute_nodes[0],
+                 'id1': compute_nodes[1],
+                 'id2': compute_nodes[2]})
+
     def test_from_request(self):
         self.stubs.Set(gettextutils, 'get_available_languages',
                        fakes.fake_get_available_languages)
