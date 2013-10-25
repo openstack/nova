@@ -17,6 +17,7 @@
 
 import socket
 
+from nova import exception
 from nova import test
 from nova.tests import utils
 import nova.tests.virt.docker.mock_client
@@ -85,3 +86,30 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
                           self.connection.unplug_vifs,
                           instance=utils.get_test_instance(),
                           network_info=None)
+
+    def test_create_container(self, image_info=None):
+        instance_href = utils.get_test_instance()
+        if image_info is None:
+            image_info = utils.get_test_image_info(None, instance_href)
+            image_info['disk_format'] = 'raw'
+            image_info['container_format'] = 'docker'
+        self.connection.spawn('fake_context', instance_href, image_info,
+                              'fake_files', 'fake_password')
+
+    def test_create_container_wrong_image(self):
+        instance_href = utils.get_test_instance()
+        image_info = utils.get_test_image_info(None, instance_href)
+        image_info['disk_format'] = 'raw'
+        image_info['container_format'] = 'invalid_format'
+        self.assertRaises(exception.InstanceDeployFailure,
+                          self.test_create_container,
+                          image_info)
+
+    def test_destroy_container(self):
+        def fake_find_container_by_name(container_name):
+            return {'id': 'fake_id'}
+
+        self.stubs.Set(self.connection, 'find_container_by_name',
+            fake_find_container_by_name)
+        instance_href = utils.get_test_instance()
+        self.connection.destroy(instance_href, 'fake_networkinfo')
