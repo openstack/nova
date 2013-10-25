@@ -19,6 +19,7 @@ import functools
 import socket
 
 from eventlet.green import httplib
+import six
 
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -43,7 +44,7 @@ def filter_data(f):
                 obj = new_list
             if isinstance(obj, dict):
                 for k, v in obj.items():
-                    if isinstance(k, basestring):
+                    if isinstance(k, six.string_types):
                         obj[k.lower()] = _filter(v)
             return obj
         return _filter(out)

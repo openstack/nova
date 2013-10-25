@@ -18,6 +18,7 @@ import os
 import re
 
 from lxml import etree
+import six
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -169,7 +170,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
 
             if error:
                 raise NoMatch('\n'.join(error))
-        elif isinstance(expected, basestring) and '%' in expected:
+        elif isinstance(expected, six.string_types) and '%' in expected:
             # NOTE(vish): escape stuff for regex
             for char in '[]<>?':
                 expected = expected.replace(char, '\\%s' % char)
@@ -194,7 +195,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                 if match.groups():
                     matched_value = match.groups()[0]
         else:
-            if isinstance(expected, basestring):
+            if isinstance(expected, six.string_types):
                 # NOTE(danms): Ignore whitespace in this comparison
                 expected = expected.strip()
                 result = result.strip()

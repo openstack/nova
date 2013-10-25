@@ -20,6 +20,7 @@ import uuid
 
 import glanceclient.v1.images
 import routes
+import six
 import webob
 import webob.dec
 import webob.request
@@ -414,7 +415,7 @@ def create_info_cache(nw_cache):
                                       {'cidr': 'b33f::/64',
                                        'ips': [_ip(ip) for ip in pub1]}]}}]
 
-    if not isinstance(nw_cache, basestring):
+    if not isinstance(nw_cache, six.string_types):
         nw_cache = jsonutils.dumps(nw_cache)
 
     return {"info_cache": {"network_info": nw_cache}}

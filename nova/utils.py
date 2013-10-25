@@ -37,6 +37,7 @@ from xml.sax import saxutils
 import eventlet
 import netaddr
 from oslo.config import cfg
+import six
 
 from nova import exception
 from nova.openstack.common import excutils
@@ -966,7 +967,7 @@ def check_string_length(value, name, min_length=0, max_length=None):
     :param min_length: the min_length of the string
     :param max_length: the max_length of the string
     """
-    if not isinstance(value, basestring):
+    if not isinstance(value, six.string_types):
         msg = _("%s is not a string or unicode") % name
         raise exception.InvalidInput(message=msg)
 
@@ -1020,7 +1021,7 @@ def is_none_string(val):
     """
     Check if a string represents a None value.
     """
-    if not isinstance(val, basestring):
+    if not isinstance(val, six.string_types):
         return False
 
     return val.lower() == 'none'

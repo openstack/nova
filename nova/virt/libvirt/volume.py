@@ -26,6 +26,7 @@ import urllib2
 import urlparse
 
 from oslo.config import cfg
+import six
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -931,7 +932,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         if isinstance(ports, list):
             for wwn in ports:
                 wwns.append(str(wwn))
-        elif isinstance(ports, basestring):
+        elif isinstance(ports, six.string_types):
             wwns.append(str(ports))
 
         # We need to look for wwns on every hba

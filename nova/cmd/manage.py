@@ -60,6 +60,7 @@ import sys
 
 import netaddr
 from oslo.config import cfg
+import six
 
 from nova.api.ec2 import ec2utils
 from nova import availability_zones
@@ -1357,7 +1358,7 @@ def main():
         v = getattr(CONF.category, 'action_kwarg_' + k)
         if v is None:
             continue
-        if isinstance(v, basestring):
+        if isinstance(v, six.string_types):
             v = v.decode('utf-8')
         fn_kwargs[k] = v
 

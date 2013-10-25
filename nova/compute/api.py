@@ -28,6 +28,7 @@ import string
 import uuid
 
 from oslo.config import cfg
+import six
 
 from nova import availability_zones
 from nova import block_device
@@ -1745,7 +1746,7 @@ class API(base.Base):
             else:
                 # Remaps are strings to translate to, or functions to call
                 # to do the translating as defined by the table above.
-                if isinstance(remap_object, basestring):
+                if isinstance(remap_object, six.string_types):
                     filters[remap_object] = value
                 else:
                     try:

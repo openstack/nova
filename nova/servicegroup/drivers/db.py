@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from oslo.config import cfg
+import six
 
 from nova import conductor
 from nova import context
@@ -55,7 +56,7 @@ class DbDriver(api.ServiceGroupDriver):
         Check whether a service is up based on last heartbeat.
         """
         last_heartbeat = service_ref['updated_at'] or service_ref['created_at']
-        if isinstance(last_heartbeat, basestring):
+        if isinstance(last_heartbeat, six.string_types):
             # NOTE(russellb) If this service_ref came in over rpc via
             # conductor, then the timestamp will be a string and needs to be
             # converted back to a datetime.

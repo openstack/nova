@@ -206,7 +206,7 @@ class Field(object):
 class String(FieldType):
     def coerce(self, obj, attr, value):
         # FIXME(danms): We should really try to avoid the need to do this
-        if isinstance(value, (basestring, int, long, float,
+        if isinstance(value, (six.string_types, int, long, float,
                               datetime.datetime)):
             return unicode(value)
         else:
@@ -232,7 +232,7 @@ class Boolean(FieldType):
 
 class DateTime(FieldType):
     def coerce(self, obj, attr, value):
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             value = timeutils.parse_isotime(value)
         elif not isinstance(value, datetime.datetime):
             raise ValueError(_('A datetime.datetime is required here'))
@@ -302,8 +302,12 @@ class Dict(CompoundFieldType):
         if not isinstance(value, dict):
             raise ValueError(_('A dict is required here'))
         for key, element in value.items():
-            if not isinstance(key, basestring):
-                raise KeyTypeError(basestring, key)
+            if not isinstance(key, six.string_types):
+                #NOTE(guohliu) In order to keep compatibility with python3
+                #we need to use six.string_types rather than basestring here,
+                #since six.string_types is a tuple, so we need to pass the
+                #real type in.
+                raise KeyTypeError(six.string_types[0], key)
             value[key] = self._element_type.coerce(
                 obj, '%s["%s"]' % (attr, key), element)
         return value
@@ -355,7 +359,7 @@ class NetworkModel(FieldType):
     def coerce(self, obj, attr, value):
         if isinstance(value, network_model.NetworkInfo):
             return value
-        elif isinstance(value, basestring):
+        elif isinstance(value, six.string_types):
             # Hmm, do we need this?
             return network_model.NetworkInfo.hydrate(value)
         else:
