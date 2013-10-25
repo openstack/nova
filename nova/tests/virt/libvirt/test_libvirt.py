@@ -387,6 +387,14 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
 
         class FakeConn():
+            def baselineCPU(self, cpu, flag):
+                """Add new libvirt API."""
+                return """<cpu mode='custom' match='exact'>
+                            <model fallback='allow'>Westmere</model>
+                            <vendor>Intel</vendor>
+                            <feature policy='require' name='aes'/>
+                          </cpu>"""
+
             def getCapabilities(self):
                 """Ensure standard capabilities being returned."""
                 return """<capabilities>
@@ -674,6 +682,21 @@ class LibvirtConnTestCase(test.TestCase):
         self.close_callback(self.conn, 1, None)
 
         conn._get_connection()
+
+    def test_cpu_features_bug_1217630(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        # Test old version of libvirt, it shouldn't see the `aes' feature
+        caps = conn.get_host_capabilities()
+        self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
+
+        # Test new verion of libvirt, should find the `aes' feature
+        setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        caps = conn.get_host_capabilities()
+        delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
+        self.assertIn('aes', [x.name for x in caps.host.cpu.features])
 
     def test_get_guest_config(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
