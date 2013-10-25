@@ -73,8 +73,13 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
     def authorize_console(self, ctxt, token, console_type, host, port,
                           internal_access_path, instance_uuid):
         # The remote side doesn't return anything, but we want to block
-        # until it completes.
-        return self.client.call(ctxt,
+        # until it completes.'
+        version = '2.0'
+        if not self.can_send_version('2.0'):
+            # NOTE(russellb) Havana compat
+            version = '1.2'
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt,
                           'authorize_console',
                           token=token, console_type=console_type,
                           host=host, port=port,
@@ -82,9 +87,19 @@ class ConsoleAuthAPI(rpcclient.RpcProxy):
                           instance_uuid=instance_uuid)
 
     def check_token(self, ctxt, token):
-        return self.client.call(ctxt, 'check_token', token=token)
+        version = '2.0'
+        if not self.can_send_version('2.0'):
+            # NOTE(russellb) Havana compat
+            version = '1.0'
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(ctxt, 'check_token', token=token)
 
     def delete_tokens_for_instance(self, ctxt, instance_uuid):
-        return self.client.cast(ctxt,
+        version = '2.0'
+        if not self.can_send_version('2.0'):
+            # NOTE(russellb) Havana compat
+            version = '1.2'
+        cctxt = self.client.prepare(version=version)
+        return cctxt.cast(ctxt,
                           'delete_tokens_for_instance',
                           instance_uuid=instance_uuid)
