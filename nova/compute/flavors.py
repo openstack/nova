@@ -21,6 +21,7 @@
 """Built-in instance properties."""
 
 import re
+import sys
 import uuid
 
 from oslo.config import cfg
@@ -116,24 +117,13 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
 
     # Some attributes are positive ( > 0) integers
     for option in ['memory_mb', 'vcpus']:
-        try:
-            if int(str(kwargs[option])) <= 0:
-                raise ValueError()
-            kwargs[option] = int(kwargs[option])
-        except (ValueError, TypeError):
-            msg = _("'%s' argument must be a positive integer") % option
-            raise exception.InvalidInput(reason=msg)
+        kwargs[option] = utils.validate_integer(kwargs[option], option, 1,
+                                                sys.maxint)
 
     # Some attributes are non-negative ( >= 0) integers
     for option in ['root_gb', 'ephemeral_gb', 'swap']:
-        try:
-            if int(str(kwargs[option])) < 0:
-                raise ValueError()
-            kwargs[option] = int(kwargs[option])
-        except (ValueError, TypeError):
-            msg = _("'%s' argument must be an integer greater than or"
-                    " equal to 0") % option
-            raise exception.InvalidInput(reason=msg)
+        kwargs[option] = utils.validate_integer(kwargs[option], option, 0,
+                                                sys.maxint)
 
     # rxtx_factor should be a positive float
     try:
