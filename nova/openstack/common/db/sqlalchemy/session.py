@@ -611,7 +611,8 @@ def _is_db_connection_error(args):
     """Return True if error in connecting to db."""
     # NOTE(adam_g): This is currently MySQL specific and needs to be extended
     #               to support Postgres and others.
-    conn_err_codes = ('2002', '2003', '2006')
+    # For the db2, the error code is -30081 since the db2 is still not ready
+    conn_err_codes = ('2002', '2003', '2006', '-30081')
     for err_code in conn_err_codes:
         if args.find(err_code) != -1:
             return True
