@@ -301,51 +301,51 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, [], [],
                                         self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdb')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdb')
 
     def test_with_ephemerals(self):
         # Test ephemeral gets assigned
         self.ephemerals[0]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals, [],
                                         self.block_device_mapping)
-        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
 
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals, [],
                                         self.block_device_mapping)
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdc')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdc')
 
     def test_with_swap(self):
         # Test swap only
         self.swap[0]['device_name'] = None
         self._test_default_device_names(None, [], self.swap, [])
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdb')
 
         # Test swap and block_device_mapping
         self.swap[0]['device_name'] = None
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, [], self.swap,
                                         self.block_device_mapping)
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdb')
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdc')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdc')
 
     def test_all_together(self):
         # Test swap missing
         self.swap[0]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals,
                                         self.swap, self.block_device_mapping)
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
 
         # Test swap and eph missing
         self.swap[0]['device_name'] = None
         self.ephemerals[0]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals,
                                         self.swap, self.block_device_mapping)
-        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
 
         # Test all missing
         self.swap[0]['device_name'] = None
@@ -353,10 +353,10 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
         self.block_device_mapping[1]['device_name'] = None
         self._test_default_device_names(None, self.ephemerals,
                                         self.swap, self.block_device_mapping)
-        self.assertEquals(self.ephemerals[0]['device_name'], '/dev/vdb')
-        self.assertEquals(self.swap[0]['device_name'], '/dev/vdc')
-        self.assertEquals(self.block_device_mapping[1]['device_name'],
-                          '/dev/vdd')
+        self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
+        self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
+        self.assertEqual(self.block_device_mapping[1]['device_name'],
+                         '/dev/vdd')
 
     def test_update_fn_gets_called(self):
         def _update(bdm):
@@ -429,29 +429,29 @@ class UsageInfoTestCase(test.TestCase):
         instance = db.instance_get(self.context, instance_id)
         compute_utils.notify_usage_exists(
             notify.get_notifier('compute'), self.context, instance)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'compute.instance.exists')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'compute.instance.exists')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
-        self.assertEquals(payload['image_meta'],
+        self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context,
                                         jsonutils.to_primitive(instance))
 
@@ -472,27 +472,27 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_usage_exists(
             notify.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'compute.instance.exists')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'compute.instance.exists')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
-        self.assertEquals(payload['image_meta'],
+        self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
@@ -503,26 +503,26 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_usage_exists(
             notify.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'compute.instance.exists')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'compute.instance.exists')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description',
                      'bandwidth', 'audit_period_beginning',
                      'audit_period_ending', 'image_meta'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
-        self.assertEquals(payload['image_meta'], {})
+        self.assertEqual(payload['image_meta'], {})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_notify_about_instance_usage(self):
         instance_id = self._create_instance()
@@ -541,28 +541,28 @@ class UsageInfoTestCase(test.TestCase):
             notify.get_notifier('compute'),
             self.context, instance, 'create.start',
             extra_usage_info=extra_usage_info)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'compute.instance.create.start')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         for attr in ('display_name', 'created_at', 'launched_at',
                      'state', 'state_description', 'image_meta'):
             self.assertTrue(attr in payload,
                             msg="Key %s not in payload" % attr)
-        self.assertEquals(payload['image_meta'],
+        self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
-        self.assertEquals(payload['image_name'], 'fake_name')
+        self.assertEqual(payload['image_name'], 'fake_name')
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context,
                                         jsonutils.to_primitive(instance))
 
@@ -572,12 +572,12 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.end",
                                                     aggregate_payload)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'aggregate.create.end')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'aggregate.create.end')
         payload = msg.payload
-        self.assertEquals(payload['aggregate_id'], 1)
+        self.assertEqual(payload['aggregate_id'], 1)
 
     def test_notify_about_aggregate_update_with_name(self):
         # Set aggregate payload
@@ -585,12 +585,12 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.start",
                                                     aggregate_payload)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'aggregate.create.start')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'aggregate.create.start')
         payload = msg.payload
-        self.assertEquals(payload['name'], 'fakegroup')
+        self.assertEqual(payload['name'], 'fakegroup')
 
     def test_notify_about_aggregate_update_without_name_id(self):
         # Set empty aggregate payload
@@ -598,7 +598,7 @@ class UsageInfoTestCase(test.TestCase):
         compute_utils.notify_about_aggregate_update(self.context,
                                                     "create.start",
                                                     aggregate_payload)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
 
 
 class ComputeGetImageMetadataTestCase(test.TestCase):

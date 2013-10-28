@@ -1153,8 +1153,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.VolumeUnattached,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
-        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
         volumes[old_volume_id]['attach_status'] = 'attached'
 
         # Should fail if old volume's instance_uuid is not that of the instance
@@ -1162,8 +1162,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
-        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
         volumes[old_volume_id]['instance_uuid'] = 'fake'
 
         # Should fail if new volume is attached
@@ -1171,8 +1171,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
-        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
         volumes[new_volume_id]['attach_status'] = 'detached'
 
         # Should fail if new volume is smaller than the old volume
@@ -1180,8 +1180,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(exception.InvalidVolume,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
-        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
         volumes[new_volume_id]['size'] = 5
 
         # Fail call to swap_volume
@@ -1198,8 +1198,8 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertRaises(AttributeError,
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
-        self.assertEquals(volumes[old_volume_id]['status'], 'in-use')
-        self.assertEquals(volumes[new_volume_id]['status'], 'available')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
         # Should succeed
         self.stubs.Set(self.compute_api.compute_rpcapi, 'swap_volume',
