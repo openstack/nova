@@ -1801,7 +1801,7 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
                                     x['device_name'] + x['instance_uuid'])
         got_bdms = [bdm for bdm in q.execute()]
 
-        self.assertEquals(len(expected_bdms), len(got_bdms))
+        self.assertEqual(len(expected_bdms), len(got_bdms))
         for expected, got in zip(expected_bdms, got_bdms):
             self.assertThat(expected, matchers.IsSubDictOf(dict(got)))
 
