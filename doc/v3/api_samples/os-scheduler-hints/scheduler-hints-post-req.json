@@ -1,0 +1,11 @@
+{
+    "server" : {
+        "name" : "new-server-test",
+        "image_ref" : "http://glance.openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavor_ref" : "http://openstack.example.com/openstack/flavors/1",
+        "os-scheduler-hints:scheduler_hints": {
+            "hypervisor": "xen",
+            "near": "48e6a9f6-30af-47e0-bc04-acaed113bb4e"
+        }
+    }
+}
