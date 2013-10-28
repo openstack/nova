@@ -910,7 +910,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Snapshot an instance in its cell."""
         instance.refresh()
         instance.task_state = task_states.IMAGE_SNAPSHOT
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_rpcapi.snapshot_instance(message.ctxt,
                                               instance,
                                               image_id)
@@ -920,7 +920,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Backup an instance in its cell."""
         instance.refresh()
         instance.task_state = task_states.IMAGE_BACKUP
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_rpcapi.backup_instance(message.ctxt,
                                             instance,
                                             image_id,

@@ -1289,7 +1289,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance = self._instance_update(context, instance['uuid'],
                                          vm_state=vm_states.BUILDING,
                                          task_state=task_states.NETWORKING,
-                                         expected_task_state=None)
+                                         expected_task_state=[None])
         is_vpn = pipelib.is_vpn_image(instance['image_ref'])
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,

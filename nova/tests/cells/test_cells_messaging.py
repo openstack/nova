@@ -1291,7 +1291,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
             self.assertEqual(task_states.IMAGE_SNAPSHOT, inst.task_state)
 
         inst.refresh()
-        inst.save(expected_task_state=None).WithSideEffects(check_state)
+        inst.save(expected_task_state=[None]).WithSideEffects(check_state)
 
         meth_cls.compute_rpcapi.snapshot_instance(self.ctxt,
                                                   inst, 'image-id')
@@ -1319,7 +1319,7 @@ class CellsTargetedMethodsTestCase(test.TestCase):
             self.assertEqual(task_states.IMAGE_BACKUP, inst.task_state)
 
         inst.refresh()
-        inst.save(expected_task_state=None).WithSideEffects(check_state)
+        inst.save(expected_task_state=[None]).WithSideEffects(check_state)
 
         meth_cls.compute_rpcapi.backup_instance(self.ctxt,
                                                 inst,

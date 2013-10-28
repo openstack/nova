@@ -1599,7 +1599,7 @@ class API(base.Base):
             if instance['host']:
                 instance = self.update(context, instance,
                             task_state=task_states.RESTORING,
-                            expected_task_state=None,
+                            expected_task_state=[None],
                             deleted_at=None)
                 self.compute_rpcapi.restore_instance(context, instance)
             else:
@@ -1607,7 +1607,7 @@ class API(base.Base):
                             instance,
                             vm_state=vm_states.ACTIVE,
                             task_state=None,
-                            expected_task_state=None,
+                            expected_task_state=[None],
                             deleted_at=None)
 
             QUOTAS.commit(context, quota_reservations)
@@ -1628,7 +1628,7 @@ class API(base.Base):
 
         instance.task_state = task_states.POWERING_OFF
         instance.progress = 0
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.STOP)
 
@@ -1655,7 +1655,7 @@ class API(base.Base):
         LOG.debug(_("Going to try to start instance"), instance=instance)
 
         instance.task_state = task_states.POWERING_ON
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.START)
         # TODO(yamahata): injected_files isn't supported right now.
@@ -1828,7 +1828,7 @@ class API(base.Base):
         # to the backup_instance() method in nova/cells/messaging.py
 
         instance.task_state = task_states.IMAGE_BACKUP
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self.compute_rpcapi.backup_instance(context, instance,
                                             image_meta['id'],
@@ -1857,7 +1857,7 @@ class API(base.Base):
         # to the snapshot_instance() method in nova/cells/messaging.py
 
         instance.task_state = task_states.IMAGE_SNAPSHOT
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self.compute_rpcapi.snapshot_instance(context, instance,
                                               image_meta['id'])
@@ -2076,7 +2076,7 @@ class API(base.Base):
 
         instance = self.update(context, instance,
                                task_state=task_states.REBUILDING,
-                               expected_task_state=None,
+                               expected_task_state=[None],
                                # Unfortunately we need to set image_ref early,
                                # so API users can see it.
                                image_ref=image_href, kernel_id=kernel_id or "",
@@ -2116,7 +2116,7 @@ class API(base.Base):
 
         instance.task_state = task_states.RESIZE_REVERTING
         try:
-            instance.save(expected_task_state=None)
+            instance.save(expected_task_state=[None])
         except Exception:
             with excutils.save_and_reraise_exception():
                 QUOTAS.rollback(context, reservations)
@@ -2336,7 +2336,7 @@ class API(base.Base):
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
         instance.update(extra_instance_updates)
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         filter_properties = {'ignore_hosts': []}
 
@@ -2373,7 +2373,7 @@ class API(base.Base):
         hypervisor.
         """
         instance.task_state = task_states.SHELVING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.SHELVE)
 
@@ -2395,7 +2395,7 @@ class API(base.Base):
     def shelve_offload(self, context, instance):
         """Remove a shelved instance from the hypervisor."""
         instance.task_state = task_states.SHELVING_OFFLOADING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self.compute_rpcapi.shelve_offload_instance(context, instance=instance)
 
@@ -2406,7 +2406,7 @@ class API(base.Base):
     def unshelve(self, context, instance):
         """Restore a shelved instance."""
         instance.task_state = task_states.UNSHELVING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.UNSHELVE)
 
@@ -2433,7 +2433,7 @@ class API(base.Base):
     def pause(self, context, instance):
         """Pause the given instance."""
         instance.task_state = task_states.PAUSING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.PAUSE)
         self.compute_rpcapi.pause_instance(context, instance)
 
@@ -2444,7 +2444,7 @@ class API(base.Base):
     def unpause(self, context, instance):
         """Unpause the given instance."""
         instance.task_state = task_states.UNPAUSING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.UNPAUSE)
         self.compute_rpcapi.unpause_instance(context, instance)
 
@@ -2460,7 +2460,7 @@ class API(base.Base):
     def suspend(self, context, instance):
         """Suspend the given instance."""
         instance.task_state = task_states.SUSPENDING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.SUSPEND)
         self.compute_rpcapi.suspend_instance(context, instance)
 
@@ -2471,7 +2471,7 @@ class API(base.Base):
     def resume(self, context, instance):
         """Resume the given instance."""
         instance.task_state = task_states.RESUMING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self._record_action_start(context, instance, instance_actions.RESUME)
         self.compute_rpcapi.resume_instance(context, instance)
 
@@ -2498,7 +2498,7 @@ class API(base.Base):
         self.update(context,
                     instance,
                     task_state=task_states.RESCUING,
-                    expected_task_state=None)
+                    expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.RESCUE)
 
@@ -2513,7 +2513,7 @@ class API(base.Base):
         self.update(context,
                     instance,
                     task_state=task_states.UNRESCUING,
-                    expected_task_state=None)
+                    expected_task_state=[None])
 
         self._record_action_start(context, instance, instance_actions.UNRESCUE)
 
@@ -2527,7 +2527,7 @@ class API(base.Base):
         self.update(context,
                     instance,
                     task_state=task_states.UPDATING_PASSWORD,
-                    expected_task_state=None)
+                    expected_task_state=[None])
 
         self._record_action_start(context, instance,
                                   instance_actions.CHANGE_PASSWORD)
@@ -2904,7 +2904,7 @@ class API(base.Base):
                   host_name or "another host", instance=instance)
 
         instance.task_state = task_states.MIGRATING
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
 
         self.compute_task_api.live_migrate_instance(context, instance,
                 host_name, block_migration=block_migration,
@@ -2928,7 +2928,7 @@ class API(base.Base):
             LOG.error(msg)
             raise exception.ComputeServiceInUse(host=inst_host)
 
-        instance = self.update(context, instance, expected_task_state=None,
+        instance = self.update(context, instance, expected_task_state=[None],
                                task_state=task_states.REBUILDING)
 
         self._record_action_start(context, instance, instance_actions.EVACUATE)
