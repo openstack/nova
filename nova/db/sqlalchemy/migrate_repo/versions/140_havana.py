@@ -154,6 +154,8 @@ def upgrade(migrate_engine):
         Column('bw_out', BigInteger),
         Column('mac', String(length=255)),
         Column('uuid', String(length=36)),
+        Column('last_ctr_in', BigInteger()),
+        Column('last_ctr_out', BigInteger()),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -432,7 +434,6 @@ def upgrade(migrate_engine):
         Column('image_ref', String(length=255)),
         Column('kernel_id', String(length=255)),
         Column('ramdisk_id', String(length=255)),
-        Column('server_name', String(length=255)),
         Column('launch_index', Integer),
         Column('key_name', String(length=255)),
         Column('key_data', MediumText()),
@@ -471,6 +472,7 @@ def upgrade(migrate_engine):
         Column('root_gb', Integer),
         Column('ephemeral_gb', Integer),
         Column('cell_name', String(length=255)),
+        Column('node', String(length=255)),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -895,8 +897,11 @@ def upgrade(migrate_engine):
     )
 
     instances.create()
-    Index('uuid', instances.c.uuid, unique=True).create(migrate_engine)
-    Index('project_id', instances.c.project_id).create(migrate_engine)
+    # NOTE(dprince): We should remove this conditional when we compress 201
+    # which also adds an index on instances.uuid
+    if migrate_engine.name != 'sqlite':
+        Index('project_id', instances.c.project_id).create(migrate_engine)
+        Index('uuid', instances.c.uuid, unique=True).create(migrate_engine)
 
     # create all tables
     tables = [aggregates, console_pools, instance_types,
@@ -1011,22 +1016,6 @@ def upgrade(migrate_engine):
         Index('instance_metadata_instance_uuid_idx',
               instance_metadata.c.instance_uuid),
 
-        # instances
-        Index('instances_host_deleted_idx',
-              instances.c.host, instances.c.deleted),
-
-        Index('instances_reservation_id_idx', instances.c.reservation_id),
-
-        Index('instances_terminated_at_launched_at_idx',
-              instances.c.terminated_at, instances.c.launched_at),
-
-        Index('instances_uuid_deleted_idx',
-              instances.c.uuid, instances.c.deleted),
-
-        Index('instances_task_state_updated_at_idx',
-              instances.c.task_state, instances.c.updated_at),
-
-
         # iscsi_targets
         Index('iscsi_targets_host_idx', iscsi_targets.c.host),
 
@@ -1103,6 +1092,35 @@ def upgrade(migrate_engine):
         Index('volume_metadata_volume_id_fkey', volume_metadata.c.volume_id),
     ]
 
+    # Common indexes (indexes we apply to all databases)
+    common_indexes = [
+        Index('migrations_by_host_and_status_idx', migrations.c.deleted,
+                  migrations.c.source_compute, migrations.c.dest_compute,
+                  migrations.c.status),
+
+        # fixed_ips
+        Index('fixed_ips_deleted_allocated_idx',
+              fixed_ips.c.address, fixed_ips.c.deleted,
+              fixed_ips.c.allocated),
+
+        # instances
+        Index('instances_host_node_deleted_idx',
+              instances.c.host, instances.c.node,
+              instances.c.deleted),
+        Index('instances_uuid_deleted_idx',
+              instances.c.uuid, instances.c.deleted),
+        Index('instances_host_deleted_idx',
+              instances.c.host, instances.c.deleted),
+        Index('instances_reservation_id_idx',
+              instances.c.reservation_id),
+        Index('instances_terminated_at_launched_at_idx',
+              instances.c.terminated_at,
+              instances.c.launched_at),
+        Index('instances_task_state_updated_at_idx',
+              instances.c.task_state,
+              instances.c.updated_at)
+    ]
+
     # MySQL specific indexes
     if migrate_engine.name == 'mysql':
         for index in mysql_indexes:
@@ -1112,10 +1130,13 @@ def upgrade(migrate_engine):
     if migrate_engine.name == 'postgresql':
         Index('address', fixed_ips.c.address).create()
 
-    # Common indexes
+    # MySQL/PostgreSQL indexes
     if migrate_engine.name == 'mysql' or migrate_engine.name == 'postgresql':
         for index in indexes:
             index.create(migrate_engine)
+
+    for index in common_indexes:
+        index.create(migrate_engine)
 
     fkeys = [
 
@@ -1166,7 +1187,7 @@ def upgrade(migrate_engine):
 
     for fkey_pair in fkeys:
         if migrate_engine.name == 'mysql':
-            # For MySQL we name our fkeys explicitly so they match Folsom
+            # For MySQL we name our fkeys explicitly so they match Havana
             fkey = ForeignKeyConstraint(columns=fkey_pair[0],
                                    refcolumns=fkey_pair[1],
                                    name=fkey_pair[2])
@@ -1191,28 +1212,6 @@ def upgrade(migrate_engine):
                          name='instance_id').create()
 
     if migrate_engine.name == "postgresql":
-        # TODO(dprince): Drop this in Grizzly. Snapshots were converted
-        # to UUIDs in Folsom so we no longer require this autocreated
-        # sequence.
-        sql = """CREATE SEQUENCE snapshots_id_seq START WITH 1 INCREMENT BY 1
-              NO MINVALUE NO MAXVALUE CACHE 1;
-              ALTER SEQUENCE snapshots_id_seq OWNED BY snapshots.id;
-              SELECT pg_catalog.setval('snapshots_id_seq', 1, false);
-              ALTER TABLE ONLY snapshots ALTER COLUMN id SET DEFAULT
-              nextval('snapshots_id_seq'::regclass);"""
-
-        # TODO(dprince): Drop this in Grizzly. Volumes were converted
-        # to UUIDs in Folsom so we no longer require this autocreated
-        # sequence.
-        sql += """CREATE SEQUENCE volumes_id_seq START WITH 1 INCREMENT BY 1
-               NO MINVALUE NO MAXVALUE CACHE 1;
-               ALTER SEQUENCE volumes_id_seq OWNED BY volumes.id;
-               SELECT pg_catalog.setval('volumes_id_seq', 1, false);
-               ALTER TABLE ONLY volumes ALTER COLUMN id SET DEFAULT
-               nextval('volumes_id_seq'::regclass);"""
-
-        migrate_engine.execute(sql)
-
         # TODO(dprince): due to the upgrade scripts in Folsom the unique key
         # on instance_uuid is named '.._instance_id_..'. Rename it in Grizzly?
         UniqueConstraint('instance_uuid', table=instance_info_caches,
@@ -1223,4 +1222,4 @@ def upgrade(migrate_engine):
 
 
 def downgrade(migrate_engine):
-    raise NotImplementedError('Downgrade from Folsom is unsupported.')
+    raise NotImplementedError('Downgrade from Havana is unsupported.')
