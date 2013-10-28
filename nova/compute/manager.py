@@ -490,8 +490,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                         'trying to set it to ERROR'),
                       instance_uuid=instance.uuid)
 
-    def _get_instances_on_driver(self, context, filters=None,
-                                 columns_to_join=None):
+    def _get_instances_on_driver(self, context, filters=None):
         """Return a list of instance records for the instances found
         on the hypervisor which satisfy the specified filters. If filters=None
         return a list of instance records for all the instances found on the
@@ -502,8 +501,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         try:
             driver_uuids = self.driver.list_instance_uuids()
             filters['uuid'] = driver_uuids
-            local_instances = self.conductor_api.instance_get_all_by_filters(
-                    context, filters, columns_to_join=columns_to_join)
+            local_instances = instance_obj.InstanceList.get_by_filters(
+                context, filters)
             return local_instances
         except NotImplementedError:
             pass
@@ -511,9 +510,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
-        instances = self.conductor_api.instance_get_all_by_filters(
-            context, filters, columns_to_join=columns_to_join)
-        name_map = dict((instance['name'], instance) for instance in instances)
+        instances = instance_obj.InstanceList.get_by_filters(context, filters)
+        name_map = dict((instance.name, instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:
             instance = name_map.get(driver_instance)
@@ -534,12 +532,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         filters = {'deleted': False}
         local_instances = self._get_instances_on_driver(context, filters)
         for instance in local_instances:
-            instance_host = instance['host']
-            if instance_host != our_host:
+            if instance.host != our_host:
                 LOG.info(_('Deleting instance as its host ('
                            '%(instance_host)s) is not equal to our '
                            'host (%(our_host)s).'),
-                         {'instance_host': instance_host,
+                         {'instance_host': instance.host,
                           'our_host': our_host}, instance=instance)
                 destroy_disks = False
                 try:
@@ -570,7 +567,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             if data:
                 shared_storage = (self.compute_rpcapi.
                                   check_instance_shared_storage(context,
-                                  instance,
+                                  obj_base.obj_to_primitive(instance),
                                   data))
         except NotImplementedError:
             LOG.warning(_('Hypervisor driver does not support '

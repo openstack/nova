@@ -208,11 +208,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         not_our_host = 'not-' + our_host
         fake_context = 'fake-context'
 
-        deleted_instance = {
-            'name': 'fake-name',
-            'host': not_our_host,
-            'uuid': 'fake-uuid',
-            }
+        deleted_instance = instance_obj.Instance(host=not_our_host,
+                                                 uuid='fake-uuid')
 
         self.mox.StubOutWithMock(self.compute.driver, 'init_host')
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -336,28 +333,27 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         driver_instances = []
         for x in xrange(10):
-            instance = dict(uuid=uuidutils.generate_uuid())
-            driver_instances.append(instance)
+            driver_instances.append(fake_instance.fake_db_instance())
 
         self.mox.StubOutWithMock(self.compute.driver,
                 'list_instance_uuids')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                'instance_get_all_by_filters')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
 
         self.compute.driver.list_instance_uuids().AndReturn(
                 [inst['uuid'] for inst in driver_instances])
-        self.compute.conductor_api.instance_get_all_by_filters(
+        db.instance_get_all_by_filters(
                 fake_context,
                 {'uuid': [inst['uuid'] for
                           inst in driver_instances]},
-                columns_to_join=[]).AndReturn(
+                'created_at', 'desc', columns_to_join=None,
+                limit=None, marker=None).AndReturn(
                         driver_instances)
 
         self.mox.ReplayAll()
 
-        result = self.compute._get_instances_on_driver(fake_context,
-                                                       columns_to_join=[])
-        self.assertEqual(driver_instances, result)
+        result = self.compute._get_instances_on_driver(fake_context)
+        self.assertEqual([x['uuid'] for x in driver_instances],
+                         [x['uuid'] for x in result])
 
     def test_get_instances_on_driver_fallback(self):
         # Test getting instances when driver doesn't support
@@ -366,10 +362,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         filters = {'host': self.compute.host}
         fake_context = context.get_admin_context()
 
+        self.flags(instance_name_template='inst-%i')
+
         all_instances = []
         driver_instances = []
         for x in xrange(10):
-            instance = dict(name=uuidutils.generate_uuid())
+            instance = fake_instance.fake_db_instance(name='inst-%i' % x,
+                                                      id=x)
             if x % 2:
                 driver_instances.append(instance)
             all_instances.append(instance)
@@ -378,21 +377,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 'list_instance_uuids')
         self.mox.StubOutWithMock(self.compute.driver,
                 'list_instances')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                'instance_get_all_by_filters')
+        self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
 
         self.compute.driver.list_instance_uuids().AndRaise(
                 NotImplementedError())
         self.compute.driver.list_instances().AndReturn(
                 [inst['name'] for inst in driver_instances])
-        self.compute.conductor_api.instance_get_all_by_filters(
+        db.instance_get_all_by_filters(
                 fake_context, filters,
-                columns_to_join=None).AndReturn(all_instances)
+                'created_at', 'desc', columns_to_join=None,
+                limit=None, marker=None).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 
         result = self.compute._get_instances_on_driver(fake_context, filters)
-        self.assertEqual(driver_instances, result)
+        self.assertEqual([x['uuid'] for x in driver_instances],
+                         [x['uuid'] for x in result])
 
     def test_instance_usage_audit(self):
         instances = [{'uuid': 'foo'}]

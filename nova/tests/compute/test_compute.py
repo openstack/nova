@@ -5311,16 +5311,17 @@ class ComputeTestCase(BaseTestCase):
         # instances in central db
         instances = [
             # those are still related to this host
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host}))
-        ]
+            self._create_fake_instance_obj(
+                {'host': self.compute.host}),
+            self._create_fake_instance_obj(
+                {'host': self.compute.host}),
+            self._create_fake_instance_obj(
+                {'host': self.compute.host})
+            ]
 
         # those are already been evacuated to other host
-        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+        evacuated_instance = self._create_fake_instance_obj(
+            {'host': 'otherhost'})
 
         instances.append(evacuated_instance)
 
@@ -5357,16 +5358,17 @@ class ComputeTestCase(BaseTestCase):
         # instances in central db
         instances = [
             # those are still related to this host
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host}))
+            self._create_fake_instance_obj(
+                {'host': self.compute.host}),
+            self._create_fake_instance(
+                {'host': self.compute.host}),
+            self._create_fake_instance(
+                {'host': self.compute.host})
         ]
 
         # those are already been evacuated to other host
-        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+        evacuated_instance = self._create_fake_instance_obj(
+            {'host': 'otherhost'})
 
         instances.append(evacuated_instance)
 
@@ -5394,7 +5396,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.check_instance_shared_storage_local(fake_context,
                 evacuated_instance).AndReturn({'filename': 'tmpfilename'})
         self.compute.compute_rpcapi.check_instance_shared_storage(fake_context,
-                evacuated_instance,
+                obj_base.obj_to_primitive(evacuated_instance),
                 {'filename': 'tmpfilename'}).AndReturn(False)
         self.compute.driver.check_instance_shared_storage_cleanup(fake_context,
                 {'filename': 'tmpfilename'})
@@ -5412,16 +5414,17 @@ class ComputeTestCase(BaseTestCase):
         # instances in central db
         instances = [
             # those are still related to this host
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host})),
-            jsonutils.to_primitive(self._create_fake_instance(
-                                                {'host': self.compute.host}))
+            self._create_fake_instance_obj(
+                {'host': self.compute.host}),
+            self._create_fake_instance_obj(
+                {'host': self.compute.host}),
+            self._create_fake_instance_obj(
+                {'host': self.compute.host})
         ]
 
         # those are already been evacuated to other host
-        evacuated_instance = self._create_fake_instance({'host': 'otherhost'})
+        evacuated_instance = self._create_fake_instance_obj(
+            {'host': 'otherhost'})
 
         instances.append(evacuated_instance)
 
