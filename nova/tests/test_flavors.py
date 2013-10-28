@@ -15,6 +15,7 @@
 """
 Unit Tests for flavors code
 """
+import sys
 import time
 
 from nova.compute import flavors
@@ -428,23 +429,35 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertInvalidInput('flavor1', 'foo', 1, 120)
         self.assertInvalidInput('flavor1', -1, 1, 120)
         self.assertInvalidInput('flavor1', 0, 1, 120)
+        self.assertInvalidInput('flavor1', sys.maxint + 1, 1, 120)
         flavors.create('flavor1', 1, 1, 120)
 
     def test_vcpus_must_be_positive_integer(self):
         self.assertInvalidInput('flavor`', 64, 'foo', 120)
         self.assertInvalidInput('flavor1', 64, -1, 120)
         self.assertInvalidInput('flavor1', 64, 0, 120)
+        self.assertInvalidInput('flavor1', 64, sys.maxint + 1, 120)
         flavors.create('flavor1', 64, 1, 120)
 
     def test_root_gb_must_be_nonnegative_integer(self):
         self.assertInvalidInput('flavor1', 64, 1, 'foo')
         self.assertInvalidInput('flavor1', 64, 1, -1)
+        self.assertInvalidInput('flavor1', 64, 1, sys.maxint + 1)
         flavors.create('flavor1', 64, 1, 0)
         flavors.create('flavor2', 64, 1, 120)
+
+    def test_ephemeral_gb_must_be_nonnegative_integer(self):
+        self.assertInvalidInput('flavor1', 64, 1, 120, ephemeral_gb='foo')
+        self.assertInvalidInput('flavor1', 64, 1, 120, ephemeral_gb=-1)
+        self.assertInvalidInput('flavor1', 64, 1, 120,
+                                ephemeral_gb=sys.maxint + 1)
+        flavors.create('flavor1', 64, 1, 120, ephemeral_gb=0)
+        flavors.create('flavor2', 64, 1, 120, ephemeral_gb=120)
 
     def test_swap_must_be_nonnegative_integer(self):
         self.assertInvalidInput('flavor1', 64, 1, 120, swap='foo')
         self.assertInvalidInput('flavor1', 64, 1, 120, swap=-1)
+        self.assertInvalidInput('flavor1', 64, 1, 120, swap=sys.maxint + 1)
         flavors.create('flavor1', 64, 1, 120, swap=0)
         flavors.create('flavor2', 64, 1, 120, swap=1)
 
