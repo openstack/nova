@@ -113,7 +113,8 @@ def fake_start_stop_locked_server(self, context, instance):
     raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
 
 
-def fake_instance_get_by_uuid_not_found(context, uuid, columns_to_join):
+def fake_instance_get_by_uuid_not_found(context, uuid,
+                                        columns_to_join, use_slave=False):
     raise exception.InstanceNotFound(instance_id=uuid)
 
 

@@ -574,9 +574,10 @@ def instance_destroy(context, instance_uuid, constraint=None,
     return rv
 
 
-def instance_get_by_uuid(context, uuid, columns_to_join=None):
+def instance_get_by_uuid(context, uuid, columns_to_join=None, use_slave=False):
     """Get an instance or raise if it does not exist."""
-    return IMPL.instance_get_by_uuid(context, uuid, columns_to_join)
+    return IMPL.instance_get_by_uuid(context, uuid,
+                                     columns_to_join, use_slave=use_slave)
 
 
 def instance_get(context, instance_id, columns_to_join=None):
@@ -611,7 +612,8 @@ def instance_get_active_by_window_joined(context, begin, end=None,
                                               project_id, host)
 
 
-def instance_get_all_by_host(context, host, columns_to_join=None):
+def instance_get_all_by_host(context, host,
+                             columns_to_join=None, use_slave=False):
     """Get all instances belonging to a host."""
     return IMPL.instance_get_all_by_host(context, host, columns_to_join)
 

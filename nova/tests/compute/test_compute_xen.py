@@ -50,7 +50,7 @@ class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
         self.mox.StubOutWithMock(self.compute, '_sync_instance_power_state')
 
         instance_obj.InstanceList.get_by_host(ctxt,
-                self.compute.host).AndReturn(instance_list)
+                self.compute.host, use_slave=True).AndReturn(instance_list)
         self.compute.driver.get_num_instances().AndReturn(1)
         vm_utils.lookup(self.compute.driver._session, instance['name'],
                 False).AndReturn(None)

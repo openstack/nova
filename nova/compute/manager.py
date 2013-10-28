@@ -4665,7 +4665,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         same power state as is in the database.
         """
         db_instances = instance_obj.InstanceList.get_by_host(context,
-                                                             self.host)
+                                                             self.host,
+                                                             use_slave=True)
 
         num_vm_instances = self.driver.get_num_instances()
         num_db_instances = len(db_instances)
@@ -4693,7 +4694,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     self._sync_instance_power_state(context,
                                                     db_instance,
-                                                    vm_power_state)
+                                                    vm_power_state,
+                                                    use_slave=True)
                 except exception.InstanceNotFound:
                     # NOTE(hanlind): If the instance gets deleted during sync,
                     # silently ignore and move on to next instance.
@@ -4703,7 +4705,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 "while processing an instance."),
                                 instance=db_instance)
 
-    def _sync_instance_power_state(self, context, db_instance, vm_power_state):
+    def _sync_instance_power_state(self, context, db_instance, vm_power_state,
+                                   use_slave=False):
         """Align instance power state between the database and hypervisor.
 
         If the instance is not found on the hypervisor, but is in the database,
@@ -4712,7 +4715,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # We re-query the DB to get the latest instance info to minimize
         # (not eliminate) race condition.
-        db_instance.refresh()
+        db_instance.refresh(use_slave=use_slave)
         db_power_state = db_instance.power_state
         vm_state = db_instance.vm_state
 

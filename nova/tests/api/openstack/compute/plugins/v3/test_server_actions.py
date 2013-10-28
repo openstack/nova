@@ -405,7 +405,8 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertNotIn('admin_pass', body['server'])
 
     def test_rebuild_server_not_found(self):
-        def server_not_found(self, instance_id, columns_to_join=None):
+        def server_not_found(self, instance_id,
+                             columns_to_join=None, use_slave=False):
             raise exception.InstanceNotFound(instance_id=instance_id)
         self.stubs.Set(db, 'instance_get_by_uuid', server_not_found)
 
@@ -988,7 +989,8 @@ class ServerActionsControllerTest(test.TestCase):
                           req, FAKE_UUID, body)
 
     def test_locked(self):
-        def fake_locked(context, instance_uuid, columns_to_join=None):
+        def fake_locked(context, instance_uuid,
+                        columns_to_join=None, use_slave=False):
             return fake_instance.fake_db_instance(name="foo",
                                                   uuid=FAKE_UUID,
                                                   locked=True)

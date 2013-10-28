@@ -1456,7 +1456,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         fake_inst = fake_instance.fake_db_instance(id=123)
         fake_inst2 = fake_instance.fake_db_instance(id=456)
         db.instance_get_all_by_host(self.context, fake_inst['host'],
-                                    columns_to_join=None
+                                    columns_to_join=None,
+                                    use_slave=False
                                     ).AndReturn([fake_inst, fake_inst2])
         self.mox.ReplayAll()
         expected_name = CONF.instance_name_template % fake_inst['id']

@@ -77,7 +77,8 @@ class InstanceActionsPolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None):
+                                      columns_to_join=None,
+                                      use_slave=False):
             return fake_instance.fake_db_instance(
                 **{'name': 'fake', 'project_id': '%s_unequal' %
                        context.project_id})
@@ -94,7 +95,8 @@ class InstanceActionsPolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None):
+                                      columns_to_join=None,
+                                      use_slave=False):
             return fake_instance.fake_db_instance(
                 **{'name': 'fake', 'project_id': '%s_unequal' %
                        context.project_id})
@@ -116,7 +118,7 @@ class InstanceActionsTest(test.NoDBTestCase):
         def fake_get(self, context, instance_uuid):
             return {'uuid': instance_uuid}
 
-        def fake_instance_get_by_uuid(context, instance_id):
+        def fake_instance_get_by_uuid(context, instance_id, use_slave=False):
             return {'name': 'fake', 'project_id': context.project_id}
 
         self.stubs.Set(compute_api.API, 'get', fake_get)
