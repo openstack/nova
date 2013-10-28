@@ -325,7 +325,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         )
         actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[0])
 
-        self.assertEquals(actual_hosts, expected)
+        self.assertEqual(actual_hosts, expected)
 
     def test_get_dhcp_hosts_for_nw01(self):
         self.flags(use_single_default_gateway=True)
@@ -338,7 +338,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "192.168.1.102,net:NW-5"
         )
         actual_hosts = self.driver.get_dhcp_hosts(self.context, networks[1])
-        self.assertEquals(actual_hosts, expected)
+        self.assertEqual(actual_hosts, expected)
 
     def test_get_dns_hosts_for_nw00(self):
         expected = (
@@ -347,7 +347,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "192.168.0.102\tfake_instance00.novalocal"
         )
         actual_hosts = self.driver.get_dns_hosts(self.context, networks[0])
-        self.assertEquals(actual_hosts, expected)
+        self.assertEqual(actual_hosts, expected)
 
     def test_get_dns_hosts_for_nw01(self):
         expected = (
@@ -356,20 +356,20 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 "192.168.1.102\tfake_instance01.novalocal"
         )
         actual_hosts = self.driver.get_dns_hosts(self.context, networks[1])
-        self.assertEquals(actual_hosts, expected)
+        self.assertEqual(actual_hosts, expected)
 
     def test_get_dhcp_opts_for_nw00(self):
         expected_opts = 'NW-3,3\nNW-4,3'
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[0])
 
-        self.assertEquals(actual_opts, expected_opts)
+        self.assertEqual(actual_opts, expected_opts)
 
     def test_get_dhcp_opts_for_nw01(self):
         self.flags(host='fake_instance01')
         expected_opts = "NW-5,3"
         actual_opts = self.driver.get_dhcp_opts(self.context, networks[1])
 
-        self.assertEquals(actual_opts, expected_opts)
+        self.assertEqual(actual_opts, expected_opts)
 
     def test_get_dhcp_leases_for_nw00(self):
         timestamp = timeutils.utcnow()
@@ -410,7 +410,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         expected = "NW-0,3"
         data = get_associated(self.context, 0)[0]
         actual = self.driver._host_dhcp_opts(data)
-        self.assertEquals(actual, expected)
+        self.assertEqual(actual, expected)
 
     def test_host_dhcp_without_default_gateway_network(self):
         expected = ','.join(['DE:AD:BE:EF:00:00',
@@ -418,13 +418,13 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                              '192.168.0.100'])
         data = get_associated(self.context, 0)[0]
         actual = self.driver._host_dhcp(data)
-        self.assertEquals(actual, expected)
+        self.assertEqual(actual, expected)
 
     def test_host_dns_without_default_gateway_network(self):
         expected = "192.168.0.100\tfake_instance00.novalocal"
         data = get_associated(self.context, 0)[0]
         actual = self.driver._host_dns(data)
-        self.assertEquals(actual, expected)
+        self.assertEqual(actual, expected)
 
     def test_linux_bridge_driver_plug(self):
         """Makes sure plug doesn't drop FORWARD by default.

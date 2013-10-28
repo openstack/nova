@@ -381,15 +381,15 @@ class TestNeutronv2Base(test.TestCase):
 
     def _verify_nw_info(self, nw_inf, index=0):
         id_suffix = index + 1
-        self.assertEquals('10.0.%s.2' % id_suffix,
-                          nw_inf.fixed_ips()[index]['address'])
-        self.assertEquals('172.0.%s.2' % id_suffix,
+        self.assertEqual('10.0.%s.2' % id_suffix,
+                         nw_inf.fixed_ips()[index]['address'])
+        self.assertEqual('172.0.%s.2' % id_suffix,
             nw_inf.fixed_ips()[index].floating_ip_addresses()[0])
-        self.assertEquals('my_netname%s' % id_suffix,
-                          nw_inf[index]['network']['label'])
-        self.assertEquals('my_portid%s' % id_suffix, nw_inf[index]['id'])
-        self.assertEquals('my_mac%s' % id_suffix, nw_inf[index]['address'])
-        self.assertEquals('10.0.%s.0/24' % id_suffix,
+        self.assertEqual('my_netname%s' % id_suffix,
+                         nw_inf[index]['network']['label'])
+        self.assertEqual('my_portid%s' % id_suffix, nw_inf[index]['id'])
+        self.assertEqual('my_mac%s' % id_suffix, nw_inf[index]['address'])
+        self.assertEqual('10.0.%s.0/24' % id_suffix,
             nw_inf[index]['network']['subnets'][0]['cidr'])
         self.assertTrue(model.IP(address='8.8.%s.1' % id_suffix) in
                         nw_inf[index]['network']['subnets'][0]['dns'])
@@ -542,11 +542,11 @@ class TestNeutronv2(TestNeutronv2Base):
                                           self.instance)
 
         id_suffix = 3
-        self.assertEquals(0, len(nw_inf.fixed_ips()))
-        self.assertEquals('my_netname1', nw_inf[0]['network']['label'])
-        self.assertEquals('my_portid%s' % id_suffix, nw_inf[0]['id'])
-        self.assertEquals('my_mac%s' % id_suffix, nw_inf[0]['address'])
-        self.assertEquals(0, len(nw_inf[0]['network']['subnets']))
+        self.assertEqual(0, len(nw_inf.fixed_ips()))
+        self.assertEqual('my_netname1', nw_inf[0]['network']['label'])
+        self.assertEqual('my_portid%s' % id_suffix, nw_inf[0]['id'])
+        self.assertEqual('my_mac%s' % id_suffix, nw_inf[0]['address'])
+        self.assertEqual(0, len(nw_inf[0]['network']['subnets']))
 
     def test_refresh_neutron_extensions_cache(self):
         api = neutronapi.API()
@@ -554,7 +554,7 @@ class TestNeutronv2(TestNeutronv2Base):
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
         api._refresh_neutron_extensions_cache()
-        self.assertEquals({'nvp-qos': {'name': 'nvp-qos'}}, api.extensions)
+        self.assertEqual({'nvp-qos': {'name': 'nvp-qos'}}, api.extensions)
 
     def test_populate_neutron_extension_values_rxtx_factor(self):
         api = neutronapi.API()
@@ -568,7 +568,7 @@ class TestNeutronv2(TestNeutronv2Base):
         instance = {'system_metadata': sys_meta}
         port_req_body = {'port': {}}
         api._populate_neutron_extension_values(instance, port_req_body)
-        self.assertEquals(port_req_body['port']['rxtx_factor'], 1)
+        self.assertEqual(port_req_body['port']['rxtx_factor'], 1)
 
     def test_allocate_for_instance_1(self):
         # Allocate one port in one network env.
@@ -1040,8 +1040,8 @@ class TestNeutronv2(TestNeutronv2Base):
         filters = {'ip': '^10\\.0\\.1\\.2$'}
         api = neutronapi.API()
         result = api.get_instance_uuids_by_ip_filter(self.context, filters)
-        self.assertEquals(self.instance2['uuid'], result[0]['instance_uuid'])
-        self.assertEquals(self.instance['uuid'], result[1]['instance_uuid'])
+        self.assertEqual(self.instance2['uuid'], result[0]['instance_uuid'])
+        self.assertEqual(self.instance['uuid'], result[1]['instance_uuid'])
 
     def test_get_fixed_ip_by_address_fails_for_no_ports(self):
         address = self._mock_list_ports(port_data=[])
@@ -1054,7 +1054,7 @@ class TestNeutronv2(TestNeutronv2Base):
         address = self._mock_list_ports(port_data=self.port_data1)
         api = neutronapi.API()
         result = api.get_fixed_ip_by_address(self.context, address)
-        self.assertEquals(self.instance2['uuid'], result['instance_uuid'])
+        self.assertEqual(self.instance2['uuid'], result['instance_uuid'])
 
     def test_get_fixed_ip_by_address_fails_for_more_than_1_port(self):
         address = self._mock_list_ports()
@@ -1639,7 +1639,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
         instance = {'host': host_id}
         port_req_body = {'port': {}}
         api._populate_neutron_extension_values(instance, port_req_body)
-        self.assertEquals(port_req_body['port']['binding:host_id'], host_id)
+        self.assertEqual(port_req_body['port']['binding:host_id'], host_id)
 
     def test_migrate_instance_finish_binding_false(self):
         api = neutronapi.API()
