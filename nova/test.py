@@ -223,7 +223,8 @@ class TestCase(testtools.TestCase):
             stderr = self.useFixture(fixtures.StringStream('stderr')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
 
-        self.log_fixture = self.useFixture(fixtures.FakeLogger())
+        fs = '%(levelname)s [%(name)s] %(message)s'
+        self.log_fixture = self.useFixture(fixtures.FakeLogger(format=fs))
         self.useFixture(conf_fixture.ConfFixture(CONF))
 
         if self.USES_DB:
