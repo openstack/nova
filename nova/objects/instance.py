@@ -539,6 +539,19 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
+    @base.remotable_classmethod
+    def get_by_security_group_id(cls, context, security_group_id):
+        db_secgroup = db.security_group_get(
+            context, security_group_id,
+            columns_to_join=['instances', 'instances.info_cache',
+                             'instances.system_metadata'])
+        return _make_instance_list(context, cls(), db_secgroup['instances'],
+                                   ['info_cache', 'system_metadata'])
+
+    @classmethod
+    def get_by_security_group(cls, context, security_group):
+        return cls.get_by_security_group_id(context, security_group.id)
+
     def fill_faults(self):
         """Batch query the database for our instances' faults.
 
