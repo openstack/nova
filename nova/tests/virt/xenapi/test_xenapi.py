@@ -3303,6 +3303,23 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
                               True, False)
         self.assertEqual(expected, result)
 
+    def test_check_live_migrate_destination_verifies_ip(self):
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        for pif_ref in xenapi_fake.get_all('PIF'):
+            pif_rec = xenapi_fake.get_record('PIF', pif_ref)
+            pif_rec['IP'] = ''
+            pif_rec['IPv6'] = ''
+
+        self.stubs.Set(vm_utils, "safe_find_sr", lambda _x: "asdf")
+
+        self.assertRaises(exception.MigrationError,
+                          self.conn.check_can_live_migrate_destination,
+                          self.context, {'host': 'host'},
+                          {}, {},
+                          True, False)
+
     def test_check_can_live_migrate_destination_block_migration_fails(self):
         stubs.stubout_session(self.stubs,
                               stubs.FakeSessionForFailedMigrateTests)
