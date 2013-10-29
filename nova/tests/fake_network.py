@@ -30,6 +30,7 @@ from nova.network import rpcapi as network_rpcapi
 from nova.objects import base as obj_base
 from nova.objects import instance_info_cache
 from nova.openstack.common import jsonutils
+from nova.tests.objects import test_instance_info_cache
 from nova.virt.libvirt import config as libvirt_config
 
 
@@ -470,8 +471,9 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     context = args[0]
 
     def _info_cache_for(instance):
-        info_cache = {'network_info': _get_fake_cache(),
-                      'instance_uuid': instance['uuid']}
+        info_cache = dict(test_instance_info_cache.fake_info_cache,
+                          network_info=_get_fake_cache(),
+                          instance_uuid=instance['uuid'])
         if isinstance(instance, obj_base.NovaObject):
             _info_cache = instance_info_cache.InstanceInfoCache()
             instance_info_cache.InstanceInfoCache._from_db_object(context,

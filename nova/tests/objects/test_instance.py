@@ -32,6 +32,7 @@ from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
 from nova.tests.objects import test_instance_fault
+from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_objects
 from nova.tests.objects import test_security_group
 
@@ -406,8 +407,10 @@ class _TestInstanceObject(object):
         nwinfo2 = network_model.NetworkInfo.hydrate([{'address': 'bar'}])
         nwinfo1_json = nwinfo1.json()
         nwinfo2_json = nwinfo2.json()
-        fake_inst['info_cache'] = {'network_info': nwinfo1_json,
-                                   'instance_uuid': fake_uuid}
+        fake_inst['info_cache'] = dict(
+            test_instance_info_cache.fake_info_cache,
+            network_info=nwinfo1_json,
+            instance_uuid=fake_uuid)
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(db, 'instance_info_cache_update')

@@ -33,6 +33,7 @@ from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests import fake_instance
+from nova.tests.objects import test_instance_info_cache
 from nova import utils
 
 
@@ -146,8 +147,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         fake_context = 'fake-context'
         inst = fake_instance.fake_db_instance(
                 vm_state=vm_states.ACTIVE,
-                info_cache={'instance_uuid': 'fake-uuid',
-                            'network_info': None},
+                info_cache=dict(test_instance_info_cache.fake_info_cache,
+                                network_info=None),
                 security_groups=None)
         startup_instances = [inst, inst, inst]
 
