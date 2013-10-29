@@ -38,6 +38,8 @@ sudo -u postgres psql
 postgres=# create user openstack_citest with createdb login password
       'openstack_citest';
 postgres=# create database openstack_citest with owner openstack_citest;
+postgres=# create database openstack_baremetal_citest with owner
+            openstack_citest;
 
 """
 
@@ -156,7 +158,9 @@ class CommonTestsMixIn(object):
     """
     def test_walk_versions(self):
         for key, engine in self.engines.items():
-            self._walk_versions(engine, self.snake_walk)
+            # We start each walk with a completely blank slate.
+            self._reset_database(key)
+            self._walk_versions(engine, self.snake_walk, self.downgrade)
 
     def test_mysql_opportunistically(self):
         self._test_mysql_opportunistically()
@@ -184,7 +188,18 @@ class CommonTestsMixIn(object):
 
 
 class BaseMigrationTestCase(test.NoDBTestCase):
-    """Base class fort testing migrations and migration utils."""
+    """Base class for testing migrations and migration utils. This sets up
+    and configures the databases to run tests against.
+    """
+
+    # NOTE(jhesketh): It is expected that tests clean up after themselves.
+    # This is necessary for concurrency to allow multiple tests to work on
+    # one database.
+    # The full migration walk tests however do call the old _reset_databases()
+    # to throw away whatever was there so they need to operate on their own
+    # database that we know isn't accessed concurrently.
+    # Hence, BaseWalkMigrationTestCase overwrites the engine list.
+
     USER = None
     PASSWD = None
     DATABASE = None
@@ -204,13 +219,16 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         self.INIT_VERSION = 0
 
         self.snake_walk = False
+        self.downgrade = False
         self.test_databases = {}
         self.migration = None
         self.migration_api = None
 
     def setUp(self):
         super(BaseMigrationTestCase, self).setUp()
+        self._load_config()
 
+    def _load_config(self):
         # Load test databases from the config file. Only do this
         # once. No need to re-run this on each test...
         LOG.debug('config_path is %s' % self.CONFIG_FILE_PATH)
@@ -218,10 +236,12 @@ class BaseMigrationTestCase(test.NoDBTestCase):
             cp = ConfigParser.RawConfigParser()
             try:
                 cp.read(self.CONFIG_FILE_PATH)
-                defaults = cp.defaults()
-                for key, value in defaults.items():
-                    self.test_databases[key] = value
+                config = cp.options('unit_tests')
+                for key in config:
+                    self.test_databases[key] = cp.get('unit_tests', key)
                 self.snake_walk = cp.getboolean('walk_style', 'snake_walk')
+                self.downgrade = cp.getboolean('walk_style', 'downgrade')
+
             except ConfigParser.ParsingError as e:
                 self.fail("Failed to read test_migrations.conf config "
                           "file. Got error: %s" % e)
@@ -233,15 +253,9 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         for key, value in self.test_databases.items():
             self.engines[key] = sqlalchemy.create_engine(value)
 
-        # We start each test case with a completely blank slate.
-        self._reset_databases()
-
-    def tearDown(self):
-        # We destroy the test data store between each test case,
-        # and recreate it, which ensures that we have no side-effects
-        # from the tests
-        self._reset_databases()
-        super(BaseMigrationTestCase, self).tearDown()
+        # NOTE(jhesketh): We only need to make sure the databases are created
+        # not necessarily clean of tables.
+        self._create_databases()
 
     def execute_cmd(self, cmd=None):
         status, output = commands.getstatusoutput(cmd)
@@ -273,34 +287,123 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         os.unsetenv('PGPASSWORD')
         os.unsetenv('PGUSER')
 
-    def _reset_databases(self):
+    @utils.synchronized('mysql', external=True)
+    def _reset_mysql(self, conn_pieces):
+        # We can execute the MySQL client to destroy and re-create
+        # the MYSQL database, which is easier and less error-prone
+        # than using SQLAlchemy to do this via MetaData...trust me.
+        (user, password, database, host) = \
+                get_mysql_connection_info(conn_pieces)
+        sql = ("drop database if exists %(database)s; "
+                "create database %(database)s;" % {'database': database})
+        cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
+               "-e \"%(sql)s\"" % {'user': user, 'password': password,
+                                   'host': host, 'sql': sql})
+        self.execute_cmd(cmd)
+
+    @utils.synchronized('sqlite', external=True)
+    def _reset_sqlite(self, conn_pieces):
+        # We can just delete the SQLite database, which is
+        # the easiest and cleanest solution
+        db_path = conn_pieces.path.strip('/')
+        if os.path.exists(db_path):
+            os.unlink(db_path)
+        # No need to recreate the SQLite DB. SQLite will
+        # create it for us if it's not there...
+
+    def _create_databases(self):
+        """Create all configured databases as needed."""
         for key, engine in self.engines.items():
-            conn_string = self.test_databases[key]
-            conn_pieces = urlparse.urlparse(conn_string)
-            engine.dispose()
-            if conn_string.startswith('sqlite'):
-                # We can just delete the SQLite database, which is
-                # the easiest and cleanest solution
-                db_path = conn_pieces.path.strip('/')
-                if os.path.exists(db_path):
-                    os.unlink(db_path)
-                # No need to recreate the SQLite DB. SQLite will
-                # create it for us if it's not there...
-            elif conn_string.startswith('mysql'):
-                # We can execute the MySQL client to destroy and re-create
-                # the MYSQL database, which is easier and less error-prone
-                # than using SQLAlchemy to do this via MetaData...trust me.
-                (user, password, database, host) = \
-                        get_mysql_connection_info(conn_pieces)
-                sql = ("drop database if exists %(database)s; "
-                        "create database %(database)s;"
-                        % {'database': database})
-                cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
-                       "-e \"%(sql)s\"" % {'user': user,
-                           'password': password, 'host': host, 'sql': sql})
-                self.execute_cmd(cmd)
-            elif conn_string.startswith('postgresql'):
-                self._reset_pg(conn_pieces)
+            self._create_database(key)
+
+    def _create_database(self, key):
+        """Create database if it doesn't exist."""
+        conn_string = self.test_databases[key]
+        conn_pieces = urlparse.urlparse(conn_string)
+
+        if conn_string.startswith('mysql'):
+            (user, password, database, host) = \
+                get_mysql_connection_info(conn_pieces)
+            sql = "create database if not exists %s;" % database
+            cmd = ("mysql -u \"%(user)s\" %(password)s -h %(host)s "
+                   "-e \"%(sql)s\"" % {'user': user, 'password': password,
+                                       'host': host, 'sql': sql})
+            self.execute_cmd(cmd)
+        elif conn_string.startswith('postgresql'):
+            (user, password, database, host) = \
+                get_pgsql_connection_info(conn_pieces)
+            os.environ['PGPASSWORD'] = password
+            os.environ['PGUSER'] = user
+
+            sqlcmd = ("psql -w -U %(user)s -h %(host)s -c"
+                      " '%(sql)s' -d template1")
+
+            sql = ("create database if not exists %s;") % database
+            createtable = sqlcmd % {'user': user, 'host': host, 'sql': sql}
+            status, output = commands.getstatusoutput(createtable)
+            if status != 0 and status != 256:
+                # 0 means databases is created
+                # 256 means it already exists (which is fine)
+                # otherwise raise an error
+                self.fail("Failed to run: %s\n%s" % (createtable, output))
+
+            os.unsetenv('PGPASSWORD')
+            os.unsetenv('PGUSER')
+
+    def _reset_databases(self):
+        """Reset all configured databases."""
+        for key, engine in self.engines.items():
+            self._reset_database(key)
+
+    def _reset_database(self, key):
+        """Reset specific database."""
+        engine = self.engines[key]
+        conn_string = self.test_databases[key]
+        conn_pieces = urlparse.urlparse(conn_string)
+        engine.dispose()
+        if conn_string.startswith('sqlite'):
+            self._reset_sqlite(conn_pieces)
+        elif conn_string.startswith('mysql'):
+            self._reset_mysql(conn_pieces)
+        elif conn_string.startswith('postgresql'):
+            self._reset_pg(conn_pieces)
+
+
+class BaseWalkMigrationTestCase(BaseMigrationTestCase):
+    """BaseWalkMigrationTestCase loads in an alternative set of databases for
+    testing against. This is necessary as the default databases can run tests
+    concurrently without interfering with itself. It is expected that
+    databases listed under [migraiton_dbs] in the configuration are only being
+    accessed by one test at a time. Currently only test_walk_versions accesses
+    the databases (and is the only method that calls _reset_database() which
+    is clearly problematic for concurrency).
+    """
+
+    def _load_config(self):
+        # Load test databases from the config file. Only do this
+        # once. No need to re-run this on each test...
+        LOG.debug('config_path is %s' % self.CONFIG_FILE_PATH)
+        if os.path.exists(self.CONFIG_FILE_PATH):
+            cp = ConfigParser.RawConfigParser()
+            try:
+                cp.read(self.CONFIG_FILE_PATH)
+                config = cp.options('migration_dbs')
+                for key in config:
+                    self.test_databases[key] = cp.get('migration_dbs', key)
+                self.snake_walk = cp.getboolean('walk_style', 'snake_walk')
+                self.downgrade = cp.getboolean('walk_style', 'downgrade')
+            except ConfigParser.ParsingError as e:
+                self.fail("Failed to read test_migrations.conf config "
+                          "file. Got error: %s" % e)
+        else:
+            self.fail("Failed to find test_migrations.conf config "
+                      "file.")
+
+        self.engines = {}
+        for key, value in self.test_databases.items():
+            self.engines[key] = sqlalchemy.create_engine(value)
+
+        self._create_databases()
 
     def _test_mysql_opportunistically(self):
         # Test that table creation on mysql only builds InnoDB tables
@@ -317,8 +420,8 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         self.test_databases[database] = connect_string
 
         # build a fully populated mysql database with all the tables
-        self._reset_databases()
-        self._walk_versions(engine, False, False)
+        self._reset_database(database)
+        self._walk_versions(engine, self.snake_walk, self.downgrade)
 
         connection = engine.connect()
         # sanity check
@@ -338,6 +441,9 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         self.assertEqual(count, 0, "%d non InnoDB tables created" % count)
         connection.close()
 
+        del(self.engines[database])
+        del(self.test_databases[database])
+
     def _test_postgresql_opportunistically(self):
         # Test postgresql database migration walk
         if not _have_postgresql(self.USER, self.PASSWD, self.DATABASE):
@@ -353,8 +459,10 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         self.test_databases[database] = connect_string
 
         # build a fully populated postgresql database with all the tables
-        self._reset_databases()
-        self._walk_versions(engine, False, False)
+        self._reset_database(database)
+        self._walk_versions(engine, self.snake_walk, self.downgrade)
+        del(self.engines[database])
+        del(self.test_databases[database])
 
     def _walk_versions(self, engine=None, snake_walk=False, downgrade=True):
         # Determine latest version script from the repo, then
@@ -447,7 +555,7 @@ class BaseMigrationTestCase(test.NoDBTestCase):
             raise
 
 
-class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
+class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
     USER = "openstack_citest"
     PASSWD = "openstack_citest"
@@ -2607,6 +2715,30 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                 for index in indexes:
                     self.assertNotIn(index, current_indexes)
 
+        # Check indexes are gone
+        if engine.name == 'mysql' or engine.name == 'postgresql':
+            data = {
+                # table_name: ((idx_1, (c1, c2,)), (idx2, (c1, c2,)), ...)
+                'quota_usages': (
+                    ('ix_quota_usages_user_id_deleted',
+                     ('user_id', 'deleted')),
+                ),
+                'reservations': (
+                    ('ix_reservations_user_id_deleted',
+                     ('user_id', 'deleted')),
+                )
+            }
+
+            meta = sqlalchemy.MetaData()
+            meta.bind = engine
+
+            for table_name, indexes in data.iteritems():
+                table = sqlalchemy.Table(table_name, meta, autoload=True)
+                current_indexes = [(i.name, tuple(i.columns.keys()))
+                           for i in table.indexes]
+                for index in indexes:
+                    self.assertNotIn(index, current_indexes)
+
     def _check_204(self, engine, data):
         if engine.name != 'sqlite':
             return
@@ -3049,18 +3181,18 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                                   "local_gb_used": 1, "deleted": 0,
                                   "hypervisor_type": "fake_type",
                                   "hypervisor_version": 1,
-                                  "service_id": 1, "id": 1},
+                                  "service_id": 1, "id": 10001},
                                  {"vcpus": 1, "cpu_info": "info",
                                   "memory_mb": 1, "local_gb": 1,
                                   "vcpus_used": 1, "memory_mb_used": 1,
                                   "local_gb_used": 1, "deleted": 2,
                                   "hypervisor_type": "fake_type",
                                   "hypervisor_version": 1,
-                                  "service_id": 1, "id": 2}],
-               "compute_node_stats": [{"id": 10, "compute_node_id": 1,
+                                  "service_id": 1, "id": 10002}],
+               "compute_node_stats": [{"id": 10, "compute_node_id": 10001,
                                        "key": "fake-1",
                                        "deleted": 0},
-                                      {"id": 20, "compute_node_id": 2,
+                                      {"id": 20, "compute_node_id": 10002,
                                        "key": "fake-2",
                                        "deleted": 0}]}
         return ret
@@ -3209,7 +3341,7 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(quota['resource'], 'injected_file_content_bytes')
 
 
-class TestBaremetalMigrations(BaseMigrationTestCase, CommonTestsMixIn):
+class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
     USER = "openstack_citest"
     PASSWD = "openstack_citest"

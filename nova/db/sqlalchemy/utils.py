@@ -289,6 +289,8 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
                             column_instance is instance of Column. These params
                             are required only for columns that have unsupported
                             types by sqlite. For example BigInteger.
+
+    :returns: The created shadow_table object.
     """
     meta = MetaData(bind=migrate_engine)
 
@@ -316,6 +318,7 @@ def create_shadow_table(migrate_engine, table_name=None, table=None,
                          mysql_engine='InnoDB')
     try:
         shadow_table.create()
+        return shadow_table
     except (OperationalError, ProgrammingError):
         LOG.info(repr(shadow_table))
         LOG.exception(_('Exception while creating table.'))
