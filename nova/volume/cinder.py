@@ -306,7 +306,7 @@ class API(base.Base):
             item = cinderclient(context).volumes.create(size, **kwargs)
             return _untranslate_volume_summary_view(context, item)
         except cinder_exception.BadRequest as e:
-            raise exception.InvalidInput(reason=e.message)
+            raise exception.InvalidInput(reason=unicode(e))
 
     @translate_volume_exception
     def delete(self, context, volume_id):

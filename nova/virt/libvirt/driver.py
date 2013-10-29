@@ -3966,7 +3966,7 @@ class LibvirtDriver(driver.ComputeDriver):
             ret = self._conn.compareCPU(cpu.to_xml(), 0)
         except libvirt.libvirtError as e:
             with excutils.save_and_reraise_exception():
-                ret = e.message
+                ret = unicode(e)
                 LOG.error(m, {'ret': ret, 'u': u})
 
         if ret <= 0:
