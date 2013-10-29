@@ -69,7 +69,7 @@ class VolumeAttachTestCase(test.NoDBTestCase):
             dict(driver_volume_type='iscsi', data='conn_data'),
             'instance_1', 'mountpoint')
 
-        self.assertEquals(
+        self.assertEqual(
             ['find_sr_from_vbd', 'destroy_vbd'], registered_calls)
 
     def test_attach_volume_call(self):
@@ -231,4 +231,4 @@ class VolumeAttachTestCase(test.NoDBTestCase):
 
         ops.connect_volume(connection_info)
 
-        self.assertEquals(False, called['VBD.plug'])
+        self.assertEqual(False, called['VBD.plug'])

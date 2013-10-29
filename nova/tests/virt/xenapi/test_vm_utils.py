@@ -194,8 +194,8 @@ class XenAPIGetUUID(VMUtilsTestBase):
             '2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f')
 
         self.mox.ReplayAll()
-        self.assertEquals('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
-                          vm_utils.get_this_vm_uuid(None))
+        self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
+                         vm_utils.get_this_vm_uuid(None))
         self.mox.VerifyAll()
 
     def test_get_this_vm_uuid_old_kernel_reboot(self):
@@ -211,8 +211,8 @@ class XenAPIGetUUID(VMUtilsTestBase):
             ('/vm/2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', ''))
 
         self.mox.ReplayAll()
-        self.assertEquals('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
-                          vm_utils.get_this_vm_uuid(None))
+        self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
+                         vm_utils.get_this_vm_uuid(None))
         self.mox.VerifyAll()
 
 
@@ -611,7 +611,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         result = list(vm_utils.get_instance_vdis_for_sr(
             driver._session, vm_ref, sr_ref))
 
-        self.assertEquals([vdi_1, vdi_2], result)
+        self.assertEqual([vdi_1, vdi_2], result)
 
     def test_get_instance_vdis_for_sr_no_vbd(self):
         vm_ref = fake.create_vm("foo", "Running")
@@ -623,7 +623,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         result = list(vm_utils.get_instance_vdis_for_sr(
             driver._session, vm_ref, sr_ref))
 
-        self.assertEquals([], result)
+        self.assertEqual([], result)
 
     def test_get_vdi_uuid_for_volume_with_sr_uuid(self):
         connection_data = get_fake_connection_data(XENSM_TYPE)
@@ -632,7 +632,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
 
         vdi_uuid = vm_utils.get_vdi_uuid_for_volume(
                 driver._session, connection_data)
-        self.assertEquals(vdi_uuid, 'falseVDI')
+        self.assertEqual(vdi_uuid, 'falseVDI')
 
     def test_get_vdi_uuid_for_volume_failure(self):
         stubs.stubout_session(self.stubs, fake.SessionBase)
@@ -654,7 +654,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
 
         vdi_uuid = vm_utils.get_vdi_uuid_for_volume(
                 driver._session, connection_data)
-        self.assertNotEquals(vdi_uuid, None)
+        self.assertNotEqual(vdi_uuid, None)
 
 
 class VMRefOrRaiseVMFoundTestCase(VMUtilsTestBase):
@@ -676,7 +676,7 @@ class VMRefOrRaiseVMFoundTestCase(VMUtilsTestBase):
         vm_utils.lookup(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn('vmref')
 
         mock.ReplayAll()
-        self.assertEquals(
+        self.assertEqual(
             'vmref', vm_utils.vm_ref_or_raise('session', 'somename'))
         mock.VerifyAll()
 
@@ -807,7 +807,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
         self.mock.ReplayAll()
 
         result = vm_utils.create_vbd(self.session, "vm_ref", "vdi_ref", 0)
-        self.assertEquals(result, "vbd_ref")
+        self.assertEqual(result, "vbd_ref")
         self.mock.VerifyAll()
 
     def test_create_vbd_osvol(self):
@@ -818,7 +818,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
         self.mock.ReplayAll()
         result = vm_utils.create_vbd(self.session, "vm_ref", "vdi_ref", 0,
                                      osvol=True)
-        self.assertEquals(result, "vbd_ref")
+        self.assertEqual(result, "vbd_ref")
         self.mock.VerifyAll()
 
     def test_create_vbd_extra_args(self):
@@ -835,7 +835,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
         result = vm_utils.create_vbd(self.session, "vm_ref", None, 0,
                 vbd_type="a", read_only=True, bootable=True,
                 empty=True, unpluggable=False)
-        self.assertEquals(result, "vbd_ref")
+        self.assertEqual(result, "vbd_ref")
         self.mock.VerifyAll()
 
     def test_attach_cd(self):
@@ -848,7 +848,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
         self.mock.ReplayAll()
 
         result = vm_utils.attach_cd(self.session, "vm_ref", "vdi_ref", 1)
-        self.assertEquals(result, "vbd_ref")
+        self.assertEqual(result, "vbd_ref")
         self.mock.VerifyAll()
 
 
@@ -1157,7 +1157,7 @@ class StreamDiskTestCase(VMUtilsTestBase):
         vm_utils._stream_disk("session", self.image_service_func,
                               vm_utils.ImageType.KERNEL, None, 'dev')
 
-        self.assertEquals([(fake_file.seek, 0)], fake_file._file_operations)
+        self.assertEqual([(fake_file.seek, 0)], fake_file._file_operations)
 
     def test_ami_disk(self):
         fake_file = FakeFile()
@@ -1174,7 +1174,7 @@ class StreamDiskTestCase(VMUtilsTestBase):
         vm_utils._stream_disk("session", self.image_service_func,
                               vm_utils.ImageType.DISK, 100, 'dev')
 
-        self.assertEquals(
+        self.assertEqual(
             [(fake_file.seek, vm_utils.MBR_SIZE_BYTES)],
             fake_file._file_operations)
 
@@ -1390,37 +1390,37 @@ class AllowVSSProviderTest(VMUtilsTestBase):
 class DetermineVmModeTestCase(VMUtilsTestBase):
     def test_determine_vm_mode_returns_xen_mode(self):
         instance = {"vm_mode": "xen"}
-        self.assertEquals(vm_mode.XEN,
+        self.assertEqual(vm_mode.XEN,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_hvm_mode(self):
         instance = {"vm_mode": "hvm"}
-        self.assertEquals(vm_mode.HVM,
+        self.assertEqual(vm_mode.HVM,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_xen_for_linux(self):
         instance = {"vm_mode": None, "os_type": "linux"}
-        self.assertEquals(vm_mode.XEN,
+        self.assertEqual(vm_mode.XEN,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_hvm_for_windows(self):
         instance = {"vm_mode": None, "os_type": "windows"}
-        self.assertEquals(vm_mode.HVM,
+        self.assertEqual(vm_mode.HVM,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_hvm_by_default(self):
         instance = {"vm_mode": None, "os_type": None}
-        self.assertEquals(vm_mode.HVM,
+        self.assertEqual(vm_mode.HVM,
             vm_utils.determine_vm_mode(instance, None))
 
     def test_determine_vm_mode_returns_xen_for_VHD(self):
         instance = {"vm_mode": None, "os_type": None}
-        self.assertEquals(vm_mode.XEN,
+        self.assertEqual(vm_mode.XEN,
             vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK_VHD))
 
     def test_determine_vm_mode_returns_xen_for_DISK(self):
         instance = {"vm_mode": None, "os_type": None}
-        self.assertEquals(vm_mode.XEN,
+        self.assertEqual(vm_mode.XEN,
             vm_utils.determine_vm_mode(instance, vm_utils.ImageType.DISK))
 
 
