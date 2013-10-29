@@ -34,6 +34,7 @@ from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.tests.virt.xenapi import test_xenapi
+from nova import unit
 from nova import utils
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
@@ -147,7 +148,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
         self.mox.StubOutWithMock(vm_utils, 'create_vdi')
         vm_utils.create_vdi('session', 'sr_ref', instance, 'config-2',
                             'configdrive',
-                            64 * 1024 * 1024).AndReturn('vdi_ref')
+                            64 * unit.Mi).AndReturn('vdi_ref')
 
         self.mox.StubOutWithMock(vm_utils, 'vdi_attached_here')
         vm_utils.vdi_attached_here(
@@ -991,7 +992,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
 
     def _check_vdi(self, vdi_ref):
         vdi_rec = self.session.call_xenapi("VDI.get_record", vdi_ref)
-        self.assertEqual(str(10 * 1024 * 1024), vdi_rec["virtual_size"])
+        self.assertEqual(str(10 * unit.Mi), vdi_rec["virtual_size"])
         vbd_ref = vdi_rec["VBDs"][0]
         vbd_rec = self.session.call_xenapi("VBD.get_record", vbd_ref)
         self.assertEqual(self.vm_ref, vbd_rec['VM'])
@@ -1111,7 +1112,7 @@ class GenerateEphemeralTestCase(VMUtilsTestBase):
 
         vm_utils._generate_disk(self.session, self.instance, self.vm_ref,
             str(self.userdevice + 2), "name ephemeral (2)", 'ephemeral',
-            1024 * 1024, None).AndRaise(exception.NovaException)
+            unit.Mi, None).AndRaise(exception.NovaException)
 
         vm_utils.safe_destroy_vdis(self.session, [4, 5])
 

@@ -18,6 +18,7 @@ from lxml import etree
 
 from nova import test
 from nova.tests import matchers
+from nova import unit
 from nova.virt.libvirt import config
 
 
@@ -958,7 +959,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
     def test_config_lxc(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "lxc"
-        obj.memory = 1024 * 1024 * 100
+        obj.memory = 100 * unit.Mi
         obj.vcpus = 2
         obj.cpuset = "0-3,^2,4-5"
         obj.name = "demo"
@@ -994,7 +995,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
     def test_config_xen_pv(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "xen"
-        obj.memory = 1024 * 1024 * 100
+        obj.memory = 100 * unit.Mi
         obj.vcpus = 2
         obj.cpuset = "0-3,^2,4-5"
         obj.name = "demo"
@@ -1038,7 +1039,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
     def test_config_xen_hvm(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "xen"
-        obj.memory = 1024 * 1024 * 100
+        obj.memory = 100 * unit.Mi
         obj.vcpus = 2
         obj.cpuset = "0-3,^2,4-5"
         obj.name = "demo"
@@ -1086,7 +1087,7 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
     def test_config_kvm(self):
         obj = config.LibvirtConfigGuest()
         obj.virt_type = "kvm"
-        obj.memory = 1024 * 1024 * 100
+        obj.memory = 100 * unit.Mi
         obj.vcpus = 2
         obj.cpuset = "0-3,^2,4-5"
         obj.cpu_shares = 100

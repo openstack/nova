@@ -22,6 +22,7 @@ import re
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova import test
+from nova import unit
 from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import vm_util
 
@@ -56,8 +57,8 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             fake_session(fake_objects))
 
         self.assertEqual(result[1], "fake-ds")
-        self.assertEqual(result[2], 1024 * 1024 * 1024 * 1024)
-        self.assertEqual(result[3], 1024 * 1024 * 500 * 1024)
+        self.assertEqual(result[2], unit.Ti)
+        self.assertEqual(result[3], 500 * unit.Gi)
 
     def test_get_datastore_ref_and_name_with_regex(self):
         # Test with a regex that matches with a datastore

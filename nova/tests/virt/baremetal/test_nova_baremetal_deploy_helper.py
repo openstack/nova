@@ -26,6 +26,7 @@ from nova.cmd import baremetal_deploy_helper as bmdh
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.virt.baremetal.db import base as bm_db_base
+from nova import unit
 from nova.virt.baremetal import db as bm_db
 
 bmdh.LOG = logging.getLogger('nova.virt.baremetal.deploy_helper')
@@ -249,7 +250,6 @@ class OtherFunctionTestCase(test.NoDBTestCase):
         self.assertEqual(expected, actual)
 
     def test_get_image_mb(self):
-        mb = 1024 * 1024
         size = None
 
         def fake_getsize(path):
@@ -260,7 +260,7 @@ class OtherFunctionTestCase(test.NoDBTestCase):
         self.assertEqual(bmdh.get_image_mb('x'), 0)
         size = 1
         self.assertEqual(bmdh.get_image_mb('x'), 1)
-        size = mb
+        size = unit.Mi
         self.assertEqual(bmdh.get_image_mb('x'), 1)
-        size = mb + 1
+        size = unit.Mi + 1
         self.assertEqual(bmdh.get_image_mb('x'), 2)
