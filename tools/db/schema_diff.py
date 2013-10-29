@@ -103,7 +103,7 @@ class Postgres(object):
                 shell=True)
 
     def url(self, name):
-        return 'postgres://localhost/%s' % name
+        return 'postgresql://localhost/%s' % name
 
 
 def _get_db_driver_class(db_type):
