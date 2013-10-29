@@ -31,10 +31,12 @@ import webob
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute.plugins.v3 import availability_zone
+from nova.api.openstack.compute.plugins.v3 import disk_config
 from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.plugins.v3 import keypairs
 from nova.api.openstack.compute.plugins.v3 import servers
 from nova.api.openstack.compute import views
+from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
 from nova.compute import api as compute_api
 from nova.compute import flavors
@@ -4470,3 +4472,73 @@ class TestServerRebuildXMLDeserializer(test.TestCase):
             },
         }
         self.assertThat(request['body'], matchers.DictMatches(expected))
+
+
+class FakeDiskConfigExt(extensions.V3APIExtensionBase):
+    name = "DiskConfig"
+    alias = 'os-disk-config'
+    namespace = "http://docs.openstack.org/compute/ext/disk_config/api/v3"
+    version = 1
+
+    def fake_extension_point(self, *args, **kwargs):
+        pass
+
+    def get_controller_extensions(self):
+        return []
+
+    def get_resources(self):
+        return []
+
+
+class TestServersExtensionPoint(test.NoDBTestCase):
+    def setUp(self):
+        super(TestServersExtensionPoint, self).setUp()
+        CONF.set_override('extensions_whitelist', ['os-disk-config'],
+                          'osapi_v3')
+        self.stubs.Set(disk_config, 'DiskConfig', FakeDiskConfigExt)
+
+    def _test_load_extension_point(self, name):
+        setattr(FakeDiskConfigExt, 'server_%s' % name,
+                FakeDiskConfigExt.fake_extension_point)
+        ext_info = plugins.LoadedExtensionInfo()
+        controller = servers.ServersController(extension_info=ext_info)
+        self.assertEqual(
+            'os-disk-config',
+            list(getattr(controller,
+                         '%s_extension_manager' % name))[0].obj.alias)
+        delattr(FakeDiskConfigExt, 'server_%s' % name)
+
+    def test_load_resize_extension_point(self):
+        self._test_load_extension_point('resize')
+
+    def test_load_update_extension_point(self):
+        self._test_load_extension_point('update')
+
+    def test_load_rebuild_extension_point(self):
+        self._test_load_extension_point('rebuild')
+
+    def test_load_create_extension_point(self):
+        self._test_load_extension_point('rebuild')
+
+    def _test_load_deserialize_extension_point(self, name):
+        extension_point_func = 'server_xml_extract_%s_deserialize' % name
+        if name == 'create':
+            extension_point_func = 'server_xml_extract_server_deserialize'
+        setattr(FakeDiskConfigExt, extension_point_func,
+                FakeDiskConfigExt.fake_extension_point)
+        ext_info = plugins.LoadedExtensionInfo()
+        controller = servers.ServersController(extension_info=ext_info)
+        self.assertEqual(
+            'os-disk-config',
+            list(getattr(controller,
+                         '%s_xml_deserialize_manager' % name))[0].obj.alias)
+        delattr(FakeDiskConfigExt, extension_point_func)
+
+    def test_load_create_xml_deserialize_extension_point(self):
+        self._test_load_deserialize_extension_point('create')
+
+    def test_load_resize_xml_deserialize_extension_point(self):
+        self._test_load_deserialize_extension_point('resize')
+
+    def test_load_rebuild_xml_deserialize_extension_point(self):
+        self._test_load_deserialize_extension_point('rebuild')
