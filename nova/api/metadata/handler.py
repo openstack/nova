@@ -43,13 +43,11 @@ metadata_proxy_opts = [
     cfg.BoolOpt(
         'service_neutron_metadata_proxy',
         default=False,
-        deprecated_name='service_quantum_metadata_proxy',
         help='Set flag to indicate Neutron will proxy metadata requests and '
              'resolve instance ids.'),
      cfg.StrOpt(
          'neutron_metadata_proxy_shared_secret',
          default='',
-         deprecated_name='quantum_metadata_proxy_shared_secret',
          help='Shared secret to validate proxies Neutron metadata requests')
 ]
 

@@ -40,11 +40,9 @@ try:
                           'networks')),
         cfg.StrOpt('use_neutron_default_nets',
                          default="False",
-                         deprecated_name='use_quantum_default_nets',
                          help=('Control for checking for default networks')),
         cfg.StrOpt('neutron_default_tenant_id',
                          default="default",
-                         deprecated_name='quantum_default_tenant_id',
                          help=('Default tenant id when creating neutron '
                                'networks'))
     ]

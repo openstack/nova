@@ -33,9 +33,6 @@ CONF = cfg.CONF
 vmwareapi_vif_opts = [
     cfg.StrOpt('vlan_interface',
                default='vmnic0',
-               #Deprecated in Icehouse
-               deprecated_name='vmwareapi_vlan_interface',
-               deprecated_group='DEFAULT',
                help='Physical ethernet adapter name for vlan networking'),
 ]
 

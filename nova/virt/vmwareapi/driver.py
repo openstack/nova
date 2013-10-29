@@ -47,27 +47,19 @@ LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               deprecated_name='vmwareapi_host_ip',
-               deprecated_group='DEFAULT',
                help='URL for connection to VMware ESX/VC host. Required if '
                     'compute_driver is vmwareapi.VMwareESXDriver or '
                     'vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('host_username',
-               deprecated_name='vmwareapi_host_username',
-               deprecated_group='DEFAULT',
                help='Username for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('host_password',
-               deprecated_name='vmwareapi_host_password',
-               deprecated_group='DEFAULT',
                help='Password for connection to VMware ESX/VC host. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.',
                secret=True),
     cfg.MultiStrOpt('cluster_name',
-               deprecated_name='vmwareapi_cluster_name',
-               deprecated_group='DEFAULT',
                help='Name of a VMware Cluster ComputeResource. Used only if '
                     'compute_driver is vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('datastore_regex',
@@ -76,39 +68,28 @@ vmwareapi_opts = [
                     'vmwareapi.VMwareVCDriver.'),
     cfg.FloatOpt('task_poll_interval',
                  default=5.0,
-                 deprecated_name='vmwareapi_task_poll_interval',
-                 deprecated_group='DEFAULT',
                  help='The interval used for polling of remote tasks. '
                        'Used only if compute_driver is '
                        'vmwareapi.VMwareESXDriver or '
                        'vmwareapi.VMwareVCDriver.'),
     cfg.IntOpt('api_retry_count',
                default=10,
-               deprecated_name='vmwareapi_api_retry_count',
-               deprecated_group='DEFAULT',
                help='The number of times we retry on failures, e.g., '
                     'socket error, etc. '
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
     cfg.IntOpt('vnc_port',
                default=5900,
-               deprecated_name='vnc_port',
-               deprecated_group='DEFAULT',
                help='VNC starting port'),
     cfg.IntOpt('vnc_port_total',
                default=10000,
-               deprecated_name='vnc_port_total',
-               deprecated_group='DEFAULT',
                help='Total number of VNC ports'),
     cfg.BoolOpt('use_linked_clone',
                 default=True,
-                deprecated_name='use_linked_clone',
-                deprecated_group='DEFAULT',
                 help='Whether to use linked clone'),
     ]
 
 CONF = cfg.CONF
-# vmware options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(vmwareapi_opts, 'vmware')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0

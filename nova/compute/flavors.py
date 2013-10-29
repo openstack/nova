@@ -39,8 +39,6 @@ from nova import utils
 
 flavor_opts = [
     cfg.StrOpt('default_flavor',
-               # Deprecated in Havana
-               deprecated_name='default_instance_type',
                default='m1.small',
                help='default flavor to use for the EC2 API only. The Nova API '
                'does not support a default flavor.'),
