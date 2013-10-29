@@ -1437,7 +1437,7 @@ class ComputeTestCase(BaseTestCase):
         # Make sure that the instance can be terminated in ERROR state.
         #check failed to schedule --> terminate
         params = {'vm_state': vm_states.ERROR}
-        instance = self._create_fake_instance(params=params)
+        instance = self._create_fake_instance_obj(params=params)
         self.compute.terminate_instance(self.context, instance=instance)
         self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
                           self.context, instance['uuid'])
@@ -1518,7 +1518,7 @@ class ComputeTestCase(BaseTestCase):
         can be termintad without issues
         """
         params = {'image_ref': ''}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance=instance)
         self._assert_state({'vm_state': vm_states.ACTIVE,
                             'task_state': None})
@@ -1652,7 +1652,7 @@ class ComputeTestCase(BaseTestCase):
 
     def test_stop_start_no_image(self):
         params = {'image_ref': ''}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance=instance)
         db.instance_update(self.context, instance['uuid'],
                            {"task_state": task_states.POWERING_OFF})
@@ -1951,7 +1951,7 @@ class ComputeTestCase(BaseTestCase):
     def test_rebuild_no_image(self):
         # Ensure instance can be rebuilt when started with no image.
         params = {'image_ref': ''}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         sys_metadata = db.instance_system_metadata_get(self.context,
                         instance['uuid'])
         self.compute.run_instance(self.context, instance=instance)
@@ -2931,6 +2931,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertIn('terminated_at', payload)
         self.assertIn('deleted_at', payload)
         self.assertEqual(payload['terminated_at'], timeutils.strtime(cur_time))
+        self.assertEqual(payload['deleted_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
@@ -7747,7 +7748,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_terminate_with_volumes(self):
         # Make sure that volumes get detached during instance termination.
         admin = context.get_admin_context()
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         volume_id = 'fake'
         values = {'instance_uuid': instance['uuid'],
@@ -7779,7 +7780,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_terminate_deletes_all_bdms(self):
         admin = context.get_admin_context()
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         img_bdm = {'instance_uuid': instance['uuid'],
                    'device_name': '/dev/vda',

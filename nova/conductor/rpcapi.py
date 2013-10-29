@@ -119,6 +119,7 @@ class ConductorAPI(rpcclient.RpcProxy):
     1.60 - Remove aggregate_metadata_add() and aggregate_metadata_delete()
     ...  - Remove security_group_get_by_instance() and
            security_group_rule_get_by_security_group()
+    1.61 - Return deleted instance from instance_destroy()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -285,8 +286,8 @@ class ConductorAPI(rpcclient.RpcProxy):
 
     def instance_destroy(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.16')
-        cctxt.call(context, 'instance_destroy', instance=instance_p)
+        cctxt = self.client.prepare(version='1.61')
+        return cctxt.call(context, 'instance_destroy', instance=instance_p)
 
     def instance_info_cache_delete(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
