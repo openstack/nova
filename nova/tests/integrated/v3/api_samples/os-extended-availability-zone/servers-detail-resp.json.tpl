@@ -4,8 +4,6 @@
             "updated": "%(timestamp)s",
             "created": "%(timestamp)s",
             "os-extended-availability-zone:availability_zone": "nova",
-            "access_ip_v4": "",
-            "access_ip_v6": "",
             "addresses": {
                 "private": [
                     {

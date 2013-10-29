@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:os-extended-availability-zone="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-09-16T02:55:02Z" user_id="fake" name="new-server-test" created="2013-09-16T02:55:01Z" tenant_id="openstack" access_ip_v4="" progress="0" host_id="146f5f54649a2655d2daed87b2da7eec04777520ce4aaa0642845173" id="d693cfcb-b6b8-4d9c-acb9-4db3bd16593f" access_ip_v6="" os-extended-availability-zone:availability_zone="nova" key_name="None">
+<server xmlns:os-extended-availability-zone="http://docs.openstack.org/compute/ext/extended_availability_zone/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-09-16T02:55:02Z" user_id="fake" name="new-server-test" created="2013-09-16T02:55:01Z" tenant_id="openstack" progress="0" host_id="146f5f54649a2655d2daed87b2da7eec04777520ce4aaa0642845173" id="d693cfcb-b6b8-4d9c-acb9-4db3bd16593f" os-extended-availability-zone:availability_zone="nova" key_name="None">
   <image id="70a599e0-31e7-49b7-b260-868f441e862b">
     <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
   </image>

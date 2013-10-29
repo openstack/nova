@@ -432,35 +432,6 @@ class ServerActionsControllerTest(test.TestCase):
                           self.controller._action_rebuild,
                           req, FAKE_UUID, body)
 
-    def test_rebuild_accessIP(self):
-        attributes = {
-            'access_ip_v4': '172.19.0.1',
-            'access_ip_v6': 'fe80::1',
-        }
-
-        body = {
-            "rebuild": {
-                "image_ref": self._image_href,
-                "access_ip_v4": "172.19.0.1",
-                "access_ip_v6": "fe80::1",
-            },
-        }
-
-        update = self.mox.CreateMockAnything()
-        self.stubs.Set(compute_api.API, 'update', update)
-        req = fakes.HTTPRequestV3.blank(self.url)
-        context = req.environ['nova.context']
-        update(context, mox.IgnoreArg(),
-                image_ref=self._image_href,
-                kernel_id="", ramdisk_id="",
-                task_state=task_states.REBUILDING,
-                expected_task_state=None,
-                progress=0, **attributes).AndReturn(
-                        fakes.stub_instance(1, host='fake_host'))
-        self.mox.ReplayAll()
-
-        self.controller._action_rebuild(req, FAKE_UUID, body)
-
     def test_rebuild_when_kernel_not_exists(self):
 
         def return_image_meta(*args, **kwargs):

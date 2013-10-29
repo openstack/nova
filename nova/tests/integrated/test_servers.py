@@ -366,6 +366,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
             self._access_ipv6_parameter: "fe80::2",
             "metadata": {'some': 'thing'},
         }
+        post['rebuild'].update(self._get_access_ips_params())
 
         self.api.post_server_action(created_server_id, post)
         LOG.debug("rebuilt server: %s" % created_server)
@@ -377,9 +378,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual('blah', found_server.get('name'))
         self.assertEqual(post['rebuild'][self._image_ref_parameter],
                          found_server.get('image')['id'])
-        self.assertEqual('172.19.0.2',
-                         found_server[self._access_ipv4_parameter])
-        self.assertEqual('fe80::2', found_server[self._access_ipv6_parameter])
+        self._verify_access_ips(found_server)
 
         # rebuild the server with empty metadata and nothing else
         post = {}
@@ -398,12 +397,19 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual('blah', found_server.get('name'))
         self.assertEqual(post['rebuild'][self._image_ref_parameter],
                          found_server.get('image')['id'])
-        self.assertEqual('172.19.0.2',
-                         found_server[self._access_ipv4_parameter])
-        self.assertEqual('fe80::2', found_server[self._access_ipv6_parameter])
+        self._verify_access_ips(found_server)
 
         # Cleanup
         self._delete_server(created_server_id)
+
+    def _get_access_ips_params(self):
+        return {self._access_ipv4_parameter: "172.19.0.2",
+                self._access_ipv6_parameter: "fe80::2"}
+
+    def _verify_access_ips(self, server):
+        self.assertEqual('172.19.0.2',
+                         server[self._access_ipv4_parameter])
+        self.assertEqual('fe80::2', server[self._access_ipv6_parameter])
 
     def test_rename_server(self):
         # Test building and renaming a server.
@@ -508,7 +514,15 @@ class ServersTestV3(client.TestOpenStackClientV3Mixin, ServersTest):
     _api_version = 'v3'
     _image_ref_parameter = 'image_ref'
     _flavor_ref_parameter = 'flavor_ref'
-    _access_ipv4_parameter = 'access_ip_v4'
-    _access_ipv6_parameter = 'access_ip_v6'
     _return_resv_id_parameter = 'os-multiple-create:return_reservation_id'
     _min_count_parameter = 'os-multiple-create:min_count'
+    _access_ipv4_parameter = None
+    _access_ipv6_parameter = None
+
+    def _get_access_ips_params(self):
+        return {}
+
+    def _verify_access_ips(self, server):
+        # NOTE(alexxu): access_ips was demoted as extensions in v3 api.
+        # So skips verifying access_ips
+        pass

@@ -1,7 +1,5 @@
 {
     "server": {
-        "access_ip_v4": "",
-        "access_ip_v6": "",
         "addresses": {
             "private": [
                 {
