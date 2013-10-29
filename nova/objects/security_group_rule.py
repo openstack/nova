@@ -42,12 +42,9 @@ class SecurityGroupRule(base.NovaPersistentObject, base.NovaObject):
             context, security_group.SecurityGroup(), db_group)
 
     @staticmethod
-    def _from_db_object(context, rule, db_rule, expected_attrs=None,
-                        expected_sub_attrs=None):
+    def _from_db_object(context, rule, db_rule, expected_attrs=None):
         if expected_attrs is None:
             expected_attrs = []
-        if expected_sub_attrs is None:
-            expected_sub_attrs = {}
         for field in rule.fields:
             if field in expected_attrs:
                 rule[field] = rule._from_db_subgroup(context, db_rule[field])
