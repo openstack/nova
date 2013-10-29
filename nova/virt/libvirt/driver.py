@@ -73,6 +73,7 @@ from nova import exception
 from nova.image import glance
 from nova import notifier
 from nova.objects import instance as instance_obj
+from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
@@ -588,12 +589,20 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if not wrapped_conn or not self._test_connection(wrapped_conn):
                 LOG.debug(_('Connecting to libvirt: %s'), self.uri())
-                if not CONF.libvirt_nonblocking:
-                    wrapped_conn = self._connect(self.uri(), self.read_only)
-                else:
-                    wrapped_conn = tpool.proxy_call(
-                        (libvirt.virDomain, libvirt.virConnect),
-                        self._connect, self.uri(), self.read_only)
+                try:
+                    if not CONF.libvirt_nonblocking:
+                        wrapped_conn = self._connect(self.uri(),
+                                                     self.read_only)
+                    else:
+                        wrapped_conn = tpool.proxy_call(
+                            (libvirt.virDomain, libvirt.virConnect),
+                            self._connect, self.uri(), self.read_only)
+                finally:
+                    # Enabling the compute service, in case it was disabled
+                    # since the connection was successful.
+                    is_connected = bool(wrapped_conn)
+                    self.set_host_enabled(CONF.host, is_connected)
+
                 self._wrapped_conn = wrapped_conn
 
             try:
@@ -627,8 +636,13 @@ class LibvirtDriver(driver.ComputeDriver):
     def _close_callback(self, conn, reason, opaque):
         with self._wrapped_conn_lock:
             if conn == self._wrapped_conn:
-                LOG.info(_("Connection to libvirt lost: %s") % reason)
+                _error = _("Connection to libvirt lost: %s") % reason
+                LOG.warn(_error)
                 self._wrapped_conn = None
+
+        # Disable compute service to avoid
+        # new instances of being scheduled on this host.
+        self.set_host_enabled(CONF.host, _error)
 
     @staticmethod
     def _test_connection(conn):
@@ -2588,6 +2602,37 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.error(_('Attaching PCI devices %(dev)s to %(dom)s failed.')
                       % {'dev': pci_devs, 'dom': dom.ID()})
             raise
+
+    def set_host_enabled(self, host, enabled):
+        """Sets the specified host's ability to accept new instances."""
+
+        status_name = {True: 'Enabled',
+                       False: 'Disabled'}
+
+        if isinstance(enabled, bool):
+            disable_service = not enabled
+            disable_reason = ''
+        else:
+            disable_service = bool(enabled)
+            disable_reason = enabled
+
+        ctx = nova_context.get_admin_context()
+        try:
+            service = service_obj.Service.get_by_compute_host(ctx, CONF.host)
+
+            if service.disabled != disable_service:
+                service.disabled = disable_service
+                service.disabled_reason = disable_reason
+                service.save()
+                LOG.debug(_('Updating compute service status to: %s'),
+                             status_name[disable_service])
+        except exception.ComputeHostNotFound:
+            LOG.warn(_('Cannot update service status on host: %s,'
+                        'since it is not registered.') % CONF.host)
+        except Exception:
+            LOG.warn(_('Cannot update service status on host: %s,'
+                        'due to an unexpected exception.') % CONF.host,
+                     exc_info=True)
 
     def get_host_capabilities(self):
         """Returns an instance of config.LibvirtConfigCaps representing
