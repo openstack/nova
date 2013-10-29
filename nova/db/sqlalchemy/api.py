@@ -3829,14 +3829,16 @@ def security_group_rule_get(context, security_group_rule_id):
 
 
 @require_context
-def security_group_rule_get_by_security_group(context, security_group_id):
-    return (_security_group_rule_get_query(context).
-            filter_by(parent_group_id=security_group_id).
-            options(joinedload_all('grantee_group.instances.'
-                                   'system_metadata')).
-            options(joinedload('grantee_group.instances.'
-                               'info_cache')).
-            all())
+def security_group_rule_get_by_security_group(context, security_group_id,
+                                              columns_to_join=None):
+    if columns_to_join is None:
+        columns_to_join = ['grantee_group.instances.system_metadata',
+                           'grantee_group.instances.info_cache']
+    query = (_security_group_rule_get_query(context).
+             filter_by(parent_group_id=security_group_id))
+    for column in columns_to_join:
+        query = query.options(joinedload_all(column))
+    return query.all()
 
 
 @require_context

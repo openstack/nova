@@ -1238,10 +1238,11 @@ def security_group_rule_create(context, values):
     return IMPL.security_group_rule_create(context, values)
 
 
-def security_group_rule_get_by_security_group(context, security_group_id):
+def security_group_rule_get_by_security_group(context, security_group_id,
+                                              columns_to_join=None):
     """Get all rules for a given security group."""
-    return IMPL.security_group_rule_get_by_security_group(context,
-                                                          security_group_id)
+    return IMPL.security_group_rule_get_by_security_group(
+        context, security_group_id, columns_to_join=columns_to_join)
 
 
 def security_group_rule_get_by_security_group_grantee(context,
