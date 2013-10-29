@@ -550,6 +550,8 @@ class API(base.Base):
                 except neutronv2.exceptions.NeutronClientException as e:
                     if e.status_code == 404:
                         port = None
+                    else:
+                        raise
                 if not port:
                     raise exception.PortNotFound(port_id=port_id)
                 if port.get('device_id', None):
@@ -715,6 +717,8 @@ class API(base.Base):
         except neutronv2.exceptions.NeutronClientException as e:
             if e.status_code == 404:
                 raise exception.FloatingIpNotFound(id=id)
+            else:
+                raise
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
         port_dict = self._setup_port_dict(client, fip['port_id'])
