@@ -172,8 +172,12 @@ class VMOps(object):
                     root_vhd_internal_size = root_vhd_size
 
                 if root_vhd_internal_size < base_vhd_size:
-                    raise vmutils.HyperVException(_("Cannot resize a VHD to a "
-                                                    "smaller size"))
+                    error_msg = _("Cannot resize a VHD to a smaller size, the"
+                                  " original size is %(base_vhd_size)s, the"
+                                  " newer size is %(root_vhd_size)s"
+                                  ) % {'base_vhd_size': base_vhd_size,
+                                       'root_vhd_size': root_vhd_size}
+                    raise vmutils.HyperVException(error_msg)
                 elif root_vhd_internal_size > base_vhd_size:
                     LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
                                 "size %(root_vhd_size)s"),
