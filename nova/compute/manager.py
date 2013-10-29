@@ -328,7 +328,7 @@ def delete_image_on_error(function):
     return decorated_function
 
 
-# TODO(danms): Remove me after havana
+# TODO(danms): Remove me after Icehouse
 def object_compat(function):
     """Wraps a method that expects a new-world instance
 
@@ -419,7 +419,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.SchedulerDependentManager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '2.48'
+    RPC_API_VERSION = '3.0'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -450,12 +450,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.driver = driver.load_compute_driver(self.virtapi, compute_driver)
         self.use_legacy_block_device_info = \
                             self.driver.need_legacy_block_device_info
-
-    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
-        additional_apis = additional_apis or []
-        additional_apis.append(_ComputeV3Proxy(self))
-        return super(ComputeManager, self).create_rpc_dispatcher(
-                backdoor_port, additional_apis)
 
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
@@ -803,12 +797,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             return self.driver.get_info(instance)["state"]
         except exception.NotFound:
             return power_state.NOSTATE
-
-    # NOTE(russellb) This method can be removed in 3.0 of this API.  It is
-    # deprecated in favor of the method in the base API.
-    def get_backdoor_port(self, context):
-        """Return backdoor port for eventlet_backdoor."""
-        return self.backdoor_port
 
     def get_console_topic(self, context):
         """Retrieves the console host for a project on this host.
@@ -1792,10 +1780,10 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def run_instance(self, context, instance, request_spec=None,
-                     filter_properties=None, requested_networks=None,
-                     injected_files=None, admin_password=None,
-                     is_first_time=False, node=None, legacy_bdm_in_spec=True):
+    def run_instance(self, context, instance, request_spec,
+                     filter_properties, requested_networks,
+                     injected_files, admin_password,
+                     is_first_time, node, legacy_bdm_in_spec):
 
         if filter_properties is None:
             filter_properties = {}
@@ -1963,17 +1951,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 quotas,
                                 system_meta)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def terminate_instance(self, context, instance, bdms=None,
-                           reservations=None):
+    def terminate_instance(self, context, instance, bdms, reservations):
         """Terminate an instance on this host."""
-        # NOTE(danms): remove this compatibility in the future
-        if not bdms:
-            bdms = self._get_instance_volume_bdms(context, instance)
 
         @utils.synchronized(instance['uuid'])
         def do_terminate_instance(instance, bdms):
@@ -1992,7 +1975,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     # NOTE(johannes): This is probably better named power_off_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2019,7 +2001,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     # NOTE(johannes): This is probably better named power_on_instance
     # so it matches the driver method, but because of other issues, we
     # can't use that name in grizzly.
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2035,12 +2016,11 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.POWERING_ON)
         self._notify_about_instance_usage(context, instance, "power_on.end")
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def soft_delete_instance(self, context, instance, reservations=None):
+    def soft_delete_instance(self, context, instance, reservations):
         """Soft delete an instance on this host."""
 
         if context.is_admin and context.project_id != instance['project_id']:
@@ -2102,8 +2082,8 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_instance_event
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
-                         injected_files, new_pass, orig_sys_metadata=None,
-                         bdms=None, recreate=False, on_shared_storage=False):
+                         injected_files, new_pass, orig_sys_metadata,
+                         bdms, recreate, on_shared_storage):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -2247,7 +2227,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                                  vm_state=vm_states.ACTIVE,
                                  task_state=task_states.POWERING_OFF,
                                  progress=0)
-                self.stop_instance(context, instance=instance)
+                inst_obj = instance_obj.Instance.get_by_uuid(context,
+                                                             instance['uuid'])
+                self.stop_instance(context, inst_obj)
 
             self._notify_about_instance_usage(
                     context, instance, "rebuild.end",
@@ -2280,15 +2262,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # Manager-detach
                 self.detach_volume(context, volume_id, instance)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def reboot_instance(self, context, instance,
-                        block_device_info=None,
-                        network_info=None,
-                        reboot_type="SOFT"):
+    def reboot_instance(self, context, instance, block_device_info,
+                        reboot_type):
         """Reboot an instance on this host."""
         context = context.elevated()
         LOG.audit(_("Rebooting instance"), context=context, instance=instance)
@@ -2381,39 +2360,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                                 task_states.IMAGE_BACKUP)
         self._rotate_backups(context, instance, backup_type, rotation)
 
-    # FIXME(comstud): Remove 'image_type', 'backup_type', and 'rotation'
-    #                 on next major RPC version bump.
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     @delete_image_on_error
-    def snapshot_instance(self, context, image_id, instance,
-                          image_type=None, backup_type=None,
-                          rotation=None):
+    def snapshot_instance(self, context, image_id, instance):
         """Snapshot an instance on this host.
 
         :param context: security context
         :param instance: an Instance dict
         :param image_id: glance.db.sqlalchemy.models.Image.Id
-        The following params are for RPC versions prior to 2.39 where
-        this method also handled backups:
-        :param image_type: snapshot | backup
-        :param backup_type: daily | weekly
-        :param rotation: int representing how many backups to keep around;
-            None if rotation shouldn't be used (as in the case of snapshots)
         """
-        if image_type is not None:
-            # Old RPC version
-            if image_type == 'backup':
-                if rotation < 0:
-                    raise exception.RotationRequiredForBackup()
-                self._snapshot_instance(context, image_id, instance,
-                                        task_states.IMAGE_BACKUP)
-                self._rotate_backups(context, instance, backup_type, rotation)
-                return
-            if rotation:
-                raise exception.ImageRotationNotAllowed()
         self._snapshot_instance(context, image_id, instance,
                                 task_states.IMAGE_SNAPSHOT)
 
@@ -2518,7 +2475,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def set_admin_password(self, context, instance, new_pass=None):
+    def set_admin_password(self, context, instance, new_pass):
         """Set the root/admin password for an instance on this host.
 
         This is generally only called by API password resets after an
@@ -2626,7 +2583,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
-    def rescue_instance(self, context, instance, rescue_password=None):
+    def rescue_instance(self, context, instance, rescue_password):
         """
         Rescue an instance on this host.
         :param rescue_password: password to set on rescue instance
@@ -2731,12 +2688,10 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         return sys_meta, instance_type
 
-    @object_compat
     @wrap_exception()
     @wrap_instance_event
     @wrap_instance_fault
-    def confirm_resize(self, context, instance, reservations=None,
-                       migration=None, migration_id=None):
+    def confirm_resize(self, context, instance, reservations, migration):
 
         @utils.synchronized(instance['uuid'])
         def do_confirm_resize(context, instance, migration_id):
@@ -2745,6 +2700,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             LOG.debug(_("Going to confirm migration %s") % migration_id,
                         context=context, instance=instance)
             try:
+                # TODO(russellb) Why are we sending the migration object just
+                # to turn around and look it up from the db again?
                 migration = migration_obj.Migration.get_by_id(
                                     context.elevated(), migration_id)
             except exception.MigrationNotFound:
@@ -2777,8 +2734,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._confirm_resize(context, instance, reservations=reservations,
                                  migration=migration)
 
-        migration_id = migration_id if migration_id else migration.id
-        do_confirm_resize(context, instance, migration_id)
+        do_confirm_resize(context, instance, migration.id)
 
     def _confirm_resize(self, context, instance, reservations=None,
                         migration=None):
@@ -2836,23 +2792,17 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._quota_commit(context, reservations)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def revert_resize(self, context, instance, migration=None,
-                      migration_id=None, reservations=None):
+    def revert_resize(self, context, instance, migration, reservations):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
         source machine.
 
         """
-        if not migration:
-            migration = migration_obj.Migration.get_by_id(
-                    context.elevated(), migration_id)
-
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
         self.conductor_api.notify_usage_exists(
@@ -2889,23 +2839,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                     migration, migration.source_compute,
                     reservations=reservations)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def finish_revert_resize(self, context, instance, reservations=None,
-                             migration=None, migration_id=None):
+    def finish_revert_resize(self, context, instance, reservations, migration):
         """Finishes the second half of reverting a resize.
 
         Bring the original source instance state back (active/shutoff) and
         revert the resized attributes in the database.
 
         """
-        if not migration:
-            migration = migration_obj.Migration.get_by_id(
-                    context.elevated(), migration_id)
-
         with self._error_out_instance_on_exception(context, instance.uuid,
                                                    reservations):
             network_info = self._get_instance_nw_info(context, instance)
@@ -3018,14 +2962,12 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.compute_rpcapi.resize_instance(context, instance,
                     claim.migration, image, instance_type, reservations)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
-                    reservations=None, request_spec=None,
-                    filter_properties=None, node=None):
+                    reservations, request_spec, filter_properties, node):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the RAM and disk size in the process.
@@ -3102,18 +3044,13 @@ class ComputeManager(manager.SchedulerDependentManager):
             # not re-scheduling
             raise exc_info[0], exc_info[1], exc_info[2]
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
-                        reservations=None, migration=None, migration_id=None,
-                        instance_type=None):
+                        reservations, migration, instance_type):
         """Starts the migration of a running instance to another host."""
-        if not migration:
-            migration = migration_obj.Migration.get_by_id(
-                    context.elevated(), migration_id)
         with self._error_out_instance_on_exception(context, instance.uuid,
                                                    reservations):
             if not instance_type:
@@ -3241,22 +3178,18 @@ class ComputeManager(manager.SchedulerDependentManager):
             context, instance, "finish_resize.end",
             network_info=network_info)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
-                      reservations=None, migration=None, migration_id=None):
+                      reservations, migration):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
         new host machine.
 
         """
-        if not migration:
-            migration = migration_obj.Migration.get_by_id(
-                    context.elevated(), migration_id)
         try:
             self._finish_resize(context, instance, migration,
                                 disk_info, image)
@@ -3325,7 +3258,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(
             context, instance, "delete_ip.end", network_info=network_info)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -3343,7 +3275,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.PAUSING)
         self._notify_about_instance_usage(context, instance, 'pause.end')
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -3362,9 +3293,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         self._notify_about_instance_usage(context, instance, 'unpause.end')
 
     @wrap_exception()
-    def host_power_action(self, context, host=None, action=None):
+    def host_power_action(self, context, action):
         """Reboots, shuts down or powers up the host."""
-        return self.driver.host_power_action(host, action)
+        # TODO(russellb) Remove the unused host parameter from the driver API
+        return self.driver.host_power_action(None, action)
 
     @wrap_exception()
     def host_maintenance_mode(self, context, host, mode):
@@ -3374,9 +3306,10 @@ class ComputeManager(manager.SchedulerDependentManager):
         return self.driver.host_maintenance_mode(host, mode)
 
     @wrap_exception()
-    def set_host_enabled(self, context, host=None, enabled=None):
+    def set_host_enabled(self, context, enabled):
         """Sets the specified host's ability to accept new instances."""
-        return self.driver.set_host_enabled(host, enabled)
+        # TODO(russellb) Remove the unused host parameter from the driver API
+        return self.driver.set_host_enabled(None, enabled)
 
     @wrap_exception()
     def get_host_uptime(self, context):
@@ -3393,7 +3326,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                       instance=instance)
             return self.driver.get_diagnostics(instance)
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -3412,7 +3344,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.SUSPENDING)
         self._notify_about_instance_usage(context, instance, 'suspend')
 
-    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -3528,7 +3459,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def unshelve_instance(self, context, instance, image=None):
+    def unshelve_instance(self, context, instance, image):
         """Unshelve the instance.
 
         :param context: request context
@@ -3588,7 +3519,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         instance.save(expected_task_state=task_states.SPAWNING)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
 
-    @object_compat
     @reverts_task_state
     @wrap_instance_fault
     def reset_network(self, context, instance):
@@ -3608,7 +3538,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                                         network_info)
         return network_info
 
-    @object_compat
     @wrap_instance_fault
     def inject_network_info(self, context, instance):
         """Inject network info, but don't return the info."""
@@ -3616,7 +3545,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @wrap_exception()
     @wrap_instance_fault
-    def get_console_output(self, context, instance, tail_length=None):
+    def get_console_output(self, context, instance, tail_length):
         """Send the console output for the given instance."""
         context = context.elevated()
         LOG.audit(_("Get console output"), context=context,
@@ -3724,7 +3653,7 @@ class ComputeManager(manager.SchedulerDependentManager):
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
-                                  volume_id=None):
+                                  volume_id):
 
         @utils.synchronized(instance['uuid'])
         def do_reserve():
@@ -3986,7 +3915,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             pass
 
     def attach_interface(self, context, instance, network_id, port_id,
-                         requested_ip=None):
+                         requested_ip):
         """Use hotplug to add an network adapter to an instance."""
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip)
@@ -4041,11 +3970,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
-    @object_compat
     @wrap_exception()
     def check_can_live_migrate_destination(self, ctxt, instance,
-                                           block_migration=False,
-                                           disk_over_commit=False):
+                                           block_migration, disk_over_commit):
         """Check if it is possible to execute live migration.
 
         This runs checks on the destination host, and then calls
@@ -4074,7 +4001,6 @@ class ComputeManager(manager.SchedulerDependentManager):
             migrate_data.update(dest_check_data['migrate_data'])
         return migrate_data
 
-    @object_compat
     @wrap_exception()
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         """Check if it is possible to execute live migration.
@@ -4100,9 +4026,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                                          dest_check_data)
 
     @wrap_exception()
-    def pre_live_migration(self, context, instance,
-                           block_migration=False, disk=None,
-                           migrate_data=None):
+    def pre_live_migration(self, context, instance, block_migration, disk,
+                           migrate_data):
         """Preparations for live migration at dest host.
 
         :param context: security context
@@ -4147,8 +4072,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         return pre_live_migration_data
 
     @wrap_exception()
-    def live_migration(self, context, dest, instance,
-                       block_migration=False, migrate_data=None):
+    def live_migration(self, context, dest, instance, block_migration,
+                       migrate_data):
         """Executing live migration.
 
         :param context: security context
@@ -4287,7 +4212,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @wrap_exception()
     def post_live_migration_at_destination(self, context, instance,
-                                           block_migration=False):
+                                           block_migration):
         """Post operations for live migration .
 
         :param context: security context
@@ -5123,12 +5048,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @aggregate_object_compat
     @wrap_exception()
-    def add_aggregate_host(self, context, host, slave_info=None,
-                           aggregate=None, aggregate_id=None):
+    def add_aggregate_host(self, context, aggregate, host, slave_info):
         """Notify hypervisor of change (for hypervisor pools)."""
-        if not aggregate:
-            aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
-
         try:
             self.driver.add_to_aggregate(context, aggregate, host,
                                          slave_info=slave_info)
@@ -5144,12 +5065,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     @aggregate_object_compat
     @wrap_exception()
-    def remove_aggregate_host(self, context, host, slave_info=None,
-                              aggregate=None, aggregate_id=None):
+    def remove_aggregate_host(self, context, host, slave_info, aggregate):
         """Removes a host from a physical hypervisor pool."""
-        if not aggregate:
-            aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
-
         try:
             self.driver.remove_from_aggregate(context, aggregate, host,
                                               slave_info=slave_info)
@@ -5224,267 +5141,3 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance.cleaned = True
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
-
-
-class _ComputeV3Proxy(object):
-
-    RPC_API_VERSION = '3.0'
-
-    def __init__(self, manager):
-        self.manager = manager
-
-    def add_aggregate_host(self, ctxt, aggregate, host, slave_info):
-        return self.manager.add_aggregate_host(ctxt, aggregate=aggregate,
-                host=host, slave_info=slave_info)
-
-    def add_fixed_ip_to_instance(self, ctxt, network_id, instance):
-        return self.manager.add_fixed_ip_to_instance(ctxt, network_id,
-                instance)
-
-    def attach_interface(self, ctxt, instance, network_id, port_id,
-                         requested_ip):
-        return self.manager.attach_interface(ctxt, instance, network_id,
-                port_id, requested_ip)
-
-    def attach_volume(self, ctxt, volume_id, mountpoint, instance):
-        return self.manager.attach_volume(ctxt, volume_id, mountpoint,
-                instance)
-
-    def change_instance_metadata(self, ctxt, diff, instance):
-        return self.manager.change_instance_metadata(ctxt, diff, instance)
-
-    def check_can_live_migrate_destination(self, ctxt,
-             instance, block_migration, disk_over_commit):
-        return self.manager.check_can_live_migrate_destination(ctxt, instance,
-                block_migration, disk_over_commit)
-
-    def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        return self.manager.check_can_live_migrate_source(ctxt, instance,
-                dest_check_data)
-
-    def check_instance_shared_storage(self, ctxt, instance, data):
-        return self.manager.check_instance_shared_storage(ctxt, instance, data)
-
-    def confirm_resize(self, ctxt, instance, reservations, migration):
-        return self.manager.confirm_resize(ctxt, instance=instance,
-                reservations=reservations, migration=migration)
-
-    def detach_interface(self, ctxt, instance, port_id):
-        return self.manager.detach_interface(ctxt, instance, port_id)
-
-    def detach_volume(self, ctxt, volume_id, instance):
-        return self.manager.detach_volume(ctxt, volume_id, instance)
-
-    def finish_resize(self, ctxt, instance, migration, image, disk_info,
-            reservations):
-        return self.manager.finish_resize(ctxt, instance=instance,
-                migration=migration, image=image,
-                disk_info=disk_info, reservations=reservations)
-
-    def finish_revert_resize(self, ctxt, instance, migration, reservations):
-        return self.manager.finish_revert_resize(ctxt, instance=instance,
-                migration=migration, reservations=reservations)
-
-    def get_console_output(self, ctxt, instance, tail_length):
-        return self.manager.get_console_output(ctxt, instance, tail_length)
-
-    def get_console_pool_info(self, ctxt, console_type):
-        return self.manager.get_console_pool_info(ctxt, console_type)
-
-    def get_console_topic(self, ctxt):
-        return self.manager.get_console_topic(ctxt)
-
-    def get_diagnostics(self, ctxt, instance):
-        return self.manager.get_diagnostics(ctxt, instance)
-
-    def get_vnc_console(self, ctxt, console_type, instance):
-        return self.manager.get_vnc_console(ctxt, console_type, instance)
-
-    def get_spice_console(self, ctxt, console_type, instance):
-        return self.manager.get_spice_console(ctxt, console_type, instance)
-
-    def validate_console_port(self, ctxt, instance, port, console_type):
-        return self.manager.validate_console_port(ctxt, instance, port,
-                console_type)
-
-    def host_maintenance_mode(self, ctxt, host, mode):
-        return self.manager.host_maintenance_mode(ctxt, host, mode)
-
-    def host_power_action(self, ctxt, action):
-        return self.manager.host_power_action(ctxt, None, action)
-
-    def inject_file(self, ctxt, instance, path, file_contents):
-        return self.manager.inject_file(ctxt, instance, path, file_contents)
-
-    def inject_network_info(self, ctxt, instance):
-        return self.manager.inject_network_info(ctxt, instance)
-
-    def live_migration(self, ctxt, instance, dest, block_migration,
-                       migrate_data):
-        return self.manager.live_migration(ctxt, instance, dest,
-                block_migration, migrate_data)
-
-    def pause_instance(self, ctxt, instance):
-        return self.manager.pause_instance(ctxt, instance)
-
-    def post_live_migration_at_destination(self, ctxt, instance,
-            block_migration):
-        return self.manager.post_live_migration_at_destination(ctxt, instance,
-                block_migration)
-
-    def pre_live_migration(self, ctxt, instance, block_migration, disk,
-            migrate_data):
-        return self.manager.pre_live_migration(ctxt, instance, block_migration,
-                disk, migrate_data)
-
-    def prep_resize(self, ctxt, image, instance, instance_type,
-                    reservations, request_spec,
-                    filter_properties, node):
-        return self.manager.prep_resize(ctxt, image=image,
-                instance=instance, instance_type=instance_type,
-                reservations=reservations, request_spec=request_spec,
-                filter_properties=filter_properties, node=node)
-
-    def reboot_instance(self, ctxt, instance, block_device_info,
-                        reboot_type):
-        return self.manager.reboot_instance(ctxt, instance=instance,
-                block_device_info=block_device_info, reboot_type=reboot_type)
-
-    def rebuild_instance(self, ctxt, instance, orig_image_ref, image_ref,
-            injected_files, new_pass, orig_sys_metadata, bdms, recreate,
-            on_shared_storage):
-        return self.manager.rebuild_instance(ctxt, instance,
-                orig_image_ref, image_ref, injected_files, new_pass,
-                orig_sys_metadata, bdms, recreate,
-                on_shared_storage)
-
-    def refresh_provider_fw_rules(self, ctxt):
-        return self.manager.refresh_provider_fw_rules(ctxt)
-
-    def remove_aggregate_host(self, ctxt, aggregate, host, slave_info):
-        return self.manager.remove_aggregate_host(ctxt, aggregate=aggregate,
-                host=host, slave_info=slave_info)
-
-    def remove_fixed_ip_from_instance(self, ctxt, address, instance):
-        return self.manager.remove_fixed_ip_from_instance(ctxt, address,
-                instance)
-
-    def remove_volume_connection(self, ctxt, instance, volume_id):
-        return self.manager.remove_volume_connection(ctxt, instance, volume_id)
-
-    def rescue_instance(self, ctxt, instance, rescue_password):
-        return self.manager.rescue_instance(ctxt, instance, rescue_password)
-
-    def reset_network(self, ctxt, instance):
-        return self.manager.reset_network(ctxt, instance)
-
-    def resize_instance(self, ctxt, instance, image, reservations, migration,
-            instance_type):
-        return self.manager.resize_instance(ctxt, instance=instance,
-                image=image, reservations=reservations, migration=migration,
-                instance_type=instance_type)
-
-    def resume_instance(self, ctxt, instance):
-        return self.manager.resume_instance(ctxt, instance)
-
-    def revert_resize(self, ctxt, instance, migration, reservations):
-        return self.manager.revert_resize(ctxt, instance=instance,
-                migration=migration, reservations=reservations)
-
-    def rollback_live_migration_at_destination(self, ctxt, instance):
-        return self.manager.rollback_live_migration_at_destination(ctxt,
-                instance)
-
-    def run_instance(self, ctxt, instance, request_spec,
-                     filter_properties, requested_networks,
-                     injected_files, admin_password,
-                     is_first_time, node, legacy_bdm_in_spec):
-        return self.manager.run_instance(ctxt, instance, request_spec,
-                filter_properties, requested_networks,
-                injected_files, admin_password,
-                is_first_time, node, legacy_bdm_in_spec)
-
-    def set_admin_password(self, ctxt, instance, new_pass):
-        return self.manager.set_admin_password(ctxt, instance, new_pass)
-
-    def set_host_enabled(self, ctxt, enabled):
-        return self.manager.set_host_enabled(ctxt, enabled=enabled)
-
-    def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
-        return self.manager.swap_volume(ctxt, instance, old_volume_id,
-                new_volume_id)
-
-    def get_host_uptime(self, ctxt):
-        return self.manager.get_host_uptime(ctxt)
-
-    def reserve_block_device_name(self, ctxt, instance, device, volume_id):
-        return self.manager.reserve_block_device_name(ctxt, instance, device,
-                volume_id)
-
-    def live_snapshot_instance(self, ctxt, instance, image_id):
-        return self.manager.live_snapshot_instance(ctxt, instance, image_id)
-
-    def backup_instance(self, ctxt, image_id, instance, backup_type,
-                        rotation):
-        return self.manager.backup_instance(ctxt, image_id, instance,
-                backup_type, rotation)
-
-    def snapshot_instance(self, ctxt, instance, image_id):
-        return self.manager.snapshot_instance(ctxt, instance=instance,
-                image_id=image_id)
-
-    def start_instance(self, ctxt, instance):
-        return self.manager.start_instance(ctxt, instance)
-
-    def stop_instance(self, ctxt, instance):
-        return self.manager.stop_instance(ctxt, instance)
-
-    def suspend_instance(self, ctxt, instance):
-        return self.manager.suspend_instance(ctxt, instance)
-
-    def terminate_instance(self, ctxt, instance, bdms, reservations):
-        return self.manager.terminate_instance(ctxt, instance=instance,
-                bdms=bdms, reservations=reservations)
-
-    def unpause_instance(self, ctxt, instance):
-        return self.manager.unpause_instance(ctxt, instance)
-
-    def unrescue_instance(self, ctxt, instance):
-        return self.manager.unrescue_instance(ctxt, instance)
-
-    def soft_delete_instance(self, ctxt, instance, reservations):
-        return self.manager.soft_delete_instance(ctxt, instance=instance,
-                reservations=reservations)
-
-    def restore_instance(self, ctxt, instance):
-        return self.manager.restore_instance(ctxt, instance)
-
-    def shelve_instance(self, ctxt, instance, image_id):
-        return self.manager.shelve_instance(ctxt, instance, image_id)
-
-    def shelve_offload_instance(self, ctxt, instance):
-        return self.manager.shelve_offload_instance(ctxt, instance)
-
-    def unshelve_instance(self, ctxt, instance, image):
-        return self.manager.unshelve_instance(ctxt, instance, image)
-
-    def volume_snapshot_create(self, ctxt, instance, volume_id,
-                               create_info):
-        return self.manager.volume_snapshot_create(ctxt, instance, volume_id,
-                create_info)
-
-    def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
-                               delete_info):
-        return self.manager.volume_snapshot_delete(ctxt, instance, volume_id,
-                snapshot_id, delete_info)
-
-    def refresh_security_group_rules(self, ctxt, security_group_id):
-        return self.manager.refresh_security_group_rules(ctxt,
-                security_group_id)
-
-    def refresh_security_group_members(self, ctxt, security_group_id):
-        return self.manager.refresh_security_group_members(ctxt,
-                security_group_id)
-
-    def refresh_instance_security_rules(self, ctxt, instance):
-        return self.manager.refresh_instance_security_rules(ctxt, instance)

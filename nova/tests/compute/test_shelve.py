@@ -31,7 +31,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve(self):
         CONF.shelved_offload_time = -1
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=db_instance)
+        self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
+                None, True, None, False)
         instance = instance_obj.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
@@ -81,7 +82,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     def test_shelve_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=db_instance)
+        self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
+                None, True, None, False)
         instance = instance_obj.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
@@ -123,7 +125,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     def test_unshelve(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=db_instance)
+        self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
+                None, True, None, False)
         instance = instance_obj.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
@@ -202,7 +205,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         cur_time = timeutils.utcnow()
         cur_time_tz = cur_time.replace(tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(cur_time)
-        self.compute.run_instance(self.context, instance=db_instance)
+        self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
+                None, True, None, False)
         instance = instance_obj.Instance.get_by_uuid(
             self.context, db_instance['uuid'],
             expected_attrs=['metadata', 'system_metadata'])
@@ -261,7 +265,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     def test_shelved_poll_none_exist(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
         self.mox.StubOutWithMock(timeutils, 'is_older_than')
         self.mox.ReplayAll()
@@ -269,7 +274,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     def test_shelved_poll_not_timedout(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         shelved_time = timeutils.utcnow()
         timeutils.set_time_override(shelved_time)
@@ -284,10 +290,12 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     def test_shelved_poll_timedout(self):
         active_instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=active_instance)
+        self.compute.run_instance(self.context, active_instance, {}, {}, [],
+                None, None, True, None, False)
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
         sys_meta = utils.metadata_to_dict(instance['system_metadata'])
         shelved_time = timeutils.utcnow()
         timeutils.set_time_override(shelved_time)
@@ -313,7 +321,8 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         fake_instance = self._create_fake_instance({'display_name': 'vm01'})
         instance = jsonutils.to_primitive(fake_instance)
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
 
         self.assertIsNone(instance['task_state'])
 
@@ -345,7 +354,8 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         # Ensure instance can be unshelved.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance=instance)
+        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+                None, True, None, False)
 
         self.assertIsNone(instance['task_state'])
 

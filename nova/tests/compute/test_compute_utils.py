@@ -419,14 +419,13 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = db.instance_get(self.context, instance_id)
+        instance = instance_obj.Instance.get_by_id(self.context, instance_id)
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
                         'other_data': 'meow'}
-        db.instance_system_metadata_update(self.context, instance['uuid'],
-                sys_metadata, False)
-        instance = db.instance_get(self.context, instance_id)
+        instance.system_metadata.update(sys_metadata)
+        instance.save()
         compute_utils.notify_usage_exists(
             notify.get_notifier('compute'), self.context, instance)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
@@ -452,23 +451,23 @@ class UsageInfoTestCase(test.TestCase):
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEqual(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context,
-                                        jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_notify_usage_exists_deleted_instance(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = db.instance_get(self.context, instance_id)
+        instance = instance_obj.Instance.get_by_id(self.context, instance_id,
+                expected_attrs=['metadata', 'system_metadata'])
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
                         'other_data': 'meow'}
-        db.instance_system_metadata_update(self.context, instance['uuid'],
-                sys_metadata, False)
-        self.compute.terminate_instance(self.context,
-                                        jsonutils.to_primitive(instance))
-        instance = db.instance_get(self.context.elevated(read_deleted='yes'),
-                                   instance_id)
+        instance.system_metadata.update(sys_metadata)
+        instance.save()
+        self.compute.terminate_instance(self.context, instance, [], [])
+        instance = instance_obj.Instance.get_by_id(
+                self.context.elevated(read_deleted='yes'), instance_id,
+                expected_attrs=['system_metadata'])
         compute_utils.notify_usage_exists(
             notify.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -497,9 +496,9 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
-        instance = db.instance_get(self.context, instance_id)
-        self.compute.terminate_instance(self.context,
-                                        jsonutils.to_primitive(instance))
+        instance = instance_obj.Instance.get_by_id(self.context, instance_id,
+                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        self.compute.terminate_instance(self.context, instance, [], [])
         compute_utils.notify_usage_exists(
             notify.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -526,17 +525,15 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_about_instance_usage(self):
         instance_id = self._create_instance()
-        instance = db.instance_get(self.context, instance_id)
+        instance = instance_obj.Instance.get_by_id(self.context, instance_id,
+                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',
                         'other_data': 'meow'}
+        instance.system_metadata.update(sys_metadata)
+        instance.save()
         extra_usage_info = {'image_name': 'fake_name'}
-        db.instance_system_metadata_update(self.context, instance['uuid'],
-                sys_metadata, False)
-        # NOTE(russellb) Make sure our instance has the latest system_metadata
-        # in it.
-        instance = db.instance_get(self.context, instance_id)
         compute_utils.notify_about_instance_usage(
             notify.get_notifier('compute'),
             self.context, instance, 'create.start',
@@ -563,8 +560,7 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['image_name'], 'fake_name')
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEqual(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context,
-                                        jsonutils.to_primitive(instance))
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_notify_about_aggregate_update_with_id(self):
         # Set aggregate payload

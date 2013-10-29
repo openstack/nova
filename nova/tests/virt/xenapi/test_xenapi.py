@@ -3126,8 +3126,9 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
 
         self.assertRaises(exception.AggregateError,
                           self.compute.add_aggregate_host,
-                          self.context, "fake_host",
-                          aggregate=jsonutils.to_primitive(self.aggr))
+                          self.context, host="fake_host",
+                          aggregate=jsonutils.to_primitive(self.aggr),
+                          slave_info=None)
         excepted = db.aggregate_get(self.context, self.aggr['id'])
         self.assertEqual(excepted['metadetails'][pool_states.KEY],
                 pool_states.ERROR)
