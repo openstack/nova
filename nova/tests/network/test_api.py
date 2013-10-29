@@ -123,8 +123,8 @@ class ApiTestCase(test.TestCase):
             expected_updated_instances = [new_instance['uuid']]
 
         def fake_instance_info_cache_update(context, instance_uuid, cache):
-            self.assertEquals(instance_uuid,
-                              expected_updated_instances.pop())
+            self.assertEqual(instance_uuid,
+                             expected_updated_instances.pop())
 
         self.stubs.Set(self.network_api.db, 'instance_info_cache_update',
                        fake_instance_info_cache_update)

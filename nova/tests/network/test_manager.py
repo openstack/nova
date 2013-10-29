@@ -1405,7 +1405,7 @@ class CommonNetworkTestCase(test.TestCase):
         manager.deallocate_for_instance(
             ctx, instance_id='ignore', host='somehost')
 
-        self.assertEquals([
+        self.assertEqual([
             (ctx, '1.2.3.4', 'somehost')
         ], manager.deallocate_fixed_ip_calls)
 
@@ -1415,7 +1415,7 @@ class CommonNetworkTestCase(test.TestCase):
                                               HOST,
                                               '10.0.0.1')
 
-        self.assertEquals(manager.deallocate_called, '10.0.0.1')
+        self.assertEqual(manager.deallocate_called, '10.0.0.1')
 
     def test_remove_fixed_ip_from_instance_bad_input(self):
         manager = fake_network.FakeNetworkManager()
@@ -2005,7 +2005,7 @@ class AllocateTestCase(test.TestCase):
             instance_id=inst['id'], instance_uuid=inst['uuid'],
             host=inst['host'], vpn=None, rxtx_factor=3,
             project_id=project_id, macs=None)
-        self.assertEquals(1, len(nw_info))
+        self.assertEqual(1, len(nw_info))
         fixed_ip = nw_info.fixed_ips()[0]['address']
         self.assertTrue(utils.is_valid_ipv4(fixed_ip))
         self.network.deallocate_for_instance(self.context,
@@ -2029,8 +2029,8 @@ class AllocateTestCase(test.TestCase):
             host=inst['host'], vpn=None, rxtx_factor=3,
             project_id=project_id, macs=available_macs)
         assigned_macs = [vif['address'] for vif in nw_info]
-        self.assertEquals(1, len(assigned_macs))
-        self.assertEquals(available_macs.pop(), assigned_macs[0])
+        self.assertEqual(1, len(assigned_macs))
+        self.assertEqual(available_macs.pop(), assigned_macs[0])
         self.network.deallocate_for_instance(self.context,
                                              instance_id=inst['id'],
                                              host=self.network.host,
@@ -2340,14 +2340,14 @@ class FloatingIPTestCase(test.TestCase):
         self.network.add_dns_entry(self.context, address1, name2, "A", zone)
         entries = self.network.get_dns_entries_by_address(self.context,
                                                           address1, zone)
-        self.assertEquals(len(entries), 2)
-        self.assertEquals(entries[0], name1)
-        self.assertEquals(entries[1], name2)
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries[0], name1)
+        self.assertEqual(entries[1], name2)
 
         entries = self.network.get_dns_entries_by_name(self.context,
                                                        name1, zone)
-        self.assertEquals(len(entries), 1)
-        self.assertEquals(entries[0], address1)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0], address1)
 
     def test_floating_dns_delete(self):
         zone = "example.org"
@@ -2361,8 +2361,8 @@ class FloatingIPTestCase(test.TestCase):
 
         entries = self.network.get_dns_entries_by_address(self.context,
                                                           address1, zone)
-        self.assertEquals(len(entries), 1)
-        self.assertEquals(entries[0], name2)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0], name2)
 
         self.assertRaises(exception.NotFound,
                           self.network.delete_dns_entry, self.context,
@@ -2387,18 +2387,18 @@ class FloatingIPTestCase(test.TestCase):
                                               'fakeproject')
 
         domains = self.network.get_dns_domains(self.context)
-        self.assertEquals(len(domains), 2)
-        self.assertEquals(domains[0]['domain'], domain1)
-        self.assertEquals(domains[1]['domain'], domain2)
-        self.assertEquals(domains[0]['project'], 'testproject')
-        self.assertEquals(domains[1]['project'], 'fakeproject')
+        self.assertEqual(len(domains), 2)
+        self.assertEqual(domains[0]['domain'], domain1)
+        self.assertEqual(domains[1]['domain'], domain2)
+        self.assertEqual(domains[0]['project'], 'testproject')
+        self.assertEqual(domains[1]['project'], 'fakeproject')
 
         self.network.add_dns_entry(self.context, address1, entryname,
                                    'A', domain1)
         entries = self.network.get_dns_entries_by_name(self.context,
                                                        entryname, domain1)
-        self.assertEquals(len(entries), 1)
-        self.assertEquals(entries[0], address1)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0], address1)
 
         self.assertRaises(exception.AdminRequired,
                           self.network.delete_dns_domain, self.context,
@@ -2442,7 +2442,7 @@ class FloatingIPTestCase(test.TestCase):
             entries = self.network.get_dns_entries_by_address(self.context,
                                                               address,
                                                               domain['domain'])
-            self.assertEquals(len(entries), 2)
+            self.assertEqual(len(entries), 2)
 
         self.network._delete_all_entries_for_ip(self.context, address)
 
@@ -2582,9 +2582,9 @@ class InstanceDNSTestCase(test.TestCase):
 
         self.network.create_private_dns_domain(context_admin, domain1, zone1)
         domains = self.network.get_dns_domains(self.context)
-        self.assertEquals(len(domains), 1)
-        self.assertEquals(domains[0]['domain'], domain1)
-        self.assertEquals(domains[0]['availability_zone'], zone1)
+        self.assertEqual(len(domains), 1)
+        self.assertEqual(domains[0]['domain'], domain1)
+        self.assertEqual(domains[0]['availability_zone'], zone1)
 
         self.assertRaises(exception.AdminRequired,
                           self.network.delete_dns_domain, self.context,
@@ -2644,13 +2644,13 @@ class LdapDNSTestCase(test.TestCase):
         self.driver.create_entry(name1, address1, "A", domain1)
         self.driver.create_entry(name2, address1, "A", domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
-        self.assertEquals(len(entries), 2)
-        self.assertEquals(entries[0], name1)
-        self.assertEquals(entries[1], name2)
+        self.assertEqual(len(entries), 2)
+        self.assertEqual(entries[0], name1)
+        self.assertEqual(entries[1], name2)
 
         entries = self.driver.get_entries_by_name(name1, domain1)
-        self.assertEquals(len(entries), 1)
-        self.assertEquals(entries[0], address1)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0], address1)
 
     def test_ldap_dns_delete(self):
         address1 = "10.10.10.11"
@@ -2660,13 +2660,13 @@ class LdapDNSTestCase(test.TestCase):
         self.driver.create_entry(name1, address1, "A", domain1)
         self.driver.create_entry(name2, address1, "A", domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
-        self.assertEquals(len(entries), 2)
+        self.assertEqual(len(entries), 2)
 
         self.driver.delete_entry(name1, domain1)
         entries = self.driver.get_entries_by_address(address1, domain1)
         LOG.debug("entries: %s" % entries)
-        self.assertEquals(len(entries), 1)
-        self.assertEquals(entries[0], name2)
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0], name2)
 
         self.assertRaises(exception.NotFound,
                           self.driver.delete_entry,
