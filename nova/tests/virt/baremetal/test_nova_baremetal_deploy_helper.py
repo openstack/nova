@@ -233,6 +233,48 @@ class PhysicalWorkTestCase(test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
+    def test_deploy_preserve_ephemeral(self):
+        address = '127.0.0.1'
+        port = 3306
+        iqn = 'iqn.xyz'
+        lun = 1
+        image_path = '/tmp/xyz/image'
+        pxe_config_path = '/tmp/abc/pxeconfig'
+        root_mb = 128
+        swap_mb = 64
+        ephemeral_mb = 128
+
+        dev = '/dev/fake'
+        ephemeral_part = '/dev/fake-part1'
+        swap_part = '/dev/fake-part2'
+        root_part = '/dev/fake-part3'
+        root_uuid = '12345678-1234-1234-12345678-12345678abcdef'
+
+        self._deploy_mox()
+        self.mox.StubOutWithMock(bmdh, 'mkfs_ephemeral')
+
+        bmdh.get_dev(address, port, iqn, lun).AndReturn(dev)
+        bmdh.get_image_mb(image_path).AndReturn(1)  # < root_mb
+        bmdh.discovery(address, port)
+        bmdh.login_iscsi(address, port, iqn)
+        bmdh.is_block_device(dev).AndReturn(True)
+        bmdh.make_partitions(dev, root_mb, swap_mb, ephemeral_mb)
+        bmdh.is_block_device(root_part).AndReturn(True)
+        bmdh.is_block_device(swap_part).AndReturn(True)
+        bmdh.is_block_device(ephemeral_part).AndReturn(True)
+        bmdh.dd(image_path, root_part)
+        bmdh.mkswap(swap_part)
+        bmdh.block_uuid(root_part).AndReturn(root_uuid)
+        bmdh.logout_iscsi(address, port, iqn)
+        bmdh.switch_pxe_config(pxe_config_path, root_uuid)
+        bmdh.notify(address, 10000)
+        self.mox.ReplayAll()
+
+        bmdh.deploy(address, port, iqn, lun, image_path, pxe_config_path,
+                    root_mb, swap_mb, ephemeral_mb, True)
+
+        self.mox.VerifyAll()
+
     def test_always_logout_iscsi(self):
         """logout_iscsi() must be called once login_iscsi() is called."""
         address = '127.0.0.1'
@@ -261,8 +303,8 @@ class PhysicalWorkTestCase(test.NoDBTestCase):
         bmdh.get_image_mb(image_path).AndReturn(1)  # < root_mb
         bmdh.discovery(address, port)
         bmdh.login_iscsi(address, port, iqn)
-        bmdh.work_on_disk(dev, root_mb, swap_mb, ephemeral_mb, image_path).\
-                AndRaise(TestException)
+        bmdh.work_on_disk(dev, root_mb, swap_mb, ephemeral_mb, image_path,
+                          False).AndRaise(TestException)
         bmdh.logout_iscsi(address, port, iqn)
         self.mox.ReplayAll()
 
@@ -294,7 +336,7 @@ class WorkOnDiskTestCase(test.NoDBTestCase):
         self.assertRaises(bmdh.BareMetalDeployException,
                           bmdh.work_on_disk,
                           self.dev, self.root_mb, self.swap_mb,
-                          self.ephemeral_mb, self.image_path)
+                          self.ephemeral_mb, self.image_path, False)
         self.m_ibd.assert_called_once_with(self.dev)
         self.m_mp.assert_not_called()
 
@@ -305,7 +347,7 @@ class WorkOnDiskTestCase(test.NoDBTestCase):
         self.assertRaises(bmdh.BareMetalDeployException,
                           bmdh.work_on_disk,
                           self.dev, self.root_mb, self.swap_mb,
-                          self.ephemeral_mb, self.image_path)
+                          self.ephemeral_mb, self.image_path, False)
         self.assertEqual(self.m_ibd.call_args_list, calls)
         self.m_mp.assert_called_once_with(self.dev, self.root_mb, self.swap_mb,
                                           self.ephemeral_mb)
@@ -318,7 +360,7 @@ class WorkOnDiskTestCase(test.NoDBTestCase):
         self.assertRaises(bmdh.BareMetalDeployException,
                           bmdh.work_on_disk,
                           self.dev, self.root_mb, self.swap_mb,
-                          self.ephemeral_mb, self.image_path)
+                          self.ephemeral_mb, self.image_path, False)
         self.assertEqual(self.m_ibd.call_args_list, calls)
         self.m_mp.assert_called_once_with(self.dev, self.root_mb, self.swap_mb,
                                           self.ephemeral_mb)
@@ -332,7 +374,7 @@ class WorkOnDiskTestCase(test.NoDBTestCase):
         self.assertRaises(bmdh.BareMetalDeployException,
                           bmdh.work_on_disk,
                           self.dev, self.root_mb, self.swap_mb,
-                          self.ephemeral_mb, self.image_path)
+                          self.ephemeral_mb, self.image_path, False)
         self.assertEqual(self.m_ibd.call_args_list, calls)
         self.m_mp.assert_called_once_with(self.dev, self.root_mb, self.swap_mb,
                                           self.ephemeral_mb)
