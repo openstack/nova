@@ -26,6 +26,7 @@ import copy
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import unit
 from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
@@ -801,9 +802,9 @@ def get_stats_from_cluster(session, cluster):
                             res_mor, "ResourcePool", "summary.runtime.memory")
             if res_usage:
                 # maxUsage is the memory limit of the cluster available to VM's
-                mem_info['total'] = int(res_usage.maxUsage / (1024 * 1024))
+                mem_info['total'] = int(res_usage.maxUsage / unit.Mi)
                 # overallUsage is the hypervisor's view of memory usage by VM's
-                consumed = int(res_usage.overallUsage / (1024 * 1024))
+                consumed = int(res_usage.overallUsage / unit.Mi)
                 mem_info['free'] = mem_info['total'] - consumed
     stats = {'cpu': cpu_info, 'mem': mem_info}
     return stats

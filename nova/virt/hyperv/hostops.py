@@ -26,6 +26,7 @@ from oslo.config import cfg
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import unit
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import utilsfactory
 
@@ -80,8 +81,8 @@ class HostOps(object):
         drive = os.path.splitdrive(self._pathutils.get_instances_dir())[0]
         (size, free_space) = self._hostutils.get_volume_info(drive)
 
-        total_gb = size / (1024 ** 3)
-        free_gb = free_space / (1024 ** 3)
+        total_gb = size / unit.Gi
+        free_gb = free_space / unit.Gi
         used_gb = total_gb - free_gb
         return (total_gb, free_gb, used_gb)
 

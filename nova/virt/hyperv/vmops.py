@@ -31,6 +31,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
+from nova import unit
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.hyperv import constants
@@ -159,7 +160,7 @@ class VMOps(object):
 
                 base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
                 base_vhd_size = base_vhd_info['MaxInternalSize']
-                root_vhd_size = instance['root_gb'] * 1024 ** 3
+                root_vhd_size = instance['root_gb'] * unit.Gi
 
                 # NOTE(lpetrut): Checking the namespace is needed as the
                 # following method is not yet implemented in vhdutilsv2.
@@ -187,7 +188,7 @@ class VMOps(object):
         return root_vhd_path
 
     def create_ephemeral_vhd(self, instance):
-        eph_vhd_size = instance.get('ephemeral_gb', 0) * 1024 ** 3
+        eph_vhd_size = instance.get('ephemeral_gb', 0) * unit.Gi
         if eph_vhd_size:
             vhd_format = self._vhdutils.get_best_supported_vhd_format()
 

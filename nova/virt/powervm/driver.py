@@ -24,6 +24,7 @@ from nova.compute import utils as compute_utils
 from nova.image import glance
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import unit
 from nova.virt import driver
 from nova.virt.powervm import exception
 from nova.virt.powervm import operator
@@ -295,7 +296,7 @@ class PowerVMDriver(driver.ComputeDriver):
         old_lv_size = disk_info['old_lv_size']
         if 'root_disk_file' in disk_info:
             disk_size = max(int(new_lv_size), int(old_lv_size))
-            disk_size_bytes = disk_size * 1024 * 1024 * 1024
+            disk_size_bytes = disk_size * unit.Gi
             self._powervm.deploy_from_migrated_file(
                     lpar_obj, disk_info['root_disk_file'], disk_size_bytes,
                     power_on)

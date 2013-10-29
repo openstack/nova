@@ -27,6 +27,7 @@ from nova import exception
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import unit
 from nova import utils
 from nova import version
 
@@ -55,7 +56,7 @@ CONF = cfg.CONF
 CONF.register_opts(configdrive_opts)
 
 # Config drives are 64mb, if we can't size to the exact size of the data
-CONFIGDRIVESIZE_BYTES = 64 * 1024 * 1024
+CONFIGDRIVESIZE_BYTES = 64 * unit.Mi
 
 
 class ConfigDriveBuilder(object):

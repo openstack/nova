@@ -29,6 +29,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import unit
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
@@ -294,7 +295,7 @@ class Qcow2(Image):
                         backing_parts[-1].isdigit():
                     legacy_backing_size = int(backing_parts[-1])
                     legacy_base += '_%d' % legacy_backing_size
-                    legacy_backing_size *= 1024 * 1024 * 1024
+                    legacy_backing_size *= unit.Gi
 
         # Create the legacy backing file if necessary.
         if legacy_backing_size:

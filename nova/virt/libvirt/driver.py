@@ -85,6 +85,7 @@ from nova.openstack.common import xmlutils
 from nova.pci import pci_manager
 from nova.pci import pci_utils
 from nova.pci import pci_whitelist
+from nova import unit
 from nova import utils
 from nova import version
 from nova.virt import configdrive
@@ -233,7 +234,7 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
     libvirt_firewall.IptablesFirewallDriver.__name__)
 
-MAX_CONSOLE_BYTES = 102400
+MAX_CONSOLE_BYTES = 100 * unit.Ki
 
 
 def patch_tpool_proxy():
@@ -2360,7 +2361,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # create a base image.
         if not booted_from_volume:
             root_fname = imagecache.get_cache_fname(disk_images, 'image_id')
-            size = instance['root_gb'] * 1024 * 1024 * 1024
+            size = instance['root_gb'] * unit.Gi
 
             if size == 0 or suffix == '.rescue':
                 size = None
@@ -2386,7 +2387,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    os_type=instance["os_type"],
                                    is_block_dev=disk_image.is_block_dev)
             fname = "ephemeral_%s_%s" % (ephemeral_gb, os_type_with_default)
-            size = ephemeral_gb * 1024 * 1024 * 1024
+            size = ephemeral_gb * unit.Gi
             disk_image.cache(fetch_func=fn,
                              filename=fname,
                              size=size,
@@ -2399,7 +2400,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                    fs_label='ephemeral%d' % idx,
                                    os_type=instance["os_type"],
                                    is_block_dev=disk_image.is_block_dev)
-            size = eph['size'] * 1024 * 1024 * 1024
+            size = eph['size'] * unit.Gi
             fname = "ephemeral_%s_%s" % (eph['size'], os_type_with_default)
             disk_image.cache(
                              fetch_func=fn,
@@ -2420,7 +2421,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 swap_mb = inst_type['swap']
 
             if swap_mb > 0:
-                size = swap_mb * 1024 * 1024
+                size = swap_mb * unit.Mi
                 image('disk.swap').cache(fetch_func=self._create_swap,
                                          filename="swap_%s" % swap_mb,
                                          size=size,
@@ -3431,7 +3432,7 @@ class LibvirtDriver(driver.ComputeDriver):
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 
         for (k, v) in info.iteritems():
-            info[k] = v / (1024 ** 3)
+            info[k] = v / unit.Gi
 
         return info
 
@@ -3905,7 +3906,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         available = 0
         if available_mb:
-            available = available_mb * (1024 ** 2)
+            available = available_mb * unit.Mi
 
         ret = self.get_instance_disk_info(instance['name'])
         disk_infos = jsonutils.loads(ret)
@@ -4555,7 +4556,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 size = instance['ephemeral_gb']
             else:
                 size = 0
-            size *= 1024 * 1024 * 1024
+            size *= unit.Gi
 
             # If we have a non partitioned image that we can extend
             # then ensure we're in 'raw' format so we can extend file system.
@@ -4832,8 +4833,8 @@ class HostState(object):
             disk_over_committed = (self.driver.
                     get_disk_over_committed_size_total())
             # Disk available least size
-            available_least = disk_free_gb * (1024 ** 3) - disk_over_committed
-            return (available_least / (1024 ** 3))
+            available_least = disk_free_gb * unit.Gi - disk_over_committed
+            return (available_least / unit.Gi)
 
         LOG.debug(_("Updating host stats"))
         disk_info_dict = self.driver.get_local_gb_info()
