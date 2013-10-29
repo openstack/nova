@@ -1250,8 +1250,6 @@ CATEGORIES = {
     'flavor': FlavorCommands,
     'floating': FloatingIpCommands,
     'host': HostCommands,
-    # Deprecated, remove in Icehouse
-    'instance_type': FlavorCommands,
     'logs': GetLogCommands,
     'network': NetworkCommands,
     'project': ProjectCommands,
