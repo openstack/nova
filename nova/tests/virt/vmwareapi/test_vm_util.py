@@ -29,11 +29,14 @@ from nova.virt.vmwareapi import vm_util
 
 
 class fake_session(object):
-    def __init__(self, ret=None):
+    def __init__(self, *ret):
         self.ret = ret
+        self.ind = 0
 
     def _call_method(self, *args):
-        return self.ret
+        # return fake objects in circular manner
+        self.ind = (self.ind + 1) % len(self.ret)
+        return self.ret[self.ind - 1]
 
     def _get_vim(self):
         fake_vim = fake.DataObject()
@@ -138,6 +141,19 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             expected_stats = {'cpu': cpu_info, 'mem': mem_info}
             self.assertEqual(expected_stats, result)
 
+    def test_get_datastore_ref_and_name_with_token(self):
+        regex = re.compile("^ds.*\d$")
+        fake0 = fake.FakeRetrieveResult()
+        fake0.add_object(fake.Datastore("ds0", 10 * units.Gi, 5 * units.Gi))
+        fake0.add_object(fake.Datastore("foo", 10 * units.Gi, 9 * units.Gi))
+        setattr(fake0, 'token', 'token-0')
+        fake1 = fake.FakeRetrieveResult()
+        fake1.add_object(fake.Datastore("ds2", 10 * units.Gi, 8 * units.Gi))
+        fake1.add_object(fake.Datastore("ds3", 10 * units.Gi, 1 * units.Gi))
+        result = vm_util.get_datastore_ref_and_name(
+            fake_session(fake0, fake1), None, None, regex)
+        self.assertEqual("ds2", result[1])
+
     def test_get_datastore_ref_and_name_with_list(self):
         # Test with a regex containing whitelist of datastores
         datastore_valid_regex = re.compile("(openstack-ds0|openstack-ds2)")
@@ -174,11 +190,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         self.assertRaises(exception.DatastoreNotFound,
                 vm_util.get_datastore_ref_and_name,
-                fake_session(), host="fake-host")
+                fake_session(None), host="fake-host")
 
         self.assertRaises(exception.DatastoreNotFound,
                 vm_util.get_datastore_ref_and_name,
-                fake_session(), cluster="fake-cluster")
+                fake_session(None), cluster="fake-cluster")
 
     def test_get_host_ref_from_id(self):
         fake_host_name = "ha-host"

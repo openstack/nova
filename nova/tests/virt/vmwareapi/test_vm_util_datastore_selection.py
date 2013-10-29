@@ -14,6 +14,7 @@
 import collections
 import re
 
+from nova.openstack.common import units
 from nova import test
 from nova.virt.vmwareapi import vm_util
 
@@ -59,7 +60,9 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
 
     def test_filter_datastores_simple(self):
         datastores = self.build_result_set(self.data)
-        rec = vm_util._get_datastore_ref_and_name(datastores)
+        best_match = vm_util.DSRecord(datastore=None, name=None,
+                              capacity=None, freespace=0)
+        rec = vm_util._select_datastore(datastores, best_match)
 
         self.assertIsNotNone(rec[0], "could not find datastore!")
         self.assertEqual('ds-001', rec[0].value,
@@ -71,18 +74,23 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         data = []
         datastores = self.build_result_set(data)
 
-        rec = vm_util._get_datastore_ref_and_name(datastores)
+        best_match = vm_util.DSRecord(datastore=None, name=None,
+                              capacity=None, freespace=0)
+        rec = vm_util._select_datastore(datastores, best_match)
 
-        self.assertIsNone(rec)
+        self.assertEqual(rec, best_match)
 
     def test_filter_datastores_no_match(self):
         datastores = self.build_result_set(self.data)
         datastore_regex = re.compile('no_match.*')
 
-        rec = vm_util._get_datastore_ref_and_name(datastores,
-                                                  datastore_regex)
+        best_match = vm_util.DSRecord(datastore=None, name=None,
+                              capacity=None, freespace=0)
+        rec = vm_util._select_datastore(datastores,
+                                        best_match,
+                                        datastore_regex)
 
-        self.assertIsNone(rec, "did not fail to match datastore properly")
+        self.assertEqual(rec, best_match, "did not match datastore properly")
 
     def test_filter_datastores_specific_match(self):
 
@@ -97,8 +105,11 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         datastores = self.build_result_set(data)
         datastore_regex = re.compile('.*-good$')
 
-        rec = vm_util._get_datastore_ref_and_name(datastores,
-                                                  datastore_regex)
+        best_match = vm_util.DSRecord(datastore=None, name=None,
+                              capacity=None, freespace=0)
+        rec = vm_util._select_datastore(datastores,
+                                        best_match,
+                                        datastore_regex)
 
         self.assertIsNotNone(rec, "could not find datastore!")
         self.assertEqual('ds-003', rec[0].value,
@@ -120,6 +131,28 @@ class VMwareVMUtilDatastoreSelectionTestCase(test.NoDBTestCase):
         prop_names = ['summary.type', 'summary.name',
                       'summary.capacity', 'summary.freeSpace']
         datastores = self.build_result_set(data, prop_names)
+        best_match = vm_util.DSRecord(datastore=None, name=None,
+                              capacity=None, freespace=0)
 
-        rec = vm_util._get_datastore_ref_and_name(datastores)
-        self.assertIsNone(rec, "no matches were expected")
+        rec = vm_util._select_datastore(datastores, best_match)
+        self.assertEqual(rec, best_match, "no matches were expected")
+
+    def test_filter_datastores_best_match(self):
+        data = [
+            ['VMFS', 'spam-good', True, 20 * units.Gi, 10 * units.Gi],
+            ['NFS', 'eggs-good', True, 40 * units.Gi, 15 * units.Gi],
+            ['BAD', 'some-name-bad', True, 30 * units.Gi, 20 * units.Gi],
+            ['VMFS', 'some-name-good', True, 50 * units.Gi, 5 * units.Gi],
+            ['VMFS', 'some-other-good', True, 10 * units.Gi, 10 * units.Gi],
+        ]
+
+        datastores = self.build_result_set(data)
+        datastore_regex = re.compile('.*-good$')
+
+        # the current best match is better than all candidates
+        best_match = vm_util.DSRecord(datastore='ds-100', name='best-ds-good',
+                              capacity=20 * units.Gi, freespace=19 * units.Gi)
+        rec = vm_util._select_datastore(datastores,
+                                        best_match,
+                                        datastore_regex)
+        self.assertEqual(rec, best_match, "did not match datastore properly")
