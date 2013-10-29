@@ -29,3 +29,4 @@ six>=1.4.1
 stevedore>=0.10
 websockify>=0.5.1,<0.6
 oslo.config>=1.2.0
+pycadf>=0.1.9
