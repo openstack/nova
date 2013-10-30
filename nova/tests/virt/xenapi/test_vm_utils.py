@@ -1759,3 +1759,35 @@ class MigrateVHDTestCase(VMUtilsTestBase):
         self.assertRaises(exception.MigrationError, vm_utils.migrate_vhd,
                           session, instance, "vdi_uuid", "dest", "sr_path", 2)
         self._assert_transfer_called(session, "a")
+
+
+class StripBaseMirrorTestCase(VMUtilsTestBase):
+    def test_strip_base_mirror_from_vdi_works(self):
+        session = mock.Mock()
+        vm_utils._try_strip_base_mirror_from_vdi(session, "vdi_ref")
+        session.call_xenapi.assert_called_once_with(
+                "VDI.remove_from_sm_config", "vdi_ref", "base_mirror")
+
+    def test_strip_base_mirror_from_vdi_hides_error(self):
+        session = mock.Mock()
+        session.XenAPI.Failure = test.TestingException
+        session.call_xenapi.side_effect = test.TestingException()
+
+        vm_utils._try_strip_base_mirror_from_vdi(session, "vdi_ref")
+
+        session.call_xenapi.assert_called_once_with(
+                "VDI.remove_from_sm_config", "vdi_ref", "base_mirror")
+
+    @mock.patch.object(vm_utils, '_try_strip_base_mirror_from_vdi')
+    def test_strip_base_mirror_from_vdis(self, mock_strip):
+        session = mock.Mock()
+        session.call_xenapi.return_value = {"VDI": "ref", "foo": "bar"}
+
+        vm_utils.strip_base_mirror_from_vdis(session, "vm_ref")
+
+        expected = [mock.call('VM.get_VBDs', "vm_ref"),
+                    mock.call('VBD.get_record', "VDI"),
+                    mock.call('VBD.get_record', "foo")]
+        self.assertEqual(expected, session.call_xenapi.call_args_list)
+        expected = [mock.call(session, "ref"), mock.call(session, "ref")]
+        self.assertEqual(expected, mock_strip.call_args_list)

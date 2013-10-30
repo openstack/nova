@@ -685,6 +685,23 @@ def get_all_vdi_uuids_for_vm(session, vm_ref, min_userdevice=0):
             yield _vdi_get_uuid(session, vdi_ref)
 
 
+def _try_strip_base_mirror_from_vdi(session, vdi_ref):
+    try:
+        session.call_xenapi("VDI.remove_from_sm_config", vdi_ref,
+                            "base_mirror")
+    except session.XenAPI.Failure:
+        LOG.debug(_("Error while removing sm_config"), exc_info=True)
+
+
+def strip_base_mirror_from_vdis(session, vm_ref):
+    # NOTE(johngarbutt) part of workaround for XenServer bug CA-98606
+    vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
+    for vbd in vbd_refs:
+        vbd_rec = session.call_xenapi("VBD.get_record", vbd)
+        vdi_ref = vbd_rec['VDI']
+        _try_strip_base_mirror_from_vdi(session, vdi_ref)
+
+
 @contextlib.contextmanager
 def snapshot_attached_here(session, instance, vm_ref, label, userdevice='0',
                            post_snapshot_callback=None):
