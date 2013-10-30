@@ -862,8 +862,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             # If we get an instance without it, re-fetch so that the call
             # to network_api (which requires it for instance_type) will
             # succeed.
-            instance = self.conductor_api.instance_get_by_uuid(
-                context, instance['uuid'])
+            instance = instance_obj.Instance.get_by_uuid(context,
+                                                         instance['uuid'])
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
         return network_info

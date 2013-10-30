@@ -4948,23 +4948,33 @@ class ComputeTestCase(BaseTestCase):
     def test_get_instance_nw_info(self):
         fake_network.unset_stub_network_methods(self.stubs)
 
-        fake_instance = {'uuid': 'fake-instance'}
+        fake_inst = fake_instance.fake_db_instance(uuid='fake-instance')
         fake_nw_info = network_model.NetworkInfo()
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'get_instance_nw_info')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'instance_get_by_uuid')
+        self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
 
-        self.compute.conductor_api.instance_get_by_uuid(
-            self.context, fake_instance['uuid']).AndReturn(fake_instance)
+        db.instance_get_by_uuid(self.context, fake_inst['uuid']
+                                ).AndReturn(fake_inst)
+        # NOTE(danms): compute manager will re-query since we're not giving
+        # it an instance with system_metadata. We're stubbing out the
+        # subsequent call so we don't need it, but keep this to make sure it
+        # does the right thing.
+        db.instance_get_by_uuid(self.context, fake_inst['uuid'],
+                                columns_to_join=['info_cache',
+                                                 'security_groups'],
+                                use_slave=False
+                                ).AndReturn(fake_inst)
         self.compute.network_api.get_instance_nw_info(self.context,
-                fake_instance).AndReturn(fake_nw_info)
+                mox.IsA(instance_obj.Instance)).AndReturn(fake_nw_info)
 
         self.mox.ReplayAll()
 
+        fake_inst_obj = instance_obj.Instance._from_db_object(
+            self.context, instance_obj.Instance(), fake_inst, [])
         result = self.compute._get_instance_nw_info(self.context,
-                                                    fake_instance)
+                                                    fake_inst_obj)
         self.assertEqual(fake_nw_info, result)
 
     def test_heal_instance_info_cache(self):
