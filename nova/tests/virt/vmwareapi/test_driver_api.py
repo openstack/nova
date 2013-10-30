@@ -243,6 +243,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                    host_username='test_username',
                    host_password='test_pass',
                    cluster_name='test_cluster',
+                   datastore_regex='.*',
                    use_linked_clone=False, group='vmware')
         self.flags(vnc_enabled=False,
                    image_cache_subdirectory_name='vmware_base')
