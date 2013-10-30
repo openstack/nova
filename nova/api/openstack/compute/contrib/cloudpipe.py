@@ -15,6 +15,7 @@
 """Connect your vlan to the world."""
 
 from oslo.config import cfg
+from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -148,7 +149,7 @@ class CloudpipeController(object):
             except exception.NoMoreNetworks:
                 msg = _("Unable to claim IP for VPN instances, ensure it "
                         "isn't running, and try again in a few minutes")
-                raise exception.HTTPBadRequest(explanation=msg)
+                raise exc.HTTPBadRequest(explanation=msg)
         return {'instance_id': instance['uuid']}
 
     @wsgi.serializers(xml=CloudpipesTemplate)
