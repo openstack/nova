@@ -1027,7 +1027,28 @@ def is_none_string(val):
 
 
 def convert_version_to_int(version):
-    return version[0] * 1000000 + version[1] * 1000 + version[2]
+    try:
+        if type(version) == str:
+            version = convert_version_to_tuple(version)
+        if type(version) == tuple:
+            return reduce(lambda x, y: (x * 1000) + y, version)
+    except Exception:
+        raise exception.NovaException(message="Hypervisor version invalid.")
+
+
+def convert_version_to_str(version_int):
+    version_numbers = []
+    factor = 1000
+    while version_int != 0:
+        version_number = version_int - (version_int // factor * factor)
+        version_numbers.insert(0, str(version_number))
+        version_int = version_int / factor
+
+    return reduce(lambda x, y: "%s.%s" % (x, y), version_numbers)
+
+
+def convert_version_to_tuple(version_str):
+    return tuple(int(part) for part in version_str.split('.'))
 
 
 def is_neutron():

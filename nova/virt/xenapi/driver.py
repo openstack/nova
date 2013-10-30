@@ -743,9 +743,7 @@ class XenAPISession(object):
             product_version_str = software_version.get('platform_version',
                                                        '0.0.0')
         product_brand = software_version.get('product_brand')
-
-        product_version = tuple(int(part) for part in
-                                product_version_str.split('.'))
+        product_version = utils.convert_version_to_tuple(product_version_str)
 
         return product_version, product_brand
 
