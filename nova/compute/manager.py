@@ -3659,8 +3659,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         if 'serial' not in connection_info:
             connection_info['serial'] = volume_id
 
-        encryption = encryptors.get_encryption_metadata(context, volume_id,
-                                                        connection_info)
+        encryption = encryptors.get_encryption_metadata(
+            context, self.volume_api, volume_id, connection_info)
+
         try:
             self.driver.attach_volume(context,
                                       connection_info,
@@ -3717,8 +3718,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(_('Detaching volume from unknown instance'),
                          context=context, instance=instance)
 
-            encryption = encryptors.get_encryption_metadata(context, volume_id,
-                                                            connection_info)
+            encryption = encryptors.get_encryption_metadata(
+                context, self.volume_api, volume_id, connection_info)
+
             self.driver.detach_volume(connection_info,
                                       instance,
                                       mp,

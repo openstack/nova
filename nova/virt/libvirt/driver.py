@@ -914,9 +914,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if ('data' in connection_info and
                     'volume_id' in connection_info['data']):
                 volume_id = connection_info['data']['volume_id']
-                encryption = \
-                    encryptors.get_encryption_metadata(context, volume_id,
-                                                       connection_info)
+                encryption = encryptors.get_encryption_metadata(
+                    context, self._volume_api, volume_id, connection_info)
+
                 if encryption:
                     # The volume must be detached from the VM before
                     # disconnecting it from its encryptor. Otherwise, the
@@ -3191,9 +3191,9 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'connection_info': jsonutils.dumps(connection_info)})
 
                 volume_id = connection_info['data']['volume_id']
-                encryption = \
-                        encryptors.get_encryption_metadata(context, volume_id,
-                                                           connection_info)
+                encryption = encryptors.get_encryption_metadata(
+                    context, self._volume_api, volume_id, connection_info)
+
                 if encryption:
                     encryptor = self._get_volume_encryptor(connection_info,
                                                            encryption)
