@@ -43,7 +43,6 @@ postgres=# create database openstack_baremetal_citest with owner
 
 """
 
-import collections
 import commands
 import ConfigParser
 import datetime
@@ -52,13 +51,9 @@ import os
 import urlparse
 
 from migrate.versioning import repository
-import netaddr
 import sqlalchemy
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.dialects import sqlite
 import sqlalchemy.exc
 
-from nova.db.sqlalchemy import api as db
 import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
 from nova.openstack.common.gettextutils import _
@@ -609,395 +604,6 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
                 break
 
         self.assertEqual(sorted(members), sorted(index_columns))
-
-    def _check_149(self, engine, data):
-        provider_fw_rules = db_utils.get_table(engine, 'provider_fw_rules')
-        result = provider_fw_rules.select().execute()
-
-        iplist = map(lambda x: str(netaddr.IPNetwork(x['cidr'])),
-                     data['provider_fw_rules'])
-
-        for row in result:
-            self.assertIn(str(netaddr.IPNetwork(row['cidr'])), iplist)
-
-        console_pools = db_utils.get_table(engine, 'console_pools')
-        result = console_pools.select().execute()
-
-        iplist = map(lambda x: str(netaddr.IPAddress(x['address'])),
-                     data['console_pools'])
-
-        for row in result:
-            self.assertIn(str(netaddr.IPAddress(row['address'])), iplist)
-
-    # migration 151 - changes period_beginning and period_ending to DateTime
-    def _pre_upgrade_151(self, engine):
-        task_log = db_utils.get_table(engine, 'task_log')
-        data = {
-            'task_name': 'The name of the task',
-            'state': 'The state of the task',
-            'host': 'compute-host1',
-            'period_beginning': str(datetime.datetime(2013, 2, 11)),
-            'period_ending': str(datetime.datetime(2013, 2, 12)),
-            'message': 'The task_log message',
-            }
-        result = task_log.insert().values(data).execute()
-        data['id'] = result.inserted_primary_key[0]
-        return data
-
-    def _check_151(self, engine, data):
-        task_log = db_utils.get_table(engine, 'task_log')
-        row = task_log.select(task_log.c.id == data['id']).execute().first()
-        self.assertIsInstance(row['period_beginning'], datetime.datetime)
-        self.assertIsInstance(row['period_ending'], datetime.datetime)
-        self.assertEqual(
-            data['period_beginning'], str(row['period_beginning']))
-        self.assertEqual(data['period_ending'], str(row['period_ending']))
-
-    # migration 152 - convert deleted from boolean to int
-    def _pre_upgrade_152(self, engine):
-        host1 = 'compute-host1'
-        host2 = 'compute-host2'
-        # NOTE(sdague): start at #4 because services data already in table
-        # from 147
-        services_data = [
-            {'id': 4, 'host': host1, 'binary': 'nova-compute',
-             'report_count': 0, 'topic': 'compute', 'deleted': False},
-            {'id': 5, 'host': host1, 'binary': 'nova-compute',
-             'report_count': 0, 'topic': 'compute', 'deleted': True}
-            ]
-        volumes_data = [
-            {'id': 'first', 'host': host1, 'deleted': False},
-            {'id': 'second', 'host': host2, 'deleted': True}
-            ]
-
-        services = db_utils.get_table(engine, 'services')
-        engine.execute(services.insert(), services_data)
-
-        volumes = db_utils.get_table(engine, 'volumes')
-        engine.execute(volumes.insert(), volumes_data)
-        return dict(services=services_data, volumes=volumes_data)
-
-    def _check_152(self, engine, data):
-        services = db_utils.get_table(engine, 'services')
-        service = services.select(services.c.id == 4).execute().first()
-        self.assertEqual(0, service.deleted)
-        service = services.select(services.c.id == 5).execute().first()
-        self.assertEqual(service.id, service.deleted)
-
-        volumes = db_utils.get_table(engine, 'volumes')
-        volume = volumes.select(volumes.c.id == "first").execute().first()
-        self.assertEqual("", volume.deleted)
-        volume = volumes.select(volumes.c.id == "second").execute().first()
-        self.assertEqual(volume.id, volume.deleted)
-
-    def _post_downgrade_152(self, engine):
-        # Check indexes exist as they used to
-        if engine.name != 'sqlite':
-            test_data = self._pre_upgrade_194(engine)
-            test_data['migrations'] = ((
-                 'migrations_instance_uuid_and_status_idx',
-                ['deleted', 'instance_uuid', 'status']
-            ), (
-                'migrations_by_host_nodes_and_status_idx',
-                ['deleted', 'source_compute', 'dest_compute', 'source_node',
-                 'dest_node', 'status']
-            ))
-
-            for table_name, indexes in test_data.iteritems():
-                meta = sqlalchemy.MetaData()
-                meta.bind = engine
-                table = sqlalchemy.Table(table_name, meta, autoload=True)
-
-                index_data = [(idx.name, idx.columns.keys())
-                              for idx in table.indexes]
-
-                for name, columns in indexes:
-                    if engine.name == "postgresql":
-                        # we can not get correct order of columns in index
-                        # definition to postgresql using sqlalchemy.
-                        # So we sort columns list before compare
-                        # bug http://www.sqlalchemy.org/trac/ticket/2767
-                        self.assertIn(
-                            (name, sorted(columns)),
-                            ([(idx[0], sorted(idx[1])) for idx in index_data])
-                        )
-                    else:
-                        self.assertIn((name, columns), index_data)
-
-    # migration 153, copy flavor information into system_metadata
-    def _pre_upgrade_153(self, engine):
-        fake_types = [
-            dict(id=10, name='type1', memory_mb=128, vcpus=1,
-                 root_gb=10, ephemeral_gb=0, flavorid="1", swap=0,
-                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
-                 is_public=True),
-            dict(id=11, name='type2', memory_mb=512, vcpus=1,
-                 root_gb=10, ephemeral_gb=5, flavorid="2", swap=0,
-                 rxtx_factor=1.5, vcpu_weight=2, disabled=False,
-                 is_public=True),
-            dict(id=12, name='type3', memory_mb=128, vcpus=1,
-                 root_gb=10, ephemeral_gb=0, flavorid="3", swap=0,
-                 rxtx_factor=1.0, vcpu_weight=1, disabled=False,
-                 is_public=False),
-            dict(id=13, name='type4', memory_mb=128, vcpus=1,
-                 root_gb=10, ephemeral_gb=0, flavorid="4", swap=0,
-                 rxtx_factor=1.0, vcpu_weight=None, disabled=True,
-                 is_public=True),
-            dict(id=14, name='type5', memory_mb=128, vcpus=1,
-                 root_gb=10, ephemeral_gb=0, flavorid="5", swap=0,
-                 rxtx_factor=1.0, vcpu_weight=1, disabled=True,
-                 is_public=False),
-            ]
-
-        fake_instances = [
-            dict(uuid='m153-uuid1', instance_type_id=10, deleted=0),
-            dict(uuid='m153-uuid2', instance_type_id=11, deleted=0),
-            dict(uuid='m153-uuid3', instance_type_id=12, deleted=0),
-            dict(uuid='m153-uuid4', instance_type_id=13, deleted=0),
-            # NOTE(danms): no use of type5
-            ]
-
-        instances = db_utils.get_table(engine, 'instances')
-        instance_types = db_utils.get_table(engine, 'instance_types')
-        engine.execute(instance_types.insert(), fake_types)
-        engine.execute(instances.insert(), fake_instances)
-
-        return fake_types, fake_instances
-
-    def _check_153(self, engine, data):
-        fake_types, fake_instances = data
-        # NOTE(danms): Fetch all the tables and data from scratch after change
-        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
-
-        # Collect all system metadata, indexed by instance_uuid
-        metadata = collections.defaultdict(dict)
-        for values in sys_meta.select().execute():
-            metadata[values['instance_uuid']][values['key']] = values['value']
-
-        # Taken from nova/compute/api.py
-        instance_type_props = ['id', 'name', 'memory_mb', 'vcpus',
-                               'root_gb', 'ephemeral_gb', 'flavorid',
-                               'swap', 'rxtx_factor', 'vcpu_weight']
-
-        for instance in fake_instances:
-            inst_sys_meta = metadata[instance['uuid']]
-            inst_type = fake_types[instance['instance_type_id'] - 10]
-            for prop in instance_type_props:
-                prop_name = 'instance_type_%s' % prop
-                self.assertIn(prop_name, inst_sys_meta)
-                if prop == "vcpu_weight":
-                    # NOTE(danms) vcpu_weight can be NULL
-                    self.assertEqual(inst_sys_meta[prop_name],
-                                     inst_type[prop] and str(inst_type[prop])
-                                     or None)
-                else:
-                    self.assertEqual(str(inst_sys_meta[prop_name]),
-                                     str(inst_type[prop]))
-
-    # migration 154, add shadow tables for deleted data
-    # There are 53 shadow tables but we only test one
-    # There are additional tests in test_db_api.py
-    def _pre_upgrade_154(self, engine):
-        meta = sqlalchemy.schema.MetaData()
-        meta.reflect(engine)
-        table_names = meta.tables.keys()
-        for table_name in table_names:
-            self.assertFalse(table_name.startswith("_shadow"))
-
-    def _check_154(self, engine, data):
-        meta = sqlalchemy.schema.MetaData()
-        meta.reflect(engine)
-        table_names = set(meta.tables.keys())
-        for table_name in table_names:
-            if table_name.startswith(db._SHADOW_TABLE_PREFIX):
-                shadow_name = table_name
-                base_name = table_name.replace(db._SHADOW_TABLE_PREFIX, "")
-                self.assertIn(base_name, table_names)
-            else:
-                base_name = table_name
-                shadow_name = db._SHADOW_TABLE_PREFIX + table_name
-                self.assertIn(shadow_name, table_names)
-            shadow_table = db_utils.get_table(engine, shadow_name)
-            base_table = db_utils.get_table(engine, base_name)
-            base_columns = []
-            shadow_columns = []
-            for column in base_table.columns:
-                base_columns.append(column)
-            for column in shadow_table.columns:
-                shadow_columns.append(column)
-            for ii, base_column in enumerate(base_columns):
-                shadow_column = shadow_columns[ii]
-            self.assertEqual(base_column.name, shadow_column.name)
-            # NullType needs a special case.  We end up with NullType on sqlite
-            # where bigint is not defined.
-            if isinstance(base_column.type, sqlalchemy.types.NullType):
-                self.assertIsInstance(shadow_column.type,
-                                      sqlalchemy.types.NullType)
-            else:
-                # Identical types do not test equal because sqlalchemy does not
-                # override __eq__, but if we stringify them then they do.
-                self.assertEqual(str(base_column.type),
-                                 str(shadow_column.type))
-
-    # migration 156 - introduce CIDR type
-    def _pre_upgrade_156(self, engine):
-        # assume the same data as from 149
-        data = {
-            'provider_fw_rules':
-                [
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
-                                              "127.0.0.1/30"))},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
-                                              "128.128.128.128/16"))},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
-                                              "128.128.128.128/32"))},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
-                                              "2001:db8::1:2/48"))},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': str(netaddr.IPNetwork(
-                                              "::1/64"))},
-                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': str(netaddr.IPNetwork(
-                             "0000:0000:0000:2013:0000:6535:abcd:ef11/64"))},
-                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': str(netaddr.IPNetwork(
-                             "0000:1020:0000:2013:0000:6535:abcd:ef11/128"))},
-                ],
-            'console_pools':
-                [
-                {'address': '10.10.10.10'},
-                {'address': '128.100.100.100'},
-                {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
-                {'address': '::1'},
-                {'address': '0000:0000:0000:2013:0000:6535:abcd:ef11'}
-                ]
-            }
-        return data
-
-    def _check_156(self, engine, data):
-        # recheck the 149 data
-        self._check_149(engine, data)
-
-    def _pre_upgrade_158(self, engine):
-        networks = db_utils.get_table(engine, 'networks')
-        data = [
-            {'vlan': 1, 'deleted': 0},
-            {'vlan': 1, 'deleted': 0},
-            {'vlan': 1, 'deleted': 0},
-        ]
-
-        for item in data:
-            networks.insert().values(item).execute()
-        return data
-
-    def _check_158(self, engine, data):
-        networks = db_utils.get_table(engine, 'networks')
-        rows = networks.select().\
-                    where(networks.c.deleted != networks.c.id).\
-                    execute().\
-                    fetchall()
-        self.assertEqual(len(rows), 1)
-
-    def _pre_upgrade_159(self, engine):
-        data = {
-            'provider_fw_rules':
-                [
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "127.0.0.1/30"},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "128.128.128.128/16"},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "128.128.128.128/32"},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "2001:db8::1:2/48"},
-                {'protocol': 'tcp', 'from_port': 1234,
-                 'to_port': 1234, 'cidr': "::1/64"},
-                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': "0000:0000:0000:2013:0000:6535:abcd:ef11/64"},
-                {'protocol': 'tcp', 'from_port': 1234, 'to_port': 1234,
-                 'cidr': "0000:1020:0000:2013:0000:6535:abcd:ef11/128"},
-                ],
-            'console_pools':
-                [
-                {'address': '10.10.10.10'},
-                {'address': '128.100.100.100'},
-                {'address': '2002:2002:2002:2002:2002:2002:2002:2002'},
-                {'address': '::1'},
-                {'address': '0000:0000:0000:2013:0000:6535:abcd:ef11'}
-                ]
-            }
-        return data
-
-    # migration 159 - revert ip column size
-    def _check_159(self, engine, data):
-        dialect = engine.url.get_dialect()
-        # NOTE(maurosr): check if column length is 39 again (it currently makes
-        # sense only for mysql)
-        if dialect not in [postgresql.dialect, sqlite.dialect]:
-            console_pools = db_utils.get_table(engine, 'console_pools')
-            self.assertEqual(console_pools.columns['address'].type.length, 39)
-        # recheck the 149 data
-        self._check_149(engine, data)
-
-    def _post_downgrade_159(self, engine):
-        dialect = engine.url.get_dialect()
-        # NOTE(maurosr): check if column length is 43 again (it currently makes
-        # sense only for mysql)
-        if dialect not in [postgresql.dialect, sqlite.dialect]:
-            console_pools = db_utils.get_table(engine, 'console_pools')
-            self.assertEqual(console_pools.columns['address'].type.length, 43)
-
-    # migration 160, fix system_metadata NULL deleted entries to be 0
-    def _pre_upgrade_160(self, engine):
-        fake_instances = [
-            dict(uuid='m160-uuid1'),
-            dict(uuid='m160-uuid2'),
-            dict(uuid='m160-uuid3'),
-            ]
-        fake_sys_meta = [
-            dict(instance_uuid='m160-uuid1', key='foo', value='bar'),
-            dict(instance_uuid='m160-uuid2', key='foo2', value='bar2'),
-            dict(instance_uuid='m160-uuid3', key='foo3', value='bar3')]
-
-        instances = db_utils.get_table(engine, 'instances')
-        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
-        engine.execute(instances.insert(), fake_instances)
-
-        # Create the metadata entries
-        data = {}
-        for sm in fake_sys_meta:
-            result = sys_meta.insert().values(sm).execute()
-            sm['id'] = result.inserted_primary_key[0]
-            data[sm['id']] = sm
-
-        # Make sure the entries in the DB for 'deleted' are None.
-        our_ids = data.keys()
-        results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
-                                          execute()
-        results = list(results)
-        self.assertEqual(len(our_ids), len(results))
-        for result in results:
-            self.assertIsNone(result['deleted'])
-        return data
-
-    def _check_160(self, engine, data):
-        our_ids = data.keys()
-        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
-        results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
-                                    execute()
-        results = list(results)
-        self.assertEqual(len(our_ids), len(results))
-        for result in results:
-            the_id = result['id']
-            # Make sure this is now 0.
-            self.assertEqual(result['deleted'], 0)
-            # Make sure nothing else changed.
-            for key, value in data[the_id].items():
-                self.assertEqual(value, result[key])
 
     # migration 161, fix system_metadata "None" values should be NULL
     def _pre_upgrade_161(self, engine):
@@ -1615,6 +1221,21 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_187(self, engine):
         # check that groups does not exist
         self._check_no_group_instance_tables(engine)
+
+    def _pre_upgrade_188(self, engine):
+        host1 = 'compute-host1'
+        host2 = 'compute-host2'
+        services_data = [
+            {'id': 1, 'host': host1, 'binary': 'nova-compute',
+             'report_count': 0, 'topic': 'compute', 'deleted': 0},
+            {'id': 2, 'host': host1, 'binary': 'nova-compute',
+             'report_count': 0, 'topic': 'compute', 'deleted': 1}
+            ]
+
+        services = db_utils.get_table(engine, 'services')
+        engine.execute(services.insert(), services_data)
+
+        return dict(services=services_data)
 
     def _check_188(self, engine, data):
         services = db_utils.get_table(engine, 'services')
