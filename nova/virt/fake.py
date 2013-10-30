@@ -465,7 +465,7 @@ class FakeVirtAPI(virtapi.VirtAPI):
                                             hypervisor, os, architecture)
 
     def instance_type_get(self, context, instance_type_id):
-        return db.instance_type_get(context, instance_type_id)
+        return db.flavor_get(context, instance_type_id)
 
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):

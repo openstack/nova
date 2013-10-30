@@ -2793,7 +2793,7 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
                                                              key)
                 self.assertEqual(spec[key], val)
 
-    def test_instance_type_extra_specs_delete(self):
+    def test_flavor_extra_specs_delete(self):
         for it in self.inst_types:
             specs = it['extra_specs']
             key = specs.keys()[0]
@@ -2803,7 +2803,7 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
                                                           it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
-    def test_instance_type_extra_specs_delete_failed(self):
+    def test_flavor_extra_specs_delete_failed(self):
         for it in self.inst_types:
             self.assertRaises(exception.InstanceTypeExtraSpecsNotFound,
                           db.flavor_extra_specs_delete,
