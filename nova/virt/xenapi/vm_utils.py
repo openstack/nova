@@ -505,19 +505,21 @@ def attach_cd(session, vm_ref, vdi_ref, userdevice):
 def destroy_vdi(session, vdi_ref):
     try:
         session.call_xenapi('VDI.destroy', vdi_ref)
-    except session.XenAPI.Failure as exc:
-        LOG.exception(exc)
-        raise volume_utils.StorageError(
-                _('Unable to destroy VDI %s') % vdi_ref)
+    except session.XenAPI.Failure:
+        msg = _("Unable to destroy VDI %s") % vdi_ref
+        LOG.debug(msg, exc_info=True)
+        LOG.error(msg)
+        raise volume_utils.StorageError(msg)
 
 
 def safe_destroy_vdis(session, vdi_refs):
-    """Destroys the requested VDIs, logging any StorageError exceptions."""
+    """Tries to destroy the requested VDIs, but ignores any errors."""
     for vdi_ref in vdi_refs:
         try:
             destroy_vdi(session, vdi_ref)
-        except volume_utils.StorageError as exc:
-            LOG.error(exc)
+        except volume_utils.StorageError:
+            msg = _("Ignoring error while destroying VDI: %s") % vdi_ref
+            LOG.debug(msg)
 
 
 def create_vdi(session, sr_ref, instance, name_label, disk_type, virtual_size,
@@ -1111,7 +1113,9 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
             create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False)
     except Exception:
         with excutils.save_and_reraise_exception():
-            destroy_vdi(session, vdi_ref)
+            msg = _("Error while generating disk number: %s") % userdevice
+            LOG.debug(msg, instance=instance, exc_info=True)
+            safe_destroy_vdis(session, [vdi_ref])
 
     return vdi_ref
 
@@ -1217,7 +1221,9 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                    read_only=True)
     except Exception:
         with excutils.save_and_reraise_exception():
-            destroy_vdi(session, vdi_ref)
+            msg = _("Error while generating config drive")
+            LOG.debug(msg, instance=instance, exc_info=True)
+            safe_destroy_vdis(session, [vdi_ref])
 
 
 def _create_kernel_image(context, session, instance, name_label, image_id,
@@ -1480,15 +1486,17 @@ def _fetch_vhd_image(context, session, instance, image_id):
     # Ensure we can see the import VHDs as VDIs
     scan_default_sr(session)
 
+    vdi_uuid = vdis['root']['uuid']
     try:
-        _check_vdi_size(context, session, instance, vdis['root']['uuid'])
+        _check_vdi_size(context, session, instance, vdi_uuid)
     except Exception:
         with excutils.save_and_reraise_exception():
-            for key in vdis:
-                vdi = vdis[key]
+            msg = _("Error while checking vdi size")
+            LOG.debug(msg, instance=instance, exc_info=True)
+            for vdi in vdis.values():
                 vdi_uuid = vdi['uuid']
                 vdi_ref = session.call_xenapi('VDI.get_by_uuid', vdi_uuid)
-                destroy_vdi(session, vdi_ref)
+                safe_destroy_vdis(session, [vdi_ref])
 
     return vdis
 
