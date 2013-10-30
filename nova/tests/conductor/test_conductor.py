@@ -221,27 +221,6 @@ class _BaseTestCase(object):
         result = self.conductor.bw_usage_update(*update_args)
         self.assertEqual(result, 'foo')
 
-    def test_security_group_get_by_instance(self):
-        fake_inst = {'uuid': 'fake-instance'}
-        self.mox.StubOutWithMock(db, 'security_group_get_by_instance')
-        db.security_group_get_by_instance(
-            self.context, fake_inst['uuid']).AndReturn('it worked')
-        self.mox.ReplayAll()
-        result = self.conductor.security_group_get_by_instance(self.context,
-                                                               fake_inst)
-        self.assertEqual(result, 'it worked')
-
-    def test_security_group_rule_get_by_security_group(self):
-        fake_secgroup = {'id': 'fake-secgroup'}
-        self.mox.StubOutWithMock(db,
-                                 'security_group_rule_get_by_security_group')
-        db.security_group_rule_get_by_security_group(
-            self.context, fake_secgroup['id']).AndReturn('it worked')
-        self.mox.ReplayAll()
-        result = self.conductor.security_group_rule_get_by_security_group(
-            self.context, fake_secgroup)
-        self.assertEqual(result, 'it worked')
-
     def test_provider_fw_rule_get_all(self):
         fake_rules = ['a', 'b', 'c']
         self.mox.StubOutWithMock(db, 'provider_fw_rule_get_all')
@@ -884,6 +863,27 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.aggregate_metadata_delete(self.context, aggregate,
                                                  'fake')
+
+    def test_security_group_get_by_instance(self):
+        fake_inst = {'uuid': 'fake-instance'}
+        self.mox.StubOutWithMock(db, 'security_group_get_by_instance')
+        db.security_group_get_by_instance(
+            self.context, fake_inst['uuid']).AndReturn('it worked')
+        self.mox.ReplayAll()
+        result = self.conductor.security_group_get_by_instance(self.context,
+                                                               fake_inst)
+        self.assertEqual(result, 'it worked')
+
+    def test_security_group_rule_get_by_security_group(self):
+        fake_secgroup = {'id': 'fake-secgroup'}
+        self.mox.StubOutWithMock(db,
+                                 'security_group_rule_get_by_security_group')
+        db.security_group_rule_get_by_security_group(
+            self.context, fake_secgroup['id']).AndReturn('it worked')
+        self.mox.ReplayAll()
+        result = self.conductor.security_group_rule_get_by_security_group(
+            self.context, fake_secgroup)
+        self.assertEqual(result, 'it worked')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
