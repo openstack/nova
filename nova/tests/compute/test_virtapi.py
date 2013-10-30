@@ -45,14 +45,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
         self.assertExpected('instance_update', 'fake-uuid',
                             dict(host='foohost'))
 
-    def test_security_group_get_by_instance(self):
-        self.assertExpected('security_group_get_by_instance',
-                            {'uuid': 'fake-id'})
-
-    def test_security_group_rule_get_by_security_group(self):
-        self.assertExpected('security_group_rule_get_by_security_group',
-                            {'id': 'fake-id'})
-
     def test_provider_fw_rule_get_all(self):
         self.assertExpected('provider_fw_rule_get_all')
 

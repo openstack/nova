@@ -457,14 +457,6 @@ class FakeVirtAPI(virtapi.VirtAPI):
                                                    instance_uuid,
                                                    updates)
 
-    def security_group_get_by_instance(self, context, instance):
-        return db.security_group_get_by_instance(context, instance['uuid'])
-
-    def security_group_rule_get_by_security_group(self, context,
-                                                  security_group):
-        return db.security_group_rule_get_by_security_group(
-            context, security_group['id'])
-
     def provider_fw_rule_get_all(self, context):
         return db.provider_fw_rule_get_all(context)
 
