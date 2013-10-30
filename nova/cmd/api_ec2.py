@@ -20,16 +20,24 @@
 
 import sys
 
+from oslo.config import cfg
+
 from nova import config
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 
 
+CONF = cfg.CONF
+CONF.import_opt('enabled_ssl_apis', 'nova.service')
+
+
 def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
-    server = service.WSGIService('ec2', max_url_len=16384)
+    should_use_ssl = 'ec2' in CONF.enabled_ssl_apis
+    server = service.WSGIService('ec2', use_ssl=should_use_ssl,
+                                 max_url_len=16384)
     service.serve(server, workers=server.workers)
     service.wait()
