@@ -64,6 +64,18 @@ def get_fake_connection_data(sr_type):
     return fakes[sr_type]
 
 
+def _get_fake_session_and_exception(error):
+    session = mock.Mock()
+
+    class FakeException(Exception):
+        details = [error, "a", "b", "c"]
+
+    session.XenAPI.Failure = FakeException
+    session.call_xenapi.side_effect = FakeException
+
+    return session
+
+
 @contextlib.contextmanager
 def contextified(result):
     yield result
@@ -850,6 +862,63 @@ class CreateVBDTestCase(VMUtilsTestBase):
         result = vm_utils.attach_cd(self.session, "vm_ref", "vdi_ref", 1)
         self.assertEqual(result, "vbd_ref")
         self.mock.VerifyAll()
+
+
+class UnplugVbdTestCase(VMUtilsTestBase):
+    @mock.patch.object(greenthread, 'sleep')
+    def test_unplug_vbd_works(self, mock_sleep):
+        session = mock.Mock()
+        vbd_ref = "ref"
+
+        vm_utils.unplug_vbd(session, vbd_ref)
+
+        session.call_xenapi.assert_called_once_with('VBD.unplug', vbd_ref)
+        self.assertEqual(0, mock_sleep.call_count)
+
+    def test_unplug_vbd_raises_unexpected_error(self):
+        session = mock.Mock()
+        vbd_ref = "ref"
+        session.call_xenapi.side_effect = test.TestingException()
+
+        self.assertRaises(test.TestingException, vm_utils.unplug_vbd,
+                          session, vbd_ref)
+        self.assertEqual(1, session.call_xenapi.call_count)
+
+    def test_unplug_vbd_already_detached_works(self):
+        error = "DEVICE_ALREADY_DETACHED"
+        session = _get_fake_session_and_exception(error)
+        vbd_ref = "ref"
+
+        vm_utils.unplug_vbd(session, vbd_ref)
+        self.assertEqual(1, session.call_xenapi.call_count)
+
+    def test_unplug_vbd_already_raises_unexpected_xenapi_error(self):
+        session = _get_fake_session_and_exception("")
+        vbd_ref = "ref"
+
+        self.assertRaises(volume_utils.StorageError, vm_utils.unplug_vbd,
+                          session, vbd_ref)
+        self.assertEqual(1, session.call_xenapi.call_count)
+
+    def _test_uplug_vbd_retries(self, mock_sleep, error):
+        session = _get_fake_session_and_exception(error)
+        vbd_ref = "ref"
+
+        self.assertRaises(volume_utils.StorageError, vm_utils.unplug_vbd,
+                          session, vbd_ref)
+
+        self.assertEqual(11, session.call_xenapi.call_count)
+        self.assertEqual(10, mock_sleep.call_count)
+
+    @mock.patch.object(greenthread, 'sleep')
+    def test_uplug_vbd_retries_on_rejected(self, mock_sleep):
+        self._test_uplug_vbd_retries(mock_sleep,
+                                     "DEVICE_DETACH_REJECTED")
+
+    @mock.patch.object(greenthread, 'sleep')
+    def test_uplug_vbd_retries_on_internal_error(self, mock_sleep):
+        self._test_uplug_vbd_retries(mock_sleep,
+                                     "INTERNAL_ERROR")
 
 
 class VDIOtherConfigTestCase(VMUtilsTestBase):

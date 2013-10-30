@@ -348,15 +348,25 @@ def find_vbd_by_number(session, vm_ref, number):
             _('VBD not found in instance %s') % vm_ref)
 
 
-def unplug_vbd(session, vbd_ref):
-    """Unplug VBD from VM."""
-    # Call VBD.unplug on the given VBD, with a retry if we get
-    # DEVICE_DETACH_REJECTED.  For reasons which we don't understand,
+def _should_retry_unplug_vbd(err):
+    # Retry if unplug failed with DEVICE_DETACH_REJECTED
+    # For reasons which we don't understand,
     # we're seeing the device still in use, even when all processes
     # using the device should be dead.
+    # Since XenServer 6.2, we also need to retry if we get
+    # INTERNAL_ERROR, as that error goes away when you retry.
+    return (err == 'DEVICE_DETACH_REJECTED'
+            or
+            err == 'INTERNAL_ERROR')
+
+
+def unplug_vbd(session, vbd_ref):
     max_attempts = CONF.xenapi_num_vbd_unplug_retries + 1
     for num_attempt in xrange(1, max_attempts + 1):
         try:
+            if num_attempt > 1:
+                greenthread.sleep(1)
+
             session.call_xenapi('VBD.unplug', vbd_ref)
             return
         except session.XenAPI.Failure as exc:
@@ -364,17 +374,15 @@ def unplug_vbd(session, vbd_ref):
             if err == 'DEVICE_ALREADY_DETACHED':
                 LOG.info(_('VBD %s already detached'), vbd_ref)
                 return
-            elif err == 'DEVICE_DETACH_REJECTED':
-                LOG.info(_('VBD %(vbd_ref)s detach rejected, attempt'
-                           ' %(num_attempt)d/%(max_attempts)d'),
+            elif _should_retry_unplug_vbd(err):
+                LOG.info(_('VBD %(vbd_ref)s uplug failed with "%(err)s", '
+                           'attempt %(num_attempt)d/%(max_attempts)d'),
                          {'vbd_ref': vbd_ref, 'num_attempt': num_attempt,
-                          'max_attempts': max_attempts})
+                          'max_attempts': max_attempts, 'err': err})
             else:
                 LOG.exception(exc)
                 raise volume_utils.StorageError(
                         _('Unable to unplug VBD %s') % vbd_ref)
-
-        greenthread.sleep(1)
 
     raise volume_utils.StorageError(
             _('Reached maximum number of retries trying to unplug VBD %s')
