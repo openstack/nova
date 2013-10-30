@@ -1845,11 +1845,11 @@ def _get_rrd(server, vm_uuid):
 
 def _get_all_vdis_in_sr(session, sr_ref):
     for vdi_ref in session.call_xenapi('SR.get_VDIs', sr_ref):
-        try:
-            vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+        vdi_rec = session.get_rec('VDI', vdi_ref)
+        # Check to make sure the record still exists. It may have
+        # been deleted between the get_all call and get_rec call
+        if vdi_rec:
             yield vdi_ref, vdi_rec
-        except session.XenAPI.Failure:
-            continue
 
 
 def get_instance_vdis_for_sr(session, vm_ref, sr_ref):

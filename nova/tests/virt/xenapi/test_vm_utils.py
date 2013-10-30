@@ -1593,6 +1593,24 @@ class GetAllVdiForVMTestCase(VMUtilsTestBase):
         self.assertEqual(expected, list(result))
 
 
+class GetAllVdisTestCase(VMUtilsTestBase):
+    def test_get_all_vdis_in_sr(self):
+
+        def fake_get_rec(record_type, ref):
+            if ref == "2":
+                return "vdi_rec_2"
+
+        session = mock.Mock()
+        session.call_xenapi.return_value = ["1", "2"]
+        session.get_rec.side_effect = fake_get_rec
+
+        sr_ref = "sr_ref"
+        actual = list(vm_utils._get_all_vdis_in_sr(session, sr_ref))
+        self.assertEqual(actual, [('2', 'vdi_rec_2')])
+
+        session.call_xenapi.assert_called_once_with("SR.get_VDIs", sr_ref)
+
+
 class SnapshotAttachedHereTestCase(VMUtilsTestBase):
     @mock.patch.object(vm_utils, '_snapshot_attached_here_impl')
     def test_snapshot_attached_here(self, mock_impl):
