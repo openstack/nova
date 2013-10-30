@@ -325,9 +325,10 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.VerifyAll()
 
     def test_fetch_vhd_image_works_with_bittorrent(self):
-        cfg.CONF.import_opt('xenapi_torrent_base_url',
-                            'nova.virt.xenapi.image.bittorrent')
-        self.flags(xenapi_torrent_base_url='http://foo')
+        cfg.CONF.import_opt('torrent_base_url',
+                            'nova.virt.xenapi.image.bittorrent',
+                            group='xenserver')
+        self.flags(torrent_base_url='http://foo', group='xenserver')
 
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
         vm_utils._image_uses_bittorrent(
@@ -384,9 +385,10 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.VerifyAll()
 
     def test_fallback_to_default_handler(self):
-        cfg.CONF.import_opt('xenapi_torrent_base_url',
-                            'nova.virt.xenapi.image.bittorrent')
-        self.flags(xenapi_torrent_base_url='http://foo')
+        cfg.CONF.import_opt('torrent_base_url',
+                            'nova.virt.xenapi.image.bittorrent',
+                            group='xenserver')
+        self.flags(torrent_base_url='http://foo', group='xenserver')
 
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
         vm_utils._image_uses_bittorrent(
@@ -417,9 +419,10 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.mox.VerifyAll()
 
     def test_default_handler_doesnt_fallback_to_itself(self):
-        cfg.CONF.import_opt('xenapi_torrent_base_url',
-                            'nova.virt.xenapi.image.bittorrent')
-        self.flags(xenapi_torrent_base_url='http://foo')
+        cfg.CONF.import_opt('torrent_base_url',
+                            'nova.virt.xenapi.image.bittorrent',
+                            group='xenserver')
+        self.flags(torrent_base_url='http://foo', group='xenserver')
 
         self.mox.StubOutWithMock(vm_utils, '_image_uses_bittorrent')
         vm_utils._image_uses_bittorrent(
@@ -439,11 +442,11 @@ class TestImageCompression(VMUtilsTestBase):
     def test_image_compression(self):
         # Testing for nova.conf, too low, negative, and a correct value.
         self.assertIsNone(vm_utils.get_compression_level())
-        self.flags(xenapi_image_compression_level=0)
+        self.flags(image_compression_level=0, group='xenserver')
         self.assertIsNone(vm_utils.get_compression_level())
-        self.flags(xenapi_image_compression_level=-6)
+        self.flags(image_compression_level=-6, group='xenserver')
         self.assertIsNone(vm_utils.get_compression_level())
-        self.flags(xenapi_image_compression_level=6)
+        self.flags(image_compression_level=6, group='xenserver')
         self.assertEqual(vm_utils.get_compression_level(), 6)
 
 
@@ -604,9 +607,10 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',)
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
 
     def test_get_instance_vdis_for_sr(self):
         vm_ref = fake.create_vm("foo", "Running")
@@ -731,13 +735,13 @@ class BittorrentTestCase(VMUtilsTestBase):
 
     def test_image_uses_bittorrent(self):
         instance = {'system_metadata': {'image_bittorrent': True}}
-        self.flags(xenapi_torrent_images='some')
+        self.flags(torrent_images='some', group='xenserver')
         self.assertTrue(vm_utils._image_uses_bittorrent(self.context,
                                                         instance))
 
     def _test_create_image(self, cache_type):
         instance = {'system_metadata': {'image_cache_in_nova': True}}
-        self.flags(cache_images=cache_type)
+        self.flags(cache_images=cache_type, group='xenserver')
 
         was = {'called': None}
 
@@ -960,7 +964,7 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
     def test_create_image(self):
         # Other images are registered implicitly when they are dropped into
         # the SR by a dom0 plugin or some other process
-        self.flags(cache_images='none')
+        self.flags(cache_images='none', group='xenserver')
 
         def fake_fetch_image(*args):
             return {'root': {'uuid': 'fake-uuid'}}
@@ -1025,9 +1029,10 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',)
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
@@ -1255,9 +1260,10 @@ class VMUtilsSRPath(VMUtilsTestBase):
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',)
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session
@@ -1427,9 +1433,10 @@ class AllowVSSProviderTest(VMUtilsTestBase):
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',)
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, fake.SessionBase)
         driver = xenapi_conn.XenAPIDriver(False)
         self.session = driver._session

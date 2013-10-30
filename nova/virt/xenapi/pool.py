@@ -35,12 +35,14 @@ LOG = logging.getLogger(__name__)
 
 xenapi_pool_opts = [
     cfg.BoolOpt('use_join_force',
+                deprecated_name='use_join_force',
+                deprecated_group='DEFAULT',
                 default=True,
                 help='To use for hosts with different CPUs'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(xenapi_pool_opts)
+CONF.register_opts(xenapi_pool_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 
 
@@ -176,10 +178,10 @@ class ResourcePool(object):
                     'url': url,
                     'user': user,
                     'password': passwd,
-                    'force': jsonutils.dumps(CONF.use_join_force),
+                    'force': jsonutils.dumps(CONF.xenserver.use_join_force),
                     'master_addr': self._host_addr,
-                    'master_user': CONF.xenapi_connection_username,
-                    'master_pass': CONF.xenapi_connection_password, }
+                    'master_user': CONF.xenserver.connection_username,
+                    'master_pass': CONF.xenserver.connection_password, }
             self._session.call_plugin('xenhost', 'host_join', args)
         except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-Join failed: %s"), e)
@@ -235,12 +237,12 @@ class ResourcePool(object):
         # because this might be 169.254.0.1, i.e. xenapi
         # NOTE: password in clear is not great, but it'll do for now
         sender_url = swap_xapi_host(
-            CONF.xenapi_connection_url, self._host_addr)
+            CONF.xenserver.connection_url, self._host_addr)
 
         return {
             "url": sender_url,
-            "user": CONF.xenapi_connection_username,
-            "passwd": CONF.xenapi_connection_password,
+            "user": CONF.xenserver.connection_username,
+            "passwd": CONF.xenserver.connection_password,
             "compute_uuid": vm_utils.get_this_vm_uuid(None),
             "xenhost_uuid": self._host_uuid,
         }

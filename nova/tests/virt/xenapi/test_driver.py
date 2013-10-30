@@ -36,8 +36,8 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'host_cpu_info': {'cpu_count': 50}}
 
     def test_available_resource(self):
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass', group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
 
         driver = xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
@@ -58,8 +58,8 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         self.assertEqual(50, resources['cpu_info'])
 
     def test_overhead(self):
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass', group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         driver = xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
         instance = {'memory_mb': 30720}

@@ -2210,229 +2210,6 @@
 
 
 #
-# Options defined in nova.virt.xenapi.agent
-#
-
-# number of seconds to wait for agent reply (integer value)
-#agent_timeout=30
-
-# number of seconds to wait for agent to be fully operational
-# (integer value)
-#agent_version_timeout=300
-
-# number of seconds to wait for agent reply to resetnetwork
-# request (integer value)
-#agent_resetnetwork_timeout=60
-
-# Specifies the path in which the xenapi guest agent should be
-# located. If the agent is present, network configuration is
-# not injected into the image. Used if
-# compute_driver=xenapi.XenAPIDriver and  flat_injected=True
-# (string value)
-#xenapi_agent_path=usr/sbin/xe-update-networking
-
-# Disables the use of the XenAPI agent in any image regardless
-# of what image properties are present. (boolean value)
-#xenapi_disable_agent=false
-
-# Determines if the xenapi agent should be used when the image
-# used does not contain a hint to declare if the agent is
-# present or not. The hint is a glance property
-# "xenapi_use_agent" that has the value "true" or "false".
-# Note that waiting for the agent when it is not present will
-# significantly increase server boot times. (boolean value)
-#xenapi_use_agent_default=false
-
-
-#
-# Options defined in nova.virt.xenapi.driver
-#
-
-# URL for connection to XenServer/Xen Cloud Platform. A
-# special value of unix://local can be used to connect to the
-# local unix socket.  Required if
-# compute_driver=xenapi.XenAPIDriver (string value)
-#xenapi_connection_url=<None>
-
-# Username for connection to XenServer/Xen Cloud Platform.
-# Used only if compute_driver=xenapi.XenAPIDriver (string
-# value)
-#xenapi_connection_username=root
-
-# Password for connection to XenServer/Xen Cloud Platform.
-# Used only if compute_driver=xenapi.XenAPIDriver (string
-# value)
-#xenapi_connection_password=<None>
-
-# Maximum number of concurrent XenAPI connections. Used only
-# if compute_driver=xenapi.XenAPIDriver (integer value)
-#xenapi_connection_concurrent=5
-
-# The interval used for polling of coalescing vhds. Used only
-# if compute_driver=xenapi.XenAPIDriver (floating point value)
-#xenapi_vhd_coalesce_poll_interval=5.0
-
-# Ensure compute service is running on host XenAPI connects
-# to. (boolean value)
-#xenapi_check_host=true
-
-# Max number of times to poll for VHD to coalesce. Used only
-# if compute_driver=xenapi.XenAPIDriver (integer value)
-#xenapi_vhd_coalesce_max_attempts=5
-
-# Base path to the storage repository (string value)
-#xenapi_sr_base_path=/var/run/sr-mount
-
-# iSCSI Target Host (string value)
-#target_host=<None>
-
-# iSCSI Target Port, 3260 Default (string value)
-#target_port=3260
-
-# IQN Prefix (string value)
-#iqn_prefix=iqn.2010-10.org.openstack
-
-# Used to enable the remapping of VBD dev (Works around an
-# issue in Ubuntu Maverick) (boolean value)
-#xenapi_remap_vbd_dev=false
-
-# Specify prefix to remap VBD dev to (ex. /dev/xvdb ->
-# /dev/sdb) (string value)
-#xenapi_remap_vbd_dev_prefix=sd
-
-# Timeout in seconds for XenAPI login. (integer value)
-#xenapi_login_timeout=10
-
-
-#
-# Options defined in nova.virt.xenapi.image.bittorrent
-#
-
-# Base URL for torrent files. (string value)
-#xenapi_torrent_base_url=<None>
-
-# Probability that peer will become a seeder. (1.0 = 100%)
-# (floating point value)
-#xenapi_torrent_seed_chance=1.0
-
-# Number of seconds after downloading an image via BitTorrent
-# that it should be seeded for other peers. (integer value)
-#xenapi_torrent_seed_duration=3600
-
-# Cached torrent files not accessed within this number of
-# seconds can be reaped (integer value)
-#xenapi_torrent_max_last_accessed=86400
-
-# Beginning of port range to listen on (integer value)
-#xenapi_torrent_listen_port_start=6881
-
-# End of port range to listen on (integer value)
-#xenapi_torrent_listen_port_end=6891
-
-# Number of seconds a download can remain at the same progress
-# percentage w/o being considered a stall (integer value)
-#xenapi_torrent_download_stall_cutoff=600
-
-# Maximum number of seeder processes to run concurrently
-# within a given dom0. (-1 = no limit) (integer value)
-#xenapi_torrent_max_seeder_processes_per_host=1
-
-
-#
-# Options defined in nova.virt.xenapi.pool
-#
-
-# To use for hosts with different CPUs (boolean value)
-#use_join_force=true
-
-
-#
-# Options defined in nova.virt.xenapi.vif
-#
-
-# Name of Integration Bridge used by Open vSwitch (string
-# value)
-#xenapi_ovs_integration_bridge=xapi1
-
-
-#
-# Options defined in nova.virt.xenapi.vm_utils
-#
-
-# Cache glance images locally. `all` will cache all images,
-# `some` will only cache images that have the image_property
-# `cache_in_nova=True`, and `none` turns off caching entirely
-# (string value)
-#cache_images=all
-
-# Compression level for images, e.g., 9 for gzip -9. Range is
-# 1-9, 9 being most compressed but most CPU intensive on dom0.
-# (integer value)
-#xenapi_image_compression_level=<None>
-
-# Default OS type (string value)
-#default_os_type=linux
-
-# Time to wait for a block device to be created (integer
-# value)
-#block_device_creation_timeout=10
-
-# Maximum size in bytes of kernel or ramdisk images (integer
-# value)
-#max_kernel_ramdisk_size=16777216
-
-# Filter for finding the SR to be used to install guest
-# instances on. To use the Local Storage in default
-# XenServer/XCP installations set this flag to other-config
-# :i18n-key=local-storage. To select an SR with a different
-# matching criteria, you could set it to other-
-# config:my_favorite_sr=true. On the other hand, to fall back
-# on the Default SR, as displayed by XenCenter, set this flag
-# to: default-sr:true (string value)
-#sr_matching_filter=default-sr:true
-
-# Whether to use sparse_copy for copying data on a resize down
-# (False will use standard dd). This speeds up resizes down
-# considerably since large runs of zeros won't have to be
-# rsynced (boolean value)
-#xenapi_sparse_copy=true
-
-# Maximum number of retries to unplug VBD (integer value)
-#xenapi_num_vbd_unplug_retries=10
-
-# Whether or not to download images via Bit Torrent
-# (all|some|none). (string value)
-#xenapi_torrent_images=none
-
-# Name of network to use for booting iPXE ISOs (string value)
-#xenapi_ipxe_network_name=<None>
-
-# URL to the iPXE boot menu (string value)
-#xenapi_ipxe_boot_menu_url=<None>
-
-# Name and optionally path of the tool used for ISO image
-# creation (string value)
-#xenapi_ipxe_mkisofs_cmd=mkisofs
-
-
-#
-# Options defined in nova.virt.xenapi.vmops
-#
-
-# number of seconds to wait for instance to go to running
-# state (integer value)
-#xenapi_running_timeout=60
-
-# The XenAPI VIF driver using XenServer Network APIs. (string
-# value)
-#xenapi_vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
-
-# Dom0 plugin driver used to handle image uploads. (string
-# value)
-#xenapi_image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
-
-
-#
 # Options defined in nova.vnc
 #
 
@@ -3089,6 +2866,231 @@
 
 # Password for Redis server. (optional) (string value)
 #password=<None>
+
+
+[xenserver]
+
+#
+# Options defined in nova.virt.xenapi.agent
+#
+
+# number of seconds to wait for agent reply (integer value)
+#agent_timeout=30
+
+# number of seconds to wait for agent to be fully operational
+# (integer value)
+#agent_version_timeout=300
+
+# number of seconds to wait for agent reply to resetnetwork
+# request (integer value)
+#agent_resetnetwork_timeout=60
+
+# Specifies the path in which the xenapi guest agent should be
+# located. If the agent is present, network configuration is
+# not injected into the image. Used if
+# compute_driver=xenapi.XenAPIDriver and  flat_injected=True
+# (string value)
+#agent_path=usr/sbin/xe-update-networking
+
+# Disables the use of the XenAPI agent in any image regardless
+# of what image properties are present. (boolean value)
+#disable_agent=false
+
+# Determines if the xenapi agent should be used when the image
+# used does not contain a hint to declare if the agent is
+# present or not. The hint is a glance property
+# "xenapi_use_agent" that has the value "true" or "false".
+# Note that waiting for the agent when it is not present will
+# significantly increase server boot times. (boolean value)
+#use_agent_default=false
+
+
+#
+# Options defined in nova.virt.xenapi.driver
+#
+
+# URL for connection to XenServer/Xen Cloud Platform. A
+# special value of unix://local can be used to connect to the
+# local unix socket.  Required if
+# compute_driver=xenapi.XenAPIDriver (string value)
+#connection_url=<None>
+
+# Username for connection to XenServer/Xen Cloud Platform.
+# Used only if compute_driver=xenapi.XenAPIDriver (string
+# value)
+#connection_username=root
+
+# Password for connection to XenServer/Xen Cloud Platform.
+# Used only if compute_driver=xenapi.XenAPIDriver (string
+# value)
+#connection_password=<None>
+
+# Maximum number of concurrent XenAPI connections. Used only
+# if compute_driver=xenapi.XenAPIDriver (integer value)
+#connection_concurrent=5
+
+# The interval used for polling of coalescing vhds. Used only
+# if compute_driver=xenapi.XenAPIDriver (floating point value)
+#vhd_coalesce_poll_interval=5.0
+
+# Ensure compute service is running on host XenAPI connects
+# to. (boolean value)
+#check_host=true
+
+# Max number of times to poll for VHD to coalesce. Used only
+# if compute_driver=xenapi.XenAPIDriver (integer value)
+#vhd_coalesce_max_attempts=5
+
+# Base path to the storage repository (string value)
+#sr_base_path=/var/run/sr-mount
+
+# iSCSI Target Host (string value)
+#target_host=<None>
+
+# iSCSI Target Port, 3260 Default (string value)
+#target_port=3260
+
+# IQN Prefix (string value)
+#iqn_prefix=iqn.2010-10.org.openstack
+
+# Used to enable the remapping of VBD dev (Works around an
+# issue in Ubuntu Maverick) (boolean value)
+#remap_vbd_dev=false
+
+# Specify prefix to remap VBD dev to (ex. /dev/xvdb ->
+# /dev/sdb) (string value)
+#remap_vbd_dev_prefix=sd
+
+# Timeout in seconds for XenAPI login. (integer value)
+#login_timeout=10
+
+
+#
+# Options defined in nova.virt.xenapi.image.bittorrent
+#
+
+# Base URL for torrent files. (string value)
+#torrent_base_url=<None>
+
+# Probability that peer will become a seeder. (1.0 = 100%)
+# (floating point value)
+#torrent_seed_chance=1.0
+
+# Number of seconds after downloading an image via BitTorrent
+# that it should be seeded for other peers. (integer value)
+#torrent_seed_duration=3600
+
+# Cached torrent files not accessed within this number of
+# seconds can be reaped (integer value)
+#torrent_max_last_accessed=86400
+
+# Beginning of port range to listen on (integer value)
+#torrent_listen_port_start=6881
+
+# End of port range to listen on (integer value)
+#torrent_listen_port_end=6891
+
+# Number of seconds a download can remain at the same progress
+# percentage w/o being considered a stall (integer value)
+#torrent_download_stall_cutoff=600
+
+# Maximum number of seeder processes to run concurrently
+# within a given dom0. (-1 = no limit) (integer value)
+#torrent_max_seeder_processes_per_host=1
+
+
+#
+# Options defined in nova.virt.xenapi.pool
+#
+
+# To use for hosts with different CPUs (boolean value)
+#use_join_force=true
+
+
+#
+# Options defined in nova.virt.xenapi.vif
+#
+
+# Name of Integration Bridge used by Open vSwitch (string
+# value)
+#ovs_integration_bridge=xapi1
+
+
+#
+# Options defined in nova.virt.xenapi.vm_utils
+#
+
+# Cache glance images locally. `all` will cache all images,
+# `some` will only cache images that have the image_property
+# `cache_in_nova=True`, and `none` turns off caching entirely
+# (string value)
+#cache_images=all
+
+# Compression level for images, e.g., 9 for gzip -9. Range is
+# 1-9, 9 being most compressed but most CPU intensive on dom0.
+# (integer value)
+#image_compression_level=<None>
+
+# Default OS type (string value)
+#default_os_type=linux
+
+# Time to wait for a block device to be created (integer
+# value)
+#block_device_creation_timeout=10
+
+# Maximum size in bytes of kernel or ramdisk images (integer
+# value)
+#max_kernel_ramdisk_size=16777216
+
+# Filter for finding the SR to be used to install guest
+# instances on. To use the Local Storage in default
+# XenServer/XCP installations set this flag to other-config
+# :i18n-key=local-storage. To select an SR with a different
+# matching criteria, you could set it to other-
+# config:my_favorite_sr=true. On the other hand, to fall back
+# on the Default SR, as displayed by XenCenter, set this flag
+# to: default-sr:true (string value)
+#sr_matching_filter=default-sr:true
+
+# Whether to use sparse_copy for copying data on a resize down
+# (False will use standard dd). This speeds up resizes down
+# considerably since large runs of zeros won't have to be
+# rsynced (boolean value)
+#sparse_copy=true
+
+# Maximum number of retries to unplug VBD (integer value)
+#num_vbd_unplug_retries=10
+
+# Whether or not to download images via Bit Torrent
+# (all|some|none). (string value)
+#torrent_images=none
+
+# Name of network to use for booting iPXE ISOs (string value)
+#ipxe_network_name=<None>
+
+# URL to the iPXE boot menu (string value)
+#ipxe_boot_menu_url=<None>
+
+# Name and optionally path of the tool used for ISO image
+# creation (string value)
+#ipxe_mkisofs_cmd=mkisofs
+
+
+#
+# Options defined in nova.virt.xenapi.vmops
+#
+
+# number of seconds to wait for instance to go to running
+# state (integer value)
+#running_timeout=60
+
+# The XenAPI VIF driver using XenServer Network APIs. (string
+# value)
+#vif_driver=nova.virt.xenapi.vif.XenAPIBridgeDriver
+
+# Dom0 plugin driver used to handle image uploads. (string
+# value)
+#image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
 
 
 [ssl]

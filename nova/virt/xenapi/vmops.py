@@ -60,20 +60,26 @@ from nova.virt.xenapi import volumeops
 LOG = logging.getLogger(__name__)
 
 xenapi_vmops_opts = [
-    cfg.IntOpt('xenapi_running_timeout',
+    cfg.IntOpt('running_timeout',
                default=60,
+               deprecated_name='xenapi_running_timeout',
+               deprecated_group='DEFAULT',
                help='number of seconds to wait for instance '
                     'to go to running state'),
-    cfg.StrOpt('xenapi_vif_driver',
+    cfg.StrOpt('vif_driver',
                default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
+               deprecated_name='xenapi_vif_driver',
+               deprecated_group='DEFAULT',
                help='The XenAPI VIF driver using XenServer Network APIs.'),
-    cfg.StrOpt('xenapi_image_upload_handler',
+    cfg.StrOpt('image_upload_handler',
                 default='nova.virt.xenapi.image.glance.GlanceStore',
-                help='Dom0 plugin driver used to handle image uploads.'),
+               deprecated_name='xenapi_image_upload_handler',
+               deprecated_group='DEFAULT',
+               help='Dom0 plugin driver used to handle image uploads.'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(xenapi_vmops_opts)
+CONF.register_opts(xenapi_vmops_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 
@@ -158,17 +164,17 @@ class VMOps(object):
             DEFAULT_FIREWALL_DRIVER,
             self._virtapi,
             xenapi_session=self._session)
-        vif_impl = importutils.import_class(CONF.xenapi_vif_driver)
+        vif_impl = importutils.import_class(CONF.xenserver.vif_driver)
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
 
         LOG.debug(_("Importing image upload handler: %s"),
-                  CONF.xenapi_image_upload_handler)
+                  CONF.xenserver.image_upload_handler)
         self.image_upload_handler = importutils.import_object(
-                                CONF.xenapi_image_upload_handler)
+                                CONF.xenserver.image_upload_handler)
 
     def agent_enabled(self, instance):
-        if CONF.xenapi_disable_agent:
+        if CONF.xenserver.disable_agent:
             return False
 
         return xapi_agent.should_use_agent(instance)
@@ -614,7 +620,7 @@ class VMOps(object):
     def _wait_for_instance_to_start(self, instance, vm_ref):
         LOG.debug(_('Waiting for instance state to become running'),
                   instance=instance)
-        expiration = time.time() + CONF.xenapi_running_timeout
+        expiration = time.time() + CONF.xenserver.running_timeout
         while time.time() < expiration:
             state = self.get_info(instance, vm_ref)['state']
             if state == power_state.RUNNING:
@@ -708,7 +714,7 @@ class VMOps(object):
            get a stable representation of the data on disk.
 
         3. Push-to-data-store: Once coalesced, we call
-           'xenapi_image_upload_handler' to upload the images.
+           'image_upload_handler' to upload the images.
 
         """
         vm_ref = self._get_vm_opaque_ref(instance)

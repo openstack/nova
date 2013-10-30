@@ -33,9 +33,10 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         self.flags(glance_host='1.1.1.1',
                    glance_port=123,
-                   glance_api_insecure=False,
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass')
+                   glance_api_insecure=False)
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
 
         self.context = context.RequestContext(
                 'user', 'project', auth_token='foobar')
