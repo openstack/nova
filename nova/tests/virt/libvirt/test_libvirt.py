@@ -55,6 +55,7 @@ import nova.tests.image.fake
 from nova.tests import matchers
 from nova.tests.objects import test_pci_device
 from nova.tests.virt.libvirt import fake_libvirt_utils
+from nova import unit
 from nova import utils
 from nova import version
 from nova.virt.disk import api as disk
@@ -716,7 +717,7 @@ class LibvirtConnTestCase(test.TestCase):
                                     None, disk_info)
         self.assertEqual(cfg.acpi, True)
         self.assertEqual(cfg.apic, True)
-        self.assertEqual(cfg.memory, 1024 * 1024 * 2)
+        self.assertEqual(cfg.memory, 2 * unit.Mi)
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
@@ -777,7 +778,7 @@ class LibvirtConnTestCase(test.TestCase):
                                     _fake_network_info(self.stubs, 2),
                                     None, disk_info)
         self.assertEqual(cfg.acpi, True)
-        self.assertEqual(cfg.memory, 1024 * 1024 * 2)
+        self.assertEqual(cfg.memory, 2 * unit.Mi)
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
@@ -835,7 +836,7 @@ class LibvirtConnTestCase(test.TestCase):
         cfg = conn.get_guest_config(instance_ref, [], None, disk_info,
                                     None, block_device_info)
         self.assertEqual(cfg.acpi, False)
-        self.assertEqual(cfg.memory, 1024 * 1024 * 2)
+        self.assertEqual(cfg.memory, 2 * unit.Mi)
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, "uml")
         self.assertEqual(cfg.os_boot_dev, [])
@@ -3264,9 +3265,8 @@ class LibvirtConnTestCase(test.TestCase):
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
-        GB = 1024 * 1024 * 1024
-        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * GB
-        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * GB
+        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * unit.Gi
+        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * unit.Gi
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
 
         self.mox.StubOutWithMock(os.path, "getsize")
@@ -3358,9 +3358,8 @@ class LibvirtConnTestCase(test.TestCase):
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
-        GB = 1024 * 1024 * 1024
-        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * GB
-        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * GB
+        fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * unit.Gi
+        fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * unit.Gi
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
 
         self.mox.StubOutWithMock(os.path, "getsize")
@@ -3658,9 +3657,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
-             'size': 10 * 1024 * 1024 * 1024},
+             'size': 10 * unit.Gi},
             {'filename': 'ephemeral_20_default',
-             'size': 20 * 1024 * 1024 * 1024},
+             'size': 20 * unit.Gi},
             ]
         self.assertEqual(gotFiles, wantFiles)
 
@@ -3720,11 +3719,11 @@ class LibvirtConnTestCase(test.TestCase):
 
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
-             'size': 10 * 1024 * 1024 * 1024},
+             'size': 10 * unit.Gi},
             {'filename': 'ephemeral_20_default',
-             'size': 20 * 1024 * 1024 * 1024},
+             'size': 20 * unit.Gi},
             {'filename': 'swap_500',
-             'size': 500 * 1024 * 1024},
+             'size': 500 * unit.Mi},
             ]
         self.assertEqual(gotFiles, wantFiles)
 

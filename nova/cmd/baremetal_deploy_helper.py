@@ -36,6 +36,7 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
+from nova import unit
 from nova import utils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
@@ -165,7 +166,7 @@ def get_dev(address, port, iqn, lun):
 
 def get_image_mb(image_path):
     """Get size of an image in Megabyte."""
-    mb = 1024 * 1024
+    mb = unit.Mi
     image_byte = os.path.getsize(image_path)
     # round up size to MB
     image_mb = int((image_byte + mb - 1) / mb)

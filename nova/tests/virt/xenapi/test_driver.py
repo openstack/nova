@@ -18,6 +18,7 @@
 import math
 
 from nova.tests.virt.xenapi import stubs
+from nova import unit
 from nova.virt import fake
 from nova.virt import xenapi
 
@@ -26,10 +27,10 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for Driver operations."""
 
     def host_stats(self, refresh=True):
-        return {'host_memory_total': 3 * 1024 * 1024,
-                'host_memory_free_computed': 2 * 1024 * 1024,
-                'disk_total': 4 * 1024 * 1024 * 1024,
-                'disk_used': 5 * 1024 * 1024 * 1024,
+        return {'host_memory_total': 3 * unit.Mi,
+                'host_memory_free_computed': 2 * unit.Mi,
+                'disk_total': 4 * unit.Gi,
+                'disk_used': 5 * unit.Gi,
                 'host_hostname': 'somename',
                 'supported_instances': 'x86_64',
                 'host_cpu_info': {'cpu_count': 50}}
