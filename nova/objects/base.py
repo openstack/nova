@@ -145,6 +145,7 @@ def remotable(fn):
                 if key in self.fields:
                     field = self.fields[key]
                     self[key] = field.from_primitive(self, key, value)
+            self.obj_reset_changes()
             self._changed_fields = set(updates.get('obj_what_changed', []))
             return result
         else:
