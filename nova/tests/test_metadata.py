@@ -353,6 +353,11 @@ class OpenStackMetadataTestCase(test.TestCase):
         self.flags(use_local=True, group='conductor')
         fake_network.stub_out_nw_api_get_instance_nw_info(self.stubs)
 
+    def test_with_primitive_instance(self):
+        mdinst = fake_InstanceMetadata(self.stubs, INSTANCE)
+        result = mdinst.lookup('/openstack')
+        self.assertIn('latest', result)
+
     def test_top_level_listing(self):
         # request for /openstack/<version>/ should show metadata.json
         inst = self.instance.obj_clone()

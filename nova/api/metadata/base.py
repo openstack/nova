@@ -112,6 +112,14 @@ class InstanceMetadata():
         if not content:
             content = []
 
+        ctxt = context.get_admin_context()
+
+        # NOTE(danms): This should be removed after bp:compute-manager-objects
+        if not isinstance(instance, instance_obj.Instance):
+            instance = instance_obj.Instance._from_db_object(
+                ctxt, instance_obj.Instance(), instance,
+                expected_attrs=['metadata', 'system_metadata'])
+
         self.instance = instance
         self.extra_md = extra_md
 
@@ -119,8 +127,6 @@ class InstanceMetadata():
             capi = conductor_api
         else:
             capi = conductor.API()
-
-        ctxt = context.get_admin_context()
 
         self.availability_zone = ec2utils.get_availability_zone_by_host(
                 instance['host'], capi)
