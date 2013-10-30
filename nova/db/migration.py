@@ -25,8 +25,6 @@ IMPL = utils.LazyPluggable('backend',
                            config_group='database',
                            sqlalchemy='nova.db.sqlalchemy.migration')
 
-INIT_VERSION = 132
-
 
 def db_sync(version=None):
     """Migrate the database to `version` or the most recent version."""
@@ -36,3 +34,8 @@ def db_sync(version=None):
 def db_version():
     """Display the current database version."""
     return IMPL.db_version()
+
+
+def db_initial_version():
+    """The starting version for the database."""
+    return IMPL.db_initial_version()

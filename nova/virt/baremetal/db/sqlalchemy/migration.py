@@ -24,8 +24,9 @@ import sqlalchemy
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
-from nova.virt.baremetal.db import migration
 from nova.virt.baremetal.db.sqlalchemy import session
+
+INIT_VERSION = 0
 
 
 @migrate_util.decorator
@@ -86,13 +87,17 @@ def db_version():
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0:
-            db_version_control(migration.INIT_VERSION)
+            db_version_control(INIT_VERSION)
             return versioning_api.db_version(session.get_engine(), repository)
         else:
             # Some pre-Essex DB's may not be version controlled.
             # Require them to upgrade using Essex first.
             raise exception.NovaException(
                 _("Upgrade DB using Essex release first."))
+
+
+def db_initial_version():
+    return INIT_VERSION
 
 
 def db_version_control(version=None):
