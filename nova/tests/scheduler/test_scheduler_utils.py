@@ -49,7 +49,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         request_spec = scheduler_utils.build_request_spec(self.context, image,
                                                           [instance])
-        self.assertEquals({}, request_spec['image'])
+        self.assertEqual({}, request_spec['image'])
 
     def _test_set_vm_state_and_notify(self, request_spec,
                                       expected_uuids):
