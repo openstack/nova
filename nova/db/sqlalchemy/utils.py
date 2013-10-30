@@ -71,6 +71,24 @@ def visit_insert_from_select(element, compiler, **kw):
         compiler.process(element.select))
 
 
+class DeleteFromSelect(UpdateBase):
+    def __init__(self, table, select, column):
+        self.table = table
+        self.select = select
+        self.column = column
+
+
+# NOTE(guochbo): some verions of MySQL doesn't yet support subquery with
+# 'LIMIT & IN/ALL/ANY/SOME' We need work around this with nesting select .
+@compiles(DeleteFromSelect)
+def visit_delete_from_select(element, compiler, **kw):
+    return "DELETE FROM %s WHERE %s in (SELECT T1.%s FROM (%s) as T1)" % (
+        compiler.process(element.table, asfrom=True),
+        compiler.process(element.column),
+        element.column.name,
+        compiler.process(element.select))
+
+
 def _get_not_supported_column(col_name_col_instance, column_name):
     try:
         column = col_name_col_instance[column_name]
