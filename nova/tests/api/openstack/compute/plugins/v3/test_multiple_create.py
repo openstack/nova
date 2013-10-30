@@ -392,7 +392,7 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body)
         reservation_id = res.obj['servers_reservation']['reservation_id']
         self.assertNotEqual(reservation_id, "")
-        self.assertNotEqual(reservation_id, None)
+        self.assertIsNotNone(reservation_id)
         self.assertTrue(len(reservation_id) > 1)
 
     def test_create_multiple_instances_with_multiple_volume_bdm(self):

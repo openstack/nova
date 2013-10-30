@@ -102,7 +102,7 @@ class XmlConversionTestCase(test.TestCase):
     """Unit test api xml conversion."""
     def test_number_conversion(self):
         conv = ec2utils._try_convert
-        self.assertEqual(conv('None'), None)
+        self.assertIsNone(conv('None'))
         self.assertEqual(conv('True'), True)
         self.assertEqual(conv('TRUE'), True)
         self.assertEqual(conv('true'), True)
@@ -184,9 +184,9 @@ class Ec2utilsTestCase(test.TestCase):
             regex = ec2utils.regex_from_ec2_regex(ec2_regex)
             self.assertEqual(regex, expected)
             if match:
-                self.assertTrue(re.match(regex, literal) is not None)
+                self.assertIsNotNone(re.match(regex, literal))
             else:
-                self.assertTrue(re.match(regex, literal) is None)
+                self.assertIsNone(re.match(regex, literal))
 
         # wildcards
         _test_re('foo', '\Afoo\Z(?s)', 'foo')

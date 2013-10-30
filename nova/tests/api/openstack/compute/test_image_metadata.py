@@ -157,7 +157,7 @@ class ImageMetaDataTest(test.TestCase):
         req.method = 'DELETE'
         res = self.controller.delete(req, '123', 'key1')
 
-        self.assertEqual(None, res)
+        self.assertIsNone(res)
 
     def test_delete_not_found(self):
         req = fakes.HTTPRequest.blank('/v2/fake/images/123/metadata/blah')

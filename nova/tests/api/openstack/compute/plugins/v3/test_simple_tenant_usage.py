@@ -195,13 +195,13 @@ class SimpleTenantUsageTest(test.TestCase):
     def test_verify_simple_index(self):
         usages = self._get_tenant_usages(detailed='0')
         for i in xrange(TENANTS):
-            self.assertEqual(usages[i].get('server_usages'), None)
+            self.assertIsNone(usages[i].get('server_usages'))
 
     def test_verify_simple_index_empty_param(self):
         # NOTE(lzyeval): 'detailed=&start=..&end=..'
         usages = self._get_tenant_usages()
         for i in xrange(TENANTS):
-            self.assertEqual(usages[i].get('server_usages'), None)
+            self.assertIsNone(usages[i].get('server_usages'))
 
     def _test_verify_show(self, start, stop):
         tenant_id = 0
@@ -500,4 +500,4 @@ class SimpleTenantUsageControllerTest(test.TestCase):
                                      deleted=1, instance_type_id=2)
         flavor = self.controller._get_flavor(self.context, self.compute_api,
                                              inst_without_sys_meta, {})
-        self.assertEqual(flavor, None)
+        self.assertIsNone(flavor)

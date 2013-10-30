@@ -380,7 +380,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
         root = minidom.parseString(response.body).childNodes[0]
         expected = "Only 1 GET request(s) can be made to * every minute."
 
-        self.assertNotEqual(root.attributes.getNamedItem("retryAfter"), None)
+        self.assertIsNotNone(root.attributes.getNamedItem("retryAfter"))
         retryAfter = root.attributes.getNamedItem("retryAfter").value
         self.assertEqual(retryAfter, "60")
 
@@ -400,7 +400,7 @@ class LimitTest(BaseLimitTestSuite):
         # Test a limit handles 1 GET per second.
         limit = limits.Limit("GET", "*", ".*", 1, 1)
         delay = limit("GET", "/anything")
-        self.assertEqual(None, delay)
+        self.assertIsNone(delay)
         self.assertEqual(0, limit.next_request)
         self.assertEqual(0, limit.last_request)
 
@@ -408,7 +408,7 @@ class LimitTest(BaseLimitTestSuite):
         # Test two calls to 1 GET per second limit.
         limit = limits.Limit("GET", "*", ".*", 1, 1)
         delay = limit("GET", "/anything")
-        self.assertEqual(None, delay)
+        self.assertIsNone(delay)
 
         delay = limit("GET", "/anything")
         self.assertEqual(1, delay)
@@ -418,7 +418,7 @@ class LimitTest(BaseLimitTestSuite):
         self.time += 4
 
         delay = limit("GET", "/anything")
-        self.assertEqual(None, delay)
+        self.assertIsNone(delay)
         self.assertEqual(4, limit.next_request)
         self.assertEqual(4, limit.last_request)
 
@@ -702,25 +702,25 @@ class WsgiLimiterTest(BaseLimitTestSuite):
 
     def test_good_url(self):
         delay = self._request("GET", "/something")
-        self.assertEqual(delay, None)
+        self.assertIsNone(delay)
 
     def test_escaping(self):
         delay = self._request("GET", "/something/jump%20up")
-        self.assertEqual(delay, None)
+        self.assertIsNone(delay)
 
     def test_response_to_delays(self):
         delay = self._request("GET", "/delayed")
-        self.assertEqual(delay, None)
+        self.assertIsNone(delay)
 
         delay = self._request("GET", "/delayed")
         self.assertEqual(delay, '60.00')
 
     def test_response_to_delays_usernames(self):
         delay = self._request("GET", "/delayed", "user1")
-        self.assertEqual(delay, None)
+        self.assertIsNone(delay)
 
         delay = self._request("GET", "/delayed", "user2")
-        self.assertEqual(delay, None)
+        self.assertIsNone(delay)
 
         delay = self._request("GET", "/delayed", "user1")
         self.assertEqual(delay, '60.00')

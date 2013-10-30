@@ -1268,7 +1268,7 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         instance = result['instancesSet'][0]
-        self.assertEqual(instance['dnsName'], None)
+        self.assertIsNone(instance['dnsName'])
 
     def test_describe_images(self):
         describe_images = self.cloud.describe_images
@@ -2820,9 +2820,8 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(
                 ec2utils.resource_type_from_id(self.context, 'aki-12345'),
                 'image')
-        self.assertEqual(
-                ec2utils.resource_type_from_id(self.context, 'x-12345'),
-                None)
+        self.assertIsNone(
+                ec2utils.resource_type_from_id(self.context, 'x-12345'))
 
 
 class CloudTestCaseNeutronProxy(test.TestCase):

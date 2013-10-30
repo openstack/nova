@@ -790,8 +790,8 @@ class TestSecurityGroupRules(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-group-rules')
         res_dict = self.controller.create(req, {'security_group_rule': rule})
         security_group_rule = res_dict['security_group_rule']
-        self.assertEquals(security_group_rule['from_port'], None)
-        self.assertEquals(security_group_rule['to_port'], None)
+        self.assertIsNone(security_group_rule['from_port'])
+        self.assertIsNone(security_group_rule['to_port'])
         self.assertEquals(security_group_rule['group']['name'], 'test')
         self.assertEquals(security_group_rule['parent_group_id'],
                           self.sg1['id'])

@@ -182,7 +182,7 @@ class ServerMetaDataTest(BaseTest):
         req.method = 'DELETE'
         res = self.controller.delete(req, self.uuid, 'key2')
 
-        self.assertEqual(None, res)
+        self.assertIsNone(res)
 
     def test_delete_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',

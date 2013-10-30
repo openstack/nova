@@ -15,7 +15,7 @@ class RequestTest(test.NoDBTestCase):
     def test_content_type_missing(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
         request.body = "<body />"
-        self.assertEqual(None, request.get_content_type())
+        self.assertIsNone(request.get_content_type())
 
     def test_content_type_unsupported(self):
         request = wsgi.Request.blank('/tests/123', method='POST')
@@ -92,7 +92,7 @@ class RequestTest(test.NoDBTestCase):
                 instances[1])
         self.assertEqual(request.get_db_instance('uuid2'),
                 instances[2])
-        self.assertEqual(request.get_db_instance('uuid3'), None)
+        self.assertIsNone(request.get_db_instance('uuid3'))
         self.assertEqual(request.get_db_instances(),
                 {'uuid0': instances[0],
                  'uuid1': instances[1],
@@ -456,7 +456,7 @@ class ResourceTest(test.NoDBTestCase):
         request.body = 'foo'
 
         content_type, body = resource.get_body(request)
-        self.assertEqual(content_type, None)
+        self.assertIsNone(content_type)
         self.assertEqual(body, '')
 
     def test_get_body_no_content_type(self):
@@ -471,7 +471,7 @@ class ResourceTest(test.NoDBTestCase):
         request.body = 'foo'
 
         content_type, body = resource.get_body(request)
-        self.assertEqual(content_type, None)
+        self.assertIsNone(content_type)
         self.assertEqual(body, '')
 
     def test_get_body_no_content_body(self):
@@ -487,7 +487,7 @@ class ResourceTest(test.NoDBTestCase):
         request.body = ''
 
         content_type, body = resource.get_body(request)
-        self.assertEqual(content_type, None)
+        self.assertIsNone(content_type)
         self.assertEqual(body, '')
 
     def test_get_body(self):
@@ -742,7 +742,7 @@ class ResourceTest(test.NoDBTestCase):
         extensions = [extension1, extension2]
         response, post = resource.pre_process_extensions(extensions, None, {})
         self.assertEqual(called, [])
-        self.assertEqual(response, None)
+        self.assertIsNone(response)
         self.assertEqual(list(post), [extension2, extension1])
 
     def test_pre_process_extensions_generator(self):
@@ -769,7 +769,7 @@ class ResourceTest(test.NoDBTestCase):
         response, post = resource.pre_process_extensions(extensions, None, {})
         post = list(post)
         self.assertEqual(called, ['pre1', 'pre2'])
-        self.assertEqual(response, None)
+        self.assertIsNone(response)
         self.assertEqual(len(post), 2)
         self.assertTrue(inspect.isgenerator(post[0]))
         self.assertTrue(inspect.isgenerator(post[1]))
@@ -826,7 +826,7 @@ class ResourceTest(test.NoDBTestCase):
         response = resource.post_process_extensions([extension2, extension1],
                                                     None, None, {})
         self.assertEqual(called, [2, 1])
-        self.assertEqual(response, None)
+        self.assertIsNone(response)
 
     def test_post_process_extensions_regular_response(self):
         class Controller(object):
@@ -878,7 +878,7 @@ class ResourceTest(test.NoDBTestCase):
                                                     None, None, {})
 
         self.assertEqual(called, [2, 1])
-        self.assertEqual(response, None)
+        self.assertIsNone(response)
 
     def test_post_process_extensions_generator_response(self):
         class Controller(object):

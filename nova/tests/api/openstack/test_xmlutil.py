@@ -81,7 +81,7 @@ class SelectorTest(test.NoDBTestCase):
 
     def test_missing_key_selector(self):
         sel = xmlutil.Selector('test2', 'attrs')
-        self.assertEqual(sel(self.obj_for_test), None)
+        self.assertIsNone(sel(self.obj_for_test))
         self.assertRaises(KeyError, sel, self.obj_for_test, True)
 
     def test_constant_selector(self):
@@ -182,7 +182,7 @@ class TemplateElementTest(test.NoDBTestCase):
         # Create a template element with no subselector
         elem = xmlutil.TemplateElement('test')
 
-        self.assertEqual(elem.subselector, None)
+        self.assertIsNone(elem.subselector)
 
     def test_element_subselector_string(self):
         # Create a template element with a string subselector
@@ -337,7 +337,7 @@ class TemplateElementTest(test.NoDBTestCase):
         elem = xmlutil.TemplateElement('test')
 
         # Ensure that it has no text
-        self.assertEqual(elem.text, None)
+        self.assertIsNone(elem.text)
 
         # Try setting it to a string and ensure it becomes a selector
         elem.text = 'test'
@@ -347,7 +347,7 @@ class TemplateElementTest(test.NoDBTestCase):
 
         # Try resetting the text to None
         elem.text = None
-        self.assertEqual(elem.text, None)
+        self.assertIsNone(elem.text)
 
         # Now make up a selector and try setting the text to that
         sel = xmlutil.Selector()
@@ -356,7 +356,7 @@ class TemplateElementTest(test.NoDBTestCase):
 
         # Finally, try deleting the text and see what happens
         del elem.text
-        self.assertEqual(elem.text, None)
+        self.assertIsNone(elem.text)
 
     def test_apply_attrs(self):
         # Create a template element
@@ -740,13 +740,13 @@ class SlaveTemplateBuilder(xmlutil.TemplateBuilder):
 class TemplateBuilderTest(test.NoDBTestCase):
     def test_master_template_builder(self):
         # Make sure the template hasn't been built yet
-        self.assertEqual(MasterTemplateBuilder._tmpl, None)
+        self.assertIsNone(MasterTemplateBuilder._tmpl)
 
         # Now, construct the template
         tmpl1 = MasterTemplateBuilder()
 
         # Make sure that there is a template cached...
-        self.assertNotEqual(MasterTemplateBuilder._tmpl, None)
+        self.assertIsNotNone(MasterTemplateBuilder._tmpl)
 
         # Make sure it wasn't what was returned...
         self.assertNotEqual(MasterTemplateBuilder._tmpl, tmpl1)
@@ -765,13 +765,13 @@ class TemplateBuilderTest(test.NoDBTestCase):
 
     def test_slave_template_builder(self):
         # Make sure the template hasn't been built yet
-        self.assertEqual(SlaveTemplateBuilder._tmpl, None)
+        self.assertIsNone(SlaveTemplateBuilder._tmpl)
 
         # Now, construct the template
         tmpl1 = SlaveTemplateBuilder()
 
         # Make sure there is a template cached...
-        self.assertNotEqual(SlaveTemplateBuilder._tmpl, None)
+        self.assertIsNotNone(SlaveTemplateBuilder._tmpl)
 
         # Make sure it was what was returned...
         self.assertEqual(SlaveTemplateBuilder._tmpl, tmpl1)

@@ -328,8 +328,8 @@ class CinderCloudTestCase(test.TestCase):
                          'pending')
 
         fake_snapshot['status'] = 'deleted'
-        self.assertEqual(self.cloud._format_snapshot(self.context,
-                                                     fake_snapshot), None)
+        self.assertIsNone(self.cloud._format_snapshot(self.context,
+                                                      fake_snapshot))
 
         fake_snapshot['status'] = 'error'
         self.assertEqual(self.cloud._format_snapshot(self.context,
@@ -739,8 +739,8 @@ class CinderCloudTestCase(test.TestCase):
         self.assertEqual(vol['attach_status'], "attached")
 
     def _assert_volume_detached(self, vol):
-        self.assertEqual(vol['instance_uuid'], None)
-        self.assertEqual(vol['mountpoint'], None)
+        self.assertIsNone(vol['instance_uuid'])
+        self.assertIsNone(vol['mountpoint'])
         self.assertEqual(vol['status'], "available")
         self.assertEqual(vol['attach_status'], "detached")
 

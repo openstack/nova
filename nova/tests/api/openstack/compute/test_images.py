@@ -691,7 +691,7 @@ class ImageXMLSerializationTest(test.NoDBTestCase):
             self.assertEqual(str(metadata_elem.text).strip(), str(meta_value))
 
         server_root = root.find('{0}server'.format(NS))
-        self.assertEqual(server_root, None)
+        self.assertIsNone(server_root)
 
     def test_show_with_min_ram(self):
         serializer = images.ImageTemplate()

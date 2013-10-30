@@ -435,8 +435,8 @@ class AccessIPsXmlDeserializeTest(test.TestCase):
         doc = minidom.parseString(server)
         server_dict = {}
         func(doc.documentElement, server_dict)
-        self.assertEqual(server_dict[access_ips.AccessIPs.v4_key], None)
-        self.assertEqual(server_dict[access_ips.AccessIPs.v6_key], None)
+        self.assertIsNone(server_dict[access_ips.AccessIPs.v4_key])
+        self.assertIsNone(server_dict[access_ips.AccessIPs.v6_key])
 
     def test_server_create(self):
         self._test(self.access_ip_ext.server_xml_extract_server_deserialize)
