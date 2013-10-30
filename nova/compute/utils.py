@@ -346,6 +346,8 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
 
 def get_nw_info_for_instance(instance):
     if isinstance(instance, instance_obj.Instance):
+        if instance.info_cache is None:
+            return network_model.NetworkInfo.hydrate([])
         return instance.info_cache.network_info
     # FIXME(comstud): Transitional while we convert to objects.
     info_cache = instance['info_cache'] or {}
