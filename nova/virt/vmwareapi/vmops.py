@@ -32,7 +32,6 @@ import uuid
 from oslo.config import cfg
 
 from nova.api.metadata import base as instance_metadata
-from nova import block_device
 from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
@@ -165,6 +164,14 @@ class VMwareVMOps(object):
         4. Attach the disk to the VM by reconfiguring the same.
         5. Power on the VM.
         """
+        ebs_root = False
+        if block_device_info:
+            LOG.debug(_("Block device information present: %s")
+                      % block_device_info, instance=instance)
+            block_device_mapping = driver.block_device_info_get_mapping(
+                    block_device_info)
+            if block_device_mapping:
+                ebs_root = True
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
@@ -177,14 +184,19 @@ class VMwareVMOps(object):
         # The use of nested functions in this file makes for a confusing and
         # hard to maintain file. At some future date, refactor this method to
         # be a full-fledged method. This will also make unit testing easier.
-        def _get_image_properties():
+        def _get_image_properties(root_size):
             """
             Get the Size of the flat vmdk file that is there on the storage
             repository.
             """
-            _image_info = vmware_images.get_vmdk_size_and_properties(context,
-                                                        instance['image_ref'],
-                                                        instance)
+            image_ref = instance.get('image_ref')
+            if image_ref:
+                _image_info = vmware_images.get_vmdk_size_and_properties(
+                        context, image_ref, instance)
+            else:
+                # The case that the image may be booted from a volume
+                _image_info = (root_size, {})
+
             image_size, image_properties = _image_info
             vmdk_file_size_in_kb = int(image_size) / 1024
             os_type = image_properties.get("vmware_ostype", "otherGuest")
@@ -204,11 +216,12 @@ class VMwareVMOps(object):
             return (vmdk_file_size_in_kb, os_type, adapter_type, disk_type,
                 vif_model, image_linked_clone)
 
-        (vmdk_file_size_in_kb, os_type, adapter_type,
-            disk_type, vif_model, image_linked_clone) = _get_image_properties()
-
         root_gb = instance['root_gb']
         root_gb_in_kb = root_gb * 1024 * 1024
+
+        (vmdk_file_size_in_kb, os_type, adapter_type, disk_type, vif_model,
+            image_linked_clone) = _get_image_properties(root_gb_in_kb)
+
         if root_gb_in_kb and vmdk_file_size_in_kb > root_gb_in_kb:
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance['uuid'],
@@ -393,9 +406,6 @@ class VMwareVMOps(object):
                          "data_store_name": data_store_name},
                         instance=instance)
 
-        ebs_root = block_device.volume_in_mapping(
-                self._default_root_device, block_device_info)
-
         if not ebs_root:
             # this logic allows for instances or images to decide
             # for themselves which strategy is best for them.
@@ -521,12 +531,11 @@ class VMwareVMOps(object):
 
         else:
             # Attach the root disk to the VM.
-            root_disk = driver.block_device_info_get_mapping(
-                           block_device_info)[0]
-            connection_info = root_disk['connection_info']
-            self._volumeops.attach_root_volume(connection_info, instance,
-                                               self._default_root_device,
-                                               data_store_ref)
+            for root_disk in block_device_mapping:
+                connection_info = root_disk['connection_info']
+                self._volumeops.attach_root_volume(connection_info, instance,
+                                                   self._default_root_device,
+                                                   data_store_ref)
 
         def _power_on_vm():
             """Power on the VM."""

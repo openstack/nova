@@ -158,7 +158,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn = driver.VMwareAPISession()
         self.assertEqual(self.attempts, 2)
 
-    def _create_instance_in_the_db(self, node=None):
+    def _create_instance_in_the_db(self, node=None, set_image_ref=True):
         if not node:
             node = self.node_name
         values = {'name': 'fake_name',
@@ -166,7 +166,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'uuid': "fake-uuid",
                   'project_id': self.project_id,
                   'user_id': self.user_id,
-                  'image_ref': "fake_image_uuid",
                   'kernel_id': "fake_kernel_uuid",
                   'ramdisk_id': "fake_ramdisk_uuid",
                   'mac_address': "de:ad:be:ef:be:ef",
@@ -174,6 +173,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'node': node,
                   'root_gb': 80,
                   }
+        if set_image_ref:
+            values['image_ref'] = "fake_image_uuid"
         self.instance_node = node
         self.instance = db.instance_create(None, values)
 
@@ -323,14 +324,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceUnacceptable,
                           self._create_vm)
 
-    def test_spawn_attach_volume_vmdk(self):
-        self._create_instance_in_the_db()
+    def _spawn_attach_volume_vmdk(self, set_image_ref=True):
+        self._create_instance_in_the_db(set_image_ref=set_image_ref)
         self.type_data = db.flavor_get_by_name(None, 'm1.large')
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
-        ebs_root = 'fake_root'
-        block_device.volume_in_mapping(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(ebs_root)
         connection_info = self._test_vmdk_connection_info('vmdk')
         root_disk = [{'connection_info': connection_info}]
         v_driver.block_device_info_get_mapping(
@@ -349,19 +347,23 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
                 self.instance, mox.IgnoreArg())
         self.mox.ReplayAll()
+        block_device_info = {'mount_device': 'vda'}
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
-                        block_device_info=None)
+                        block_device_info=block_device_info)
+
+    def test_spawn_attach_volume_vmdk(self):
+        self._spawn_attach_volume_vmdk()
+
+    def test_spawn_attach_volume_vmdk_no_image_ref(self):
+        self._spawn_attach_volume_vmdk(set_image_ref=False)
 
     def test_spawn_attach_volume_iscsi(self):
         self._create_instance_in_the_db()
         self.type_data = db.flavor_get_by_name(None, 'm1.large')
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
-        ebs_root = 'fake_root'
-        block_device.volume_in_mapping(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn(ebs_root)
         connection_info = self._test_vmdk_connection_info('iscsi')
         root_disk = [{'connection_info': connection_info}]
         v_driver.block_device_info_get_mapping(
@@ -371,10 +373,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         volumeops.VMwareVolumeOps.attach_volume(connection_info,
                 self.instance, mox.IgnoreArg())
         self.mox.ReplayAll()
+        block_device_info = {'mount_device': 'vda'}
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
-                        block_device_info=None)
+                        block_device_info=block_device_info)
 
     def _test_snapshot(self):
         expected_calls = [
