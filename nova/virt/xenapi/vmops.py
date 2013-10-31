@@ -277,8 +277,23 @@ class VMOps(object):
 
         self._attach_mapped_block_devices(instance, block_device_info)
 
+        try:
+            self.firewall_driver.setup_basic_filtering(
+                    instance, network_info)
+        except NotImplementedError:
+            # NOTE(salvatore-orlando): setup_basic_filtering might be
+            # empty or not implemented at all, as basic filter could
+            # be implemented with VIF rules created by xapi plugin
+            pass
+
+        self.firewall_driver.prepare_instance_filter(instance,
+                                                     network_info)
+
         # 5. Start VM
         self._start(instance, vm_ref=vm_ref)
+
+        self.firewall_driver.apply_instance_filter(instance, network_info)
+
         self._update_instance_progress(context, instance,
                                        step=5,
                                        total_steps=RESIZE_TOTAL_STEPS)
