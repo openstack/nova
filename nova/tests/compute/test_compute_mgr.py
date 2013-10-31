@@ -728,7 +728,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.image = {}
         self.node = 'fake-node'
         self.limits = {}
+        self.requested_networks = []
+        self.security_groups = []
         self.block_device_mapping = []
+
+        def fake_network_info():
+            return network_model.NetworkInfo()
+
+        self.network_info = network_model.NetworkInfoAsyncWrapper(
+                fake_network_info)
         self.block_device_info = self.compute._prep_block_device(context,
                 self.instance, self.block_device_mapping)
 
@@ -745,6 +753,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_finish')
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits)
         self.compute.conductor_api.action_event_start(self.context,
                                                       mox.IgnoreArg())
@@ -756,11 +765,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
     def test_build_abort_exception(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
         self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
                                  'build_instances')
@@ -770,9 +782,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_finish')
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits).AndRaise(
                         exception.BuildAbortException(reason='',
                             instance_uuid=self.instance['uuid']))
+        self.compute._cleanup_allocated_networks(self.context, self.instance,
+                self.requested_networks)
         self.compute._set_instance_error_state(self.context,
                 self.instance['uuid'])
         self.compute.conductor_api.action_event_start(self.context,
@@ -785,6 +800,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
@@ -799,12 +816,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_finish')
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits).AndRaise(
                         exception.RescheduledException(reason='',
                             instance_uuid=self.instance['uuid']))
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
-                self.injected_files, None, None, self.block_device_mapping)
+                self.injected_files, self.requested_networks,
+                self.security_groups, self.block_device_mapping)
         self.compute.conductor_api.action_event_start(self.context,
                                                       mox.IgnoreArg())
         self.compute.conductor_api.action_event_finish(self.context,
@@ -815,6 +834,116 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits)
+
+    def test_rescheduled_exception_do_not_deallocate_network(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute.compute_task_api,
+                'build_instances')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node, self.limits).AndRaise(
+                        exception.RescheduledException(reason='',
+                            instance_uuid=self.instance['uuid']))
+        self.compute.compute_task_api.build_instances(self.context,
+                [self.instance], self.image, [], self.admin_pass,
+                self.injected_files, self.requested_networks,
+                self.security_groups, self.block_device_mapping)
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits)
+
+    def test_rescheduled_exception_deallocate_network_if_dhcp(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute.driver,
+                'dhcp_options_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute.compute_task_api,
+                'build_instances')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node, self.limits).AndRaise(
+                        exception.RescheduledException(reason='',
+                            instance_uuid=self.instance['uuid']))
+        self.compute.driver.dhcp_options_for_instance(self.instance).AndReturn(
+                {'fake': 'options'})
+        self.compute._cleanup_allocated_networks(self.context, self.instance,
+                self.requested_networks)
+        self.compute.compute_task_api.build_instances(self.context,
+                [self.instance], self.image, [], self.admin_pass,
+                self.injected_files, self.requested_networks,
+                self.security_groups, self.block_device_mapping)
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
+                block_device_mapping=self.block_device_mapping, node=self.node,
+                limits=self.limits)
+
+    def test_unexpected_exception(self):
+        self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
+        self.mox.StubOutWithMock(self.compute, '_cleanup_allocated_networks')
+        self.mox.StubOutWithMock(self.compute, '_set_instance_error_state')
+        self.mox.StubOutWithMock(self.compute.compute_task_api,
+                'build_instances')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_start')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'action_event_finish')
+        self.compute._build_and_run_instance(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass,
+                self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node, self.limits).AndRaise(
+                        test.TestingException())
+        self.compute._cleanup_allocated_networks(self.context, self.instance,
+                self.requested_networks)
+        self.compute._set_instance_error_state(self.context,
+                self.instance['uuid'])
+        self.compute.conductor_api.action_event_start(self.context,
+                                                      mox.IgnoreArg())
+        self.compute.conductor_api.action_event_finish(self.context,
+                                                       mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.compute.build_and_run_instance(self.context, self.instance,
+                self.image, request_spec={}, filter_properties=[],
+                injected_files=self.injected_files,
+                admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
@@ -822,8 +951,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
+                network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(
                         exception.InstanceNotFound(instance_id=1))
         conductor_rpcapi.ConductorAPI.instance_update(
@@ -833,15 +967,21 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceNotFound,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass, self.block_device_mapping, self.node,
+                self.admin_pass, self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node,
                 self.limits)
 
     def test_reschedule_on_exception(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
+                network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(
                         test.TestingException())
         conductor_rpcapi.ConductorAPI.instance_update(
@@ -851,15 +991,21 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.RescheduledException,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass, self.block_device_mapping, self.node,
+                self.admin_pass, self.requested_networks, self.security_groups,
+                self.block_device_mapping, self.node,
                 self.limits)
 
     def test_unexpected_task_state(self):
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
+                network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(
                         exception.UnexpectedTaskStateError(expected=None,
                             actual='deleting'))
@@ -870,7 +1016,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.BuildAbortException,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass, self.block_device_mapping, self.node,
+                self.admin_pass, self.requested_networks,
+                self.security_groups, self.block_device_mapping, self.node,
                 self.limits)
 
     def test_reschedule_on_resources_unavailable(self):
@@ -889,7 +1036,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 FakeResourceTracker())
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
-                self.injected_files, None, None, self.block_device_mapping)
+                self.injected_files, self.requested_networks,
+                self.security_groups, self.block_device_mapping)
         self.compute.conductor_api.action_event_start(self.context,
                                                       mox.IgnoreArg())
         self.compute.conductor_api.action_event_finish(self.context,
@@ -900,6 +1048,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, request_spec={}, filter_properties=[],
                 injected_files=self.injected_files,
                 admin_password=self.admin_pass,
+                requested_networks=self.requested_networks,
+                security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
                 limits=self.limits)
 
@@ -909,7 +1059,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'instance_update')
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
-        self.compute._build_resources(self.context, self.instance, self.image,
+        self.compute._build_resources(self.context, self.instance,
+                self.requested_networks, self.security_groups, self.image,
                 self.block_device_mapping).AndRaise(
                         exception.BuildAbortException(
                             instance_uuid=self.instance['uuid'],
@@ -918,24 +1069,49 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(exception.BuildAbortException,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
-                self.admin_pass, self.block_device_mapping, self.node,
+                self.admin_pass, self.requested_networks,
+                self.security_groups, self.block_device_mapping, self.node,
                 self.limits)
 
     def test_build_resources_reraises_on_failed_bdm_prep(self):
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
         self.compute._prep_block_device(self.context, self.instance,
                 self.block_device_mapping).AndRaise(test.TestingException())
         self.mox.ReplayAll()
 
         try:
             with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping):
+                pass
+        except Exception as e:
+            self.assertTrue(isinstance(e, exception.BuildAbortException))
+
+    def test_build_resources_aborts_on_failed_network_alloc(self):
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndRaise(
+                        test.TestingException())
+        self.mox.ReplayAll()
+
+        try:
+            with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups, self.image,
+                    self.block_device_mapping):
                 pass
         except Exception as e:
             self.assertTrue(isinstance(e, exception.BuildAbortException))
 
     def test_build_resources_cleans_up_and_reraises_on_spawn_failure(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping)
         self.mox.ReplayAll()
@@ -947,6 +1123,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         try:
             with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping):
                 fake_spawn()
         except Exception as e:
@@ -954,6 +1131,10 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def test_build_resources_aborts_on_cleanup_failure(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_build_resources')
+        self.mox.StubOutWithMock(self.compute, '_build_networks_for_instance')
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups).AndReturn(
+                        self.network_info)
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping).AndRaise(test.TestingException())
         self.mox.ReplayAll()
@@ -963,6 +1144,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         try:
             with self.compute._build_resources(self.context, self.instance,
+                    self.requested_networks, self.security_groups,
                     self.image, self.block_device_mapping):
                 fake_spawn()
         except Exception as e:
@@ -986,3 +1168,29 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.assertRaises(test.TestingException,
                 self.compute._cleanup_build_resources, self.context,
                 self.instance, self.block_device_mapping)
+
+    def test_build_networks_if_none_found(self):
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute, '_allocate_network')
+        self.compute._get_instance_nw_info(self.context,
+                self.instance).AndReturn(self.network_info)
+        self.compute._allocate_network(self.context, self.instance,
+                self.requested_networks, None, self.security_groups, None)
+        self.mox.ReplayAll()
+
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups)
+
+    def test_return_networks_if_found(self):
+        def fake_network_info():
+            return network_model.NetworkInfo([{'address': '123.123.123.123'}])
+
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute, '_allocate_network')
+        self.compute._get_instance_nw_info(self.context,
+                self.instance).AndReturn(
+                    network_model.NetworkInfoAsyncWrapper(fake_network_info))
+        self.mox.ReplayAll()
+
+        self.compute._build_networks_for_instance(self.context, self.instance,
+                self.requested_networks, self.security_groups)

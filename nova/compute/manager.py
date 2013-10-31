@@ -1239,6 +1239,45 @@ class ComputeManager(manager.SchedulerDependentManager):
                     retry_time = 30
         # Not reached.
 
+    def _build_networks_for_instance(self, context, instance,
+            requested_networks, security_groups):
+
+        # May have been allocated previously and rescheduled to this host
+        network_info = self._get_instance_nw_info(context, instance)
+        if len(network_info) > 0:
+            return network_info
+
+        if not self.is_neutron_security_groups:
+            security_groups = []
+
+        macs = self.driver.macs_for_instance(instance)
+        dhcp_options = self.driver.dhcp_options_for_instance(instance)
+        network_info = self._allocate_network(context, instance,
+                requested_networks, macs, security_groups, dhcp_options)
+
+        if not instance['access_ip_v4'] and not instance['access_ip_v6']:
+            # If CONF.default_access_ip_network_name is set, grab the
+            # corresponding network and set the access ip values accordingly.
+            # Note that when there are multiple ips to choose from, an
+            # arbitrary one will be chosen.
+            network_name = CONF.default_access_ip_network_name
+            if not network_name:
+                return network_info
+
+            access_ips = {}
+            for vif in network_info:
+                if vif['network']['label'] == network_name:
+                    for ip in vif.fixed_ips():
+                        if ip['version'] == 4:
+                            access_ips['access_ip_v4'] = ip['address']
+                        if ip['version'] == 6:
+                            access_ips['access_ip_v6'] = ip['address']
+                    self._instance_update(context, instance['uuid'],
+                            **access_ips)
+                    break
+
+        return network_info
+
     def _allocate_network(self, context, instance, requested_networks, macs,
                           security_groups, dhcp_options):
         """Start network allocation asynchronously.  Return an instance
@@ -1536,13 +1575,21 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             try:
                 self._build_and_run_instance(context, instance, image,
-                        decoded_files, admin_password, block_device_mapping,
-                        node, limits)
+                        decoded_files, admin_password, requested_networks,
+                        security_groups, block_device_mapping, node, limits)
             except exception.BuildAbortException as e:
                 LOG.exception(e.format_message(), instance=instance)
+                self._cleanup_allocated_networks(context, instance,
+                        requested_networks)
                 self._set_instance_error_state(context, instance['uuid'])
             except exception.RescheduledException as e:
                 LOG.debug(e.format_message(), instance=instance)
+                # dhcp_options are per host, so if they're set we need to
+                # deallocate the networks and reallocate on the next host.
+                if self.driver.dhcp_options_for_instance(instance):
+                    self._cleanup_allocated_networks(context, instance,
+                            requested_networks)
+
                 self.compute_task_api.build_instances(context, [instance],
                         image, filter_properties, admin_password,
                         injected_files, requested_networks, security_groups,
@@ -1552,6 +1599,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.debug(msg, instance=instance)
             except Exception:
                 # Should not reach here.
+                self._cleanup_allocated_networks(context, instance,
+                        requested_networks)
                 self._set_instance_error_state(context, instance['uuid'])
                 msg = _('Unexpected build failure, not rescheduling build.')
                 LOG.exception(msg, instance=instance)
@@ -1562,16 +1611,20 @@ class ComputeManager(manager.SchedulerDependentManager):
                 node, limits)
 
     def _build_and_run_instance(self, context, instance, image, injected_files,
-            admin_password, block_device_mapping, node, limits):
+            admin_password, requested_networks, security_groups,
+            block_device_mapping, node, limits):
 
         try:
             rt = self._get_resource_tracker(node)
             with rt.instance_claim(context, instance, limits):
-                with self._build_resources(context, instance, image,
+                with self._build_resources(context, instance,
+                        requested_networks, security_groups, image,
                         block_device_mapping) as resources:
                     block_device_info = resources['block_device_info']
+                    network_info = resources['network_info']
                     self.driver.spawn(context, instance, image,
                                       injected_files, admin_password,
+                                      network_info=network_info,
                                       block_device_info=block_device_info)
         except exception.InstanceNotFound:
             raise
@@ -1583,18 +1636,39 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance_uuid=instance['uuid'], reason=e.format_message())
         except exception.BuildAbortException:
             raise
+        except (exception.VirtualInterfaceCreateException,
+                exception.VirtualInterfaceMacAddressException,
+                exception.FixedIpLimitExceeded,
+                exception.NoMoreNetworks):
+            LOG.exception('Failed to allocate network(s)', instance=instance)
+            msg = _('Failed to allocate the network(s), not rescheduling.')
+            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+                    reason=msg)
         except Exception as e:
             raise exception.RescheduledException(
                     instance_uuid=instance['uuid'], reason=str(e))
 
     @contextlib.contextmanager
-    def _build_resources(self, context, instance, image, block_device_mapping):
+    def _build_resources(self, context, instance, requested_networks,
+            security_groups, image, block_device_mapping):
         resources = {}
 
         # Verify that all the BDMs have a device_name set and assign a
         # default to the ones missing it with the help of the driver.
         self._default_block_device_names(context, instance, image,
                 block_device_mapping)
+
+        try:
+            network_info = self._build_networks_for_instance(context, instance,
+                    requested_networks, security_groups)
+            resources['network_info'] = network_info
+        except Exception:
+            # Because this allocation is async any failures are likely to occur
+            # when the driver accesses network_info during spawn().
+            LOG.exception('Failed to allocate network(s)', instance=instance)
+            msg = _('Failed to allocate the network(s), not rescheduling.')
+            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+                    reason=msg)
 
         try:
             block_device_info = self._prep_block_device(context, instance,
@@ -1612,6 +1686,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         except Exception:
             with excutils.save_and_reraise_exception() as ctxt:
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
+                # Make sure the async call finishes
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
                 try:
                     self._cleanup_build_resources(context, instance,
                             block_device_mapping)
@@ -1622,8 +1699,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                     raise exception.BuildAbortException(
                             instance_uuid=instance['uuid'], reason=msg)
 
+    def _cleanup_allocated_networks(self, context, instance,
+            requested_networks):
+        try:
+            self._deallocate_network(context, instance, requested_networks)
+        except Exception:
+            msg = _('Failed to deallocate networks')
+            LOG.exception(msg, instance=instance)
+
     def _cleanup_build_resources(self, context, instance,
             block_device_mapping):
+        # Don't clean up networks here in case we reschedule
         try:
             self._cleanup_volumes(context, instance['uuid'],
                     block_device_mapping)
