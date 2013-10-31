@@ -3627,7 +3627,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
     def _unshelve_instance(self, context, instance, image):
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
-        compute_info = self._get_compute_info(context, self.host)
+        compute_info = self._get_compute_info(context.elevated(), self.host)
         instance.task_state = task_states.SPAWNING
         instance.node = compute_info['hypervisor_hostname']
         instance.host = self.host
