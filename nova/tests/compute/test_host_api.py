@@ -20,6 +20,7 @@ from nova import context
 from nova import exception
 from nova.openstack.common import rpc
 from nova import test
+from nova.tests import fake_notifier
 from nova.tests.objects import test_objects
 from nova.tests.objects import test_service
 
@@ -29,6 +30,8 @@ class ComputeHostAPITestCase(test.TestCase):
         super(ComputeHostAPITestCase, self).setUp()
         self.host_api = compute.HostAPI()
         self.ctxt = context.get_admin_context()
+        fake_notifier.stub_notifier(self.stubs)
+        self.addCleanup(fake_notifier.reset)
 
     def _compare_obj(self, obj, db_obj):
         test_objects.compare_obj(self, obj, db_obj,
@@ -63,9 +66,23 @@ class ComputeHostAPITestCase(test.TestCase):
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
 
         self.mox.ReplayAll()
+        fake_notifier.NOTIFICATIONS = []
         result = self.host_api.set_host_enabled(self.ctxt, 'fake_host',
                                                 'fake_enabled')
         self.assertEqual('fake-result', result)
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('HostAPI.set_enabled.start', msg.event_type)
+        self.assertEqual('api.fake_host', msg.publisher_id)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake_enabled', msg.payload['enabled'])
+        self.assertEqual('fake_host', msg.payload['host_name'])
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual('HostAPI.set_enabled.end', msg.event_type)
+        self.assertEqual('api.fake_host', msg.publisher_id)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake_enabled', msg.payload['enabled'])
+        self.assertEqual('fake_host', msg.payload['host_name'])
 
     def test_host_name_from_assert_hosts_exists(self):
         self._mock_assert_host_exists()
@@ -114,9 +131,23 @@ class ComputeHostAPITestCase(test.TestCase):
                  'args': {'action': 'fake_action'},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
+        fake_notifier.NOTIFICATIONS = []
         result = self.host_api.host_power_action(self.ctxt, 'fake_host',
                                                  'fake_action')
         self.assertEqual('fake-result', result)
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('HostAPI.power_action.start', msg.event_type)
+        self.assertEqual('api.fake_host', msg.publisher_id)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake_action', msg.payload['action'])
+        self.assertEqual('fake_host', msg.payload['host_name'])
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual('HostAPI.power_action.end', msg.event_type)
+        self.assertEqual('api.fake_host', msg.publisher_id)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake_action', msg.payload['action'])
+        self.assertEqual('fake_host', msg.payload['host_name'])
 
     def test_set_host_maintenance(self):
         self._mock_assert_host_exists()
@@ -126,9 +157,23 @@ class ComputeHostAPITestCase(test.TestCase):
                  'args': {'host': 'fake_host', 'mode': 'fake_mode'},
                  'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION})
         self.mox.ReplayAll()
+        fake_notifier.NOTIFICATIONS = []
         result = self.host_api.set_host_maintenance(self.ctxt, 'fake_host',
                                                     'fake_mode')
         self.assertEqual('fake-result', result)
+        self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('HostAPI.set_maintenance.start', msg.event_type)
+        self.assertEqual('api.fake_host', msg.publisher_id)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake_host', msg.payload['host_name'])
+        self.assertEqual('fake_mode', msg.payload['mode'])
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual('HostAPI.set_maintenance.end', msg.event_type)
+        self.assertEqual('api.fake_host', msg.publisher_id)
+        self.assertEqual('INFO', msg.priority)
+        self.assertEqual('fake_host', msg.payload['host_name'])
+        self.assertEqual('fake_mode', msg.payload['mode'])
 
     def test_service_get_all_no_zones(self):
         services = [dict(test_service.fake_service,

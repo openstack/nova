@@ -2991,11 +2991,20 @@ class HostAPI(base.Base):
             raise exception.ComputeServiceUnavailable(host=host_name)
         return service['host']
 
+    @wrap_exception()
     def set_host_enabled(self, context, host_name, enabled):
         """Sets the specified host's ability to accept new instances."""
         host_name = self._assert_host_exists(context, host_name)
-        return self.rpcapi.set_host_enabled(context, enabled=enabled,
+        payload = {'host_name': host_name, 'enabled': enabled}
+        compute_utils.notify_about_host_update(context,
+                                               'set_enabled.start',
+                                               payload)
+        result = self.rpcapi.set_host_enabled(context, enabled=enabled,
                 host=host_name)
+        compute_utils.notify_about_host_update(context,
+                                               'set_enabled.end',
+                                               payload)
+        return result
 
     def get_host_uptime(self, context, host_name):
         """Returns the result of calling "uptime" on the target host."""
@@ -3003,19 +3012,37 @@ class HostAPI(base.Base):
                          must_be_up=True)
         return self.rpcapi.get_host_uptime(context, host=host_name)
 
+    @wrap_exception()
     def host_power_action(self, context, host_name, action):
         """Reboots, shuts down or powers up the host."""
         host_name = self._assert_host_exists(context, host_name)
-        return self.rpcapi.host_power_action(context, action=action,
+        payload = {'host_name': host_name, 'action': action}
+        compute_utils.notify_about_host_update(context,
+                                               'power_action.start',
+                                               payload)
+        result = self.rpcapi.host_power_action(context, action=action,
                 host=host_name)
+        compute_utils.notify_about_host_update(context,
+                                               'power_action.end',
+                                               payload)
+        return result
 
+    @wrap_exception()
     def set_host_maintenance(self, context, host_name, mode):
         """Start/Stop host maintenance window. On start, it triggers
         guest VMs evacuation.
         """
         host_name = self._assert_host_exists(context, host_name)
-        return self.rpcapi.host_maintenance_mode(context,
+        payload = {'host_name': host_name, 'mode': mode}
+        compute_utils.notify_about_host_update(context,
+                                               'set_maintenance.start',
+                                               payload)
+        result = self.rpcapi.host_maintenance_mode(context,
                 host_param=host_name, mode=mode, host=host_name)
+        compute_utils.notify_about_host_update(context,
+                                               'set_maintenance.end',
+                                               payload)
+        return result
 
     def service_get_all(self, context, filters=None, set_zones=False):
         """Returns a list of services, optionally filtering the results.
