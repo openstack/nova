@@ -745,12 +745,46 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.compute.driver, self.node)
         self.compute._resource_tracker_dict[self.node] = fake_rt
 
+    def _do_build_instance_update(self, reschedule_update=False):
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.compute._instance_update(self.context, self.instance['uuid'],
+                vm_state=vm_states.BUILDING, task_state=None,
+                expected_task_state=(task_states.SCHEDULING, None)).AndReturn(
+                        self.instance)
+        if reschedule_update:
+            self.compute._instance_update(self.context, self.instance['uuid'],
+                    task_state=task_states.SCHEDULING).AndReturn(self.instance)
+
+    def _build_and_run_instance_update(self):
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self._build_resources_instance_update(stub=False)
+        self.compute._instance_update(self.context, self.instance['uuid'],
+                vm_state=vm_states.BUILDING, task_state=task_states.SPAWNING,
+                expected_task_state=
+                    task_states.BLOCK_DEVICE_MAPPING).AndReturn(self.instance)
+
+    def _build_resources_instance_update(self, stub=True):
+        if stub:
+            self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.compute._instance_update(self.context, self.instance['uuid'],
+                vm_state=vm_states.BUILDING,
+                task_state=task_states.BLOCK_DEVICE_MAPPING).AndReturn(
+                        self.instance)
+
+    def _notify_about_instance_usage(self, event, stub=True, **kwargs):
+        if stub:
+            self.mox.StubOutWithMock(self.compute,
+                    '_notify_about_instance_usage')
+        self.compute._notify_about_instance_usage(self.context, self.instance,
+                event, **kwargs)
+
     def test_build_and_run_instance_called_with_proper_args(self):
         self.mox.StubOutWithMock(self.compute, '_build_and_run_instance')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
+        self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -780,6 +814,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
+        self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -814,6 +849,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
+        self._do_build_instance_update(reschedule_update=True)
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -848,6 +884,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
+        self._do_build_instance_update(reschedule_update=True)
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -884,6 +921,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
+        self._do_build_instance_update(reschedule_update=True)
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -923,6 +961,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
+        self._do_build_instance_update()
         self.compute._build_and_run_instance(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
@@ -948,6 +987,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 limits=self.limits)
 
     def test_instance_not_found(self):
+        exc = exception.InstanceNotFound(instance_id=1)
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
@@ -955,11 +995,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self._notify_about_instance_usage('create.start',
+            extra_usage_info={'image_name': self.image.get('name')})
+        self._build_and_run_instance_update()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
-                block_device_info=self.block_device_info).AndRaise(
-                        exception.InstanceNotFound(instance_id=1))
+                block_device_info=self.block_device_info).AndRaise(exc)
+        self._notify_about_instance_usage('create.end',
+                extra_usage_info={'message': exc.format_message()}, stub=False)
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
@@ -979,6 +1023,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self._notify_about_instance_usage('create.start',
+            extra_usage_info={'image_name': self.image.get('name')})
+        self._build_and_run_instance_update()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
@@ -986,6 +1033,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         test.TestingException())
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
+        self._notify_about_instance_usage('create.error',
+            extra_usage_info={'message': str(test.TestingException())},
+            stub=False)
         self.mox.ReplayAll()
 
         self.assertRaises(exception.RescheduledException,
@@ -1003,17 +1053,22 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self._notify_about_instance_usage('create.start',
+            extra_usage_info={'image_name': self.image.get('name')})
+        exc = exception.UnexpectedTaskStateError(expected=None,
+                actual='deleting')
+        self._build_and_run_instance_update()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
-                block_device_info=self.block_device_info).AndRaise(
-                        exception.UnexpectedTaskStateError(expected=None,
-                            actual='deleting'))
+                block_device_info=self.block_device_info).AndRaise(exc)
+        self._notify_about_instance_usage('create.end', stub=False,
+            extra_usage_info={'message': exc.format_message()})
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.BuildAbortException,
+        self.assertRaises(exception.UnexpectedTaskStateError,
                 self.compute._build_and_run_instance, self.context,
                 self.instance, self.image, self.injected_files,
                 self.admin_pass, self.requested_networks,
@@ -1021,9 +1076,11 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.limits)
 
     def test_reschedule_on_resources_unavailable(self):
+        exc = exception.ComputeResourcesUnavailable()
+
         class FakeResourceTracker(object):
             def instance_claim(self, context, instance, limits):
-                raise exception.ComputeResourcesUnavailable
+                raise exc
 
         self.mox.StubOutWithMock(self.compute, '_get_resource_tracker')
         self.mox.StubOutWithMock(self.compute.compute_task_api,
@@ -1032,8 +1089,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                  'action_event_start')
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'action_event_finish')
-        self.compute._get_resource_tracker('node').AndReturn(
-                FakeResourceTracker())
+        self.compute._get_resource_tracker(self.node).AndReturn(
+            FakeResourceTracker())
+        self._do_build_instance_update(reschedule_update=True)
+        self._notify_about_instance_usage('create.start',
+            extra_usage_info={'image_name': self.image.get('name')})
+        self._notify_about_instance_usage('create.error',
+            extra_usage_info={'message': exc.format_message()}, stub=False)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, self.requested_networks,
@@ -1054,17 +1116,20 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 limits=self.limits)
 
     def test_build_resources_buildabort_reraise(self):
+        exc = exception.BuildAbortException(
+                instance_uuid=self.instance['uuid'], reason='')
         self.mox.StubOutWithMock(self.compute, '_build_resources')
         self.mox.StubOutWithMock(conductor_rpcapi.ConductorAPI,
                                  'instance_update')
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
+        self._notify_about_instance_usage('create.start',
+            extra_usage_info={'image_name': self.image.get('name')})
         self.compute._build_resources(self.context, self.instance,
                 self.requested_networks, self.security_groups, self.image,
-                self.block_device_mapping).AndRaise(
-                        exception.BuildAbortException(
-                            instance_uuid=self.instance['uuid'],
-                            reason=''))
+                self.block_device_mapping).AndRaise(exc)
+        self._notify_about_instance_usage('create.end',
+            extra_usage_info={'message': exc.format_message()}, stub=False)
         self.mox.ReplayAll()
         self.assertRaises(exception.BuildAbortException,
                 self.compute._build_and_run_instance, self.context,
@@ -1079,6 +1144,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self._build_resources_instance_update()
         self.compute._prep_block_device(self.context, self.instance,
                 self.block_device_mapping).AndRaise(test.TestingException())
         self.mox.ReplayAll()
@@ -1112,6 +1178,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self._build_resources_instance_update()
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping)
         self.mox.ReplayAll()
@@ -1135,6 +1202,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_networks_for_instance(self.context, self.instance,
                 self.requested_networks, self.security_groups).AndReturn(
                         self.network_info)
+        self._build_resources_instance_update()
         self.compute._cleanup_build_resources(self.context, self.instance,
                 self.block_device_mapping).AndRaise(test.TestingException())
         self.mox.ReplayAll()
