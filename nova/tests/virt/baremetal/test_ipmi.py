@@ -102,7 +102,7 @@ class BareMetalIPMITestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         res = self.ipmi.is_power_on()
-        self.assertEqual(res, None)
+        self.assertIsNone(res)
         self.mox.VerifyAll()
 
     def test_power_already_on(self):
@@ -218,7 +218,7 @@ class BareMetalIPMITestCase(test.NoDBTestCase):
         pid = ipmi._get_console_pid(self.ipmi.node_id)
         bm_utils.unlink_without_raise(path)
         self.mox.VerifyAll()
-        self.assertTrue(pid is None)
+        self.assertIsNone(pid)
 
     def test_console_pid_file_not_found(self):
         pid_path = ipmi._get_console_pid_path(self.ipmi.node_id)
@@ -229,4 +229,4 @@ class BareMetalIPMITestCase(test.NoDBTestCase):
 
         pid = ipmi._get_console_pid(self.ipmi.node_id)
         self.mox.VerifyAll()
-        self.assertTrue(pid is None)
+        self.assertIsNone(pid)

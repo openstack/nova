@@ -155,7 +155,7 @@ class BareMetalVolumeTestCase(test.NoDBTestCase):
     def test_find_tid_not_found(self):
         tid = volume_driver._find_tid(
                 'iqn.2010-10.org.openstack.baremetal:1000002-dev.vdc')
-        self.assertTrue(tid is None)
+        self.assertIsNone(tid)
 
     def test_get_iqn(self):
         self.flags(iscsi_iqn_prefix='iqn.2012-12.a.b', group='baremetal')

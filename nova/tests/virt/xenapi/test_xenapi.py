@@ -932,7 +932,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         def _tee_handler(cmd, **kwargs):
             input = kwargs.get('process_input', None)
-            self.assertNotEqual(input, None)
+            self.assertIsNotNone(input)
             config = [line.strip() for line in input.split("\n")]
             # Find the start of eth0 configuration and check it
             index = config.index('auto eth0')
@@ -1557,7 +1557,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.conn.destroy(instance, network_info)
 
         vm_ref = vm_utils.lookup(self.conn._session, instance['name'])
-        self.assertTrue(vm_ref is None)
+        self.assertIsNone(vm_ref)
         self.assertTrue(fake_destroy_kernel_ramdisk.called)
 
 
@@ -2136,7 +2136,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
     def test_supported_instances_is_calculated_by_to_supported_instances(self):
 
         def to_supported_instances(somedata):
-            self.assertEqual(None, somedata)
+            self.assertIsNone(somedata)
             return "SOMERETURNVALUE"
         self.stubs.Set(host, 'to_supported_instances', to_supported_instances)
 

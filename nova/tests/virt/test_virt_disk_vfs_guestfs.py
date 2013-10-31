@@ -50,7 +50,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         handle = vfs.handle
         vfs.teardown()
 
-        self.assertEqual(vfs.handle, None)
+        self.assertIsNone(vfs.handle)
         self.assertEqual(handle.running, False)
         self.assertEqual(handle.closed, True)
         self.assertEqual(len(handle.mounts), 0)
@@ -95,7 +95,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         handle = vfs.handle
         vfs.teardown()
 
-        self.assertEqual(vfs.handle, None)
+        self.assertIsNone(vfs.handle)
         self.assertEqual(handle.running, False)
         self.assertEqual(handle.closed, True)
         self.assertEqual(len(handle.mounts), 0)
@@ -114,7 +114,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         handle = vfs.handle
         vfs.teardown()
 
-        self.assertEqual(vfs.handle, None)
+        self.assertIsNone(vfs.handle)
         self.assertEqual(handle.running, False)
         self.assertEqual(handle.closed, True)
         self.assertEqual(len(handle.mounts), 0)

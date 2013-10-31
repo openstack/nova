@@ -721,7 +721,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
-        self.assertEqual(cfg.os_root, None)
+        self.assertIsNone(cfg.os_root)
         self.assertEqual(len(cfg.devices), 7)
         self.assertEqual(type(cfg.devices[0]),
                          vconfig.LibvirtConfigGuestDisk)
@@ -782,7 +782,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.vcpus, 1)
         self.assertEqual(cfg.os_type, vm_mode.HVM)
         self.assertEqual(cfg.os_boot_dev, ["hd"])
-        self.assertEqual(cfg.os_root, None)
+        self.assertIsNone(cfg.os_root)
         self.assertEqual(len(cfg.devices), 8)
         self.assertEqual(type(cfg.devices[0]),
                          vconfig.LibvirtConfigGuestDisk)
@@ -1207,7 +1207,7 @@ class LibvirtConnTestCase(test.TestCase):
         conf = conn.get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
                                      None, disk_info)
-        self.assertEqual(conf.cpu, None)
+        self.assertIsNone(conf.cpu)
 
     def test_get_guest_cpu_config_default_kvm(self):
         self.flags(libvirt_type="kvm",
@@ -1230,7 +1230,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(type(conf.cpu),
                          vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-model")
-        self.assertEqual(conf.cpu.model, None)
+        self.assertIsNone(conf.cpu.model)
 
     def test_get_guest_cpu_config_default_uml(self):
         self.flags(libvirt_type="uml",
@@ -1244,7 +1244,7 @@ class LibvirtConnTestCase(test.TestCase):
         conf = conn.get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
                                      None, disk_info)
-        self.assertEqual(conf.cpu, None)
+        self.assertIsNone(conf.cpu)
 
     def test_get_guest_cpu_config_default_lxc(self):
         self.flags(libvirt_type="lxc",
@@ -1258,7 +1258,7 @@ class LibvirtConnTestCase(test.TestCase):
         conf = conn.get_guest_config(instance_ref,
                                      _fake_network_info(self.stubs, 1),
                                      None, disk_info)
-        self.assertEqual(conf.cpu, None)
+        self.assertIsNone(conf.cpu)
 
     def test_get_guest_cpu_config_host_passthrough_new(self):
         def get_lib_version_stub():
@@ -1279,7 +1279,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(type(conf.cpu),
                          vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-passthrough")
-        self.assertEqual(conf.cpu.model, None)
+        self.assertIsNone(conf.cpu.model)
 
     def test_get_guest_cpu_config_host_model_new(self):
         def get_lib_version_stub():
@@ -1300,7 +1300,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(type(conf.cpu),
                          vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-model")
-        self.assertEqual(conf.cpu.model, None)
+        self.assertIsNone(conf.cpu.model)
 
     def test_get_guest_cpu_config_custom_new(self):
         def get_lib_version_stub():
@@ -1379,7 +1379,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      None, disk_info)
         self.assertEqual(type(conf.cpu),
                          vconfig.LibvirtConfigGuestCPU)
-        self.assertEqual(conf.cpu.mode, None)
+        self.assertIsNone(conf.cpu.mode)
         self.assertEqual(conf.cpu.model, "Opteron_G4")
         self.assertEqual(conf.cpu.vendor, "AMD")
         self.assertEqual(len(conf.cpu.features), 2)
@@ -1405,7 +1405,7 @@ class LibvirtConnTestCase(test.TestCase):
                                      None, disk_info)
         self.assertEqual(type(conf.cpu),
                          vconfig.LibvirtConfigGuestCPU)
-        self.assertEqual(conf.cpu.mode, None)
+        self.assertIsNone(conf.cpu.mode)
         self.assertEqual(conf.cpu.model, "Penryn")
 
     def test_xml_and_uri_no_ramdisk_no_kernel(self):
@@ -3163,7 +3163,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = conn.pre_live_migration(c, inst_ref, vol, nw_info, None)
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
 
     def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
         # Creating testdata, using temp dir.
@@ -3206,7 +3206,7 @@ class LibvirtConnTestCase(test.TestCase):
                             }
             ret = conn.pre_live_migration(c, inst_ref, vol, nw_info, None,
                                           migrate_data)
-            self.assertEqual(ret, None)
+            self.assertIsNone(ret)
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
                                                        inst_ref['name'])))
         db.instance_destroy(self.context, inst_ref['uuid'])
@@ -5225,7 +5225,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         fake_conf.source_type = 'file'
         conn.set_cache_mode(fake_conf)
-        self.assertEqual(fake_conf.driver_cache, None)
+        self.assertIsNone(fake_conf.driver_cache)
 
     def test_set_cache_mode_invalid_object(self):
         self.flags(disk_cachemodes=['file=directsync'])

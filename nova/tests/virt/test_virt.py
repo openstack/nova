@@ -43,25 +43,23 @@ class TestVirtDriver(test.NoDBTestCase):
 
         self.assertEqual(
             driver.block_device_info_get_root(block_device_info), '/dev/sda')
-        self.assertEqual(
-            driver.block_device_info_get_root(empty_block_device_info), None)
-        self.assertEqual(
-            driver.block_device_info_get_root(None), None)
+        self.assertIsNone(
+            driver.block_device_info_get_root(empty_block_device_info))
+        self.assertIsNone(driver.block_device_info_get_root(None))
 
         self.assertEqual(
             driver.block_device_info_get_swap(block_device_info), swap)
-        self.assertEqual(driver.block_device_info_get_swap(
-            empty_block_device_info)['device_name'], None)
+        self.assertIsNone(driver.block_device_info_get_swap(
+            empty_block_device_info)['device_name'])
         self.assertEqual(driver.block_device_info_get_swap(
             empty_block_device_info)['swap_size'], 0)
-        self.assertEqual(
-            driver.block_device_info_get_swap({'swap': None})['device_name'],
-            None)
+        self.assertIsNone(
+            driver.block_device_info_get_swap({'swap': None})['device_name'])
         self.assertEqual(
             driver.block_device_info_get_swap({'swap': None})['swap_size'],
             0)
-        self.assertEqual(
-            driver.block_device_info_get_swap(None)['device_name'], None)
+        self.assertIsNone(
+            driver.block_device_info_get_swap(None)['device_name'])
         self.assertEqual(
             driver.block_device_info_get_swap(None)['swap_size'], 0)
 

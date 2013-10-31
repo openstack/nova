@@ -617,8 +617,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_destroy_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertEqual(self.conn.destroy(self.instance, self.network_info),
-                         None)
+        self.assertIsNone(self.conn.destroy(self.instance, self.network_info))
 
     def _rescue(self):
         def fake_attach_disk_to_vm(*args, **kwargs):
