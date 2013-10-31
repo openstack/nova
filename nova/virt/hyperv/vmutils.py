@@ -547,7 +547,7 @@ class VMUtils(object):
     def get_controller_volume_paths(self, controller_path):
         disks = self._conn.query("SELECT * FROM "
                                  "Msvm_ResourceAllocationSettingData "
-                                 "WHERE ResourceSubType = %(res_sub_type)s "
+                                 "WHERE ResourceSubType = '%(res_sub_type)s' "
                                  "AND Parent='%(parent)s'" %
                                  {"res_sub_type": self._PHYS_DISK_RES_SUB_TYPE,
                                   "parent": controller_path})
