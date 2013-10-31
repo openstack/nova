@@ -45,9 +45,9 @@ class RouteTests(test.NoDBTestCase):
         route = model.Route.hydrate(
                 {'gateway': fake_network_cache_model.new_ip(
                                 dict(address='192.168.1.1'))})
-        self.assertEqual(route['cidr'], None)
+        self.assertIsNone(route['cidr'])
         self.assertEqual(route['gateway']['address'], '192.168.1.1')
-        self.assertEqual(route['interface'], None)
+        self.assertIsNone(route['interface'])
 
 
 class FixedIPTests(test.NoDBTestCase):
@@ -83,9 +83,9 @@ class FixedIPTests(test.NoDBTestCase):
     def test_hydrate(self):
         fixed_ip = model.FixedIP.hydrate({})
         self.assertEqual(fixed_ip['floating_ips'], [])
-        self.assertEqual(fixed_ip['address'], None)
+        self.assertIsNone(fixed_ip['address'])
         self.assertEqual(fixed_ip['type'], 'fixed')
-        self.assertEqual(fixed_ip['version'], None)
+        self.assertIsNone(fixed_ip['version'])
 
     def test_add_floating_ip(self):
         fixed_ip = model.FixedIP(address='192.168.1.100')
@@ -352,10 +352,10 @@ class NetworkInfoTests(test.NoDBTestCase):
         ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
         self.assertRaises(test.TestingException, ninfo.wait)
         # 2nd one doesn't raise
-        self.assertEqual(None, ninfo.wait())
+        self.assertIsNone(ninfo.wait())
         # Test that do_raise=False works on .wait()
         ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
-        self.assertEqual(None, ninfo.wait(do_raise=False))
+        self.assertIsNone(ninfo.wait(do_raise=False))
         # Test we also raise calling a method
         ninfo = model.NetworkInfoAsyncWrapper(async_wrapper)
         self.assertRaises(test.TestingException, ninfo.fixed_ips)
@@ -419,7 +419,7 @@ class NetworkInfoTests(test.NoDBTestCase):
 
         # will just ignore the improper behavior.
         if not should_inject:
-            self.assertTrue(template is None)
+            self.assertIsNone(template)
         else:
             if use_ipv4:
                 self.assertIn('auto eth0', template)
@@ -439,7 +439,7 @@ class NetworkInfoTests(test.NoDBTestCase):
                 if gateway:
                     self.assertIn('gateway 1234:567::1', template)
             if not use_ipv4 and not use_ipv6:
-                self.assertTrue(template is None)
+                self.assertIsNone(template)
 
     def test_injection_static(self):
         self._test_injected_network_template(should_inject=True)

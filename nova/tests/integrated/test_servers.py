@@ -459,7 +459,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         server_map = dict((server['id'], server) for server in servers)
         found_server = server_map.get(created_server_id)
         # The server from the 2nd request should not be there.
-        self.assertEqual(found_server, None)
+        self.assertIsNone(found_server)
         # Should have found 2 servers.
         self.assertEqual(len(server_map), 2)
 

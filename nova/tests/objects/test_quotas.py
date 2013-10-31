@@ -56,8 +56,8 @@ class _TestQuotasObject(object):
                 self.context, fake_reservations)
         self.assertEqual(self.context, quotas._context)
         self.assertEqual(fake_reservations, quotas.reservations)
-        self.assertEqual(None, quotas.project_id)
-        self.assertEqual(None, quotas.user_id)
+        self.assertIsNone(quotas.project_id)
+        self.assertIsNone(quotas.user_id)
 
     def test_from_reservations_bogus(self):
         fake_reservations = [_TestQuotasObject, _TestQuotasObject]
@@ -115,7 +115,7 @@ class _TestQuotasObject(object):
 
         self.mox.ReplayAll()
         quotas.commit()
-        self.assertEqual(None, quotas.reservations)
+        self.assertIsNone(quotas.reservations)
 
     def test_commit_none_reservations(self):
         quotas = quotas_obj.Quotas.from_reservations(self.context, None)
@@ -134,7 +134,7 @@ class _TestQuotasObject(object):
 
         self.mox.ReplayAll()
         quotas.rollback()
-        self.assertEqual(None, quotas.reservations)
+        self.assertIsNone(quotas.reservations)
 
     def test_rollback_none_reservations(self):
         quotas = quotas_obj.Quotas.from_reservations(self.context, None)

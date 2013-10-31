@@ -234,7 +234,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
 
         self.cells_manager._heal_instances(fake_context)
         self.assertEqual(call_info['shuffle'], True)
-        self.assertEqual(call_info['project_id'], None)
+        self.assertIsNone(call_info['project_id'])
         self.assertEqual(call_info['updated_since'], updated_since)
         self.assertEqual(call_info['get_instances'], 1)
         # Only first 2
@@ -244,7 +244,7 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         call_info['sync_instances'] = []
         self.cells_manager._heal_instances(fake_context)
         self.assertEqual(call_info['shuffle'], True)
-        self.assertEqual(call_info['project_id'], None)
+        self.assertIsNone(call_info['project_id'])
         self.assertEqual(call_info['updated_since'], updated_since)
         self.assertEqual(call_info['get_instances'], 2)
         # Now the last 1 and the first 1

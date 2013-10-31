@@ -147,21 +147,21 @@ class TestUtils(test.TestCase):
         self.assertEqual(utils.datetime_or_none(dt),
                          naive_dt.replace(tzinfo=iso8601.iso8601.Utc(),
                                           microsecond=0))
-        self.assertEqual(utils.datetime_or_none(None), None)
+        self.assertIsNone(utils.datetime_or_none(None))
         self.assertRaises(ValueError, utils.datetime_or_none, 'foo')
 
     def test_datetime_or_str_or_none(self):
         dts = timeutils.isotime()
         dt = timeutils.parse_isotime(dts)
         self.assertEqual(utils.datetime_or_str_or_none(dt), dt)
-        self.assertEqual(utils.datetime_or_str_or_none(None), None)
+        self.assertIsNone(utils.datetime_or_str_or_none(None))
         self.assertEqual(utils.datetime_or_str_or_none(dts), dt)
         self.assertRaises(ValueError, utils.datetime_or_str_or_none, 'foo')
 
     def test_int_or_none(self):
         self.assertEqual(utils.int_or_none(1), 1)
         self.assertEqual(utils.int_or_none('1'), 1)
-        self.assertEqual(utils.int_or_none(None), None)
+        self.assertIsNone(utils.int_or_none(None))
         self.assertRaises(ValueError, utils.int_or_none, 'foo')
 
     def test_str_or_none(self):
@@ -169,7 +169,7 @@ class TestUtils(test.TestCase):
             pass
         self.assertEqual(utils.str_or_none('foo'), 'foo')
         self.assertEqual(utils.str_or_none(1), '1')
-        self.assertEqual(utils.str_or_none(None), None)
+        self.assertIsNone(utils.str_or_none(None))
         self.assertIsInstance(utils.str_or_none('foo'), unicode)
 
     def test_str_value(self):
@@ -188,13 +188,13 @@ class TestUtils(test.TestCase):
         ip6 = netaddr.IPAddress('1::2', 6)
         self.assertEqual(utils.ip_or_none(4)('1.2.3.4'), ip4)
         self.assertEqual(utils.ip_or_none(6)('1::2'), ip6)
-        self.assertEqual(utils.ip_or_none(4)(None), None)
-        self.assertEqual(utils.ip_or_none(6)(None), None)
+        self.assertIsNone(utils.ip_or_none(4)(None))
+        self.assertIsNone(utils.ip_or_none(6)(None))
         self.assertRaises(netaddr.AddrFormatError, utils.ip_or_none(4), 'foo')
         self.assertRaises(netaddr.AddrFormatError, utils.ip_or_none(6), 'foo')
 
     def test_list_of_strings_or_none(self):
-        self.assertEqual(utils.list_of_strings_or_none(None), None)
+        self.assertIsNone(utils.list_of_strings_or_none(None))
         self.assertEqual(utils.list_of_strings_or_none(['1', '2']),
                          ['1', '2'])
         self.assertRaises(ValueError,
@@ -205,7 +205,7 @@ class TestUtils(test.TestCase):
                           utils.list_of_strings_or_none, ['1', 2])
 
     def test_dict_of_strings_or_none(self):
-        self.assertEqual(utils.dict_of_strings_or_none(None), None)
+        self.assertIsNone(utils.dict_of_strings_or_none(None))
         self.assertEqual(utils.dict_of_strings_or_none({'1': '2'}),
                          {'1': '2'})
         self.assertRaises(ValueError,
@@ -225,7 +225,7 @@ class TestUtils(test.TestCase):
         obj.bar = timeutils.parse_isotime('1955-11-05T00:00:00Z')
         self.assertEqual(obj.foo(), '1955-11-05T00:00:00Z')
         obj.bar = None
-        self.assertEqual(obj.foo(), None)
+        self.assertIsNone(obj.foo())
         obj.bar = 'foo'
         self.assertRaises(AttributeError, obj.foo)
 
@@ -233,7 +233,7 @@ class TestUtils(test.TestCase):
         dt = timeutils.parse_isotime('1955-11-05T00:00:00Z')
         self.assertEqual(utils.dt_deserializer(None, timeutils.isotime(dt)),
                          dt)
-        self.assertEqual(utils.dt_deserializer(None, None), None)
+        self.assertIsNone(utils.dt_deserializer(None, None))
         self.assertRaises(ValueError, utils.dt_deserializer, None, 'foo')
 
     def test_obj_to_primitive_list(self):

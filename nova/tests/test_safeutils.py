@@ -72,7 +72,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertIn('red', callargs)
         self.assertEqual(3, callargs['red'])
         self.assertIn('blue', callargs)
-        self.assertEqual(None, callargs['blue'])
+        self.assertIsNone(callargs['blue'])
 
     def test_partial_args(self):
         args = ({'uuid': 1}, 3)
@@ -85,7 +85,7 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertIn('red', callargs)
         self.assertEqual(3, callargs['red'])
         self.assertIn('blue', callargs)
-        self.assertEqual(None, callargs['blue'])
+        self.assertIsNone(callargs['blue'])
 
     def test_partial_mixed_args(self):
         args = (3,)
@@ -97,4 +97,4 @@ class GetCallArgsTestCase(test.NoDBTestCase):
         self.assertIn('red', callargs)
         self.assertEqual(3, callargs['red'])
         self.assertIn('blue', callargs)
-        self.assertEqual(None, callargs['blue'])
+        self.assertIsNone(callargs['blue'])

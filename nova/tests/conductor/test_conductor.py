@@ -346,7 +346,7 @@ class _BaseTestCase(object):
         db.compute_node_delete(self.context, node['id']).AndReturn(None)
         self.mox.ReplayAll()
         result = self.conductor.compute_node_delete(self.context, node)
-        self.assertEqual(result, None)
+        self.assertIsNone(result)
 
     def test_instance_fault_create(self):
         self.mox.StubOutWithMock(db, 'instance_fault_create')

@@ -59,7 +59,7 @@ class _TestInstanceInfoCacheObject(object):
         self.assertEqual(set(['instance_uuid', 'network_info']),
                          obj.obj_what_changed())
         self.assertEqual('fake-uuid', obj.instance_uuid)
-        self.assertEqual(None, obj.network_info)
+        self.assertIsNone(obj.network_info)
 
     def _save_helper(self, cell_type, update_cells):
         obj = instance_info_cache.InstanceInfoCache()

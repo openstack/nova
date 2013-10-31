@@ -314,7 +314,7 @@ class UnsupportedDriverTestCase(BaseTestCase):
     def test_disabled(self):
         # disabled = no compute node stats
         self.assertTrue(self.tracker.disabled)
-        self.assertEqual(None, self.tracker.compute_node)
+        self.assertIsNone(self.tracker.compute_node)
 
     def test_disabled_claim(self):
         # basic claim:
@@ -602,7 +602,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         self.tracker.update_available_resource(self.context)
 
         # confirm tracker is adding in host_ip
-        self.assertTrue(self.compute.get('host_ip') is not None)
+        self.assertIsNotNone(self.compute.get('host_ip'))
 
         # confirm that resource usage is derived from instance usages,
         # not virt layer:
@@ -621,7 +621,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
                 root_gb=claim_disk, ephemeral_gb=0)
         claim = self.tracker.instance_claim(self.context, instance,
                 self.limits)
-        self.assertNotEqual(None, claim)
+        self.assertIsNotNone(claim)
 
         self.assertEqual(claim_mem + FAKE_VIRT_MEMORY_OVERHEAD,
                          self.compute["memory_mb_used"])
@@ -980,9 +980,9 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
 
     def test_set_instance_host_and_node(self):
         instance = self._fake_instance()
-        self.assertEqual(None, instance['host'])
-        self.assertEqual(None, instance['launched_on'])
-        self.assertEqual(None, instance['node'])
+        self.assertIsNone(instance['host'])
+        self.assertIsNone(instance['launched_on'])
+        self.assertIsNone(instance['node'])
 
         claim = self.tracker.instance_claim(self.context, instance)
         self.assertNotEqual(0, claim.memory_mb)

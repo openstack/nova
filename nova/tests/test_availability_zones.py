@@ -85,7 +85,7 @@ class AvailabilityZoneTestCases(test.TestCase):
 
     def test_rest_availability_zone_reset_cache(self):
         az.reset_cache()
-        self.assertEqual(az._get_cache().get('cache'), None)
+        self.assertIsNone(az._get_cache().get('cache'))
 
     def test_set_availability_zone_compute_service(self):
         """Test for compute service get right availability zone."""

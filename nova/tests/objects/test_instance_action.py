@@ -78,7 +78,7 @@ class _TestInstanceActionObject(object):
         self.mox.ReplayAll()
         action = instance_action.InstanceAction.action_start(
             self.context, 'fake-uuid', 'fake-action', want_result=False)
-        self.assertEqual(None, action)
+        self.assertIsNone(action)
 
     def test_action_finish(self):
         timeutils.set_time_override()
@@ -98,7 +98,7 @@ class _TestInstanceActionObject(object):
         self.mox.ReplayAll()
         action = instance_action.InstanceAction.action_finish(
             self.context, 'fake-uuid', want_result=False)
-        self.assertEqual(None, action)
+        self.assertIsNone(action)
 
     def test_finish(self):
         timeutils.set_time_override()
@@ -169,7 +169,7 @@ class _TestInstanceActionEventObject(object):
         self.mox.ReplayAll()
         event = instance_action.InstanceActionEvent.event_start(
             self.context, 'fake-uuid', 'fake-event', want_result=False)
-        self.assertEqual(None, event)
+        self.assertIsNone(event)
 
     def test_event_finish(self):
         self.mox.StubOutWithMock(db, 'action_event_finish')
@@ -194,7 +194,7 @@ class _TestInstanceActionEventObject(object):
         self.mox.ReplayAll()
         event = instance_action.InstanceActionEvent.event_finish(
             self.context, 'fake-uuid', 'fake-event', want_result=False)
-        self.assertEqual(None, event)
+        self.assertIsNone(event)
 
     def test_event_finish_with_failure(self):
         self.mox.StubOutWithMock(db, 'action_event_finish')

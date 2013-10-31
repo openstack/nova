@@ -254,7 +254,7 @@ class MetadataTestCase(test.TestCase):
         md = fake_InstanceMetadata(self.stubs, inst)
         data = md.lookup("/latest/meta-data/ramdisk-id")
 
-        self.assertTrue(data is not None)
+        self.assertIsNotNone(data)
         self.assertTrue(re.match('ari-[0-9a-f]{8}', data))
 
     def test_image_type_kernel(self):

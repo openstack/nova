@@ -157,7 +157,7 @@ class TestTargetCellFilter(_FilterTestClass):
                         'host_sched_kwargs': 'meow',
                         'cell_scheduler_method': 'schedule_run_instance'}
         # None is returned to bypass further scheduling.
-        self.assertEqual(None, self._filter_cells(cells, filter_props))
+        self.assertIsNone(self._filter_cells(cells, filter_props))
         # The filter should have re-scheduled to the child cell itself.
         expected_info = {'ctxt': self.context,
                          'cell': 'fake!cell!path',

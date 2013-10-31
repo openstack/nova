@@ -315,7 +315,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
         def fake_init(self2):
             # In original _FakeImageService.__init__(), some fake images are
@@ -347,7 +347,7 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
 
-        self.assertEqual(instance['task_state'], None)
+        self.assertIsNone(instance['task_state'])
 
         inst_obj = instance_obj.Instance.get_by_uuid(self.context,
                                                      instance_uuid)

@@ -108,7 +108,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEquals(n.event_type, 'api.fault')
         self.assertEquals(n.payload['url'], 'http://example.com/foo')
         self.assertEquals(n.payload['status'], 500)
-        self.assertTrue(n.payload['exception'] is not None)
+        self.assertIsNotNone(n.payload['exception'])
 
     def test_notif_disabled(self):
 
@@ -238,7 +238,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEquals(vm_states.BUILDING, payload["old_state"])
         self.assertEquals(vm_states.BUILDING, payload["state"])
         self.assertEquals(task_states.SPAWNING, payload["old_task_state"])
-        self.assertEquals(None, payload["new_task_state"])
+        self.assertIsNone(payload["new_task_state"])
         self.assertEquals(payload["access_ip_v4"], access_ip_v4)
         self.assertEquals(payload["access_ip_v6"], access_ip_v6)
         self.assertEquals(payload["display_name"], display_name)

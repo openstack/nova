@@ -164,7 +164,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # Ensure instance can be suspended.
         instance = self._create_instance_obj()
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
-        self.assertEqual(instance.task_state, None)
+        self.assertIsNone(instance.task_state)
 
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
@@ -192,7 +192,7 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj(
                 params=dict(vm_state=vm_states.SUSPENDED))
         self.assertEqual(instance.vm_state, vm_states.SUSPENDED)
-        self.assertEqual(instance.task_state, None)
+        self.assertIsNone(instance.task_state)
 
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
@@ -1046,7 +1046,7 @@ class _ComputeAPIUnitTestMixIn(object):
         # Ensure instance can be paused.
         instance = self._create_instance_obj()
         self.assertEqual(instance.vm_state, vm_states.ACTIVE)
-        self.assertEqual(instance.task_state, None)
+        self.assertIsNone(instance.task_state)
 
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,
@@ -1074,7 +1074,7 @@ class _ComputeAPIUnitTestMixIn(object):
         params = dict(vm_state=vm_states.PAUSED)
         instance = self._create_instance_obj(params=params)
         self.assertEqual(instance.vm_state, vm_states.PAUSED)
-        self.assertEqual(instance.task_state, None)
+        self.assertIsNone(instance.task_state)
 
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api,

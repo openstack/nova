@@ -191,7 +191,7 @@ class _TestPciDeviceObject(object):
         self.pci_device.claim(self.inst)
         self.pci_device.free(self.inst)
         self.assertEqual(self.pci_device.status, 'available')
-        self.assertEqual(self.pci_device.instance_uuid, None)
+        self.assertIsNone(self.pci_device.instance_uuid)
 
     def test_free_allocated_device(self):
         self._create_fake_instance()
@@ -202,7 +202,7 @@ class _TestPciDeviceObject(object):
         self.pci_device.free(self.inst)
         self.assertEqual(len(self.inst.pci_devices), 0)
         self.assertEqual(self.pci_device.status, 'available')
-        self.assertEqual(self.pci_device.instance_uuid, None)
+        self.assertIsNone(self.pci_device.instance_uuid)
 
     def test_free_device_fail(self):
         self._create_fake_pci_device()
@@ -214,7 +214,7 @@ class _TestPciDeviceObject(object):
         self._create_fake_pci_device()
         self.pci_device.remove()
         self.assertEqual(self.pci_device.status, 'removed')
-        self.assertEqual(self.pci_device.instance_uuid, None)
+        self.assertIsNone(self.pci_device.instance_uuid)
 
     def test_remove_device_fail(self):
         self._create_fake_instance()
