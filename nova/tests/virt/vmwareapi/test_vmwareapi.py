@@ -241,6 +241,32 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn = driver.VMwareAPISession()
         self.assertEqual(self.attempts, 2)
 
+    def test_wait_for_task_exception(self):
+        self.flags(task_poll_interval=1, group='vmware')
+        self.login_session = vmwareapi_fake.FakeVim()._login()
+        self.stop_called = 0
+
+        def _fake_login(_self):
+            return self.login_session
+
+        self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
+
+        def fake_poll_task(instance_uuid, task_ref, done):
+            done.send_exception(exception.NovaException('fake exception'))
+
+        def fake_stop_loop(loop):
+            self.stop_called += 1
+            return loop.stop()
+
+        self.conn = driver.VMwareAPISession()
+        self.stubs.Set(self.conn, "_poll_task",
+                       fake_poll_task)
+        self.stubs.Set(self.conn, "_stop_loop",
+                       fake_stop_loop)
+        self.assertRaises(exception.NovaException,
+                          self.conn._wait_for_task, 'fake-id', 'fake-ref')
+        self.assertEqual(self.stop_called, 1)
+
     def _create_instance_in_the_db(self, node=None, set_image_ref=True,
                                    uuid=None):
         if not node:
