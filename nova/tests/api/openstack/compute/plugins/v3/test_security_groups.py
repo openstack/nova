@@ -406,4 +406,4 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                                 {"name": "sg2"}]
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)

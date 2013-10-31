@@ -32,7 +32,7 @@ class TestFaults(test.NoDBTestCase):
     def test_fault_exception_status_int(self):
         # Ensure the status_int is set correctly on faults.
         fault = faults.Fault(webob.exc.HTTPNotFound(explanation='test'))
-        self.assertEquals(fault.wrapped_exc.status_int, 404)
+        self.assertEqual(fault.wrapped_exc.status_int, 404)
 
     def test_fault_call(self):
         # Ensure proper EC2 response on faults.

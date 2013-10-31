@@ -459,7 +459,7 @@ class TestServerRebuildRequestXMLDeserializer(test.TestCase):
                 }
         }
 
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_create_request_with_personality(self):
         serial_request = """
@@ -492,7 +492,7 @@ class TestServerRebuildRequestXMLDeserializer(test.TestCase):
                 }
             }
 
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_empty_metadata_personality(self):
         serial_request = """
@@ -513,7 +513,7 @@ class TestServerRebuildRequestXMLDeserializer(test.TestCase):
                 "personality": [],
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_multiple_personality_files(self):
         serial_request = """

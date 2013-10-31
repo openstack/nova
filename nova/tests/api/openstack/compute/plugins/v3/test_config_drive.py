@@ -65,7 +65,7 @@ class ConfigDriveTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         response = req.get_response(fakes.wsgi_app_v3(
             init_only=('servers', 'os-config-drive')))
-        self.assertEquals(response.status_int, 200)
+        self.assertEqual(response.status_int, 200)
         res_dict = jsonutils.loads(response.body)
         self.assertIn(config_drive.ATTRIBUTE_NAME, res_dict['server'])
 
@@ -317,7 +317,7 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 config_drive.ATTRIBUTE_NAME: "true"
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
 
 class ConfigDriveXmlSerializerTest(test.TestCase):

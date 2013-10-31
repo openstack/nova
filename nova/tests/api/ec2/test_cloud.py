@@ -531,9 +531,9 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(authz(self.context, group_name=sec1['name'], **kwargs))
         describe = self.cloud.describe_security_groups
         groups = describe(self.context, group_name=['test'])
-        self.assertEquals(len(groups['securityGroupInfo']), 1)
+        self.assertEqual(len(groups['securityGroupInfo']), 1)
         actual_rules = groups['securityGroupInfo'][0]['ipPermissions']
-        self.assertEquals(len(actual_rules), 4)
+        self.assertEqual(len(actual_rules), 4)
         expected_rules = [{'fromPort': -1,
                            'groups': [{'groupName': 'somegroup1',
                                        'userId': 'someuser'}],
@@ -633,7 +633,7 @@ class CloudTestCase(test.TestCase):
 
         describe = self.cloud.describe_security_groups
         groups = describe(self.context, group_name=['test'])
-        self.assertEquals(len(groups['securityGroupInfo']), 1)
+        self.assertEqual(len(groups['securityGroupInfo']), 1)
         actual_rules = groups['securityGroupInfo'][0]['ipPermissions']
         expected_rules = [{'groups': [{'groupName': 'test',
                                        'userId': self.context.user_id}],
@@ -824,8 +824,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(len(result['instancesSet']), 1)
         instance = result['instancesSet'][0]
         self.assertEqual(instance['instanceId'], instance_id)
-        self.assertEqual(instance['placement']['availabilityZone'],
-                'zone2')
+        self.assertEqual(instance['placement']['availabilityZone'], 'zone2')
         self.assertEqual(instance['ipAddress'], '1.2.3.4')
         self.assertEqual(instance['dnsName'], '1.2.3.4')
         self.assertEqual(instance['tagSet'], [])
@@ -1691,7 +1690,7 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(password, 'extract_password', lambda i: 'fakepass')
         output = self.cloud.get_password_data(context=self.context,
                                               instance_id=[instance_id])
-        self.assertEquals(output['passwordData'], 'fakepass')
+        self.assertEqual(output['passwordData'], 'fakepass')
         rv = self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_console_output(self):
@@ -1701,7 +1700,7 @@ class CloudTestCase(test.TestCase):
             max_count=1)
         output = self.cloud.get_console_output(context=self.context,
                                                instance_id=[instance_id])
-        self.assertEquals(base64.b64decode(output['output']),
+        self.assertEqual(base64.b64decode(output['output']),
                 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
@@ -2297,13 +2296,13 @@ class CloudTestCase(test.TestCase):
 
         self.assertIn('blockDeviceMapping', created_image)
         bdm = created_image['blockDeviceMapping'][0]
-        self.assertEquals(bdm.get('deviceName'), 'sda1')
+        self.assertEqual(bdm.get('deviceName'), 'sda1')
         self.assertIn('ebs', bdm)
-        self.assertEquals(bdm['ebs'].get('snapshotId'),
-                          ec2utils.id_to_ec2_snap_id(snapshots[0]))
-        self.assertEquals(created_image.get('kernelId'), 'aki-00000001')
-        self.assertEquals(created_image.get('ramdiskId'), 'ari-00000002')
-        self.assertEquals(created_image.get('rootDeviceType'), 'ebs')
+        self.assertEqual(bdm['ebs'].get('snapshotId'),
+                         ec2utils.id_to_ec2_snap_id(snapshots[0]))
+        self.assertEqual(created_image.get('kernelId'), 'aki-00000001')
+        self.assertEqual(created_image.get('ramdiskId'), 'ari-00000002')
+        self.assertEqual(created_image.get('rootDeviceType'), 'ebs')
         self.assertNotEqual(virt_driver.get('powered_on'), no_reboot)
         self.assertNotEqual(virt_driver.get('powered_off'), no_reboot)
 

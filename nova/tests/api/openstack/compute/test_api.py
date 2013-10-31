@@ -157,7 +157,7 @@ class APITest(test.NoDBTestCase):
         if hasattr(exception_type, 'headers'):
             for (key, value) in exception_type.headers.iteritems():
                 self.assertIn(key, resp.headers)
-                self.assertEquals(resp.headers[key], str(value))
+                self.assertEqual(resp.headers[key], str(value))
 
     def test_quota_error_mapping(self):
         self._do_test_exception_mapping(exception.QuotaError, 'too many used')

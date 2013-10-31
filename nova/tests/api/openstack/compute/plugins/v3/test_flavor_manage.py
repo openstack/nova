@@ -126,7 +126,7 @@ class FlavorManageTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
-            self.assertEquals(body["flavor"][key], expected["flavor"][key])
+            self.assertEqual(body["flavor"][key], expected["flavor"][key])
 
     def test_create_public_default(self):
         flavor = {
@@ -152,7 +152,7 @@ class FlavorManageTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         body = jsonutils.loads(res.body)
         for key in expected["flavor"]:
-            self.assertEquals(body["flavor"][key], expected["flavor"][key])
+            self.assertEqual(body["flavor"][key], expected["flavor"][key])
 
     def test_create_without_flavorid(self):
         expected = self.expected_flavor
@@ -167,7 +167,7 @@ class FlavorManageTest(test.NoDBTestCase):
         body = jsonutils.loads(res.body)
 
         for key in expected["flavor"]:
-            self.assertEquals(body["flavor"][key], expected["flavor"][key])
+            self.assertEqual(body["flavor"][key], expected["flavor"][key])
 
     def test_flavor_exists_exception_returns_409(self):
         expected = {
@@ -258,7 +258,7 @@ class PrivateFlavorManageTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(url, use_admin_context=True)
         body = self.controller._create(req, req_body)
         for key in expected["flavor"]:
-            self.assertEquals(body["flavor"][key], expected["flavor"][key])
+            self.assertEqual(body["flavor"][key], expected["flavor"][key])
         flavor_access_body = self.flavor_access_controller.index(
             FakeRequest(), body["flavor"]["id"])
         expected_flavor_access_body = {
@@ -296,4 +296,4 @@ class PrivateFlavorManageTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(url, use_admin_context=True)
         body = self.controller._create(req, req_body)
         for key in expected["flavor"]:
-            self.assertEquals(body["flavor"][key], expected["flavor"][key])
+            self.assertEqual(body["flavor"][key], expected["flavor"][key])

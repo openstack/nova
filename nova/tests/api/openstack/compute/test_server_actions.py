@@ -891,17 +891,17 @@ class ServerActionsControllerTest(test.TestCase):
         image_id = location.replace('http://localhost/v2/fake/images/', '')
         image = image_service.show(None, image_id)
 
-        self.assertEquals(image['name'], 'snapshot_of_volume_backed')
+        self.assertEqual(image['name'], 'snapshot_of_volume_backed')
         properties = image['properties']
-        self.assertEquals(properties['kernel_id'], _fake_id('b'))
-        self.assertEquals(properties['ramdisk_id'], _fake_id('c'))
-        self.assertEquals(properties['root_device_name'], '/dev/vda')
+        self.assertEqual(properties['kernel_id'], _fake_id('b'))
+        self.assertEqual(properties['ramdisk_id'], _fake_id('c'))
+        self.assertEqual(properties['root_device_name'], '/dev/vda')
         bdms = properties['block_device_mapping']
-        self.assertEquals(len(bdms), 1)
-        self.assertEquals(bdms[0]['device_name'], 'vda')
-        self.assertEquals(bdms[0]['snapshot_id'], snapshot['id'])
+        self.assertEqual(len(bdms), 1)
+        self.assertEqual(bdms[0]['device_name'], 'vda')
+        self.assertEqual(bdms[0]['snapshot_id'], snapshot['id'])
         for k in extra_properties.keys():
-            self.assertEquals(properties[k], extra_properties[k])
+            self.assertEqual(properties[k], extra_properties[k])
 
     def test_create_volume_backed_image_no_metadata(self):
         self._do_test_create_volume_backed_image({})
@@ -963,8 +963,8 @@ class ServerActionsControllerTest(test.TestCase):
         image = image_service.show(None, image_id)
 
         properties = image['properties']
-        self.assertEquals(properties['test_key1'], 'test_value1')
-        self.assertEquals(properties['test_key2'], 'test_value2')
+        self.assertEqual(properties['test_key1'], 'test_value1')
+        self.assertEqual(properties['test_key2'], 'test_value2')
 
     def test_create_image_snapshots_disabled(self):
         """Don't permit a snapshot if the allow_instance_snapshots flag is
@@ -1090,7 +1090,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "name": "new-server-test",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_create_image_with_metadata(self):
         serial_request = """
@@ -1107,7 +1107,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "metadata": {"key1": "value1"},
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_change_pass(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1120,7 +1120,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "adminPass": "1234pass",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_change_pass_no_pass(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1142,7 +1142,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "adminPass": "",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_reboot(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1155,7 +1155,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "type": "HARD",
             },
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_reboot_no_type(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1175,7 +1175,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
         expected = {
             "resize": {"flavorRef": "http://localhost/flavors/3"},
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_resize_no_flavor_ref(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1194,7 +1194,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
         expected = {
             "confirmResize": None,
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_revert_resize(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>
@@ -1204,7 +1204,7 @@ class TestServerActionXMLDeserializer(test.TestCase):
         expected = {
             "revertResize": None,
         }
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)
 
     def test_rebuild(self):
         serial_request = """<?xml version="1.0" encoding="UTF-8"?>

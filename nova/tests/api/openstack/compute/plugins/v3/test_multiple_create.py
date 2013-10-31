@@ -514,4 +514,4 @@ class TestServerCreateRequestXMLDeserializer(test.TestCase):
                 multiple_create.MAX_ATTRIBUTE_NAME: "3",
                 multiple_create.RRID_ATTRIBUTE_NAME: True,
                 }}
-        self.assertEquals(request['body'], expected)
+        self.assertEqual(request['body'], expected)

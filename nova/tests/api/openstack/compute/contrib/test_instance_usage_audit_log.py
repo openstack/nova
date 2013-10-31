@@ -135,14 +135,14 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         result = self.controller.index(req)
         self.assertIn('instance_usage_audit_logs', result)
         logs = result['instance_usage_audit_logs']
-        self.assertEquals(57, logs['total_instances'])
-        self.assertEquals(0, logs['total_errors'])
-        self.assertEquals(4, len(logs['log']))
-        self.assertEquals(4, logs['num_hosts'])
-        self.assertEquals(4, logs['num_hosts_done'])
-        self.assertEquals(0, logs['num_hosts_running'])
-        self.assertEquals(0, logs['num_hosts_not_run'])
-        self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
+        self.assertEqual(57, logs['total_instances'])
+        self.assertEqual(0, logs['total_errors'])
+        self.assertEqual(4, len(logs['log']))
+        self.assertEqual(4, logs['num_hosts'])
+        self.assertEqual(4, logs['num_hosts_done'])
+        self.assertEqual(0, logs['num_hosts_running'])
+        self.assertEqual(0, logs['num_hosts_not_run'])
+        self.assertEqual("ALL hosts done. 0 errors.", logs['overall_status'])
 
     def test_show(self):
         req = fakes.HTTPRequest.blank(
@@ -150,14 +150,14 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         result = self.controller.show(req, '2012-07-05 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
-        self.assertEquals(57, logs['total_instances'])
-        self.assertEquals(0, logs['total_errors'])
-        self.assertEquals(4, len(logs['log']))
-        self.assertEquals(4, logs['num_hosts'])
-        self.assertEquals(4, logs['num_hosts_done'])
-        self.assertEquals(0, logs['num_hosts_running'])
-        self.assertEquals(0, logs['num_hosts_not_run'])
-        self.assertEquals("ALL hosts done. 0 errors.", logs['overall_status'])
+        self.assertEqual(57, logs['total_instances'])
+        self.assertEqual(0, logs['total_errors'])
+        self.assertEqual(4, len(logs['log']))
+        self.assertEqual(4, logs['num_hosts'])
+        self.assertEqual(4, logs['num_hosts_done'])
+        self.assertEqual(0, logs['num_hosts_running'])
+        self.assertEqual(0, logs['num_hosts_not_run'])
+        self.assertEqual("ALL hosts done. 0 errors.", logs['overall_status'])
 
     def test_show_with_running(self):
         req = fakes.HTTPRequest.blank(
@@ -165,15 +165,15 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         result = self.controller.show(req, '2012-07-06 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
-        self.assertEquals(57, logs['total_instances'])
-        self.assertEquals(0, logs['total_errors'])
-        self.assertEquals(4, len(logs['log']))
-        self.assertEquals(4, logs['num_hosts'])
-        self.assertEquals(3, logs['num_hosts_done'])
-        self.assertEquals(1, logs['num_hosts_running'])
-        self.assertEquals(0, logs['num_hosts_not_run'])
-        self.assertEquals("3 of 4 hosts done. 0 errors.",
-                          logs['overall_status'])
+        self.assertEqual(57, logs['total_instances'])
+        self.assertEqual(0, logs['total_errors'])
+        self.assertEqual(4, len(logs['log']))
+        self.assertEqual(4, logs['num_hosts'])
+        self.assertEqual(3, logs['num_hosts_done'])
+        self.assertEqual(1, logs['num_hosts_running'])
+        self.assertEqual(0, logs['num_hosts_not_run'])
+        self.assertEqual("3 of 4 hosts done. 0 errors.",
+                         logs['overall_status'])
 
     def test_show_with_errors(self):
         req = fakes.HTTPRequest.blank(
@@ -181,12 +181,12 @@ class InstanceUsageAuditLogTest(test.NoDBTestCase):
         result = self.controller.show(req, '2012-07-07 10:00:00')
         self.assertIn('instance_usage_audit_log', result)
         logs = result['instance_usage_audit_log']
-        self.assertEquals(57, logs['total_instances'])
-        self.assertEquals(3, logs['total_errors'])
-        self.assertEquals(4, len(logs['log']))
-        self.assertEquals(4, logs['num_hosts'])
-        self.assertEquals(4, logs['num_hosts_done'])
-        self.assertEquals(0, logs['num_hosts_running'])
-        self.assertEquals(0, logs['num_hosts_not_run'])
-        self.assertEquals("ALL hosts done. 3 errors.",
-                          logs['overall_status'])
+        self.assertEqual(57, logs['total_instances'])
+        self.assertEqual(3, logs['total_errors'])
+        self.assertEqual(4, len(logs['log']))
+        self.assertEqual(4, logs['num_hosts'])
+        self.assertEqual(4, logs['num_hosts_done'])
+        self.assertEqual(0, logs['num_hosts_running'])
+        self.assertEqual(0, logs['num_hosts_not_run'])
+        self.assertEqual("ALL hosts done. 3 errors.",
+                         logs['overall_status'])
