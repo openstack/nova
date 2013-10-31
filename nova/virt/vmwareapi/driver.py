@@ -878,6 +878,9 @@ class VMwareAPISession(object):
             self._create_session()
         return self.vim
 
+    def _stop_loop(self, loop):
+        loop.stop()
+
     def _wait_for_task(self, instance_uuid, task_ref):
         """
         Return a Deferred that will give the result of the given task.
@@ -888,8 +891,12 @@ class VMwareAPISession(object):
                                                     instance_uuid,
                                                     task_ref, done)
         loop.start(CONF.vmware.task_poll_interval)
-        ret_val = done.wait()
-        loop.stop()
+        try:
+            ret_val = done.wait()
+        except Exception:
+            raise
+        finally:
+            self._stop_loop(loop)
         return ret_val
 
     def _poll_task(self, instance_uuid, task_ref, done):
