@@ -76,6 +76,7 @@ from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import safe_utils
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
@@ -416,7 +417,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
                 context, bdm_id, values)
 
 
-class ComputeManager(manager.SchedulerDependentManager):
+class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
     RPC_API_VERSION = '3.0'
@@ -439,6 +440,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             openstack_driver.is_neutron_security_groups())
         self.consoleauth_rpcapi = consoleauth.rpcapi.ConsoleAuthAPI()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
+        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self._resource_tracker_dict = {}
 
         super(ComputeManager, self).__init__(service_name="compute",

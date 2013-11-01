@@ -62,7 +62,6 @@ from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
-from nova.scheduler import rpcapi as scheduler_rpcapi
 
 
 CONF = cfg.CONF
@@ -128,27 +127,3 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         Child classes should override this method.
         """
         pass
-
-
-class SchedulerDependentManager(Manager):
-    """Periodically send capability updates to the Scheduler services.
-
-    Services that need to update the Scheduler of their capabilities
-    should derive from this class. Otherwise they can derive from
-    manager.Manager directly. Updates are only sent after
-    update_service_capabilities is called with non-None values.
-
-    """
-
-    def __init__(self, host=None, db_driver=None, service_name='undefined'):
-        self.last_capabilities = None
-        self.service_name = service_name
-        self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
-        super(SchedulerDependentManager, self).__init__(host, db_driver,
-                service_name)
-
-    def update_service_capabilities(self, capabilities):
-        """Remember these capabilities to send on next periodic update."""
-        if not isinstance(capabilities, list):
-            capabilities = [capabilities]
-        self.last_capabilities = capabilities
