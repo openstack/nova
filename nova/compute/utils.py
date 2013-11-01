@@ -344,6 +344,27 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
     notifier.info(context, 'aggregate.%s' % event_suffix, aggregate_payload)
 
 
+def notify_about_host_update(context, event_suffix, host_payload):
+    """
+    Send a notification about host update.
+
+    :param event_suffix: Event type like "create.start" or "create.end"
+    :param host_payload: payload for host update. It is a dict and there
+                         should be at least the 'host_name' key in this
+                         dict.
+    """
+    host_identifier = host_payload.get('host_name')
+    if not host_identifier:
+        LOG.warn(_("No host name specified for the notification of "
+                   "HostAPI.%s and it will be ignored"), event_suffix)
+        return
+
+    notifier = notify.get_notifier(service='api',
+                                   host=host_identifier)
+
+    notifier.info(context, 'HostAPI.%s' % event_suffix, host_payload)
+
+
 def get_nw_info_for_instance(instance):
     if isinstance(instance, instance_obj.Instance):
         if instance.info_cache is None:
