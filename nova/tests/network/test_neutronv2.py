@@ -985,6 +985,24 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.validate_networks,
                           self.context, requested_networks)
 
+    def test_validate_networks_port_show_rasies_non404(self):
+        # Verify that the correct exception is thrown when a non existent
+        # port is passed to validate_networks.
+
+        requested_networks = [('my_netid1', None, '3123-ad34-bc43-32332ca33e')]
+
+        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
+                                                            status_code=0)
+        self.moxed_client.show_port(requested_networks[0][2]).AndRaise(
+                                                        NeutronNotFound)
+        self.mox.ReplayAll()
+        # Expected call from setUp.
+        neutronv2.get_client(None)
+        api = neutronapi.API()
+        self.assertRaises(neutronv2.exceptions.NeutronClientException,
+                          api.validate_networks,
+                          self.context, requested_networks)
+
     def test_validate_networks_port_in_use(self):
         requested_networks = [(None, None, self.port_data3[0]['id'])]
         self.moxed_client.show_port(self.port_data3[0]['id']).\
@@ -1198,6 +1216,18 @@ class TestNeutronv2(TestNeutronv2Base):
             AndRaise(NeutronNotFound)
         self.mox.ReplayAll()
         self.assertRaises(exception.FloatingIpNotFound,
+                          api.get_floating_ip,
+                          self.context, floating_ip_id)
+
+    def test_get_floating_ip_raises_non404(self):
+        api = neutronapi.API()
+        NeutronNotFound = neutronv2.exceptions.NeutronClientException(
+            status_code=0)
+        floating_ip_id = self.fip_unassociated['id']
+        self.moxed_client.show_floatingip(floating_ip_id).\
+            AndRaise(NeutronNotFound)
+        self.mox.ReplayAll()
+        self.assertRaises(neutronv2.exceptions.NeutronClientException,
                           api.get_floating_ip,
                           self.context, floating_ip_id)
 
