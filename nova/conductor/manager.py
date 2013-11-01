@@ -74,7 +74,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    RPC_API_VERSION = '1.60'
+    RPC_API_VERSION = '1.61'
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -369,7 +369,8 @@ class ConductorManager(manager.Manager):
         return jsonutils.to_primitive(result)
 
     def instance_destroy(self, context, instance):
-        self.db.instance_destroy(context, instance['uuid'])
+        result = self.db.instance_destroy(context, instance['uuid'])
+        return jsonutils.to_primitive(result)
 
     def instance_info_cache_delete(self, context, instance):
         self.db.instance_info_cache_delete(context, instance['uuid'])

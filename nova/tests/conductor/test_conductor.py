@@ -262,9 +262,11 @@ class _BaseTestCase(object):
 
     def test_instance_destroy(self):
         self.mox.StubOutWithMock(db, 'instance_destroy')
-        db.instance_destroy(self.context, 'fake-uuid')
+        db.instance_destroy(self.context, 'fake-uuid').AndReturn('fake-result')
         self.mox.ReplayAll()
-        self.conductor.instance_destroy(self.context, {'uuid': 'fake-uuid'})
+        result = self.conductor.instance_destroy(self.context,
+                                                 {'uuid': 'fake-uuid'})
+        self.assertEqual(result, 'fake-result')
 
     def test_instance_info_cache_delete(self):
         self.mox.StubOutWithMock(db, 'instance_info_cache_delete')

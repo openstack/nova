@@ -1938,8 +1938,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             instance.terminated_at = timeutils.utcnow()
             instance.save()
             system_meta = utils.instance_sys_meta(instance)
-            self.conductor_api.instance_destroy(
+            db_inst = self.conductor_api.instance_destroy(
                 context, obj_base.obj_to_primitive(instance))
+            instance = instance_obj.Instance._from_db_object(context, instance,
+                                                             db_inst)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._quota_rollback(context, reservations,
