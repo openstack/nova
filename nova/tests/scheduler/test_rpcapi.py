@@ -70,12 +70,6 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
                 request_spec='fake_request_spec',
                 filter_properties='fake_props', reservations=list('fake_res'))
 
-    def test_update_service_capabilities(self):
-        self._test_scheduler_api('update_service_capabilities',
-                rpc_method='fanout_cast', service_name='fake_name',
-                host='fake_host', capabilities='fake_capabilities',
-                version='2.4')
-
     def test_select_hosts(self):
         self._test_scheduler_api('select_hosts', rpc_method='call',
                 request_spec='fake_request_spec',
