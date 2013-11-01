@@ -216,6 +216,24 @@ def check_instance_cell(fn):
     return _wrapped
 
 
+def _diff_dict(orig, new):
+    """
+    Return a dict describing how to change orig to new.  The keys
+    correspond to values that have changed; the value will be a list
+    of one or two elements.  The first element of the list will be
+    either '+' or '-', indicating whether the key was updated or
+    deleted; if the key was updated, the list will contain a second
+    element, giving the updated value.
+    """
+    # Figure out what keys went away
+    result = dict((k, ['-']) for k in set(orig.keys()) - set(new.keys()))
+    # Compute the updates
+    for key, value in new.items():
+        if key not in orig or value != orig[key]:
+            result[key] = ['+', value]
+    return result
+
+
 class API(base.Base):
     """API for interacting with the compute manager."""
 
@@ -2859,7 +2877,7 @@ class API(base.Base):
                                          _metadata, True)
         instance['metadata'] = metadata
         notifications.send_update(context, instance, instance)
-        diff = utils.diff_dict(orig, _metadata)
+        diff = _diff_dict(orig, _metadata)
         self.compute_rpcapi.change_instance_metadata(context,
                                                      instance=instance,
                                                      diff=diff)

@@ -1517,3 +1517,35 @@ class ComputeAPIComputeCellUnitTestCase(_ComputeAPIUnitTestMixIn,
 
     def test_resize_same_flavor_passes(self):
         self._test_resize(same_flavor=True)
+
+
+class DiffDictTestCase(test.NoDBTestCase):
+    """Unit tests for _diff_dict()."""
+
+    def test_no_change(self):
+        old = dict(a=1, b=2, c=3)
+        new = dict(a=1, b=2, c=3)
+        diff = compute_api._diff_dict(old, new)
+
+        self.assertEqual(diff, {})
+
+    def test_new_key(self):
+        old = dict(a=1, b=2, c=3)
+        new = dict(a=1, b=2, c=3, d=4)
+        diff = compute_api._diff_dict(old, new)
+
+        self.assertEqual(diff, dict(d=['+', 4]))
+
+    def test_changed_key(self):
+        old = dict(a=1, b=2, c=3)
+        new = dict(a=1, b=4, c=3)
+        diff = compute_api._diff_dict(old, new)
+
+        self.assertEqual(diff, dict(b=['+', 4]))
+
+    def test_removed_key(self):
+        old = dict(a=1, b=2, c=3)
+        new = dict(a=1, c=3)
+        diff = compute_api._diff_dict(old, new)
+
+        self.assertEqual(diff, dict(b=['-']))
