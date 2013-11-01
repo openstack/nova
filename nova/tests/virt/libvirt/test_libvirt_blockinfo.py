@@ -581,6 +581,23 @@ class LibvirtBlockInfoTest(test.TestCase):
                           'kvm',
                           image_meta)
 
+    def test_success_get_disk_bus_for_disk_dev(self):
+        expected = (
+                ('ide', ("kvm", "hda")),
+                ('scsi', ("kvm", "sdf")),
+                ('virtio', ("kvm", "vds")),
+                ('fdc', ("kvm", "fdc")),
+                ('uml', ("kvm", "ubd")),
+                ('xen', ("xen", "sdf")),
+                ('xen', ("xen", "xvdb"))
+                )
+        for res, args in expected:
+            self.assertEqual(blockinfo.get_disk_bus_for_disk_dev(*args), res)
+
+    def test_fail_get_disk_bus_for_disk_dev(self):
+        self.assertRaises(exception.NovaException,
+                blockinfo.get_disk_bus_for_disk_dev, 'inv', 'val')
+
     def test_get_config_drive_type_default(self):
         config_drive_type = blockinfo.get_config_drive_type()
         self.assertEqual('cdrom', config_drive_type)
