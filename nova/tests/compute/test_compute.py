@@ -1040,21 +1040,6 @@ class ComputeTestCase(BaseTestCase):
 
         test_fn(None, self.context, instance=db_inst)
 
-    def test_create_instance_with_img_ref_associates_config_drive(self):
-        # Make sure create associates a config drive.
-
-        instance = jsonutils.to_primitive(self._create_fake_instance(
-                        params={'config_drive': '1234', }))
-
-        try:
-            self.compute.run_instance(self.context, instance=instance)
-            instances = db.instance_get_all(self.context)
-            instance = instances[0]
-
-            self.assertTrue(instance['config_drive'])
-        finally:
-            db.instance_destroy(self.context, instance['uuid'])
-
     def test_create_instance_associates_config_drive(self):
         # Make sure create associates a config drive.
 
