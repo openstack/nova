@@ -1328,6 +1328,16 @@ class ComputeManager(manager.Manager):
                 # Make sure the async call finishes
                 if network_info is not None:
                     network_info.wait(do_raise=False)
+        except exception.InvalidBDM:
+            with excutils.save_and_reraise_exception():
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
+                try:
+                    self._deallocate_network(context, instance)
+                except Exception:
+                    msg = _('Failed to dealloc network '
+                            'for failed instance')
+                    LOG.exception(msg, instance=instance)
         except Exception:
             exc_info = sys.exc_info()
             # try to re-schedule instance:
@@ -1685,9 +1695,9 @@ class ComputeManager(manager.Manager):
             return block_device_info
 
         except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_('Instance failed block device setup'),
-                              instance=instance)
+            LOG.exception(_('Instance failed block device setup'),
+                          instance=instance)
+            raise exception.InvalidBDM()
 
     @object_compat
     def _spawn(self, context, instance, image_meta, network_info,
