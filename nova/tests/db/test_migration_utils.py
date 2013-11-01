@@ -80,6 +80,51 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
             test_table.drop()
 
+    def test_insert_from_select(self):
+        insert_table_name = "__test_insert_to_table__"
+        select_table_name = "__test_select_from_table__"
+        uuidstrs = []
+        for unused in range(10):
+            uuidstrs.append(uuid.uuid4().hex)
+        for key, engine in self.engines.items():
+            meta = MetaData()
+            meta.bind = engine
+            conn = engine.connect()
+            insert_table = Table(insert_table_name, meta,
+                               Column('id', Integer, primary_key=True,
+                                      nullable=False, autoincrement=True),
+                               Column('uuid', String(36), nullable=False))
+            select_table = Table(select_table_name, meta,
+                               Column('id', Integer, primary_key=True,
+                                      nullable=False, autoincrement=True),
+                               Column('uuid', String(36), nullable=False))
+
+            insert_table.create()
+            select_table.create()
+            # Add 10 rows to select_table
+            for uuidstr in uuidstrs:
+                ins_stmt = select_table.insert().values(uuid=uuidstr)
+                conn.execute(ins_stmt)
+
+            # Select 4 rows in one chunk from select_table
+            column = select_table.c.id
+            query_insert = select([select_table],
+                                  select_table.c.id < 5).order_by(column)
+            insert_statement = utils.InsertFromSelect(insert_table,
+                                                      query_insert)
+            result_insert = conn.execute(insert_statement)
+            # Verify we insert 4 rows
+            self.assertEqual(result_insert.rowcount, 4)
+
+            query_all = select([insert_table]).\
+                        where(insert_table.c.uuid.in_(uuidstrs))
+            rows = conn.execute(query_all).fetchall()
+            # Verify we really have 4 rows in insert_table
+            self.assertEqual(len(rows), 4)
+
+            insert_table.drop()
+            select_table.drop()
+
     def test_utils_drop_unique_constraint(self):
         table_name = "test_utils_drop_unique_constraint"
         uc_name = 'uniq_foo'
