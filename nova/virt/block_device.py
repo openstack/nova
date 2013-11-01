@@ -38,6 +38,9 @@ class _NoLegacy(Exception):
 
 
 class DriverBlockDevice(dict):
+    _fields = set()
+    _legacy_fields = set()
+
     def __init__(self, bdm):
         if bdm.get('no_device'):
             raise _NotTransformable()
