@@ -171,7 +171,8 @@ class VMwareVMOps(object):
         LOG.debug(_("Deleted the datastore file"), instance=instance)
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info, block_device_info=None):
+              admin_password, network_info, block_device_info=None,
+              instance_name=None):
         """
         Creates a VM instance.
 
@@ -282,9 +283,13 @@ class VMwareVMOps(object):
 
         vif_infos = _get_vif_infos()
 
+        # Get the instance name. In some cases this may differ from the 'uuid',
+        # for example when the spawn of a rescue instance takes place.
+        if not instance_name:
+            instance_name = instance['uuid']
         # Get the create vm config spec
         config_spec = vm_util.get_vm_create_spec(
-                            client_factory, instance,
+                            client_factory, instance, instance_name,
                             data_store_name, vif_infos, os_type)
 
         def _execute_create_vm():
@@ -300,7 +305,7 @@ class VMwareVMOps(object):
             LOG.debug(_("Created VM on the ESX host"), instance=instance)
 
         _execute_create_vm()
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
@@ -904,15 +909,20 @@ class VMwareVMOps(object):
         except Exception as exc:
             LOG.exception(exc, instance=instance)
 
-    def destroy(self, instance, network_info, destroy_disks=True):
+    def destroy(self, instance, network_info, destroy_disks=True,
+                instance_name=None):
         """
         Destroy a VM instance. Steps followed are:
         1. Power off the VM, if it is in poweredOn state.
         2. Un-register a VM.
         3. Delete the contents of the folder holding the VM related data.
         """
+        # Get the instance name. In some cases this may differ from the 'uuid',
+        # for example when the spawn of a rescue instance takes place.
+        if not instance_name:
+            instance_name = instance['uuid']
         try:
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
+            vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
             props = self._session._call_method(vim_util,
@@ -1041,9 +1051,10 @@ class VMwareVMOps(object):
         self.power_off(instance)
         r_instance = copy.deepcopy(instance)
         r_instance['name'] = r_instance['name'] + self._rescue_suffix
-        r_instance['uuid'] = r_instance['uuid'] + self._rescue_suffix
+        instance_name = r_instance['uuid'] + self._rescue_suffix
         self.spawn(context, r_instance, image_meta,
-                   None, None, network_info)
+                   None, None, network_info,
+                   instance_name=instance_name)
 
         # Attach vmdk to the rescue VM
         hardware_devices = self._session._call_method(vim_util,
@@ -1055,11 +1066,8 @@ class VMwareVMOps(object):
 
         # Figure out the correct unit number
         unit_number = unit_number + 1
-        rescue_vm_ref = vm_util.get_vm_ref_from_uuid(self._session,
-                                                     r_instance['uuid'])
-        if rescue_vm_ref is None:
-            rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
-                                                     r_instance['name'])
+        rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
+                                                     instance_name)
         self._volumeops.attach_disk_to_vm(
                                 rescue_vm_ref, r_instance,
                                 adapter_type, disk_type, vmdk_path,
@@ -1077,9 +1085,17 @@ class VMwareVMOps(object):
          unit_number) = vm_util.get_vmdk_path_and_adapter_type(
                 hardware_devices, uuid=instance['uuid'])
         r_instance = copy.deepcopy(instance)
+        instance_name = r_instance['uuid'] + self._rescue_suffix
         r_instance['name'] = r_instance['name'] + self._rescue_suffix
-        r_instance['uuid'] = r_instance['uuid'] + self._rescue_suffix
-        self.destroy(r_instance, None)
+        # detach the original instance disk from the rescue disk
+        vm_rescue_ref = vm_util.get_vm_ref_from_name(self._session,
+                                                     instance_name)
+        hardware_devices = self._session._call_method(vim_util,
+                        "get_dynamic_property", vm_rescue_ref,
+                        "VirtualMachine", "config.hardware.device")
+        device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
+        self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
+        self.destroy(r_instance, None, instance_name=instance_name)
         self._power_on(instance)
 
     def power_off(self, instance):
