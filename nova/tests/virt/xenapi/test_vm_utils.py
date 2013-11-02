@@ -1046,7 +1046,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         if self.session.is_local_connection:
             utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
                           'msdos', check_exit_code=False, run_as_root=True)
-            utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
+            utils.execute('parted', '--script', '/dev/fakedev', '--', 'mkpart',
                           'primary', '0', '-0',
                           check_exit_code=False, run_as_root=True)
             vm_utils.os.path.exists('/dev/mapper/fakedev1').AndReturn(True)
@@ -1055,7 +1055,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         else:
             utils.execute('parted', '--script', '/dev/fakedev', 'mklabel',
                           'msdos', check_exit_code=True, run_as_root=True)
-            utils.execute('parted', '--script', '/dev/fakedev', 'mkpart',
+            utils.execute('parted', '--script', '/dev/fakedev', '--', 'mkpart',
                           'primary', '0', '-0',
                           check_exit_code=True, run_as_root=True)
 

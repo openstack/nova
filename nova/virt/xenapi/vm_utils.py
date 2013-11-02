@@ -933,7 +933,7 @@ def _make_partition(session, dev, partition_start, partition_end):
                   'mklabel', 'msdos', run_as_root=True,
                   check_exit_code=not session.is_local_connection)
 
-    utils.execute('parted', '--script', dev_path,
+    utils.execute('parted', '--script', dev_path, '--',
                   'mkpart', 'primary',
                   partition_start,
                   partition_end,
