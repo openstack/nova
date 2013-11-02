@@ -51,11 +51,11 @@ def split_datastore_path(datastore_path):
     return datastore_url, path.strip()
 
 
-def get_vm_create_spec(client_factory, instance, data_store_name,
+def get_vm_create_spec(client_factory, instance, name, data_store_name,
                        vif_infos, os_type="otherGuest"):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
-    config_spec.name = instance['uuid']
+    config_spec.name = name
     config_spec.guestId = os_type
 
     # Allow nested ESX instances to host 64 bit VMs.
@@ -985,13 +985,14 @@ def get_vmdk_backed_disk_device(hardware_devices, uuid):
             return device
 
 
-def get_vmdk_volume_disk(hardware_devices):
+def get_vmdk_volume_disk(hardware_devices, path=None):
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
 
     for device in hardware_devices:
         if (device.__class__.__name__ == "VirtualDisk"):
-            return device
+            if not path or path == device.backing.fileName:
+                return device
 
 
 def get_res_pool_ref(session, cluster, node_mo_id):
