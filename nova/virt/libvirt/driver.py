@@ -2303,10 +2303,20 @@ class LibvirtDriver(driver.ComputeDriver):
         return os.path.join(libvirt_utils.get_instance_path(instance),
                             'console.log')
 
+    @staticmethod
+    def _get_disk_config_path(instance):
+        return os.path.join(libvirt_utils.get_instance_path(instance),
+                            'disk.config')
+
     def _chown_console_log_for_instance(self, instance):
         console_log = self._get_console_log_path(instance)
         if os.path.exists(console_log):
             libvirt_utils.chown(console_log, os.getuid())
+
+    def _chown_disk_config_for_instance(self, instance):
+        disk_config = self._get_disk_config_path(instance)
+        if os.path.exists(disk_config):
+            libvirt_utils.chown(disk_config, os.getuid())
 
     def _create_image(self, context, instance,
                       disk_mapping, suffix='',
@@ -2340,6 +2350,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
         self._chown_console_log_for_instance(instance)
+
+        # NOTE(yaguang): For evacuate disk.config already exist in shared
+        # storage, chown it.
+        self._chown_disk_config_for_instance(instance)
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(
