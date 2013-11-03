@@ -17,6 +17,7 @@
 
 import socket
 
+from nova import context
 from nova import exception
 from nova import test
 from nova.tests import utils
@@ -48,6 +49,8 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
         self.stubs.Set(nova.virt.docker.driver.DockerDriver,
                        '_get_registry_port',
                        fake_get_registry_port)
+
+        self.context = context.RequestContext('fake_user', 'fake_project')
 
     #NOTE(bcwaldon): This exists only because _get_running_instance on the
     # base class will not let us set a custom disk/container_format.
@@ -93,7 +96,7 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
             image_info = utils.get_test_image_info(None, instance_href)
             image_info['disk_format'] = 'raw'
             image_info['container_format'] = 'docker'
-        self.connection.spawn('fake_context', instance_href, image_info,
+        self.connection.spawn(self.context, instance_href, image_info,
                               'fake_files', 'fake_password')
 
     def test_create_container_wrong_image(self):
@@ -112,4 +115,5 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
         self.stubs.Set(self.connection, 'find_container_by_name',
             fake_find_container_by_name)
         instance_href = utils.get_test_instance()
-        self.connection.destroy(instance_href, 'fake_networkinfo')
+        self.connection.destroy(self.context, instance_href,
+                'fake_networkinfo')

@@ -109,8 +109,8 @@ class PowerVMDriver(driver.ComputeDriver):
         """Create a new instance/VM/domain on powerVM."""
         self._powervm.spawn(context, instance, image_meta['id'], network_info)
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True, context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         """Destroy (shutdown and delete) the specified instance."""
         self._powervm.destroy(instance['name'], destroy_disks)
 

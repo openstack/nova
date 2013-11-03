@@ -124,6 +124,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                 network_info=utils.get_test_network_info(),
             )
         result['destroy_params'] = dict(
+                context=self.context,
                 instance=result['instance'],
                 network_info=result['spawn_params']['network_info'],
                 block_device_info=result['spawn_params']['block_device_info'],

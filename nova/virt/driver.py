@@ -241,21 +241,21 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True, context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         """Destroy (shutdown and delete) the specified instance.
 
         If the instance is not found (for example if networking failed), this
         function should still succeed.  It's probably a good idea to log a
         warning in that case.
 
+        :param context: security context
         :param instance: Instance object as returned by DB layer.
         :param network_info:
            :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
-        :param context: security context
         """
         raise NotImplementedError()
 

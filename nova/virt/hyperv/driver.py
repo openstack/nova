@@ -58,8 +58,8 @@ class HyperVDriver(driver.ComputeDriver):
                block_device_info=None, bad_volumes_callback=None):
         self._vmops.reboot(instance, network_info, reboot_type)
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True, context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
 

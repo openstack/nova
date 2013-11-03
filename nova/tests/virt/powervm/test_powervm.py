@@ -221,6 +221,7 @@ class PowerVMDriverTestCase(test.TestCase):
                        lambda: FakeBlockAdapter())
         self.powervm_connection = powervm_driver.PowerVMDriver(None)
         self.instance = create_instance(self)
+        self.context = context.RequestContext('fake_user', 'fake_project')
 
     def test_list_instances(self):
         instances = self.powervm_connection.list_instances()
@@ -367,7 +368,7 @@ class PowerVMDriverTestCase(test.TestCase):
         self.assertEqual(info_dict['state'], power_state.NOSTATE)
 
     def test_destroy(self):
-        self.powervm_connection.destroy(self.instance, None)
+        self.powervm_connection.destroy(self.context, self.instance, None)
         self.stubs.Set(FakeIVMOperator, 'get_lpar', lambda x, y: None)
         name = self.instance['name']
         self.assertFalse(self.powervm_connection.instance_exists(name))
