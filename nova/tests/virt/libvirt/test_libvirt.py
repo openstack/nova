@@ -3537,6 +3537,20 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn.spawn(self.context, instance, None, [], None)
 
+    def test_chown_disk_config_for_instance(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = copy.deepcopy(self.test_instance)
+        instance['name'] = 'test_name'
+        self.mox.StubOutWithMock(fake_libvirt_utils, 'get_instance_path')
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(fake_libvirt_utils, 'chown')
+        fake_libvirt_utils.get_instance_path(instance).AndReturn('/tmp/uuid')
+        os.path.exists('/tmp/uuid/disk.config').AndReturn(True)
+        fake_libvirt_utils.chown('/tmp/uuid/disk.config', os.getuid())
+
+        self.mox.ReplayAll()
+        conn._chown_disk_config_for_instance(instance)
+
     def test_create_image_plain(self):
         gotFiles = []
 
