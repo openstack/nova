@@ -401,14 +401,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         fake_instance = {'id': 42, 'name': 'I just made this up!',
                          'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00'}
         network_info = test_utils.get_test_network_info()
-        self.connection.destroy(fake_instance, network_info)
+        self.connection.destroy(fake_instance, network_info, context=self.ctxt)
 
     @catch_notimplementederror
     def test_destroy_instance(self):
         instance_ref, network_info = self._get_running_instance()
         self.assertIn(instance_ref['name'],
                       self.connection.list_instances())
-        self.connection.destroy(instance_ref, network_info)
+        self.connection.destroy(instance_ref, network_info, context=self.ctxt)
         self.assertNotIn(instance_ref['name'],
                          self.connection.list_instances())
 
