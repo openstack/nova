@@ -532,7 +532,7 @@ class ServersController(wsgi.Controller):
         if 'changes_since' in search_opts:
             search_opts['changes-since'] = search_opts.pop('changes_since')
 
-        if search_opts.get("vm_state") == "deleted":
+        if search_opts.get("vm_state") == ['deleted']:
             if context.is_admin:
                 search_opts['deleted'] = True
             else:

@@ -26,6 +26,8 @@ import xml.dom.minidom as minidom
 
 from nova.api.openstack import common
 from nova.api.openstack import xmlutil
+from nova.compute import task_states
+from nova.compute import vm_states
 from nova import exception
 from nova import test
 from nova.tests import utils
@@ -349,11 +351,30 @@ class MiscFunctionsTest(test.TestCase):
         self.assertIsNone(common.check_img_metadata_properties_quota(ctxt,
                                                         metadata5))
 
+    def test_status_from_state(self):
+        for vm_state in (vm_states.ACTIVE, vm_states.STOPPED):
+            for task_state in (task_states.RESIZE_PREP,
+                               task_states.RESIZE_MIGRATING,
+                               task_states.RESIZE_MIGRATED,
+                               task_states.RESIZE_FINISH):
+                actual = common.status_from_state(vm_state, task_state)
+                expected = 'RESIZE'
+                self.assertEqual(expected, actual)
+
     def test_task_and_vm_state_from_status(self):
-        fixture = 'reboot'
-        actual = common.task_and_vm_state_from_status(fixture)
-        excepted = 'active', ['rebooting']
-        self.assertEqual(actual, excepted)
+        fixture1 = 'reboot'
+        actual = common.task_and_vm_state_from_status(fixture1)
+        expected = [vm_states.ACTIVE], [task_states.REBOOTING]
+        self.assertEqual(expected, actual)
+
+        fixture2 = 'resize'
+        actual = common.task_and_vm_state_from_status(fixture2)
+        expected = ([vm_states.ACTIVE, vm_states.STOPPED],
+                    [task_states.RESIZE_FINISH,
+                     task_states.RESIZE_MIGRATED,
+                     task_states.RESIZE_MIGRATING,
+                     task_states.RESIZE_PREP])
+        self.assertEqual(expected, actual)
 
 
 class MetadataXMLDeserializationTest(test.TestCase):
