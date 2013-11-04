@@ -402,14 +402,14 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     def test_create_image_too_small(self):
         fn = self.prepare_mocks()
         self.mox.StubOutWithMock(os.path, 'exists')
-        self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
+        self.mox.StubOutWithMock(imagebackend.Qcow2, 'get_disk_size')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
         os.path.exists(self.INSTANCES_PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
-                                       ).AndReturn(self.SIZE)
+        imagebackend.Qcow2.get_disk_size(self.TEMPLATE_PATH
+                                         ).AndReturn(self.SIZE)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)

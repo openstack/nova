@@ -201,8 +201,7 @@ class Image(object):
                           (CONF.preallocate_images, self.path))
         return can_fallocate
 
-    @staticmethod
-    def verify_base_size(base, size, base_size=0):
+    def verify_base_size(self, base, size, base_size=0):
         """Check that the base image is not larger than size.
            Since images can't be generally shrunk, enforce this
            constraint taking account of virtual image size.
@@ -221,7 +220,7 @@ class Image(object):
             return
 
         if size and not base_size:
-            base_size = disk.get_disk_size(base)
+            base_size = self.get_disk_size(base)
 
         if size < base_size:
             msg = _('%(base)s virtual size %(base_size)s '
@@ -230,6 +229,9 @@ class Image(object):
                               'base_size': base_size,
                               'size': size})
             raise exception.InstanceTypeDiskTooSmall()
+
+    def get_disk_size(self, name):
+        disk.get_disk_size(name)
 
     def snapshot_create(self):
         raise NotImplementedError()
@@ -695,7 +697,10 @@ class Rbd(Image):
             vol.resize(int(size))
 
     def _size(self):
-        with RBDVolumeProxy(self, self.rbd_name) as vol:
+        return self.get_disk_size(self.rbd_name)
+
+    def get_disk_size(self, name):
+        with RBDVolumeProxy(self, name) as vol:
             return vol.size()
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
