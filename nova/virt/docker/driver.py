@@ -316,8 +316,8 @@ class DockerDriver(driver.ComputeDriver):
             raise exception.InstanceDeployFailure(msg.format(e),
                                                   instance_id=instance['name'])
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True, context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+            destroy_disks=True):
         container_id = self.find_container_by_name(instance['name']).get('id')
         if not container_id:
             return

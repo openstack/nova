@@ -283,8 +283,7 @@ class BareMetalDriver(driver.ComputeDriver):
                 "for instance %r") % instance['uuid'])
         _update_state(ctx, node, instance, state)
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None):
         context = nova_context.get_admin_context()
 
         try:

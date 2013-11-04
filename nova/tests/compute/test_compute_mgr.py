@@ -236,7 +236,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 instance_id=deleted_instance['uuid']))
         # ensure driver.destroy is called so that driver may
         # clean up any dangling files
-        self.compute.driver.destroy(deleted_instance,
+        self.compute.driver.destroy(fake_context, deleted_instance,
             mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
 
         self.mox.ReplayAll()

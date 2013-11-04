@@ -850,11 +850,11 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info(_("Going to destroy instance again."), instance=instance)
             self._destroy(instance)
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True, context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         self._destroy(instance)
-        self._cleanup(instance, network_info, block_device_info,
-                      destroy_disks, context=context)
+        self._cleanup(context, instance, network_info, block_device_info,
+                      destroy_disks)
 
     def _undefine_domain(self, instance):
         try:
@@ -887,8 +887,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                 'Code=%(errcode)s Error=%(e)s') %
                               {'errcode': errcode, 'e': e}, instance=instance)
 
-    def _cleanup(self, instance, network_info, block_device_info,
-                 destroy_disks, context=None):
+    def _cleanup(self, context, instance, network_info, block_device_info,
+                 destroy_disks):
         self._undefine_domain(instance)
         self.unplug_vifs(instance, network_info)
         retry = True

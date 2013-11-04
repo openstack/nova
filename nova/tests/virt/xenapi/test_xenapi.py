@@ -1554,7 +1554,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
         instance = self._create_instance(spawn=True)
         network_info = fake_network.fake_get_instance_nw_info(self.stubs)
-        self.conn.destroy(instance, network_info)
+        self.conn.destroy(self.context, instance, network_info)
 
         vm_ref = vm_utils.lookup(self.conn._session, instance['name'])
         self.assertIsNone(vm_ref)

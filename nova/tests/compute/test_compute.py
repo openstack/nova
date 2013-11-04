@@ -3007,7 +3007,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.destroy(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
                                     mox.IgnoreArg(),
-                                    context=mox.IgnoreArg()).AndRaise(exp)
+                                    mox.IgnoreArg()).AndRaise(exp)
         # mox will detect if _deallocate_network gets called unexpectedly
         self.mox.ReplayAll()
         instance = self._create_fake_instance()
@@ -3024,7 +3024,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.driver.destroy(mox.IgnoreArg(),
                                     mox.IgnoreArg(),
                                     mox.IgnoreArg(),
-                                    context=mox.IgnoreArg()).AndRaise(exp)
+                                    mox.IgnoreArg()).AndRaise(exp)
         self.compute._deallocate_network(mox.IgnoreArg(),
                                          mox.IgnoreArg(),
                                          mox.IgnoreArg())
@@ -5340,7 +5340,7 @@ class ComputeTestCase(BaseTestCase):
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute._is_instance_storage_shared(fake_context,
                         evacuated_instance).AndReturn(True)
-        self.compute.driver.destroy(evacuated_instance,
+        self.compute.driver.destroy(fake_context, evacuated_instance,
                                     'fake_network_info',
                                     'fake_bdi',
                                     False)
@@ -5396,7 +5396,7 @@ class ComputeTestCase(BaseTestCase):
                 {'filename': 'tmpfilename'}).AndReturn(False)
         self.compute.driver.check_instance_shared_storage_cleanup(fake_context,
                 {'filename': 'tmpfilename'})
-        self.compute.driver.destroy(evacuated_instance,
+        self.compute.driver.destroy(fake_context, evacuated_instance,
                                     'fake_network_info',
                                     'fake_bdi',
                                     True)
@@ -5447,7 +5447,7 @@ class ComputeTestCase(BaseTestCase):
                 fake_context, evacuated_instance).AndReturn('fake_bdi')
         self.compute.driver.check_instance_shared_storage_local(fake_context,
                 evacuated_instance).AndRaise(NotImplementedError())
-        self.compute.driver.destroy(evacuated_instance,
+        self.compute.driver.destroy(fake_context, evacuated_instance,
                                     'fake_network_info',
                                     'fake_bdi',
                                     True)

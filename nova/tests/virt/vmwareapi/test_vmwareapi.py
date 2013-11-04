@@ -611,13 +611,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 1)
-        self.conn.destroy(self.instance, self.network_info)
+        self.conn.destroy(self.context, self.instance, self.network_info)
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 0)
 
     def test_destroy_non_existent(self):
         self._create_instance_in_the_db()
-        self.assertIsNone(self.conn.destroy(self.instance, self.network_info))
+        self.assertIsNone(self.conn.destroy(self.context, self.instance,
+            self.network_info))
 
     def _rescue(self):
         def fake_attach_disk_to_vm(*args, **kwargs):
@@ -970,7 +971,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_connection_info_get_after_destroy(self):
         self._create_vm()
-        self.conn.destroy(self.instance, self.network_info)
+        self.conn.destroy(self.context, self.instance, self.network_info)
         connector = self.conn.get_volume_connector(self.instance)
         self.assertEqual(connector['ip'], 'test_url')
         self.assertEqual(connector['host'], 'test_url')
@@ -1099,7 +1100,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         info = self.conn.get_info({'uuid': uuid1,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.destroy(self.instance, self.network_info)
+        self.conn.destroy(self.context, self.instance, self.network_info)
         self._create_vm(node=self.node_name2, num_instances=1,
                         uuid=uuid2)
         info = self.conn.get_info({'uuid': uuid2,

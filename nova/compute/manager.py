@@ -554,7 +554,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                              instance=instance)
                     # always destroy disks if the instance was deleted
                     destroy_disks = True
-                self.driver.destroy(instance,
+                self.driver.destroy(context, instance,
                                     network_info,
                                     bdi, destroy_disks)
 
@@ -1838,8 +1838,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
         try:
-            self.driver.destroy(instance, network_info, block_device_info,
-                                context=context)
+            self.driver.destroy(context, instance, network_info,
+                    block_device_info)
         except exception.InstancePowerOffFailure:
             # if the instance can't power off, don't release the ip
             with excutils.save_and_reraise_exception():
@@ -2224,7 +2224,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 block_device_info = \
                         self._get_instance_volume_block_device_info(
                                 context, instance)
-                self.driver.destroy(instance,
+                self.driver.destroy(context, instance,
                                     network_info,
                                     block_device_info=block_device_info)
 
@@ -2947,7 +2947,7 @@ class ComputeManager(manager.SchedulerDependentManager):
             block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance)
 
-            self.driver.destroy(instance, network_info,
+            self.driver.destroy(context, instance, network_info,
                                 block_device_info)
 
             self._terminate_volume_connections(context, instance)
@@ -3584,7 +3584,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         network_info = self._get_instance_nw_info(context, instance)
         block_device_info = self._get_instance_volume_block_device_info(
                 context, instance)
-        self.driver.destroy(instance, network_info,
+        self.driver.destroy(context, instance, network_info,
                 block_device_info)
 
         instance.power_state = current_power_state
@@ -4325,7 +4325,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         if migrate_data:
             is_shared_storage = migrate_data.get('is_shared_storage', True)
         if block_migration or not is_shared_storage:
-            self.driver.destroy(instance_ref, network_info)
+            self.driver.destroy(ctxt, instance_ref, network_info)
         else:
             # self.driver.destroy() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
@@ -4482,7 +4482,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         #             from remote volumes if necessary
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
-        self.driver.destroy(instance, network_info, block_device_info)
+        self.driver.destroy(context, instance, network_info, block_device_info)
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)

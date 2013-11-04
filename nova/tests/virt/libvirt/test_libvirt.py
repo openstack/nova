@@ -3961,7 +3961,7 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_delete_instance_files)
 
         instance = db.instance_create(self.context, self.test_instance)
-        conn.destroy(instance, {})
+        conn.destroy(self.context, instance, {})
 
     def test_destroy_removes_disk(self):
         instance = {"name": "instancename", "id": "42",
@@ -4018,7 +4018,7 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_obj_load_attr)
         self.stubs.Set(instance_obj.Instance, 'save', fake_save)
 
-        conn.destroy(instance, [])
+        conn.destroy(self.context, instance, [])
 
     def test_destroy_not_removes_disk(self):
         instance = {"name": "instancename", "id": "instanceid",
@@ -4050,7 +4050,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn.firewall_driver,
                        'unfilter_instance', fake_unfilter_instance)
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
-        conn.destroy(instance, [], None, False)
+        conn.destroy(self.context, instance, [], None, False)
 
     def test_delete_instance_files(self):
         instance = {"name": "instancename", "id": "42",
@@ -4348,7 +4348,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        conn.destroy(instance, [])
+        conn.destroy(self.context, instance, [])
 
     def test_cleanup_rbd(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
@@ -4408,7 +4408,7 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_delete_instance_files)
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        conn.destroy(instance, [])
+        conn.destroy(self.context, instance, [])
 
     def test_destroy_undefines_no_attribute_with_managed_save(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
@@ -4437,7 +4437,7 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_delete_instance_files)
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        conn.destroy(instance, [])
+        conn.destroy(self.context, instance, [])
 
     def test_destroy_undefines_no_attribute_no_managed_save(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
@@ -4465,7 +4465,7 @@ class LibvirtConnTestCase(test.TestCase):
                        fake_delete_instance_files)
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-        conn.destroy(instance, [])
+        conn.destroy(self.context, instance, [])
 
     def test_destroy_timed_out(self):
         mock = self.mox.CreateMock(libvirt.virDomain)
@@ -4486,7 +4486,7 @@ class LibvirtConnTestCase(test.TestCase):
         instance = {"name": "instancename", "id": "instanceid",
                     "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
         self.assertRaises(exception.InstancePowerOffFailure,
-                conn.destroy, instance, [])
+                conn.destroy, self.context, instance, [])
 
     def test_private_destroy_not_found(self):
         mock = self.mox.CreateMock(libvirt.virDomain)

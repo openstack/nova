@@ -206,8 +206,8 @@ class FakeDriver(driver.ComputeDriver):
     def resume(self, instance, network_info, block_device_info=None):
         pass
 
-    def destroy(self, instance, network_info, block_device_info=None,
-                destroy_disks=True, context=None):
+    def destroy(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
         key = instance['name']
         if key in self.instances:
             del self.instances[key]
