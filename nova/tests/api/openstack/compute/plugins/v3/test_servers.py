@@ -1813,7 +1813,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server'].update(params)
         self.req.body = jsonutils.dumps(self.body)
         self.req.headers["content-type"] = "application/json"
-        server = self.controller.create(self.req, self.body).obj['server']
+        self.controller.create(self.req, self.body).obj['server']
 
     # TODO(cyeoh): bp-v3-api-unittests
     # This needs to be ported to the os-keypairs extension tests
@@ -2127,7 +2127,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_location(self):
         selfhref = 'http://localhost/v2/fake/servers/%s' % FAKE_UUID
-        bookhref = 'http://localhost/fake/servers/%s' % FAKE_UUID
         self.req.body = jsonutils.dumps(self.body)
         robj = self.controller.create(self.req, self.body)
 
@@ -2139,7 +2138,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['flavor_ref'] = 3
         self.req.body = jsonutils.dumps(self.body)
         try:
-            server = self.controller.create(self.req, self.body).obj['server']
+            self.controller.create(self.req, self.body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
             self.assertEqual(e.explanation, expected_msg)
@@ -2905,11 +2904,6 @@ class ServersViewBuilderTest(test.TestCase):
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
         self.instance['fault'] = fake_instance.fake_fault_obj(self.uuid)
-
-        image_bookmark = "http://localhost:9292/images/5"
-        flavor_bookmark = "http://localhost/flavors/1"
-        self_link = "http://localhost/v3/servers/%s" % self.uuid
-        bookmark_link = "http://localhost/servers/%s" % self.uuid
 
         output = self.view_builder.show(self.request, self.instance)
         self.assertNotIn('fault', output['server'])
