@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: FULL NAME <EMAIL@ADDRESS>\n"
-"POT-Creation-Date: 2013-11-03 06:08+0000\n"
+"POT-Creation-Date: 2013-11-04 06:08+0000\n"
 "PO-Revision-Date: 2012-05-14 08:35+0000\n"
 "Last-Translator: Erwan Gallen <Unknown>\n"
 "Language-Team: French <fr@li.org>\n"
@@ -8727,35 +8727,35 @@ msgstr ""
 msgid "Added %(filepath)s to config drive"
 msgstr ""
 
-#: nova/virt/driver.py:1009
+#: nova/virt/driver.py:1008
 #, python-format
 msgid "Discarding event %s"
 msgstr ""
 
-#: nova/virt/driver.py:1014
+#: nova/virt/driver.py:1013
 msgid "Event must be an instance of nova.virt.event.Event"
 msgstr ""
 
-#: nova/virt/driver.py:1017
+#: nova/virt/driver.py:1016
 #, python-format
 msgid "Emitting event %s"
 msgstr ""
 
-#: nova/virt/driver.py:1020
+#: nova/virt/driver.py:1019
 #, python-format
 msgid "Exception dispatching event %(event)s: %(ex)s"
 msgstr ""
 
-#: nova/virt/driver.py:1101
+#: nova/virt/driver.py:1100
 msgid "Compute driver option required, but not specified"
 msgstr ""
 
-#: nova/virt/driver.py:1104
+#: nova/virt/driver.py:1103
 #, python-format
 msgid "Loading compute driver '%s'"
 msgstr ""
 
-#: nova/virt/driver.py:1111
+#: nova/virt/driver.py:1110
 msgid "Unable to load the virtualization driver"
 msgstr ""
 
@@ -14123,27 +14123,5 @@ msgstr ""
 #~ msgstr ""
 
 #~ msgid "Neutron client authentication failed: %s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Instance properties %(image_props)s are "
-#~ "satisfied by compute host "
-#~ "supported_instances%(supp_instances)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Instance contains properties %(image_props)s "
-#~ "that are not provided by the "
-#~ "compute node supported_instances %(supp_instances)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "%(base)s virtual size %(disk_size)slarger than"
-#~ " flavor root disk size %(size)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "VBD %(vbd_ref)s detach rejected, attempt "
-#~ "%(num_attempt)d/%(max_attempts)d"
 #~ msgstr ""
 
