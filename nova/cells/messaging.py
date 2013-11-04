@@ -992,8 +992,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             except exception.NotFound:
                 # FIXME(comstud): Strange.  Need to handle quotas here,
                 # if we actually want this code to remain..
-                self.db.instance_create(message.ctxt, instance,
-                                        legacy=False)
+                self.db.instance_create(message.ctxt, instance)
         if info_cache:
             network_info = info_cache.get('network_info')
             if isinstance(network_info, list):

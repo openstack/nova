@@ -1397,7 +1397,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.assertFalse(self.mid_methods_cls._at_the_top())
         self.assertFalse(self.src_methods_cls._at_the_top())
 
-    def _test_instance_update_at_top(self, net_info):
+    def _test_instance_update_at_top(self, net_info, exists=True):
         fake_info_cache = {'id': 1,
                            'instance': 'fake_instance',
                            'network_info': net_info}
@@ -1435,11 +1435,16 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
                                  'instance_info_cache_update')
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_update')
+        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_create')
         self.mox.StubOutWithMock(self.tgt_db_inst,
                                  'instance_info_cache_update')
-        self.tgt_db_inst.instance_update(self.ctxt, 'fake_uuid',
-                                         expected_instance,
-                                         update_cells=False)
+        mock = self.tgt_db_inst.instance_update(self.ctxt, 'fake_uuid',
+                                                expected_instance,
+                                                update_cells=False)
+        if not exists:
+            mock.AndRaise(exception.InstanceNotFound(instance_id='fake_uuid'))
+            self.tgt_db_inst.instance_create(self.ctxt,
+                                             expected_instance)
         self.tgt_db_inst.instance_info_cache_update(self.ctxt, 'fake_uuid',
                                                     expected_info_cache)
         self.mox.ReplayAll()
@@ -1454,6 +1459,9 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
     def test_instance_update_at_top_netinfo_model(self):
         self._test_instance_update_at_top(network_model.NetworkInfo())
+
+    def test_instance_update_at_top_doesnt_already_exist(self):
+        self._test_instance_update_at_top([], exists=False)
 
     def test_instance_update_at_top_with_building_state(self):
         fake_info_cache = {'id': 1,
