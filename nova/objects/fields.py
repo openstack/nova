@@ -96,13 +96,16 @@ class AbstractFieldType(six.with_metaclass(abc.ABCMeta, object)):
 
 
 class FieldType(AbstractFieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         return value
 
-    def from_primitive(self, obj, attr, value):
+    @staticmethod
+    def from_primitive(obj, attr, value):
         return value
 
-    def to_primitive(self, obj, attr, value):
+    @staticmethod
+    def to_primitive(obj, attr, value):
         return value
 
     def describe(self):
@@ -204,7 +207,8 @@ class Field(object):
 
 
 class String(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         # FIXME(danms): We should really try to avoid the need to do this
         if isinstance(value, (six.string_types, int, long, float,
                               datetime.datetime)):
@@ -215,23 +219,27 @@ class String(FieldType):
 
 
 class UUID(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         # FIXME(danms): We should actually verify the UUIDness here
         return str(value)
 
 
 class Integer(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         return int(value)
 
 
 class Boolean(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         return bool(value)
 
 
 class DateTime(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         if isinstance(value, six.string_types):
             value = timeutils.parse_isotime(value)
         elif not isinstance(value, datetime.datetime):
@@ -244,12 +252,14 @@ class DateTime(FieldType):
     def from_primitive(self, obj, attr, value):
         return self.coerce(obj, attr, timeutils.parse_isotime(value))
 
-    def to_primitive(self, obj, attr, value):
+    @staticmethod
+    def to_primitive(obj, attr, value):
         return timeutils.isotime(value)
 
 
 class IPV4Address(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         try:
             return netaddr.IPAddress(value, version=4)
         except netaddr.AddrFormatError as e:
@@ -258,12 +268,14 @@ class IPV4Address(FieldType):
     def from_primitive(self, obj, attr, value):
         return self.coerce(obj, attr, value)
 
-    def to_primitive(self, obj, attr, value):
+    @staticmethod
+    def to_primitive(obj, attr, value):
         return str(value)
 
 
 class IPV6Address(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         try:
             return netaddr.IPAddress(value, version=6)
         except netaddr.AddrFormatError as e:
@@ -272,7 +284,8 @@ class IPV6Address(FieldType):
     def from_primitive(self, obj, attr, value):
         return self.coerce(obj, attr, value)
 
-    def to_primitive(self, obj, attr, value):
+    @staticmethod
+    def to_primitive(obj, attr, value):
         return str(value)
 
 
@@ -343,10 +356,12 @@ class Object(FieldType):
                              self._obj_name)
         return value
 
-    def to_primitive(self, obj, attr, value):
+    @staticmethod
+    def to_primitive(obj, attr, value):
         return value.obj_to_primitive()
 
-    def from_primitive(self, obj, attr, value):
+    @staticmethod
+    def from_primitive(obj, attr, value):
         # FIXME(danms): Avoid circular import from base.py
         from nova.objects import base as obj_base
         return obj_base.NovaObject.obj_from_primitive(value, obj._context)
@@ -356,7 +371,8 @@ class Object(FieldType):
 
 
 class NetworkModel(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         if isinstance(value, network_model.NetworkInfo):
             return value
         elif isinstance(value, six.string_types):
@@ -365,15 +381,18 @@ class NetworkModel(FieldType):
         else:
             raise ValueError(_('A NetworkModel is required here'))
 
-    def to_primitive(self, obj, attr, value):
+    @staticmethod
+    def to_primitive(obj, attr, value):
         return value.json()
 
-    def from_primitive(self, obj, attr, value):
+    @staticmethod
+    def from_primitive(obj, attr, value):
         return network_model.NetworkInfo.hydrate(value)
 
 
 class CIDR(FieldType):
-    def coerce(self, obj, attr, value):
+    @staticmethod
+    def coerce(obj, attr, value):
         try:
             network, length = value.split('/')
         except (ValueError, AttributeError):
