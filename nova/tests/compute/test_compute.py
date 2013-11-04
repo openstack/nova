@@ -620,22 +620,22 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         # Check that volume.attach, 2 volume.usage, and volume.detach
         # notifications were sent
-        self.assertEquals(4, len(fake_notifier.NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.NOTIFICATIONS))
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals('compute.instance.volume.attach', msg.event_type)
+        self.assertEqual('compute.instance.volume.attach', msg.event_type)
         msg = fake_notifier.NOTIFICATIONS[2]
-        self.assertEquals('volume.usage', msg.event_type)
+        self.assertEqual('volume.usage', msg.event_type)
         payload = msg.payload
-        self.assertEquals(instance['uuid'], payload['instance_id'])
-        self.assertEquals('fake', payload['user_id'])
-        self.assertEquals('fake', payload['tenant_id'])
-        self.assertEquals(1, payload['reads'])
-        self.assertEquals(30, payload['read_bytes'])
-        self.assertEquals(1, payload['writes'])
-        self.assertEquals(20, payload['write_bytes'])
+        self.assertEqual(instance['uuid'], payload['instance_id'])
+        self.assertEqual('fake', payload['user_id'])
+        self.assertEqual('fake', payload['tenant_id'])
+        self.assertEqual(1, payload['reads'])
+        self.assertEqual(30, payload['read_bytes'])
+        self.assertEqual(1, payload['writes'])
+        self.assertEqual(20, payload['write_bytes'])
         self.assertIsNone(payload['availability_zone'])
         msg = fake_notifier.NOTIFICATIONS[3]
-        self.assertEquals('compute.instance.volume.detach', msg.event_type)
+        self.assertEqual('compute.instance.volume.detach', msg.event_type)
 
         # Check the database for the
         volume_usages = db.vol_get_usage_by_time(self.context, 0)
@@ -1084,15 +1084,15 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance(params)
         self.compute.run_instance(self.context, instance=instance,
                                   filter_properties=filter_properties)
-        self.assertEquals(1024, self.rt.compute_node['memory_mb_used'])
-        self.assertEquals(256, self.rt.compute_node['local_gb_used'])
+        self.assertEqual(1024, self.rt.compute_node['memory_mb_used'])
+        self.assertEqual(256, self.rt.compute_node['local_gb_used'])
 
         params = {"memory_mb": 2048, "root_gb": 256, "ephemeral_gb": 256}
         instance = self._create_fake_instance(params)
         self.compute.run_instance(self.context, instance=instance,
                                   filter_properties=filter_properties)
-        self.assertEquals(3072, self.rt.compute_node['memory_mb_used'])
-        self.assertEquals(768, self.rt.compute_node['local_gb_used'])
+        self.assertEqual(3072, self.rt.compute_node['memory_mb_used'])
+        self.assertEqual(768, self.rt.compute_node['local_gb_used'])
 
         params = {"memory_mb": 8192, "root_gb": 8192, "ephemeral_gb": 8192}
         instance = self._create_fake_instance(params)
@@ -1704,23 +1704,23 @@ class ComputeTestCase(BaseTestCase):
         expected_notifications = ['compute.instance.exists',
                                   'compute.instance.rescue.start',
                                   'compute.instance.rescue.end']
-        self.assertEquals([m.event_type for m in fake_notifier.NOTIFICATIONS],
-                          expected_notifications)
+        self.assertEqual([m.event_type for m in fake_notifier.NOTIFICATIONS],
+                         expected_notifications)
         for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
-            self.assertEquals(msg.event_type, expected_notifications[n])
-            self.assertEquals(msg.priority, 'INFO')
+            self.assertEqual(msg.event_type, expected_notifications[n])
+            self.assertEqual(msg.priority, 'INFO')
             payload = msg.payload
-            self.assertEquals(payload['tenant_id'], self.project_id)
-            self.assertEquals(payload['user_id'], self.user_id)
-            self.assertEquals(payload['instance_id'], instance_uuid)
-            self.assertEquals(payload['instance_type'], 'm1.tiny')
+            self.assertEqual(payload['tenant_id'], self.project_id)
+            self.assertEqual(payload['user_id'], self.user_id)
+            self.assertEqual(payload['instance_id'], instance_uuid)
+            self.assertEqual(payload['instance_type'], 'm1.tiny')
             type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-            self.assertEquals(str(payload['instance_type_id']), str(type_id))
+            self.assertEqual(str(payload['instance_type_id']), str(type_id))
             self.assertIn('display_name', payload)
             self.assertIn('created_at', payload)
             self.assertIn('launched_at', payload)
             image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
-            self.assertEquals(payload['image_ref_url'], image_ref_url)
+            self.assertEqual(payload['image_ref_url'], image_ref_url)
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertIn('rescue_image_name', msg.payload)
 
@@ -1744,23 +1744,23 @@ class ComputeTestCase(BaseTestCase):
 
         expected_notifications = ['compute.instance.unrescue.start',
                                   'compute.instance.unrescue.end']
-        self.assertEquals([m.event_type for m in fake_notifier.NOTIFICATIONS],
-                          expected_notifications)
+        self.assertEqual([m.event_type for m in fake_notifier.NOTIFICATIONS],
+                         expected_notifications)
         for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
-            self.assertEquals(msg.event_type, expected_notifications[n])
-            self.assertEquals(msg.priority, 'INFO')
+            self.assertEqual(msg.event_type, expected_notifications[n])
+            self.assertEqual(msg.priority, 'INFO')
             payload = msg.payload
-            self.assertEquals(payload['tenant_id'], self.project_id)
-            self.assertEquals(payload['user_id'], self.user_id)
-            self.assertEquals(payload['instance_id'], instance_uuid)
-            self.assertEquals(payload['instance_type'], 'm1.tiny')
+            self.assertEqual(payload['tenant_id'], self.project_id)
+            self.assertEqual(payload['user_id'], self.user_id)
+            self.assertEqual(payload['instance_id'], instance_uuid)
+            self.assertEqual(payload['instance_type'], 'm1.tiny')
             type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-            self.assertEquals(str(payload['instance_type_id']), str(type_id))
+            self.assertEqual(str(payload['instance_type_id']), str(type_id))
             self.assertIn('display_name', payload)
             self.assertIn('created_at', payload)
             self.assertIn('launched_at', payload)
             image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
-            self.assertEquals(payload['image_ref_url'], image_ref_url)
+            self.assertEqual(payload['image_ref_url'], image_ref_url)
 
         self.compute.terminate_instance(self.context, instance=instance)
 
@@ -1967,7 +1967,7 @@ class ComputeTestCase(BaseTestCase):
                                       new_pass="new_password",
                                       bdms=[])
         instance = db.instance_get_by_uuid(self.context, instance_uuid,)
-        self.assertEquals(cur_time, instance['launched_at'])
+        self.assertEqual(cur_time, instance['launched_at'])
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(instance))
 
@@ -2745,11 +2745,11 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, network_id=1,
                 instance=instance)
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_remove_fixed_ip_usage_notification(self):
@@ -2765,11 +2765,11 @@ class ComputeTestCase(BaseTestCase):
 
         instance = jsonutils.to_primitive(self._create_fake_instance())
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 0)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.remove_fixed_ip_from_instance(self.context, 1,
                                                    instance=instance)
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_run_instance_usage_notification(self):
@@ -2777,33 +2777,33 @@ class ComputeTestCase(BaseTestCase):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
         self.compute.run_instance(self.context, instance=instance)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type, 'compute.instance.create.start')
-        self.assertEquals(msg.payload['image_name'], 'fake_name')
+        self.assertEqual(msg.event_type, 'compute.instance.create.start')
+        self.assertEqual(msg.payload['image_name'], 'fake_name')
         # The last event is the one with the sugar in it.
         msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'compute.instance.create.end')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'compute.instance.create.end')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['image_name'], 'fake_name')
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], inst_ref['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['image_name'], 'fake_name')
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], inst_ref['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
-        self.assertEquals(payload['state'], 'active')
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(payload['state'], 'active')
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
         self.assertIn('fixed_ips', payload)
         self.assertTrue(payload['launched_at'])
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.assertEqual('Success', payload['message'])
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
@@ -2820,13 +2820,13 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_build_instance', build_inst_abort)
 
         self.compute.run_instance(self.context, instance=instance)
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        self.assertEqual(msg.event_type, 'compute.instance.create.start')
         msg = fake_notifier.NOTIFICATIONS[1]
 
-        self.assertEquals(msg.event_type, 'compute.instance.create.end')
-        self.assertEquals('INFO', msg.priority)
+        self.assertEqual(msg.event_type, 'compute.instance.create.end')
+        self.assertEqual('INFO', msg.priority)
         payload = msg.payload
         message = payload['message']
         self.assertTrue(message.find("already deleted") != -1)
@@ -2846,11 +2846,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        self.assertEqual(msg.event_type, 'compute.instance.create.start')
         msg = fake_notifier.NOTIFICATIONS[1]
 
-        self.assertEquals(msg.event_type, 'compute.instance.create.error')
-        self.assertEquals('ERROR', msg.priority)
+        self.assertEqual(msg.event_type, 'compute.instance.create.error')
+        self.assertEqual('ERROR', msg.priority)
         payload = msg.payload
         message = payload['message']
         self.assertTrue(message.find("something bad happened") != -1)
@@ -2869,11 +2869,11 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertTrue(len(fake_notifier.NOTIFICATIONS) >= 2)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type, 'compute.instance.create.start')
+        self.assertEqual(msg.event_type, 'compute.instance.create.start')
         msg = fake_notifier.NOTIFICATIONS[1]
 
-        self.assertEquals(msg.event_type, 'compute.instance.create.error')
-        self.assertEquals('ERROR', msg.priority)
+        self.assertEqual(msg.event_type, 'compute.instance.create.error')
+        self.assertEqual('ERROR', msg.priority)
         payload = msg.payload
         message = payload['message']
         self.assertTrue(message.find("i'm dying") != -1)
@@ -2890,26 +2890,26 @@ class ComputeTestCase(BaseTestCase):
         timeutils.set_time_override(cur_time)
         self.compute.terminate_instance(self.context, instance=instance)
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 4)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 4)
 
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.priority, 'INFO')
-        self.assertEquals(msg.event_type, 'compute.instance.delete.start')
+        self.assertEqual(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type, 'compute.instance.delete.start')
         msg1 = fake_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg1.event_type, 'compute.instance.shutdown.start')
+        self.assertEqual(msg1.event_type, 'compute.instance.shutdown.start')
         msg1 = fake_notifier.NOTIFICATIONS[2]
-        self.assertEquals(msg1.event_type, 'compute.instance.shutdown.end')
+        self.assertEqual(msg1.event_type, 'compute.instance.shutdown.end')
         msg1 = fake_notifier.NOTIFICATIONS[3]
-        self.assertEquals(msg1.event_type, 'compute.instance.delete.end')
+        self.assertEqual(msg1.event_type, 'compute.instance.delete.end')
         payload = msg1.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
@@ -2918,7 +2918,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(payload['terminated_at'], timeutils.strtime(cur_time))
         self.assertEqual(payload['deleted_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_run_instance_existing(self):
         # Ensure failure when running an instance that already exists.
@@ -3572,14 +3572,14 @@ class ComputeTestCase(BaseTestCase):
                                    '/dev/vdc', instance_p)
 
         # assert volume attached correctly
-        self.assertEquals(volume['device_name'], '/dev/vdc')
+        self.assertEqual(volume['device_name'], '/dev/vdc')
         disk_info = db.block_device_mapping_get_all_by_instance(
             self.context, instance.uuid)
-        self.assertEquals(len(disk_info), 1)
+        self.assertEqual(len(disk_info), 1)
         for bdm in disk_info:
-            self.assertEquals(bdm['device_name'], volume['device_name'])
-            self.assertEquals(bdm['connection_info'],
-                              jsonutils.dumps(connection_info))
+            self.assertEqual(bdm['device_name'], volume['device_name'])
+            self.assertEqual(bdm['connection_info'],
+                             jsonutils.dumps(connection_info))
 
         # begin resize
         instance_type = flavors.get_default_flavor()
@@ -3607,11 +3607,11 @@ class ComputeTestCase(BaseTestCase):
         # assert bdm is unchanged
         disk_info = db.block_device_mapping_get_all_by_instance(
             self.context, instance.uuid)
-        self.assertEquals(len(disk_info), 1)
+        self.assertEqual(len(disk_info), 1)
         for bdm in disk_info:
-            self.assertEquals(bdm['device_name'], volume['device_name'])
+            self.assertEqual(bdm['device_name'], volume['device_name'])
             cached_connection_info = jsonutils.loads(bdm['connection_info'])
-            self.assertEquals(cached_connection_info['data'],
+            self.assertEqual(cached_connection_info['data'],
                               orig_connection_data)
         # but connection was terminated
         self.assertIsNone(connection_info['data'])
@@ -3645,9 +3645,9 @@ class ComputeTestCase(BaseTestCase):
         # assert volume attached correctly
         disk_info = db.block_device_mapping_get_all_by_instance(
             self.context, instance['uuid'])
-        self.assertEquals(len(disk_info), 1)
+        self.assertEqual(len(disk_info), 1)
         for bdm in disk_info:
-            self.assertEquals(bdm['connection_info'],
+            self.assertEqual(bdm['connection_info'],
                               jsonutils.dumps(connection_info))
 
         # stub out detach
@@ -3735,35 +3735,35 @@ class ComputeTestCase(BaseTestCase):
         image_ref_url = glance.generate_image_url(image_ref)
         new_image_ref_url = glance.generate_image_url(new_image_ref)
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 3)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type,
+        self.assertEqual(msg.event_type,
                           'compute.instance.exists')
-        self.assertEquals(msg.payload['image_ref_url'], image_ref_url)
+        self.assertEqual(msg.payload['image_ref_url'], image_ref_url)
         msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg.event_type,
+        self.assertEqual(msg.event_type,
                           'compute.instance.rebuild.start')
-        self.assertEquals(msg.payload['image_ref_url'], new_image_ref_url)
-        self.assertEquals(msg.payload['image_name'], 'fake_name')
+        self.assertEqual(msg.payload['image_ref_url'], new_image_ref_url)
+        self.assertEqual(msg.payload['image_name'], 'fake_name')
         msg = fake_notifier.NOTIFICATIONS[2]
-        self.assertEquals(msg.event_type,
+        self.assertEqual(msg.event_type,
                           'compute.instance.rebuild.end')
-        self.assertEquals(msg.priority, 'INFO')
+        self.assertEqual(msg.priority, 'INFO')
         payload = msg.payload
-        self.assertEquals(payload['image_name'], 'fake_name')
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], inst_ref['uuid'])
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['image_name'], 'fake_name')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], inst_ref['uuid'])
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
-        self.assertEquals(payload['image_ref_url'], new_image_ref_url)
+        self.assertEqual(payload['image_ref_url'], new_image_ref_url)
         self.compute.terminate_instance(self.context,
                 instance=jsonutils.to_primitive(inst_ref))
 
@@ -3801,27 +3801,27 @@ class ComputeTestCase(BaseTestCase):
                 migration=migration,
                 disk_info={}, image={}, instance=instance)
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type,
-                          'compute.instance.finish_resize.start')
+        self.assertEqual(msg.event_type,
+                         'compute.instance.finish_resize.start')
         msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg.event_type,
-                          'compute.instance.finish_resize.end')
-        self.assertEquals(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type,
+                         'compute.instance.finish_resize.end')
+        self.assertEqual(msg.priority, 'INFO')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance.uuid)
-        self.assertEquals(payload['instance_type'], 'm1.small')
-        self.assertEquals(str(payload['instance_type_id']), str(new_type_id))
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance.uuid)
+        self.assertEqual(payload['instance_type'], 'm1.small')
+        self.assertEqual(str(payload['instance_type_id']), str(new_type_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
         self.assertEqual(payload['launched_at'], timeutils.strtime(cur_time))
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance)
 
     def test_resize_instance_notification(self):
@@ -3846,31 +3846,31 @@ class ComputeTestCase(BaseTestCase):
                                                 instance.uuid,
                                                 'pre-migrating')
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 3)
         msg = fake_notifier.NOTIFICATIONS[0]
-        self.assertEquals(msg.event_type,
-                          'compute.instance.exists')
+        self.assertEqual(msg.event_type,
+                         'compute.instance.exists')
         msg = fake_notifier.NOTIFICATIONS[1]
-        self.assertEquals(msg.event_type,
-                          'compute.instance.resize.prep.start')
+        self.assertEqual(msg.event_type,
+                         'compute.instance.resize.prep.start')
         msg = fake_notifier.NOTIFICATIONS[2]
-        self.assertEquals(msg.event_type,
-                          'compute.instance.resize.prep.end')
-        self.assertEquals(msg.priority, 'INFO')
+        self.assertEqual(msg.event_type,
+                         'compute.instance.resize.prep.end')
+        self.assertEqual(msg.priority, 'INFO')
         payload = msg.payload
-        self.assertEquals(payload['tenant_id'], self.project_id)
-        self.assertEquals(payload['user_id'], self.user_id)
-        self.assertEquals(payload['instance_id'], instance.uuid)
-        self.assertEquals(payload['instance_type'], 'm1.tiny')
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['instance_id'], instance.uuid)
+        self.assertEqual(payload['instance_type'], 'm1.tiny')
         type_id = flavors.get_flavor_by_name('m1.tiny')['id']
-        self.assertEquals(str(payload['instance_type_id']), str(type_id))
+        self.assertEqual(str(payload['instance_type_id']), str(type_id))
         flavor_id = flavors.get_flavor_by_name('m1.tiny')['flavorid']
-        self.assertEquals(str(payload['instance_flavor_id']), str(flavor_id))
+        self.assertEqual(str(payload['instance_flavor_id']), str(flavor_id))
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
         image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
-        self.assertEquals(payload['image_ref_url'], image_ref_url)
+        self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance=instance)
 
     def test_prep_resize_instance_migration_error_on_same_host(self):
@@ -4752,7 +4752,7 @@ class ComputeTestCase(BaseTestCase):
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }
-            self.assertEquals(expected, values)
+            self.assertEqual(expected, values)
 
         try:
             raise NotImplementedError('test')
@@ -4783,7 +4783,7 @@ class ComputeTestCase(BaseTestCase):
                 'message': 'Remote error: test My Test Message\nNone.',
                 'host': self.compute.host
             }
-            self.assertEquals(expected, values)
+            self.assertEqual(expected, values)
 
         try:
             raise rpc_common.RemoteError('test', 'My Test Message')
@@ -4809,7 +4809,7 @@ class ComputeTestCase(BaseTestCase):
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }
-            self.assertEquals(expected, values)
+            self.assertEqual(expected, values)
 
         user_exc = exception.Invalid('fake details', code=400)
 
@@ -4835,7 +4835,7 @@ class ComputeTestCase(BaseTestCase):
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }
-            self.assertEquals(expected, values)
+            self.assertEqual(expected, values)
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
@@ -4858,7 +4858,7 @@ class ComputeTestCase(BaseTestCase):
                 'instance_uuid': instance['uuid'],
                 'host': self.compute.host
             }
-            self.assertEquals(expected, values)
+            self.assertEqual(expected, values)
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
@@ -6103,11 +6103,11 @@ class ComputeAPITestCase(BaseTestCase):
                                                     1,
                                                     security_groups=None,
                                                     instance_type=inst_type)
-        self.assertEquals(str(base_options['image_ref']),
-                          instance['system_metadata']['image_base_image_ref'])
-        self.assertEquals(vm_states.BUILDING, instance['vm_state'])
-        self.assertEquals(task_states.SCHEDULING, instance['task_state'])
-        self.assertEquals(1, instance['launch_index'])
+        self.assertEqual(str(base_options['image_ref']),
+                         instance['system_metadata']['image_base_image_ref'])
+        self.assertEqual(vm_states.BUILDING, instance['vm_state'])
+        self.assertEqual(task_states.SCHEDULING, instance['task_state'])
+        self.assertEqual(1, instance['launch_index'])
         self.assertIsNotNone(instance.get('uuid'))
         self.assertEqual([], instance.security_groups.objects)
 
@@ -6536,8 +6536,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
 
         instance = self.compute_api.get(self.context, exp_instance['uuid'])
-        self.assertEquals(unify_instance(expected),
-                          unify_instance(instance))
+        self.assertEqual(unify_instance(expected),
+                         unify_instance(instance))
 
     def test_get_with_admin_context(self):
         # Test get instance.
@@ -6557,8 +6557,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_db_get)
 
         instance = self.compute_api.get(c, exp_instance['uuid'])
-        self.assertEquals(unify_instance(expected),
-                          unify_instance(instance))
+        self.assertEqual(unify_instance(expected),
+                         unify_instance(instance))
 
     def test_get_with_integer_id(self):
         # Test get instance with an integer id.
@@ -6576,8 +6576,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(db, 'instance_get', fake_db_get)
 
         instance = self.compute_api.get(self.context, exp_instance['id'])
-        self.assertEquals(unify_instance(expected),
-                          unify_instance(instance))
+        self.assertEqual(unify_instance(expected),
+                         unify_instance(instance))
 
     def test_get_all_by_name_regexp(self):
         # Test searching instances by name (display_name).
@@ -6901,11 +6901,11 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(metadata, {'key1': 'value1', 'key2': 'value2'})
         self.assertEqual(meta_changes, [{'key2': ['+', 'value2']}])
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 1)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
         payload = msg.payload
         self.assertIn('metadata', payload)
-        self.assertEquals(payload['metadata'], metadata)
+        self.assertEqual(payload['metadata'], metadata)
 
         new_metadata = {'key2': 'bah', 'key3': 'value3'}
         self.compute_api.update_instance_metadata(_context, instance,
@@ -6918,22 +6918,22 @@ class ComputeAPITestCase(BaseTestCase):
                     'key3': ['+', 'value3'],
                     }])
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 2)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[1]
         payload = msg.payload
         self.assertIn('metadata', payload)
-        self.assertEquals(payload['metadata'], metadata)
+        self.assertEqual(payload['metadata'], metadata)
 
         self.compute_api.delete_instance_metadata(_context, instance, 'key2')
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key3': 'value3'})
         self.assertEqual(meta_changes, [{'key2': ['-']}])
 
-        self.assertEquals(len(fake_notifier.NOTIFICATIONS), 3)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 3)
         msg = fake_notifier.NOTIFICATIONS[2]
         payload = msg.payload
         self.assertIn('metadata', payload)
-        self.assertEquals(payload['metadata'], {})
+        self.assertEqual(payload['metadata'], {})
 
         db.instance_destroy(_context, instance['uuid'])
 
@@ -7790,7 +7790,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context, instance=instance)
         bdms = db.block_device_mapping_get_all_by_instance(admin,
                                                            instance['uuid'])
-        self.assertEquals(len(bdms), 0)
+        self.assertEqual(len(bdms), 0)
 
     def test_inject_network_info(self):
         instance = self._create_fake_instance(params={'host': CONF.host})
@@ -8463,10 +8463,10 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         test_meta_aggregate = aggregate_list[1]
         self.assertIn('foo_key1', test_meta_aggregate.get('metadata'))
         self.assertIn('foo_key2', test_meta_aggregate.get('metadata'))
-        self.assertEquals('foo_value1',
-                          test_meta_aggregate.get('metadata')['foo_key1'])
-        self.assertEquals('foo_value2',
-                          test_meta_aggregate.get('metadata')['foo_key2'])
+        self.assertEqual('foo_value1',
+                         test_meta_aggregate.get('metadata')['foo_key1'])
+        self.assertEqual('foo_value2',
+                         test_meta_aggregate.get('metadata')['foo_key2'])
 
     def test_aggregate_list_with_hosts(self):
         values = _create_service_entries(self.context)
@@ -8519,10 +8519,10 @@ class ComputeAggrTestCase(BaseTestCase):
 
     def test_add_aggregate_host_passes_slave_info_to_driver(self):
         def driver_add_to_aggregate(context, aggregate, host, **kwargs):
-            self.assertEquals(self.context, context)
-            self.assertEquals(aggregate['id'], self.aggr['id'])
-            self.assertEquals(host, "the_host")
-            self.assertEquals("SLAVE_INFO", kwargs.get("slave_info"))
+            self.assertEqual(self.context, context)
+            self.assertEqual(aggregate['id'], self.aggr['id'])
+            self.assertEqual(host, "the_host")
+            self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
 
         self.stubs.Set(self.compute.driver, "add_to_aggregate",
                        driver_add_to_aggregate)
@@ -8533,10 +8533,10 @@ class ComputeAggrTestCase(BaseTestCase):
 
     def test_remove_from_aggregate_passes_slave_info_to_driver(self):
         def driver_remove_from_aggregate(context, aggregate, host, **kwargs):
-            self.assertEquals(self.context, context)
-            self.assertEquals(aggregate['id'], self.aggr['id'])
-            self.assertEquals(host, "the_host")
-            self.assertEquals("SLAVE_INFO", kwargs.get("slave_info"))
+            self.assertEqual(self.context, context)
+            self.assertEqual(aggregate['id'], self.aggr['id'])
+            self.assertEqual(host, "the_host")
+            self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
 
         self.stubs.Set(self.compute.driver, "remove_from_aggregate",
                        driver_remove_from_aggregate)
@@ -9179,7 +9179,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         def fake_get_compute_info(context, host):
             self.assertTrue(context.is_admin)
-            self.assertEquals('fake-mini', host)
+            self.assertEqual('fake-mini', host)
             return {'hypervisor_hostname': self.rt.nodename}
 
         self.stubs.Set(self.compute, '_get_compute_info',

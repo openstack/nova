@@ -104,8 +104,8 @@ class StatsTestCase(test.NoDBTestCase):
         self.assertEqual(2, self.stats.num_os_type("Linux"))
         self.assertEqual(1, self.stats.num_os_type("FreeBSD"))
 
-        self.assertEquals(2, self.stats.num_instances_for_project("1234"))
-        self.assertEquals(1, self.stats.num_instances_for_project("2345"))
+        self.assertEqual(2, self.stats.num_instances_for_project("1234"))
+        self.assertEqual(1, self.stats.num_instances_for_project("2345"))
 
         self.assertEqual(1, self.stats["num_task_None"])
         self.assertEqual(2, self.stats["num_task_" + task_states.SCHEDULING])
