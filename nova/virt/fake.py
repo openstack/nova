@@ -129,11 +129,6 @@ class FakeDriver(driver.ComputeDriver):
         fake_instance = FakeInstance(name, state)
         self.instances[name] = fake_instance
 
-    def live_snapshot(self, context, instance, name, update_task_state):
-        if instance['name'] not in self.instances:
-            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
-        update_task_state(task_state=task_states.IMAGE_UPLOADING)
-
     def snapshot(self, context, instance, name, update_task_state):
         if instance['name'] not in self.instances:
             raise exception.InstanceNotRunning(instance_id=instance['uuid'])

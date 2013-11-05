@@ -372,10 +372,6 @@ class ComputeRpcAPITestCase(test.TestCase):
                 instance=self.fake_instance, image_id='id',
                 version='2.42')
 
-    def test_live_snapshot_instance(self):
-        self._test_compute_api('live_snapshot_instance', 'cast',
-                instance=self.fake_instance, image_id='id', version='2.30')
-
     def test_start_instance(self):
         self._test_compute_api('start_instance', 'cast',
                 instance=self.fake_instance, version='2.29')

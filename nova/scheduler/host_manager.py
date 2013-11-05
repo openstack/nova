@@ -268,7 +268,7 @@ class HostState(object):
         if vm_state == vm_states.BUILDING or task_state in [
                 task_states.RESIZE_MIGRATING, task_states.REBUILDING,
                 task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
-                task_states.IMAGE_LIVE_SNAPSHOT, task_states.IMAGE_BACKUP]:
+                task_states.IMAGE_BACKUP]:
             self.num_io_ops += 1
 
     def _statmap(self, stats):

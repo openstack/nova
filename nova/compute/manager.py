@@ -2384,57 +2384,6 @@ class ComputeManager(manager.SchedulerDependentManager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
-    @delete_image_on_error
-    def live_snapshot_instance(self, context, image_id, instance):
-        """Live snapshot an instance on this host.
-
-        :param context: security context
-        :param image_id: glance.db.sqlalchemy.models.Image.Id
-        :param instance: an Instance dict
-        """
-        context = context.elevated()
-
-        current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state)
-
-        LOG.audit(_('instance live snapshotting'), context=context,
-                  instance=instance)
-
-        if instance['power_state'] != power_state.RUNNING:
-            state = instance['power_state']
-            running = power_state.RUNNING
-            LOG.warn(_('trying to snapshot a non-running '
-                       'instance: (state: %(state)s '
-                       'expected: %(running)s)') %
-                     {'state': state, 'running': running},
-                     instance=instance)
-
-        self._notify_about_instance_usage(
-                context, instance, "live_snapshot.start")
-
-        expected_task_state = task_states.IMAGE_LIVE_SNAPSHOT
-
-        def update_task_state(task_state, expected_state=expected_task_state):
-            return self._instance_update(context, instance['uuid'],
-                    task_state=task_state,
-                    expected_task_state=expected_state)
-
-        self.driver.live_snapshot(context, instance, image_id,
-                                  update_task_state)
-        # The instance could have changed from the driver.  But since
-        # we're doing a fresh update here, we'll grab the changes.
-
-        instance = self._instance_update(context, instance['uuid'],
-                task_state=None,
-                expected_task_state=task_states.IMAGE_UPLOADING)
-
-        self._notify_about_instance_usage(
-                context, instance, "live_snapshot.end")
-
-    @wrap_exception()
-    @reverts_task_state
-    @wrap_instance_fault
     def backup_instance(self, context, image_id, instance, backup_type,
                         rotation):
         """Backup an instance on this host.
