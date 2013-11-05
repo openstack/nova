@@ -167,10 +167,10 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
 
     def setUp(self):
         super(BareMetalLibVirtVolumeDriverTestCase, self).setUp()
-        self.flags(libvirt_volume_drivers=[
+        self.flags(volume_drivers=[
                 'fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
                 'fake2=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver',
-                ])
+                ], group='libvirt')
         self.driver = volume_driver.LibvirtVolumeDriver(fake.FakeVirtAPI())
         self.disk_info = {
             'dev': 'vdc',
@@ -179,7 +179,7 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
             }
         self.connection_info = {'driver_volume_type': 'fake'}
 
-    def test_init_loads_libvirt_volume_drivers(self):
+    def test_init_loads_volume_drivers(self):
         self.assertEqual(type(self.driver.volume_drivers['fake']),
                          libvirt_volume.LibvirtFakeVolumeDriver)
         self.assertEqual(type(self.driver.volume_drivers['fake2']),

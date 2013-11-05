@@ -1935,112 +1935,6 @@
 
 
 #
-# Options defined in nova.virt.libvirt.driver
-#
-
-# Rescue ami image (string value)
-#rescue_image_id=<None>
-
-# Rescue aki image (string value)
-#rescue_kernel_id=<None>
-
-# Rescue ari image (string value)
-#rescue_ramdisk_id=<None>
-
-# Libvirt domain type (valid options are: kvm, lxc, qemu, uml,
-# xen) (string value)
-#libvirt_type=kvm
-
-# Override the default libvirt URI (which is dependent on
-# libvirt_type) (string value)
-#libvirt_uri=
-
-# Inject the admin password at boot time, without an agent.
-# (boolean value)
-#libvirt_inject_password=false
-
-# Inject the ssh public key at boot time (boolean value)
-#libvirt_inject_key=true
-
-# The partition to inject to : -2 => disable, -1 => inspect
-# (libguestfs only), 0 => not partitioned, >0 => partition
-# number (integer value)
-#libvirt_inject_partition=1
-
-# Sync virtual and real mouse cursors in Windows VMs (boolean
-# value)
-#use_usb_tablet=true
-
-# Migration target URI (any included "%s" is replaced with the
-# migration target hostname) (string value)
-#live_migration_uri=qemu+tcp://%s/system
-
-# Migration flags to be set for live migration (string value)
-#live_migration_flag=VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER
-
-# Migration flags to be set for block migration (string value)
-#block_migration_flag=VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_NON_SHARED_INC
-
-# Maximum bandwidth to be used during migration, in Mbps
-# (integer value)
-#live_migration_bandwidth=0
-
-# Snapshot image format (valid options are : raw, qcow2, vmdk,
-# vdi). Defaults to same as source image (string value)
-#snapshot_image_format=<None>
-
-# The libvirt VIF driver to configure the VIFs. (string value)
-#libvirt_vif_driver=nova.virt.libvirt.vif.LibvirtGenericVIFDriver
-
-# Libvirt handlers for remote volumes. (list value)
-#libvirt_volume_drivers=iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver,iser=nova.virt.libvirt.volume.LibvirtISERVolumeDriver,local=nova.virt.libvirt.volume.LibvirtVolumeDriver,fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver,rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver,aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver,glusterfs=nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver,fibre_channel=nova.virt.libvirt.volume.LibvirtFibreChannelVolumeDriver,scality=nova.virt.libvirt.volume.LibvirtScalityVolumeDriver
-
-# Override the default disk prefix for the devices attached to
-# a server, which is dependent on libvirt_type. (valid options
-# are: sd, xvd, uvd, vd) (string value)
-#libvirt_disk_prefix=<None>
-
-# Number of seconds to wait for instance to shut down after
-# soft reboot request is made. We fall back to hard reboot if
-# instance does not shutdown within this window. (integer
-# value)
-#libvirt_wait_soft_reboot_seconds=120
-
-# Use a separated OS thread pool to realize non-blocking
-# libvirt calls (boolean value)
-#libvirt_nonblocking=true
-
-# Set to "host-model" to clone the host CPU feature flags; to
-# "host-passthrough" to use the host CPU model exactly; to
-# "custom" to use a named CPU model; to "none" to not set any
-# CPU model. If libvirt_type="kvm|qemu", it will default to
-# "host-model", otherwise it will default to "none" (string
-# value)
-#libvirt_cpu_mode=<None>
-
-# Set to a named libvirt CPU model (see names listed in
-# /usr/share/libvirt/cpu_map.xml). Only has effect if
-# libvirt_cpu_mode="custom" and libvirt_type="kvm|qemu"
-# (string value)
-#libvirt_cpu_model=<None>
-
-# Location where libvirt driver will store snapshots before
-# uploading them to image service (string value)
-#libvirt_snapshots_directory=$instances_path/snapshots
-
-# Location where the Xen hvmloader is kept (string value)
-#xen_hvmloader_path=/usr/lib/xen/boot/hvmloader
-
-# Specific cachemodes to use for different disk types e.g:
-# file=directsync,block=none (list value)
-#disk_cachemodes=
-
-# Which pcpus can be used by vcpus of instance e.g:
-# "4-12,^8,15" (string value)
-#vcpu_pin_set=<None>
-
-
-#
 # Options defined in nova.virt.libvirt.imagebackend
 #
 
@@ -2671,6 +2565,113 @@
 # under the sections image_file_url:<list entry name> (list
 # value)
 #filesystems=
+
+
+[libvirt]
+
+#
+# Options defined in nova.virt.libvirt.driver
+#
+
+# Rescue ami image (string value)
+#rescue_image_id=<None>
+
+# Rescue aki image (string value)
+#rescue_kernel_id=<None>
+
+# Rescue ari image (string value)
+#rescue_ramdisk_id=<None>
+
+# Libvirt domain type (valid options are: kvm, lxc, qemu, uml,
+# xen) (string value)
+#virt_type=kvm
+
+# Override the default libvirt URI (which is dependent on
+# virt_type) (string value)
+#connection_uri=
+
+# Inject the admin password at boot time, without an agent.
+# (boolean value)
+#inject_password=false
+
+# Inject the ssh public key at boot time (boolean value)
+#inject_key=true
+
+# The partition to inject to : -2 => disable, -1 => inspect
+# (libguestfs only), 0 => not partitioned, >0 => partition
+# number (integer value)
+#inject_partition=1
+
+# Sync virtual and real mouse cursors in Windows VMs (boolean
+# value)
+#use_usb_tablet=true
+
+# Migration target URI (any included "%s" is replaced with the
+# migration target hostname) (string value)
+#live_migration_uri=qemu+tcp://%s/system
+
+# Migration flags to be set for live migration (string value)
+#live_migration_flag=VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER
+
+# Migration flags to be set for block migration (string value)
+#block_migration_flag=VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, VIR_MIGRATE_NON_SHARED_INC
+
+# Maximum bandwidth to be used during migration, in Mbps
+# (integer value)
+#live_migration_bandwidth=0
+
+# Snapshot image format (valid options are : raw, qcow2, vmdk,
+# vdi). Defaults to same as source image (string value)
+#snapshot_image_format=<None>
+
+# The libvirt VIF driver to configure the VIFs. (string value)
+#vif_driver=nova.virt.libvirt.vif.LibvirtGenericVIFDriver
+
+# Libvirt handlers for remote volumes. (list value)
+#volume_drivers=iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver,iser=nova.virt.libvirt.volume.LibvirtISERVolumeDriver,local=nova.virt.libvirt.volume.LibvirtVolumeDriver,fake=nova.virt.libvirt.volume.LibvirtFakeVolumeDriver,rbd=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,sheepdog=nova.virt.libvirt.volume.LibvirtNetVolumeDriver,nfs=nova.virt.libvirt.volume.LibvirtNFSVolumeDriver,aoe=nova.virt.libvirt.volume.LibvirtAOEVolumeDriver,glusterfs=nova.virt.libvirt.volume.LibvirtGlusterfsVolumeDriver,fibre_channel=nova.virt.libvirt.volume.LibvirtFibreChannelVolumeDriver,scality=nova.virt.libvirt.volume.LibvirtScalityVolumeDriver
+
+# Override the default disk prefix for the devices attached to
+# a server, which is dependent on virt_type. (valid options
+# are: sd, xvd, uvd, vd) (string value)
+#disk_prefix=<None>
+
+# Number of seconds to wait for instance to shut down after
+# soft reboot request is made. We fall back to hard reboot if
+# instance does not shutdown within this window. (integer
+# value)
+#wait_soft_reboot_seconds=120
+
+# Use a separated OS thread pool to realize non-blocking
+# libvirt calls (boolean value)
+#api_thread_pool=true
+
+# Set to "host-model" to clone the host CPU feature flags; to
+# "host-passthrough" to use the host CPU model exactly; to
+# "custom" to use a named CPU model; to "none" to not set any
+# CPU model. If virt_type="kvm|qemu", it will default to
+# "host-model", otherwise it will default to "none" (string
+# value)
+#cpu_mode=<None>
+
+# Set to a named libvirt CPU model (see names listed in
+# /usr/share/libvirt/cpu_map.xml). Only has effect if
+# cpu_mode="custom" and virt_type="kvm|qemu" (string value)
+#cpu_model=<None>
+
+# Location where libvirt driver will store snapshots before
+# uploading them to image service (string value)
+#snapshots_directory=$instances_path/snapshots
+
+# Location where the Xen hvmloader is kept (string value)
+#xen_hvmloader_path=/usr/lib/xen/boot/hvmloader
+
+# Specific cachemodes to use for different disk types e.g:
+# file=directsync,block=none (list value)
+#disk_cachemodes=
+
+# Which pcpus can be used by vcpus of instance e.g:
+# "4-12,^8,15" (string value)
+#vcpu_pin_set=<None>
 
 
 [baremetal]

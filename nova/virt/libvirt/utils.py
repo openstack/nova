@@ -406,7 +406,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
     :param is_block_dev:
     :returns: driver_name or None
     """
-    if CONF.libvirt_type == "xen":
+    if CONF.libvirt.virt_type == "xen":
         if is_block_dev:
             return "phy"
         else:
@@ -416,7 +416,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
             else:
                 return "tap2"
 
-    elif CONF.libvirt_type in ('kvm', 'qemu'):
+    elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
         return "qemu"
     else:
         # UML doesn't want a driver_name set
@@ -564,7 +564,7 @@ def find_disk(virt_dom):
     """
     xml_desc = virt_dom.XMLDesc(0)
     domain = etree.fromstring(xml_desc)
-    if CONF.libvirt_type == 'lxc':
+    if CONF.libvirt.virt_type == 'lxc':
         source = domain.find('devices/filesystem/source')
         disk_path = source.get('dir')
         disk_path = disk_path[0:disk_path.rfind('rootfs')]
