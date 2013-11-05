@@ -318,12 +318,11 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         return ret
 
     def _has_security_group_requirements(self, port):
-        port_security_enabled = port.get('port_security_enabled')
+        port_security_enabled = port.get('port_security_enabled', True)
         has_ip = port.get('fixed_ips')
-        if port_security_enabled and has_ip:
-            return True
-        else:
-            return False
+        if has_ip:
+            return port_security_enabled
+        return False
 
     @wrap_check_security_groups_policy
     def add_to_instance(self, context, instance, security_group_name):
