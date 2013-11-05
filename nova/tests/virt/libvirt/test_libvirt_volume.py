@@ -474,7 +474,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
+        libvirt_driver._get_multipath_iqn = lambda x: self.iqn
         libvirt_driver.disconnect_volume(connection_info, 'vde')
+        expected_multipath_cmd = ('multipath', '-f', 'foo')
+        self.assertIn(expected_multipath_cmd, self.executes)
 
     def test_libvirt_kvm_volume_with_multipath_getmpdev(self):
         self.flags(libvirt_iscsi_use_multipath=True)
@@ -520,7 +523,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         conf = libvirt_driver.connect_volume(connection_info, disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
+        libvirt_driver._get_multipath_iqn = lambda x: iqn
         libvirt_driver.disconnect_volume(connection_info, 'vde')
+        expected_multipath_cmd = ('multipath', '-f', 'foo')
+        self.assertIn(expected_multipath_cmd, self.executes)
 
     def test_libvirt_kvm_iser_volume_with_multipath_getmpdev(self):
         self.flags(libvirt_iser_use_multipath=True)
