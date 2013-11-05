@@ -1046,7 +1046,11 @@ class LibvirtDriver(driver.ComputeDriver):
     def _cleanup_resize(self, instance, network_info):
         target = libvirt_utils.get_instance_path(instance) + "_resize"
         if os.path.exists(target):
-            shutil.rmtree(target)
+            # Deletion can fail over NFS, so retry the deletion as required.
+            # Set maximum attempt as 5, most test can remove the directory
+            # for the second time.
+            utils.execute('rm', '-rf', target, delay_on_retry=True,
+                          attempts=5)
 
         if instance['host'] != CONF.host:
             self._undefine_domain(instance)
