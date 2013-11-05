@@ -1209,10 +1209,8 @@ class Controller(wsgi.Controller):
                 or 'adminPass' not in body['changePassword']):
             msg = _("No adminPass was specified")
             raise exc.HTTPBadRequest(explanation=msg)
-        password = body['changePassword']['adminPass']
-        if not isinstance(password, six.string_types):
-            msg = _("Invalid adminPass")
-            raise exc.HTTPBadRequest(explanation=msg)
+        password = self._get_server_admin_password(body['changePassword'])
+
         server = self._get_server(context, req, id)
         try:
             self.compute_api.set_admin_password(context, server, password)
@@ -1271,10 +1269,7 @@ class Controller(wsgi.Controller):
 
         image_href = self._image_uuid_from_href(image_href)
 
-        try:
-            password = body['adminPass']
-        except (KeyError, TypeError):
-            password = utils.generate_password()
+        password = self._get_server_admin_password(body)
 
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)

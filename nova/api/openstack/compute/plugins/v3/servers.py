@@ -1082,10 +1082,7 @@ class ServersController(wsgi.Controller):
 
         image_href = self._image_uuid_from_href(image_href)
 
-        try:
-            password = rebuild_dict['admin_pass']
-        except (KeyError, TypeError):
-            password = utils.generate_password()
+        password = self._get_server_admin_password(rebuild_dict)
 
         context = req.environ['nova.context']
         instance = self._get_server(context, req, id)
