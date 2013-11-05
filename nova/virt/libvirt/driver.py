@@ -1607,7 +1607,6 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.NovaException(msg)
 
         snapshot = vconfig.LibvirtConfigGuestSnapshot()
-        disks = []
 
         for current_name, new_filename in disks_to_snap:
             snap_disk = vconfig.LibvirtConfigGuestSnapshotDisk()
@@ -3272,7 +3271,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            disk_dev = vol['mount_device'].rpartition("/")[2]
             disk_info = blockinfo.get_info_from_bdm(CONF.libvirt_type, vol)
             conf = self.volume_driver_method('connect_volume',
                                              connection_info,
@@ -4226,7 +4224,6 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
-            disk_dev = vol['mount_device'].rpartition("/")[2]
             disk_info = blockinfo.get_info_from_bdm(CONF.libvirt_type, vol)
             self.volume_driver_method('connect_volume',
                                       connection_info,
