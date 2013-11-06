@@ -47,7 +47,9 @@ CONF.register_opts(image_opts)
 
 def qemu_img_info(path):
     """Return an object containing the parsed output from qemu-img info."""
-    if not os.path.exists(path) and CONF.libvirt_images_type != 'rbd':
+    # TODO(mikal): this code should not be referring to a libvirt specific
+    # flag.
+    if not os.path.exists(path) and CONF.libvirt.images_type != 'rbd':
         return imageutils.QemuImgInfo()
 
     out, err = utils.execute('env', 'LC_ALL=C', 'LANG=C',

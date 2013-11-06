@@ -46,32 +46,43 @@ except ImportError:
 
 
 __imagebackend_opts = [
-    cfg.StrOpt('libvirt_images_type',
-            default='default',
-            help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
-                 'rbd, default. If default is specified,'
-                 ' then use_cow_images flag is used instead of this one.'),
-    cfg.StrOpt('libvirt_images_volume_group',
-            help='LVM Volume Group that is used for VM images, when you'
-                 ' specify libvirt_images_type=lvm.'),
-    cfg.BoolOpt('libvirt_sparse_logical_volumes',
-            default=False,
-            help='Create sparse logical volumes (with virtualsize)'
-                 ' if this flag is set to True.'),
-    cfg.IntOpt('libvirt_lvm_snapshot_size',
-            default=1000,
-            help='The amount of storage (in megabytes) to allocate for LVM'
-                    ' snapshot copy-on-write blocks.'),
-    cfg.StrOpt('libvirt_images_rbd_pool',
-            default='rbd',
-            help='the RADOS pool in which rbd volumes are stored'),
-    cfg.StrOpt('libvirt_images_rbd_ceph_conf',
-            default='',  # default determined by librados
-            help='path to the ceph configuration file to use'),
+    cfg.StrOpt('images_type',
+               default='default',
+               help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
+                    'rbd, default. If default is specified,'
+                    ' then use_cow_images flag is used instead of this one.',
+               deprecated_group='DEFAULT',
+               deprecated_name='libvirt_images_type'),
+    cfg.StrOpt('images_volume_group',
+               help='LVM Volume Group that is used for VM images, when you'
+                    ' specify images_type=lvm.',
+               deprecated_group='DEFAULT',
+               deprecated_name='libvirt_images_volume_group'),
+    cfg.BoolOpt('sparse_logical_volumes',
+                default=False,
+                help='Create sparse logical volumes (with virtualsize)'
+                     ' if this flag is set to True.',
+                deprecated_group='DEFAULT',
+                deprecated_name='libvirt_sparse_logical_volumes'),
+    cfg.IntOpt('lvm_snapshot_size',
+               default=1000,
+               help='The amount of storage (in megabytes) to allocate for LVM'
+                    ' snapshot copy-on-write blocks.',
+               deprecated_group='DEFAULT'),
+    cfg.StrOpt('images_rbd_pool',
+               default='rbd',
+               help='the RADOS pool in which rbd volumes are stored',
+               deprecated_group='DEFAULT',
+               deprecated_name='libvirt_images_rdb_pool'),
+    cfg.StrOpt('images_rbd_ceph_conf',
+               default='',  # default determined by librados
+               help='path to the ceph configuration file to use',
+               deprecated_group='DEFAULT',
+               deprecated_name='libvirt_images_rdb_ceph_conf'),
         ]
 
 CONF = cfg.CONF
-CONF.register_opts(__imagebackend_opts)
+CONF.register_opts(__imagebackend_opts, 'libvirt')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.compute.manager')
 CONF.import_opt('preallocate_images', 'nova.virt.driver')
 
@@ -165,7 +176,7 @@ class Image(object):
         def call_if_not_exists(target, *args, **kwargs):
             if not os.path.exists(target):
                 fetch_func(target=target, *args, **kwargs)
-            elif CONF.libvirt_images_type == "lvm" and \
+            elif CONF.libvirt.images_type == "lvm" and \
                     'ephemeral_size' in kwargs:
                 fetch_func(target=target, *args, **kwargs)
 
@@ -346,18 +357,18 @@ class Lvm(Image):
             self.lv = info['LV']
             self.path = path
         else:
-            if not CONF.libvirt_images_volume_group:
+            if not CONF.libvirt.images_volume_group:
                 raise RuntimeError(_('You should specify'
-                                     ' libvirt_images_volume_group'
+                                     ' images_volume_group'
                                      ' flag to use LVM images.'))
-            self.vg = CONF.libvirt_images_volume_group
+            self.vg = CONF.libvirt.images_volume_group
             self.lv = '%s_%s' % (self.escape(instance['name']),
                                  self.escape(disk_name))
             self.path = os.path.join('/dev', self.vg, self.lv)
 
-        # TODO(pbrady): possibly deprecate libvirt_sparse_logical_volumes
+        # TODO(pbrady): possibly deprecate libvirt.sparse_logical_volumes
         # for the more general preallocate_images
-        self.sparse = CONF.libvirt_sparse_logical_volumes
+        self.sparse = CONF.libvirt.sparse_logical_volumes
         self.preallocate = not self.sparse
 
     def _can_fallocate(self):
@@ -457,12 +468,13 @@ class Rbd(Image):
                 raise exception.InvalidDevicePath(path=path)
         else:
             self.rbd_name = '%s_%s' % (instance['uuid'], disk_name)
-        if not CONF.libvirt_images_rbd_pool:
+
+        if not CONF.libvirt.images_rbd_pool:
             raise RuntimeError(_('You should specify'
-                                 ' libvirt_images_rbd_pool'
+                                 ' images_rbd_pool'
                                  ' flag to use rbd images.'))
-        self.pool = CONF.libvirt_images_rbd_pool
-        self.ceph_conf = ascii_str(CONF.libvirt_images_rbd_ceph_conf)
+        self.pool = CONF.libvirt.images_rbd_pool
+        self.ceph_conf = ascii_str(CONF.libvirt.images_rbd_ceph_conf)
         self.rbd_user = ascii_str(CONF.rbd_user)
         self.rbd = kwargs.get('rbd', rbd)
         self.rados = kwargs.get('rados', rados)
@@ -607,7 +619,7 @@ class Backend(object):
 
     def backend(self, image_type=None):
         if not image_type:
-            image_type = CONF.libvirt_images_type
+            image_type = CONF.libvirt.images_type
         image = self.BACKEND.get(image_type)
         if not image:
             raise RuntimeError(_('Unknown image_type=%s') % image_type)
@@ -619,7 +631,7 @@ class Backend(object):
         :instance: Instance name.
         :name: Image name.
         :image_type: Image type.
-        Optional, is CONF.libvirt_images_type by default.
+        Optional, is CONF.libvirt.images_type by default.
         """
         backend = self.backend(image_type)
         return backend(instance=instance, disk_name=disk_name)

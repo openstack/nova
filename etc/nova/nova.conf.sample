@@ -1940,36 +1940,6 @@
 
 
 #
-# Options defined in nova.virt.libvirt.imagebackend
-#
-
-# VM Images format. Acceptable values are: raw, qcow2,
-# lvm,rbd, default. If default is specified, then
-# use_cow_images flag is used instead of this one. (string
-# value)
-#libvirt_images_type=default
-
-# LVM Volume Group that is used for VM images, when you
-# specify libvirt_images_type=lvm. (string value)
-#libvirt_images_volume_group=<None>
-
-# Create sparse logical volumes (with virtualsize) if this
-# flag is set to True. (boolean value)
-#libvirt_sparse_logical_volumes=false
-
-# The amount of storage (in megabytes) to allocate for LVM
-# snapshot copy-on-write blocks. (integer value)
-#libvirt_lvm_snapshot_size=1000
-
-# the RADOS pool in which rbd volumes are stored (string
-# value)
-#libvirt_images_rbd_pool=rbd
-
-# path to the ceph configuration file to use (string value)
-#libvirt_images_rbd_ceph_conf=
-
-
-#
 # Options defined in nova.virt.libvirt.utils
 #
 
@@ -2640,6 +2610,36 @@
 # Which pcpus can be used by vcpus of instance e.g:
 # "4-12,^8,15" (string value)
 #vcpu_pin_set=<None>
+
+
+#
+# Options defined in nova.virt.libvirt.imagebackend
+#
+
+# VM Images format. Acceptable values are: raw, qcow2,
+# lvm,rbd, default. If default is specified, then
+# use_cow_images flag is used instead of this one. (string
+# value)
+#images_type=default
+
+# LVM Volume Group that is used for VM images, when you
+# specify images_type=lvm. (string value)
+#images_volume_group=<None>
+
+# Create sparse logical volumes (with virtualsize) if this
+# flag is set to True. (boolean value)
+#sparse_logical_volumes=false
+
+# The amount of storage (in megabytes) to allocate for LVM
+# snapshot copy-on-write blocks. (integer value)
+#lvm_snapshot_size=1000
+
+# the RADOS pool in which rbd volumes are stored (string
+# value)
+#images_rbd_pool=rbd
+
+# path to the ceph configuration file to use (string value)
+#images_rbd_ceph_conf=
 
 
 #

@@ -4406,7 +4406,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(conn, 'get_info', fake_get_info)
 
-        self.flags(libvirt_images_rbd_pool=fake_pool)
+        self.flags(images_rbd_pool=fake_pool, group='libvirt')
         self.mox.StubOutWithMock(libvirt_driver.libvirt_utils,
                                  'remove_rbd_volumes')
         libvirt_driver.libvirt_utils.remove_rbd_volumes(fake_pool,
