@@ -5082,7 +5082,7 @@ class ComputeTestCase(BaseTestCase):
                                                   instance,
                                                   NotImplementedError(message))
 
-    def test_cleanup_running_deleted_instances(self):
+    def _test_cleanup_running(self, action):
         admin_context = context.get_admin_context()
         deleted_at = (timeutils.utcnow() -
                       datetime.timedelta(hours=1, minutes=5))
@@ -5098,29 +5098,80 @@ class ComputeTestCase(BaseTestCase):
                             'host': self.compute.host}).AndReturn([instance1,
                                                                    instance2])
         self.flags(running_deleted_instance_timeout=3600,
-                   running_deleted_instance_action='reap')
+                   running_deleted_instance_action=action)
 
+        return admin_context, instance1, instance2
+
+    def test_cleanup_running_deleted_instances_reap(self):
         bdms = []
+
+        ctxt, inst1, inst2 = self._test_cleanup_running('reap')
 
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
         # Simulate an error and make sure cleanup proceeds with next instance.
-        self.compute._shutdown_instance(admin_context,
-                                        instance1,
-                                        bdms,
-                                        notify=False).\
+        self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False).\
                                         AndRaise(test.TestingException)
-        self.compute._shutdown_instance(admin_context,
-                                        instance2,
-                                        bdms,
-                                        notify=False).AndReturn(None)
+        self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False).\
+                                        AndReturn(None)
 
         self.mox.StubOutWithMock(self.compute, "_cleanup_volumes")
-        self.compute._cleanup_volumes(admin_context,
-                                      instance1['uuid'],
-                                      bdms).AndReturn(None)
+        self.compute._cleanup_volumes(ctxt, inst1['uuid'], bdms).\
+                                      AndReturn(None)
 
         self.mox.ReplayAll()
-        self.compute._cleanup_running_deleted_instances(admin_context)
+        self.compute._cleanup_running_deleted_instances(ctxt)
+
+    def test_cleanup_running_deleted_instances_shutdown(self):
+        ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
+
+        self.mox.StubOutWithMock(self.compute.driver, 'set_bootable')
+        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
+
+        self.compute.driver.set_bootable(inst1, False)
+        self.compute.driver.power_off(inst1)
+        self.compute.driver.set_bootable(inst2, False)
+        self.compute.driver.power_off(inst2)
+
+        self.mox.ReplayAll()
+        self.compute._cleanup_running_deleted_instances(ctxt)
+
+    def test_cleanup_running_deleted_instances_shutdown_notimpl(self):
+        ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
+
+        self.mox.StubOutWithMock(self.compute.driver, 'set_bootable')
+        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
+
+        self.compute.driver.set_bootable(inst1, False).AndRaise(
+                NotImplementedError)
+        compute_manager.LOG.warn(mox.IgnoreArg())
+        self.compute.driver.power_off(inst1)
+        self.compute.driver.set_bootable(inst2, False).AndRaise(
+                NotImplementedError)
+        compute_manager.LOG.warn(mox.IgnoreArg())
+        self.compute.driver.power_off(inst2)
+
+        self.mox.ReplayAll()
+        self.compute._cleanup_running_deleted_instances(ctxt)
+
+    def test_cleanup_running_deleted_instances_shutdown_error(self):
+        ctxt, inst1, inst2 = self._test_cleanup_running('shutdown')
+
+        self.mox.StubOutWithMock(self.compute.driver, 'set_bootable')
+        self.mox.StubOutWithMock(self.compute.driver, 'power_off')
+
+        self.mox.StubOutWithMock(compute_manager.LOG, 'exception')
+        e = test.TestingException('bad')
+
+        self.compute.driver.set_bootable(inst1, False)
+        self.compute.driver.power_off(inst1).AndRaise(e)
+        compute_manager.LOG.warn(mox.IgnoreArg())
+
+        self.compute.driver.set_bootable(inst2, False)
+        self.compute.driver.power_off(inst2).AndRaise(e)
+        compute_manager.LOG.warn(mox.IgnoreArg())
+
+        self.mox.ReplayAll()
+        self.compute._cleanup_running_deleted_instances(ctxt)
 
     def test_running_deleted_instances(self):
         admin_context = context.get_admin_context()
