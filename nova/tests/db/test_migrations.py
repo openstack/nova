@@ -3088,12 +3088,16 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                               'vcpus': 2, 'memory_mb': 256, 'uuid': 'uuid1',
                               'deleted': 0},
                              {'user_id': '234', 'project_id': '5678',
-                              'vcpus': 1, 'memory_mb': 256, 'deleted': 0}],
+                              'vcpus': 1, 'memory_mb': 256, 'deleted': 0},
+                             {'user_id': '4321', 'project_id': '1234',
+                              'vcpus': 1, 'memory_mb': 512, 'deleted': 0}],
             'security_groups': [{'user_id': '1234', 'project_id': '5678',
                                  'deleted': 0},
                                 {'user_id': '234', 'project_id': '5678',
                                  'deleted': 0},
                                 {'user_id': '234', 'project_id': '5678',
+                                 'deleted': 0},
+                                {'user_id': '4321', 'project_id': '1234',
                                  'deleted': 0}],
             'floating_ips': [{'deleted': 0, 'project_id': '5678',
                               'auto_assigned': False},
@@ -3107,10 +3111,14 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                     'resource': 'instances', 'in_use': 1, 'reserved': 0},
                 {'user_id': None, 'project_id': '5678',
                     'resource': 'instances', 'in_use': 1, 'reserved': 0},
+                {'user_id': None, 'project_id': '1234',
+                    'resource': 'instances', 'in_use': 1, 'reserved': 0},
                 {'user_id': '1234', 'project_id': '5678',
                     'resource': 'security_groups', 'in_use': 1, 'reserved': 0},
                 {'user_id': '234', 'project_id': '5678',
                     'resource': 'security_groups', 'in_use': 2, 'reserved': 0},
+                {'user_id': None, 'project_id': '1234',
+                    'resource': 'security_groups', 'in_use': 1, 'reserved': 0},
                 {'user_id': None, 'project_id': '5678',
                     'resource': 'security_groups', 'in_use': 1, 'reserved': 0},
                 {'user_id': '1234', 'project_id': '5678',
@@ -3157,7 +3165,9 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
         per_user = {'1234': {'instances': 1, 'cores': 2, 'ram': 256,
                         'security_groups': 1},
                     '234': {'instances': 1, 'cores': 1, 'ram': 256,
-                        'security_groups': 2}}
+                        'security_groups': 2},
+                    '4321': {'instances': 1, 'cores': 1, 'ram': 512,
+                        'security_groups': 1}}
 
         per_project = {'floating_ips': 2, 'fixed_ips': 1, 'networks': 1}
 
@@ -3167,6 +3177,12 @@ class TestNovaMigrations(BaseMigrationTestCase, CommonTestsMixIn):
                             quota_usages.c.resource == resource).execute(
                                     ).fetchall()
             self.assertEqual(0, len(rows))
+
+            rows = quota_usages.select().where(
+                    quota_usages.c.user_id == '4321').where(
+                            quota_usages.c.resource == resource).execute(
+                                    ).fetchall()
+            self.assertEqual(1, len(rows))
 
         for user in per_user.keys():
             rows = quota_usages.select().where(
