@@ -131,7 +131,8 @@ def create_vm(name_label, status, **kwargs):
     vm_rec = kwargs.copy()
     vm_rec.update({'name_label': name_label,
                    'domid': domid,
-                   'power_state': status})
+                   'power_state': status,
+                   'blocked_operations': {}})
     vm_ref = _create_object('VM', vm_rec)
     after_VM_create(vm_ref, vm_rec)
     return vm_ref
@@ -742,6 +743,10 @@ class SessionBase(object):
     def VM_migrate_send(self, session, mref, migrate_data, live, vdi_map,
                         vif_map, options):
         pass
+
+    def VM_remove_from_blocked_operations(self, session, vm_ref, key):
+        # operation is idempotent, XenServer doesn't care if the key exists
+        _db_content['VM'][vm_ref]['blocked_operations'].pop(key, None)
 
     def xenapi_request(self, methodname, params):
         if methodname.startswith('login'):

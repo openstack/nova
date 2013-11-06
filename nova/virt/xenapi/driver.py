@@ -307,6 +307,10 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.rescue(context, instance, network_info, image_meta,
                            rescue_password)
 
+    def set_bootable(self, instance, is_bootable):
+        """Set the ability to power on/off an instance."""
+        self._vmops.set_bootable(instance, is_bootable)
+
     def unrescue(self, instance, network_info):
         """Unrescue the specified instance."""
         self._vmops.unrescue(instance)

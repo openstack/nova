@@ -688,6 +688,10 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
         self.connection.emit_event(event1)
 
+    def test_set_bootable(self):
+        self.assertRaises(NotImplementedError, self.connection.set_bootable,
+                          'instance', True)
+
 
 class AbstractDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def setUp(self):

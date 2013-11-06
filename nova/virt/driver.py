@@ -445,6 +445,10 @@ class ComputeDriver(object):
         """Rescue the specified instance."""
         raise NotImplementedError()
 
+    def set_bootable(self, instance, is_bootable):
+        """Set the ability to power on/off an instance."""
+        raise NotImplementedError()
+
     def unrescue(self, instance, network_info):
         """Unrescue the specified instance."""
         # TODO(Vek): Need to pass context in for access to auth_token
