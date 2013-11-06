@@ -916,19 +916,17 @@ class NetworkManager(manager.Manager):
 
             if CONF.force_dhcp_release:
                 dev = self.driver.get_dev(network)
-                # NOTE(vish): The below errors should never happen, but there
-                #             may be a race condition that is causing them per
-                #             https://code.launchpad.net/bugs/968457, so we log
-                #             an error to help track down the possible race.
-                msg = _("Unable to release %s because vif doesn't exist.")
+
                 if not vif_id:
-                    LOG.error(msg % address)
+                    # NOTE(russellb) This will get hit if we're tearing down an
+                    # instance before it finished getting created.  In that
+                    # case a vif may never have been associated with the
+                    # fixed_ip.
                     return
 
                 vif = vif_obj.VirtualInterface.get_by_id(context, vif_id)
 
                 if not vif:
-                    LOG.error(msg % address)
                     return
 
                 # NOTE(cfb): Call teardown before release_dhcp to ensure
