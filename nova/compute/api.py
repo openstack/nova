@@ -1346,6 +1346,8 @@ class API(base.Base):
         else:
             user_id = context.user_id
 
+        original_task_state = instance.task_state
+
         try:
             # NOTE(maoy): no expected_task_state needs to be set
             instance.update(instance_attrs)
@@ -1403,6 +1405,16 @@ class API(base.Base):
                     context.elevated(), instance.host)
                 if self.servicegroup_api.service_is_up(service):
                     is_up = True
+
+                    if original_task_state in (task_states.DELETING,
+                                                  task_states.SOFT_DELETING):
+                        LOG.info(_('Instance is already in deleting state, '
+                                   'ignoring this request'), instance=instance)
+                        if reservations:
+                            QUOTAS.rollback(context, reservations,
+                                            project_id=project_id,
+                                            user_id=user_id)
+                        return
 
                     self._record_action_start(context, instance,
                                               instance_actions.DELETE)
