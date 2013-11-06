@@ -72,7 +72,7 @@ __imagebackend_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts)
-CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
+CONF.import_opt('image_cache_subdirectory_name', 'nova.compute.manager')
 CONF.import_opt('preallocate_images', 'nova.virt.driver')
 
 LOG = logging.getLogger(__name__)
@@ -169,7 +169,8 @@ class Image(object):
                     'ephemeral_size' in kwargs:
                 fetch_func(target=target, *args, **kwargs)
 
-        base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
+        base_dir = os.path.join(CONF.instances_path,
+                                CONF.image_cache_subdirectory_name)
         if not os.path.exists(base_dir):
             fileutils.ensure_tree(base_dir)
         base = os.path.join(base_dir, filename)

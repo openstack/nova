@@ -101,6 +101,12 @@ compute_opts = [
     cfg.StrOpt('instances_path',
                default=paths.state_path_def('instances'),
                help='where instances are stored on disk'),
+    cfg.StrOpt('image_cache_subdirectory_name',
+               default='_base',
+               help="Where cached images are stored under $instances_path."
+                    "This is NOT the full path - just a folder name."
+                    "For per-compute-host cached images, set to _base_$my_ip",
+               deprecated_name='base_dir_name'),
     cfg.BoolOpt('instance_usage_audit',
                default=False,
                help="Generate periodic compute.instance.exists notifications"),
