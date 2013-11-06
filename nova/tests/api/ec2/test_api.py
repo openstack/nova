@@ -18,7 +18,6 @@
 
 """Unit tests for the API endpoint."""
 
-import pkg_resources
 import random
 import re
 import StringIO
@@ -43,6 +42,7 @@ from nova import block_device
 from nova import context
 from nova import exception
 from nova.openstack.common import timeutils
+from nova.openstack.common import versionutils
 from nova import test
 from nova.tests import matchers
 
@@ -273,11 +273,10 @@ class ApiEc2TestCase(test.TestCase):
         self.http = FakeHttplibConnection(
                 self.app, '%s:8773' % (self.host), False)
         # pylint: disable=E1103
-        boto_version = pkg_resources.parse_version(boto.Version)
-        if boto_version >= (2, 13):
+        if versionutils.is_compatible('2.14', boto.Version, same_major=False):
             self.ec2.new_http_connection(host or self.host, 8773,
                 is_secure).AndReturn(self.http)
-        elif boto_version >= (2,):
+        elif versionutils.is_compatible('2', boto.Version, same_major=False):
             self.ec2.new_http_connection(host or '%s:8773' % (self.host),
                 is_secure).AndReturn(self.http)
         else:
