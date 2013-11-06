@@ -2360,43 +2360,6 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance=instance)
 
-    def test_live_snapshot(self):
-        # Ensure instance can be live_snapshotted.
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        name = "myfakesnapshot"
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.IMAGE_LIVE_SNAPSHOT})
-        self.compute.live_snapshot_instance(self.context, name,
-                                            instance=instance)
-        self.compute.terminate_instance(self.context, instance=instance)
-
-    def test_live_snapshot_fails(self):
-        # Ensure task_state is set to None if snapshot fails.
-        def fake_live_snapshot(*args, **kwargs):
-            raise test.TestingException()
-
-        self.fake_image_delete_called = False
-
-        def fake_delete(self_, context, image_id):
-            self.fake_image_delete_called = True
-
-        self.stubs.Set(self.compute.driver, 'live_snapshot',
-                       fake_live_snapshot)
-        fake_image.stub_out_image_service(self.stubs)
-        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
-
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance=instance)
-        db.instance_update(self.context, instance['uuid'],
-                           {"task_state": task_states.IMAGE_LIVE_SNAPSHOT})
-        self.assertRaises(test.TestingException,
-                          self.compute.live_snapshot_instance,
-                          self.context, "failing_snapshot", instance=instance)
-        self.assertTrue(self.fake_image_delete_called)
-        self._assert_state({'task_state': None})
-        self.compute.terminate_instance(self.context, instance=instance)
-
     def _get_snapshotting_instance(self):
         # Ensure instance can be snapshotted.
         instance = jsonutils.to_primitive(self._create_fake_instance())

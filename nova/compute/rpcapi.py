@@ -209,6 +209,7 @@ class ComputeAPI(rpcclient.RpcProxy):
 
         2.48 - Make add_aggregate_host() and remove_aggregate_host() take
                new-world objects
+        ...  - Remove live_snapshot() that was never actually used
     '''
 
     #
@@ -706,13 +707,6 @@ class ComputeAPI(rpcclient.RpcProxy):
         return cctxt.call(ctxt, 'reserve_block_device_name',
                           instance=instance_p, device=device,
                           volume_id=volume_id)
-
-    def live_snapshot_instance(self, ctxt, instance, image_id):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.30')
-        cctxt.cast(ctxt, 'live_snapshot_instance',
-                   instance=instance_p, image_id=image_id)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):

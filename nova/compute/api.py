@@ -1807,34 +1807,6 @@ class API(base.Base):
             limit=limit, marker=marker, expected_attrs=fields)
 
     @wrap_check_policy
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED])
-    def live_snapshot(self, context, instance, name, extra_properties=None,
-                 image_id=None):
-        """Live Snapshot the given instance.
-
-        :param instance: nova.db.sqlalchemy.models.Instance
-        :param name: name of the backup or snapshot
-        :param extra_properties: dict of extra image properties to include
-
-        :returns: A dict containing image metadata
-        """
-        if image_id:
-            # The image entry has already been created, so just pull the
-            # metadata.
-            image_meta = self.image_service.show(context, image_id)
-        else:
-            image_meta = self._create_image(context, instance, name,
-                    'snapshot', extra_properties=extra_properties)
-
-        instance = self.update(context, instance,
-                               task_state=task_states.IMAGE_LIVE_SNAPSHOT,
-                               expected_task_state=None)
-
-        self.compute_rpcapi.live_snapshot_instance(context, instance=instance,
-                image_id=image_meta['id'])
-        return image_meta
-
-    @wrap_check_policy
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def backup(self, context, instance, name, backup_type, rotation,

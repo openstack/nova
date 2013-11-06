@@ -351,17 +351,6 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def live_snapshot(self, context, instance, image_id, update_task_state):
-        """
-        Live-snapshots the specified instance (includes ram and proc state).
-
-        :param context: security context
-        :param instance: Instance object as returned by DB layer.
-        :param image_id: Reference to a pre-created image that will
-                         hold the snapshot.
-        """
-        raise NotImplementedError()
-
     def snapshot(self, context, instance, image_id, update_task_state):
         """
         Snapshots the specified instance.

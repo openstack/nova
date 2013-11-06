@@ -174,8 +174,7 @@ class StatsTestCase(test.NoDBTestCase):
         vms = [vm_states.ACTIVE, vm_states.BUILDING, vm_states.PAUSED]
         tasks = [task_states.RESIZE_MIGRATING, task_states.REBUILDING,
                  task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
-                 task_states.IMAGE_LIVE_SNAPSHOT, task_states.IMAGE_BACKUP,
-                 task_states.RESCUING]
+                 task_states.IMAGE_BACKUP, task_states.RESCUING]
 
         for state in vms:
             self.stats._increment("num_vm_" + state)
