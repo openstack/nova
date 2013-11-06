@@ -36,6 +36,7 @@ from nova.virt import configdrive
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import imagecache
 from nova.virt.hyperv import utilsfactory
+from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import volumeops
 
@@ -157,13 +158,22 @@ class VMOps(object):
                 self._pathutils.copyfile(base_vhd_path, root_vhd_path)
 
                 base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
-                base_vhd_size = base_vhd_info['FileSize']
+                base_vhd_size = base_vhd_info['MaxInternalSize']
                 root_vhd_size = instance['root_gb'] * 1024 ** 3
 
-                if root_vhd_size < base_vhd_size:
+                # NOTE(lpetrut): Checking the namespace is needed as the
+                # following method is not yet implemented in vhdutilsv2.
+                if not isinstance(self._vhdutils, vhdutilsv2.VHDUtilsV2):
+                    root_vhd_internal_size = (
+                        self._vhdutils.get_internal_vhd_size_by_file_size(
+                            root_vhd_path, root_vhd_size))
+                else:
+                    root_vhd_internal_size = root_vhd_size
+
+                if root_vhd_internal_size < base_vhd_size:
                     raise vmutils.HyperVException(_("Cannot resize a VHD to a "
                                                     "smaller size"))
-                elif root_vhd_size > base_vhd_size:
+                elif root_vhd_internal_size > base_vhd_size:
                     LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
                                 "size %(root_vhd_size)s"),
                               {'base_vhd_path': base_vhd_path,
