@@ -272,8 +272,8 @@ class LibvirtVifTestCase(test.TestCase):
     def _get_instance_xml(self, driver, vif, image_meta=None):
         default_inst_type = flavors.get_default_flavor()
         extra_specs = default_inst_type['extra_specs'].items()
-        quota_bandwith = self.bandwidth.items()
-        default_inst_type['extra_specs'] = dict(extra_specs + quota_bandwith)
+        quota_bandwidth = self.bandwidth.items()
+        default_inst_type['extra_specs'] = dict(extra_specs + quota_bandwidth)
         conf = self._get_conf()
         nic = driver.get_config(self.instance, vif, image_meta,
                                 default_inst_type)
