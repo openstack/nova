@@ -25,6 +25,7 @@ import sys
 import uuid
 
 from oslo.config import cfg
+import six
 
 from nova import context
 from nova import db
@@ -87,6 +88,8 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
         'rxtx_factor': rxtx_factor,
     }
 
+    if isinstance(name, six.string_types):
+        name = name.strip()
     # ensure name do not exceed 255 characters
     utils.check_string_length(name, 'name', min_length=1, max_length=255)
 

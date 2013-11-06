@@ -415,6 +415,9 @@ class CreateInstanceTypeTest(test.TestCase):
         # Flavor name which is empty should cause an error
         self.assertInvalidInput('', 64, 1, 120)
 
+    def test_all_whitespace_flavor_names_rejected(self):
+        self.assertInvalidInput(' ', 64, 1, 120)
+
     def test_flavorid_with_invalid_characters(self):
         # Ensure Flavor ID can only contain [a-zA-Z0-9_.- ]
         self.assertInvalidInput('a', 64, 1, 120, flavorid=u'\u2605')
