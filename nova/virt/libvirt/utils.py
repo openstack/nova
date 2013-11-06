@@ -35,14 +35,16 @@ from nova import utils
 from nova.virt import images
 
 libvirt_opts = [
-    cfg.BoolOpt('libvirt_snapshot_compression',
+    cfg.BoolOpt('snapshot_compression',
                 default=False,
                 help='Compress snapshot images when possible. This '
-                     'currently applies exclusively to qcow2 images'),
+                     'currently applies exclusively to qcow2 images',
+                deprecated_group='DEFAULT',
+                deprecated_name='libvirt_snashot_compression'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(libvirt_opts)
+CONF.register_opts(libvirt_opts, 'libvirt')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
@@ -519,7 +521,7 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
     qemu_img_cmd = ('qemu-img', 'convert', '-f', source_fmt, '-O', dest_fmt)
 
     # Conditionally enable compression of snapshots.
-    if CONF.libvirt_snapshot_compression and dest_fmt == "qcow2":
+    if CONF.libvirt.snapshot_compression and dest_fmt == "qcow2":
         qemu_img_cmd += ('-c',)
 
     qemu_img_cmd += (disk_path, out_path)

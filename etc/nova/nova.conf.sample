@@ -1940,15 +1940,6 @@
 
 
 #
-# Options defined in nova.virt.libvirt.utils
-#
-
-# Compress snapshot images when possible. This currently
-# applies exclusively to qcow2 images (boolean value)
-#libvirt_snapshot_compression=false
-
-
-#
 # Options defined in nova.virt.libvirt.vif
 #
 
@@ -2672,6 +2663,15 @@
 
 # How frequently to checksum base images (integer value)
 #checksum_interval_seconds=3600
+
+
+#
+# Options defined in nova.virt.libvirt.utils
+#
+
+# Compress snapshot images when possible. This currently
+# applies exclusively to qcow2 images (boolean value)
+#snapshot_compression=false
 
 
 [baremetal]
