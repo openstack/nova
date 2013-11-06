@@ -91,7 +91,7 @@ class FakeVirtAPITest(VirtAPIBaseTest):
         else:
             e_args = args
 
-        if method in ('block_device_mapping_get_all_by_instance'):
+        if method == 'block_device_mapping_get_all_by_instance':
             e_kwargs = {}
         else:
             e_kwargs = kwargs

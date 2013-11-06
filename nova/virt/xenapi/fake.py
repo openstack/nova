@@ -539,7 +539,7 @@ class SessionBase(object):
         _db_content['SR'][sr_ref]['uuid'] = sr_uuid
         _db_content['SR'][sr_ref]['forgotten'] = 0
         vdi_per_lun = False
-        if type in ('iscsi'):
+        if type == 'iscsi':
             # Just to be clear
             vdi_per_lun = True
         if vdi_per_lun:
