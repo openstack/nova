@@ -39,6 +39,14 @@ hyper_volumeops_opts = [
     cfg.IntOpt('volume_attach_retry_interval',
                default=5,
                help='Interval between volume attachment attempts, in seconds'),
+    cfg.IntOpt('mounted_disk_query_retry_count',
+               default=10,
+               help='The number of times to retry checking for a disk mounted '
+                    'via iSCSI.'),
+    cfg.IntOpt('mounted_disk_query_retry_interval',
+               default=5,
+               help='Interval between checks for a mounted iSCSI '
+                    'disk, in seconds.'),
 ]
 
 CONF = cfg.CONF
@@ -192,8 +200,21 @@ class VolumeOps(object):
 
     def _get_mounted_disk_from_lun(self, target_iqn, target_lun,
                                    wait_for_device=False):
-        device_number = self._volutils.get_device_number_for_target(target_iqn,
-                                                                    target_lun)
+        # The WMI query in get_device_number_for_target can incorrectly
+        # return no data when the system is under load.  This issue can
+        # be avoided by adding a retry.
+        for i in xrange(CONF.hyperv.mounted_disk_query_retry_count):
+            device_number = self._volutils.get_device_number_for_target(
+                            target_iqn, target_lun)
+            if device_number is None:
+                attempt = i + 1
+                LOG.debug(_('Attempt %d to get device_number '
+                          'from get_device_number_for_target failed. '
+                          'Retrying...') % attempt)
+                time.sleep(CONF.hyperv.mounted_disk_query_retry_interval)
+            else:
+                break
+
         if device_number is None:
             raise exception.NotFound(_('Unable to find a mounted disk for '
                                        'target_iqn: %s') % target_iqn)

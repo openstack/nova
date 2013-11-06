@@ -18,6 +18,7 @@
 Test suite for the Hyper-V driver and related APIs.
 """
 
+import contextlib
 import io
 import os
 import platform
@@ -60,6 +61,7 @@ from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vhdutilsv2
 from nova.virt.hyperv import vmutils
 from nova.virt.hyperv import vmutilsv2
+from nova.virt.hyperv import volumeops
 from nova.virt.hyperv import volumeutils
 from nova.virt.hyperv import volumeutilsv2
 from nova.virt import images
@@ -1636,3 +1638,52 @@ class HyperVAPITestCase(test.NoDBTestCase):
                     self._test_spawn_instance, [], None)
             mock_destroy.assert_called_once_with(self._context,
                     self._test_spawn_instance, [], None)
+
+
+class VolumeOpsTestCase(HyperVAPITestCase):
+    """Unit tests for VolumeOps class."""
+
+    def setUp(self):
+        super(VolumeOpsTestCase, self).setUp()
+        self.volumeops = volumeops.VolumeOps()
+
+    def test_get_mounted_disk_from_lun(self):
+        with contextlib.nested(
+            mock.patch.object(self.volumeops._volutils,
+                              'get_device_number_for_target'),
+            mock.patch.object(self.volumeops._vmutils,
+                              'get_mounted_disk_by_drive_number')
+            ) as (mock_get_device_number_for_target,
+                  mock_get_mounted_disk_by_drive_number):
+
+            mock_get_device_number_for_target.return_value = 0
+            mock_get_mounted_disk_by_drive_number.return_value = 'disk_path'
+
+            block_device_info = db_fakes.get_fake_block_device_info(
+                self._volume_target_portal, self._volume_id)
+
+            mapping = driver.block_device_info_get_mapping(block_device_info)
+            data = mapping[0]['connection_info']['data']
+            target_lun = data['target_lun']
+            target_iqn = data['target_iqn']
+
+            disk = self.volumeops._get_mounted_disk_from_lun(target_iqn,
+                                                             target_lun)
+            self.assertEqual(disk, 'disk_path')
+
+    def test_get_mounted_disk_from_lun_failure(self):
+        with mock.patch.object(self.volumeops._volutils,
+                               'get_device_number_for_target') as m_device_num:
+            m_device_num.return_value = None
+
+            block_device_info = db_fakes.get_fake_block_device_info(
+                self._volume_target_portal, self._volume_id)
+
+            mapping = driver.block_device_info_get_mapping(block_device_info)
+            data = mapping[0]['connection_info']['data']
+            target_lun = data['target_lun']
+            target_iqn = data['target_iqn']
+
+            self.assertRaises(exception.NotFound,
+                              self.volumeops._get_mounted_disk_from_lun,
+                              target_iqn, target_lun)
