@@ -45,6 +45,10 @@ docker_opts = [
                default=5042,
                help=_('Default TCP port to find the '
                       'docker-registry container')),
+    cfg.StrOpt('docker_registry_ip',
+               default='127.0.0.1',
+               help=_('Default IP address to find the '
+                      'docker-registry container')),
 ]
 
 CONF = cfg.CONF
@@ -271,7 +275,7 @@ class DockerDriver(driver.ComputeDriver):
             raise exception.InstanceDeployFailure(msg.format(fmt),
                 instance_id=instance['name'])
         registry_port = self._get_registry_port()
-        return '{0}:{1}/{2}'.format(CONF.my_ip,
+        return '{0}:{1}/{2}'.format(CONF.docker_registry_ip,
                                     registry_port,
                                     image['name'])
 
@@ -384,7 +388,7 @@ class DockerDriver(driver.ComputeDriver):
         registry_port = self._get_registry_port()
         name = image['name']
         default_tag = (':' not in name)
-        name = '{0}:{1}/{2}'.format(CONF.my_ip,
+        name = '{0}:{1}/{2}'.format(CONF.docker_registry_ip,
                                     registry_port,
                                     name)
         commit_name = name if not default_tag else name + ':latest'
