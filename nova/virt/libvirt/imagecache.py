@@ -46,34 +46,41 @@ imagecache_opts = [
                default='$instances_path/$image_cache_subdirectory_name/'
                        '%(image)s.info',
                help='Allows image information files to be stored in '
-                    'non-standard locations'),
+                    'non-standard locations',
+               deprecated_group='DEFAULT'),
     cfg.BoolOpt('remove_unused_base_images',
                 default=True,
-                help='Should unused base images be removed?'),
+                help='Should unused base images be removed?',
+                deprecated_group='DEFAULT'),
     cfg.BoolOpt('remove_unused_kernels',
                 default=False,
                 help='Should unused kernel images be removed? This is only '
                      'safe to enable if all compute nodes have been updated '
-                     'to support this option. This will enabled by default '
-                     'in future.'),
+                     'to support this option. This will be enabled by default '
+                     'in future.',
+                deprecated_group='DEFAULT'),
     cfg.IntOpt('remove_unused_resized_minimum_age_seconds',
                default=3600,
                help='Unused resized base images younger than this will not be '
-                    'removed'),
+                    'removed',
+               deprecated_group='DEFAULT'),
     cfg.IntOpt('remove_unused_original_minimum_age_seconds',
                default=(24 * 3600),
                help='Unused unresized base images younger than this will not '
-                    'be removed'),
+                    'be removed',
+               deprecated_group='DEFAULT'),
     cfg.BoolOpt('checksum_base_images',
                 default=False,
-                help='Write a checksum for files in _base to disk'),
+                help='Write a checksum for files in _base to disk',
+               deprecated_group='DEFAULT'),
     cfg.IntOpt('checksum_interval_seconds',
                default=3600,
-               help='How frequently to checksum base images'),
+               help='How frequently to checksum base images',
+               deprecated_group='DEFAULT'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(imagecache_opts)
+CONF.register_opts(imagecache_opts, 'libvirt')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.compute.manager')
@@ -96,7 +103,8 @@ def get_cache_fname(images, key):
     assume this.
     """
     image_id = str(images[key])
-    if not CONF.remove_unused_kernels and key in ['kernel_id', 'ramdisk_id']:
+    if ((not CONF.libvirt.remove_unused_kernels and
+         key in ['kernel_id', 'ramdisk_id'])):
         return image_id
     else:
         return hashlib.sha1(image_id).hexdigest()
@@ -110,7 +118,7 @@ def get_info_filename(base_path):
     """
 
     base_file = os.path.basename(base_path)
-    return (CONF.image_info_filename_pattern
+    return (CONF.libvirt.image_info_filename_pattern
             % {'image': base_file})
 
 
@@ -118,7 +126,7 @@ def is_valid_info_file(path):
     """Test if a given path matches the pattern for info files."""
 
     digest_size = hashlib.sha1().digestsize * 2
-    regexp = (CONF.image_info_filename_pattern
+    regexp = (CONF.libvirt.image_info_filename_pattern
               % {'image': ('([0-9a-f]{%(digest_size)d}|'
                            '[0-9a-f]{%(digest_size)d}_sm|'
                            '[0-9a-f]{%(digest_size)d}_[0-9]+)'
@@ -394,7 +402,7 @@ class ImageCacheManager(object):
         handle manually when it occurs.
         """
 
-        if not CONF.checksum_base_images:
+        if not CONF.libvirt.checksum_base_images:
             return None
 
         lock_name = 'hash-%s' % os.path.split(base_file)[-1]
@@ -411,7 +419,7 @@ class ImageCacheManager(object):
                 # shared storage), then we don't need to checksum again.
                 if (stored_timestamp and
                     time.time() - stored_timestamp <
-                        CONF.checksum_interval_seconds):
+                        CONF.libvirt.checksum_interval_seconds):
                     return True
 
                 # NOTE(mikal): If there is no timestamp, then the checksum was
@@ -441,7 +449,7 @@ class ImageCacheManager(object):
                 # NOTE(mikal): If the checksum file is missing, then we should
                 # create one. We don't create checksums when we download images
                 # from glance because that would delay VM startup.
-                if CONF.checksum_base_images and create_if_missing:
+                if CONF.libvirt.checksum_base_images and create_if_missing:
                     LOG.info(_('%(id)s (%(base_file)s): generating checksum'),
                              {'id': img_id,
                               'base_file': base_file})
@@ -464,9 +472,9 @@ class ImageCacheManager(object):
         mtime = os.path.getmtime(base_file)
         age = time.time() - mtime
 
-        maxage = CONF.remove_unused_resized_minimum_age_seconds
+        maxage = CONF.libvirt.remove_unused_resized_minimum_age_seconds
         if base_file in self.originals:
-            maxage = CONF.remove_unused_original_minimum_age_seconds
+            maxage = CONF.libvirt.remove_unused_original_minimum_age_seconds
 
         if age < maxage:
             LOG.info(_('Base file too young to remove: %s'),
@@ -614,7 +622,7 @@ class ImageCacheManager(object):
             LOG.info(_('Removable base files: %s'),
                      ' '.join(self.removable_base_files))
 
-            if CONF.remove_unused_base_images:
+            if CONF.libvirt.remove_unused_base_images:
                 for base_file in self.removable_base_files:
                     self._remove_base_file(base_file)
 

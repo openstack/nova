@@ -1970,38 +1970,6 @@
 
 
 #
-# Options defined in nova.virt.libvirt.imagecache
-#
-
-# Allows image information files to be stored in non-standard
-# locations (string value)
-#image_info_filename_pattern=$instances_path/$image_cache_subdirectory_name/%(image)s.info
-
-# Should unused base images be removed? (boolean value)
-#remove_unused_base_images=true
-
-# Should unused kernel images be removed? This is only safe to
-# enable if all compute nodes have been updated to support
-# this option. This will enabled by default in future.
-# (boolean value)
-#remove_unused_kernels=false
-
-# Unused resized base images younger than this will not be
-# removed (integer value)
-#remove_unused_resized_minimum_age_seconds=3600
-
-# Unused unresized base images younger than this will not be
-# removed (integer value)
-#remove_unused_original_minimum_age_seconds=86400
-
-# Write a checksum for files in _base to disk (boolean value)
-#checksum_base_images=false
-
-# How frequently to checksum base images (integer value)
-#checksum_interval_seconds=3600
-
-
-#
 # Options defined in nova.virt.libvirt.utils
 #
 
@@ -2672,6 +2640,38 @@
 # Which pcpus can be used by vcpus of instance e.g:
 # "4-12,^8,15" (string value)
 #vcpu_pin_set=<None>
+
+
+#
+# Options defined in nova.virt.libvirt.imagecache
+#
+
+# Allows image information files to be stored in non-standard
+# locations (string value)
+#image_info_filename_pattern=$instances_path/$image_cache_subdirectory_name/%(image)s.info
+
+# Should unused base images be removed? (boolean value)
+#remove_unused_base_images=true
+
+# Should unused kernel images be removed? This is only safe to
+# enable if all compute nodes have been updated to support
+# this option. This will be enabled by default in future.
+# (boolean value)
+#remove_unused_kernels=false
+
+# Unused resized base images younger than this will not be
+# removed (integer value)
+#remove_unused_resized_minimum_age_seconds=3600
+
+# Unused unresized base images younger than this will not be
+# removed (integer value)
+#remove_unused_original_minimum_age_seconds=86400
+
+# Write a checksum for files in _base to disk (boolean value)
+#checksum_base_images=false
+
+# How frequently to checksum base images (integer value)
+#checksum_interval_seconds=3600
 
 
 [baremetal]
