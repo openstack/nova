@@ -62,7 +62,7 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                   {}, jdata)
-        self.assertEquals({}, fake.get_configuration())
+        self.assertEqual({}, fake.get_configuration())
         self.assertFalse(fake.file_was_loaded)
 
     def test_get_configuration_first_time_empty_file(self):
@@ -75,7 +75,7 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                   {}, jdata)
-        self.assertEquals({}, fake.get_configuration('foo.json'))
+        self.assertEqual({}, fake.get_configuration('foo.json'))
         self.assertTrue(fake.file_was_loaded)
 
     def test_get_configuration_first_time_happy_day(self):
@@ -89,7 +89,7 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                   {}, jdata)
-        self.assertEquals(data, fake.get_configuration('foo.json'))
+        self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertTrue(fake.file_was_loaded)
 
     def test_get_configuration_second_time_no_change(self):
@@ -103,7 +103,7 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                                  data, jdata)
-        self.assertEquals(data, fake.get_configuration('foo.json'))
+        self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertFalse(fake.file_was_loaded)
 
     def test_get_configuration_second_time_too_fast(self):
@@ -118,7 +118,7 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                             old_data, jdata)
-        self.assertEquals(old_data, fake.get_configuration('foo.json'))
+        self.assertEqual(old_data, fake.get_configuration('foo.json'))
         self.assertFalse(fake.file_was_loaded)
 
     def test_get_configuration_second_time_change(self):
@@ -133,5 +133,5 @@ class SchedulerOptionsTestCase(test.NoDBTestCase):
 
         fake = FakeSchedulerOptions(last_checked, now, file_old, file_now,
                                                             old_data, jdata)
-        self.assertEquals(data, fake.get_configuration('foo.json'))
+        self.assertEqual(data, fake.get_configuration('foo.json'))
         self.assertTrue(fake.file_was_loaded)

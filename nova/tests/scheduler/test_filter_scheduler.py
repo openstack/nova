@@ -195,7 +195,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'os_type': 'Linux'}}
         self.mox.ReplayAll()
         weighed_hosts = sched._schedule(fake_context, request_spec, {})
-        self.assertEquals(len(weighed_hosts), 10)
+        self.assertEqual(len(weighed_hosts), 10)
         for weighed_host in weighed_hosts:
             self.assertIsNotNone(weighed_host.obj)
 
@@ -529,9 +529,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 filter_properties=filter_properties)
 
         # one host should be chosen
-        self.assertEquals(1, len(hosts))
+        self.assertEqual(1, len(hosts))
 
-        self.assertEquals(50, hosts[0].weight)
+        self.assertEqual(50, hosts[0].weight)
 
     def test_select_hosts_happy_day(self):
         """select_hosts is basically a wrapper around the _select() method.
@@ -572,8 +572,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                                 'os_type': 'Linux'}}
         self.mox.ReplayAll()
         hosts = sched.select_hosts(fake_context, request_spec, {})
-        self.assertEquals(len(hosts), 10)
-        self.assertEquals(hosts, selected_hosts)
+        self.assertEqual(len(hosts), 10)
+        self.assertEqual(hosts, selected_hosts)
 
     def test_select_hosts_no_valid_host(self):
 
@@ -626,8 +626,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.mox.ReplayAll()
         dests = sched.select_destinations(fake_context, request_spec, {})
         (host, node) = (dests[0]['host'], dests[0]['nodename'])
-        self.assertEquals(host, selected_hosts[0])
-        self.assertEquals(node, selected_nodes[0])
+        self.assertEqual(host, selected_hosts[0])
+        self.assertEqual(node, selected_nodes[0])
 
     def test_select_destinations_no_valid_host(self):
 
