@@ -127,6 +127,10 @@ class BaseVolumeUtils(object):
             return None
 
         devices = initiator_sessions[0].Devices
+
+        if not devices:
+            return None
+
         for device in devices:
             if device.ScsiLun == target_lun:
                 return device.DeviceNumber
