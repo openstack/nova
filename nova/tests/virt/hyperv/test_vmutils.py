@@ -28,6 +28,8 @@ class VMUtilsTestCase(test.NoDBTestCase):
     _FAKE_VM_NAME = 'fake_vm'
     _FAKE_MEMORY_MB = 2
     _FAKE_VM_PATH = "fake_vm_path"
+    _FAKE_VHD_PATH = "fake_vhd_path"
+    _FAKE_VOLUME_DRIVE_PATH = "fake_volume_drive_path"
 
     def setUp(self):
         self._vmutils = vmutils.VMUtils()
@@ -75,3 +77,29 @@ class VMUtilsTestCase(test.NoDBTestCase):
             self.assertTrue(mock_s.DynamicMemoryEnabled)
         else:
             self.assertFalse(mock_s.DynamicMemoryEnabled)
+
+    def test_get_vm_storage_paths(self):
+        mock_vm = self._lookup_vm()
+
+        mock_vmsettings = [mock.MagicMock()]
+        mock_vm.associators.return_value = mock_vmsettings
+        mock_rasds = []
+        mock_rasd1 = mock.MagicMock()
+        mock_rasd1.ResourceSubType = self._vmutils._IDE_DISK_RES_SUB_TYPE
+        mock_rasd1.Connection = [self._FAKE_VHD_PATH]
+        mock_rasd2 = mock.MagicMock()
+        mock_rasd2.ResourceSubType = self._vmutils._PHYS_DISK_RES_SUB_TYPE
+        mock_rasd2.HostResource = [self._FAKE_VOLUME_DRIVE_PATH]
+        mock_rasds.append(mock_rasd1)
+        mock_rasds.append(mock_rasd2)
+        mock_vmsettings[0].associators.return_value = mock_rasds
+
+        storage = self._vmutils.get_vm_storage_paths(self._FAKE_VM_NAME)
+        (disk_files, volume_drives) = storage
+
+        mock_vm.associators.assert_called_with(
+            wmi_result_class='Msvm_VirtualSystemSettingData')
+        mock_vmsettings[0].associators.assert_called_with(
+            wmi_result_class='Msvm_ResourceAllocationSettingData')
+        self.assertEqual([self._FAKE_VHD_PATH], disk_files)
+        self.assertEqual([self._FAKE_VOLUME_DRIVE_PATH], volume_drives)

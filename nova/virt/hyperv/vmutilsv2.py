@@ -58,6 +58,10 @@ class VMUtilsV2(vmutils.VMUtils):
 
     _METRIC_ENABLED = 2
 
+    _STORAGE_ALLOC_SETTING_DATA_CLASS = 'Msvm_StorageAllocationSettingData'
+    _ETHERNET_PORT_ALLOCATION_SETTING_DATA_CLASS = \
+    'Msvm_EthernetPortAllocationSettingData'
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
                             constants.HYPERV_VM_STATE_REBOOT: 11,
@@ -81,12 +85,12 @@ class VMUtilsV2(vmutils.VMUtils):
                                             SystemSettings=vs_data.GetText_(1))
         job = self.check_ret_val(ret_val, job_path)
         if not vm_path and job:
-            vm_path = job.associators("Msvm_AffectedJobElement")[0]
+            vm_path = job.associators(self._AFFECTED_JOB_ELEMENT_CLASS)[0]
         return self._get_wmi_obj(vm_path)
 
     def _get_vm_setting_data(self, vm):
         vmsettings = vm.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         # Avoid snapshots
         return [s for s in vmsettings if
                 s.VirtualSystemType == self._VIRTUAL_SYSTEM_TYPE_REALIZED][0]
@@ -120,7 +124,7 @@ class VMUtilsV2(vmutils.VMUtils):
             res_sub_type = self._IDE_DVD_RES_SUB_TYPE
 
         res = self._get_new_resource_setting_data(
-            res_sub_type, 'Msvm_StorageAllocationSettingData')
+            res_sub_type, self._STORAGE_ALLOC_SETTING_DATA_CLASS)
 
         res.Parent = drive_path
         res.HostResource = [path]
@@ -151,6 +155,9 @@ class VMUtilsV2(vmutils.VMUtils):
 
         vm = self._lookup_vm_check(vm_name)
         self._add_virt_resource(scsicontrl, vm.path_())
+
+    def _get_disk_resource_disk_path(self, disk_resource):
+        return disk_resource.HostResource
 
     def destroy_vm(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
@@ -202,7 +209,7 @@ class VMUtilsV2(vmutils.VMUtils):
         job_wmi_path = job_path.replace('\\', '/')
         job = wmi.WMI(moniker=job_wmi_path)
         snp_setting_data = job.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')[0]
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)[0]
 
         return snp_setting_data.path_()
 
@@ -215,7 +222,7 @@ class VMUtilsV2(vmutils.VMUtils):
         nic_data = self._get_nic_data_by_name(nic_name)
 
         eth_port_data = self._get_new_setting_data(
-            'Msvm_EthernetPortAllocationSettingData')
+            self._ETHERNET_PORT_ALLOCATION_SETTING_DATA_CLASS)
 
         eth_port_data.HostResource = [vswitch_conn_data]
         eth_port_data.Parent = nic_data.path_()

@@ -67,6 +67,16 @@ class VMUtils(object):
     _IDE_CTRL_RES_SUB_TYPE = 'Microsoft Emulated IDE Controller'
     _SCSI_CTRL_RES_SUB_TYPE = 'Microsoft Synthetic SCSI Controller'
 
+    _SETTINGS_DEFINE_STATE_CLASS = 'Msvm_SettingsDefineState'
+    _VIRTUAL_SYSTEM_SETTING_DATA_CLASS = 'Msvm_VirtualSystemSettingData'
+    _RESOURCE_ALLOC_SETTING_DATA_CLASS = 'Msvm_ResourceAllocationSettingData'
+    _PROCESSOR_SETTING_DATA_CLASS = 'Msvm_ProcessorSettingData'
+    _MEMORY_SETTING_DATA_CLASS = 'Msvm_MemorySettingData'
+    _STORAGE_ALLOC_SETTING_DATA_CLASS = _RESOURCE_ALLOC_SETTING_DATA_CLASS
+    _SYNTHETIC_ETHERNET_PORT_SETTING_DATA_CLASS = \
+    'Msvm_SyntheticEthernetPortSettingData'
+    _AFFECTED_JOB_ELEMENT_CLASS = "Msvm_AffectedJobElement"
+
     _vm_power_states_map = {constants.HYPERV_VM_STATE_ENABLED: 2,
                             constants.HYPERV_VM_STATE_DISABLED: 3,
                             constants.HYPERV_VM_STATE_REBOOT: 10,
@@ -95,8 +105,8 @@ class VMUtils(object):
 
         vs_man_svc = self._conn.Msvm_VirtualSystemManagementService()[0]
         vmsettings = vm.associators(
-            wmi_association_class='Msvm_SettingsDefineState',
-            wmi_result_class='Msvm_VirtualSystemSettingData')
+            wmi_association_class=self._SETTINGS_DEFINE_STATE_CLASS,
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         settings_paths = [v.path_() for v in vmsettings]
         #See http://msdn.microsoft.com/en-us/library/cc160706%28VS.85%29.aspx
         (ret_val, summary_info) = vs_man_svc.GetSummaryInformation(
@@ -146,13 +156,13 @@ class VMUtils(object):
 
     def _get_vm_setting_data(self, vm):
         vmsettings = vm.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         # Avoid snapshots
         return [s for s in vmsettings if s.SettingType == 3][0]
 
     def _set_vm_memory(self, vm, vmsetting, memory_mb, dynamic_memory_ratio):
         mem_settings = vmsetting.associators(
-            wmi_result_class='Msvm_MemorySettingData')[0]
+            wmi_result_class=self._MEMORY_SETTING_DATA_CLASS)[0]
 
         max_mem = long(memory_mb)
         mem_settings.Limit = max_mem
@@ -175,7 +185,7 @@ class VMUtils(object):
 
     def _set_vm_vcpus(self, vm, vmsetting, vcpus_num, limit_cpu_features):
         procsetting = vmsetting.associators(
-            wmi_result_class='Msvm_ProcessorSettingData')[0]
+            wmi_result_class=self._PROCESSOR_SETTING_DATA_CLASS)[0]
         vcpus = long(vcpus_num)
         procsetting.VirtualQuantity = vcpus
         procsetting.Reservation = vcpus
@@ -229,18 +239,18 @@ class VMUtils(object):
         vm = self._lookup_vm_check(vm_name)
 
         vmsettings = vm.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         rasds = vmsettings[0].associators(
-            wmi_result_class='MSVM_ResourceAllocationSettingData')
+            wmi_result_class=self._RESOURCE_ALLOC_SETTING_DATA_CLASS)
         res = [r for r in rasds
                if r.ResourceSubType == self._SCSI_CTRL_RES_SUB_TYPE][0]
         return res.path_()
 
     def _get_vm_ide_controller(self, vm, ctrller_addr):
         vmsettings = vm.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         rasds = vmsettings[0].associators(
-            wmi_result_class='MSVM_ResourceAllocationSettingData')
+            wmi_result_class=self._RESOURCE_ALLOC_SETTING_DATA_CLASS)
         return [r for r in rasds
                 if r.ResourceSubType == self._IDE_CTRL_RES_SUB_TYPE
                 and r.Address == str(ctrller_addr)][0].path_()
@@ -250,12 +260,13 @@ class VMUtils(object):
         return self._get_vm_ide_controller(vm, ctrller_addr)
 
     def get_attached_disks_count(self, scsi_controller_path):
-        volumes = self._conn.query("SELECT * FROM "
-                                   "Msvm_ResourceAllocationSettingData "
+        volumes = self._conn.query("SELECT * FROM %(class_name)s "
                                    "WHERE ResourceSubType = "
                                    "'%(res_sub_type)s' AND "
                                    "Parent = '%(parent)s'" %
-                                   {'res_sub_type':
+                                   {"class_name":
+                                    self._RESOURCE_ALLOC_SETTING_DATA_CLASS,
+                                    'res_sub_type':
                                     self._PHYS_DISK_RES_SUB_TYPE,
                                     'parent':
                                     scsi_controller_path.replace("'", "''")})
@@ -265,9 +276,10 @@ class VMUtils(object):
         return self._conn.query("SELECT * FROM %s WHERE InstanceID "
                                 "LIKE '%%\\Default'" % class_name)[0]
 
-    def _get_new_resource_setting_data(
-            self, resource_sub_type,
-            class_name='Msvm_ResourceAllocationSettingData'):
+    def _get_new_resource_setting_data(self, resource_sub_type,
+                                       class_name=None):
+        if class_name is None:
+            class_name = self._RESOURCE_ALLOC_SETTING_DATA_CLASS
         return self._conn.query("SELECT * FROM %(class_name)s "
                                 "WHERE ResourceSubType = "
                                 "'%(res_sub_type)s' AND "
@@ -349,7 +361,7 @@ class VMUtils(object):
         """Create a (synthetic) nic and attach it to the vm."""
         #Create a new nic
         new_nic_data = self._get_new_setting_data(
-            'Msvm_SyntheticEthernetPortSettingData')
+            self._SYNTHETIC_ETHERNET_PORT_SETTING_DATA_CLASS)
 
         #Configure the nic
         new_nic_data.ElementName = nic_name
@@ -374,13 +386,16 @@ class VMUtils(object):
                     "to %(req_state)s"),
                   {'vm_name': vm_name, 'req_state': req_state})
 
+    def _get_disk_resource_disk_path(self, disk_resource):
+        return disk_resource.Connection
+
     def get_vm_storage_paths(self, vm_name):
         vm = self._lookup_vm_check(vm_name)
 
         vmsettings = vm.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)
         rasds = vmsettings[0].associators(
-            wmi_result_class='Msvm_ResourceAllocationSettingData')
+            wmi_result_class=self._STORAGE_ALLOC_SETTING_DATA_CLASS)
         disk_resources = [r for r in rasds
                           if r.ResourceSubType ==
                           self._IDE_DISK_RES_SUB_TYPE]
@@ -395,7 +410,8 @@ class VMUtils(object):
 
         disk_files = []
         for disk_resource in disk_resources:
-            disk_files.extend([c for c in disk_resource.Connection])
+            disk_files.extend(
+                [c for c in self._get_disk_resource_disk_path(disk_resource)])
 
         return (disk_files, volume_drives)
 
@@ -511,7 +527,7 @@ class VMUtils(object):
         job_wmi_path = job_path.replace('\\', '/')
         job = wmi.WMI(moniker=job_wmi_path)
         snp_setting_data = job.associators(
-            wmi_result_class='Msvm_VirtualSystemSettingData')[0]
+            wmi_result_class=self._VIRTUAL_SYSTEM_SETTING_DATA_CLASS)[0]
         return snp_setting_data.path_()
 
     def remove_vm_snapshot(self, snapshot_path):
@@ -528,10 +544,12 @@ class VMUtils(object):
             self._remove_virt_resource(physical_disk, vm.path_())
 
     def _get_mounted_disk_resource_from_path(self, disk_path):
-        physical_disks = self._conn.query("SELECT * FROM "
-                                          "Msvm_ResourceAllocationSettingData"
-                                          " WHERE ResourceSubType = '%s'" %
-                                          self._PHYS_DISK_RES_SUB_TYPE)
+        physical_disks = self._conn.query("SELECT * FROM %(class_name)s "
+                             "WHERE ResourceSubType = '%(res_sub_type)s'" %
+                             {"class_name":
+                              self._RESOURCE_ALLOC_SETTING_DATA_CLASS,
+                              'res_sub_type':
+                              self._PHYS_DISK_RES_SUB_TYPE})
         for physical_disk in physical_disks:
             if physical_disk.HostResource:
                 if physical_disk.HostResource[0].lower() == disk_path.lower():
@@ -545,12 +563,15 @@ class VMUtils(object):
             return mounted_disks[0].path_()
 
     def get_controller_volume_paths(self, controller_path):
-        disks = self._conn.query("SELECT * FROM "
-                                 "Msvm_ResourceAllocationSettingData "
+        disks = self._conn.query("SELECT * FROM %(class_name)s "
                                  "WHERE ResourceSubType = '%(res_sub_type)s' "
                                  "AND Parent='%(parent)s'" %
-                                 {"res_sub_type": self._PHYS_DISK_RES_SUB_TYPE,
-                                  "parent": controller_path})
+                                 {"class_name":
+                                  self._RESOURCE_ALLOC_SETTING_DATA_CLASS,
+                                  "res_sub_type":
+                                  self._PHYS_DISK_RES_SUB_TYPE,
+                                  "parent":
+                                  controller_path})
         disk_data = {}
         for disk in disks:
             if disk.HostResource:
