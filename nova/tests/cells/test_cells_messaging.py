@@ -1398,6 +1398,23 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         self.assertFalse(self.mid_methods_cls._at_the_top())
         self.assertFalse(self.src_methods_cls._at_the_top())
 
+    def test_apply_expected_states_building(self):
+        instance_info = {'vm_state': vm_states.BUILDING}
+        expected = dict(instance_info,
+                        expected_vm_state=[vm_states.BUILDING, None])
+        self.src_methods_cls._apply_expected_states(instance_info)
+        self.assertEqual(expected, instance_info)
+
+    def test_apply_expected_states_resize_finish(self):
+        instance_info = {'task_state': task_states.RESIZE_FINISH}
+        exp_states = [task_states.RESIZE_FINISH,
+                      task_states.RESIZE_MIGRATED,
+                      task_states.RESIZE_MIGRATING,
+                      task_states.RESIZE_PREP]
+        expected = dict(instance_info, expected_task_state=exp_states)
+        self.src_methods_cls._apply_expected_states(instance_info)
+        self.assertEqual(expected, instance_info)
+
     def _test_instance_update_at_top(self, net_info, exists=True):
         fake_info_cache = {'id': 1,
                            'instance': 'fake_instance',
