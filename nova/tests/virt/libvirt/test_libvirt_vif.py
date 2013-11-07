@@ -317,16 +317,18 @@ class LibvirtVifTestCase(test.TestCase):
                              node.find("target").get("dev"))
 
     def test_model_novirtio(self):
-        self.flags(libvirt_use_virtio_for_bridges=False)
-        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(use_virtio_for_bridges=False,
+                   virt_type='kvm',
+                   group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         xml = self._get_instance_xml(d, self.vif_bridge)
         self._assertModel(xml)
 
     def test_model_kvm(self):
-        self.flags(libvirt_use_virtio_for_bridges=True)
-        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         xml = self._get_instance_xml(d, self.vif_bridge)
@@ -334,8 +336,9 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertModel(xml, "virtio")
 
     def test_model_kvm_custom(self):
-        self.flags(libvirt_use_virtio_for_bridges=True)
-        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         image_meta = {'properties': {'hw_vif_model': 'e1000'}}
@@ -344,8 +347,9 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertModel(xml, "e1000")
 
     def test_model_kvm_bogus(self):
-        self.flags(libvirt_use_virtio_for_bridges=True)
-        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='kvm',
+                   group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         image_meta = {'properties': {'hw_vif_model': 'acme'}}
@@ -356,8 +360,9 @@ class LibvirtVifTestCase(test.TestCase):
                           image_meta)
 
     def test_model_qemu(self):
-        self.flags(libvirt_use_virtio_for_bridges=True)
-        self.flags(virt_type='qemu', group='libvirt')
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='qemu',
+                   group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         xml = self._get_instance_xml(d, self.vif_bridge)
@@ -370,8 +375,9 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertModel(xml, "virtio", "qemu")
 
     def test_model_xen(self):
-        self.flags(libvirt_use_virtio_for_bridges=True)
-        self.flags(virt_type='xen', group='libvirt')
+        self.flags(use_virtio_for_bridges=True,
+                   virt_type='xen',
+                   group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn("xen:///system"))
         xml = self._get_instance_xml(d, self.vif_bridge)

@@ -36,13 +36,15 @@ from nova.virt.libvirt import designer
 LOG = logging.getLogger(__name__)
 
 libvirt_vif_opts = [
-    cfg.BoolOpt('libvirt_use_virtio_for_bridges',
+    cfg.BoolOpt('use_virtio_for_bridges',
                 default=True,
-                help='Use virtio for bridge interfaces with KVM/QEMU'),
+                help='Use virtio for bridge interfaces with KVM/QEMU',
+                deprecated_group='DEFAULT',
+                deprecated_name='libvirt_use_virtio_for_bridges'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(libvirt_vif_opts)
+CONF.register_opts(libvirt_vif_opts, 'libvirt')
 CONF.import_opt('virt_type', 'nova.virt.libvirt.driver', group='libvirt')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
@@ -112,7 +114,7 @@ class LibvirtBaseVIFDriver(object):
         # to the global config parameter
         if (model is None and
             CONF.libvirt.virt_type in ('kvm', 'qemu') and
-                    CONF.libvirt_use_virtio_for_bridges):
+                    CONF.libvirt.use_virtio_for_bridges):
             model = "virtio"
 
         # Workaround libvirt bug, where it mistakenly
