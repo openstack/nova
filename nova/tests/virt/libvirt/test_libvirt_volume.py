@@ -330,10 +330,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             'driver_volume_type': 'rbd',
             'data': {
                 'name': '%s/%s' % ('rbd', volume['name']),
-                'auth_enabled': CONF.rbd_secret_uuid is not None,
-                'auth_username': CONF.rbd_user,
+                'auth_enabled': CONF.libvirt.rbd_secret_uuid is not None,
+                'auth_username': CONF.libvirt.rbd_user,
                 'secret_type': 'ceph',
-                'secret_uuid': CONF.rbd_secret_uuid,
+                'secret_uuid': CONF.libvirt.rbd_secret_uuid,
                 'qos_specs': {
                     'total_bytes_sec': '1048576',
                     'read_iops_sec': '500',
@@ -397,7 +397,8 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
         flags_user = 'bar'
         self.flags(rbd_user=flags_user,
-                   rbd_secret_uuid=flags_uuid)
+                   rbd_secret_uuid=flags_uuid,
+                   group='libvirt')
 
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -436,7 +437,8 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         flags_uuid = '37152720-1785-11e2-a740-af0c1d8b8e4b'
         flags_user = 'bar'
         self.flags(rbd_user=flags_user,
-                   rbd_secret_uuid=flags_uuid)
+                   rbd_secret_uuid=flags_uuid,
+                   group='libvirt')
 
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -460,7 +462,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         libvirt_driver.disconnect_volume(connection_info, 'vde')
 
     def test_libvirt_kvm_volume_with_multipath(self):
-        self.flags(libvirt_iscsi_use_multipath=True)
+        self.flags(iscsi_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
         devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
@@ -480,7 +482,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertIn(expected_multipath_cmd, self.executes)
 
     def test_libvirt_kvm_volume_with_multipath_getmpdev(self):
-        self.flags(libvirt_iscsi_use_multipath=True)
+        self.flags(iscsi_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
         name0 = 'volume-00000000'
@@ -501,7 +503,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         libvirt_driver.disconnect_volume(connection_info, 'vde')
 
     def test_libvirt_kvm_iser_volume_with_multipath(self):
-        self.flags(libvirt_iser_use_multipath=True)
+        self.flags(iser_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
         devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
@@ -529,7 +531,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertIn(expected_multipath_cmd, self.executes)
 
     def test_libvirt_kvm_iser_volume_with_multipath_getmpdev(self):
-        self.flags(libvirt_iser_use_multipath=True)
+        self.flags(iser_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
         name0 = 'volume-00000000'
@@ -562,7 +564,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
     def test_libvirt_nfs_driver(self):
         # NOTE(vish) exists is to make driver assume connecting worked
         mnt_base = '/mnt'
-        self.flags(nfs_mount_point_base=mnt_base)
+        self.flags(nfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/nfs/share1'
@@ -584,7 +586,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
     def test_libvirt_nfs_driver_with_opts(self):
         mnt_base = '/mnt'
-        self.flags(nfs_mount_point_base=mnt_base)
+        self.flags(nfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/nfs/share1'
@@ -633,7 +635,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
     def test_libvirt_glusterfs_driver(self):
         mnt_base = '/mnt'
-        self.flags(glusterfs_mount_point_base=mnt_base)
+        self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/volume-00001'
@@ -675,7 +677,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
     def test_libvirt_glusterfs_driver_with_opts(self):
         mnt_base = '/mnt'
-        self.flags(glusterfs_mount_point_base=mnt_base)
+        self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/volume-00001'
@@ -700,7 +702,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertEqual(self.executes, expected_commands)
 
     def test_libvirt_glusterfs_libgfapi(self):
-        self.flags(qemu_allowed_storage_drivers=['gluster'])
+        self.flags(qemu_allowed_storage_drivers=['gluster'], group='libvirt')
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/volume-00001'
         name = 'volume-00001'
@@ -824,7 +826,8 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
         self.stubs.Set(os, 'access', _access_wrapper)
         self.flags(scality_sofs_config=TEST_CONFIG,
-                   scality_sofs_mount_point=TEST_MOUNT)
+                   scality_sofs_mount_point=TEST_MOUNT,
+                   group='libvirt')
         driver = volume.LibvirtScalityVolumeDriver(self.fake_conn)
         conf = driver.connect_volume(TEST_CONN_INFO, self.disk_info)
 

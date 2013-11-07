@@ -475,7 +475,7 @@ class Rbd(Image):
                                  ' flag to use rbd images.'))
         self.pool = CONF.libvirt.images_rbd_pool
         self.ceph_conf = ascii_str(CONF.libvirt.images_rbd_ceph_conf)
-        self.rbd_user = ascii_str(CONF.rbd_user)
+        self.rbd_user = ascii_str(CONF.libvirt.rbd_user)
         self.rbd = kwargs.get('rbd', rbd)
         self.rados = kwargs.get('rados', rados)
 
@@ -546,15 +546,15 @@ class Rbd(Image):
         info.source_name = '%s/%s' % (self.pool, self.rbd_name)
         info.source_hosts = hosts
         info.source_ports = ports
-        auth_enabled = (CONF.rbd_user is not None)
-        if CONF.rbd_secret_uuid:
-            info.auth_secret_uuid = CONF.rbd_secret_uuid
+        auth_enabled = (CONF.libvirt.rbd_user is not None)
+        if CONF.libvirt.rbd_secret_uuid:
+            info.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
             auth_enabled = True  # Force authentication locally
-            if CONF.rbd_user:
-                info.auth_username = CONF.rbd_user
+            if CONF.libvirt.rbd_user:
+                info.auth_username = CONF.libvirt.rbd_user
         if auth_enabled:
             info.auth_secret_type = 'ceph'
-            info.auth_secret_uuid = CONF.rbd_secret_uuid
+            info.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
         return info
 
     def _can_fallocate(self):

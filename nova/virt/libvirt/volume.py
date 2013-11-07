@@ -44,47 +44,62 @@ LOG = logging.getLogger(__name__)
 volume_opts = [
     cfg.IntOpt('num_iscsi_scan_tries',
                default=3,
-               help='number of times to rescan iSCSI target to find volume'),
+               help='number of times to rescan iSCSI target to find volume',
+               deprecated_group='DEFAULT'),
     cfg.IntOpt('num_iser_scan_tries',
                default=3,
-               help='number of times to rescan iSER target to find volume'),
+               help='number of times to rescan iSER target to find volume',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('rbd_user',
-               help='the RADOS client name for accessing rbd volumes'),
+               help='the RADOS client name for accessing rbd volumes',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('rbd_secret_uuid',
                help='the libvirt uuid of the secret for the rbd_user'
-                    'volumes'),
+                    'volumes',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('nfs_mount_point_base',
                default=paths.state_path_def('mnt'),
-               help='Dir where the nfs volume is mounted on the compute node'),
+               help='Dir where the nfs volume is mounted on the compute node',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('nfs_mount_options',
                help='Mount options passed to the nfs client. See section '
-                    'of the nfs man page for details'),
+                    'of the nfs man page for details',
+               deprecated_group='DEFAULT'),
     cfg.IntOpt('num_aoe_discover_tries',
                default=3,
-               help='number of times to rediscover AoE target to find volume'),
+               help='number of times to rediscover AoE target to find volume',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('glusterfs_mount_point_base',
-                default=paths.state_path_def('mnt'),
-                help='Dir where the glusterfs volume is mounted on the '
-                      'compute node'),
-    cfg.BoolOpt('libvirt_iscsi_use_multipath',
+               default=paths.state_path_def('mnt'),
+               help='Dir where the glusterfs volume is mounted on the '
+                    'compute node',
+               deprecated_group='DEFAULT'),
+    cfg.BoolOpt('iscsi_use_multipath',
                 default=False,
-                help='use multipath connection of the iSCSI volume'),
-    cfg.BoolOpt('libvirt_iser_use_multipath',
+                help='use multipath connection of the iSCSI volume',
+                deprecated_group='DEFAULT',
+                deprecated_name='libvirt_iscsi_use_multipath'),
+    cfg.BoolOpt('iser_use_multipath',
                 default=False,
-                help='use multipath connection of the iSER volume'),
+                help='use multipath connection of the iSER volume',
+                deprecated_group='DEFAULT',
+                deprecated_name='libvirt_iser_use_multipath'),
     cfg.StrOpt('scality_sofs_config',
-               help='Path or URL to Scality SOFS configuration file'),
+               help='Path or URL to Scality SOFS configuration file',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('scality_sofs_mount_point',
                default='$state_path/scality',
-               help='Base dir where Scality SOFS shall be mounted'),
+               help='Base dir where Scality SOFS shall be mounted',
+               deprecated_group='DEFAULT'),
     cfg.ListOpt('qemu_allowed_storage_drivers',
-               default=[],
-               help='Protocols listed here will be accessed directly '
-                    'from QEMU. Currently supported protocols: [gluster]')
+                default=[],
+                help='Protocols listed here will be accessed directly '
+                     'from QEMU. Currently supported protocols: [gluster]',
+                deprecated_group='DEFAULT')
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(volume_opts)
+CONF.register_opts(volume_opts, 'libvirt')
 
 
 class LibvirtBaseVolumeDriver(object):
@@ -202,11 +217,11 @@ class LibvirtNetVolumeDriver(LibvirtBaseVolumeDriver):
         conf.source_ports = netdisk_properties.get('ports', [])
         auth_enabled = netdisk_properties.get('auth_enabled')
         if (conf.source_protocol == 'rbd' and
-                CONF.rbd_secret_uuid):
-            conf.auth_secret_uuid = CONF.rbd_secret_uuid
+                CONF.libvirt.rbd_secret_uuid):
+            conf.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
             auth_enabled = True  # Force authentication locally
-            if CONF.rbd_user:
-                conf.auth_username = CONF.rbd_user
+            if CONF.libvirt.rbd_user:
+                conf.auth_username = CONF.libvirt.rbd_user
         if auth_enabled:
             conf.auth_username = (conf.auth_username or
                                   netdisk_properties['auth_username'])
@@ -221,8 +236,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     def __init__(self, connection):
         super(LibvirtISCSIVolumeDriver, self).__init__(connection,
                                                        is_block_dev=False)
-        self.num_scan_tries = CONF.num_iscsi_scan_tries
-        self.use_multipath = CONF.libvirt_iscsi_use_multipath
+        self.num_scan_tries = CONF.libvirt.num_iscsi_scan_tries
+        self.use_multipath = CONF.libvirt.iscsi_use_multipath
 
     def _run_iscsiadm(self, iscsi_properties, iscsi_command, **kwargs):
         check_exit_code = kwargs.pop('check_exit_code', 0)
@@ -545,8 +560,8 @@ class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
     def __init__(self, connection):
         super(LibvirtISERVolumeDriver, self).__init__(connection)
-        self.num_scan_tries = CONF.num_iser_scan_tries
-        self.use_multipath = CONF.libvirt_iser_use_multipath
+        self.num_scan_tries = CONF.libvirt.num_iser_scan_tries
+        self.use_multipath = CONF.libvirt.iser_use_multipath
 
     def _get_multipath_iqn(self, multipath_device):
         entries = self._get_iscsi_devices()
@@ -600,7 +615,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         @type nfs_export: string
         @type options: string
         """
-        mount_path = os.path.join(CONF.nfs_mount_point_base,
+        mount_path = os.path.join(CONF.libvirt.nfs_mount_point_base,
                                   self.get_hash_str(nfs_export))
         self._mount_nfs(mount_path, nfs_export, options, ensure=True)
         return mount_path
@@ -611,8 +626,8 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
 
         # Construct the NFS mount command.
         nfs_cmd = ['mount', '-t', 'nfs']
-        if CONF.nfs_mount_options is not None:
-            nfs_cmd.extend(['-o', CONF.nfs_mount_options])
+        if CONF.libvirt.nfs_mount_options is not None:
+            nfs_cmd.extend(['-o', CONF.libvirt.nfs_mount_options])
         if options is not None:
             nfs_cmd.extend(options.split(' '))
         nfs_cmd.extend([nfs_share, mount_path])
@@ -668,7 +683,7 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
             if os.path.exists(aoedevpath):
                 raise loopingcall.LoopingCallDone()
 
-            if self.tries >= CONF.num_aoe_discover_tries:
+            if self.tries >= CONF.libvirt.num_aoe_discover_tries:
                 raise exception.NovaException(_("AoE device not found at %s") %
                                                 (aoedevpath))
             LOG.warn(_("AoE volume not yet found at: %(aoedevpath)s. "
@@ -713,7 +728,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
 
         data = connection_info['data']
 
-        if 'gluster' in CONF.qemu_allowed_storage_drivers:
+        if 'gluster' in CONF.libvirt.qemu_allowed_storage_drivers:
             vol_name = data['export'].split('/')[1]
             source_host = data['export'].split('/')[0][:-1]
 
@@ -737,7 +752,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         @type glusterfs_export: string
         @type options: string
         """
-        mount_path = os.path.join(CONF.glusterfs_mount_point_base,
+        mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
                                   self.get_hash_str(glusterfs_export))
         self._mount_glusterfs(mount_path, glusterfs_export,
                               options, ensure=True)
@@ -846,7 +861,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
                     self.device_name = os.path.realpath(device)
                     raise loopingcall.LoopingCallDone()
 
-            if self.tries >= CONF.num_iscsi_scan_tries:
+            if self.tries >= CONF.libvirt.num_iscsi_scan_tries:
                 msg = _("Fibre Channel device not found.")
                 raise exception.NovaException(msg)
 
@@ -934,7 +949,7 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
         self._mount_sofs()
         conf = super(LibvirtScalityVolumeDriver,
                      self).connect_volume(connection_info, disk_info)
-        path = os.path.join(CONF.scality_sofs_mount_point,
+        path = os.path.join(CONF.libvirt.scality_sofs_mount_point,
                             connection_info['data']['sofs_path'])
         conf.source_type = 'file'
         conf.source_path = path
@@ -951,7 +966,7 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
         """Sanity checks before attempting to mount SOFS."""
 
         # config is mandatory
-        config = CONF.scality_sofs_config
+        config = CONF.libvirt.scality_sofs_config
         if not config:
             msg = _("Value required for 'scality_sofs_config'")
             LOG.warn(msg)
@@ -975,8 +990,8 @@ class LibvirtScalityVolumeDriver(LibvirtBaseVolumeDriver):
             raise exception.NovaException(msg)
 
     def _mount_sofs(self):
-        config = CONF.scality_sofs_config
-        mount_path = CONF.scality_sofs_mount_point
+        config = CONF.libvirt.scality_sofs_config
+        mount_path = CONF.libvirt.scality_sofs_mount_point
         sysdir = os.path.join(mount_path, 'sys')
 
         if not os.path.isdir(mount_path):
