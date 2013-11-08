@@ -208,6 +208,14 @@ class QuotaSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body)
 
+    def test_quotas_update_without_quota_set(self):
+        # when without the quota_set para
+        body = {}
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body)
+
     def test_quotas_delete_as_unauthorized_user(self):
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.delete,

@@ -200,6 +200,16 @@ class QuotaSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body)
 
+    def test_quotas_update_empty_body(self):
+        self.ext_mgr.is_loaded('os-extended-quotas').AndReturn(True)
+        self.ext_mgr.is_loaded('os-user-quotas').AndReturn(True)
+        self.mox.ReplayAll()
+        body = {}
+        req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body)
+
     def test_quotas_update_invalid_value_json_fromat_empty_string(self):
         expected_resp = {'quota_set': {
                               'instances': 50, 'cores': 50,

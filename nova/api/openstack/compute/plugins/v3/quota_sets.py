@@ -70,7 +70,7 @@ class QuotaDetailTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class QuotaSetsController(object):
+class QuotaSetsController(wsgi.Controller):
 
     def _format_quota_set(self, project_id, quota_set):
         """Convert the quota object to a result dict."""
@@ -142,7 +142,12 @@ class QuotaSetsController(object):
         bad_keys = []
         force_update = False
 
-        for key, value in body['quota_set'].items():
+        if not self.is_valid_body(body, 'quota_set'):
+            msg = _("quota_set not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        quota_set = body['quota_set']
+
+        for key, value in quota_set.items():
             if key not in QUOTAS and key != 'force':
                 bad_keys.append(key)
                 continue

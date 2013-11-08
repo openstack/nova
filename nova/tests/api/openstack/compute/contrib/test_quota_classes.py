@@ -121,6 +121,31 @@ class QuotaClassSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'test_class', body)
 
+    def test_quotas_update_with_empty_body(self):
+        body = {}
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake4/os-quota-class-sets/test_class',
+            use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
+    def test_quotas_update_with_a_non_integer_value(self):
+        body = {'quota_class_set': {'instances': "not integer", 'cores': 50,
+                                    'ram': 51200, 'floating_ips': 10,
+                                    'fixed_ips': -1, 'metadata_items': 128,
+                                    'injected_files': 5,
+                                    'injected_file_content_bytes': 10240,
+                                    'injected_file_path_bytes': 255,
+                                    'security_groups': 10,
+                                    'security_group_rules': 20,
+                                    'key_pairs': 100}}
+
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake4/os-quota-class-sets/test_class',
+            use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
 
 class QuotaTemplateXMLSerializerTest(test.TestCase):
     def setUp(self):

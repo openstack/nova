@@ -52,7 +52,7 @@ class QuotaTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class QuotaSetsController(object):
+class QuotaSetsController(wsgi.Controller):
 
     def __init__(self, ext_mgr):
         self.ext_mgr = ext_mgr
@@ -137,7 +137,11 @@ class QuotaSetsController(object):
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
-        for key, value in body['quota_set'].items():
+        if not self.is_valid_body(body, 'quota_set'):
+            msg = _("quota_set not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        quota_set = body['quota_set']
+        for key, value in quota_set.items():
             if (key not in QUOTAS and
                     key not in NON_QUOTA_KEYS):
                 bad_keys.append(key)
@@ -167,7 +171,7 @@ class QuotaSetsController(object):
         except exception.NotAuthorized:
             raise webob.exc.HTTPForbidden()
 
-        for key, value in body['quota_set'].items():
+        for key, value in quota_set.items():
             if key in NON_QUOTA_KEYS or (not value and value != 0):
                 continue
             # validate whether already used and reserved exceeds the new
