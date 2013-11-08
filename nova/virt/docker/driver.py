@@ -41,14 +41,16 @@ from nova.virt import driver
 
 
 docker_opts = [
-    cfg.IntOpt('docker_registry_default_port',
+    cfg.IntOpt('registry_default_port',
                default=5042,
                help=_('Default TCP port to find the '
-                      'docker-registry container')),
+                      'docker-registry container'),
+               deprecated_group='DEFAULT',
+               deprecated_name='docker_registry_default_port'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(docker_opts)
+CONF.register_opts(docker_opts, 'docker')
 CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = log.getLogger(__name__)
@@ -355,7 +357,7 @@ class DockerDriver(driver.ComputeDriver):
         return self.docker.get_container_logs(container_id)
 
     def _get_registry_port(self):
-        default_port = CONF.docker_registry_default_port
+        default_port = CONF.docker.registry_default_port
         registry = None
         for container in self.docker.list_containers(_all=False):
             container = self.docker.inspect_container(container['id'])
