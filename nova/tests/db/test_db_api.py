@@ -146,9 +146,9 @@ class DecoratorTestCase(test.TestCase):
 
         decorated_func = decorator(test_func)
 
-        self.assertEquals(test_func.func_name, decorated_func.func_name)
-        self.assertEquals(test_func.__doc__, decorated_func.__doc__)
-        self.assertEquals(test_func.__module__, decorated_func.__module__)
+        self.assertEqual(test_func.func_name, decorated_func.func_name)
+        self.assertEqual(test_func.__doc__, decorated_func.__doc__)
+        self.assertEqual(test_func.__module__, decorated_func.__module__)
 
     def test_require_context_decorator_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(sqlalchemy_api.require_context)
@@ -245,7 +245,7 @@ class AggregateDBApiTestCase(test.TestCase):
 
     def test_aggregate_create_no_metadata(self):
         result = _create_aggregate(metadata=None)
-        self.assertEquals(result['name'], 'fake_aggregate')
+        self.assertEqual(result['name'], 'fake_aggregate')
 
     def test_aggregate_create_avoid_name_conflict(self):
         r1 = _create_aggregate(metadata=None)
@@ -1280,10 +1280,10 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
             real.append(in_use)
         expected = [True, False]
 
-        self.assertEquals(expected, real)
+        self.assertEqual(expected, real)
 
     def test_security_group_ensure_default(self):
-        self.assertEquals(0, len(db.security_group_get_by_project(
+        self.assertEqual(0, len(db.security_group_get_by_project(
                                     self.ctxt,
                                     self.ctxt.project_id)))
 
@@ -1293,8 +1293,8 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                             self.ctxt,
                             self.ctxt.project_id)
 
-        self.assertEquals(1, len(security_groups))
-        self.assertEquals("default", security_groups[0]["name"])
+        self.assertEqual(1, len(security_groups))
+        self.assertEqual("default", security_groups[0]["name"])
 
     def test_security_group_update(self):
         security_group = self._create_security_group({})
@@ -1442,7 +1442,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         values = {'created_at': '2011-01-31T00:00:00.0'}
         actual = db.instance_update(self.ctxt, instance['uuid'], values)
         expected = datetime.datetime(2011, 1, 31)
-        self.assertEquals(expected, actual["created_at"])
+        self.assertEqual(expected, actual["created_at"])
 
     def test_create_instance_unique_hostname(self):
         context1 = context.RequestContext('user1', 'p1')
@@ -3034,8 +3034,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
 
         fip = db.fixed_ip_get_by_network_host(self.ctxt, 1, 'host')
 
-        self.assertEquals(1, fip['network_id'])
-        self.assertEquals('host', fip['host'])
+        self.assertEqual(1, fip['network_id'])
+        self.assertEqual('host', fip['host'])
 
     def _create_instance(self, **kwargs):
         instance = db.instance_create(self.ctxt, kwargs)
@@ -3155,7 +3155,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
             self.ctxt, dict(instance_uuid=instance_uuid))
 
         ips_list = db.fixed_ips_by_virtual_interface(self.ctxt, vif.id)
-        self.assertEquals(0, len(ips_list))
+        self.assertEqual(0, len(ips_list))
 
     def create_fixed_ip(self, **params):
         default_params = {'address': '192.168.0.1'}
@@ -4064,7 +4064,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                                'curr_write_bytes': 0,
                                'curr_last_refreshed': now2}
 
-        self.assertEquals(1, len(vol_usages))
+        self.assertEqual(1, len(vol_usages))
         for key, value in expected_vol_usages.items():
             self.assertEqual(vol_usages[0][key], value, key)
 
@@ -6478,7 +6478,7 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         db.instance_group_update(self.context, result1['uuid'],
                                  values)
         result2 = db.instance_group_get(self.context, result1['uuid'])
-        self.assertEquals(result1['uuid'], result2['uuid'])
+        self.assertEqual(result1['uuid'], result2['uuid'])
         ignored_keys = ['id', 'uuid', 'deleted', 'deleted_at', 'updated_at',
                         'created_at']
         self._assertEqualObjects(result2, values, ignored_keys)
@@ -6505,11 +6505,11 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_group_get_all(self):
         groups = db.instance_group_get_all(self.context)
-        self.assertEquals(0, len(groups))
+        self.assertEqual(0, len(groups))
         value = self._get_default_values()
         result1 = self._create_instance_group(self.context, value)
         groups = db.instance_group_get_all(self.context)
-        self.assertEquals(1, len(groups))
+        self.assertEqual(1, len(groups))
         value = self._get_default_values()
         result2 = self._create_instance_group(self.context, value)
         groups = db.instance_group_get_all(self.context)
@@ -6519,12 +6519,12 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_group_get_all_by_project_id(self):
         groups = db.instance_group_get_all_by_project_id(self.context,
                                                          'invalid_project_id')
-        self.assertEquals(0, len(groups))
+        self.assertEqual(0, len(groups))
         values = self._get_default_values()
         result1 = self._create_instance_group(self.context, values)
         groups = db.instance_group_get_all_by_project_id(self.context,
                                                          'fake_project')
-        self.assertEquals(1, len(groups))
+        self.assertEqual(1, len(groups))
         values = self._get_default_values()
         values['project_id'] = 'new_project_id'
         result2 = self._create_instance_group(self.context, values)
@@ -6550,7 +6550,7 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
         values['name'] = 'new_fake_name'
         db.instance_group_update(self.context, id, values)
         result = db.instance_group_get(self.context, id)
-        self.assertEquals(result['name'], 'new_fake_name')
+        self.assertEqual(result['name'], 'new_fake_name')
         # update metadata
         values = self._get_default_values()
         metadataInput = {'key11': 'value1',
@@ -6678,7 +6678,7 @@ class InstanceGroupMembersDBApiTestCase(InstanceGroupDBApiTestCase):
         result = self._create_instance_group(self.context, values)
         id = result['uuid']
         members = db.instance_group_members_get(self.context, id)
-        self.assertEquals(members, [])
+        self.assertEqual(members, [])
         members2 = ['instance_id1', 'instance_id2']
         db.instance_group_members_add(self.context, id, members2)
         members = db.instance_group_members_get(self.context, id)
@@ -6749,7 +6749,7 @@ class InstanceGroupPoliciesDBApiTestCase(InstanceGroupDBApiTestCase):
         result = self._create_instance_group(self.context, values)
         id = result['uuid']
         policies = db.instance_group_policies_get(self.context, id)
-        self.assertEquals(policies, [])
+        self.assertEqual(policies, [])
         policies2 = ['policy1', 'policy2']
         db.instance_group_policies_add(self.context, id, policies2)
         policies = db.instance_group_policies_get(self.context, id)
