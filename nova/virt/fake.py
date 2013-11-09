@@ -309,7 +309,7 @@ class FakeDriver(driver.ComputeDriver):
     def get_console_output(self, instance):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
 
-    def get_vnc_console(self, instance):
+    def get_vnc_console(self, context, instance):
         return {'internal_access_path': 'FAKE',
                 'host': 'fakevncconsole.com',
                 'port': 6969}

@@ -392,7 +392,7 @@ class XenAPIDriver(driver.ComputeDriver):
         """Return snapshot of console."""
         return self._vmops.get_console_output(instance)
 
-    def get_vnc_console(self, instance):
+    def get_vnc_console(self, context, instance):
         """Return link to instance's VNC console."""
         return self._vmops.get_vnc_console(instance)
 

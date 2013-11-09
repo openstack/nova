@@ -1566,17 +1566,17 @@ class VMOps(object):
 
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
-        if instance['vm_state'] == vm_states.RESCUED:
-            name = '%s-rescue' % instance['name']
+        if instance.vm_state == vm_states.RESCUED:
+            name = '%s-rescue' % instance.name
             vm_ref = vm_utils.lookup(self._session, name)
             if vm_ref is None:
                 # The rescue instance might not be ready at this point.
-                raise exception.InstanceNotReady(instance_id=instance['uuid'])
+                raise exception.InstanceNotReady(instance_id=instance.uuid)
         else:
-            vm_ref = vm_utils.lookup(self._session, instance['name'])
+            vm_ref = vm_utils.lookup(self._session, instance.name)
             if vm_ref is None:
                 # The compute manager expects InstanceNotFound for this case.
-                raise exception.InstanceNotFound(instance_id=instance['uuid'])
+                raise exception.InstanceNotFound(instance_id=instance.uuid)
 
         session_id = self._session.get_session_id()
         path = "/console?ref=%s&session_id=%s" % (str(vm_ref), session_id)

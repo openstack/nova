@@ -287,8 +287,12 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def get_vnc_console(self, instance):
-        # TODO(Vek): Need to pass context in for access to auth_token
+    def get_vnc_console(self, context, instance):
+        """Get connection info for a vnc console.
+
+        :param context: security context
+        :param instance: nova.objects.instance.Instance
+        """
         raise NotImplementedError()
 
     def get_spice_console(self, context, instance):

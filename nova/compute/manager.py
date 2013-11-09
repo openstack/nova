@@ -3625,6 +3625,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def get_vnc_console(self, context, console_type, instance):
         """Return connection information for a vnc console."""
+        instance = instance_obj.Instance._from_db_object(
+            context, instance_obj.Instance(), instance)
         context = context.elevated()
         LOG.debug(_("Getting vnc console"), instance=instance)
         token = str(uuid.uuid4())
@@ -3644,7 +3646,7 @@ class ComputeManager(manager.Manager):
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
-            connect_info = self.driver.get_vnc_console(instance)
+            connect_info = self.driver.get_vnc_console(context, instance)
             connect_info['token'] = token
             connect_info['access_url'] = access_url
         except exception.InstanceNotFound:
@@ -3694,12 +3696,13 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_fault
     def validate_console_port(self, ctxt, instance, port, console_type):
+        instance = instance_obj.Instance._from_db_object(
+            ctxt, instance_obj.Instance(), instance)
+
         if console_type == "spice-html5":
-            instance = instance_obj.Instance._from_db_object(
-                ctxt, instance_obj.Instance(), instance)
             console_info = self.driver.get_spice_console(ctxt, instance)
         else:
-            console_info = self.driver.get_vnc_console(instance)
+            console_info = self.driver.get_vnc_console(ctxt, instance)
 
         return console_info['port'] == port
 

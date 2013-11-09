@@ -5603,7 +5603,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(self.log_error_called)
 
     def test_get_vnc_console(self):
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance = self.create_instance_obj(self.context)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<graphics type='vnc' port='5900'/>"
@@ -5614,17 +5614,17 @@ class LibvirtConnTestCase(test.TestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref['name']:
+            if instance_name == instance['name']:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        vnc_dict = conn.get_vnc_console(instance_ref)
+        vnc_dict = conn.get_vnc_console(self.context, instance)
         self.assertEqual(vnc_dict['port'], '5900')
 
     def test_get_vnc_console_unavailable(self):
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance = self.create_instance_obj(self.context)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices></devices></domain>")
 
@@ -5633,14 +5633,14 @@ class LibvirtConnTestCase(test.TestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref['name']:
+            if instance_name == instance['name']:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.ConsoleTypeUnavailable,
-                          conn.get_vnc_console, instance_ref)
+                          conn.get_vnc_console, self.context, instance)
 
     def test_get_spice_console(self):
         instance = self.create_instance_obj(self.context)
