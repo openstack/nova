@@ -212,6 +212,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         ...  - Remove live_snapshot() that was never actually used
 
         3.0 - Remove 2.x compatibility
+        3.1 - Update get_spice_console() to take an instance object
     '''
 
     #
@@ -424,13 +425,16 @@ class ComputeAPI(rpcclient.RpcProxy):
                           instance=instance_p, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.24')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('3.1'):
+            version = '3.1'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.24')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_spice_console',
-                          instance=instance_p, console_type=console_type)
+                          instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
         # NOTE(russellb) Havana compat

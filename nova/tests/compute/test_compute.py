@@ -7700,7 +7700,7 @@ class ComputeAPITestCase(BaseTestCase):
                     'namespace': None,
                     'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
-                   'version': '3.0'}
+                   'version': '3.1'}
         rpc_msg2 = {'method': 'authorize_console',
                     'namespace': None,
                     'args': fake_connect_info,

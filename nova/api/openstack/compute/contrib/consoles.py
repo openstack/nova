@@ -63,7 +63,7 @@ class ConsolesController(wsgi.Controller):
         console_type = body['os-getSPICEConsole'].get('type')
 
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
             output = self.compute_api.get_spice_console(context,
                                                       instance,
                                                       console_type)
