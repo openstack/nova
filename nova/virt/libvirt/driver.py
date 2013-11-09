@@ -1667,9 +1667,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   the snapshot is complete
         """
 
-        LOG.debug(_("volume_snapshot_create: instance: %(instance)s "
-                    "create_info: %(c_info)s") % {'instance': instance['uuid'],
-                                                 'c_info': create_info})
+        LOG.debug(_("volume_snapshot_create: create_info: %(c_info)s"),
+                  {'c_info': create_info}, instance=instance)
 
         try:
             virt_dom = self._lookup_by_name(instance['name'])
@@ -3114,14 +3113,15 @@ class LibvirtDriver(driver.ComputeDriver):
                                             context, instance['image_ref'])
             image_meta = compute_utils.get_image_metadata(
                                 context, image_service, image_id, instance)
-        LOG.debug(_('Start to_xml instance=%(instance)s '
+        LOG.debug(_('Start to_xml '
                     'network_info=%(network_info)s '
                     'disk_info=%(disk_info)s '
                     'image_meta=%(image_meta)s rescue=%(rescue)s'
                     'block_device_info=%(block_device_info)s'),
-                  {'instance': instance, 'network_info': network_info,
-                   'disk_info': disk_info, 'image_meta': image_meta,
-                   'rescue': rescue, 'block_device_info': block_device_info})
+                  {'network_info': network_info, 'disk_info': disk_info,
+                   'image_meta': image_meta, 'rescue': rescue,
+                   'block_device_info': block_device_info},
+                  instance=instance)
         conf = self.get_guest_config(instance, network_info, image_meta,
                                      disk_info, rescue, block_device_info)
         xml = conf.to_xml()
@@ -3131,8 +3131,8 @@ class LibvirtDriver(driver.ComputeDriver):
             xml_path = os.path.join(instance_dir, 'libvirt.xml')
             libvirt_utils.write_to_file(xml_path, xml)
 
-        LOG.debug(_('End to_xml instance=%(instance)s xml=%(xml)s'),
-                  {'instance': instance, 'xml': xml})
+        LOG.debug(_('End to_xml xml=%(xml)s'),
+                  {'xml': xml}, instance=instance)
         return xml
 
     def _lookup_by_id(self, instance_id):
@@ -3752,10 +3752,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                  flush_operations=vol_stats[4])
                     LOG.debug(
                         _("Got volume usage stats for the volume=%(volume)s,"
-                          " instance=%(instance)s, rd_req=%(rd_req)d,"
-                          " rd_bytes=%(rd_bytes)d, wr_req=%(wr_req)d,"
-                          " wr_bytes=%(wr_bytes)d")
-                        % stats)
+                          " rd_req=%(rd_req)d, rd_bytes=%(rd_bytes)d, "
+                          "wr_req=%(wr_req)d, wr_bytes=%(wr_bytes)d"),
+                        stats, instance=instance)
                     vol_usage.append(stats)
 
         return vol_usage
@@ -3831,7 +3830,8 @@ class LibvirtDriver(driver.ComputeDriver):
         fd, tmp_file = tempfile.mkstemp(dir=dirpath)
         LOG.debug(_("Creating tmpfile %s to verify with other "
                     "compute node that the instance is on "
-                    "the same shared storage.") % tmp_file)
+                    "the same shared storage."),
+                  tmp_file, instance=instance)
         os.close(fd)
         return {"filename": tmp_file}
 
