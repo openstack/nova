@@ -497,7 +497,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_get_console_output(self):
         fake_libvirt_utils.files['dummy.log'] = ''
         instance_ref, network_info = self._get_running_instance()
-        console_output = self.connection.get_console_output(instance_ref)
+        console_output = self.connection.get_console_output(self.ctxt,
+            instance_ref)
         self.assertIsInstance(console_output, six.string_types)
 
     @catch_notimplementederror

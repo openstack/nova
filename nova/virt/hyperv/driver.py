@@ -196,6 +196,6 @@ class HyperVDriver(driver.ComputeDriver):
     def get_host_ip_addr(self):
         return self._hostops.get_host_ip_addr()
 
-    def get_console_output(self, instance):
+    def get_console_output(self, context, instance):
         LOG.debug(_("get_console_output called"), instance=instance)
         return ''

@@ -388,7 +388,7 @@ class XenAPIDriver(driver.ComputeDriver):
                     bwcounters.append(vif_counter)
         return bwcounters
 
-    def get_console_output(self, instance):
+    def get_console_output(self, context, instance):
         """Return snapshot of console."""
         return self._vmops.get_console_output(instance)
 

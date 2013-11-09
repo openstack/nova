@@ -3598,10 +3598,12 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length):
         """Send the console output for the given instance."""
+        instance = instance_obj.Instance._from_db_object(
+            context, instance_obj.Instance(), instance)
         context = context.elevated()
         LOG.audit(_("Get console output"), context=context,
                   instance=instance)
-        output = self.driver.get_console_output(instance)
+        output = self.driver.get_console_output(context, instance)
 
         if tail_length is not None:
             output = self._tail_log(output, tail_length)

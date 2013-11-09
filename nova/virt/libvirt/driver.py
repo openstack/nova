@@ -2186,8 +2186,8 @@ class LibvirtDriver(driver.ComputeDriver):
         fp.write(data)
         return fpath
 
-    def get_console_output(self, instance):
-        virt_dom = self._lookup_by_name(instance['name'])
+    def get_console_output(self, context, instance):
+        virt_dom = self._lookup_by_name(instance.name)
         xml = virt_dom.XMLDesc(0)
         tree = etree.fromstring(xml)
 

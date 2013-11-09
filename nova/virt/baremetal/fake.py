@@ -43,7 +43,7 @@ class FakeDriver(base.NodeDriver):
         pass
 
     def get_console_output(self, node, instance):
-        return 'fake\nconsole\noutput for instance %s' % instance['id']
+        return 'fake\nconsole\noutput for instance %s' % instance.id
 
 
 class FakePowerManager(base.PowerManager):

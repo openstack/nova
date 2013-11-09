@@ -1365,7 +1365,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(self.conn._vmops, 'get_console_output',
                        fake_get_console_output)
 
-        self.assertEqual(self.conn.get_console_output("instance"),
+        self.assertEqual(self.conn.get_console_output('context', "instance"),
                          "console_log")
 
     def _test_maintenance_mode(self, find_host, find_aggregate):

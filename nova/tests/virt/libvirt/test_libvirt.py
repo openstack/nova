@@ -3978,7 +3978,7 @@ class LibvirtConnTestCase(test.TestCase):
             try:
                 prev_max = libvirt_driver.MAX_CONSOLE_BYTES
                 libvirt_driver.MAX_CONSOLE_BYTES = 5
-                output = conn.get_console_output(instance)
+                output = conn.get_console_output(self.context, instance)
             finally:
                 libvirt_driver.MAX_CONSOLE_BYTES = prev_max
 
@@ -4029,7 +4029,7 @@ class LibvirtConnTestCase(test.TestCase):
             try:
                 prev_max = libvirt_driver.MAX_CONSOLE_BYTES
                 libvirt_driver.MAX_CONSOLE_BYTES = 5
-                output = conn.get_console_output(instance)
+                output = conn.get_console_output(self.context, instance)
             finally:
                 libvirt_driver.MAX_CONSOLE_BYTES = prev_max
 
