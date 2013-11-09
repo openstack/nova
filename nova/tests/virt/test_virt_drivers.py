@@ -511,7 +511,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_get_spice_console(self):
         instance_ref, network_info = self._get_running_instance()
-        spice_console = self.connection.get_spice_console(instance_ref)
+        spice_console = self.connection.get_spice_console(self.ctxt,
+                instance_ref)
         self.assertIn('internal_access_path', spice_console)
         self.assertIn('host', spice_console)
         self.assertIn('port', spice_console)

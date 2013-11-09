@@ -43,6 +43,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.objects import instance as instance_obj
+from nova.objects import pci_device as pci_device_obj
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -492,6 +493,14 @@ class LibvirtConnTestCase(test.TestCase):
                        'report_count': 0}
 
         return db.service_create(context.get_admin_context(), service_ref)
+
+    def create_instance_obj(self, context, **params):
+        default_params = self.test_instance
+        default_params['pci_devices'] = pci_device_obj.PciDeviceList()
+        default_params.update(params)
+        instance = instance_obj.Instance(context, **params)
+        instance.create()
+        return instance
 
     def test_prepare_pci_device(self):
 
@@ -5496,7 +5505,7 @@ class LibvirtConnTestCase(test.TestCase):
                           conn.get_vnc_console, instance_ref)
 
     def test_get_spice_console(self):
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance = self.create_instance_obj(self.context)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
                     "<graphics type='spice' port='5950'/>"
@@ -5507,17 +5516,17 @@ class LibvirtConnTestCase(test.TestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref['name']:
+            if instance_name == instance['name']:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        spice_dict = conn.get_spice_console(instance_ref)
+        spice_dict = conn.get_spice_console(self.context, instance)
         self.assertEqual(spice_dict['port'], '5950')
 
     def test_get_spice_console_unavailable(self):
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance = self.create_instance_obj(self.context)
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices></devices></domain>")
 
@@ -5526,14 +5535,14 @@ class LibvirtConnTestCase(test.TestCase):
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
         def fake_lookup(instance_name):
-            if instance_name == instance_ref['name']:
+            if instance_name == instance['name']:
                 return vdmock
         self.create_fake_libvirt_mock(lookupByName=fake_lookup)
 
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.ConsoleTypeUnavailable,
-                          conn.get_spice_console, instance_ref)
+                          conn.get_spice_console, self.context, instance)
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """
