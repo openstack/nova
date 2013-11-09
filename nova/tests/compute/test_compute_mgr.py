@@ -1138,7 +1138,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 network_info=self.network_info,
                 block_device_info=self.block_device_info).AndRaise(exc)
         self._notify_about_instance_usage('create.end',
-                extra_usage_info={'message': exc.format_message()}, stub=False)
+                fault=exc, stub=False)
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self.mox.ReplayAll()
@@ -1161,16 +1161,15 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self._build_and_run_instance_update()
+        exc = test.TestingException()
         self.compute.driver.spawn(self.context, self.instance, self.image,
                 self.injected_files, self.admin_pass,
                 network_info=self.network_info,
-                block_device_info=self.block_device_info).AndRaise(
-                        test.TestingException())
+                block_device_info=self.block_device_info).AndRaise(exc)
         conductor_rpcapi.ConductorAPI.instance_update(
             self.context, self.instance['uuid'], mox.IgnoreArg(), 'conductor')
         self._notify_about_instance_usage('create.error',
-            extra_usage_info={'message': str(test.TestingException())},
-            stub=False)
+            fault=exc, stub=False)
         self.mox.ReplayAll()
 
         self.assertRaises(exception.RescheduledException,
@@ -1214,7 +1213,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.call(self.context, self.instance, 'create.start',
                     extra_usage_info={'image_name': self.image.get('name')}),
                 mock.call(self.context, self.instance, 'create.error',
-                    extra_usage_info={'message': exc.format_message()})])
+                    fault=exc)])
 
             save.assert_has_calls([
                 mock.call(),
@@ -1249,7 +1248,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._notify_about_instance_usage('create.start',
             extra_usage_info={'image_name': self.image.get('name')})
         self._notify_about_instance_usage('create.error',
-            extra_usage_info={'message': exc.format_message()}, stub=False)
+            fault=exc, stub=False)
         self.compute.compute_task_api.build_instances(self.context,
                 [self.instance], self.image, [], self.admin_pass,
                 self.injected_files, self.requested_networks,
@@ -1283,7 +1282,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups, self.image,
                 self.block_device_mapping).AndRaise(exc)
         self._notify_about_instance_usage('create.error',
-            extra_usage_info={'message': exc.format_message()}, stub=False)
+            fault=exc, stub=False)
         self.mox.ReplayAll()
         self.assertRaises(exception.BuildAbortException,
                 self.compute._build_and_run_instance, self.context,

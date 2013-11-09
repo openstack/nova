@@ -958,13 +958,13 @@ class ComputeManager(manager.Manager):
 
         extra_usage_info = {}
 
-        def notify(status, msg="", **kwargs):
+        def notify(status, msg="", fault=None, **kwargs):
             """Send a create.{start,error,end} notification."""
             type_ = "create.%(status)s" % dict(status=status)
             info = extra_usage_info.copy()
             info['message'] = unicode(msg)
             self._notify_about_instance_usage(context, instance, type_,
-                    extra_usage_info=info, **kwargs)
+                    extra_usage_info=info, fault=fault, **kwargs)
 
         try:
             self._prebuild_instance(context, instance)
@@ -985,7 +985,7 @@ class ComputeManager(manager.Manager):
 
         except exception.RescheduledException as e:
             # Instance build encountered an error, and has been rescheduled.
-            notify("error", msg=unicode(e))  # notify that build failed
+            notify("error", fault=e)
 
         except exception.BuildAbortException as e:
             # Instance build aborted due to a non-failure
@@ -996,7 +996,7 @@ class ComputeManager(manager.Manager):
             # Instance build encountered a non-recoverable error:
             with excutils.save_and_reraise_exception():
                 self._set_instance_error_state(context, instance['uuid'])
-                notify("error", msg=unicode(e))  # notify that build failed
+                notify("error", fault=e)  # notify that build failed
 
     def _prebuild_instance(self, context, instance):
         self._check_instance_exists(context, instance)
@@ -1128,6 +1128,8 @@ class ComputeManager(manager.Manager):
 
         compute_utils.add_instance_fault_from_exc(context, self.conductor_api,
                 instance, exc_info[1], exc_info=exc_info)
+        self._notify_about_instance_usage(context, instance,
+                'instance.create.error', fault=exc_info[1])
 
         try:
             LOG.debug(_("Clean up resource before rescheduling."),
@@ -1515,12 +1517,12 @@ class ComputeManager(manager.Manager):
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, system_metadata=None,
-                                     extra_usage_info=None):
+                                     extra_usage_info=None, fault=None):
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, event_suffix,
             network_info=network_info,
             system_metadata=system_metadata,
-            extra_usage_info=extra_usage_info)
+            extra_usage_info=extra_usage_info, fault=fault)
 
     def _deallocate_network(self, context, instance,
                             requested_networks=None):
@@ -1697,29 +1699,22 @@ class ComputeManager(manager.Manager):
                             'create.end',
                             extra_usage_info={'message': _('Success')},
                             network_info=network_info)
-        except exception.InstanceNotFound as e:
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError) as e:
             with excutils.save_and_reraise_exception():
                 self._notify_about_instance_usage(context, instance,
-                        'create.end',
-                        extra_usage_info={'message': e.format_message()})
-        except exception.UnexpectedDeletingTaskStateError as e:
-            with excutils.save_and_reraise_exception():
-                msg = e.format_message()
-                self._notify_about_instance_usage(context, instance,
-                        'create.end', extra_usage_info={'message': msg})
+                    'create.end', fault=e)
         except exception.ComputeResourcesUnavailable as e:
             LOG.debug(e.format_message(), instance=instance)
             self._notify_about_instance_usage(context, instance,
-                    'create.error',
-                    extra_usage_info={'message': e.format_message()})
+                    'create.error', fault=e)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=e.format_message())
         except exception.BuildAbortException as e:
             with excutils.save_and_reraise_exception():
-                LOG.debug(e.format_message, instance=instance)
+                LOG.debug(e.format_message(), instance=instance)
                 self._notify_about_instance_usage(context, instance,
-                        'create.error', extra_usage_info={'message':
-                                                        e.format_message()})
+                    'create.error', fault=e)
         except (exception.VirtualInterfaceCreateException,
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpLimitExceeded,
@@ -1727,15 +1722,13 @@ class ComputeManager(manager.Manager):
             LOG.exception(_('Failed to allocate network(s)'),
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
-                    'create.error', extra_usage_info={'message':
-                        e.format_message()})
+                    'create.error', fault=e)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
         except Exception as e:
             self._notify_about_instance_usage(context, instance,
-                    'create.error',
-                    extra_usage_info={'message': str(e)})
+                    'create.error', fault=e)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=str(e))
 
@@ -2400,25 +2393,23 @@ class ComputeManager(manager.Manager):
                                bad_volumes_callback=bad_volumes_callback)
 
         except Exception as error:
-            # Can't use save_and_reraise as we don't know yet if we
-            # will re-raise or not
-            type_, value, tb = sys.exc_info()
-
-            compute_utils.add_instance_fault_from_exc(context,
-                            self.conductor_api, instance, error,
-                            sys.exc_info())
-
-            # if the reboot failed but the VM is running don't
-            # put it into an error state
-            new_power_state = self._get_power_state(context, instance)
-            if new_power_state == power_state.RUNNING:
-                LOG.warning(_('Reboot failed but instance is running'),
-                            context=context, instance=instance)
-            else:
-                LOG.error(_('Cannot reboot instance: %s'), error,
-                          context=context, instance=instance)
-                self._set_instance_obj_error_state(context, instance)
-                raise type_, value, tb
+            with excutils.save_and_reraise_exception() as ctxt:
+                exc_info = sys.exc_info()
+                # if the reboot failed but the VM is running don't
+                # put it into an error state
+                new_power_state = self._get_power_state(context, instance)
+                if new_power_state == power_state.RUNNING:
+                    LOG.warning(_('Reboot failed but instance is running'),
+                                context=context, instance=instance)
+                    compute_utils.add_instance_fault_from_exc(context,
+                            self.conductor_api, instance, error, exc_info)
+                    self._notify_about_instance_usage(context, instance,
+                            'reboot.error', fault=error)
+                    ctxt.reraise = False
+                else:
+                    LOG.error(_('Cannot reboot instance: %s'), error,
+                              context=context, instance=instance)
+                    self._set_instance_obj_error_state(context, instance)
 
         if not new_power_state:
             new_power_state = self._get_power_state(context, instance)
@@ -3127,9 +3118,6 @@ class ComputeManager(manager.Manager):
         rescheduled = False
         instance_uuid = instance['uuid']
 
-        compute_utils.add_instance_fault_from_exc(context, self.conductor_api,
-                instance, exc_info[0], exc_info=exc_info)
-
         try:
             # NOTE(comstud): remove the scheduler RPCAPI method when
             # this is adjusted to send to conductor... and then
@@ -3143,14 +3131,23 @@ class ComputeManager(manager.Manager):
             rescheduled = self._reschedule(context, request_spec,
                     filter_properties, instance_uuid, scheduler_method,
                     method_args, task_state, exc_info)
-        except Exception:
+        except Exception as error:
             rescheduled = False
             LOG.exception(_("Error trying to reschedule"),
                           instance_uuid=instance_uuid)
+            compute_utils.add_instance_fault_from_exc(context,
+                    self.conductor_api, instance, error,
+                    exc_info=sys.exc_info())
+            self._notify_about_instance_usage(context, instance,
+                    'resize.error', fault=error)
 
         if rescheduled:
-            # log the original build error
             self._log_original_error(exc_info, instance_uuid)
+            compute_utils.add_instance_fault_from_exc(context,
+                    self.conductor_api, instance, exc_info[1],
+                    exc_info=exc_info)
+            self._notify_about_instance_usage(context, instance,
+                    'resize.error', fault=exc_info[1])
         else:
             # not re-scheduling
             raise exc_info[0], exc_info[1], exc_info[2]

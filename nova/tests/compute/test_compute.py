@@ -2337,6 +2337,7 @@ class ComputeTestCase(BaseTestCase):
             'args': (econtext, instance, expected_nw_info,
                      reboot_type),
             'kwargs': {'block_device_info': fake_block_dev_info}}
+        fault = exception.InstanceNotFound(instance_id='instance-0000')
 
         def fake_reboot(*args, **kwargs):
             reboot_call_info['args'] = args
@@ -2347,7 +2348,7 @@ class ComputeTestCase(BaseTestCase):
             # can't stub it out, thus we skip that comparison.
             kwargs.pop('bad_volumes_callback')
             if fail_reboot:
-                raise exception.InstanceNotFound(instance_id='instance-0000')
+                raise fault
 
         self.stubs.Set(self.compute.driver, 'reboot', fake_reboot)
 
@@ -2362,6 +2363,8 @@ class ComputeTestCase(BaseTestCase):
                     instance).AndReturn(fake_power_state3)
 
         if test_delete:
+            fault = exception.InstanceNotFound(
+                        instance_id=instance['uuid'])
             db.instance_update_and_get_original(
                 econtext, updated_dbinstance1['uuid'],
                 {'power_state': new_power_state,
@@ -2369,8 +2372,7 @@ class ComputeTestCase(BaseTestCase):
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
                 columns_to_join=['system_metadata'],
-                ).AndRaise(exception.InstanceNotFound(
-                    instance_id=instance['uuid']))
+                ).AndRaise(fault)
             self.compute._notify_about_instance_usage(
                 econtext,
                 instance,
@@ -2381,8 +2383,7 @@ class ComputeTestCase(BaseTestCase):
                 {'vm_state': vm_states.ERROR},
                 update_cells=False,
                 columns_to_join=['system_metadata'],
-                ).AndRaise(exception.InstanceNotFound(
-                    instance_id=instance['uuid']))
+                ).AndRaise(fault)
         else:
             db.instance_update_and_get_original(
                 econtext, updated_dbinstance1['uuid'],
@@ -2392,6 +2393,9 @@ class ComputeTestCase(BaseTestCase):
                 update_cells=False,
                 columns_to_join=['system_metadata'],
                 ).AndReturn((None, updated_dbinstance2))
+            if fail_running:
+                self.compute._notify_about_instance_usage(econtext, instance,
+                        'reboot.error', fault=fault)
             self.compute._notify_about_instance_usage(
                 econtext,
                 instance,
