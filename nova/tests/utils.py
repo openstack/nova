@@ -28,6 +28,7 @@ from nova import exception
 from nova.image import glance
 from nova.network import minidns
 from nova.network import model as network_model
+from nova.objects import instance as instance_obj
 
 CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
@@ -71,7 +72,7 @@ def get_test_instance_type(context=None, options=None):
     return instance_type_ref
 
 
-def get_test_instance(context=None, instance_type=None):
+def get_test_instance(context=None, instance_type=None, obj=False):
     if not context:
         context = get_test_admin_context()
 
@@ -93,8 +94,12 @@ def get_test_instance(context=None, instance_type=None):
                      'system_metadata': metadata,
                      'extra_specs': {}}
 
-    instance_ref = nova.db.instance_create(context, test_instance)
-    return instance_ref
+    if obj:
+        instance = instance_obj.Instance(context, **test_instance)
+        instance.create()
+    else:
+        instance = nova.db.instance_create(context, test_instance)
+    return instance
 
 
 def get_test_network_info(count=1):
