@@ -314,7 +314,12 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_validate_console_port(self):
         self._test_compute_api('validate_console_port', 'call',
                 instance=self.fake_instance, port="5900",
-                console_type="novnc")
+                console_type="novnc", version='3.3')
+
+        self.flags(compute='3.0', group='upgrade_levels')
+        self._test_compute_api('validate_console_port', 'call',
+                instance=self.fake_instance, port="5900",
+                console_type="novnc", version='3.0')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
