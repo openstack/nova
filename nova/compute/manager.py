@@ -420,7 +420,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.1'
+    RPC_API_VERSION = '3.2'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3623,10 +3623,9 @@ class ComputeManager(manager.Manager):
             exception.InstanceNotReady, exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
+    @object_compat
     def get_vnc_console(self, context, console_type, instance):
         """Return connection information for a vnc console."""
-        instance = instance_obj.Instance._from_db_object(
-            context, instance_obj.Instance(), instance)
         context = context.elevated()
         LOG.debug(_("Getting vnc console"), instance=instance)
         token = str(uuid.uuid4())

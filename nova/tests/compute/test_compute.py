@@ -7641,7 +7641,7 @@ class ComputeAPITestCase(BaseTestCase):
                     'namespace': None,
                     'args': {'instance': fake_instance,
                              'console_type': fake_console_type},
-                   'version': compute_rpcapi.ComputeAPI.BASE_RPC_API_VERSION}
+                   'version': '3.2'}
         rpc_msg2 = {'method': 'authorize_console',
                     'namespace': None,
                     'args': fake_connect_info,
