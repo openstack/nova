@@ -149,7 +149,6 @@ policy_data = """
     "compute_extension:consoles": "",
     "compute_extension:v3:os-remote-consoles": "",
     "compute_extension:coverage_ext": "is_admin:True",
-    "compute_extension:v3:os-coverage": "is_admin:True",
     "compute_extension:createserverext": "",
     "compute_extension:deferred_delete": "",
     "compute_extension:v3:os-deferred-delete": "",
