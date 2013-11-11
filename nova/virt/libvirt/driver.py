@@ -582,52 +582,56 @@ class LibvirtDriver(driver.ComputeDriver):
 
         self._init_events()
 
+    def _get_new_connection(self):
+        # call with _wrapped_conn_lock held
+        LOG.debug(_('Connecting to libvirt: %s'), self.uri())
+        wrapped_conn = None
+        try:
+            if not CONF.libvirt_nonblocking:
+                wrapped_conn = self._connect(self.uri(), self.read_only)
+            else:
+                wrapped_conn = tpool.proxy_call(
+                        (libvirt.virDomain, libvirt.virConnect),
+                        self._connect, self.uri(), self.read_only)
+        finally:
+            # Enabling the compute service, in case it was disabled
+            # since the connection was successful.
+            is_connected = bool(wrapped_conn)
+            self.set_host_enabled(CONF.host, is_connected)
+
+        self._wrapped_conn = wrapped_conn
+
+        try:
+            LOG.debug(_("Registering for lifecycle events %s") % str(self))
+            wrapped_conn.domainEventRegisterAny(
+                None,
+                libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
+                self._event_lifecycle_callback,
+                self)
+        except Exception as e:
+            LOG.warn(_("URI %(uri)s does not support events: %(error)s"),
+                     {'uri': self.uri(), 'error': e})
+
+        if self._has_min_version(wrapped_conn,
+                                 MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
+            try:
+                LOG.debug(_("Registering for connection events: %s") %
+                          str(self))
+                wrapped_conn.registerCloseCallback(
+                        self._close_callback, None)
+            except libvirt.libvirtError as e:
+                LOG.warn(_("URI %(uri)s does not support connection"
+                         " events: %(error)s"),
+                         {'uri': self.uri(), 'error': e})
+
+        return wrapped_conn
+
     def _get_connection(self):
         # multiple concurrent connections are protected by _wrapped_conn_lock
         with self._wrapped_conn_lock:
             wrapped_conn = self._wrapped_conn
-
             if not wrapped_conn or not self._test_connection(wrapped_conn):
-                LOG.debug(_('Connecting to libvirt: %s'), self.uri())
-                try:
-                    if not CONF.libvirt_nonblocking:
-                        wrapped_conn = self._connect(self.uri(),
-                                                     self.read_only)
-                    else:
-                        wrapped_conn = tpool.proxy_call(
-                            (libvirt.virDomain, libvirt.virConnect),
-                            self._connect, self.uri(), self.read_only)
-                finally:
-                    # Enabling the compute service, in case it was disabled
-                    # since the connection was successful.
-                    is_connected = bool(wrapped_conn)
-                    self.set_host_enabled(CONF.host, is_connected)
-
-                self._wrapped_conn = wrapped_conn
-
-            try:
-                LOG.debug(_("Registering for lifecycle events %s") %
-                          str(self))
-                wrapped_conn.domainEventRegisterAny(
-                    None,
-                    libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
-                    self._event_lifecycle_callback,
-                    self)
-            except Exception as e:
-                LOG.warn(_("URI %(uri)s does not support events: %(error)s"),
-                         {'uri': self.uri(), 'error': e})
-
-            if self._has_min_version(wrapped_conn,
-                                     MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
-                try:
-                    LOG.debug(_("Registering for connection events: %s") %
-                              str(self))
-                    wrapped_conn.registerCloseCallback(
-                        self._close_callback, None)
-                except libvirt.libvirtError as e:
-                    LOG.warn(_("URI %(uri)s does not support connection"
-                             " events: %(error)s"),
-                             {'uri': self.uri(), 'error': e})
+                wrapped_conn = self._get_new_connection()
 
         return wrapped_conn
 

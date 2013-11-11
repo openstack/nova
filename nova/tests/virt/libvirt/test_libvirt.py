@@ -410,6 +410,9 @@ class LibvirtConnTestCase(test.TestCase):
             def getLibVersion(self):
                 return (0 * 1000 * 1000) + (9 * 1000) + 11
 
+            def domainEventRegisterAny(self, *args, **kwargs):
+                pass
+
             def registerCloseCallback(self, cb, opaque):
                 pass
 
@@ -5562,18 +5565,24 @@ class LibvirtConnTestCase(test.TestCase):
         def connect_with_block(*a, **k):
             # enough to allow another connect to run
             eventlet.sleep(0)
-            self.calls += 1
+            self.connect_calls += 1
             return self.conn
 
-        self.calls = 0
+        def fake_register(*a, **k):
+            self.register_calls += 1
+
+        self.connect_calls = 0
+        self.register_calls = 0
         self.stubs.Set(libvirt_driver.LibvirtDriver,
                        '_connect', connect_with_block)
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.stubs.Set(self.conn, 'domainEventRegisterAny', fake_register)
 
         # call serially
         get_conn_currency(driver)
         get_conn_currency(driver)
-        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.connect_calls, 1)
+        self.assertEqual(self.register_calls, 1)
 
     def test_get_connection_concurrency(self):
 
@@ -5583,13 +5592,18 @@ class LibvirtConnTestCase(test.TestCase):
         def connect_with_block(*a, **k):
             # enough to allow another connect to run
             eventlet.sleep(0)
-            self.calls += 1
+            self.connect_calls += 1
             return self.conn
 
-        self.calls = 0
+        def fake_register(*a, **k):
+            self.register_calls += 1
+
+        self.connect_calls = 0
+        self.register_calls = 0
         self.stubs.Set(libvirt_driver.LibvirtDriver,
                        '_connect', connect_with_block)
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.stubs.Set(self.conn, 'domainEventRegisterAny', fake_register)
 
         # call concurrently
         thr1 = eventlet.spawn(get_conn_currency, driver=driver)
@@ -5600,7 +5614,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         thr1.wait()
         thr2.wait()
-        self.assertEqual(self.calls, 1)
+        self.assertEqual(self.connect_calls, 1)
+        self.assertEqual(self.register_calls, 1)
 
 
 class HostStateTestCase(test.TestCase):
