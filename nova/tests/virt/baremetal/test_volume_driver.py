@@ -160,7 +160,7 @@ class BareMetalVolumeTestCase(test.NoDBTestCase):
     def test_get_iqn(self):
         self.flags(iscsi_iqn_prefix='iqn.2012-12.a.b', group='baremetal')
         iqn = volume_driver._get_iqn('instname', '/dev/vdx')
-        self.assertEquals('iqn.2012-12.a.b:instname-dev-vdx', iqn)
+        self.assertEqual('iqn.2012-12.a.b:instname-dev-vdx', iqn)
 
 
 class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
