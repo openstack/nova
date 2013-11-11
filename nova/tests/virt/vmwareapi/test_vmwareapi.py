@@ -53,12 +53,6 @@ from nova.virt.vmwareapi import volume_util
 from nova.virt.vmwareapi import volumeops
 
 
-class fake_vm_ref(object):
-    def __init__(self):
-        self.value = 4
-        self._type = 'VirtualMachine'
-
-
 class VMwareAPIConfTestCase(test.NoDBTestCase):
     """Unit tests for VMWare API configurations."""
     def setUp(self):
