@@ -176,7 +176,7 @@ class MuteWeigherTestClass(_WeigherTestClass):
     def setUp(self):
         super(MuteWeigherTestClass, self).setUp()
         self.flags(mute_weight_multiplier=-10.0, mute_child_interval=100,
-                   mute_weight_value=1000.0, group='cells')
+                   group='cells')
 
         self.now = timeutils.utcnow()
         timeutils.set_time_override(self.now)
