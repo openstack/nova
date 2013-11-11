@@ -46,13 +46,13 @@ class LoopTestCase(test.NoDBTestCase):
         # No error logged, device consumed
         self.assertTrue(l.get_dev())
         self.assertTrue(l.linked)
-        self.assertEquals('', l.error)
-        self.assertEquals('/dev/loop0', l.device)
+        self.assertEqual('', l.error)
+        self.assertEqual('/dev/loop0', l.device)
 
         # Free
         l.unget_dev()
         self.assertFalse(l.linked)
-        self.assertEquals('', l.error)
+        self.assertEqual('', l.error)
         self.assertIsNone(l.device)
 
     def test_inner_get_dev_fails(self):
@@ -64,7 +64,7 @@ class LoopTestCase(test.NoDBTestCase):
         # No error logged, device consumed
         self.assertFalse(l._inner_get_dev())
         self.assertFalse(l.linked)
-        self.assertNotEquals('', l.error)
+        self.assertNotEqual('', l.error)
         self.assertIsNone(l.device)
 
         # Free
