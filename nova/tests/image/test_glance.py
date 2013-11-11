@@ -229,8 +229,8 @@ class TestGlanceImageService(test.NoDBTestCase):
         image_id = self.service.create(self.context, fixture)['id']
 
         self.assertIsNotNone(image_id)
-        self.assertEquals(num_images + 1,
-                          len(self.service.detail(self.context)))
+        self.assertEqual(num_images + 1,
+                         len(self.service.detail(self.context)))
 
     def test_create_and_show_non_existing_image(self):
         fixture = self._make_fixture(name='test image')
@@ -270,7 +270,7 @@ class TestGlanceImageService(test.NoDBTestCase):
             ids.append(self.service.create(self.context, fixture)['id'])
 
         image_metas = self.service.detail(self.context, marker=ids[1])
-        self.assertEquals(len(image_metas), 8)
+        self.assertEqual(len(image_metas), 8)
         i = 2
         for meta in image_metas:
             expected = {
@@ -304,12 +304,12 @@ class TestGlanceImageService(test.NoDBTestCase):
             ids.append(self.service.create(self.context, fixture)['id'])
 
         image_metas = self.service.detail(self.context, limit=5)
-        self.assertEquals(len(image_metas), 5)
+        self.assertEqual(len(image_metas), 5)
 
     def test_page_size(self):
         with patch.object(GlanceClientWrapper, 'call') as a_mock:
             self.service.detail(self.context, page_size=5)
-            self.assertEquals(a_mock.called, True)
+            self.assertEqual(a_mock.called, True)
             a_mock.assert_called_with(self.context, 1, 'list',
                                       filters={'is_public': 'none'},
                                       page_size=5)
@@ -335,7 +335,7 @@ class TestGlanceImageService(test.NoDBTestCase):
             ids.append(self.service.create(self.context, fixture)['id'])
 
         image_metas = self.service.detail(self.context, marker=ids[3], limit=5)
-        self.assertEquals(len(image_metas), 5)
+        self.assertEqual(len(image_metas), 5)
         i = 4
         for meta in image_metas:
             expected = {
@@ -378,7 +378,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.service.update(self.context, image_id, fixture)
 
         new_image_data = self.service.show(self.context, image_id)
-        self.assertEquals('new image name', new_image_data['name'])
+        self.assertEqual('new image name', new_image_data['name'])
 
     def test_delete(self):
         fixture1 = self._make_fixture(name='test image 1')
@@ -386,7 +386,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         fixtures = [fixture1, fixture2]
 
         num_images = len(self.service.detail(self.context))
-        self.assertEquals(0, num_images)
+        self.assertEqual(0, num_images)
 
         ids = []
         for fixture in fixtures:
@@ -394,7 +394,7 @@ class TestGlanceImageService(test.NoDBTestCase):
             ids.append(new_id)
 
         num_images = len(self.service.detail(self.context))
-        self.assertEquals(2, num_images)
+        self.assertEqual(2, num_images)
 
         self.service.delete(self.context, ids[0])
         # When you delete an image from glance, it sets the status to DELETED
@@ -402,12 +402,12 @@ class TestGlanceImageService(test.NoDBTestCase):
 
         # Check the image is still there.
         num_images = len(self.service.detail(self.context))
-        self.assertEquals(2, num_images)
+        self.assertEqual(2, num_images)
 
         # Check the image is marked as deleted.
         num_images = reduce(lambda x, y: x + (0 if y['deleted'] else 1),
                             self.service.detail(self.context), 0)
-        self.assertEquals(1, num_images)
+        self.assertEqual(1, num_images)
 
     def test_show_passes_through_to_client(self):
         fixture = self._make_fixture(name='image1', is_public=True)
@@ -748,7 +748,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         image_id = self.service.create(self.context, fixture)['id']
         (service, same_id) = glance.get_remote_image_service(
                 self.context, image_id)
-        self.assertEquals(same_id, image_id)
+        self.assertEqual(same_id, image_id)
 
     def test_glance_client_image_ref(self):
         fixture = self._make_fixture(name='test image')
@@ -756,8 +756,8 @@ class TestGlanceImageService(test.NoDBTestCase):
         image_url = 'http://something-less-likely/%s' % image_id
         (service, same_id) = glance.get_remote_image_service(
                 self.context, image_url)
-        self.assertEquals(same_id, image_id)
-        self.assertEquals(service._client.host,
+        self.assertEqual(same_id, image_id)
+        self.assertEqual(service._client.host,
                 'something-less-likely')
 
 
@@ -798,15 +798,15 @@ class TestGlanceClientWrapper(test.NoDBTestCase):
                                        endpoint, **params)
             self.assertIsNotNone(fake_client.auth_token)
             self.assertIsNotNone(fake_client.identity_headers)
-            self.assertEquals(fake_client.identity_header['X-Auth_Token'],
-                              auth_token)
-            self.assertEquals(fake_client.identity_header['X-User-Id'], 'fake')
+            self.assertEqual(fake_client.identity_header['X-Auth_Token'],
+                             auth_token)
+            self.assertEqual(fake_client.identity_header['X-User-Id'], 'fake')
             self.assertIsNone(fake_client.identity_header['X-Roles'])
             self.assertIsNone(fake_client.identity_header['X-Tenant-Id'])
             self.assertIsNone(fake_client.identity_header['X-Service-Catalog'])
-            self.assertEquals(fake_client.
-                              identity_header['X-Identity-Status'],
-                              'Confirmed')
+            self.assertEqual(fake_client.
+                             identity_header['X-Identity-Status'],
+                             'Confirmed')
 
         self.stubs.Set(glanceclient.Client, '__init__',
                        _get_fake_glanceclient)
