@@ -33,7 +33,7 @@ class ConsolesController(wsgi.Controller):
 
     @wsgi.action('os-getVNCConsole')
     def get_vnc_console(self, req, id, body):
-        """Get text console output."""
+        """Get vnc connection information to access a server."""
         context = req.environ['nova.context']
         authorize(context)
 
@@ -55,7 +55,7 @@ class ConsolesController(wsgi.Controller):
 
     @wsgi.action('os-getSPICEConsole')
     def get_spice_console(self, req, id, body):
-        """Get text console output."""
+        """Get spice connection information to access a server."""
         context = req.environ['nova.context']
         authorize(context)
 
