@@ -1089,21 +1089,6 @@ def quota_usage_update(context, project_id, user_id, resource, **kwargs):
 ###################
 
 
-def reservation_create(context, uuid, usage, project_id, user_id, resource,
-                       delta, expire):
-    """Create a reservation for the given project and resource."""
-    return IMPL.reservation_create(context, uuid, usage, project_id,
-                                   user_id, resource, delta, expire)
-
-
-def reservation_get(context, uuid):
-    """Retrieve a reservation or raise if it does not exist."""
-    return IMPL.reservation_get(context, uuid)
-
-
-###################
-
-
 def quota_reserve(context, resources, quotas, user_quotas, deltas, expire,
                   until_refresh, max_age, project_id=None, user_id=None):
     """Check quotas and create appropriate reservations."""

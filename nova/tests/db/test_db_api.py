@@ -62,6 +62,16 @@ get_engine = db_session.get_engine
 get_session = db_session.get_session
 
 
+def _reservation_get(context, uuid):
+    result = sqlalchemy_api.model_query(context, models.Reservation,
+            read_deleted="no").filter_by(uuid=uuid).first()
+
+    if not result:
+        raise exception.ReservationNotFound(uuid=uuid)
+
+    return result
+
+
 def _quota_reserve(context, project_id, user_id):
     """Create sample Quota, QuotaUsage and Reservation objects.
 
@@ -916,24 +926,6 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'expire': timeutils.utcnow() + datetime.timedelta(days=1),
                 'usage': {'id': 1}}
 
-    def test_reservation_create(self):
-        reservation = db.reservation_create(self.ctxt, **self.values)
-        self._assertEqualObjects(self.values, reservation, ignored_keys=(
-                        'deleted', 'updated_at',
-                        'deleted_at', 'id',
-                        'created_at', 'usage',
-                        'usage_id'))
-        self.assertEqual(reservation['usage_id'], self.values['usage']['id'])
-
-    def test_reservation_get(self):
-        reservation = db.reservation_create(self.ctxt, **self.values)
-        reservation_db = db.reservation_get(self.ctxt, self.values['uuid'])
-        self._assertEqualObjects(reservation, reservation_db)
-
-    def test_reservation_get_nonexistent(self):
-        self.assertRaises(exception.ReservationNotFound, db.reservation_get,
-                                    self.ctxt, 'non-exitent-resevation-uuid')
-
     def test_reservation_commit(self):
         reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
         expected = {'project_id': 'project1', 'user_id': 'user1',
@@ -942,10 +934,10 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'fixed_ips': {'reserved': 2, 'in_use': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
-        db.reservation_get(self.ctxt, reservations[0])
+        _reservation_get(self.ctxt, reservations[0])
         db.reservation_commit(self.ctxt, reservations, 'project1', 'user1')
         self.assertRaises(exception.ReservationNotFound,
-            db.reservation_get, self.ctxt, reservations[0])
+            _reservation_get, self.ctxt, reservations[0])
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 2},
@@ -961,10 +953,10 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 'fixed_ips': {'reserved': 2, 'in_use': 2}}
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
-        db.reservation_get(self.ctxt, reservations[0])
+        _reservation_get(self.ctxt, reservations[0])
         db.reservation_rollback(self.ctxt, reservations, 'project1', 'user1')
         self.assertRaises(exception.ReservationNotFound,
-            db.reservation_get, self.ctxt, reservations[0])
+            _reservation_get, self.ctxt, reservations[0])
         expected = {'project_id': 'project1', 'user_id': 'user1',
                 'resource0': {'reserved': 0, 'in_use': 0},
                 'resource1': {'reserved': 0, 'in_use': 1},
@@ -5084,7 +5076,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                               None, None, 'project1')
         resources_names = reservable_resources.keys()
         for reservation_uuid in reservations_uuids:
-            reservation = db.reservation_get(self.ctxt, reservation_uuid)
+            reservation = _reservation_get(self.ctxt, reservation_uuid)
             usage = db.quota_usage_get(self.ctxt, 'project1',
                                        reservation.resource)
             self.assertEqual(usage.in_use, usages[reservation.resource],
@@ -5107,7 +5099,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                             {'project_id': 'project1'})
         for r in reservations:
             self.assertRaises(exception.ReservationNotFound,
-                            db.reservation_get, self.ctxt, r)
+                            _reservation_get, self.ctxt, r)
 
     def test_quota_destroy_all_by_project_and_user(self):
         reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
@@ -5124,7 +5116,7 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
                              'fixed_ips': {'in_use': 2, 'reserved': 2}})
         for r in reservations:
             self.assertRaises(exception.ReservationNotFound,
-                            db.reservation_get, self.ctxt, r)
+                            _reservation_get, self.ctxt, r)
 
     def test_quota_usage_get_nonexistent(self):
         self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_get,
