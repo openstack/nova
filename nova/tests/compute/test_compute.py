@@ -100,6 +100,10 @@ FAKE_IMAGE_REF = 'fake-image-ref'
 NODENAME = 'fakenode1'
 
 
+def fake_not_implemented(*args, **kwargs):
+    raise NotImplementedError()
+
+
 def get_primitive_instance_by_uuid(context, instance_uuid):
     """
     Helper method to get an instance and then convert it to
@@ -2756,6 +2760,27 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.ConsoleTypeInvalid,
                           self.compute.get_vnc_console,
                           self.context, None, instance=instance)
+
+        self.compute.terminate_instance(self.context, instance, [], [])
+
+    def test_get_vnc_console_not_implemented(self):
+        self.stubs.Set(self.compute.driver, 'get_vnc_console',
+                       fake_not_implemented)
+
+        instance = self._create_fake_instance_obj()
+        self.compute.run_instance(self.context,
+            jsonutils.to_primitive(instance), {}, {}, [], None,
+            None, True, None, False)
+
+        self.assertRaises(rpc_common.ClientException,
+                          self.compute.get_vnc_console,
+                          self.context, 'novnc', instance=instance)
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(NotImplementedError,
+                          self.compute.get_vnc_console,
+                          self.context, 'novnc', instance=instance)
 
         self.compute.terminate_instance(self.context, instance, [], [])
 

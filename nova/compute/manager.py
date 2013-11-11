@@ -3612,7 +3612,8 @@ class ComputeManager(manager.Manager):
             return '\n'.join(log.split('\n')[-int(length):])
 
     @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
-            exception.InstanceNotReady, exception.InstanceNotFound)
+            exception.InstanceNotReady, exception.InstanceNotFound,
+            NotImplementedError)
     @wrap_exception()
     @wrap_instance_fault
     @object_compat
