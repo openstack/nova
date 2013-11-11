@@ -137,3 +137,10 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
         req = self._create_request(length_dict={'length': 2.5})
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
+
+    def test_get_console_output_not_implemented(self):
+        self.stubs.Set(compute_api.API, 'get_console_output',
+                       fakes.fake_not_implemented)
+        req = self._create_request()
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 501)
