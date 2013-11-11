@@ -938,7 +938,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         host = vmwareapi_fake._get_objects('HostSystem').objects[0]
         host._add_iscsi_target(data)
         result = volume_util.find_st(self.conn._session, data)
-        self.assertEquals(('fake-device', 'fake-uuid'), result)
+        self.assertEqual(('fake-device', 'fake-uuid'), result)
 
     def test_detach_iscsi_disk_from_vm(self):
         self._create_vm()
@@ -1118,7 +1118,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def test_finish_migration_power_on_resize(self):
         self._test_finish_migration(power_on=True,
                                     resize_instance=True)
-        self.assertEquals(True, self.power_on_called)
+        self.assertEqual(True, self.power_on_called)
 
     def test_finish_revert_migration_power_on(self):
         self._test_finish_revert_migration(power_on=True)

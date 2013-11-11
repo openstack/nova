@@ -132,7 +132,7 @@ class VMUtilsV2TestCase(test.NoDBTestCase):
 
         enabled_state = self._vmutils.get_vm_state(self._FAKE_VM_NAME)
 
-        self.assertEquals(self._FAKE_ENABLED_STATE, enabled_state)
+        self.assertEqual(self._FAKE_ENABLED_STATE, enabled_state)
 
     def test_take_vm_snapshot(self):
         self._lookup_vm()

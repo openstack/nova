@@ -92,12 +92,12 @@ class VHDUtilsV2TestCase(test.NoDBTestCase):
 
         vhd_info = self._vhdutils.get_vhd_info(self._FAKE_VHD_PATH)
 
-        self.assertEquals(self._FAKE_VHD_PATH, vhd_info['Path'])
-        self.assertEquals(self._FAKE_PARENT_VHD_PATH, vhd_info['ParentPath'])
-        self.assertEquals(self._FAKE_FORMAT, vhd_info['Format'])
-        self.assertEquals(self._FAKE_MAK_INTERNAL_SIZE,
-                          vhd_info['MaxInternalSize'])
-        self.assertEquals(self._FAKE_TYPE, vhd_info['Type'])
+        self.assertEqual(self._FAKE_VHD_PATH, vhd_info['Path'])
+        self.assertEqual(self._FAKE_PARENT_VHD_PATH, vhd_info['ParentPath'])
+        self.assertEqual(self._FAKE_FORMAT, vhd_info['Format'])
+        self.assertEqual(self._FAKE_MAK_INTERNAL_SIZE,
+                         vhd_info['MaxInternalSize'])
+        self.assertEqual(self._FAKE_TYPE, vhd_info['Type'])
 
     def test_create_dynamic_vhd(self):
         self._vhdutils.get_vhd_info = mock.MagicMock(
