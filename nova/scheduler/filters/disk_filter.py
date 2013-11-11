@@ -34,8 +34,9 @@ class DiskFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         """Filter based on disk usage."""
         instance_type = filter_properties.get('instance_type')
-        requested_disk = 1024 * (instance_type['root_gb'] +
-                                 instance_type['ephemeral_gb'])
+        requested_disk = (1024 * (instance_type['root_gb'] +
+                                 instance_type['ephemeral_gb']) +
+                         instance_type['swap'])
 
         free_disk_mb = host_state.free_disk_mb
         total_usable_disk_mb = host_state.total_usable_disk_gb * 1024
