@@ -34,7 +34,7 @@ CONF.register_opts(ram_weigher_opts, group='cells')
 class RamByInstanceTypeWeigher(weights.BaseCellWeigher):
     """Weigh cells by instance_type requested."""
 
-    def _weight_multiplier(self):
+    def weight_multiplier(self):
         return CONF.cells.ram_weight_multiplier
 
     def _weigh_object(self, cell, weight_properties):

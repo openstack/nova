@@ -3058,6 +3058,15 @@
 #ram_weight_multiplier=10.0
 
 
+#
+# Options defined in nova.cells.weights.weight_offset
+#
+
+# Multiplier used to weigh offset weigher. (floating point
+# value)
+#offset_weight_multiplier=1.0
+
+
 [baremetal]
 
 #

@@ -18,7 +18,18 @@ Weigh cells by their weight_offset in the DB.  Cells with higher
 weight_offsets in the DB will be preferred.
 """
 
+from oslo.config import cfg
+
 from nova.cells import weights
+
+weigher_opts = [
+    cfg.FloatOpt('offset_weight_multiplier',
+                 default=1.0,
+                 help='Multiplier used to weigh offset weigher.'),
+]
+
+CONF = cfg.CONF
+CONF.register_opts(weigher_opts, group='cells')
 
 
 class WeightOffsetWeigher(weights.BaseCellWeigher):
@@ -27,6 +38,9 @@ class WeightOffsetWeigher(weights.BaseCellWeigher):
     Originally designed so you can set a default cell by putting
     its weight_offset to 999999999999999 (highest weight wins)
     """
+
+    def weight_multiplier(self):
+        return CONF.cells.offset_weight_multiplier
 
     def _weigh_object(self, cell, weight_properties):
         """Returns whatever was in the DB for weight_offset."""

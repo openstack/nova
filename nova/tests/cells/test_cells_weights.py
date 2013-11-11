@@ -213,5 +213,5 @@ class MuteWeigherTestClass(_WeigherTestClass):
 
         for i in range(2):
             weighed_cell = weighed_cells.pop(0)
-            self.assertEqual(1000 * -10.0, weighed_cell.weight)
+            self.assertEqual(-10.0, weighed_cell.weight)
             self.assertIn(weighed_cell.obj.name, ['cell1', 'cell2'])

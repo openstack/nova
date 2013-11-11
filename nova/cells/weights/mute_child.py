@@ -48,7 +48,7 @@ class MuteChildWeigher(weights.BaseCellWeigher):
     weight.
     """
 
-    def _weight_multiplier(self):
+    def weight_multiplier(self):
         # negative multiplier => lower weight
         return CONF.cells.mute_weight_multiplier
 
