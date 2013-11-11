@@ -20,6 +20,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
+from nova.openstack.common.gettextutils import _
 
 
 ALIAS = "os-remote-consoles"
@@ -31,7 +32,7 @@ class RemoteConsolesController(wsgi.Controller):
         self.compute_api = compute.API()
         super(RemoteConsolesController, self).__init__(*args, **kwargs)
 
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_vnc_console')
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
@@ -52,6 +53,9 @@ class RemoteConsolesController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to get vnc console, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
