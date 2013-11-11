@@ -1164,6 +1164,58 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
         raise exception.DatastoreNotFound()
 
 
+def _get_allowed_datastores(data_stores, datastore_regex, allowed_types):
+    allowed = []
+    for obj_content in data_stores.objects:
+        # the propset attribute "need not be set" by returning API
+        if not hasattr(obj_content, 'propSet'):
+            continue
+
+        propdict = propset_dict(obj_content.propSet)
+        # Local storage identifier vSphere doesn't support CIFS or
+        # vfat for datastores, therefore filtered
+        ds_type = propdict['summary.type']
+        ds_name = propdict['summary.name']
+        if (propdict['summary.accessible'] and ds_type in allowed_types):
+            if datastore_regex is None or datastore_regex.match(ds_name):
+                allowed.append({'ref': obj_content.obj, 'name': ds_name})
+
+    return allowed
+
+
+def get_available_datastores(session, cluster=None, datastore_regex=None):
+    """Get the datastore list and choose the first local storage."""
+    if cluster:
+        mobj = cluster
+        type = "ClusterComputeResource"
+    else:
+        mobj = get_host_ref(session)
+        type = "HostSystem"
+    ds = session._call_method(vim_util, "get_dynamic_property", mobj,
+                              type, "datastore")
+    if not ds:
+        return []
+    data_store_mors = ds.ManagedObjectReference
+    # NOTE(garyk): use utility method to retrieve remote objects
+    data_stores = session._call_method(vim_util,
+            "get_properties_for_a_collection_of_objects",
+            "Datastore", data_store_mors,
+            ["summary.type", "summary.name", "summary.accessible"])
+
+    allowed = []
+    while data_stores:
+        allowed.extend(_get_allowed_datastores(data_stores, datastore_regex,
+                                               ['VMFS', 'NFS']))
+        token = _get_token(data_stores)
+        if not token:
+            break
+
+        data_stores = session._call_method(vim_util,
+                                           "continue_to_get_objects",
+                                           token)
+    return allowed
+
+
 def get_vmdk_backed_disk_uuid(hardware_devices, volume_uuid):
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice

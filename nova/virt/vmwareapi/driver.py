@@ -84,6 +84,11 @@ TIME_BETWEEN_API_CALL_RETRIES = 1.0
 class VMwareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
+    capabilities = {
+        "has_imagecache": True,
+        "supports_recreate": False,
+        }
+
     # VMwareAPI has both ESXi and vCenter API sets.
     # The ESXi API are a proper sub-set of the vCenter API.
     # That is to say, nearly all valid ESXi calls are
@@ -339,6 +344,10 @@ class VMwareESXDriver(driver.ComputeDriver):
         """List VM instance UUIDs."""
         uuids = self._vmops.list_instances()
         return [uuid for uuid in uuids if uuidutils.is_uuid_like(uuid)]
+
+    def manage_image_cache(self, context, all_instances):
+        """Manage the local cache of images."""
+        self._vmops.manage_image_cache(context, all_instances)
 
 
 class VMwareVCDriver(VMwareESXDriver):
@@ -687,6 +696,25 @@ class VMwareVCDriver(VMwareESXDriver):
         """inject network info for specified instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.inject_network_info(instance, network_info)
+
+    def manage_image_cache(self, context, all_instances):
+        """Manage the local cache of images."""
+
+        # Running instances per cluster
+        cluster_instances = {}
+        for instance in all_instances:
+            instances = cluster_instances.get(instance['node'])
+            if instances:
+                instances.append(instance)
+            else:
+                instances = [instance]
+            cluster_instances[instance['node']] = instances
+
+        # Invoke the image aging per cluster
+        for resource in self._resources.keys():
+            instances = cluster_instances.get(resource, [])
+            _vmops = self._get_vmops_for_compute_node(resource)
+            _vmops.manage_image_cache(context, instances)
 
 
 class VMwareAPISession(object):

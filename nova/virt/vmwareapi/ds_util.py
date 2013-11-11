@@ -124,3 +124,24 @@ def mkdir(session, ds_path, dc_ref):
             name=ds_path, datacenter=dc_ref,
             createParentDirectories=True)
     LOG.debug(_("Created directory with path %s"), ds_path)
+
+
+def get_sub_folders(session, ds_browser, ds_path):
+    """Return a set of subfolders for a path on a datastore.
+
+    If the path does not exist then an empty set is returned.
+    """
+    client_factory = session._get_vim().client.factory
+    search_task = session._call_method(
+            session._get_vim(),
+            "SearchDatastore_Task",
+            ds_browser,
+            datastorePath=ds_path)
+    try:
+        task_info = session._wait_for_task(search_task)
+    except error_util.FileNotFoundException:
+        return set()
+    # populate the folder entries
+    if hasattr(task_info.result, 'file'):
+        return set([file.path for file in task_info.result.file])
+    return set()
