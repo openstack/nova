@@ -3609,6 +3609,7 @@ class ComputeManager(manager.Manager):
         """Inject network info, but don't return the info."""
         self._inject_network_info(context, instance)
 
+    @rpc_common.client_exceptions(NotImplementedError)
     @wrap_exception()
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length):
