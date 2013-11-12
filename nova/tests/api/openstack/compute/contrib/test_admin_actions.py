@@ -251,6 +251,22 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
         self._test_migrate_live_failed_with_exception(
             exception.DestinationHypervisorTooOld())
 
+    def test_migrate_live_no_valid_host(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.NoValidHost(reason=''))
+
+    def test_migrate_live_invalid_local_storage(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.InvalidLocalStorage(path='', reason=''))
+
+    def test_migrate_live_invalid_shared_storage(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.InvalidSharedStorage(path='', reason=''))
+
+    def test_migrate_live_migration_pre_check_error(self):
+        self._test_migrate_live_failed_with_exception(
+            exception.MigrationPreCheckError(reason=''))
+
     def test_unlock_not_authorized(self):
         self.mox.StubOutWithMock(self.compute_api, 'unlock')
 

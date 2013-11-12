@@ -301,7 +301,11 @@ class AdminActionsController(wsgi.Controller):
         except (exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
                 exception.UnableToMigrateToSelf,
-                exception.DestinationHypervisorTooOld) as ex:
+                exception.DestinationHypervisorTooOld,
+                exception.NoValidHost,
+                exception.InvalidLocalStorage,
+                exception.InvalidSharedStorage,
+                exception.MigrationPreCheckError) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message())
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
