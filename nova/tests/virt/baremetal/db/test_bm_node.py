@@ -48,21 +48,21 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
 
     def test_get_all(self):
         r = db.bm_node_get_all(self.context)
-        self.assertEquals(r, [])
+        self.assertEqual(r, [])
 
         self._create_nodes()
 
         r = db.bm_node_get_all(self.context)
-        self.assertEquals(len(r), 6)
+        self.assertEqual(len(r), 6)
 
     def test_get(self):
         self._create_nodes()
 
         r = db.bm_node_get(self.context, self.ids[0])
-        self.assertEquals(r['pm_address'], '0')
+        self.assertEqual(r['pm_address'], '0')
 
         r = db.bm_node_get(self.context, self.ids[1])
-        self.assertEquals(r['pm_address'], '1')
+        self.assertEqual(r['pm_address'], '1')
 
         self.assertRaises(
               exception.NodeNotFound,
@@ -73,14 +73,14 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         self._create_nodes()
 
         r = db.bm_node_get_all(self.context, service_host=None)
-        self.assertEquals(len(r), 6)
+        self.assertEqual(len(r), 6)
 
         r = db.bm_node_get_all(self.context, service_host="host1")
-        self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['pm_address'], '0')
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['pm_address'], '0')
 
         r = db.bm_node_get_all(self.context, service_host="host2")
-        self.assertEquals(len(r), 5)
+        self.assertEqual(len(r), 5)
         pmaddrs = [x['pm_address'] for x in r]
         self.assertIn('1', pmaddrs)
         self.assertIn('2', pmaddrs)
@@ -89,17 +89,17 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
         self.assertIn('5', pmaddrs)
 
         r = db.bm_node_get_all(self.context, service_host="host3")
-        self.assertEquals(r, [])
+        self.assertEqual(r, [])
 
     def test_get_associated(self):
         self._create_nodes()
 
         r = db.bm_node_get_associated(self.context, service_host=None)
-        self.assertEquals(len(r), 1)
-        self.assertEquals(r[0]['pm_address'], '1')
+        self.assertEqual(len(r), 1)
+        self.assertEqual(r[0]['pm_address'], '1')
 
         r = db.bm_node_get_unassociated(self.context, service_host=None)
-        self.assertEquals(len(r), 5)
+        self.assertEqual(len(r), 5)
         pmaddrs = [x['pm_address'] for x in r]
         self.assertIn('0', pmaddrs)
         self.assertIn('2', pmaddrs)
@@ -118,7 +118,7 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
               self.context, self.ids[0])
 
         r = db.bm_node_get_all(self.context)
-        self.assertEquals(len(r), 5)
+        self.assertEqual(len(r), 5)
 
     def test_destroy_with_interfaces(self):
         self._create_nodes()
@@ -152,7 +152,7 @@ class BareMetalNodesTestCase(base.BMDBTestCase):
               self.context, self.ids[0])
 
         r = db.bm_node_get_all(self.context)
-        self.assertEquals(len(r), 5)
+        self.assertEqual(len(r), 5)
 
     def test_find_free(self):
         self._create_nodes()
