@@ -160,6 +160,8 @@ def upload_image(context, image, instance, **kwargs):
                       "size": file_size,
                       "properties": {"vmware_adaptertype":
                                             kwargs.get("adapter_type"),
+                                     "vmware_disktype":
+                                            kwargs.get("disk_type"),
                                      "vmware_ostype": kwargs.get("os_type"),
                                      "vmware_image_version":
                                             kwargs.get("image_version"),
