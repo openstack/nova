@@ -19,6 +19,7 @@ from neutronclient.common import exceptions
 from neutronclient.v2_0 import client as clientv20
 from oslo.config import cfg
 
+from nova.openstack.common import local
 from nova.openstack.common import log as logging
 
 CONF = cfg.CONF
@@ -46,11 +47,23 @@ def _get_client(token=None):
 
 
 def get_client(context, admin=False):
+    # NOTE(dims): We need to use admin token, let us cache a
+    # thread local copy for re-using this client
+    # multiple times and to avoid excessive calls
+    # to neutron to fetch tokens. Some of the hackiness in this code
+    # will go away once BP auth-plugins is implemented.
+    # That blue print will ensure that tokens can be shared
+    # across clients as well
     if admin or context.is_admin:
-        token = None
-    elif not context.auth_token:
-        raise exceptions.Unauthorized()
-    else:
-        token = context.auth_token
+        if not hasattr(local.strong_store, 'neutron_client'):
+            local.strong_store.neutron_client = _get_client(token=None)
+        return local.strong_store.neutron_client
 
-    return _get_client(token=token)
+    # We got a user token that we can use that as-is
+    if context.auth_token:
+        token = context.auth_token
+        return _get_client(token=token)
+
+    # We did not get a user token and we should not be using
+    # an admin token so log an error
+    raise exceptions.Unauthorized()
