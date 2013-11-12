@@ -38,11 +38,11 @@ class FakeImageServiceTestCase(test.NoDBTestCase):
         res = self.image_service.detail(self.context)
         for image in res:
             keys = set(image.keys())
-            self.assertEquals(keys, set(['id', 'name', 'created_at',
-                                         'updated_at', 'deleted_at', 'deleted',
-                                         'status', 'is_public', 'properties',
-                                         'disk_format', 'container_format',
-                                         'size']))
+            self.assertEqual(keys, set(['id', 'name', 'created_at',
+                                        'updated_at', 'deleted_at', 'deleted',
+                                        'status', 'is_public', 'properties',
+                                        'disk_format', 'container_format',
+                                        'size']))
             self.assertIsInstance(image['created_at'], datetime.datetime)
             self.assertIsInstance(image['updated_at'], datetime.datetime)
 
@@ -73,7 +73,7 @@ class FakeImageServiceTestCase(test.NoDBTestCase):
         self.image_service.create(self.context, {})
 
         index = self.image_service.detail(self.context)
-        self.assertEquals(len(index), image_count + 1)
+        self.assertEqual(len(index), image_count + 1)
 
         self.assertTrue(index[0]['id'])
 
@@ -99,7 +99,7 @@ class FakeImageServiceTestCase(test.NoDBTestCase):
                                   {'id': '34', 'foo': 'baz'})
 
         img = self.image_service.show(self.context, '34')
-        self.assertEquals(img['foo'], 'baz')
+        self.assertEqual(img['foo'], 'baz')
 
     def test_delete(self):
         self.image_service.create(self.context, {'id': '34', 'foo': 'bar'})
@@ -117,4 +117,4 @@ class FakeImageServiceTestCase(test.NoDBTestCase):
                                   data=s1)
         s2 = StringIO.StringIO()
         self.image_service.download(self.context, '32', data=s2)
-        self.assertEquals(s2.getvalue(), blob, 'Did not get blob back intact')
+        self.assertEqual(s2.getvalue(), blob, 'Did not get blob back intact')
