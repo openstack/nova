@@ -43,7 +43,7 @@ class NetworkUtilsV2TestCase(test.NoDBTestCase):
         switch_path = self._networkutils.get_external_vswitch(
             self._FAKE_VSWITCH_NAME)
 
-        self.assertEquals(self._FAKE_VSWITCH_PATH, switch_path)
+        self.assertEqual(self._FAKE_VSWITCH_PATH, switch_path)
 
     def test_get_external_vswitch_not_found(self):
         mock_vswitch = mock.MagicMock()
@@ -66,4 +66,4 @@ class NetworkUtilsV2TestCase(test.NoDBTestCase):
 
         switch_path = self._networkutils.get_external_vswitch(None)
 
-        self.assertEquals(self._FAKE_VSWITCH_PATH, switch_path)
+        self.assertEqual(self._FAKE_VSWITCH_PATH, switch_path)
