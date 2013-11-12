@@ -785,6 +785,7 @@ class VMwareVMOps(object):
                 image_id,
                 instance,
                 os_type=os_type,
+                disk_type="preallocated",
                 adapter_type=adapter_type,
                 image_version=1,
                 host=self._session._host_ip,
