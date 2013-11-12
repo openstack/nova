@@ -5454,14 +5454,13 @@ class LibvirtConnTestCase(test.TestCase):
             raise ValueError("Unhandled method %" % method_name)
 
         virtapi = fake.FakeVirtAPI()
-        fake_inst_type_id = test_instance['instance_type_id']
-        fake_inst_type = virtapi.instance_type_get(self.context,
-                                                   fake_inst_type_id)
+        fake_flavor_id = test_instance['instance_type_id']
+        fake_flavor = virtapi.flavor_get(self.context, fake_flavor_id)
         expected = conn.vif_driver.get_config(test_instance, network_info[0],
-                                              fake_image_meta, fake_inst_type)
+                                              fake_image_meta, fake_flavor)
         self.mox.StubOutWithMock(conn.vif_driver, 'get_config')
         conn.vif_driver.get_config(test_instance, network_info[0],
-                                   fake_image_meta, fake_inst_type).\
+                                   fake_image_meta, fake_flavor).\
                                    AndReturn(expected)
 
         self.mox.ReplayAll()
