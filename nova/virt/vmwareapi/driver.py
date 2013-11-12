@@ -108,6 +108,7 @@ vmwareapi_opts = [
     ]
 
 CONF = cfg.CONF
+# vmware options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(vmwareapi_opts, 'vmware')
 
 TIME_BETWEEN_API_CALL_RETRIES = 2.0

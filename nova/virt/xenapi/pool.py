@@ -35,6 +35,7 @@ LOG = logging.getLogger(__name__)
 
 xenapi_pool_opts = [
     cfg.BoolOpt('use_join_force',
+                #Deprecated in Icehouse
                 deprecated_name='use_join_force',
                 deprecated_group='DEFAULT',
                 default=True,

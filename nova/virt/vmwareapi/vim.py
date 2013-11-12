@@ -34,6 +34,7 @@ CONN_ABORT_ERROR = 'Software caused connection abort'
 ADDRESS_IN_USE_ERROR = 'Address already in use'
 
 vmwareapi_wsdl_loc_opt = cfg.StrOpt('wsdl_location',
+        #Deprecated in Icehouse
         deprecated_name='vmwareapi_wsdl_loc',
         deprecated_group='DEFAULT',
         help='Optional VIM Service WSDL Location '
