@@ -30,9 +30,10 @@ CONF.import_opt('compute_driver', 'nova.virt.driver')
 class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(ComputeXenTestCase, self).setUp()
-        self.flags(compute_driver='xenapi.XenAPIDriver',
-                xenapi_connection_url='test_url',
-                xenapi_connection_password='test_pass')
+        self.flags(compute_driver='xenapi.XenAPIDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
 
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.compute = importutils.import_object(CONF.compute_manager)

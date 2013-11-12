@@ -200,9 +200,10 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
         super(XenAPIVolumeTestCase, self).setUp()
         self.flags(disable_process_locking=True,
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass')
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
 
         self.instance = fake_instance.fake_db_instance(name='foo')
 
@@ -290,9 +291,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.flags(disable_process_locking=True,
                    instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',)
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', 'fake_br1')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -380,7 +382,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(set(uuids), set(instance_uuids))
 
     def test_get_rrd_server(self):
-        self.flags(xenapi_connection_url='myscheme://myaddress/')
+        self.flags(connection_url='myscheme://myaddress/',
+                   group='xenserver')
         server_info = vm_utils._get_rrd_server()
         self.assertEqual(server_info[0], 'myscheme')
         self.assertEqual(server_info[1], 'myaddress')
@@ -655,17 +658,17 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(self.vm['HVM_boot_policy'], '')
 
     def _list_vdis(self):
-        url = CONF.xenapi_connection_url
-        username = CONF.xenapi_connection_username
-        password = CONF.xenapi_connection_password
+        url = CONF.xenserver.connection_url
+        username = CONF.xenserver.connection_username
+        password = CONF.xenserver.connection_password
         session = xenapi_conn.XenAPISession(url, username, password,
                                             fake.FakeVirtAPI())
         return session.call_xenapi('VDI.get_all')
 
     def _list_vms(self):
-        url = CONF.xenapi_connection_url
-        username = CONF.xenapi_connection_username
-        password = CONF.xenapi_connection_password
+        url = CONF.xenserver.connection_url
+        username = CONF.xenserver.connection_username
+        password = CONF.xenserver.connection_password
         session = xenapi_conn.XenAPISession(url, username, password,
                                             fake.FakeVirtAPI())
         return session.call_xenapi('VM.get_all')
@@ -736,9 +739,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
         vm_utils.get_sr_path(mox.IgnoreArg()).AndReturn('/sr/path')
 
-        self.flags(xenapi_ipxe_network_name='test1',
-                   xenapi_ipxe_boot_menu_url='http://boot.example.com',
-                   xenapi_ipxe_mkisofs_cmd='/root/mkisofs')
+        self.flags(ipxe_network_name='test1',
+                   ipxe_boot_menu_url='http://boot.example.com',
+                   ipxe_mkisofs_cmd='/root/mkisofs',
+                   group='xenserver')
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
         self.conn._session.call_plugin_serialized(
             'ipxe', 'inject', '/sr/path', mox.IgnoreArg(),
@@ -749,8 +753,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
     def test_spawn_ipxe_iso_no_network_name(self):
-        self.flags(xenapi_ipxe_network_name=None,
-                   xenapi_ipxe_boot_menu_url='http://boot.example.com')
+        self.flags(ipxe_network_name=None,
+                   ipxe_boot_menu_url='http://boot.example.com',
+                   group='xenserver')
 
         # call_plugin_serialized shouldn't be called
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
@@ -759,8 +764,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
     def test_spawn_ipxe_iso_no_boot_menu_url(self):
-        self.flags(xenapi_ipxe_network_name='test1',
-                   xenapi_ipxe_boot_menu_url=None)
+        self.flags(ipxe_network_name='test1',
+                   ipxe_boot_menu_url=None,
+                   group='xenserver')
 
         # call_plugin_serialized shouldn't be called
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
@@ -769,8 +775,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
     def test_spawn_ipxe_iso_unknown_network_name(self):
-        self.flags(xenapi_ipxe_network_name='test2',
-                   xenapi_ipxe_boot_menu_url='http://boot.example.com')
+        self.flags(ipxe_network_name='test2',
+                   ipxe_boot_menu_url='http://boot.example.com',
+                   group='xenserver')
 
         # call_plugin_serialized shouldn't be called
         self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
@@ -1024,7 +1031,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_ssh_key_injection(self):
         # Test spawning with key_data on an instance.  Should use
         # agent file injection.
-        self.flags(xenapi_use_agent_default=True)
+        self.flags(use_agent_default=True,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_inject_file(self, method, args):
@@ -1054,7 +1062,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_ssh_key_injection_non_rsa(self):
         # Test spawning with key_data on an instance.  Should use
         # agent file injection.
-        self.flags(xenapi_use_agent_default=True)
+        self.flags(use_agent_default=True,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_inject_file(self, method, args):
@@ -1082,7 +1091,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_spawn_injected_files(self):
         # Test spawning with injected_files.
-        self.flags(xenapi_use_agent_default=True)
+        self.flags(use_agent_default=True,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_inject_file(self, method, args):
@@ -1101,7 +1111,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(actual_injected_files, injected_files)
 
     def test_spawn_agent_upgrade(self):
-        self.flags(xenapi_use_agent_default=True)
+        self.flags(use_agent_default=True,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_agent_build(_self, *args):
@@ -1116,7 +1127,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
 
     def test_spawn_agent_upgrade_fails_silently(self):
-        self.flags(xenapi_use_agent_default=True)
+        self.flags(use_agent_default=True,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_agent_build(_self, *args):
@@ -1137,7 +1149,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
 
     def test_spawn_with_resetnetwork_alternative_returncode(self):
-        self.flags(xenapi_use_agent_default=True)
+        self.flags(use_agent_default=True,
+                   group='xenserver')
 
         def fake_resetnetwork(self, method, args):
             fake_resetnetwork.called = True
@@ -1153,8 +1166,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertTrue(fake_resetnetwork.called)
 
     def _test_spawn_fails_silently_with(self, trigger, expected_exception):
-        self.flags(xenapi_use_agent_default=True)
-        self.flags(agent_version_timeout=0)
+        self.flags(use_agent_default=True,
+                   agent_version_timeout=0,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_agent_version(self, method, args):
@@ -1185,8 +1199,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                                              exception.AgentError)
 
     def test_spawn_fails_with_agent_bad_return(self):
-        self.flags(xenapi_use_agent_default=True)
-        self.flags(agent_version_timeout=0)
+        self.flags(use_agent_default=True,
+                   agent_version_timeout=0,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_agent_version(self, method, args):
@@ -1200,8 +1215,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_spawn_fails_agent_not_implemented(self):
         # Test spawning with injected_files.
-        self.flags(xenapi_use_agent_default=True)
-        self.flags(agent_version_timeout=0)
+        self.flags(use_agent_default=True,
+                   agent_version_timeout=0,
+                   group='xenserver')
         actual_injected_files = []
 
         def fake_agent_version(self, method, args):
@@ -1572,9 +1588,10 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -2028,8 +2045,9 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIHostTestCase, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.context = context.get_admin_context()
         self.flags(use_local=True, group='conductor')
@@ -2168,9 +2186,10 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
 class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIAutoDiskConfigTestCase, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
@@ -2264,9 +2283,10 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
     """Test generating of local disks, like swap and ephemeral."""
     def setUp(self):
         super(XenAPIGenerateLocal, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -2378,9 +2398,10 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBaseNoDB):
         super(XenAPIBWCountersTestCase, self).setUp()
         self.stubs.Set(vm_utils, 'list_vms',
                        XenAPIBWCountersTestCase._fake_list_vms)
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
@@ -2510,9 +2531,10 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIDom0IptablesFirewallTestCase, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   instance_name_template='%d',
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         self.user_id = 'mappin'
@@ -2775,7 +2797,7 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for testing we find the right SR."""
     def test_safe_find_sr_raise_exception(self):
         # Ensure StorageRepositoryNotFound is raise when wrong filter.
-        self.flags(sr_matching_filter='yadayadayada')
+        self.flags(sr_matching_filter='yadayadayada', group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
@@ -2784,7 +2806,8 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
 
     def test_safe_find_sr_local_storage(self):
         # Ensure the default local-storage is found.
-        self.flags(sr_matching_filter='other-config:i18n-key=local-storage')
+        self.flags(sr_matching_filter='other-config:i18n-key=local-storage',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
@@ -2804,7 +2827,8 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
 
     def test_safe_find_sr_by_other_criteria(self):
         # Ensure the SR is found when using a different filter.
-        self.flags(sr_matching_filter='other-config:my_fake_sr=true')
+        self.flags(sr_matching_filter='other-config:my_fake_sr=true',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
@@ -2818,7 +2842,8 @@ class XenAPISRSelectionTestCase(stubs.XenAPITestBaseNoDB):
 
     def test_safe_find_sr_default(self):
         # Ensure the default SR is found regardless of other-config.
-        self.flags(sr_matching_filter='default-sr:true')
+        self.flags(sr_matching_filter='default-sr:true',
+                   group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         session = xenapi_conn.XenAPISession('test_url', 'root', 'test_pass',
                                             fake.FakeVirtAPI())
@@ -2846,10 +2871,11 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
     """Unit tests for aggregate operations."""
     def setUp(self):
         super(XenAPIAggregateTestCase, self).setUp()
-        self.flags(xenapi_connection_url='http://test_url',
-                   xenapi_connection_username='test_user',
-                   xenapi_connection_password='test_pass',
-                   instance_name_template='%d',
+        self.flags(connection_url='http://test_url',
+                   connection_username='test_user',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    host='host',
@@ -3219,9 +3245,10 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for live_migration."""
     def setUp(self):
         super(XenAPILiveMigrateTestCase, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver',
                    host='host')
         db_fakes.stub_out_db_instance_api(self.stubs)
@@ -3679,9 +3706,10 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 class XenAPIInjectMetadataTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(XenAPIInjectMetadataTestCase, self).setUp()
-        self.flags(xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass',
-                   firewall_driver='nova.virt.xenapi.firewall.'
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+        self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)

@@ -51,39 +51,51 @@ LOG = logging.getLogger(__name__)
 xenapi_agent_opts = [
     cfg.IntOpt('agent_timeout',
                default=30,
+               deprecated_name='agent_timeout',
+               deprecated_group='DEFAULT',
                help='number of seconds to wait for agent reply'),
     cfg.IntOpt('agent_version_timeout',
                default=300,
+               deprecated_name='agent_version_timeout',
+               deprecated_group='DEFAULT',
                help='number of seconds to wait for agent '
                     'to be fully operational'),
     cfg.IntOpt('agent_resetnetwork_timeout',
+               deprecated_name='agent_resetnetwork_timeout',
+               deprecated_group='DEFAULT',
                default=60,
                help='number of seconds to wait for agent reply '
                     'to resetnetwork request'),
-    cfg.StrOpt('xenapi_agent_path',
+    cfg.StrOpt('agent_path',
                default='usr/sbin/xe-update-networking',
+               deprecated_name='xenapi_agent_path',
+               deprecated_group='DEFAULT',
                help='Specifies the path in which the xenapi guest agent '
                     'should be located. If the agent is present, network '
                     'configuration is not injected into the image. '
                     'Used if compute_driver=xenapi.XenAPIDriver and '
                     ' flat_injected=True'),
-    cfg.BoolOpt('xenapi_disable_agent',
-               default=False,
-               help='Disables the use of the XenAPI agent in any image '
-                    'regardless of what image properties are present.'),
-    cfg.BoolOpt('xenapi_use_agent_default',
-               default=False,
-               help='Determines if the xenapi agent should be used when '
-                    'the image used does not contain a hint to declare if '
-                    'the agent is present or not. '
-                    'The hint is a glance property "' + USE_AGENT_KEY + '" '
-                    'that has the value "true" or "false". '
-                    'Note that waiting for the agent when it is not present '
-                    'will significantly increase server boot times.'),
+    cfg.BoolOpt('disable_agent',
+                default=False,
+                deprecated_name='xenapi_disable_agent',
+                deprecated_group='DEFAULT',
+                help='Disables the use of the XenAPI agent in any image '
+                     'regardless of what image properties are present.'),
+    cfg.BoolOpt('use_agent_default',
+                default=False,
+                deprecated_name='xenapi_use_agent_default',
+                deprecated_group='DEFAULT',
+                help='Determines if the xenapi agent should be used when '
+                     'the image used does not contain a hint to declare if '
+                     'the agent is present or not. '
+                     'The hint is a glance property "' + USE_AGENT_KEY + '" '
+                     'that has the value "true" or "false". '
+                     'Note that waiting for the agent when it is not present '
+                     'will significantly increase server boot times.'),
 ]
 
 CONF = cfg.CONF
-CONF.register_opts(xenapi_agent_opts)
+CONF.register_opts(xenapi_agent_opts, 'xenserver')
 
 
 def _call_agent(session, instance, vm_ref, method, addl_args=None,
@@ -92,7 +104,7 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
     if addl_args is None:
         addl_args = {}
     if timeout is None:
-        timeout = CONF.agent_timeout
+        timeout = CONF.xenserver.agent_timeout
     if success_codes is None:
         success_codes = ['0']
 
@@ -198,7 +210,7 @@ class XenAPIBasedAgent(object):
         # it will generally perform a setup process on first boot that can
         # take a couple of minutes and then reboot. On Linux, the system can
         # also take a while to boot.
-        expiration = time.time() + CONF.agent_version_timeout
+        expiration = time.time() + CONF.xenserver.agent_version_timeout
         while True:
             try:
                 # NOTE(johngarbutt): we can't use the xapi plugin
@@ -334,8 +346,8 @@ class XenAPIBasedAgent(object):
 
         #NOTE(johngarbutt) old FreeBSD and Gentoo agents return 500 on success
         return self._call_agent('resetnetwork',
-                                timeout=CONF.agent_resetnetwork_timeout,
-                                success_codes=['0', '500'])
+                            timeout=CONF.xenserver.agent_resetnetwork_timeout,
+                            success_codes=['0', '500'])
 
     def _skip_ssh_key_inject(self):
         return self._get_sys_meta_key(SKIP_SSH_SM_KEY)
@@ -354,10 +366,10 @@ def find_guest_agent(base_dir):
     tries to locate a guest agent at the path
     specified by agent_rel_path
     """
-    if CONF.xenapi_disable_agent:
+    if CONF.xenserver.disable_agent:
         return False
 
-    agent_rel_path = CONF.xenapi_agent_path
+    agent_rel_path = CONF.xenserver.agent_path
     agent_path = os.path.join(base_dir, agent_rel_path)
     if os.path.isfile(agent_path):
         # The presence of the guest agent
@@ -385,7 +397,7 @@ def find_guest_agent(base_dir):
 def should_use_agent(instance):
     sys_meta = utils.instance_sys_meta(instance)
     if USE_AGENT_SM_KEY not in sys_meta:
-        return CONF.xenapi_use_agent_default
+        return CONF.xenserver.use_agent_default
     else:
         use_agent_raw = sys_meta[USE_AGENT_SM_KEY]
         try:
@@ -394,7 +406,7 @@ def should_use_agent(instance):
             LOG.warn(_("Invalid 'agent_present' value. "
                        "Falling back to the default."),
                        instance=instance)
-            return CONF.xenapi_use_agent_default
+            return CONF.xenserver.use_agent_default
 
 
 class SimpleDH(object):

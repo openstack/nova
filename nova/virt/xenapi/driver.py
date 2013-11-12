@@ -19,11 +19,11 @@ A driver for XenServer or Xen Cloud Platform.
 
 **Related Flags**
 
-:xenapi_connection_url:  URL for connection to XenServer/Xen Cloud Platform.
-:xenapi_connection_username:  Username for connection to XenServer/Xen Cloud
-                              Platform (default: root).
-:xenapi_connection_password:  Password for connection to XenServer/Xen Cloud
-                              Platform.
+:connection_url:  URL for connection to XenServer/Xen Cloud Platform.
+:connection_username:  Username for connection to XenServer/Xen Cloud
+                       Platform (default: root).
+:connection_password:  Password for connection to XenServer/Xen Cloud
+                       Platform.
 :target_host:                the iSCSI Target Host IP address, i.e. the IP
                              address for the nova-volume host
 :target_port:                iSCSI Target Port, 3260 Default
@@ -67,63 +67,91 @@ from nova.virt.xenapi import volumeops
 LOG = logging.getLogger(__name__)
 
 xenapi_opts = [
-    cfg.StrOpt('xenapi_connection_url',
+    cfg.StrOpt('connection_url',
+               deprecated_name='xenapi_connection_url',
+               deprecated_group='DEFAULT',
                help='URL for connection to XenServer/Xen Cloud Platform. '
                     'A special value of unix://local can be used to connect '
                     'to the local unix socket.  '
                     'Required if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('xenapi_connection_username',
+    cfg.StrOpt('connection_username',
                default='root',
+               deprecated_name='xenapi_connection_username',
+               deprecated_group='DEFAULT',
                help='Username for connection to XenServer/Xen Cloud Platform. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('xenapi_connection_password',
+    cfg.StrOpt('connection_password',
+               deprecated_name='xenapi_connection_password',
+               deprecated_group='DEFAULT',
                help='Password for connection to XenServer/Xen Cloud Platform. '
                     'Used only if compute_driver=xenapi.XenAPIDriver',
                secret=True),
-    cfg.IntOpt('xenapi_connection_concurrent',
+    cfg.IntOpt('connection_concurrent',
                default=5,
+               deprecated_name='xenapi_connection_concurrent',
+               deprecated_group='DEFAULT',
                help='Maximum number of concurrent XenAPI connections. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.FloatOpt('xenapi_vhd_coalesce_poll_interval',
+    cfg.FloatOpt('vhd_coalesce_poll_interval',
                  default=5.0,
+                 deprecated_name='xenapi_vhd_coalesce_poll_interval',
+                 deprecated_group='DEFAULT',
                  help='The interval used for polling of coalescing vhds. '
                       'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.BoolOpt('xenapi_check_host',
+    cfg.BoolOpt('check_host',
                 default=True,
+                deprecated_name='xenapi_check_host',
+                deprecated_group='DEFAULT',
                 help='Ensure compute service is running on host XenAPI '
                      'connects to.'),
-    cfg.IntOpt('xenapi_vhd_coalesce_max_attempts',
+    cfg.IntOpt('vhd_coalesce_max_attempts',
                default=5,
+               deprecated_name='xenapi_vhd_coalesce_max_attempts',
+               deprecated_group='DEFAULT',
                help='Max number of times to poll for VHD to coalesce. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
-    cfg.StrOpt('xenapi_sr_base_path',
+    cfg.StrOpt('sr_base_path',
                default='/var/run/sr-mount',
+               deprecated_name='xenapi_sr_base_path',
+               deprecated_group='DEFAULT',
                help='Base path to the storage repository'),
     cfg.StrOpt('target_host',
+               deprecated_name='target_host',
+               deprecated_group='DEFAULT',
                help='iSCSI Target Host'),
     cfg.StrOpt('target_port',
                default='3260',
+               deprecated_name='target_port',
+               deprecated_group='DEFAULT',
                help='iSCSI Target Port, 3260 Default'),
     cfg.StrOpt('iqn_prefix',
                default='iqn.2010-10.org.openstack',
+               deprecated_name='iqn_prefix',
+               deprecated_group='DEFAULT',
                help='IQN Prefix'),
     # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
     # when we pull support for it, we should remove this
-    cfg.BoolOpt('xenapi_remap_vbd_dev',
+    cfg.BoolOpt('remap_vbd_dev',
                 default=False,
+                deprecated_name='xenapi_remap_vbd_dev',
+                deprecated_group='DEFAULT',
                 help='Used to enable the remapping of VBD dev '
                      '(Works around an issue in Ubuntu Maverick)'),
-    cfg.StrOpt('xenapi_remap_vbd_dev_prefix',
+    cfg.StrOpt('remap_vbd_dev_prefix',
                default='sd',
+               deprecated_name='xenapi_remap_vbd_dev_prefix',
+               deprecated_group='DEFAULT',
                help='Specify prefix to remap VBD dev to '
                     '(ex. /dev/xvdb -> /dev/sdb)'),
-    cfg.IntOpt('xenapi_login_timeout',
+    cfg.IntOpt('login_timeout',
                default=10,
+               deprecated_name='xenapi_login_timeout',
+               deprecated_group='DEFAULT',
                help='Timeout in seconds for XenAPI login.'),
     ]
 
 CONF = cfg.CONF
-CONF.register_opts(xenapi_opts)
+CONF.register_opts(xenapi_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 
 
@@ -133,13 +161,13 @@ class XenAPIDriver(driver.ComputeDriver):
     def __init__(self, virtapi, read_only=False):
         super(XenAPIDriver, self).__init__(virtapi)
 
-        url = CONF.xenapi_connection_url
-        username = CONF.xenapi_connection_username
-        password = CONF.xenapi_connection_password
+        url = CONF.xenserver.connection_url
+        username = CONF.xenserver.connection_username
+        password = CONF.xenserver.connection_password
         if not url or password is None:
-            raise Exception(_('Must specify xenapi_connection_url, '
-                              'xenapi_connection_username (optionally), and '
-                              'xenapi_connection_password to use '
+            raise Exception(_('Must specify connection_url, '
+                              'connection_username (optionally), and '
+                              'connection_password to use '
                               'compute_driver=xenapi.XenAPIDriver'))
 
         self._session = XenAPISession(url, username, password, self.virtapi)
@@ -158,7 +186,7 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
-        if CONF.xenapi_check_host:
+        if CONF.xenserver.check_host:
             vm_utils.ensure_correct_host(self._session)
 
         try:
@@ -399,7 +427,7 @@ class XenAPIDriver(driver.ComputeDriver):
 
     @staticmethod
     def get_host_ip_addr():
-        xs_url = urlparse.urlparse(CONF.xenapi_connection_url)
+        xs_url = urlparse.urlparse(CONF.xenserver.connection_url)
         return xs_url.netloc
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
@@ -417,10 +445,10 @@ class XenAPIDriver(driver.ComputeDriver):
                                              mountpoint)
 
     def get_console_pool_info(self, console_type):
-        xs_url = urlparse.urlparse(CONF.xenapi_connection_url)
+        xs_url = urlparse.urlparse(CONF.xenserver.connection_url)
         return {'address': xs_url.netloc,
-                'username': CONF.xenapi_connection_username,
-                'password': CONF.xenapi_connection_password}
+                'username': CONF.xenserver.connection_username,
+                'password': CONF.xenserver.connection_password}
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.
@@ -692,7 +720,7 @@ class XenAPISession(object):
     def _create_first_session(self, url, user, pw, exception):
         try:
             session = self._create_session(url)
-            with timeout.Timeout(CONF.xenapi_login_timeout, exception):
+            with timeout.Timeout(CONF.xenserver.login_timeout, exception):
                 session.login_with_password(user, pw)
         except self.XenAPI.Failure as e:
             # if user and pw of the master are different, we're doomed!
@@ -708,9 +736,9 @@ class XenAPISession(object):
         return url
 
     def _populate_session_pool(self, url, user, pw, exception):
-        for i in xrange(CONF.xenapi_connection_concurrent - 1):
+        for i in xrange(CONF.xenserver.connection_concurrent - 1):
             session = self._create_session(url)
-            with timeout.Timeout(CONF.xenapi_login_timeout, exception):
+            with timeout.Timeout(CONF.xenserver.login_timeout, exception):
                 session.login_with_password(user, pw)
             self._sessions.put(session)
 

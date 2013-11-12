@@ -35,9 +35,10 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
         self.store = bittorrent.BittorrentStore()
         self.mox = mox.Mox()
 
-        self.flags(xenapi_torrent_base_url='http://foo',
-                   xenapi_connection_url='test_url',
-                   xenapi_connection_password='test_pass')
+        self.flags(torrent_base_url='http://foo',
+                   connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
 
         self.context = context.RequestContext(
                 'user', 'project', auth_token='foobar')
@@ -121,18 +122,20 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
         return []
 
     def test_default_fetch_url_no_base_url_set(self):
-        self.flags(xenapi_torrent_base_url=None)
+        self.flags(torrent_base_url=None,
+                   group='xenserver')
         self.stubs.Set(pkg_resources, 'iter_entry_points',
                        self._mock_iter_none)
 
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
         self.assertEqual(_('Cannot create default bittorrent URL without'
-                           ' xenapi_torrent_base_url set'),
+                           ' torrent_base_url set'),
                          str(exc))
 
     def test_default_fetch_url_base_url_is_set(self):
-        self.flags(xenapi_torrent_base_url='http://foo')
+        self.flags(torrent_base_url='http://foo',
+                   group='xenserver')
         self.stubs.Set(pkg_resources, 'iter_entry_points',
                        self._mock_iter_none)
 
