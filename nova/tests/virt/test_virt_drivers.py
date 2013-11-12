@@ -266,7 +266,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         ip = netaddr.IPAddress(host_ip)
 
         # For now, assume IPv4.
-        self.assertEquals(ip.version, 4)
+        self.assertEqual(ip.version, 4)
 
     @catch_notimplementederror
     def test_set_admin_password(self):
@@ -483,13 +483,13 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def test_block_stats(self):
         instance_ref, network_info = self._get_running_instance()
         stats = self.connection.block_stats(instance_ref['name'], 'someid')
-        self.assertEquals(len(stats), 5)
+        self.assertEqual(len(stats), 5)
 
     @catch_notimplementederror
     def test_interface_stats(self):
         instance_ref, network_info = self._get_running_instance()
         stats = self.connection.interface_stats(instance_ref['name'], 'someid')
-        self.assertEquals(len(stats), 8)
+        self.assertEqual(len(stats), 8)
 
     @catch_notimplementederror
     def test_get_console_output(self):

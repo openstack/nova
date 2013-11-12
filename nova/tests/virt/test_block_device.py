@@ -185,7 +185,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertTrue(self.base_class_transform_called)
         self.assertThat(dummy_device, matchers.DictMatches(
             {'foo': None, 'bar': None}))
-        self.assertEquals(dummy_device.id, 42)
+        self.assertEqual(dummy_device.id, 42)
         self.assertThat(dummy_device.legacy(), matchers.DictMatches(
             {'foo': None, 'baz': None}))
 
@@ -238,28 +238,28 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         test_bdm = self.driver_classes['volume'](
             self.volume_bdm)
-        self.assertEquals(test_bdm.id, 3)
-        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-1')
-        self.assertEquals(test_bdm.volume_size, 8)
+        self.assertEqual(test_bdm.id, 3)
+        self.assertEqual(test_bdm.volume_id, 'fake-volume-id-1')
+        self.assertEqual(test_bdm.volume_size, 8)
 
     def test_driver_snapshot_block_device(self):
         self._test_driver_device("snapshot")
 
         test_bdm = self.driver_classes['snapshot'](
             self.snapshot_bdm)
-        self.assertEquals(test_bdm.id, 4)
-        self.assertEquals(test_bdm.snapshot_id, 'fake-snapshot-id-1')
-        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
-        self.assertEquals(test_bdm.volume_size, 3)
+        self.assertEqual(test_bdm.id, 4)
+        self.assertEqual(test_bdm.snapshot_id, 'fake-snapshot-id-1')
+        self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
+        self.assertEqual(test_bdm.volume_size, 3)
 
     def test_driver_image_block_device(self):
         self._test_driver_device('image')
 
         test_bdm = self.driver_classes['image'](
             self.image_bdm)
-        self.assertEquals(test_bdm.id, 5)
-        self.assertEquals(test_bdm.image_id, 'fake-image-id-1')
-        self.assertEquals(test_bdm.volume_size, 1)
+        self.assertEqual(test_bdm.id, 5)
+        self.assertEqual(test_bdm.image_id, 'fake-image-id-1')
+        self.assertEqual(test_bdm.volume_size, 1)
 
     def test_driver_image_block_device_destination_local(self):
         self._test_driver_device('image')
@@ -354,7 +354,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         test_bdm.attach(self.context, instance, self.volume_api,
                         self.virt_driver, self.db_api, wait_func)
-        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
+        self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
     def test_snapshot_attach_volume(self):
         test_bdm = self.driver_classes['snapshot'](
@@ -377,7 +377,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         test_bdm.attach(self.context, instance, self.volume_api,
                         self.virt_driver, self.db_api)
-        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
+        self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
     def test_image_attach_no_volume(self):
         no_volume_image = self.image_bdm.copy()
@@ -404,7 +404,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         test_bdm.attach(self.context, instance, self.volume_api,
                         self.virt_driver, self.db_api, wait_func)
-        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
+        self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
     def test_image_attach_volume(self):
         test_bdm = self.driver_classes['image'](
@@ -427,13 +427,13 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         test_bdm.attach(self.context, instance, self.volume_api,
                         self.virt_driver, self.db_api)
-        self.assertEquals(test_bdm.volume_id, 'fake-volume-id-2')
+        self.assertEqual(test_bdm.volume_id, 'fake-volume-id-2')
 
     def test_convert_block_devices(self):
         converted = driver_block_device._convert_block_devices(
             self.driver_classes['volume'],
             [self.volume_bdm, self.ephemeral_bdm])
-        self.assertEquals(converted, [self.volume_driver_bdm])
+        self.assertEqual(converted, [self.volume_driver_bdm])
 
     def test_legacy_block_devices(self):
         test_snapshot = self.driver_classes['snapshot'](
@@ -442,7 +442,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         block_device_mapping = [test_snapshot, test_snapshot]
         legacy_bdm = driver_block_device.legacy_block_devices(
             block_device_mapping)
-        self.assertEquals(legacy_bdm, [self.snapshot_legacy_driver_bdm,
+        self.assertEqual(legacy_bdm, [self.snapshot_legacy_driver_bdm,
                                        self.snapshot_legacy_driver_bdm])
 
         # Test that the ephemerals work as expected
@@ -456,17 +456,17 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         expected[1]['num'] = 1
         legacy_ephemerals = driver_block_device.legacy_block_devices(
             test_ephemerals)
-        self.assertEquals(expected, legacy_ephemerals)
+        self.assertEqual(expected, legacy_ephemerals)
 
     def test_get_swap(self):
         swap = [self.swap_driver_bdm]
         legacy_swap = [self.swap_legacy_driver_bdm]
         no_swap = [self.volume_driver_bdm]
 
-        self.assertEquals(swap[0], driver_block_device.get_swap(swap))
-        self.assertEquals(legacy_swap[0],
+        self.assertEqual(swap[0], driver_block_device.get_swap(swap))
+        self.assertEqual(legacy_swap[0],
                           driver_block_device.get_swap(legacy_swap))
-        self.assertEquals(no_swap, driver_block_device.get_swap(no_swap))
+        self.assertEqual(no_swap, driver_block_device.get_swap(no_swap))
         self.assertIsNone(driver_block_device.get_swap([]))
 
     def test_is_implemented(self):

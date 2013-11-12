@@ -32,9 +32,9 @@ class FakeDriver2(FakeDriver):
 class ToDriverRegistryTestCase(test.NoDBTestCase):
 
     def assertDriverInstance(self, inst, class_, *args, **kwargs):
-        self.assertEquals(class_, inst.__class__)
-        self.assertEquals(args, inst.args)
-        self.assertEquals(kwargs, inst.kwargs)
+        self.assertEqual(class_, inst.__class__)
+        self.assertEqual(args, inst.args)
+        self.assertEqual(kwargs, inst.kwargs)
 
     def test_driver_dict_from_config(self):
         drvs = driver.driver_dict_from_config(
@@ -44,7 +44,7 @@ class ToDriverRegistryTestCase(test.NoDBTestCase):
             ], 'arg1', 'arg2', param1='value1', param2='value2'
         )
 
-        self.assertEquals(
+        self.assertEqual(
             sorted(['key1', 'key2']),
             sorted(drvs.keys())
         )

@@ -176,10 +176,10 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
         vfs.read_file("/some/file")
 
-        self.assertEquals(vfs.handle.files["/some/file"]["mode"], 0o700)
+        self.assertEqual(vfs.handle.files["/some/file"]["mode"], 0o700)
 
         vfs.set_permissions("/some/file", 0o7777)
-        self.assertEquals(vfs.handle.files["/some/file"]["mode"], 0o7777)
+        self.assertEqual(vfs.handle.files["/some/file"]["mode"], 0o7777)
 
         vfs.teardown()
 
@@ -188,19 +188,19 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
         vfs.read_file("/some/file")
 
-        self.assertEquals(vfs.handle.files["/some/file"]["uid"], 100)
-        self.assertEquals(vfs.handle.files["/some/file"]["gid"], 100)
+        self.assertEqual(vfs.handle.files["/some/file"]["uid"], 100)
+        self.assertEqual(vfs.handle.files["/some/file"]["gid"], 100)
 
         vfs.set_ownership("/some/file", "fred", None)
-        self.assertEquals(vfs.handle.files["/some/file"]["uid"], 105)
-        self.assertEquals(vfs.handle.files["/some/file"]["gid"], 100)
+        self.assertEqual(vfs.handle.files["/some/file"]["uid"], 105)
+        self.assertEqual(vfs.handle.files["/some/file"]["gid"], 100)
 
         vfs.set_ownership("/some/file", None, "users")
-        self.assertEquals(vfs.handle.files["/some/file"]["uid"], 105)
-        self.assertEquals(vfs.handle.files["/some/file"]["gid"], 500)
+        self.assertEqual(vfs.handle.files["/some/file"]["uid"], 105)
+        self.assertEqual(vfs.handle.files["/some/file"]["gid"], 500)
 
         vfs.set_ownership("/some/file", "joe", "admins")
-        self.assertEquals(vfs.handle.files["/some/file"]["uid"], 110)
-        self.assertEquals(vfs.handle.files["/some/file"]["gid"], 600)
+        self.assertEqual(vfs.handle.files["/some/file"]["uid"], 110)
+        self.assertEqual(vfs.handle.files["/some/file"]["gid"], 600)
 
         vfs.teardown()

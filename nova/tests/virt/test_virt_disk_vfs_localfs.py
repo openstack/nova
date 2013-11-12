@@ -140,7 +140,7 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
         vfs = vfsimpl.VFSLocalFS("dummy.img")
         vfs.imgdir = "/foo"
         ret = vfs._canonical_path('etc/something.conf')
-        self.assertEquals(ret, '/foo/etc/something.conf')
+        self.assertEqual(ret, '/foo/etc/something.conf')
 
     def test_check_unsafe_path(self):
         if tests_utils.is_osx():
@@ -197,8 +197,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.append_file("/some/file", " Goodbye")
 
         self.assertIn("/scratch/dir/some/file", files)
-        self.assertEquals(files["/scratch/dir/some/file"]["content"],
-                          "Hello World Goodbye")
+        self.assertEqual(files["/scratch/dir/some/file"]["content"],
+                         "Hello World Goodbye")
 
         root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
@@ -223,8 +223,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.replace_file("/some/file", "Goodbye")
 
         self.assertIn("/scratch/dir/some/file", files)
-        self.assertEquals(files["/scratch/dir/some/file"]["content"],
-                          "Goodbye")
+        self.assertEqual(files["/scratch/dir/some/file"]["content"],
+                         "Goodbye")
 
         root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
@@ -308,7 +308,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.read_file("/some/file")
 
         vfs.set_permissions("/some/file", 0o777)
-        self.assertEquals(files["/scratch/dir/some/file"]["mode"], 0o777)
+        self.assertEqual(files["/scratch/dir/some/file"]["mode"], 0o777)
 
         root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
@@ -338,20 +338,20 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.imgdir = "/scratch/dir"
         vfs.read_file("/some/file")
 
-        self.assertEquals(files["/scratch/dir/some/file"]["uid"], 100)
-        self.assertEquals(files["/scratch/dir/some/file"]["gid"], 100)
+        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 100)
+        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 100)
 
         vfs.set_ownership("/some/file", "fred", None)
-        self.assertEquals(files["/scratch/dir/some/file"]["uid"], 105)
-        self.assertEquals(files["/scratch/dir/some/file"]["gid"], 100)
+        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 105)
+        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 100)
 
         vfs.set_ownership("/some/file", None, "users")
-        self.assertEquals(files["/scratch/dir/some/file"]["uid"], 105)
-        self.assertEquals(files["/scratch/dir/some/file"]["gid"], 500)
+        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 105)
+        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 500)
 
         vfs.set_ownership("/some/file", "joe", "admins")
-        self.assertEquals(files["/scratch/dir/some/file"]["uid"], 110)
-        self.assertEquals(files["/scratch/dir/some/file"]["gid"], 600)
+        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 110)
+        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 600)
 
         root_helper = nova.utils._get_root_helper()
         self.assertEqual(commands,
