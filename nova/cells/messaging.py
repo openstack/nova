@@ -909,7 +909,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def snapshot_instance(self, message, instance, image_id):
         """Snapshot an instance in its cell."""
         instance.refresh()
-        instance.task_state = task_states.IMAGE_SNAPSHOT
+        instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
         instance.save(expected_task_state=[None])
         self.compute_rpcapi.snapshot_instance(message.ctxt,
                                               instance,

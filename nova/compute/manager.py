@@ -676,6 +676,16 @@ class ComputeManager(manager.Manager):
                                              vm_state=vm_states.ERROR)
             return
 
+        if (instance.vm_state != vm_states.ERROR and
+            instance.task_state in [task_states.IMAGE_PENDING_UPLOAD,
+                                    task_states.IMAGE_UPLOADING,
+                                    task_states.IMAGE_SNAPSHOT]):
+            LOG.debug(_("Instance in transitional state %s at start-up "
+                        "clearing task state"),
+                        instance['task_state'], instance=instance)
+            instance = self._instance_update(context, instance.uuid,
+                                   task_state=None)
+
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
             self.driver.plug_vifs(instance, net_info)
@@ -2393,6 +2403,26 @@ class ComputeManager(manager.Manager):
         :param instance: an Instance dict
         :param image_id: glance.db.sqlalchemy.models.Image.Id
         """
+        # NOTE(dave-mcnally) the task state will already be set by the api
+        # but if the compute manager has crashed/been restarted prior to the
+        # request getting here the task state may have been cleared so we set
+        # it again and things continue normally
+        try:
+            instance.task_state = task_states.IMAGE_SNAPSHOT
+            instance.save(
+                        expected_task_state=task_states.IMAGE_SNAPSHOT_PENDING)
+        except exception.InstanceNotFound:
+            # possiblity instance no longer exists, no point in continuing
+            LOG.debug(_("Instance not found, could not set state %s "
+                        "for instance."),
+                      task_states.IMAGE_SNAPSHOT, instance=instance)
+            return
+
+        except exception.UnexpectedDeletingTaskStateError:
+            LOG.debug(_("Instance being deleted, snapshot cannot continue"),
+                      instance=instance)
+            return
+
         self._snapshot_instance(context, image_id, instance,
                                 task_states.IMAGE_SNAPSHOT)
 
