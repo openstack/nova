@@ -24,6 +24,7 @@ from nova import exception
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
+from nova.virt.xenapi import agent as xenapi_agent
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
@@ -551,6 +552,30 @@ class SpawnTestCase(VMOpsTestBase):
 
         self.mox.ReplayAll()
         self.vmops._attach_orig_disk_for_rescue(instance, vm_ref)
+
+    def test_agent_update_setup(self):
+        # agent updates need to occur after networking is configured
+        instance = {'name': 'betelgeuse',
+                    'uuid': '1-2-3-4-5-6'}
+        vm_ref = 'vm_ref'
+        agent = xenapi_agent.XenAPIBasedAgent(self.vmops._session,
+                self.vmops._virtapi, instance, vm_ref)
+
+        self.mox.StubOutWithMock(xenapi_agent, 'should_use_agent')
+        self.mox.StubOutWithMock(self.vmops, '_get_agent')
+        self.mox.StubOutWithMock(agent, 'get_version')
+        self.mox.StubOutWithMock(agent, 'resetnetwork')
+        self.mox.StubOutWithMock(agent, 'update_if_needed')
+
+        xenapi_agent.should_use_agent(instance).AndReturn(True)
+        self.vmops._get_agent(instance, vm_ref).AndReturn(agent)
+        agent.get_version().AndReturn('1.2.3')
+        agent.resetnetwork()
+        agent.update_if_needed('1.2.3')
+
+        self.mox.ReplayAll()
+        self.vmops._configure_new_instance_with_agent(instance, vm_ref,
+                None, None)
 
 
 @mock.patch.object(vmops.VMOps, '_update_instance_progress')

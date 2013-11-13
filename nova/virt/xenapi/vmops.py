@@ -645,8 +645,6 @@ class VMOps(object):
 
         # NOTE(johngarbutt) the agent object allows all of
         # the following steps to silently fail
-        agent.update_if_needed(version)
-
         agent.inject_ssh_key()
 
         if injected_files:
@@ -656,6 +654,7 @@ class VMOps(object):
             agent.set_admin_password(admin_password)
 
         agent.resetnetwork()
+        agent.update_if_needed(version)
 
     def _prepare_instance_filter(self, instance, network_info):
         try:
