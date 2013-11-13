@@ -34,7 +34,6 @@ from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests import fake_instance
 from nova.tests.objects import test_instance_info_cache
-from nova import utils
 
 
 CONF = cfg.CONF
@@ -247,13 +246,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.UnsetStubs()
 
     def test_init_instance_failed_resume_sets_error(self):
-        instance = {
-            'uuid': 'fake-uuid',
-            'info_cache': None,
-            'power_state': power_state.RUNNING,
-            'vm_state': vm_states.ACTIVE,
-            'task_state': None,
-        }
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'fake-uuid'
+        instance.info_cache = None
+        instance.power_state = power_state.RUNNING
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+
         self.flags(resume_guests_state_on_host_boot=True)
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
@@ -283,39 +282,36 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         sys_meta = {
             'old_vm_state': old_vm_state
             }
-        instance = {
-            'uuid': 'foo',
-            'vm_state': vm_states.ERROR,
-            'task_state': task_states.RESIZE_MIGRATING,
-            'power_state': power_state.SHUTDOWN,
-            'system_metadata': sys_meta
-            }
-        fixed = dict(instance, task_state=None)
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ERROR
+        instance.task_state = task_states.RESIZE_MIGRATING
+        instance.power_state = power_state.SHUTDOWN
+        instance.system_metadata = sys_meta
+
         self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
-        self.mox.StubOutWithMock(utils, 'instance_sys_meta')
         self.mox.StubOutWithMock(self.compute.driver, 'plug_vifs')
         self.mox.StubOutWithMock(self.compute.driver,
                                  'finish_revert_migration')
         self.mox.StubOutWithMock(self.compute,
                                  '_get_instance_volume_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver, 'get_info')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(instance, 'save')
 
         compute_utils.get_nw_info_for_instance(instance).AndReturn(
             network_model.NetworkInfo())
         self.compute.driver.plug_vifs(instance, [])
-        utils.instance_sys_meta(instance).AndReturn(sys_meta)
         self.compute._get_instance_volume_block_device_info(
             self.context, instance).AndReturn([])
         self.compute.driver.finish_revert_migration(instance, [], [], power_on)
-        self.compute._instance_update(self.context, instance['uuid'],
-                                      task_state=None).AndReturn(fixed)
-        self.compute.driver.get_info(fixed).AndReturn(
+        instance.save()
+        self.compute.driver.get_info(instance).AndReturn(
             {'state': power_state.SHUTDOWN})
 
         self.mox.ReplayAll()
 
         self.compute._init_instance(self.context, instance)
+        self.assertEqual(None, instance.task_state)
 
     def test_init_instance_reverts_crashed_migration_from_active(self):
         self._test_init_instance_reverts_crashed_migrations(

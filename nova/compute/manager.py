@@ -589,21 +589,18 @@ class ComputeManager(manager.SchedulerDependentManager):
         Complete deletion for instances in DELETED status but not marked as
         deleted in the DB
         """
-        self.conductor_api.instance_destroy(context, instance)
-        system_meta = utils.metadata_to_dict(instance['system_metadata'])
+        instance.destroy()
         bdms = self._get_instance_volume_bdms(context, instance)
-        instance_vcpus = instance['vcpus']
-        instance_memory_mb = instance['memory_mb']
         quotas = quotas_obj.Quotas()
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
         quotas.reserve(context, project_id=project_id, user_id=user_id,
-                       instances=-1, cores=-instance_vcpus,
-                       ram=-instance_memory_mb)
+                       instances=-1, cores=-instance.vcpus,
+                       ram=-instance.memory_mb)
         self._complete_deletion(context,
                                 instance,
                                 bdms,
                                 quotas,
-                                system_meta)
+                                instance.system_metadata)
 
     def _complete_deletion(self, context, instance, bdms,
                            quotas, system_meta):
@@ -615,7 +612,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         # NOTE(ndipanov): Delete the dummy image BDM as well. This will not
         #                 be needed once the manager code is using the image
-        if instance['image_ref']:
+        if instance.image_ref:
             # Do not convert to legacy here - we want them all
             leftover_bdm = \
                 self.conductor_api.block_device_mapping_get_all_by_instance(
@@ -629,20 +626,20 @@ class ComputeManager(manager.SchedulerDependentManager):
         if CONF.vnc_enabled or CONF.spice.enabled:
             if CONF.cells.enable:
                 self.cells_rpcapi.consoleauth_delete_tokens(context,
-                        instance['uuid'])
+                        instance.uuid)
             else:
                 self.consoleauth_rpcapi.delete_tokens_for_instance(context,
-                        instance['uuid'])
+                        instance.uuid)
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
 
         # instance was supposed to shut down - don't attempt
         # recovery in any case
-        if instance['vm_state'] == vm_states.SOFT_DELETED:
+        if instance.vm_state == vm_states.SOFT_DELETED:
             return
 
-        if instance['vm_state'] == vm_states.DELETED:
+        if instance.vm_state == vm_states.DELETED:
             try:
                 self._complete_partial_deletion(context, instance)
             except Exception:
@@ -657,14 +654,14 @@ class ComputeManager(manager.SchedulerDependentManager):
             self.driver.plug_vifs(instance, net_info)
         except NotImplementedError as e:
             LOG.debug(e, instance=instance)
-        if instance['task_state'] == task_states.RESIZE_MIGRATING:
+        if instance.task_state == task_states.RESIZE_MIGRATING:
             # We crashed during resize/migration, so roll back for safety
             try:
                 # NOTE(mriedem): check old_vm_state for STOPPED here, if it's
                 # not in system_metadata we default to True for backwards
                 # compatibility
-                sys_meta = utils.instance_sys_meta(instance)
-                power_on = sys_meta.get('old_vm_state') != vm_states.STOPPED
+                power_on = (instance.system_metadata.get('old_vm_state') !=
+                            vm_states.STOPPED)
 
                 block_dev_info = self._get_instance_volume_block_device_info(
                             context, instance)
@@ -679,10 +676,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.info(_('Instance found in migrating state during '
                            'startup. Resetting task_state'),
                          instance=instance)
-                instance = self._instance_update(context, instance['uuid'],
-                                                 task_state=None)
+                instance.task_state = None
+                instance.save()
 
-        db_state = instance['power_state']
+        db_state = instance.power_state
         drv_state = self._get_power_state(context, instance)
         expect_running = (db_state == power_state.RUNNING and
                           drv_state != db_state)
@@ -710,7 +707,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 # NOTE(vish): The instance failed to resume, so we set the
                 #             instance to error and attempt to continue.
                 LOG.warning(_('Failed to resume instance'), instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance.uuid)
 
         elif drv_state == power_state.RUNNING:
             # VMwareAPI drivers will raise an exception
