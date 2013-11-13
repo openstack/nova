@@ -29,11 +29,11 @@ class IPv6RFC2462TestCase(test.NoDBTestCase):
 
     def test_to_global(self):
         addr = ipv6.to_global('2001:db8::', '02:16:3e:33:44:55', 'test')
-        self.assertEquals(addr, '2001:db8::16:3eff:fe33:4455')
+        self.assertEqual(addr, '2001:db8::16:3eff:fe33:4455')
 
     def test_to_mac(self):
         mac = ipv6.to_mac('2001:db8::216:3eff:fe33:4455')
-        self.assertEquals(mac, '00:16:3e:33:44:55')
+        self.assertEqual(mac, '00:16:3e:33:44:55')
 
     def test_to_global_with_bad_mac(self):
         bad_mac = '02:16:3e:33:44:5Z'
@@ -64,11 +64,11 @@ class IPv6AccountIdentiferTestCase(test.NoDBTestCase):
 
     def test_to_global(self):
         addr = ipv6.to_global('2001:db8::', '02:16:3e:33:44:55', 'test')
-        self.assertEquals(addr, '2001:db8::a94a:8fe5:ff33:4455')
+        self.assertEqual(addr, '2001:db8::a94a:8fe5:ff33:4455')
 
     def test_to_mac(self):
         mac = ipv6.to_mac('2001:db8::a94a:8fe5:ff33:4455')
-        self.assertEquals(mac, '02:16:3e:33:44:55')
+        self.assertEqual(mac, '02:16:3e:33:44:55')
 
     def test_to_global_with_bad_mac(self):
         bad_mac = '02:16:3e:33:44:5X'

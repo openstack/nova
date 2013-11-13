@@ -757,8 +757,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         (service, same_id) = glance.get_remote_image_service(
                 self.context, image_url)
         self.assertEqual(same_id, image_id)
-        self.assertEqual(service._client.host,
-                'something-less-likely')
+        self.assertEqual(service._client.host, 'something-less-likely')
 
 
 def _create_failing_glance_client(info):

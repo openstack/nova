@@ -53,7 +53,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(self.specs, actual_specs)
+        self.assertEqual(self.specs, actual_specs)
 
     def test_flavor_extra_specs_delete(self):
         del self.specs["xpu_model"]
@@ -63,7 +63,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(self.specs, actual_specs)
+        self.assertEqual(self.specs, actual_specs)
 
     def test_instance_type_extra_specs_update(self):
         self.specs["cpu_model"] = "Sandy Bridge"
@@ -74,7 +74,7 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(self.specs, actual_specs)
+        self.assertEqual(self.specs, actual_specs)
 
     def test_instance_type_extra_specs_update_with_nonexisting_flavor(self):
         extra_specs = dict(cpu_arch="x86_64")
@@ -96,40 +96,40 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               self.context,
                               self.flavorid)
-        self.assertEquals(self.specs, actual_specs)
+        self.assertEqual(self.specs, actual_specs)
 
     def test_instance_type_get_with_extra_specs(self):
         instance_type = db.flavor_get(
                             self.context,
                             self.instance_type_id)
-        self.assertEquals(instance_type['extra_specs'],
-                          self.specs)
+        self.assertEqual(instance_type['extra_specs'],
+                         self.specs)
         instance_type = db.flavor_get(
                             self.context,
                             5)
-        self.assertEquals(instance_type['extra_specs'], {})
+        self.assertEqual(instance_type['extra_specs'], {})
 
     def test_instance_type_get_by_name_with_extra_specs(self):
         instance_type = db.flavor_get_by_name(
                             self.context,
                             "cg1.4xlarge")
-        self.assertEquals(instance_type['extra_specs'],
-                          self.specs)
+        self.assertEqual(instance_type['extra_specs'],
+                         self.specs)
         instance_type = db.flavor_get_by_name(
                             self.context,
                             "m1.small")
-        self.assertEquals(instance_type['extra_specs'], {})
+        self.assertEqual(instance_type['extra_specs'], {})
 
     def test_instance_type_get_by_flavor_id_with_extra_specs(self):
         instance_type = db.flavor_get_by_flavor_id(
                             self.context,
                             105)
-        self.assertEquals(instance_type['extra_specs'],
-                          self.specs)
+        self.assertEqual(instance_type['extra_specs'],
+                         self.specs)
         instance_type = db.flavor_get_by_flavor_id(
                             self.context,
                             2)
-        self.assertEquals(instance_type['extra_specs'], {})
+        self.assertEqual(instance_type['extra_specs'], {})
 
     def test_instance_type_get_all(self):
         types = db.flavor_get_all(self.context)
@@ -139,5 +139,5 @@ class InstanceTypeExtraSpecsTestCase(test.TestCase):
             name = instance_type['name']
             name2specs[name] = instance_type['extra_specs']
 
-        self.assertEquals(name2specs['cg1.4xlarge'], self.specs)
-        self.assertEquals(name2specs['m1.small'], {})
+        self.assertEqual(name2specs['cg1.4xlarge'], self.specs)
+        self.assertEqual(name2specs['m1.small'], {})

@@ -309,7 +309,7 @@ class FlavorCommandsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_id)
-        self.assertEquals(empty_specs, actual_specs)
+        self.assertEqual(empty_specs, actual_specs)
 
     def test_extra_specs_set_unset(self):
         expected_specs = {'k1': 'v1'}
@@ -320,7 +320,7 @@ class FlavorCommandsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
-        self.assertEquals(expected_specs, actual_specs)
+        self.assertEqual(expected_specs, actual_specs)
 
         self.unset_key(self.instance_type_name, "k1")
         self._test_extra_specs_empty()
@@ -335,13 +335,13 @@ class FlavorCommandsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
-        self.assertEquals(expected_specs, actual_specs)
+        self.assertEqual(expected_specs, actual_specs)
 
         self.set_key(self.instance_type_name, "k1", "v2")
         actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
-        self.assertEquals(updated_specs, actual_specs)
+        self.assertEqual(updated_specs, actual_specs)
 
         self.unset_key(self.instance_type_name, "k1")
 
@@ -356,7 +356,7 @@ class FlavorCommandsTestCase(test.TestCase):
         actual_specs = db.flavor_extra_specs_get(
                               context.get_admin_context(),
                               self.instance_type_flavorid)
-        self.assertEquals(two_items_extra_specs, actual_specs)
+        self.assertEqual(two_items_extra_specs, actual_specs)
 
         self.unset_key(self.instance_type_name, "k1")
         self.unset_key(self.instance_type_name, "k3")
@@ -378,7 +378,7 @@ class ProjectCommandsTestCase(test.TestCase):
         sys.stdout = sys.__stdout__
         result = output.getvalue()
         print_format = "%-36s %-10s" % ('instances', 'unlimited')
-        self.assertEquals((print_format in result), True)
+        self.assertEqual((print_format in result), True)
 
     def test_quota_update_invalid_key(self):
         self.assertEqual(2, self.commands.quota('admin', 'volumes1', '10'))

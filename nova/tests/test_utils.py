@@ -278,13 +278,13 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertFalse(utils.is_valid_ipv6_cidr("127.0.0.1"))
 
     def test_get_shortened_ipv6(self):
-        self.assertEquals("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
-                          utils.get_shortened_ipv6(
+        self.assertEqual("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
+                         utils.get_shortened_ipv6(
                             "abcd:ef01:2345:6789:abcd:ef01:192.168.254.254"))
-        self.assertEquals("::1", utils.get_shortened_ipv6(
+        self.assertEqual("::1", utils.get_shortened_ipv6(
                                     "0000:0000:0000:0000:0000:0000:0000:0001"))
-        self.assertEquals("caca::caca:0:babe:201:102",
-                          utils.get_shortened_ipv6(
+        self.assertEqual("caca::caca:0:babe:201:102",
+                         utils.get_shortened_ipv6(
                                     "caca:0000:0000:caca:0000:babe:0201:0102"))
         self.assertRaises(netaddr.AddrFormatError, utils.get_shortened_ipv6,
                           "127.0.0.1")
@@ -292,9 +292,9 @@ class GenericUtilsTestCase(test.NoDBTestCase):
                           "failure")
 
     def test_get_shortened_ipv6_cidr(self):
-        self.assertEquals("2600::/64", utils.get_shortened_ipv6_cidr(
+        self.assertEqual("2600::/64", utils.get_shortened_ipv6_cidr(
                 "2600:0000:0000:0000:0000:0000:0000:0000/64"))
-        self.assertEquals("2600::/64", utils.get_shortened_ipv6_cidr(
+        self.assertEqual("2600::/64", utils.get_shortened_ipv6_cidr(
                 "2600::1/64"))
         self.assertRaises(netaddr.AddrFormatError,
                           utils.get_shortened_ipv6_cidr,
@@ -391,12 +391,12 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def test_hour(self):
         begin, end = utils.last_completed_audit_period(unit='hour')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            hour=7,
                                            day=5,
                                            month=3,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            hour=8,
                                            day=5,
                                            month=3,
@@ -404,13 +404,13 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def test_hour_with_offset_before_current(self):
         begin, end = utils.last_completed_audit_period(unit='hour@10')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            minute=10,
                                            hour=7,
                                            day=5,
                                            month=3,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            minute=10,
                                            hour=8,
                                            day=5,
@@ -419,13 +419,13 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def test_hour_with_offset_after_current(self):
         begin, end = utils.last_completed_audit_period(unit='hour@30')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            minute=30,
                                            hour=6,
                                            day=5,
                                            month=3,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            minute=30,
                                            hour=7,
                                            day=5,
@@ -434,23 +434,23 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def test_day(self):
         begin, end = utils.last_completed_audit_period(unit='day')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=4,
                                            month=3,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=5,
                                            month=3,
                                            year=2012))
 
     def test_day_with_offset_before_current(self):
         begin, end = utils.last_completed_audit_period(unit='day@6')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            hour=6,
                                            day=4,
                                            month=3,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            hour=6,
                                            day=5,
                                            month=3,
@@ -458,12 +458,12 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def test_day_with_offset_after_current(self):
         begin, end = utils.last_completed_audit_period(unit='day@10')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            hour=10,
                                            day=3,
                                            month=3,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            hour=10,
                                            day=4,
                                            month=3,
@@ -471,66 +471,66 @@ class AuditPeriodTest(test.NoDBTestCase):
 
     def test_month(self):
         begin, end = utils.last_completed_audit_period(unit='month')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=1,
                                            month=2,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=1,
                                            month=3,
                                            year=2012))
 
     def test_month_with_offset_before_current(self):
         begin, end = utils.last_completed_audit_period(unit='month@2')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=2,
                                            month=2,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=2,
                                            month=3,
                                            year=2012))
 
     def test_month_with_offset_after_current(self):
         begin, end = utils.last_completed_audit_period(unit='month@15')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=15,
                                            month=1,
                                            year=2012))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=15,
                                            month=2,
                                            year=2012))
 
     def test_year(self):
         begin, end = utils.last_completed_audit_period(unit='year')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=1,
                                            month=1,
                                            year=2011))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=1,
                                            month=1,
                                            year=2012))
 
     def test_year_with_offset_before_current(self):
         begin, end = utils.last_completed_audit_period(unit='year@2')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=1,
                                            month=2,
                                            year=2011))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=1,
                                            month=2,
                                            year=2012))
 
     def test_year_with_offset_after_current(self):
         begin, end = utils.last_completed_audit_period(unit='year@6')
-        self.assertEquals(begin, datetime.datetime(
+        self.assertEqual(begin, datetime.datetime(
                                            day=1,
                                            month=6,
                                            year=2010))
-        self.assertEquals(end, datetime.datetime(
+        self.assertEqual(end, datetime.datetime(
                                            day=1,
                                            month=6,
                                            year=2011))
@@ -706,20 +706,20 @@ class StringLengthTestCase(test.NoDBTestCase):
 
 class ValidateIntegerTestCase(test.NoDBTestCase):
     def test_valid_inputs(self):
-        self.assertEquals(
+        self.assertEqual(
             utils.validate_integer(42, "answer"), 42)
-        self.assertEquals(
+        self.assertEqual(
             utils.validate_integer("42", "answer"), 42)
-        self.assertEquals(
+        self.assertEqual(
             utils.validate_integer(
                 "7", "lucky", min_value=7, max_value=8), 7)
-        self.assertEquals(
+        self.assertEqual(
             utils.validate_integer(
                 7, "lucky", min_value=6, max_value=7), 7)
-        self.assertEquals(
+        self.assertEqual(
             utils.validate_integer(
                 300, "Spartaaa!!!", min_value=300), 300)
-        self.assertEquals(
+        self.assertEqual(
             utils.validate_integer(
                 "300", "Spartaaa!!!", max_value=300), 300)
 

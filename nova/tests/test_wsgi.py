@@ -69,7 +69,7 @@ document_root = /tmp
         self.loader = nova.wsgi.Loader(self.config.name)
 
     def test_config_found(self):
-        self.assertEquals(self.config.name, self.loader.config_path)
+        self.assertEqual(self.config.name, self.loader.config_path)
 
     def test_app_not_found(self):
         self.assertRaises(
@@ -80,7 +80,7 @@ document_root = /tmp
 
     def test_app_found(self):
         url_parser = self.loader.load_app("test_app")
-        self.assertEquals("/tmp", url_parser.directory)
+        self.assertEqual("/tmp", url_parser.directory)
 
     def tearDown(self):
         self.config.close()
@@ -92,7 +92,7 @@ class TestWSGIServer(test.NoDBTestCase):
 
     def test_no_app(self):
         server = nova.wsgi.Server("test_app", None)
-        self.assertEquals("test_app", server.name)
+        self.assertEqual("test_app", server.name)
 
     def test_start_random_port(self):
         server = nova.wsgi.Server("test_random_port", None,
@@ -160,7 +160,7 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
         cli.write('POST / HTTP/1.1\r\nHost: localhost\r\n'
                   'Connection: close\r\nContent-length:4\r\n\r\nPING')
         response = cli.read(8192)
-        self.assertEquals(response[-4:], "PONG")
+        self.assertEqual(response[-4:], "PONG")
 
         fake_ssl_server.stop()
         fake_ssl_server.wait()
@@ -188,14 +188,14 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
         cli.write('POST / HTTP/1.1\r\nHost: localhost\r\n'
                   'Connection: close\r\nContent-length:4\r\n\r\nPING')
         response = cli.read(8192)
-        self.assertEquals(response[-4:], "PONG")
+        self.assertEqual(response[-4:], "PONG")
 
         cli = eventlet.connect(("localhost", fake_server.port))
 
         cli.sendall('POST / HTTP/1.1\r\nHost: localhost\r\n'
                   'Connection: close\r\nContent-length:4\r\n\r\nPING')
         response = cli.recv(8192)
-        self.assertEquals(response[-4:], "PONG")
+        self.assertEqual(response[-4:], "PONG")
 
         fake_ssl_server.stop()
         fake_ssl_server.wait()
@@ -217,7 +217,7 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
         server.start()
 
         response = urllib2.urlopen('https://[::1]:%d/' % server.port)
-        self.assertEquals(greetings, response.read())
+        self.assertEqual(greetings, response.read())
 
         server.stop()
         server.wait()

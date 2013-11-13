@@ -2025,7 +2025,7 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
         responses = self.src_msg_runner.get_migrations(
                 self.ctxt,
                 None, False, filters)
-        self.assertEquals(2, len(responses))
+        self.assertEqual(2, len(responses))
         for response in responses:
             self.assertIn(response.value_or_raise(), [migrations_from_cell1,
                                                       migrations_from_cell2])
