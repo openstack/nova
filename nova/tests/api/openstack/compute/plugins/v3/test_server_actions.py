@@ -194,7 +194,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertEqual(len(body['server']['admin_pass']),
+        self.assertEqual(len(body['server']['admin_password']),
                          CONF.password_length)
 
         self.assertEqual(robj['location'], self_href)
@@ -246,7 +246,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(info['image_href_in_call'], image_uuid)
 
     def test_rebuild_accepted_minimum_pass_disabled(self):
-        # run with enable_instance_password disabled to verify admin_pass
+        # run with enable_instance_password disabled to verify admin_password
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False)
 
@@ -266,7 +266,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertNotIn("admin_pass", body['server'])
+        self.assertNotIn("admin_password", body['server'])
 
         self.assertEqual(robj['location'], self_href)
 
@@ -364,7 +364,7 @@ class ServerActionsControllerTest(test.TestCase):
 
         self.assertNotIn('personality', body['server'])
 
-    def test_rebuild_admin_pass(self):
+    def test_rebuild_admin_password(self):
         return_server = fakes.fake_instance_get(image_ref='2',
                 vm_state=vm_states.ACTIVE, host='fake_host')
         self.stubs.Set(db, 'instance_get_by_uuid', return_server)
@@ -372,7 +372,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = {
             "rebuild": {
                 "image_ref": self._image_href,
-                "admin_pass": "asdf",
+                "admin_password": "asdf",
             },
         }
 
@@ -380,10 +380,10 @@ class ServerActionsControllerTest(test.TestCase):
         body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertEqual(body['server']['admin_pass'], 'asdf')
+        self.assertEqual(body['server']['admin_password'], 'asdf')
 
-    def test_rebuild_admin_pass_pass_disabled(self):
-        # run with enable_instance_password disabled to verify admin_pass
+    def test_rebuild_admin_password_pass_disabled(self):
+        # run with enable_instance_password disabled to verify admin_password
         # is missing from response. See lp bug 921814
         self.flags(enable_instance_password=False)
 
@@ -394,7 +394,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = {
             "rebuild": {
                 "image_ref": self._image_href,
-                "admin_pass": "asdf",
+                "admin_password": "asdf",
             },
         }
 
@@ -402,7 +402,7 @@ class ServerActionsControllerTest(test.TestCase):
         body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
-        self.assertNotIn('admin_pass', body['server'])
+        self.assertNotIn('admin_password', body['server'])
 
     def test_rebuild_server_not_found(self):
         def server_not_found(self, instance_id,

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" id="46d75a5e-8eb5-4268-849a-b109c1fbed45" admin_pass="rdATBmaKT7my">
+<server xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" id="46d75a5e-8eb5-4268-849a-b109c1fbed45" admin_password="rdATBmaKT7my">
   <metadata/>
   <atom:link href="http://openstack.example.com/v3/servers/46d75a5e-8eb5-4268-849a-b109c1fbed45" rel="self"/>
   <atom:link href="http://openstack.example.com/servers/46d75a5e-8eb5-4268-849a-b109c1fbed45" rel="bookmark"/>

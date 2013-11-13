@@ -1,5 +1,5 @@
 {
     "rescue": {
-        "admin_pass": "MySecretPass"
+        "admin_password": "MySecretPass"
     }
 }
