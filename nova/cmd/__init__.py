@@ -31,4 +31,8 @@ os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 
 import eventlet
 
-eventlet.monkey_patch(os=False)
+if '--remote_debug-host' in sys.argv and '--remote_debug-port' in sys.argv:
+    # turn off thread patching to enable the remote debugger
+    eventlet.monkey_patch(os=False, thread=False)
+else:
+    eventlet.monkey_patch(os=False)
