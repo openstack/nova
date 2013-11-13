@@ -24,7 +24,6 @@ import six
 
 from nova.compute import flavors
 from nova import conductor
-from nova import context
 from nova.db import base
 from nova import exception
 from nova.network import api as network_api
@@ -302,11 +301,11 @@ class API(base.Base):
                                       'device_owner': zone}}
             try:
                 port = ports.get(network_id)
-                self._populate_neutron_extension_values(instance,
+                self._populate_neutron_extension_values(context, instance,
                                                         port_req_body)
                 # Requires admin creds to set port bindings
                 port_client = (neutron if not
-                               self._has_port_binding_extension() else
+                               self._has_port_binding_extension(context) else
                                neutronv2.get_client(context, admin=True))
                 if port:
                     port_client.update_port(port['id'], port_req_body)
@@ -322,7 +321,7 @@ class API(base.Base):
                         try:
                             port_req_body = {'port': {'device_id': None}}
                             # Requires admin creds to set port bindings
-                            if self._has_port_binding_extension():
+                            if self._has_port_binding_extension(context):
                                 port_req_body['port']['binding:host_id'] = None
                                 port_client = neutronv2.get_client(
                                     context, admin=True)
@@ -350,35 +349,35 @@ class API(base.Base):
                                           if port['id'] in created_port_ids +
                                                            touched_port_ids])
 
-    def _refresh_neutron_extensions_cache(self):
+    def _refresh_neutron_extensions_cache(self, context):
         """Refresh the neutron extensions cache when necessary."""
         if (not self.last_neutron_extension_sync or
             ((time.time() - self.last_neutron_extension_sync)
              >= CONF.neutron_extension_sync_interval)):
-            neutron = neutronv2.get_client(context.get_admin_context(),
-                                           admin=True)
+            neutron = neutronv2.get_client(context)
             extensions_list = neutron.list_extensions()['extensions']
             self.last_neutron_extension_sync = time.time()
             self.extensions.clear()
             self.extensions = dict((ext['name'], ext)
                                    for ext in extensions_list)
 
-    def _has_port_binding_extension(self, refresh_cache=False):
+    def _has_port_binding_extension(self, context, refresh_cache=False):
         if refresh_cache:
-            self._refresh_neutron_extensions_cache()
+            self._refresh_neutron_extensions_cache(context)
         return constants.PORTBINDING_EXT in self.extensions
 
-    def _populate_neutron_extension_values(self, instance, port_req_body):
+    def _populate_neutron_extension_values(self, context, instance,
+                                           port_req_body):
         """Populate neutron extension values for the instance.
 
         If the extension contains nvp-qos then get the rxtx_factor.
         """
-        self._refresh_neutron_extensions_cache()
+        self._refresh_neutron_extensions_cache(context)
         if 'nvp-qos' in self.extensions:
             flavor = flavors.extract_flavor(instance)
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
-        if self._has_port_binding_extension():
+        if self._has_port_binding_extension(context):
             port_req_body['port']['binding:host_id'] = instance.get('host')
 
     def deallocate_for_instance(self, context, instance, **kwargs):
@@ -904,7 +903,7 @@ class API(base.Base):
 
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""
-        if not self._has_port_binding_extension(refresh_cache=True):
+        if not self._has_port_binding_extension(context, refresh_cache=True):
             return
         neutron = neutronv2.get_client(context, admin=True)
         search_opts = {'device_id': instance['uuid'],
