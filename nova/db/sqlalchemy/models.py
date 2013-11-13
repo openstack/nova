@@ -112,6 +112,7 @@ class ComputeNode(BASE, NovaBase):
     disk_available_least = Column(Integer)
     host_ip = Column(types.IPAddress())
     supported_instances = Column(Text)
+    metrics = Column(Text, nullable=True)
 
     # Note(yongli): json string PCI Stats
     # '{"vendor_id":"8086", "product_id":"1234", "count":3 }'

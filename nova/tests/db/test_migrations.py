@@ -3340,6 +3340,16 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         quota = table.select(table.c.id == 5).execute().first()
         self.assertEqual(quota['resource'], 'injected_file_content_bytes')
 
+    def _check_228(self, engine, data):
+        self.assertColumnExists(engine, 'compute_nodes', 'metrics')
+
+        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        self.assertTrue(isinstance(compute_nodes.c.metrics.type,
+                            sqlalchemy.types.Text))
+
+    def _post_downgrade_228(self, engine):
+        self.assertColumnNotExists(engine, 'compute_nodes', 'metrics')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

@@ -41,6 +41,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'running_vms': fields.IntegerField(nullable=True),
         'cpu_info': fields.StringField(nullable=True),
         'disk_available_least': fields.IntegerField(nullable=True),
+        'metrics': fields.StringField(nullable=True),
         }
 
     @staticmethod
