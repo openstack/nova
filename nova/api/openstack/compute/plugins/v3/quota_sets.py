@@ -194,7 +194,7 @@ class QuotaSetsController(object):
                                'value': value})
                     if quota_used > value:
                         msg = (_("Quota value %(value)s for %(key)s are "
-                                "greater than already used and reserved "
+                                "less than already used and reserved "
                                 "%(quota_used)s") %
                                 {'value': value, 'key': key,
                                  'quota_used': quota_used})
