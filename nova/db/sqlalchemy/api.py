@@ -1662,22 +1662,23 @@ def instance_destroy(context, instance_uuid, constraint=None):
         else:
             raise exception.InvalidUUID(instance_uuid)
 
-        query = session.query(models.Instance).\
+        query = model_query(context, models.Instance, session=session).\
                         filter_by(uuid=instance_uuid)
         if constraint is not None:
             query = constraint.apply(models.Instance, query)
         count = query.soft_delete()
         if count == 0:
             raise exception.ConstraintNotMet()
-        session.query(models.SecurityGroupInstanceAssociation).\
+        model_query(context, models.SecurityGroupInstanceAssociation,
+                    session=session).\
                 filter_by(instance_uuid=instance_uuid).\
                 soft_delete()
-        session.query(models.InstanceInfoCache).\
-                 filter_by(instance_uuid=instance_uuid).\
-                 soft_delete()
-        session.query(models.InstanceMetadata).\
-                 filter_by(instance_uuid=instance_uuid).\
-                 soft_delete()
+        model_query(context, models.InstanceInfoCache, session=session).\
+                filter_by(instance_uuid=instance_uuid).\
+                soft_delete()
+        model_query(context, models.InstanceMetadata, session=session).\
+                filter_by(instance_uuid=instance_uuid).\
+                soft_delete()
     return instance_ref
 
 

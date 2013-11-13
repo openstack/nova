@@ -1903,6 +1903,26 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertIsInstance(instance['access_ip_v4'], basestring)
         self.assertIsInstance(instance['access_ip_v6'], basestring)
 
+    def test_instance_destroy(self):
+        ctxt = context.get_admin_context()
+        values = {
+            'metadata': {'key': 'value'}
+        }
+        inst_uuid = self.create_instance_with_args(**values)['uuid']
+        db.instance_destroy(ctxt, inst_uuid)
+
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_get, ctxt, inst_uuid)
+        self.assertIsNone(db.instance_info_cache_get(ctxt, inst_uuid))
+        self.assertEqual({}, db.instance_metadata_get(ctxt, inst_uuid))
+
+    def test_instance_destroy_already_destroyed(self):
+        ctxt = context.get_admin_context()
+        instance = self.create_instance_with_args()
+        db.instance_destroy(ctxt, instance['uuid'])
+        self.assertRaises(exception.InstanceNotFound,
+                          db.instance_destroy, ctxt, instance['uuid'])
+
 
 class InstanceMetadataTestCase(test.TestCase):
 
