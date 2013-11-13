@@ -1597,12 +1597,14 @@ class ComputeManager(manager.SchedulerDependentManager):
                     power_state=self._get_power_state(context, instance),
                     task_state=task_states.REBUILDING,
                     expected_task_state=task_states.REBUILDING)
-
-            if recreate:
-                self.network_api.setup_networks_on_host(
-                        context, instance, self.host)
-
+            #in multihost mode we need to create network
+            #if recreate:
+            LOG.info("setup network by api setup")
+            self.network_api.setup_networks_on_host(
+                context, instance, self.host)
+            #this is double tapping
             network_info = self._get_instance_nw_info(context, instance)
+            self.network_api.migrate_instance_finish(context,instance,"rebuild")
 
             if bdms is None:
                 bdms = self.conductor_api.\
@@ -1642,6 +1644,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                               [], new_pass,
                               network_info=self._legacy_nw_info(network_info),
                               block_device_info=block_device_info)
+
 
             instance = self._instance_update(
                     context, instance['uuid'],
