@@ -170,7 +170,7 @@ def agent_update(self, arg_dict):
     url = arg_dict["url"]
     md5sum = arg_dict["md5sum"]
     arg_dict["value"] = json.dumps({"name": "agentupdate",
-                "value": {"url": url, "md5sum": md5sum}})
+                                    "value": "%s,%s" % (url, md5sum)})
     arg_dict["path"] = "data/host/%s" % request_id
     xenstore.write_record(self, arg_dict)
     try:
