@@ -237,6 +237,9 @@ DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
 
 MAX_CONSOLE_BYTES = 100 * unit.Ki
 
+# The libvirt driver will prefix any disable reason codes with this string.
+DISABLE_PREFIX = 'AUTO: '
+
 
 def patch_tpool_proxy():
     """eventlet.tpool.Proxy doesn't work with old-style class in __str__()
@@ -2603,7 +2606,12 @@ class LibvirtDriver(driver.ComputeDriver):
             raise
 
     def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances."""
+        """Sets the specified host's ability to accept new instances.
+
+           This doesn't override non-automatic disablement with an automatic
+           setting; thereby permitting operators to keep otherwise
+           healthy hosts out of rotation.
+        """
 
         status_name = {True: 'Enabled',
                        False: 'Disabled'}
@@ -2620,11 +2628,26 @@ class LibvirtDriver(driver.ComputeDriver):
             service = service_obj.Service.get_by_compute_host(ctx, CONF.host)
 
             if service.disabled != disable_service:
-                service.disabled = disable_service
-                service.disabled_reason = disable_reason
-                service.save()
-                LOG.debug(_('Updating compute service status to: %s'),
-                             status_name[disable_service])
+                # Note(jang): this is a quick fix to stop operator-
+                # disabled compute hosts from re-enabling themselves
+                # automatically. We prefix any automatic reason code
+                # with a fixed string. We only re-enable a host
+                # automatically if we find that string in place.
+                # This should probably be replaced with a separate flag.
+                if not service.disabled or (
+                        service.disabled_reason and
+                        service.disabled_reason.startswith(DISABLE_PREFIX)):
+                    service.disabled = disable_service
+                    service.disabled_reason = (
+                       DISABLE_PREFIX + disable_reason
+                       if disable_service else '')
+                    service.save()
+                    LOG.debug(_('Updating compute service status to: %s'),
+                                 status_name[disable_service])
+                else:
+                    LOG.debug(_('Not overriding manual compute service '
+                                'status with: %s'),
+                                 status_name[disable_service])
         except exception.ComputeHostNotFound:
             LOG.warn(_('Cannot update service status on host: %s,'
                         'since it is not registered.') % CONF.host)
