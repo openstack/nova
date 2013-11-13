@@ -216,8 +216,33 @@ class ImageType(object):
         }.get(image_type_id)
 
 
+def get_vm_device_id(session, image_meta):
+    # NOTE: device_id should be 2 for windows VMs which run new xentools
+    # (>=6.1). Refer to http://support.citrix.com/article/CTX135099 for more
+    # information.
+    if image_meta is None:
+        image_meta = {}
+    device_id = image_meta.get('xenapi_device_id')
+
+    # The device_id is required to be set for hypervisor version 6.1 and above
+    if device_id:
+        hypervisor_version = session.product_version
+        if _hypervisor_supports_device_id(hypervisor_version):
+            return device_id
+        else:
+            msg = _("Device id %(id)s specified is not supported by "
+                    "hypervisor version %(version)s") % {'id': device_id,
+                    'version': hypervisor_version}
+            raise exception.NovaException(msg)
+
+
+def _hypervisor_supports_device_id(version):
+    hypervisor_major_minor_version = utils.get_major_minor_version(version)
+    return(hypervisor_major_minor_version >= 6.1)
+
+
 def create_vm(session, instance, name_label, kernel, ramdisk,
-              use_pv_kernel=False):
+              use_pv_kernel=False, device_id=None):
     """Create a VM record.  Returns new VM reference.
     the use_pv_kernel flag indicates whether the guest is HVM or PV
 
@@ -293,6 +318,9 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         rec['platform']['nx'] = 'true'
         rec['HVM_boot_params'] = {'order': 'dc'}
         rec['HVM_boot_policy'] = 'BIOS order'
+
+    if device_id:
+        rec['platform']['device_id'] = device_id
 
     vm_ref = session.call_xenapi('VM.create', rec)
     LOG.debug(_('Created VM'), instance=instance)

@@ -294,7 +294,8 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._ensure_instance_name_unique(name_label)
         self.vmops._ensure_enough_free_mem(instance)
         self.vmops._create_vm_record(context, instance, name_label,
-                di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
+                di_type, kernel_file,
+                ramdisk_file, image_meta).AndReturn(vm_ref)
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -400,7 +401,8 @@ class SpawnTestCase(VMOpsTestBase):
 
         vm_ref = "fake_vm_ref"
         self.vmops._create_vm_record(context, instance, name_label,
-                di_type, kernel_file, ramdisk_file).AndReturn(vm_ref)
+                di_type, kernel_file,
+                ramdisk_file, image_meta).AndReturn(vm_ref)
 
         if resize_instance:
             self.vmops._resize_up_root_vdi(instance, root_vdi)
@@ -746,3 +748,31 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
         mock_restore.assert_called_once_with(instance)
         mock_migrate_vhd.assert_called_once_with(self.vmops._session,
                 instance, "parent", dest, sr_path, 1)
+
+
+class CreateVMRecordTestCase(VMOpsTestBase):
+    @mock.patch.object(vm_utils, 'determine_vm_mode')
+    @mock.patch.object(vm_utils, 'get_vm_device_id')
+    @mock.patch.object(vm_utils, 'create_vm')
+    def test_create_vm_record_with_vm_device_id(self, mock_create_vm,
+            mock_get_vm_device_id, mock_determine_vm_mode):
+
+        context = "context"
+        instance = {"vm_mode": "vm_mode", "uuid": "uuid123"}
+        name_label = "dummy"
+        disk_image_type = "vhd"
+        kernel_file = "kernel"
+        ramdisk_file = "ram"
+        image_meta = "image_meta"
+        device_id = "0002"
+        session = "session"
+        self.vmops._session = session
+        mock_get_vm_device_id.return_value = device_id
+        mock_determine_vm_mode.return_value = "vm_mode"
+
+        self.vmops._create_vm_record(context, instance, name_label,
+            disk_image_type, kernel_file, ramdisk_file, image_meta)
+
+        vm_utils.get_vm_device_id.assert_called_with(session, image_meta)
+        mock_create_vm.assert_called_with(session, instance, name_label,
+            kernel_file, ramdisk_file, False, device_id)

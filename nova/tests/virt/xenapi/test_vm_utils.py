@@ -1816,3 +1816,81 @@ class StripBaseMirrorTestCase(VMUtilsTestBase):
         self.assertEqual(expected, session.call_xenapi.call_args_list)
         expected = [mock.call(session, "ref"), mock.call(session, "ref")]
         self.assertEqual(expected, mock_strip.call_args_list)
+
+
+class DeviceIdTestCase(VMUtilsTestBase):
+    def test_device_id_is_none_if_not_specified_in_meta_data(self):
+        image_meta = {}
+        session = mock.Mock()
+        session.product_version = '6.1'
+        self.assertIsNone(vm_utils.get_vm_device_id(session, image_meta))
+
+    def test_get_device_id_if_hypervisor_version_is_greater_than_6_1(self):
+        image_meta = {'xenapi_device_id': '0002'}
+        session = mock.Mock()
+        session.product_version = '6.2'
+        self.assertEqual('0002',
+                         vm_utils.get_vm_device_id(session, image_meta))
+        session.product_version = '6.3.1'
+        self.assertEqual('0002',
+                         vm_utils.get_vm_device_id(session, image_meta))
+
+    def test_raise_exception_if_device_id_not_supported_by_hyp_version(self):
+        image_meta = {'xenapi_device_id': '0002'}
+        session = mock.Mock()
+        session.product_version = '6.0'
+        exc = self.assertRaises(exception.NovaException,
+            vm_utils.get_vm_device_id, session, image_meta)
+        self.assertEqual("Device id 0002 specified is not supported by "
+            "hypervisor version 6.0", exc.message)
+
+
+class CreateVmRecordTestCase(VMUtilsTestBase):
+    @mock.patch.object(flavors, 'extract_flavor')
+    def test_create_vm_record(self, mock_extract_flavor):
+        session = mock.Mock()
+        instance = {"uuid": "uuid123"}
+        instance_type = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
+        mock_extract_flavor.return_value = instance_type
+
+        vm_utils.create_vm(session, instance, "name", "kernel", "ramdisk",
+                           device_id="0002")
+
+        expected_vm_rec = {
+            'VCPUs_params': {'cap': '0', 'weight': '2'},
+            'PV_args': '',
+            'memory_static_min': '0',
+            'ha_restart_priority': '',
+            'HVM_boot_policy': 'BIOS order',
+            'PV_bootloader': '',
+            'tags': [],
+            'VCPUs_max': '1',
+            'memory_static_max': '1073741824',
+            'actions_after_shutdown': 'destroy',
+            'memory_dynamic_max': '1073741824',
+            'user_version': '0',
+            'xenstore_data': {'vm-data/allowvssprovider': 'false'},
+            'blocked_operations': {},
+            'is_a_template': False,
+            'name_description': '',
+            'memory_dynamic_min': '1073741824',
+            'actions_after_crash': 'destroy',
+            'memory_target': '1073741824',
+            'PV_ramdisk': '',
+            'PV_bootloader_args': '',
+            'PCI_bus': '',
+            'other_config': {'nova_uuid': 'uuid123'},
+            'name_label': 'name',
+            'actions_after_reboot': 'restart',
+            'VCPUs_at_startup': '1',
+            'HVM_boot_params': {'order': 'dc'},
+            'platform': {'nx': 'true', 'pae': 'true', 'apic': 'true',
+                         'timeoffset': '0', 'viridian': 'true', 'acpi': 'true',
+                         'device_id': '0002'},
+            'PV_legacy_args': '',
+            'PV_kernel': '',
+            'affinity': '',
+            'recommendations': '',
+            'ha_always_run': False}
+
+        session.call_xenapi.assert_called_with('VM.create', expected_vm_rec)

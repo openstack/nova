@@ -1033,6 +1033,18 @@ def convert_version_to_tuple(version_str):
     return tuple(int(part) for part in version_str.split('.'))
 
 
+def get_major_minor_version(version):
+    try:
+        if type(version) == int or type(version) == float:
+            return version
+        if type(version) == str:
+            major_minor_versions = version.split(".")[0:2]
+            version_as_float = float(".".join(major_minor_versions))
+            return version_as_float
+    except Exception:
+        raise exception.NovaException(_("Version %s invalid") % version)
+
+
 def is_neutron():
     global _IS_NEUTRON_ATTEMPTED
     global _IS_NEUTRON

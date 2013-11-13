@@ -387,7 +387,8 @@ class VMOps(object):
         def create_vm_record_step(undo_mgr, disk_image_type,
                                   kernel_file, ramdisk_file):
             vm_ref = self._create_vm_record(context, instance, name_label,
-                    disk_image_type, kernel_file, ramdisk_file)
+                                            disk_image_type, kernel_file,
+                                            ramdisk_file, image_meta)
 
             def undo_create_vm():
                 self._destroy(instance, vm_ref, network_info=network_info)
@@ -524,8 +525,8 @@ class VMOps(object):
         if not vm_utils.is_enough_free_mem(self._session, instance):
             raise exception.InsufficientFreeMemory(uuid=instance['uuid'])
 
-    def _create_vm_record(self, context, instance, name_label,
-                          disk_image_type, kernel_file, ramdisk_file):
+    def _create_vm_record(self, context, instance, name_label, disk_image_type,
+                          kernel_file, ramdisk_file, image_meta):
         """Create the VM record in Xen, making sure that we do not create
         a duplicate name-label.  Also do a rough sanity check on memory
         to try to short-circuit a potential failure later.  (The memory
@@ -538,10 +539,12 @@ class VMOps(object):
             self._virtapi.instance_update(context,
                                           instance['uuid'], {'vm_mode': mode})
 
+        device_id = vm_utils.get_vm_device_id(self._session, image_meta)
         use_pv_kernel = (mode == vm_mode.XEN)
         LOG.debug(_("Using PV kernel: %s") % use_pv_kernel, instance=instance)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
-                                    kernel_file, ramdisk_file, use_pv_kernel)
+                                    kernel_file, ramdisk_file,
+                                    use_pv_kernel, device_id)
         return vm_ref
 
     def _attach_disks(self, instance, vm_ref, name_label, vdis,

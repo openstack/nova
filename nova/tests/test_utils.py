@@ -895,7 +895,7 @@ class GetImageFromSystemMetadataTestCase(test.NoDBTestCase):
         self.assertNotIn("foo1", image)
 
 
-class VersionTestCase(test.TestCase):
+class VersionTestCase(test.NoDBTestCase):
     def test_convert_version_to_int(self):
         self.assertEqual(utils.convert_version_to_int('6.2.0'), 6002000)
         self.assertEqual(utils.convert_version_to_int((6, 4, 3)), 6004003)
@@ -909,3 +909,17 @@ class VersionTestCase(test.TestCase):
 
     def test_convert_version_to_tuple(self):
         self.assertEqual(utils.convert_version_to_tuple('6.7.0'), (6, 7, 0))
+
+    def test_get_major_minor_version_from_string(self):
+        self.assertEqual(utils.get_major_minor_version('6.1.3'), 6.1)
+        self.assertEqual(utils.get_major_minor_version('6.4'), 6.4)
+        self.assertEqual(utils.get_major_minor_version('6'), 6)
+
+    def test_get_major_minor_version_from_float(self):
+        self.assertEqual(utils.get_major_minor_version(6.1), 6.1)
+        self.assertEqual(utils.get_major_minor_version(6), 6.0)
+
+    def test_get_major_minor_version_raises_exception(self):
+        exc = self.assertRaises(exception.NovaException,
+                                utils.get_major_minor_version, '5a.6b')
+        self.assertEqual("Version 5a.6b invalid", exc.message)
