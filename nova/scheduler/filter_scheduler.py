@@ -17,6 +17,8 @@
 The FilterScheduler is for creating instances locally.
 You can customize this scheduler by specifying your own Host Filters and
 Weighing Functions.
+This scheduler does not take the load balance into account, so you can
+design new scheduler based on this on by yourself
 """
 
 import random
