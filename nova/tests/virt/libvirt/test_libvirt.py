@@ -5999,6 +5999,7 @@ class LibvirtConnTestCase(test.TestCase):
         Tests that the xml is logged when enabling hairpin mode for the domain
         fails.
         """
+        utils.reset_is_neutron()
         fake_xml = "<test>this is a test</test>"
         fake_domain = FakeVirtDomain(fake_xml)
 
