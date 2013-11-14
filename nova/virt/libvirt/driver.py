@@ -1270,7 +1270,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        inst_type = self.virtapi.instance_type_get(
+        inst_type = self.virtapi.flavor_get(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         self.vif_driver.plug(instance, vif)
@@ -1291,7 +1291,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        inst_type = self.virtapi.instance_type_get(
+        inst_type = self.virtapi.flavor_get(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         cfg = self.vif_driver.get_config(instance, vif, None, inst_type)
@@ -2871,7 +2871,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
 
-        inst_type = self.virtapi.instance_type_get(
+        inst_type = self.virtapi.flavor_get(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)

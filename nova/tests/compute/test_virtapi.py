@@ -52,9 +52,8 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
         self.assertExpected('agent_build_get_by_triple',
                             'fake-hv', 'gnu/hurd', 'fake-arch')
 
-    def test_instance_type_get(self):
-        self.assertExpected('instance_type_get',
-                            'fake-instance-type')
+    def test_flavor_get(self):
+        self.assertExpected('flavor_get', 'fake-flavor')
 
     def test_block_device_mapping_get_all_by_instance(self):
         self.assertExpected('block_device_mapping_get_all_by_instance',
@@ -77,10 +76,6 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             # NOTE(danms): instance_update actually becomes the other variant
             # in FakeVirtAPI
             db_method = 'instance_update_and_get_original'
-        elif method == 'instance_type_get':
-            # TODO(mriedem): Remove this once virtapi renames instance_type_get
-            # to flavor_get.
-            db_method = 'flavor_get'
         else:
             db_method = method
         self.mox.StubOutWithMock(db, db_method)
@@ -128,8 +123,14 @@ class ComputeVirtAPITest(VirtAPIBaseTest):
         self.virtapi = compute_manager.ComputeVirtAPI(self.compute)
 
     def assertExpected(self, method, *args, **kwargs):
-        self.mox.StubOutWithMock(self.compute.conductor_api, method)
-        getattr(self.compute.conductor_api, method)(
+        if method == 'flavor_get':
+            # TODO(mriedem): Remove this when conductor_api.instance_type_get
+            # is renamed to flavor_get.
+            cond_api_method = 'instance_type_get'
+        else:
+            cond_api_method = method
+        self.mox.StubOutWithMock(self.compute.conductor_api, cond_api_method)
+        getattr(self.compute.conductor_api, cond_api_method)(
             self.context, *args, **kwargs).AndReturn('it worked')
         self.mox.ReplayAll()
         result = getattr(self.virtapi, method)(self.context, *args, **kwargs)

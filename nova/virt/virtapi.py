@@ -42,10 +42,10 @@ class VirtAPI(object):
         """
         raise NotImplementedError()
 
-    def instance_type_get(self, context, instance_type_id):
-        """Get information about an instance type
+    def flavor_get(self, context, flavor_id):
+        """Get information about a flavor
         :param context: security context
-        :param instance_type_id: the id of the instance type in question
+        :param flavor_id: the id of the flavor in question
         """
         raise NotImplementedError()
 

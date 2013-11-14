@@ -338,7 +338,7 @@ class PXE(base.NodeDriver):
     def cache_images(self, context, node, instance,
             admin_password, image_meta, injected_files, network_info):
         """Prepare all the images for this instance."""
-        instance_type = self.virtapi.instance_type_get(
+        instance_type = self.virtapi.flavor_get(
             context, instance['instance_type_id'])
         tftp_image_info = get_tftp_image_info(instance, instance_type)
         self._cache_tftp_images(context, instance, tftp_image_info)
@@ -374,7 +374,7 @@ class PXE(base.NodeDriver):
             ./pxelinux.cfg/
                  {mac} -> ../{uuid}/config
         """
-        instance_type = self.virtapi.instance_type_get(
+        instance_type = self.virtapi.flavor_get(
             context, instance['instance_type_id'])
         image_info = get_tftp_image_info(instance, instance_type)
         (root_mb, swap_mb, ephemeral_mb) = get_partition_sizes(instance)

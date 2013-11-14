@@ -435,13 +435,13 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_cache_images(self):
         self._create_node()
-        self.mox.StubOutWithMock(self.driver.virtapi, 'instance_type_get')
+        self.mox.StubOutWithMock(self.driver.virtapi, 'flavor_get')
         self.mox.StubOutWithMock(pxe, "get_tftp_image_info")
         self.mox.StubOutWithMock(self.driver, "_cache_tftp_images")
         self.mox.StubOutWithMock(self.driver, "_cache_image")
         self.mox.StubOutWithMock(self.driver, "_inject_into_image")
 
-        self.driver.virtapi.instance_type_get(
+        self.driver.virtapi.flavor_get(
             self.context, self.instance['instance_type_id']).AndReturn({})
         pxe.get_tftp_image_info(self.instance, {}).AndReturn([])
         self.driver._cache_tftp_images(self.context, self.instance, [])
@@ -487,7 +487,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         pxe_path = pxe.get_pxe_config_file_path(self.instance)
         image_path = pxe.get_image_file_path(self.instance)
 
-        self.mox.StubOutWithMock(self.driver.virtapi, 'instance_type_get')
+        self.mox.StubOutWithMock(self.driver.virtapi, 'flavor_get')
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(pxe, 'get_partition_sizes')
         self.mox.StubOutWithMock(bm_utils, 'random_alnum')
@@ -495,7 +495,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.mox.StubOutWithMock(bm_utils, 'write_to_file')
         self.mox.StubOutWithMock(bm_utils, 'create_link_without_raise')
 
-        self.driver.virtapi.instance_type_get(
+        self.driver.virtapi.flavor_get(
             self.context, self.instance['instance_type_id']).AndReturn({})
         pxe.get_tftp_image_info(self.instance, {}).AndReturn(image_info)
         pxe.get_partition_sizes(self.instance).AndReturn((0, 0, 0))
@@ -526,13 +526,13 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
             }
         self.instance['uuid'] = 'fake-uuid'
 
-        self.mox.StubOutWithMock(self.driver.virtapi, 'instance_type_get')
+        self.mox.StubOutWithMock(self.driver.virtapi, 'flavor_get')
         self.mox.StubOutWithMock(bm_utils, 'write_to_file')
         self.mox.StubOutWithMock(bm_utils, 'create_link_without_raise')
         self.mox.StubOutWithMock(bm_utils, 'unlink_without_raise')
         self.mox.StubOutWithMock(bm_utils, 'rmtree_without_raise')
 
-        self.driver.virtapi.instance_type_get(
+        self.driver.virtapi.flavor_get(
             self.context, self.instance['instance_type_id']).AndReturn(
                 instance_type)
 
