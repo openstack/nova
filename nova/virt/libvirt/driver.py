@@ -1410,7 +1410,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 virt_dom.managedSave(0)
 
         snapshot_backend = self.image_backend.snapshot(disk_path,
-                snapshot_name,
                 image_type=source_format)
 
         if live_snapshot:
@@ -1419,7 +1418,6 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             LOG.info(_("Beginning cold snapshot process"),
                      instance=instance)
-            snapshot_backend.snapshot_create()
 
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
         snapshot_directory = CONF.libvirt_snapshots_directory
@@ -1436,8 +1434,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     snapshot_backend.snapshot_extract(out_path, image_format)
             finally:
-                if not live_snapshot:
-                    snapshot_backend.snapshot_delete()
                 new_dom = None
                 # NOTE(dkang): because previous managedSave is not called
                 #              for LXC, _create_domain must not be called.
@@ -1530,7 +1526,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Convert the delta (CoW) image with a backing file to a flat
         # image with no backing file.
-        libvirt_utils.extract_snapshot(disk_delta, 'qcow2', None,
+        libvirt_utils.extract_snapshot(disk_delta, 'qcow2',
                                        out_path, image_format)
 
     def _volume_snapshot_update_status(self, context, snapshot_id, status):

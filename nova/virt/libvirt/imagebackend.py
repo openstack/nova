@@ -228,25 +228,17 @@ class Image(object):
                               'size': size})
             raise exception.InstanceTypeDiskTooSmall()
 
-    def snapshot_create(self):
-        raise NotImplementedError()
-
     def snapshot_extract(self, target, out_format):
-        raise NotImplementedError()
-
-    def snapshot_delete(self):
         raise NotImplementedError()
 
 
 class Raw(Image):
-    def __init__(self, instance=None, disk_name=None, path=None,
-                 snapshot_name=None):
+    def __init__(self, instance=None, disk_name=None, path=None):
         super(Raw, self).__init__("file", "raw", is_block_dev=False)
 
         self.path = (path or
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
-        self.snapshot_name = snapshot_name
         self.preallocate = CONF.preallocate_images != 'none'
         self.correct_format()
 
@@ -276,25 +268,17 @@ class Raw(Image):
                     copy_raw_image(base, self.path, size)
         self.correct_format()
 
-    def snapshot_create(self):
-        pass
-
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format)
 
-    def snapshot_delete(self):
-        pass
-
 
 class Qcow2(Image):
-    def __init__(self, instance=None, disk_name=None, path=None,
-                 snapshot_name=None):
+    def __init__(self, instance=None, disk_name=None, path=None):
         super(Qcow2, self).__init__("file", "qcow2", is_block_dev=False)
 
         self.path = (path or
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
-        self.snapshot_name = snapshot_name
         self.preallocate = CONF.preallocate_images != 'none'
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
@@ -341,16 +325,10 @@ class Qcow2(Image):
             with fileutils.remove_path_on_error(self.path):
                 copy_qcow2_image(base, self.path, size)
 
-    def snapshot_create(self):
-        libvirt_utils.create_snapshot(self.path, self.snapshot_name)
-
     def snapshot_extract(self, target, out_format):
         libvirt_utils.extract_snapshot(self.path, 'qcow2',
-                                       self.snapshot_name, target,
+                                       target,
                                        out_format)
-
-    def snapshot_delete(self):
-        libvirt_utils.delete_snapshot(self.path, self.snapshot_name)
 
 
 class Lvm(Image):
@@ -358,8 +336,7 @@ class Lvm(Image):
     def escape(filename):
         return filename.replace('_', '__')
 
-    def __init__(self, instance=None, disk_name=None, path=None,
-                 snapshot_name=None):
+    def __init__(self, instance=None, disk_name=None, path=None):
         super(Lvm, self).__init__("block", "raw", is_block_dev=True)
 
         if path:
@@ -381,11 +358,6 @@ class Lvm(Image):
         # for the more general preallocate_images
         self.sparse = CONF.libvirt_sparse_logical_volumes
         self.preallocate = not self.sparse
-
-        if snapshot_name:
-            self.snapshot_name = snapshot_name
-            self.snapshot_path = os.path.join('/dev', self.vg,
-                                              self.snapshot_name)
 
     def _can_fallocate(self):
         return False
@@ -424,20 +396,9 @@ class Lvm(Image):
             with excutils.save_and_reraise_exception():
                 libvirt_utils.remove_logical_volumes(path)
 
-    def snapshot_create(self):
-        size = CONF.libvirt_lvm_snapshot_size
-        cmd = ('lvcreate', '-L', size, '-s', '--name', self.snapshot_name,
-               self.path)
-        libvirt_utils.execute(*cmd, run_as_root=True, attempts=3)
-
     def snapshot_extract(self, target, out_format):
-        images.convert_image(self.snapshot_path, target, out_format,
+        images.convert_image(self.path, target, out_format,
                              run_as_root=True)
-
-    def snapshot_delete(self):
-        # NOTE (rmk): Snapshot volumes are automatically zeroed by LVM
-        cmd = ('lvremove', '-f', self.snapshot_path)
-        libvirt_utils.execute(*cmd, run_as_root=True, attempts=3)
 
 
 class RBDVolumeProxy(object):
@@ -486,8 +447,7 @@ def ascii_str(s):
 
 
 class Rbd(Image):
-    def __init__(self, instance=None, disk_name=None, path=None,
-                 snapshot_name=None, **kwargs):
+    def __init__(self, instance=None, disk_name=None, path=None, **kwargs):
         super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
         if path:
             try:
@@ -496,7 +456,6 @@ class Rbd(Image):
                 raise exception.InvalidDevicePath(path=path)
         else:
             self.rbd_name = '%s_%s' % (instance['uuid'], disk_name)
-        self.snapshot_name = snapshot_name
         if not CONF.libvirt_images_rbd_pool:
             raise RuntimeError(_('You should specify'
                                  ' libvirt_images_rbd_pool'
@@ -630,15 +589,9 @@ class Rbd(Image):
         if size and size > base_size:
             self._resize(self.rbd_name, size)
 
-    def snapshot_create(self):
-        pass
-
     def snapshot_extract(self, target, out_format):
         snap = 'rbd:%s/%s' % (self.pool, self.rbd_name)
         images.convert_image(snap, target, out_format)
-
-    def snapshot_delete(self):
-        pass
 
 
 class Backend(object):
@@ -670,12 +623,11 @@ class Backend(object):
         backend = self.backend(image_type)
         return backend(instance=instance, disk_name=disk_name)
 
-    def snapshot(self, disk_path, snapshot_name, image_type=None):
+    def snapshot(self, disk_path, image_type=None):
         """Returns snapshot for given image
 
         :path: path to image
-        :snapshot_name: snapshot name
         :image_type: type of image
         """
         backend = self.backend(image_type)
-        return backend(path=disk_path, snapshot_name=snapshot_name)
+        return backend(path=disk_path)
