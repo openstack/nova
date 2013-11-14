@@ -2032,12 +2032,12 @@ class LibvirtDriver(driver.ComputeDriver):
             pci_manager.get_instance_pci_devs(instance))
         dom.managedSave(0)
 
-    def resume(self, instance, network_info, block_device_info=None):
+    def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
         dom = self._create_domain_and_network(xml, instance, network_info,
-                                              block_device_info)
+                         block_device_info=block_device_info, context=context)
         self._attach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
 
