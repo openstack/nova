@@ -160,9 +160,9 @@ class TemplateElement(object):
                             This is used to further refine the datum
                             object returned by selector in the event
                             that it is a list of objects.
-        :colon_ns: An optional flag indicates whether support k:v
-                    type tagname, if so the k:v type tagname will
-                    be supported by adding the k into namespace.
+        :colon_ns: An optional flag indicating whether to support k:v
+                   type tagname, if True the k:v type tagname will
+                   be supported by adding the k into the namespace.
         """
 
         # Convert selector into a Selector
