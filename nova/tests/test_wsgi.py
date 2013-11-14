@@ -179,7 +179,7 @@ class TestWSGIServerWithSSL(test.NoDBTestCase):
         fake_server = nova.wsgi.Server("fake", test_app,
             host="127.0.0.1", port=0)
         fake_server.start()
-        self.assertNotEquals(0, fake_server.port)
+        self.assertNotEqual(0, fake_server.port)
 
         cli = eventlet.connect(("localhost", fake_ssl_server.port))
         cli = eventlet.wrap_ssl(cli,
