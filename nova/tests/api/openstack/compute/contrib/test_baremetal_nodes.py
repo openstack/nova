@@ -154,6 +154,68 @@ class BareMetalNodesTest(test.NoDBTestCase):
         node = fake_node_ext_status(id=100)
         self._test_create(node, ext_status=True)
 
+    def test_create_with_prov_mac_address(self):
+        node = {
+            'service_host': "host",
+            'cpus': 8,
+            'memory_mb': 8192,
+            'local_gb': 128,
+            'pm_address': "10.1.2.3",
+            'pm_user': "pm_user",
+            'pm_password': "pm_pass",
+            'terminal_port': 8000,
+            'interfaces': [],
+        }
+        intf = {
+            'address': '1a:B2:3C:4d:e5:6f',
+            'datapath_id': None,
+            'id': None,
+            'port_no': None,
+        }
+
+        request = node.copy()
+        request['prov_mac_address'] = intf['address']
+
+        db_node = node.copy()
+        db_node['id'] = 100
+
+        response = node.copy()
+        response.update(id=db_node['id'],
+                        instance_uuid=None,
+                        interfaces=[intf])
+        del response['pm_password']
+
+        self.mox.StubOutWithMock(db, 'bm_node_create')
+        self.mox.StubOutWithMock(db, 'bm_interface_create')
+        self.mox.StubOutWithMock(db, 'bm_interface_get')
+        db.bm_node_create(self.context, node).AndReturn(db_node)
+        self.ext_mgr.is_loaded('os-baremetal-ext-status').AndReturn(False)
+        db.bm_interface_create(self.context,
+                               bm_node_id=db_node['id'],
+                               address=intf['address'],
+                               datapath_id=intf['datapath_id'],
+                               port_no=intf['port_no']).AndReturn(1000)
+        db.bm_interface_get(self.context, 1000).AndReturn(intf)
+        self.mox.ReplayAll()
+        res_dict = self.controller.create(self.request, {'node': request})
+        self.assertEqual({'node': response}, res_dict)
+
+    def test_create_with_invalid_prov_mac_address(self):
+        node = {
+            'service_host': "host",
+            'cpus': 8,
+            'memory_mb': 8192,
+            'local_gb': 128,
+            'pm_address': "10.1.2.3",
+            'pm_user': "pm_user",
+            'pm_password': "pm_pass",
+            'terminal_port': 8000,
+            'prov_mac_address': 'INVALID!!',
+        }
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.create,
+                          self.request, {'node': node})
+
     def test_delete(self):
         self.mox.StubOutWithMock(db, 'bm_node_destroy')
         db.bm_node_destroy(self.context, 1)
@@ -193,7 +255,7 @@ class BareMetalNodesTest(test.NoDBTestCase):
 
     def test_add_interface(self):
         node_id = 1
-        address = '11:22:33:44:55:66'
+        address = '11:22:33:ab:cd:ef'
         body = {'add_interface': {'address': address}}
         self.mox.StubOutWithMock(db, 'bm_node_get')
         self.mox.StubOutWithMock(db, 'bm_interface_create')
@@ -211,6 +273,18 @@ class BareMetalNodesTest(test.NoDBTestCase):
         res_dict = self.controller._add_interface(self.request, node_id, body)
         self.assertEqual(12345, res_dict['interface']['id'])
         self.assertEqual(address, res_dict['interface']['address'])
+
+    def test_add_interface_invalid_address(self):
+        node_id = 1
+        body = {'add_interface': {'address': ''}}
+        self.mox.StubOutWithMock(db, 'bm_node_get')
+        db.bm_node_get(self.context, node_id)
+        self.mox.ReplayAll()
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller._add_interface,
+                          self.request,
+                          node_id,
+                          body)
 
     def test_remove_interface(self):
         node_id = 1
@@ -283,3 +357,17 @@ class BareMetalNodesTest(test.NoDBTestCase):
                           self.request,
                           node_id,
                           body)
+
+    def test_is_valid_mac(self):
+        self.assertFalse(baremetal_nodes.is_valid_mac(None))
+        self.assertTrue(baremetal_nodes.is_valid_mac("52:54:00:cf:2d:31"))
+        self.assertTrue(baremetal_nodes.is_valid_mac(u"52:54:00:cf:2d:31"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("127.0.0.1"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("not:a:mac:address"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("52-54-00-cf-2d-31"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("5254.00cf.2d31"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("52:54:0:cf:2d:31"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("aa bb cc dd ee ff"))
+        self.assertTrue(baremetal_nodes.is_valid_mac("AA:BB:CC:DD:EE:FF"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("AA BB CC DD EE FF"))
+        self.assertFalse(baremetal_nodes.is_valid_mac("AA-BB-CC-DD-EE-FF"))
