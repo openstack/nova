@@ -1736,6 +1736,19 @@
 
 
 #
+# Options defined in nova.scheduler.filters.aggregate_image_properties_isolation
+#
+
+# Force the filter to consider only keys matching the given
+# namespace. (string value)
+#aggregate_image_properties_isolation_namespace=<None>
+
+# The separator used between the namespace and keys (string
+# value)
+#aggregate_image_properties_isolation_separator=.
+
+
+#
 # Options defined in nova.scheduler.filters.core_filter
 #
 

@@ -107,6 +107,8 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |GroupAffinityFilter| - ensures that each instance in group is on a same
   host with one of the instance host in a group.
 * |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
+* |AggregateImagePropertiesIsolation| - isolates hosts based on image
+  properties and aggregate metadata.
 
 Now we can focus on these standard filter classes in details. I will pass the
 simplest ones, such as |AllHostsFilter|, |CoreFilter| and |RamFilter| are,
@@ -330,5 +332,5 @@ in :mod:``nova.tests.scheduler``.
 .. |AggregateTypeAffinityFilter| replace:: :class:`AggregateTypeAffinityFilter <nova.scheduler.filters.type_filter.AggregateTypeAffinityFilter>`
 .. |AggregateInstanceExtraSpecsFilter| replace:: :class:`AggregateInstanceExtraSpecsFilter <nova.scheduler.filters.aggregate_instance_extra_specs.AggregateInstanceExtraSpecsFilter>`
 .. |AggregateMultiTenancyIsolation| replace:: :class:`AggregateMultiTenancyIsolation <nova.scheduler.filters.aggregate_multitenancy_isolation.AggregateMultiTenancyIsolation>`
-
 .. |RamWeigher| replace:: :class:`RamWeigher <nova.scheduler.weights.all_weighers.RamWeigher>`
+.. |AggregateImagePropertiesIsolation| replace:: :class:`AggregateImagePropertiesIsolation <nova.scheduler.filters.aggregate_image_properties_isolation.AggregateImagePropertiesIsolation>`

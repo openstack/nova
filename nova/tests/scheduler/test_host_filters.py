@@ -1643,3 +1643,105 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.pci_request_result = True
         self.assertRaises(AttributeError, filt_cls.host_passes,
                           host, filter_properties)
+
+    def test_aggregate_image_properties_isolation_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        aggr_meta = {'foo': 'bar'}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'foo': 'bar'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_image_properties_isolation_multi_props_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        aggr_meta = {'foo': 'bar', 'foo2': 'bar2'}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'foo': 'bar',
+                                                    'foo2': 'bar2'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_image_properties_isolation_props_with_meta_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        aggr_meta = {'foo': 'bar'}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_image_properties_isolation_props_imgprops_passes(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        aggr_meta = {}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'foo': 'bar'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_image_properties_isolation_props_not_match_fails(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        aggr_meta = {'foo': 'bar'}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'foo': 'no-bar'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_image_properties_isolation_props_not_match2_fails(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        aggr_meta = {'foo': 'bar', 'foo2': 'bar2'}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'foo': 'bar',
+                                                    'foo2': 'bar3'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_aggregate_image_properties_isolation_props_namespace(self):
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['AggregateImagePropertiesIsolation']()
+        self.flags(aggregate_image_properties_isolation_namespace="np")
+        aggr_meta = {'np.foo': 'bar', 'foo2': 'bar2'}
+        self._create_aggregate_with_host(name='fake1',
+                                         metadata=aggr_meta,
+                                         hosts=['host1'])
+        filter_properties = {'context': self.context,
+                             'request_spec': {
+                                 'image': {
+                                     'properties': {'np.foo': 'bar',
+                                                    'foo2': 'bar3'}}}}
+        host = fakes.FakeHostState('host1', 'compute', {})
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
