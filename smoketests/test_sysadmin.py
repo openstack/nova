@@ -303,9 +303,9 @@ class VolumeTests(base.UserSmokeTestCase):
         conn.close()
         # NOTE(vish): 1G bytes / 512 bytes per block
         expected_size = 1024 * 1024 * 1024 / 512
-        self.assertEquals('%s' % (expected_size,), out,
-                          'Volume is not the right size: %s %s. Expected: %s' %
-                          (out, stderr.read(), expected_size))
+        self.assertEqual('%s' % (expected_size,), out,
+                         'Volume is not the right size: %s %s. Expected: %s' %
+                         (out, stderr.read(), expected_size))
 
     def test_006_me_can_umount_volume(self):
         ip = self.data['instance'].private_ip_address

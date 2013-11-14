@@ -80,7 +80,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.Datastore("openstack-ds2"))
         result = vm_util.get_datastore_ref_and_name(
             fake_session(fake_objects), None, None, datastore_valid_regex)
-        self.assertNotEquals("openstack-ds1", result[1])
+        self.assertNotEqual("openstack-ds1", result[1])
 
     def test_get_datastore_ref_and_name_with_regex_error(self):
         # Test with a regex that has no match

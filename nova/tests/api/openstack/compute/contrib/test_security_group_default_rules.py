@@ -109,7 +109,7 @@ class TestSecurityGroupDefaultRules(test.TestCase):
         res_dict = self.controller.create(req,
                                           {'security_group_default_rule': sgr})
         security_group_default_rule = res_dict['security_group_default_rule']
-        self.assertNotEquals(security_group_default_rule['id'], 0)
+        self.assertNotEqual(security_group_default_rule['id'], 0)
         self.assertEqual(security_group_default_rule['ip_range']['cidr'],
                          '0.0.0.0/0')
 
@@ -145,7 +145,7 @@ class TestSecurityGroupDefaultRules(test.TestCase):
         res_dict = self.controller.create(req,
                                           {'security_group_default_rule': sgr})
         security_group_default_rule = res_dict['security_group_default_rule']
-        self.assertNotEquals(security_group_default_rule['id'], 0)
+        self.assertNotEqual(security_group_default_rule['id'], 0)
         self.assertEqual(security_group_default_rule['ip_range']['cidr'],
                          '0.0.0.0/0')
 

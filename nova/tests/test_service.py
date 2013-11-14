@@ -242,5 +242,5 @@ class TestLauncher(test.TestCase):
 
     def test_launch_app(self):
         service.serve(self.service)
-        self.assertNotEquals(0, self.service.port)
+        self.assertNotEqual(0, self.service.port)
         service._launcher.stop()
