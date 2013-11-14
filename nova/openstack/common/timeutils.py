@@ -50,9 +50,9 @@ def parse_isotime(timestr):
     try:
         return iso8601.parse_date(timestr)
     except iso8601.ParseError as e:
-        raise ValueError(unicode(e))
+        raise ValueError(six.text_type(e))
     except TypeError as e:
-        raise ValueError(unicode(e))
+        raise ValueError(six.text_type(e))
 
 
 def strtime(at=None, fmt=PERFECT_TIME_FORMAT):

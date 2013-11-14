@@ -26,10 +26,13 @@ Usual usage in an openstack.common module:
 
 import copy
 import gettext
-import logging.handlers
+import logging
 import os
 import re
-import UserString
+try:
+    import UserString as _userString
+except ImportError:
+    import collections as _userString
 
 from babel import localedata
 import six
@@ -37,7 +40,7 @@ import six
 _localedir = os.environ.get('nova'.upper() + '_LOCALEDIR')
 _t = gettext.translation('nova', localedir=_localedir, fallback=True)
 
-_AVAILABLE_LANGUAGES = []
+_AVAILABLE_LANGUAGES = {}
 USE_LAZY = False
 
 
@@ -57,6 +60,8 @@ def _(msg):
     if USE_LAZY:
         return Message(msg, 'nova')
     else:
+        if six.PY3:
+            return _t.gettext(msg)
         return _t.ugettext(msg)
 
 
@@ -102,24 +107,28 @@ def install(domain, lazy=False):
             """
             return Message(msg, domain)
 
-        import __builtin__
-        __builtin__.__dict__['_'] = _lazy_gettext
+        from six import moves
+        moves.builtins.__dict__['_'] = _lazy_gettext
     else:
         localedir = '%s_LOCALEDIR' % domain.upper()
-        gettext.install(domain,
-                        localedir=os.environ.get(localedir),
-                        unicode=True)
+        if six.PY3:
+            gettext.install(domain,
+                            localedir=os.environ.get(localedir))
+        else:
+            gettext.install(domain,
+                            localedir=os.environ.get(localedir),
+                            unicode=True)
 
 
-class Message(UserString.UserString, object):
+class Message(_userString.UserString, object):
     """Class used to encapsulate translatable messages."""
     def __init__(self, msg, domain):
         # _msg is the gettext msgid and should never change
         self._msg = msg
         self._left_extra_msg = ''
         self._right_extra_msg = ''
+        self._locale = None
         self.params = None
-        self.locale = None
         self.domain = domain
 
     @property
@@ -139,14 +148,46 @@ class Message(UserString.UserString, object):
                                        localedir=localedir,
                                        fallback=True)
 
+        if six.PY3:
+            ugettext = lang.gettext
+        else:
+            ugettext = lang.ugettext
+
         full_msg = (self._left_extra_msg +
-                    lang.ugettext(self._msg) +
+                    ugettext(self._msg) +
                     self._right_extra_msg)
 
         if self.params is not None:
             full_msg = full_msg % self.params
 
         return six.text_type(full_msg)
+
+    @property
+    def locale(self):
+        return self._locale
+
+    @locale.setter
+    def locale(self, value):
+        self._locale = value
+        if not self.params:
+            return
+
+        # This Message object may have been constructed with one or more
+        # Message objects as substitution parameters, given as a single
+        # Message, or a tuple or Map containing some, so when setting the
+        # locale for this Message we need to set it for those Messages too.
+        if isinstance(self.params, Message):
+            self.params.locale = value
+            return
+        if isinstance(self.params, tuple):
+            for param in self.params:
+                if isinstance(param, Message):
+                    param.locale = value
+            return
+        if isinstance(self.params, dict):
+            for param in self.params.values():
+                if isinstance(param, Message):
+                    param.locale = value
 
     def _save_dictionary_parameter(self, dict_param):
         full_msg = self.data
@@ -166,7 +207,7 @@ class Message(UserString.UserString, object):
                     params[key] = copy.deepcopy(dict_param[key])
                 except TypeError:
                     # cast uncopyable thing to unicode string
-                    params[key] = unicode(dict_param[key])
+                    params[key] = six.text_type(dict_param[key])
 
         return params
 
@@ -185,7 +226,7 @@ class Message(UserString.UserString, object):
             try:
                 self.params = copy.deepcopy(other)
             except TypeError:
-                self.params = unicode(other)
+                self.params = six.text_type(other)
 
         return self
 
@@ -194,11 +235,13 @@ class Message(UserString.UserString, object):
         return self.data
 
     def __str__(self):
+        if six.PY3:
+            return self.__unicode__()
         return self.data.encode('utf-8')
 
     def __getstate__(self):
         to_copy = ['_msg', '_right_extra_msg', '_left_extra_msg',
-                   'domain', 'params', 'locale']
+                   'domain', 'params', '_locale']
         new_dict = self.__dict__.fromkeys(to_copy)
         for attr in to_copy:
             new_dict[attr] = copy.deepcopy(self.__dict__[attr])
@@ -252,7 +295,7 @@ class Message(UserString.UserString, object):
         if name in ops:
             return getattr(self.data, name)
         else:
-            return UserString.UserString.__getattribute__(self, name)
+            return _userString.UserString.__getattribute__(self, name)
 
 
 def get_available_languages(domain):
@@ -260,8 +303,8 @@ def get_available_languages(domain):
 
     :param domain: the domain to get languages for
     """
-    if _AVAILABLE_LANGUAGES:
-        return _AVAILABLE_LANGUAGES
+    if domain in _AVAILABLE_LANGUAGES:
+        return copy.copy(_AVAILABLE_LANGUAGES[domain])
 
     localedir = '%s_LOCALEDIR' % domain.upper()
     find = lambda x: gettext.find(domain,
@@ -270,28 +313,37 @@ def get_available_languages(domain):
 
     # NOTE(mrodden): en_US should always be available (and first in case
     # order matters) since our in-line message strings are en_US
-    _AVAILABLE_LANGUAGES.append('en_US')
+    language_list = ['en_US']
     # NOTE(luisg): Babel <1.0 used a function called list(), which was
     # renamed to locale_identifiers() in >=1.0, the requirements master list
     # requires >=0.9.6, uncapped, so defensively work with both. We can remove
-    # this check when the master list updates to >=1.0, and all projects udpate
+    # this check when the master list updates to >=1.0, and update all projects
     list_identifiers = (getattr(localedata, 'list', None) or
                         getattr(localedata, 'locale_identifiers'))
     locale_identifiers = list_identifiers()
     for i in locale_identifiers:
         if find(i) is not None:
-            _AVAILABLE_LANGUAGES.append(i)
-    return _AVAILABLE_LANGUAGES
+            language_list.append(i)
+    _AVAILABLE_LANGUAGES[domain] = language_list
+    return copy.copy(language_list)
 
 
 def get_localized_message(message, user_locale):
-    """Gets a localized version of the given message in the given locale."""
-    if (isinstance(message, Message)):
-        if user_locale:
-            message.locale = user_locale
-        return unicode(message)
-    else:
-        return message
+    """Gets a localized version of the given message in the given locale.
+
+    If the message is not a Message object the message is returned as-is.
+    If the locale is None the message is translated to the default locale.
+
+    :returns: the translated message in unicode, or the original message if
+              it could not be translated
+    """
+    translated = message
+    if isinstance(message, Message):
+        original_locale = message.locale
+        message.locale = user_locale
+        translated = six.text_type(message)
+        message.locale = original_locale
+    return translated
 
 
 class LocaleHandler(logging.Handler):
