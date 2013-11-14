@@ -855,7 +855,8 @@ class PowerVMDriverTestCase(test.TestCase):
     def test_resume(self):
         # Check to make sure the method raises NotImplementedError.
         self.assertRaises(NotImplementedError, self.powervm_connection.resume,
-                          instance=None, network_info=None)
+                          context.get_admin_context(), instance=None,
+                          network_info=None)
 
     def test_host_power_action(self):
         # Check to make sure the method raises NotImplementedError.
