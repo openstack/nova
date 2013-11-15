@@ -63,7 +63,8 @@ CONF.register_opts(api_opts, api_opts_group)
 # TODO(cyeoh): Expand this list as the core APIs are ported to V3
 API_V3_CORE_EXTENSIONS = set(['consoles', 'extensions', 'flavors', 'ips',
                               'limits', 'servers', 'server-metadata',
-                              'keypairs', 'console-output', 'versions'])
+                              'keypairs', 'console-output', 'versions',
+                              'flavor-manage'])
 
 
 class FaultWrapper(base_wsgi.Middleware):

@@ -18,7 +18,6 @@ from nova.tests.integrated.v3 import api_sample_base
 
 class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
     extension_name = 'os-flavor-access'
-    extra_extensions_to_load = ['flavor-manage']
 
     def _add_tenant(self):
         subs = {
