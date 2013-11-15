@@ -22,6 +22,8 @@
 import copy
 import uuid
 
+import six
+
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import local
@@ -71,7 +73,7 @@ class RequestContext(object):
         self.remote_address = remote_address
         if not timestamp:
             timestamp = timeutils.utcnow()
-        if isinstance(timestamp, basestring):
+        if isinstance(timestamp, six.string_types):
             timestamp = timeutils.parse_strtime(timestamp)
         self.timestamp = timestamp
         if not request_id:

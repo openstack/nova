@@ -18,6 +18,7 @@ import datetime
 import iso8601
 
 import netaddr
+import six
 
 from nova.network import model as network_model
 from nova.openstack.common.gettextutils import _
@@ -42,7 +43,7 @@ def datetime_or_none(dt):
 # NOTE(danms): Being tolerant of isotime strings here will help us
 # during our objects transition
 def datetime_or_str_or_none(val):
-    if isinstance(val, basestring):
+    if isinstance(val, six.string_types):
         return timeutils.parse_isotime(val)
     return datetime_or_none(val)
 
@@ -109,7 +110,7 @@ def list_of_strings_or_none(val):
         return val
     if not isinstance(val, list):
         raise ValueError(_('A list of strings is required here'))
-    if not all([isinstance(x, basestring) for x in val]):
+    if not all([isinstance(x, six.string_types) for x in val]):
         raise ValueError(_('Invalid values found in list '
                            '(strings are required)'))
     return val
@@ -123,10 +124,10 @@ def dict_of_strings_or_none(val):
             val = dict(val.iteritems())
         except Exception:
             raise ValueError(_('A dict of strings is required here'))
-    if not all([isinstance(x, basestring) for x in val.keys()]):
+    if not all([isinstance(x, six.string_types) for x in val.keys()]):
         raise ValueError(_('Invalid keys found in dict '
                            '(strings are required)'))
-    if not all([isinstance(x, basestring) for x in val.values()]):
+    if not all([isinstance(x, six.string_types) for x in val.values()]):
         raise ValueError(_('Invalid values found in dict '
                            '(strings are required)'))
     return val

@@ -28,6 +28,7 @@ import uuid as stdlib_uuid
 import mox
 import netaddr
 from oslo.config import cfg
+import six
 from sqlalchemy.dialects import sqlite
 from sqlalchemy import exc
 from sqlalchemy.exc import IntegrityError
@@ -1889,11 +1890,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             self.ctxt, instance['uuid'],
             {'access_ip_v4': netaddr.IPAddress('1.2.3.4'),
              'access_ip_v6': netaddr.IPAddress('::1')})
-        self.assertIsInstance(instance['access_ip_v4'], basestring)
-        self.assertIsInstance(instance['access_ip_v6'], basestring)
+        self.assertIsInstance(instance['access_ip_v4'], six.string_types)
+        self.assertIsInstance(instance['access_ip_v6'], six.string_types)
         instance = db.instance_get_by_uuid(self.ctxt, instance['uuid'])
-        self.assertIsInstance(instance['access_ip_v4'], basestring)
-        self.assertIsInstance(instance['access_ip_v6'], basestring)
+        self.assertIsInstance(instance['access_ip_v4'], six.string_types)
+        self.assertIsInstance(instance['access_ip_v6'], six.string_types)
 
 
 class InstanceMetadataTestCase(test.TestCase):

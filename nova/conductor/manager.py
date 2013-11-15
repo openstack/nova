@@ -14,6 +14,8 @@
 
 """Handles database requests from other nova services."""
 
+import six
+
 from nova.api.ec2 import ec2utils
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
@@ -124,7 +126,7 @@ class ConductorManager(manager.Manager):
                             "'%(key)s' on %(instance_uuid)s"),
                           {'key': key, 'instance_uuid': instance_uuid})
                 raise KeyError("unexpected update keyword '%s'" % key)
-            if key in datetime_fields and isinstance(value, basestring):
+            if key in datetime_fields and isinstance(value, six.string_types):
                 updates[key] = timeutils.parse_strtime(value)
 
         old_ref, instance_ref = self.db.instance_update_and_get_original(

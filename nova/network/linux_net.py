@@ -26,6 +26,7 @@ import re
 
 import netaddr
 from oslo.config import cfg
+import six
 
 from nova import db
 from nova import exception
@@ -292,7 +293,7 @@ class IptablesTable(object):
 
     def remove_rules_regex(self, regex):
         """Remove all rules matching regex."""
-        if isinstance(regex, basestring):
+        if isinstance(regex, six.string_types):
             regex = re.compile(regex)
         num_rules = len(self.rules)
         self.rules = filter(lambda r: not regex.match(str(r)), self.rules)

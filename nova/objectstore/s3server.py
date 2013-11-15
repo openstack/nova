@@ -43,6 +43,7 @@ import urllib
 
 from oslo.config import cfg
 import routes
+import six
 import webob
 
 from nova.openstack.common import fileutils
@@ -184,7 +185,7 @@ class BaseRequestHandler(object):
         if not parts:
             parts = []
 
-        if isinstance(value, basestring):
+        if isinstance(value, six.string_types):
             parts.append(utils.xhtml_escape(value))
         elif isinstance(value, int) or isinstance(value, long):
             parts.append(str(value))

@@ -16,6 +16,7 @@
 
 
 import netaddr
+import six
 
 from nova.compute import api as compute
 from nova.openstack.common.gettextutils import _
@@ -41,7 +42,7 @@ class DifferentHostFilter(AffinityFilter):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
         affinity_uuids = scheduler_hints.get('different_host', [])
-        if isinstance(affinity_uuids, basestring):
+        if isinstance(affinity_uuids, six.string_types):
             affinity_uuids = [affinity_uuids]
         if affinity_uuids:
             return not self.compute_api.get_all(context,
@@ -65,7 +66,7 @@ class SameHostFilter(AffinityFilter):
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
 
         affinity_uuids = scheduler_hints.get('same_host', [])
-        if isinstance(affinity_uuids, basestring):
+        if isinstance(affinity_uuids, six.string_types):
             affinity_uuids = [affinity_uuids]
         if affinity_uuids:
             return self.compute_api.get_all(context, {'host': host_state.host,

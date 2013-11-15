@@ -29,6 +29,7 @@ import time
 import uuid
 
 from oslo.config import cfg
+import six
 from sqlalchemy import and_
 from sqlalchemy import Boolean
 from sqlalchemy.exc import DataError
@@ -290,7 +291,7 @@ def exact_filter(query, model, filters, legal_keys):
 
 def convert_datetimes(values, *datetime_keys):
     for key in values:
-        if key in datetime_keys and isinstance(values[key], basestring):
+        if key in datetime_keys and isinstance(values[key], six.string_types):
             values[key] = timeutils.parse_strtime(values[key])
     return values
 
@@ -1580,7 +1581,7 @@ def _handle_objects_related_type_conversions(values):
     for key in ('created_at', 'deleted_at', 'updated_at',
                 'launched_at', 'terminated_at', 'scheduled_at'):
         if key in values and values[key]:
-            if isinstance(values[key], basestring):
+            if isinstance(values[key], six.string_types):
                 values[key] = timeutils.parse_strtime(values[key])
             values[key] = values[key].replace(tzinfo=None)
 

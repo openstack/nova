@@ -21,6 +21,7 @@
 import datetime
 
 from oslo.config import cfg
+import six
 
 from nova import db
 from nova import exception
@@ -1057,7 +1058,7 @@ class QuotaEngine(object):
             return self.__driver
         if not self._driver_cls:
             self._driver_cls = CONF.quota_driver
-        if isinstance(self._driver_cls, basestring):
+        if isinstance(self._driver_cls, six.string_types):
             self._driver_cls = importutils.import_object(self._driver_cls)
         self.__driver = self._driver_cls
         return self.__driver

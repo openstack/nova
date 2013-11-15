@@ -57,6 +57,7 @@ import os
 import sys
 
 from oslo.config import cfg
+import six
 
 from nova import config
 from nova.openstack.common import cliutils
@@ -186,7 +187,7 @@ def main():
         v = getattr(CONF.category, 'action_kwarg_' + k)
         if v is None:
             continue
-        if isinstance(v, basestring):
+        if isinstance(v, six.string_types):
             v = v.decode('utf-8')
         fn_kwargs[k] = v
 

@@ -24,6 +24,7 @@ import urlparse
 
 from eventlet.green import httplib
 from oslo.config import cfg
+import six
 import webob
 import webob.dec
 import webob.exc
@@ -521,7 +522,7 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
         # Log filtered environment for unexpected errors.
         env = req.environ.copy()
         for k in env.keys():
-            if not isinstance(env[k], basestring):
+            if not isinstance(env[k], six.string_types):
                 env.pop(k)
         log_fun(_('Environment: %s') % jsonutils.dumps(env))
     if not message:
