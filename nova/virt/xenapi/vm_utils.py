@@ -2093,7 +2093,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
                          read_only=read_only, bootable=False)
     try:
         LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
-        session.call_xenapi("VBD.plug", vbd_ref)
+        volume_utils.vbd_plug(session, vbd_ref, this_vm_ref)
         try:
             LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
             orig_dev = session.call_xenapi("VBD.get_device", vbd_ref)
