@@ -140,6 +140,11 @@ class ApiTestCase(test.TestCase):
     def test_associate_unassociated_floating_ip(self):
         self._do_test_associate_floating_ip(None)
 
+    def test_get_floating_ip_invalid_id(self):
+        self.assertRaises(exception.InvalidID,
+                          self.network_api.get_floating_ip,
+                          self.context, '123zzz')
+
     def _stub_migrate_instance_calls(self, method, multi_host, info):
         fake_instance_type = flavors.get_default_flavor()
         fake_instance_type['rxtx_factor'] = 1.21
