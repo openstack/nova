@@ -61,7 +61,7 @@ def get_test_instance_type(context=None):
     try:
         instance_type_ref = nova.db.flavor_create(context,
                                                          test_instance_type)
-    except (exception.InstanceTypeExists, exception.InstanceTypeIdExists):
+    except (exception.FlavorExists, exception.FlavorIdExists):
         instance_type_ref = nova.db.flavor_get_by_name(context,
                                                               'kinda.big')
     return instance_type_ref

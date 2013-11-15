@@ -1780,7 +1780,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         with testtools.ExpectedException(
                 webob.exc.HTTPBadRequest,
-                "Instance type's disk is too small for requested image."):
+                "Flavor's disk is too small for requested image."):
             self.controller.create(self.req, self.body)
 
     def test_create_instance_image_ref_is_bookmark(self):

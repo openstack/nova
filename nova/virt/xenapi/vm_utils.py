@@ -1454,7 +1454,7 @@ def _check_vdi_size(context, session, instance, vdi_uuid):
                   {'size': size, 'allowed_size': allowed_size},
                   instance=instance)
 
-        raise exception.InstanceTypeDiskTooSmall()
+        raise exception.FlavorDiskTooSmall()
 
 
 def _fetch_disk_image(context, session, instance, name_label, image_id,

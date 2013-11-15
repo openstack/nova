@@ -226,7 +226,7 @@ class Image(object):
             LOG.error(msg % {'base': base,
                               'base_size': base_size,
                               'size': size})
-            raise exception.InstanceTypeDiskTooSmall()
+            raise exception.FlavorDiskTooSmall()
 
     def snapshot_extract(self, target, out_format):
         raise NotImplementedError()

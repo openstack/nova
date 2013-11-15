@@ -2506,7 +2506,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
         db.flavor_destroy(self.ctxt, 'name1')
 
-        self.assertRaises(exception.InstanceTypeNotFound,
+        self.assertRaises(exception.FlavorNotFound,
                           db.flavor_get, self.ctxt, flavor1['id'])
         real_specs1 = db.flavor_extra_specs_get(self.ctxt, flavor1['flavorid'])
         self._assertEqualObjects(real_specs1, {})
@@ -2515,18 +2515,18 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(flavor2, r_flavor2, 'extra_specs')
 
     def test_flavor_destroy_not_found(self):
-        self.assertRaises(exception.InstanceTypeNotFound,
+        self.assertRaises(exception.FlavorNotFound,
                           db.flavor_destroy, self.ctxt, 'nonexists')
 
     def test_flavor_create_duplicate_name(self):
         self._create_flavor({})
-        self.assertRaises(exception.InstanceTypeExists,
+        self.assertRaises(exception.FlavorExists,
                           self._create_flavor,
                           {'flavorid': 'some_random_flavor'})
 
     def test_flavor_create_duplicate_flavorid(self):
         self._create_flavor({})
-        self.assertRaises(exception.InstanceTypeIdExists,
+        self.assertRaises(exception.FlavorIdExists,
                           self._create_flavor,
                           {'name': 'some_random_name'})
 
@@ -2662,7 +2662,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(flavor, flavor_by_id)
 
         # Regular user can not
-        self.assertRaises(exception.InstanceTypeNotFound, db.flavor_get,
+        self.assertRaises(exception.FlavorNotFound, db.flavor_get,
                 self.user_ctxt, flavor['id'])
 
         # Regular user can see it after being granted access
@@ -2683,7 +2683,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
     def test_flavor_get_by_name_not_found(self):
         self._create_flavor({})
-        self.assertRaises(exception.InstanceTypeNotFoundByName,
+        self.assertRaises(exception.FlavorNotFoundByName,
                           db.flavor_get_by_name, self.ctxt, 'nonexists')
 
     def test_flavor_get_by_name_non_public(self):
@@ -2695,7 +2695,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(flavor, flavor_by_name)
 
         # Regular user can not
-        self.assertRaises(exception.InstanceTypeNotFoundByName,
+        self.assertRaises(exception.FlavorNotFoundByName,
                 db.flavor_get_by_name, self.user_ctxt,
                 flavor['name'])
 
@@ -2791,7 +2791,7 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
 
     def test_flavor_extra_specs_delete_failed(self):
         for it in self.flavors:
-            self.assertRaises(exception.InstanceTypeExtraSpecsNotFound,
+            self.assertRaises(exception.FlavorExtraSpecsNotFound,
                           db.flavor_extra_specs_delete,
                           self.ctxt, it['flavorid'], 'dummy')
 

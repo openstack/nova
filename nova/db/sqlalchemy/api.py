@@ -4191,8 +4191,8 @@ def flavor_create(context, values):
         instance_type_ref.save()
     except db_exc.DBDuplicateEntry as e:
         if 'flavorid' in e.columns:
-            raise exception.InstanceTypeIdExists(flavor_id=values['flavorid'])
-        raise exception.InstanceTypeExists(name=values['name'])
+            raise exception.FlavorIdExists(flavor_id=values['flavorid'])
+        raise exception.FlavorExists(name=values['name'])
     except Exception as e:
         raise db_exc.DBError(e)
 
@@ -4312,7 +4312,7 @@ def flavor_get(context, id):
                         filter_by(id=id).\
                         first()
     if not result:
-        raise exception.InstanceTypeNotFound(instance_type_id=id)
+        raise exception.FlavorNotFound(flavor_id=id)
     return _dict_with_extra_specs(result)
 
 
@@ -4323,7 +4323,7 @@ def flavor_get_by_name(context, name):
                         filter_by(name=name).\
                         first()
     if not result:
-        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
+        raise exception.FlavorNotFoundByName(flavor_name=name)
     return _dict_with_extra_specs(result)
 
 
@@ -4348,7 +4348,7 @@ def flavor_destroy(context, name):
                     filter_by(name=name).\
                     first()
         if not ref:
-            raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
+            raise exception.FlavorNotFoundByName(flavor_name=name)
 
         ref.soft_delete(session=session)
         model_query(context, models.InstanceTypeExtraSpecs,
@@ -4428,8 +4428,8 @@ def flavor_extra_specs_get_item(context, flavor_id, key):
                 filter(models.InstanceTypeExtraSpecs.key == key).\
                 first()
     if not result:
-        raise exception.InstanceTypeExtraSpecsNotFound(
-                extra_specs_key=key, instance_type_id=flavor_id)
+        raise exception.FlavorExtraSpecsNotFound(
+                extra_specs_key=key, flavor_id=flavor_id)
 
     return {result["key"]: result["value"]}
 
@@ -4441,8 +4441,8 @@ def flavor_extra_specs_delete(context, flavor_id, key):
                      soft_delete(synchronize_session=False)
     # did not find the extra spec
     if result == 0:
-        raise exception.InstanceTypeExtraSpecsNotFound(
-                extra_specs_key=key, instance_type_id=flavor_id)
+        raise exception.FlavorExtraSpecsNotFound(
+                extra_specs_key=key, flavor_id=flavor_id)
 
 
 @require_context

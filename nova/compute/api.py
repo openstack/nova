@@ -593,7 +593,7 @@ class API(base.Base):
             raise exception.ImageNotActive(image_id=image_id)
 
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
-            raise exception.InstanceTypeMemoryTooSmall()
+            raise exception.FlavorMemoryTooSmall()
 
         # NOTE(johannes): root_gb is allowed to be 0 for legacy reasons
         # since libvirt interpreted the value differently than other
@@ -601,10 +601,10 @@ class API(base.Base):
         root_gb = instance_type['root_gb']
         if root_gb:
             if int(image.get('size') or 0) > root_gb * (1024 ** 3):
-                raise exception.InstanceTypeDiskTooSmall()
+                raise exception.FlavorDiskTooSmall()
 
             if int(image.get('min_disk') or 0) > root_gb:
-                    raise exception.InstanceTypeDiskTooSmall()
+                    raise exception.FlavorDiskTooSmall()
 
     def _check_and_transform_bdm(self, base_options, min_count, max_count,
                                  block_device_mapping, legacy_bdm):
@@ -666,8 +666,7 @@ class API(base.Base):
                 raise exception.InvalidRequest(msg)
 
         if instance_type['disabled']:
-            raise exception.InstanceTypeNotFound(
-                    instance_type_id=instance_type['id'])
+            raise exception.FlavorNotFound(flavor_id=instance_type['id'])
 
         if user_data:
             l = len(user_data)
@@ -1472,9 +1471,8 @@ class API(base.Base):
                 old_inst_type_id = migration.old_instance_type_id
                 try:
                     old_inst_type = flavors.get_flavor(old_inst_type_id)
-                except exception.InstanceTypeNotFound:
-                    LOG.warning(_("instance type %d not found"),
-                                old_inst_type_id)
+                except exception.FlavorNotFound:
+                    LOG.warning(_("Flavor %d not found"), old_inst_type_id)
                     pass
                 else:
                     instance_vcpus = old_inst_type['vcpus']
@@ -2280,7 +2278,6 @@ class API(base.Base):
                    'new_instance_type_name': new_instance_type_name},
                   instance=instance)
 
-        # FIXME(sirp): both of these should raise InstanceTypeNotFound instead
         if not new_instance_type:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
 

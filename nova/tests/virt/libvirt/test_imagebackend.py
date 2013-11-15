@@ -305,7 +305,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskTooSmall,
                           image.create_image, fn, self.TEMPLATE_PATH, 1)
         self.mox.VerifyAll()
 

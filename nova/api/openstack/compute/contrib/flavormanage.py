@@ -79,8 +79,8 @@ class FlavorManageController(wsgi.Controller):
                 flavors.add_flavor_access(flavor['flavorid'],
                                           context.project_id, context)
             req.cache_db_flavor(flavor)
-        except (exception.InstanceTypeExists,
-                exception.InstanceTypeIdExists) as err:
+        except (exception.FlavorExists,
+                exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
         except exception.InvalidInput as exc:
             raise webob.exc.HTTPBadRequest(explanation=exc.format_message())

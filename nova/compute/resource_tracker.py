@@ -536,8 +536,8 @@ class ResourceTracker(object):
             try:
                 self._update_usage_from_migration(context, instance, resources,
                                                   migration)
-            except exception.InstanceTypeNotFound:
-                LOG.warn(_("InstanceType could not be found, skipping "
+            except exception.FlavorNotFound:
+                LOG.warn(_("Flavor could not be found, skipping "
                            "migration."), instance_uuid=uuid)
                 continue
 
