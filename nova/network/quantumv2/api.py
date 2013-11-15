@@ -376,8 +376,6 @@ class API(base.Base):
     def get_instance_nw_info(self, context, instance, conductor_api=None,
                              networks=None):
         result = self._get_instance_nw_info(context, instance, networks)
-        update_instance_info_cache(self, context, instance, result,
-                                   conductor_api)
         return result
 
     @refresh_cache
