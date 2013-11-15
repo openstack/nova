@@ -88,6 +88,16 @@ class TestInteger(TestField):
         self.from_primitive_values = self.coerce_good_values[0:1]
 
 
+class TestFloat(TestField):
+    def setUp(self):
+        super(TestFloat, self).setUp()
+        self.field = fields.FloatField()
+        self.coerce_good_values = [(1.1, 1.1), ('1.1', 1.1)]
+        self.coerce_bad_values = ['foo', None]
+        self.to_primitive_values = self.coerce_good_values[0:1]
+        self.from_primitive_values = self.coerce_good_values[0:1]
+
+
 class TestBoolean(TestField):
     def setUp(self):
         super(TestField, self).setUp()
