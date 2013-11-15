@@ -20,6 +20,7 @@ import os
 import tempfile
 import time
 
+import mock
 import mox
 
 from nova.cmd import baremetal_deploy_helper as bmdh
@@ -269,6 +270,72 @@ class PhysicalWorkTestCase(test.NoDBTestCase):
                          bmdh.deploy,
                          address, port, iqn, lun, image_path,
                          pxe_config_path, root_mb, swap_mb, ephemeral_mb)
+
+
+class WorkOnDiskTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(WorkOnDiskTestCase, self).setUp()
+        self.image_path = '/tmp/xyz/image'
+        self.root_mb = 128
+        self.swap_mb = 64
+        self.ephemeral_mb = 256
+        self.dev = '/dev/fake'
+        self.ephemeral_part = '/dev/fake-part1'
+        self.swap_part = '/dev/fake-part2'
+        self.root_part = '/dev/fake-part3'
+
+        self.m_ibd = mock.Mock()
+        self.m_mp = mock.Mock()
+        self.stubs.Set(bmdh, 'is_block_device', self.m_ibd)
+        self.stubs.Set(bmdh, 'make_partitions', self.m_mp)
+
+    def test_no_parent_device(self):
+        self.m_ibd.return_value = False
+        self.assertRaises(bmdh.BareMetalDeployException,
+                          bmdh.work_on_disk,
+                          self.dev, self.root_mb, self.swap_mb,
+                          self.ephemeral_mb, self.image_path)
+        self.m_ibd.assert_called_once_with(self.dev)
+        self.m_mp.assert_not_called()
+
+    def test_no_root_partition(self):
+        self.m_ibd.side_effect = [True, False]
+        calls = [mock.call(self.dev),
+                 mock.call(self.root_part)]
+        self.assertRaises(bmdh.BareMetalDeployException,
+                          bmdh.work_on_disk,
+                          self.dev, self.root_mb, self.swap_mb,
+                          self.ephemeral_mb, self.image_path)
+        self.assertEqual(self.m_ibd.call_args_list, calls)
+        self.m_mp.assert_called_once_with(self.dev, self.root_mb, self.swap_mb,
+                                          self.ephemeral_mb)
+
+    def test_no_swap_partition(self):
+        self.m_ibd.side_effect = [True, True, False]
+        calls = [mock.call(self.dev),
+                 mock.call(self.root_part),
+                 mock.call(self.swap_part)]
+        self.assertRaises(bmdh.BareMetalDeployException,
+                          bmdh.work_on_disk,
+                          self.dev, self.root_mb, self.swap_mb,
+                          self.ephemeral_mb, self.image_path)
+        self.assertEqual(self.m_ibd.call_args_list, calls)
+        self.m_mp.assert_called_once_with(self.dev, self.root_mb, self.swap_mb,
+                                          self.ephemeral_mb)
+
+    def test_no_ephemeral_partition(self):
+        self.m_ibd.side_effect = [True, True, True, False]
+        calls = [mock.call(self.dev),
+                 mock.call(self.root_part),
+                 mock.call(self.swap_part),
+                 mock.call(self.ephemeral_part)]
+        self.assertRaises(bmdh.BareMetalDeployException,
+                          bmdh.work_on_disk,
+                          self.dev, self.root_mb, self.swap_mb,
+                          self.ephemeral_mb, self.image_path)
+        self.assertEqual(self.m_ibd.call_args_list, calls)
+        self.m_mp.assert_called_once_with(self.dev, self.root_mb, self.swap_mb,
+                                          self.ephemeral_mb)
 
 
 class SwitchPxeConfigTestCase(test.NoDBTestCase):
