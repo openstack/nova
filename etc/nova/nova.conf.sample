@@ -2120,10 +2120,6 @@
 # Options defined in nova.virt.libvirt.vif
 #
 
-# Name of Integration Bridge used by Open vSwitch (string
-# value)
-#libvirt_ovs_bridge=br-int
-
 # Use virtio for bridge interfaces with KVM/QEMU (boolean
 # value)
 #libvirt_use_virtio_for_bridges=true
