@@ -1884,6 +1884,15 @@
 
 
 #
+# Options defined in nova.virt.cpu
+#
+
+# Which pcpus can be used by vcpus of instance e.g:
+# "4-12,^8,15" (string value)
+#vcpu_pin_set=<None>
+
+
+#
 # Options defined in nova.virt.disk.api
 #
 
@@ -2592,10 +2601,6 @@
 # Specific cachemodes to use for different disk types e.g:
 # file=directsync,block=none (list value)
 #disk_cachemodes=
-
-# Which pcpus can be used by vcpus of instance e.g:
-# "4-12,^8,15" (string value)
-#vcpu_pin_set=<None>
 
 
 #
