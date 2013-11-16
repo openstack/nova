@@ -205,7 +205,7 @@
 # IP address for OpenStack API to listen (string value)
 #osapi_compute_listen=0.0.0.0
 
-# list port for osapi compute (integer value)
+# port for osapi compute to listen (integer value)
 #osapi_compute_listen_port=8774
 
 # Number of workers for OpenStack API service (integer value)
