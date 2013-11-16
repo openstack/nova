@@ -20,8 +20,8 @@ from webob import exc
 
 from nova.api.openstack.compute.contrib import flavor_access
 from nova.api.openstack.compute import flavors as flavors_api
-from nova.compute import flavors
 from nova import context
+from nova import db
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -41,6 +41,7 @@ def generate_flavor(flavorid, ispublic):
         'vcpus': 1,
         'swap': 512,
         'rxtx_factor': 1.0,
+        'disabled': False,
         'extra_specs': {},
         'deleted_at': None,
         'vcpu_weight': None,
@@ -60,7 +61,7 @@ ACCESS_LIST = [{'flavor_id': '2', 'project_id': 'proj2'},
                {'flavor_id': '3', 'project_id': 'proj3'}]
 
 
-def fake_get_flavor_access_by_flavor_id(flavorid):
+def fake_get_flavor_access_by_flavor_id(context, flavorid):
     res = []
     for access in ACCESS_LIST:
         if access['flavor_id'] == flavorid:
@@ -68,7 +69,7 @@ def fake_get_flavor_access_by_flavor_id(flavorid):
     return res
 
 
-def fake_get_flavor_by_flavor_id(flavorid, ctxt=None):
+def fake_get_flavor_by_flavor_id(context, flavorid, read_deleted=None):
     return INSTANCE_TYPES[flavorid]
 
 
@@ -80,7 +81,7 @@ def _has_flavor_access(flavorid, projectid):
     return False
 
 
-def fake_get_all_flavors_sorted_list(context=None, inactive=False,
+def fake_get_all_flavors_sorted_list(context, inactive=False,
                                      filters=None, sort_key='flavorid',
                                      sort_dir='asc', limit=None, marker=None):
     if filters == None or filters['is_public'] == None:
@@ -124,11 +125,11 @@ class FlavorAccessTest(test.NoDBTestCase):
         self.flavor_action_controller = flavor_access.FlavorActionController()
         self.req = FakeRequest()
         self.context = self.req.environ['nova.context']
-        self.stubs.Set(flavors, 'get_flavor_by_flavor_id',
+        self.stubs.Set(db, 'flavor_get_by_flavor_id',
                        fake_get_flavor_by_flavor_id)
-        self.stubs.Set(flavors, 'get_all_flavors_sorted_list',
+        self.stubs.Set(db, 'flavor_get_all',
                        fake_get_all_flavors_sorted_list)
-        self.stubs.Set(flavors, 'get_flavor_access_by_flavor_id',
+        self.stubs.Set(db, 'flavor_access_get_by_flavor_id',
                        fake_get_flavor_access_by_flavor_id)
 
     def _verify_flavor_list(self, result, expected):
@@ -264,10 +265,10 @@ class FlavorAccessTest(test.NoDBTestCase):
                          resp.obj['flavor'])
 
     def test_add_tenant_access(self):
-        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
+        def stub_add_flavor_access(context, flavorid, projectid):
             self.assertEqual('3', flavorid, "flavorid")
             self.assertEqual("proj2", projectid, "projectid")
-        self.stubs.Set(flavors, 'add_flavor_access',
+        self.stubs.Set(db, 'flavor_access_add',
                        stub_add_flavor_access)
         expected = {'flavor_access':
             [{'flavor_id': '3', 'tenant_id': 'proj3'}]}
@@ -287,10 +288,10 @@ class FlavorAccessTest(test.NoDBTestCase):
                           req, '2', body)
 
     def test_add_tenant_access_with_already_added_access(self):
-        def stub_add_flavor_access(flavorid, projectid, ctxt=None):
+        def stub_add_flavor_access(context, flavorid, projectid):
             raise exception.FlavorAccessExists(flavor_id=flavorid,
                                                project_id=projectid)
-        self.stubs.Set(flavors, 'add_flavor_access',
+        self.stubs.Set(db, 'flavor_access_add',
                        stub_add_flavor_access)
         body = {'addTenantAccess': {'tenant': 'proj2'}}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
@@ -300,10 +301,10 @@ class FlavorAccessTest(test.NoDBTestCase):
                           self.req, '3', body)
 
     def test_remove_tenant_access_with_bad_access(self):
-        def stub_remove_flavor_access(flavorid, projectid, ctxt=None):
+        def stub_remove_flavor_access(context, flavorid, projectid):
             raise exception.FlavorAccessNotFound(flavor_id=flavorid,
                                                  project_id=projectid)
-        self.stubs.Set(flavors, 'remove_flavor_access',
+        self.stubs.Set(db, 'flavor_access_remove',
                        stub_remove_flavor_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',

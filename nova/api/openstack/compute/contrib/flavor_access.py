@@ -22,8 +22,8 @@ import webob
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.compute import flavors
 from nova import exception
+from nova.objects import flavor as flavor_obj
 from nova.openstack.common.gettextutils import _
 
 
@@ -70,18 +70,11 @@ class FlavorAccessTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-def _marshall_flavor_access(flavor_id):
+def _marshall_flavor_access(flavor):
     rval = []
-    try:
-        access_list = flavors.\
-                      get_flavor_access_by_flavor_id(flavor_id)
-    except exception.FlavorNotFound:
-        explanation = _("Flavor not found.")
-        raise webob.exc.HTTPNotFound(explanation=explanation)
-
-    for access in access_list:
-        rval.append({'flavor_id': flavor_id,
-                     'tenant_id': access['project_id']})
+    for project_id in flavor.projects:
+        rval.append({'flavor_id': flavor.flavorid,
+                     'tenant_id': project_id})
 
     return {'flavor_access': rval}
 
@@ -98,18 +91,18 @@ class FlavorAccessController(object):
         authorize(context)
 
         try:
-            flavor = flavors.get_flavor_by_flavor_id(flavor_id, ctxt=context)
+            flavor = flavor_obj.Flavor.get_by_flavor_id(context, flavor_id)
         except exception.FlavorNotFound:
             explanation = _("Flavor not found.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
         # public flavor to all projects
-        if flavor['is_public']:
+        if flavor.is_public:
             explanation = _("Access list not available for public flavors.")
             raise webob.exc.HTTPNotFound(explanation=explanation)
 
         # private flavor to listed projects only
-        return _marshall_flavor_access(flavor_id)
+        return _marshall_flavor_access(flavor)
 
 
 class FlavorActionController(wsgi.Controller):
@@ -122,10 +115,10 @@ class FlavorActionController(wsgi.Controller):
     def _get_flavor_refs(self, context):
         """Return a dictionary mapping flavorid to flavor_ref."""
 
-        flavor_refs = flavors.get_all_flavors(context)
+        flavors = flavor_obj.FlavorList.get_all(context)
         rval = {}
-        for name, obj in flavor_refs.iteritems():
-            rval[obj['flavorid']] = obj
+        for flavor in flavors:
+            rval[flavor.flavorid] = flavor
         return rval
 
     def _extend_flavor(self, flavor_rval, flavor_ref):
@@ -176,12 +169,15 @@ class FlavorActionController(wsgi.Controller):
         vals = body['addTenantAccess']
         tenant = vals['tenant']
 
+        flavor = flavor_obj.Flavor(context=context, flavorid=id)
         try:
-            flavors.add_flavor_access(id, tenant, context)
+            flavor.add_access(tenant)
         except exception.FlavorAccessExists as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
+        except exception.FlavorNotFound as err:
+            raise webob.exc.HTTPNotFound(explanation=err.format_message())
 
-        return _marshall_flavor_access(id)
+        return _marshall_flavor_access(flavor)
 
     @wsgi.serializers(xml=FlavorAccessTemplate)
     @wsgi.action("removeTenantAccess")
@@ -194,12 +190,14 @@ class FlavorActionController(wsgi.Controller):
         vals = body['removeTenantAccess']
         tenant = vals['tenant']
 
+        flavor = flavor_obj.Flavor(context=context, flavorid=id)
         try:
-            flavors.remove_flavor_access(id, tenant, context)
-        except exception.FlavorAccessNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+            flavor.remove_access(tenant)
+        except (exception.FlavorNotFound,
+                exception.FlavorAccessNotFound) as err:
+            raise webob.exc.HTTPNotFound(explanation=err.format_message())
 
-        return _marshall_flavor_access(id)
+        return _marshall_flavor_access(flavor)
 
 
 class Flavor_access(extensions.ExtensionDescriptor):
