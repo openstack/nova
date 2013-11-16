@@ -208,15 +208,6 @@ def _format_mappings(properties, result):
         result['blockDeviceMapping'] = mappings
 
 
-def db_to_inst_obj(context, db_instance):
-    # NOTE(danms): This is a temporary helper method for converting
-    # Instance DB objects to NovaObjects without needing to re-query.
-    inst_obj = instance_obj.Instance._from_db_object(
-        context, instance_obj.Instance(), db_instance,
-        expected_attrs=['system_metadata', 'metadata'])
-    return inst_obj
-
-
 class CloudController(object):
     """CloudController provides the critical dispatch between
  inbound API calls through the endpoint and messages
