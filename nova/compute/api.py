@@ -421,6 +421,13 @@ class API(base.Base):
         # In future, we may support more variable length strings, so we act
         #  as if this is quota-controlled for forwards compatibility
         for k, v in metadata.iteritems():
+            if not isinstance(k, six.string_types):
+                msg = _("Metadata property key '%s' is not a string.") % k
+                raise exception.InvalidMetadata(reason=msg)
+            if not isinstance(v, six.string_types):
+                msg = (_("Metadata property value '%(v)s' for key '%(k)s' is "
+                         "not a string.") % {'v': v, 'k': k})
+                raise exception.InvalidMetadata(reason=msg)
             if len(k) == 0:
                 msg = _("Metadata property key blank")
                 raise exception.InvalidMetadata(reason=msg)
