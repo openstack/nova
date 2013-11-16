@@ -36,11 +36,6 @@ from nova.virt.libvirt import designer
 LOG = logging.getLogger(__name__)
 
 libvirt_vif_opts = [
-    # neutron_ovs_bridge is used, if Neutron provides Nova
-    # the 'vif_type' portbinding field
-    cfg.StrOpt('libvirt_ovs_bridge',
-               default='br-int',
-               help='Name of Integration Bridge used by Open vSwitch'),
     cfg.BoolOpt('libvirt_use_virtio_for_bridges',
                 default=True,
                 help='Use virtio for bridge interfaces with KVM/QEMU'),
