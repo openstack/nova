@@ -241,14 +241,6 @@
             "updated": "2011-12-23T00:00:00+00:00"
         },
         {
-            "alias": "os-coverage",
-            "description": "Enable Nova Coverage.",
-            "links": [],
-            "name": "Coverage",
-            "namespace": "http://docs.openstack.org/compute/ext/coverage/api/v2",
-            "updated": "2012-10-15T00:00:00+00:00"
-        },
-        {
             "alias": "os-create-server-ext",
             "description": "Extended support to the Create Server v1.1 API.",
             "links": [],
