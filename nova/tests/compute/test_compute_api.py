@@ -328,7 +328,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, 'update')
         self.mox.StubOutWithMock(inst, 'save')
         inst.save(expected_task_state=[None, task_states.REBOOTING])
-        self.context.elevated().AndReturn(self.context)
         self.compute_api._record_action_start(self.context, inst,
                                               instance_actions.REBOOT)
 
