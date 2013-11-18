@@ -39,7 +39,7 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
                                  "flavor-access-create-req",
                                  subs)
         subs.update(self._get_regexes())
-        self._verify_response("flavor-access-create-resp", subs, response, 200)
+        self._verify_response("flavor-access-create-resp", subs, response, 201)
 
     def test_flavor_access_create(self):
         self._create_flavor()
