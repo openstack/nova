@@ -7296,6 +7296,19 @@ class LibvirtNonblockingTestCase(test.TestCase):
         connection.set_host_enabled = mock.Mock()
         jsonutils.to_primitive(connection._conn, convert_instances=True)
 
+    def test_tpool_execute_calls_libvirt(self):
+        self.mox.StubOutWithMock(eventlet.tpool, 'execute')
+        conn = libvirt.virConnect()
+        conn.is_expected = True
+        eventlet.tpool.execute(
+            libvirt.openAuth, 'test:///default',
+            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn)
+        self.mox.ReplayAll()
+
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        c = driver._get_connection()
+        self.assertEqual(True, c.is_expected)
+
 
 class LibvirtVolumeSnapshotTestCase(test.TestCase):
     """Tests for libvirtDriver.volume_snapshot_create/delete."""
