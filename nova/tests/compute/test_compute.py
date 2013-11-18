@@ -79,6 +79,7 @@ from nova.tests import fake_network_cache_model
 from nova.tests import fake_notifier
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
+from nova.tests.objects import test_flavor
 from nova.tests.objects import test_migration
 from nova import utils
 from nova.virt import event
@@ -6438,7 +6439,8 @@ class ComputeAPITestCase(BaseTestCase):
         nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
+        instance = instance_obj.Instance.get_by_uuid(self.context,
+                                                     instance_uuid)
         self.compute_api.restore(self.context, instance)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
@@ -6452,17 +6454,19 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertIsNone(instance['task_state'])
+        instance = instance_obj.Instance.get_by_uuid(self.context,
+                                                     instance_uuid)
+        self.assertIsNone(instance.task_state)
         # Set some image metadata that should get wiped out and reset
         # as well as some other metadata that should be preserved.
-        db.instance_system_metadata_update(self.context, instance_uuid,
-                {'image_kernel_id': 'old-data',
-                 'image_ramdisk_id': 'old_data',
-                 'image_something_else': 'old-data',
-                 'image_should_remove': 'bye-bye',
-                 'preserved': 'preserve this!'},
-                True)
+        instance.system_metadata.update({
+                'image_kernel_id': 'old-data',
+                'image_ramdisk_id': 'old_data',
+                'image_something_else': 'old-data',
+                'image_should_remove': 'bye-bye',
+                'preserved': 'preserve this!'})
+
+        instance.save()
 
         # Make sure Compute API updates the image_ref before casting to
         # compute manager.
@@ -6479,23 +6483,23 @@ class ComputeAPITestCase(BaseTestCase):
         image_ref = instance["image_ref"] + '-new_image_ref'
         password = "new_password"
 
-        db.instance_update(self.context, instance['uuid'],
-                           {"vm_state": vm_state})
+        instance.vm_state = vm_state
+        instance.save()
 
         self.compute_api.rebuild(self.context, instance, image_ref, password)
         self.assertEqual(info['image_ref'], image_ref)
 
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.REBUILDING)
-        sys_metadata = db.instance_system_metadata_get(self.context,
-                instance_uuid)
-        self.assertEqual(sys_metadata,
+        instance.refresh()
+        self.assertEqual(instance.task_state, task_states.REBUILDING)
+        sys_meta = dict([(k, v) for k, v in instance.system_metadata.items()
+                         if not k.startswith('instance_type')])
+        self.assertEqual(sys_meta,
                 {'image_kernel_id': 'fake_kernel_id',
                 'image_min_disk': '1',
                 'image_ramdisk_id': 'fake_ramdisk_id',
                 'image_something_else': 'meow',
                 'preserved': 'preserve this!'})
-        db.instance_destroy(self.context, instance['uuid'])
+        instance.destroy()
 
     def test_rebuild(self):
         self._test_rebuild(vm_state=vm_states.ACTIVE)
@@ -6524,9 +6528,8 @@ class ComputeAPITestCase(BaseTestCase):
                           "new password")
 
     def test_rebuild_no_image(self):
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': ''}))
-        instance_uuid = instance['uuid']
+        instance = self._create_fake_instance_obj(params={'image_ref': ''})
+        instance_uuid = instance.uuid
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
@@ -6538,9 +6541,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_rebuild_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
         # rebuild from it
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': '1'}))
-
+        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
         self.fake_image['name'] = 'fake_name'
         self.fake_image['status'] = 'DELETED'
         self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
@@ -6554,11 +6555,11 @@ class ComputeAPITestCase(BaseTestCase):
                                      self.fake_image['id'], 'new_password')
 
     def test_rebuild_with_too_little_ram(self):
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': '1'}))
+        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst):
-            return dict(memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix):
+            self.assertEqual('', prefix)
+            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -6578,11 +6579,11 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_rebuild_with_too_little_disk(self):
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': '1'}))
+        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst):
-            return dict(memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix):
+            self.assertEqual('', prefix)
+            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -6602,11 +6603,11 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_rebuild_with_just_enough_ram_and_disk(self):
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': '1'}))
+        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst):
-            return dict(memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix):
+            self.assertEqual('', prefix)
+            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -6620,11 +6621,11 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_rebuild_with_no_ram_and_disk_reqs(self):
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': '1'}))
+        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst):
-            return dict(memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix):
+            self.assertEqual('', prefix)
+            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)
@@ -6635,11 +6636,11 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_rebuild_with_too_large_image(self):
-        instance = jsonutils.to_primitive(
-            self._create_fake_instance(params={'image_ref': '1'}))
+        instance = self._create_fake_instance_obj(params={'image_ref': '1'})
 
-        def fake_extract_flavor(_inst):
-            return dict(memory_mb=64, root_gb=1)
+        def fake_extract_flavor(_inst, prefix):
+            self.assertEqual('', prefix)
+            return dict(test_flavor.fake_flavor, memory_mb=64, root_gb=1)
 
         self.stubs.Set(flavors, 'extract_flavor',
                        fake_extract_flavor)

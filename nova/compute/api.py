@@ -54,6 +54,7 @@ from nova import notifications
 from nova import notifier
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_action
 from nova.objects import instance_info_cache
@@ -1624,9 +1625,9 @@ class API(base.Base):
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
         # Reserve quotas
-        instance_type = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         num_instances, quota_reservations = self._check_num_instances_quota(
-                context, instance_type, 1, 1)
+                context, flavor, 1, 1)
 
         self._record_action_start(context, instance, instance_actions.RESTORE)
 
@@ -1770,10 +1771,8 @@ class API(base.Base):
         filters = {}
 
         def _remap_flavor_filter(flavor_id):
-            instance_type = flavors.get_flavor_by_flavor_id(
-                    flavor_id)
-
-            filters['instance_type_id'] = instance_type['id']
+            flavor = flavor_obj.Flavor.get_by_flavor_id(context, flavor_id)
+            filters['instance_type_id'] = flavor.id
 
         def _remap_fixed_ip_filter(fixed_ip):
             # Turn fixed_ip into a regexp match. Since '.' matches
@@ -2075,9 +2074,9 @@ class API(base.Base):
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image, **kwargs)
 
-        instance_type = flavors.extract_flavor(instance)
+        flavor = instance.get_flavor()
         self._checks_for_create_and_rebuild(context, image_id, image,
-                instance_type, metadata, files_to_inject)
+                flavor, metadata, files_to_inject)
 
         kernel_id, ramdisk_id = self._handle_kernel_and_ramdisk(
                 context, None, None, image)
@@ -2105,7 +2104,7 @@ class API(base.Base):
 
             # Add the new ones
             new_sys_metadata = utils.get_system_metadata_from_image(
-                image, instance_type)
+                image, flavor)
 
             sys_metadata.update(new_sys_metadata)
             self.db.instance_system_metadata_update(context,
@@ -2208,8 +2207,8 @@ class API(base.Base):
                                            reservations)
 
     @staticmethod
-    def _resize_quota_delta(context, new_instance_type,
-                            old_instance_type, sense, compare):
+    def _resize_quota_delta(context, new_flavor,
+                            old_flavor, sense, compare):
         """
         Calculate any quota adjustment required at a particular point
         in the resize cycle.
@@ -2225,8 +2224,7 @@ class API(base.Base):
                         -1 indicates negative deltas
         """
         def _quota_delta(resource):
-            return sense * (new_instance_type[resource] -
-                            old_instance_type[resource])
+            return sense * (new_flavor[resource] - old_flavor[resource])
 
         deltas = {}
         if compare * _quota_delta('vcpus') > 0:
@@ -2237,12 +2235,11 @@ class API(base.Base):
         return deltas
 
     @staticmethod
-    def _upsize_quota_delta(context, new_instance_type, old_instance_type):
+    def _upsize_quota_delta(context, new_flavor, old_flavor):
         """
         Calculate deltas required to adjust quota for an instance upsize.
         """
-        return API._resize_quota_delta(context, new_instance_type,
-                                       old_instance_type, 1, 1)
+        return API._resize_quota_delta(context, new_flavor, old_flavor, 1, 1)
 
     @staticmethod
     def _reverse_upsize_quota_delta(context, migration_ref):
@@ -2250,25 +2247,21 @@ class API(base.Base):
         Calculate deltas required to reverse a prior upsizing
         quota adjustment.
         """
-        old_instance_type = flavors.get_flavor(
-            migration_ref['old_instance_type_id'])
-        new_instance_type = flavors.get_flavor(
-            migration_ref['new_instance_type_id'])
+        old_flavor = flavor_obj.Flavor.get_by_id(
+            context, migration_ref['old_instance_type_id'])
+        new_flavor = flavor_obj.Flavor.get_by_id(
+            context, migration_ref['new_instance_type_id'])
 
-        return API._resize_quota_delta(context, new_instance_type,
-                                       old_instance_type, -1, -1)
+        return API._resize_quota_delta(context, new_flavor, old_flavor, -1, -1)
 
     @staticmethod
     def _downsize_quota_delta(context, instance):
         """
         Calculate deltas required to adjust quota for an instance downsize.
         """
-        old_instance_type = flavors.extract_flavor(instance,
-                                                                 'old_')
-        new_instance_type = flavors.extract_flavor(instance,
-                                                                 'new_')
-        return API._resize_quota_delta(context, new_instance_type,
-                                       old_instance_type, 1, -1)
+        old_flavor = instance.get_flavor('old')
+        new_flavor = instance.get_flavor('new')
+        return API._resize_quota_delta(context, new_flavor, old_flavor, 1, -1)
 
     @staticmethod
     def _reserve_quota_delta(context, deltas, project_id=None):
