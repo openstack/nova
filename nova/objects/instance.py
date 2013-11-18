@@ -14,11 +14,13 @@
 
 from nova.cells import opts as cells_opts
 from nova.cells import rpcapi as cells_rpcapi
+from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova import notifications
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance_fault
 from nova.objects import instance_info_cache
 from nova.objects import pci_device
@@ -502,6 +504,27 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             raise exception.ObjectActionError(
                 action='obj_load_attr',
                 reason='loading %s requires recursion' % attrname)
+
+    def get_flavor(self, namespace=None):
+        prefix = ('%s_' % namespace) if namespace is not None else ''
+
+        db_flavor = flavors.extract_flavor(self, prefix)
+        flavor = flavor_obj.Flavor()
+        for key in flavors.system_metadata_flavor_props:
+            flavor[key] = db_flavor[key]
+        return flavor
+
+    def set_flavor(self, flavor, namespace=None):
+        prefix = ('%s_' % namespace) if namespace is not None else ''
+
+        self.system_metadata = flavors.save_flavor_info(
+            self.system_metadata, flavor, prefix)
+        self.save()
+
+    def delete_flavor(self, namespace):
+        self.system_metadata = flavors.delete_flavor_info(
+            self.system_metadata, "%s_" % namespace)
+        self.save()
 
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):

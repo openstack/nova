@@ -20,6 +20,7 @@ import mox
 import netaddr
 
 from nova.cells import rpcapi as cells_rpcapi
+from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova.network import model as network_model
@@ -36,6 +37,7 @@ from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_objects
 from nova.tests.objects import test_security_group
+from nova import utils
 
 
 class _TestInstanceObject(object):
@@ -745,6 +747,58 @@ class _TestInstanceObject(object):
         self.assertEqual(
             '1.4',
             primitive['nova_object.data']['info_cache']['nova_object.version'])
+
+    def _test_get_flavor(self, namespace):
+        prefix = '%s_' % namespace if namespace is not None else ''
+        db_inst = db.instance_create(self.context, {
+            'user_id': self.context.user_id,
+            'project_id': self.context.project_id,
+            'system_metadata': flavors.save_flavor_info(
+                {}, flavors.get_default_flavor(), prefix)})
+        db_flavor = flavors.extract_flavor(db_inst, prefix)
+        inst = instance.Instance.get_by_uuid(self.context, db_inst['uuid'])
+        flavor = inst.get_flavor(namespace)
+        self.assertEqual(db_flavor['flavorid'], flavor.flavorid)
+
+    def test_get_flavor(self):
+        self._test_get_flavor(None)
+        self._test_get_flavor('foo')
+
+    def _test_set_flavor(self, namespace):
+        prefix = '%s_' % namespace if namespace is not None else ''
+        db_inst = db.instance_create(self.context, {
+            'user_id': self.context.user_id,
+            'project_id': self.context.project_id,
+            })
+        inst = instance.Instance.get_by_uuid(self.context, db_inst['uuid'])
+        db_flavor = flavors.get_default_flavor()
+        inst.set_flavor(db_flavor, namespace)
+        db_inst = db.instance_get(self.context, db_inst['id'])
+        self.assertEqual(
+            db_flavor['flavorid'], flavors.extract_flavor(
+                db_inst, prefix)['flavorid'])
+
+    def test_set_flavor(self):
+        self._test_set_flavor(None)
+        self._test_set_flavor('foo')
+
+    def test_delete_flavor(self):
+        namespace = 'foo'
+        prefix = '%s_' % namespace
+        db_inst = db.instance_create(self.context, {
+            'user_id': self.context.user_id,
+            'project_id': self.context.project_id,
+            'system_metadata': flavors.save_flavor_info(
+                {}, flavors.get_default_flavor(), prefix)})
+        inst = instance.Instance.get_by_uuid(self.context, db_inst['uuid'])
+        inst.delete_flavor(namespace)
+        db_inst = db.instance_get(self.context, db_inst['id'])
+        self.assertEqual({}, utils.instance_sys_meta(db_inst))
+
+    def test_delete_flavor_no_namespace_fails(self):
+        inst = instance.Instance(system_metadata={})
+        self.assertRaises(KeyError, inst.delete_flavor, None)
+        self.assertRaises(KeyError, inst.delete_flavor, '')
 
 
 class TestInstanceObject(test_objects._LocalTest,
