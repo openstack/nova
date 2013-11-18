@@ -1312,6 +1312,20 @@ class API(base.Base):
                                                      new_type_id,
                                                      project_id, user_id)
 
+            if self.cell_type == 'api':
+                # NOTE(comstud): If we're in the API cell, we need to
+                # skip all remaining logic and just call the callback,
+                # which will cause a cast to the child cell.  Also,
+                # commit reservations here early until we have a better
+                # way to deal with quotas with cells.
+                cb(context, instance, bdms, reservations=None)
+                if reservations:
+                    QUOTAS.commit(context,
+                                  reservations,
+                                  project_id=project_id,
+                                  user_id=user_id)
+                return
+
             if not host:
                 try:
                     compute_utils.notify_about_instance_usage(
