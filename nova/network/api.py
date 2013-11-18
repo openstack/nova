@@ -71,7 +71,7 @@ def update_instance_cache_with_nw_info(api, context, instance, nw_info=None,
         LOG.debug(_('Updating cache with info: %s'), nw_info)
         if not isinstance(nw_info, network_model.NetworkInfo):
             nw_info = None
-        if not nw_info:
+        if nw_info is None:
             nw_info = api._get_instance_nw_info(context, instance)
         # NOTE(comstud): The save() method actually handles updating or
         # creating the instance.  We don't need to retrieve the object
