@@ -1231,6 +1231,66 @@ class HyperVAPITestCase(test.NoDBTestCase):
 
         self.assertEquals(len(self._instance_volume_disks), 1)
 
+    def _mock_get_mounted_disk_from_lun_error(self, target_iqn, target_lun,
+                                              fake_mounted_disk,
+                                              fake_device_number):
+        m = volumeutils.VolumeUtils.get_device_number_for_target(target_iqn,
+                                                                 target_lun)
+        m.AndRaise(vmutils.HyperVException('Simulated failure'))
+
+    def _mock_attach_volume_target_logout(self, instance_name, target_iqn,
+                                          target_lun, target_portal=None,
+                                          boot_from_volume=False):
+        fake_mounted_disk = "fake_mounted disk"
+        fake_device_number = 0
+        fake_controller_path = "fake_scsi_controller_path"
+
+        self._mock_login_storage_target(target_iqn, target_lun,
+                                       target_portal,
+                                       fake_mounted_disk,
+                                       fake_device_number)
+
+        self._mock_get_mounted_disk_from_lun_error(target_iqn, target_lun,
+                                                   fake_mounted_disk,
+                                                   fake_device_number)
+
+        m = volumeutils.VolumeUtils.logout_storage_target(target_iqn)
+
+    def test_attach_volume_logout(self):
+        instance_data = self._get_instance_data()
+
+        connection_info = db_fakes.get_fake_volume_info_data(
+            self._volume_target_portal, self._volume_id)
+        data = connection_info['data']
+        target_lun = data['target_lun']
+        target_iqn = data['target_iqn']
+        target_portal = data['target_portal']
+        mount_point = '/dev/sdc'
+
+        self._mock_attach_volume_target_logout(instance_data['name'],
+                                        target_iqn, target_lun,
+                                        target_portal)
+
+        self._mox.ReplayAll()
+        self.assertRaises(vmutils.HyperVException, self._conn.attach_volume,
+                          None, connection_info, instance_data, mount_point)
+        self._mox.VerifyAll()
+
+    def test_attach_volume_connection_error(self):
+        instance_data = self._get_instance_data()
+
+        connection_info = db_fakes.get_fake_volume_info_data(
+            self._volume_target_portal, self._volume_id)
+        mount_point = '/dev/sdc'
+
+        def fake_login_storage_target(connection_info):
+            raise Exception('Fake connection exception')
+
+        self.stubs.Set(self._conn._volumeops, '_login_storage_target',
+                       fake_login_storage_target)
+        self.assertRaises(vmutils.HyperVException, self._conn.attach_volume,
+                          None, connection_info, instance_data, mount_point)
+
     def _mock_detach_volume(self, target_iqn, target_lun):
         mount_point = '/dev/sdc'
 
