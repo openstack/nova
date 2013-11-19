@@ -7375,10 +7375,6 @@ class ComputeAPITestCase(BaseTestCase):
             return {'id': volume_id, 'status': 'attaching'}
 
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
-
-        volume = {'id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66',
-                  'state': 'active', 'instance_uuid': instance['uuid']}
-
         self.assertRaises(exception.InvalidVolume,
                 self.compute_api.rescue, self.context, instance)
 
