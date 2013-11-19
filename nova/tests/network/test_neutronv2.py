@@ -257,7 +257,7 @@ class TestNeutronv2Base(test.TestCase):
 
     def _stub_allocate_for_instance(self, net_idx=1, **kwargs):
         api = neutronapi.API()
-        self.mox.StubOutWithMock(api, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(api, 'get_instance_nw_info')
         has_portbinding = False
         has_extra_dhcp_opts = False
         # Note: (dkehn) this option check should be removed as soon as support
@@ -372,10 +372,10 @@ class TestNeutronv2Base(test.TestCase):
                 self.moxed_client.create_port(
                     MyComparator(port_req_body)).AndReturn(res_port)
 
-        api._get_instance_nw_info(mox.IgnoreArg(),
-                                  self.instance,
-                                  networks=nets).AndReturn(
-                                        self._returned_nw_info)
+        api.get_instance_nw_info(mox.IgnoreArg(),
+                                 self.instance,
+                                 networks=nets).AndReturn(
+                                       self._returned_nw_info)
         self.mox.ReplayAll()
         return api
 

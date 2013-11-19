@@ -357,7 +357,7 @@ class API(base.Base):
                             msg = _("Failed to delete port %s")
                             LOG.exception(msg, port_id)
 
-        nw_info = self._get_instance_nw_info(context, instance, networks=nets)
+        nw_info = self.get_instance_nw_info(context, instance, networks=nets)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
@@ -438,7 +438,7 @@ class API(base.Base):
             LOG.exception(_("Failed to delete neutron port %s") %
                           port_id)
 
-        return self._get_instance_nw_info(context, instance)
+        return self.get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
         """List ports for the client based on search options."""
@@ -448,6 +448,7 @@ class API(base.Base):
         """Return the port for the client given the port id."""
         return neutronv2.get_client(context).show_port(port_id)
 
+    @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None):
         """Return network information for specified instance
            and update cache.
@@ -458,8 +459,9 @@ class API(base.Base):
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None):
-        LOG.debug(_('get_instance_nw_info() for %s'),
-                  instance['display_name'])
+        # keep this caching-free version of the get_instance_nw_info method
+        # because it is used by the caching logic itself.
+        LOG.debug(_('get_instance_nw_info() for %s'), instance['display_name'])
         nw_info = self._build_network_info_model(context, instance, networks)
         return network_model.NetworkInfo.hydrate(nw_info)
 
