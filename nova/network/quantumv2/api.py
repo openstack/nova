@@ -292,7 +292,7 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_add_security_group_refresh(context, instance)
 
-        nw_info = self._get_instance_nw_info(context, instance, networks=nets)
+        nw_info = self.get_instance_nw_info(context, instance, networks=nets)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
@@ -365,7 +365,7 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
 
-        return self._get_instance_nw_info(context, instance)
+        return self.get_instance_nw_info(context, instance)
 
     def list_ports(self, context, **search_opts):
         return quantumv2.get_client(context).list_ports(**search_opts)
@@ -373,15 +373,19 @@ class API(base.Base):
     def show_port(self, context, port_id):
         return quantumv2.get_client(context).show_port(port_id)
 
+    @refresh_cache
     def get_instance_nw_info(self, context, instance, conductor_api=None,
                              networks=None):
+        """Return network information for specified instance
+           and update cache.
+        """
         result = self._get_instance_nw_info(context, instance, networks)
         return result
 
-    @refresh_cache
     def _get_instance_nw_info(self, context, instance, networks=None):
-        LOG.debug(_('get_instance_nw_info() for %s'),
-                  instance['display_name'])
+        # keep this caching-free version of the get_instance_nw_info method
+        # because it is used by the caching logic itself.
+        LOG.debug(_('get_instance_nw_info() for %s'), instance['display_name'])
         nw_info = self._build_network_info_model(context, instance, networks)
         return network_model.NetworkInfo.hydrate(nw_info)
 
