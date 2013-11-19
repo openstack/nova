@@ -93,6 +93,10 @@ def _create_shadow_tables(migrate_engine):
                 column_copy = Column(column.name, BigInteger(), default=0)
             elif (table_name, column.name) in _SHADOW_SKIPS:
                 column_copy = Column(column.name, Inet())
+            elif (table_name, column.name) == ('cells', 'deleted'):
+                #NOTE(dprince): Skip for now. This is fixed in
+                # 181_fix_179_migration_sync_shadow_table
+                column_copy = Column(column.name, Boolean())
             else:
                 column_copy = column.copy()
             columns.append(column_copy)
@@ -234,7 +238,6 @@ def upgrade(migrate_engine):
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
         Column('id', Integer, primary_key=True, nullable=False),
         Column('api_url', String(length=255)),
         Column('username', String(length=255)),
@@ -246,6 +249,7 @@ def upgrade(migrate_engine):
         Column('rpc_host', String(length=255)),
         Column('rpc_port', Integer),
         Column('rpc_virtual_host', String(length=255)),
+        Column('deleted', Integer),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -1025,7 +1029,6 @@ def upgrade(migrate_engine):
             Column('deleted_at', DateTime(timezone=False)),
             Column('id', Integer(), primary_key=True, nullable=False),
             Column('volume_id', String(36), nullable=False),
-            Column("instance_id", Integer()),
             Column('tot_last_refreshed', DateTime(timezone=False)),
             Column('tot_reads', BigInteger(), default=0),
             Column('tot_read_bytes', BigInteger(), default=0),
@@ -1037,6 +1040,10 @@ def upgrade(migrate_engine):
             Column('curr_writes', BigInteger(), default=0),
             Column('curr_write_bytes', BigInteger(), default=0),
             Column('deleted', Integer),
+            Column("instance_uuid", String(length=36)),
+            Column("project_id", String(length=36)),
+            Column("user_id", String(length=36)),
+            Column("availability_zone", String(length=255)),
             mysql_engine='InnoDB',
             mysql_charset='utf8'
     )
@@ -1097,6 +1104,29 @@ def upgrade(migrate_engine):
     UniqueConstraint('vlan', 'deleted', table=networks,
                      name='uniq_vlan_x_deleted').create()
 
+    # flavorid unique constraint
+    UniqueConstraint('flavorid', 'deleted', table=instance_types,
+                     name='uniq_flavorid_x_deleted').create()
+
+    # instance_type_name constraint
+    UniqueConstraint('name', 'deleted', table=instance_types,
+                     name='uniq_name_x_deleted').create()
+
+    # keypair contraint
+    UniqueConstraint('user_id', 'name', 'deleted', table=key_pairs,
+                     name='key_pairs_uniq_name_and_user_id').create()
+
+    # instance_type_projects constraint
+    inst_type_uc_name = 'uniq_instance_type_id_x_project_id_x_deleted'
+    UniqueConstraint('instance_type_id', 'project_id', 'deleted',
+                     table=instance_type_projects,
+                     name=inst_type_uc_name).create()
+
+    # floating_ips unique constraint
+    UniqueConstraint('address', 'deleted',
+                     table=floating_ips,
+                     name='uniq_address_x_deleted').create()
+
     indexes = [
         # agent_builds
         Index('agent_builds_hypervisor_os_arch_idx',
@@ -1132,6 +1162,10 @@ def upgrade(migrate_engine):
         Index('ix_compute_node_stats_compute_node_id',
               compute_node_stats.c.compute_node_id),
 
+        Index('compute_node_stats_node_id_and_deleted_idx',
+              compute_node_stats.c.compute_node_id,
+              compute_node_stats.c.deleted),
+
         # consoles
         Index('consoles_instance_uuid_idx', consoles.c.instance_uuid),
 
@@ -1161,10 +1195,6 @@ def upgrade(migrate_engine):
 
         # iscsi_targets
         Index('iscsi_targets_host_idx', iscsi_targets.c.host),
-
-        # key_pairs
-        Index('key_pair_user_id_name_idx',
-              key_pairs.c.user_id, key_pairs.c.name),
 
         Index('networks_host_idx', networks.c.host),
 
