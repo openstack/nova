@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<server xmlns="http://docs.openstack.org/compute/api/v1.1" imageRef="%(host)s/openstack/images/%(image_id)s" flavorRef="%(host)s/openstack/flavors/1" name="new-server-test">
+<server xmlns="http://docs.openstack.org/compute/api/v1.1" xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" imageRef="%(host)s/openstack/images/%(image_id)s" flavorRef="%(host)s/openstack/flavors/1" name="new-server-test" OS-DCF:diskConfig="AUTO">
   <metadata>
     <meta key="My Server Name">Apache1</meta>
   </metadata>
