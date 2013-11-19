@@ -83,7 +83,7 @@ def downgrade(migrate_engine):
         # Only need to update nova-compute availability_zones
         if rec['binary'] != 'nova-compute':
             continue
-        result = select([aggregate_metadata.c.value],
+        query = select([aggregate_metadata.c.value],
             from_obj=aggregate_metadata.join(
                 agg_hosts,
                 agg_hosts.c.aggregate_id == aggregate_metadata.c.aggregate_id
@@ -96,8 +96,12 @@ def downgrade(migrate_engine):
             agg_hosts.c.host == rec['host']
         )
 
-        services.update().values(
-            availability_zone=list(result.execute())[0][0]
-        ).where(
-            services.c.id == rec['id']
-        )
+        result = list(query.execute())
+        # Check that there used to be an availability_zone. It is possible to
+        # have no aggregates.
+        if len(result) > 0:
+            services.update().values(
+                availability_zone=result[0][0]
+            ).where(
+                services.c.id == rec['id']
+            )
