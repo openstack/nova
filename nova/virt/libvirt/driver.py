@@ -2285,7 +2285,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                     '%d%c' % (local_size, unit))
 
     def _create_ephemeral(self, target, ephemeral_size,
-                          fs_label, os_type, is_block_dev=False):
+                          fs_label, os_type, is_block_dev=False,
+                          max_size=None):
         if not is_block_dev:
             self._create_local(target, ephemeral_size)
 
@@ -2293,7 +2294,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk.mkfs(os_type, fs_label, target, run_as_root=is_block_dev)
 
     @staticmethod
-    def _create_swap(target, swap_mb):
+    def _create_swap(target, swap_mb, max_size=None):
         """Create a swap file of specified size."""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
         utils.mkfs('swap', target)
