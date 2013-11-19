@@ -144,7 +144,7 @@ class Scheduler(object):
 
         # The system_metadata 'group' will be filtered
         members = db.instance_get_all_by_filters(context,
-                {'deleted': False, 'group': group})
+                {'deleted': False, 'system_metadata': {'group': group}})
         return [member['host']
                 for member in members
                 if member.get('host') is not None]
