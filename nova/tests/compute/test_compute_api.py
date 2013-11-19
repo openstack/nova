@@ -821,6 +821,45 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_revert_resize(self):
         self._test_revert_resize()
 
+    def test_revert_resize_concurent_fail(self):
+        params = dict(vm_state=vm_states.RESIZED)
+        fake_inst = self._create_instance_obj(params=params)
+        fake_mig = migration_obj.Migration._from_db_object(
+                self.context, migration_obj.Migration(),
+                test_migration.fake_db_migration())
+
+        self.mox.StubOutWithMock(self.context, 'elevated')
+        self.mox.StubOutWithMock(migration_obj.Migration,
+                                 'get_by_instance_and_status')
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_reverse_upsize_quota_delta')
+        self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
+        self.mox.StubOutWithMock(fake_inst, 'save')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
+
+        self.context.elevated().AndReturn(self.context)
+        migration_obj.Migration.get_by_instance_and_status(
+            self.context, fake_inst['uuid'], 'finished').AndReturn(fake_mig)
+
+        delta = ['delta']
+        self.compute_api._reverse_upsize_quota_delta(
+            self.context, fake_mig).AndReturn(delta)
+        resvs = ['resvs']
+        self.compute_api._reserve_quota_delta(
+            self.context, delta).AndReturn(resvs)
+
+        exc = exception.UnexpectedTaskStateError(
+            actual=task_states.RESIZE_REVERTING, expected=None)
+        fake_inst.save(expected_task_state=None).AndRaise(exc)
+
+        quota.QUOTAS.rollback(self.context, resvs)
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.UnexpectedTaskStateError,
+                          self.compute_api.revert_resize,
+                          self.context,
+                          fake_inst)
+
     def _test_resize(self, flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
                      allow_mig_same_host=False,

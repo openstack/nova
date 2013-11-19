@@ -2105,7 +2105,11 @@ class API(base.Base):
         reservations = self._reserve_quota_delta(context, deltas)
 
         instance.task_state = task_states.RESIZE_REVERTING
-        instance.save(expected_task_state=None)
+        try:
+            instance.save(expected_task_state=None)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                QUOTAS.rollback(context, reservations)
 
         migration.status = 'reverting'
         migration.save()
