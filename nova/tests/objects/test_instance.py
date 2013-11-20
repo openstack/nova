@@ -837,12 +837,12 @@ class _TestInstanceListObject(object):
         self.mox.StubOutWithMock(db, 'instance_get_all_by_filters')
         db.instance_get_all_by_filters(self.context, {'foo': 'bar'}, 'uuid',
                                        'asc', limit=None, marker=None,
-                                       columns_to_join=['metadata']).AndReturn(
-                                           fakes)
+                                       columns_to_join=['metadata'],
+                                       use_slave=False).AndReturn(fakes)
         self.mox.ReplayAll()
         inst_list = instance.InstanceList.get_by_filters(
             self.context, {'foo': 'bar'}, 'uuid', 'asc',
-            expected_attrs=['metadata'])
+            expected_attrs=['metadata'], use_slave=False)
 
         for i in range(0, len(fakes)):
             self.assertIsInstance(inst_list.objects[i], instance.Instance)
@@ -858,12 +858,13 @@ class _TestInstanceListObject(object):
         db.instance_get_all_by_filters(self.context,
                                        {'deleted': True, 'cleaned': False},
                                        'uuid', 'asc', limit=None, marker=None,
-                                       columns_to_join=['metadata']).AndReturn(
+                                       columns_to_join=['metadata'],
+                                       use_slave=False).AndReturn(
                                            [fakes[1]])
         self.mox.ReplayAll()
         inst_list = instance.InstanceList.get_by_filters(
             self.context, {'deleted': True, 'cleaned': False}, 'uuid', 'asc',
-            expected_attrs=['metadata'])
+            expected_attrs=['metadata'], use_slave=False)
 
         self.assertEqual(1, len(inst_list))
         self.assertIsInstance(inst_list.objects[0], instance.Instance)

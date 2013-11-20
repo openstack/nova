@@ -5345,7 +5345,7 @@ class ComputeTestCase(BaseTestCase):
         unrescued_instances = {'fake_uuid1': False, 'fake_uuid2': False}
 
         def fake_instance_get_all_by_filters(context, filters,
-                                             columns_to_join):
+                                             columns_to_join, use_slave=False):
             self.assertEqual(columns_to_join, [])
             return instances
 
@@ -5882,7 +5882,8 @@ class ComputeTestCase(BaseTestCase):
 
         instance_obj.InstanceList.get_by_filters(
             ctxt, mox.IgnoreArg(),
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
+            use_slave=True
             ).AndReturn(instances)
 
         # The first instance delete fails.

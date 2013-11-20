@@ -660,7 +660,7 @@ class ServersControllerTest(ControllerTest):
     def test_tenant_id_filter_converts_to_project_id_for_admin(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertIsNotNone(filters)
             self.assertEqual(filters['project_id'], 'newfake')
             self.assertFalse(filters.get('tenant_id'))
@@ -679,7 +679,7 @@ class ServersControllerTest(ControllerTest):
     def test_all_tenants_param_normal(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
 
@@ -695,7 +695,7 @@ class ServersControllerTest(ControllerTest):
     def test_all_tenants_param_one(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
 
@@ -711,7 +711,7 @@ class ServersControllerTest(ControllerTest):
     def test_all_tenants_param_zero(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertNotIn('all_tenants', filters)
             return [fakes.stub_instance(100)]
 
@@ -727,7 +727,7 @@ class ServersControllerTest(ControllerTest):
     def test_all_tenants_param_false(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertNotIn('all_tenants', filters)
             return [fakes.stub_instance(100)]
 
@@ -758,7 +758,7 @@ class ServersControllerTest(ControllerTest):
     def test_admin_restricted_tenant(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertIsNotNone(filters)
             self.assertEqual(filters['project_id'], 'fake')
             return [fakes.stub_instance(100)]
@@ -775,7 +775,7 @@ class ServersControllerTest(ControllerTest):
     def test_all_tenants_pass_policy(self):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
-                         columns_to_join=None):
+                         columns_to_join=None, use_slave=False):
             self.assertIsNotNone(filters)
             self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]

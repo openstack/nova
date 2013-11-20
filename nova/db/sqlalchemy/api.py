@@ -1817,7 +1817,8 @@ def instance_get_all(context, columns_to_join=None):
 
 @require_context
 def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
-                                limit=None, marker=None, columns_to_join=None):
+                                limit=None, marker=None, columns_to_join=None,
+                                use_slave=False):
     """Return instances that match all filters.  Deleted instances
     will be returned by default, unless there's a filter that says
     otherwise.
@@ -1854,7 +1855,10 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
 
     sort_fn = {'desc': desc, 'asc': asc}
 
-    session = get_session()
+    if CONF.database.slave_connection == '':
+        use_slave = False
+
+    session = get_session(slave_session=use_slave)
 
     if columns_to_join is None:
         columns_to_join = ['info_cache', 'security_groups']

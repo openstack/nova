@@ -556,7 +556,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.1: Added use_slave to get_by_host
     #              Instance <= version 1.9
     # Version 1.2: Instance <= version 1.11
-    VERSION = '1.2'
+    # Version 1.3: Added use_slave to get_by_filters
+    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -565,15 +566,17 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.1': '1.9',
         # NOTE(danms): Instance was at 1.9 before we added this
         '1.2': '1.11',
+        '1.3': '1.11',
         }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
                        sort_key='created_at', sort_dir='desc', limit=None,
-                       marker=None, expected_attrs=None):
+                       marker=None, expected_attrs=None, use_slave=False):
         db_inst_list = db.instance_get_all_by_filters(
             context, filters, sort_key, sort_dir, limit=limit, marker=marker,
-            columns_to_join=_expected_cols(expected_attrs))
+            columns_to_join=_expected_cols(expected_attrs),
+            use_slave=use_slave)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
 
