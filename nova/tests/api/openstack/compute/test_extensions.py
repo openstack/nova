@@ -49,7 +49,7 @@ class StubController(object):
     def index(self, req):
         return self.body
 
-    def create(self, req):
+    def create(self, req, body):
         msg = 'All aboard the fail train!'
         raise webob.exc.HTTPBadRequest(explanation=msg)
 
