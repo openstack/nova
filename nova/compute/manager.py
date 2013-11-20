@@ -1500,7 +1500,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                               legacy=False)
         block_device_mapping = (
             driver_block_device.convert_volumes(bdms) +
-            driver_block_device.convert_snapshots(bdms))
+            driver_block_device.convert_snapshots(bdms) +
+            driver_block_device.convert_images(bdms))
 
         if not refresh_conn_info:
             # if the block_device_mapping has no value in connection_info
