@@ -71,7 +71,7 @@ class FlavorManageController(wsgi.Controller):
         root_gb = vals.get('disk')
         ephemeral_gb = vals.get('ephemeral', 0)
         swap = vals.get('swap', 0)
-        rxtx_factor = vals.get('rxtx_factor', 1.0)
+        rxtx_factor = vals.get('os-flavor-rxtx:rxtx_factor', 1.0)
         is_public = vals.get('flavor-access:is_public', True)
 
         try:

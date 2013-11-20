@@ -17,7 +17,7 @@
         ],
         "name": "flavortest",
         "ram": 1024,
-        "rxtx_factor": 2.0,
+        "os-flavor-rxtx:rxtx_factor": 2.0,
         "swap": 0,
         "vcpus": 2
     }
