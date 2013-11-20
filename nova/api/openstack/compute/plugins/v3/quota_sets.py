@@ -33,6 +33,8 @@ from nova import quota
 ALIAS = "os-quota-sets"
 QUOTAS = quota.QUOTAS
 LOG = logging.getLogger(__name__)
+FILTERED_QUOTAS = ['injected_files', 'injected_file_content_bytes',
+                   'injected_file_path_bytes']
 authorize_update = extensions.extension_authorizer('compute',
                                                    'v3:%s:update' % ALIAS)
 authorize_show = extensions.extension_authorizer('compute',
@@ -49,8 +51,9 @@ class QuotaTemplate(xmlutil.TemplateBuilder):
         root.set('id')
 
         for resource in QUOTAS.resources:
-            elem = xmlutil.SubTemplateElement(root, resource)
-            elem.text = resource
+            if resource not in FILTERED_QUOTAS:
+                elem = xmlutil.SubTemplateElement(root, resource)
+                elem.text = resource
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -61,11 +64,12 @@ class QuotaDetailTemplate(xmlutil.TemplateBuilder):
         root.set('id')
 
         for resource in QUOTAS.resources:
-            elem = xmlutil.SubTemplateElement(root, resource,
-                                              selector=resource)
-            elem.set('in_use')
-            elem.set('reserved')
-            elem.set('limit')
+            if resource not in FILTERED_QUOTAS:
+                elem = xmlutil.SubTemplateElement(root, resource,
+                                                  selector=resource)
+                elem.set('in_use')
+                elem.set('reserved')
+                elem.set('limit')
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -96,6 +100,8 @@ class QuotaSetsController(wsgi.Controller):
                                             usages=usages)
         else:
             values = QUOTAS.get_project_quotas(context, id, usages=usages)
+        values = dict((k, v) for k, v in values.items() if k not in
+                      FILTERED_QUOTAS)
 
         if usages:
             return values
@@ -148,7 +154,8 @@ class QuotaSetsController(wsgi.Controller):
         quota_set = body['quota_set']
 
         for key, value in quota_set.items():
-            if key not in QUOTAS and key != 'force':
+            if ((key not in QUOTAS or key in FILTERED_QUOTAS)
+                 and key != 'force'):
                 bad_keys.append(key)
                 continue
             if key == 'force':
@@ -224,7 +231,10 @@ class QuotaSetsController(wsgi.Controller):
     def defaults(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
-        return self._format_quota_set(id, QUOTAS.get_defaults(context))
+        values = QUOTAS.get_defaults(context)
+        values = dict((k, v) for k, v in values.items() if k not in
+                      FILTERED_QUOTAS)
+        return self._format_quota_set(id, values)
 
     @extensions.expected_errors(403)
     @wsgi.response(204)

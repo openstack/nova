@@ -26,11 +26,9 @@ def quota_set(class_name):
     return {'quota_class_set': {'id': class_name, 'metadata_items': 128,
                                 'ram': 51200, 'floating_ips': 10,
                                 'fixed_ips': -1, 'instances': 10,
-                                'injected_files': 5, 'cores': 20,
-                                'injected_file_content_bytes': 10240,
+                                'cores': 20,
                                 'security_groups': 10,
-                                'security_group_rules': 20, 'key_pairs': 100,
-                                'injected_file_path_bytes': 255}}
+                                'security_group_rules': 20, 'key_pairs': 100}}
 
 
 class QuotaClassSetsTest(test.TestCase):
@@ -47,9 +45,6 @@ class QuotaClassSetsTest(test.TestCase):
             'floating_ips': 10,
             'fixed_ips': -1,
             'metadata_items': 128,
-            'injected_files': 5,
-            'injected_file_path_bytes': 255,
-            'injected_file_content_bytes': 10240,
             'security_groups': 10,
             'security_group_rules': 20,
             'key_pairs': 100,
@@ -66,9 +61,6 @@ class QuotaClassSetsTest(test.TestCase):
         self.assertEqual(qs['floating_ips'], 10)
         self.assertEqual(qs['fixed_ips'], -1)
         self.assertEqual(qs['metadata_items'], 128)
-        self.assertEqual(qs['injected_files'], 5)
-        self.assertEqual(qs['injected_file_path_bytes'], 255)
-        self.assertEqual(qs['injected_file_content_bytes'], 10240)
         self.assertEqual(qs['security_groups'], 10)
         self.assertEqual(qs['security_group_rules'], 20)
         self.assertEqual(qs['key_pairs'], 100)
@@ -89,9 +81,7 @@ class QuotaClassSetsTest(test.TestCase):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'floating_ips': 10,
                                     'fixed_ips': -1, 'metadata_items': 128,
-                                    'injected_files': 5, 'id': 'test_class',
-                                    'injected_file_content_bytes': 10240,
-                                    'injected_file_path_bytes': 255,
+                                    'id': 'test_class',
                                     'security_groups': 10,
                                     'security_group_rules': 20,
                                     'key_pairs': 100}}
@@ -125,8 +115,6 @@ class QuotaClassSetsTest(test.TestCase):
         body = {'quota_class_set': {'instances': 50, 'cores': 50,
                                     'ram': 51200, 'floating_ips': 10,
                                     'fixed_ips': -1, 'metadata_items': 128,
-                                    'injected_files': 5,
-                                    'injected_file_content_bytes': 10240,
                                     'security_groups': 10,
                                     'security_group_rules': 20,
                                     'key_pairs': 100,
@@ -147,13 +135,10 @@ class QuotaTemplateXMLSerializerTest(test.TestCase):
         exemplar = dict(quota_class_set=dict(
                 id='test_class',
                 metadata_items=10,
-                injected_file_path_bytes=255,
-                injected_file_content_bytes=20,
                 ram=50,
                 floating_ips=60,
                 fixed_ips=-1,
                 instances=70,
-                injected_files=80,
                 security_groups=10,
                 security_group_rules=20,
                 key_pairs=100,
@@ -173,12 +158,10 @@ class QuotaTemplateXMLSerializerTest(test.TestCase):
     def test_deserializer(self):
         exemplar = dict(quota_class_set=dict(
                 metadata_items='10',
-                injected_file_content_bytes='20',
                 ram='50',
                 floating_ips='60',
                 fixed_ips='-1',
                 instances='70',
-                injected_files='80',
                 security_groups='10',
                 security_group_rules='20',
                 key_pairs='100',
@@ -186,13 +169,10 @@ class QuotaTemplateXMLSerializerTest(test.TestCase):
         intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
                   '<quota_class_set>'
                   '<metadata_items>10</metadata_items>'
-                  '<injected_file_content_bytes>20'
-                  '</injected_file_content_bytes>'
                   '<ram>50</ram>'
                   '<floating_ips>60</floating_ips>'
                   '<fixed_ips>-1</fixed_ips>'
                   '<instances>70</instances>'
-                  '<injected_files>80</injected_files>'
                   '<cores>90</cores>'
                   '<security_groups>10</security_groups>'
                   '<security_group_rules>20</security_group_rules>'
