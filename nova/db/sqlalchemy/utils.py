@@ -512,8 +512,17 @@ def _change_deleted_column_type_to_id_type_sqlite(migrate_engine, table_name,
         if not isinstance(constraint, CheckConstraint):
             return False
         sqltext = str(constraint.sqltext)
-        return (sqltext.endswith("deleted in (0, 1)") or
-                sqltext.endswith("deleted IN (:deleted_1, :deleted_2)"))
+        # NOTE(I159): when the type of column `deleted` is changed from boolean
+        # to int, the corresponding CHECK constraint is dropped too. But
+        # starting from SQLAlchemy version 0.8.3, those CHECK constraints
+        # aren't dropped anymore. So despite the fact that column deleted is
+        # of type int now, we still restrict its values to be either 0 or 1.
+        constraint_markers = (
+            "deleted in (0, 1)",
+            "deleted IN (:deleted_1, :deleted_2)",
+            "deleted IN (:param_1, :param_2)"
+        )
+        return any(sqltext.endswith(marker) for marker in constraint_markers)
 
     constraints = []
     for constraint in table.constraints:
