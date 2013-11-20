@@ -18,6 +18,7 @@ import time
 import zlib
 
 from nova import context
+from nova import exception
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.tests import fake_network
@@ -68,8 +69,9 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         # Create a server which will enter error state.
         fake_network.set_stub_network_methods(self.stubs)
 
-        def throw_error(*_):
-            raise Exception()
+        def throw_error(*args, **kwargs):
+            raise exception.BuildAbortException(reason='',
+                    instance_uuid='fake')
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'spawn', throw_error)
 
