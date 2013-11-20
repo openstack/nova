@@ -1434,9 +1434,9 @@ def virtual_interface_create(context, values):
     return vif_ref
 
 
-def _virtual_interface_query(context, session=None):
+def _virtual_interface_query(context, session=None, use_slave=False):
     return model_query(context, models.VirtualInterface, session=session,
-                       read_deleted="no")
+                       read_deleted="no", use_slave=use_slave)
 
 
 @require_context
@@ -1482,12 +1482,12 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
 
 @require_context
 @require_instance_exists_using_uuid
-def virtual_interface_get_by_instance(context, instance_uuid):
+def virtual_interface_get_by_instance(context, instance_uuid, use_slave=False):
     """Gets all virtual interfaces for instance.
 
     :param instance_uuid: = uuid of the instance to retrieve vifs for
     """
-    vif_refs = _virtual_interface_query(context).\
+    vif_refs = _virtual_interface_query(context, use_slave=use_slave).\
                        filter_by(instance_uuid=instance_uuid).\
                        all()
     return vif_refs

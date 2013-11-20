@@ -855,7 +855,7 @@ class ComputeManager(manager.Manager):
         """This call passes straight through to the virtualization driver."""
         return self.driver.refresh_provider_fw_rules()
 
-    def _get_instance_nw_info(self, context, instance):
+    def _get_instance_nw_info(self, context, instance, use_slave=False):
         """Get a list of dictionaries of network data of an instance."""
         if (not hasattr(instance, 'system_metadata') or
                 len(instance['system_metadata']) == 0):
@@ -865,7 +865,9 @@ class ComputeManager(manager.Manager):
             # to network_api (which requires it for instance_type) will
             # succeed.
             instance = instance_obj.Instance.get_by_uuid(context,
-                                                         instance['uuid'])
+                                                         instance['uuid'],
+                                                         use_slave=use_slave)
+
         network_info = self.network_api.get_instance_nw_info(context,
                                                              instance)
         return network_info
@@ -4373,14 +4375,15 @@ class ComputeManager(manager.Manager):
                 try:
                     instance = instance_obj.Instance.get_by_uuid(
                         context, instance_uuids.pop(0),
-                        expected_attrs=['system_metadata'])
+                        expected_attrs=['system_metadata'],
+                        use_slave=True)
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue
             else:
                 # No more in our copy of uuids.  Pull from the DB.
                 db_instances = instance_obj.InstanceList.get_by_host(
-                    context, self.host, expected_attrs=[])
+                    context, self.host, expected_attrs=[], use_slave=True)
                 if not db_instances:
                     # None.. just return.
                     return
@@ -4392,7 +4395,7 @@ class ComputeManager(manager.Manager):
         try:
             # Call to network API to get instance info.. this will
             # force an update to the instance's info_cache
-            self._get_instance_nw_info(context, instance)
+            self._get_instance_nw_info(context, instance, use_slave=True)
             LOG.debug(_('Updated the info_cache for instance'),
                       instance=instance)
         except Exception as e:

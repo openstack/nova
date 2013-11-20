@@ -565,12 +565,17 @@ class NetworkManager(manager.Manager):
         where network = dict containing pertinent data from a network db object
         and info = dict containing pertinent networking data
         """
+        use_slave = kwargs.get('use_slave') or False
+
         if not uuidutils.is_uuid_like(instance_id):
             instance_id = instance_uuid
         instance_uuid = instance_id
 
+        # TODO(geekinutah): Is this worth objectifying as it's slated for
+        #                   deprecation?
         vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance_uuid)
+                                                         instance_uuid,
+                                                         use_slave=use_slave)
         networks = {}
 
         for vif in vifs:
