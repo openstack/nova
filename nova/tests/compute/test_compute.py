@@ -5092,7 +5092,7 @@ class ComputeTestCase(BaseTestCase):
                     return instance
 
         def fake_migration_get_unconfirmed_by_dest_compute(context,
-                resize_confirm_window, dest_compute):
+                resize_confirm_window, dest_compute, use_slave=False):
             self.assertEqual(dest_compute, CONF.host)
             return migrations
 

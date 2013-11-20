@@ -4530,7 +4530,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         mig_list_cls = migration_obj.MigrationList
         migrations = mig_list_cls.get_unconfirmed_by_dest_compute(
-                context, CONF.resize_confirm_window, self.host)
+                context, CONF.resize_confirm_window, self.host,
+                use_slave=True)
 
         migrations_info = dict(migration_count=len(migrations),
                 confirm_window=CONF.resize_confirm_window)
@@ -4557,7 +4558,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             expected_attrs = ['metadata', 'system_metadata']
             try:
                 instance = instance_obj.Instance.get_by_uuid(context,
-                            instance_uuid, expected_attrs=expected_attrs)
+                            instance_uuid, expected_attrs=expected_attrs,
+                            use_slave=True)
             except exception.InstanceNotFound:
                 reason = (_("Instance %s not found") %
                           instance_uuid)
