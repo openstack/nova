@@ -14,17 +14,30 @@
 #    under the License.
 import mock
 
+import contextlib
+import mock
+
 from nova.network import model as network_model
 from nova import test
+from nova.tests.virt.vmwareapi import stubs
 from nova import utils
+from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
+from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vmops
 
 
 class VMwareVMOpsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
+        vmwareapi_fake.reset()
+        stubs.set_stubs(self.stubs)
+        self._session = driver.VMwareAPISession()
+
+        self._vmops = vmops.VMwareVMOps(self._session, None, None)
+        self._instance = {'name': 'fake_name', 'uuid': 'fake_uuid'}
+
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
                                         gateway=
@@ -147,3 +160,48 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         ops._check_if_folder_file_exists(mock.Mock(), mock.Mock(), "datastore",
                                          "folder", "some_file")
         ops._create_folder_if_missing.assert_called_once()
+
+    def test_delete_vm_snapshot(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            self.assertEqual('RemoveSnapshot_Task', method)
+            self.assertEqual(args[0], "fake_vm_snapshot")
+            self.assertEqual(kwargs['removeChildren'], False)
+            self.assertEqual(kwargs['consolidate'], True)
+            return 'fake_remove_snapshot_task'
+
+        with contextlib.nested(
+            mock.patch.object(self._session, '_wait_for_task'),
+            mock.patch.object(self._session, '_call_method', fake_call_method)
+        ) as (_wait_for_task, _call_method):
+            self._vmops._delete_vm_snapshot(self._instance,
+                                            "fake_vm_ref", "fake_vm_snapshot")
+            _wait_for_task.assert_has_calls([
+                   mock.call('fake_remove_snapshot_task')])
+
+    def test_create_vm_snapshot(self):
+
+        method_list = ['CreateSnapshot_Task', 'get_dynamic_property']
+
+        def fake_call_method(module, method, *args, **kwargs):
+            expected_method = method_list.pop(0)
+            self.assertEqual(expected_method, method)
+            if (expected_method == 'CreateSnapshot_Task'):
+                self.assertEqual(args[0], "fake_vm_ref")
+                self.assertEqual(kwargs['memory'], False)
+                self.assertEqual(kwargs['quiesce'], True)
+                return 'fake_snapshot_task'
+            elif (expected_method == 'get_dynamic_property'):
+                task_info = mock.Mock()
+                task_info.result = "fake_snapshot_ref"
+                self.assertEqual(('fake_snapshot_task', 'Task', 'info'), args)
+                return task_info
+
+        with contextlib.nested(
+            mock.patch.object(self._session, '_wait_for_task'),
+            mock.patch.object(self._session, '_call_method', fake_call_method)
+        ) as (_wait_for_task, _call_method):
+            snap = self._vmops._create_vm_snapshot(self._instance,
+                                                   "fake_vm_ref")
+            self.assertEqual("fake_snapshot_ref", snap)
+            _wait_for_task.assert_has_calls([
+                   mock.call('fake_snapshot_task')])

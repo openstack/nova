@@ -961,6 +961,26 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.context, self.instance, "Test-Snapshot",
                           lambda *args, **kwargs: None)
 
+    def test_snapshot_delete_vm_snapshot(self):
+        self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0].obj
+        snapshot_ref = vmwareapi_fake.ManagedObjectReference(
+                               value="Snapshot-123",
+                               name="VirtualMachineSnapshot")
+
+        self.mox.StubOutWithMock(vmops.VMwareVMOps,
+                                 '_create_vm_snapshot')
+        self.conn._vmops._create_vm_snapshot(
+                self.instance, fake_vm).AndReturn(snapshot_ref)
+
+        self.mox.StubOutWithMock(vmops.VMwareVMOps,
+                                 '_delete_vm_snapshot')
+        self.conn._vmops._delete_vm_snapshot(
+                self.instance, fake_vm, snapshot_ref).AndReturn(None)
+        self.mox.ReplayAll()
+
+        self._test_snapshot()
+
     def test_reboot(self):
         self._create_vm()
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,

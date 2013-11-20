@@ -1105,6 +1105,11 @@ class FakeVim(object):
                 vm_refs.append(vm_ref)
         return vm_refs
 
+    def _delete_snapshot(self, method, *args, **kwargs):
+        """Deletes a VM snapshot. Here we do nothing for faking sake."""
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
+
     def _delete_disk(self, method, *args, **kwargs):
         """Deletes .vmdk and -flat.vmdk files corresponding to the VM."""
         vmdk_file_path = kwargs.get("name")
@@ -1323,6 +1328,9 @@ class FakeVim(object):
                                                 args[0], "suspended")
         elif attr_name == "CreateSnapshot_Task":
             return lambda *args, **kwargs: self._snapshot_vm(attr_name)
+        elif attr_name == "RemoveSnapshot_Task":
+            return lambda *args, **kwargs: self._delete_snapshot(attr_name,
+                                                *args, **kwargs)
         elif attr_name == "CopyVirtualDisk_Task":
             return lambda *args, **kwargs: self._create_copy_disk(attr_name,
                                                 kwargs.get("destName"))

@@ -769,6 +769,32 @@ class VMwareVMOps(object):
                                                   adapter_type,
                                                   disk_type)
 
+    def _create_vm_snapshot(self, instance, vm_ref):
+        LOG.debug(_("Creating Snapshot of the VM instance"), instance=instance)
+        snapshot_task = self._session._call_method(
+                    self._session._get_vim(),
+                    "CreateSnapshot_Task", vm_ref,
+                    name="%s-snapshot" % instance['uuid'],
+                    description="Taking Snapshot of the VM",
+                    memory=False,
+                    quiesce=True)
+        self._session._wait_for_task(snapshot_task)
+        LOG.debug(_("Created Snapshot of the VM instance"), instance=instance)
+        task_info = self._session._call_method(vim_util,
+                                               "get_dynamic_property",
+                                               snapshot_task, "Task", "info")
+        snapshot = task_info.result
+        return snapshot
+
+    def _delete_vm_snapshot(self, instance, vm_ref, snapshot):
+        LOG.debug(_("Deleting Snapshot of the VM instance"), instance=instance)
+        delete_snapshot_task = self._session._call_method(
+                    self._session._get_vim(),
+                    "RemoveSnapshot_Task", snapshot,
+                    removeChildren=False, consolidate=True)
+        self._session._wait_for_task(delete_snapshot_task)
+        LOG.debug(_("Deleted Snapshot of the VM instance"), instance=instance)
+
     def snapshot(self, context, instance, image_id, update_task_state):
         """Create snapshot from a running VM instance.
 
@@ -807,22 +833,7 @@ class VMwareVMOps(object):
         (vmdk_file_path_before_snapshot, adapter_type, disk_type,
          datastore_name, os_type) = _get_vm_and_vmdk_attribs()
 
-        def _create_vm_snapshot():
-            # Create a snapshot of the VM
-            LOG.debug(_("Creating Snapshot of the VM instance"),
-                      instance=instance)
-            snapshot_task = self._session._call_method(
-                        self._session._get_vim(),
-                        "CreateSnapshot_Task", vm_ref,
-                        name="%s-snapshot" % instance['uuid'],
-                        description="Taking Snapshot of the VM",
-                        memory=False,
-                        quiesce=True)
-            self._session._wait_for_task(snapshot_task)
-            LOG.debug(_("Created Snapshot of the VM instance"),
-                      instance=instance)
-
-        _create_vm_snapshot()
+        snapshot = self._create_vm_snapshot(instance, vm_ref)
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
         def _check_if_tmp_folder_exists():
@@ -850,12 +861,12 @@ class VMwareVMOps(object):
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
 
         def _copy_vmdk_content():
-            # Copy the contents of the disk (or disks, if there were snapshots
-            # done earlier) to a temporary vmdk file.
+            # Consolidate the snapshotted disk to a temporary vmdk.
             copy_spec = self.get_copy_virtual_disk_spec(client_factory,
                                                         adapter_type,
                                                         disk_type)
-            LOG.debug(_('Copying disk data before snapshot of the VM'),
+            LOG.debug(_('Copying snapshotted disk %s.'),
+                      vmdk_file_path_before_snapshot,
                       instance=instance)
             copy_disk_task = self._session._call_method(
                 self._session._get_vim(),
@@ -868,10 +879,13 @@ class VMwareVMOps(object):
                 destSpec=copy_spec,
                 force=False)
             self._session._wait_for_task(copy_disk_task)
-            LOG.debug(_("Copied disk data before snapshot of the VM"),
+            LOG.debug(_('Copied snapshotted disk %s.'),
+                      vmdk_file_path_before_snapshot,
                       instance=instance)
 
         _copy_vmdk_content()
+        # Note(vui): handle snapshot cleanup on exceptions.
+        self._delete_vm_snapshot(instance, vm_ref, snapshot)
 
         cookies = self._session._get_vim().client.options.transport.cookiejar
 
