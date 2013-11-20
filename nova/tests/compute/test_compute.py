@@ -2191,6 +2191,39 @@ class ComputeTestCase(BaseTestCase):
         self._test_reboot(False, fail_reboot=True,
                           fail_running=True)
 
+    def test_get_instance_volume_block_device_info_source_image(self):
+        def _fake_get_instance_volume_bdms(context, instance, legacy=True):
+            bdms = [{
+                'id': 3,
+                'volume_id': u'4cbc9e62-6ba0-45dd-b647-934942ead7d6',
+                'instance_uuid': 'fake-instance',
+                'device_name': '/dev/vda',
+                'connection_info': '{"driver_volume_type": "rbd"}',
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'image_id': 'fake-image-id-1',
+                'boot_index': 0
+            }]
+
+            return bdms
+
+        with mock.patch.object(self.compute, '_get_instance_volume_bdms',
+                               _fake_get_instance_volume_bdms):
+            block_device_info = (
+                self.compute._get_instance_volume_block_device_info(
+                    self.context, self._create_fake_instance())
+            )
+            expected = {
+                'block_device_mapping': [{
+                    'connection_info': {
+                        'driver_volume_type': 'rbd'
+                    },
+                    'mount_device': '/dev/vda',
+                    'delete_on_termination': None
+                }]
+            }
+            self.assertEqual(block_device_info, expected)
+
     def test_set_admin_password(self):
         # Ensure instance can have its admin password set.
         instance = jsonutils.to_primitive(self._create_fake_instance())
