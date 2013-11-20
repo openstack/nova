@@ -968,7 +968,7 @@ def validate_integer(value, name, min_value=None, max_value=None):
     """Make sure that value is a valid integer, potentially within range."""
     try:
         value = int(str(value))
-    except ValueError:
+    except (ValueError, UnicodeEncodeError):
         msg = _('%(value_name)s must be an integer')
         raise exception.InvalidInput(reason=(
             msg % {'value_name': name}))
