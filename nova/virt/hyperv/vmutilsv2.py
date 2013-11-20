@@ -51,9 +51,6 @@ class VMUtilsV2(vmutils.VMUtils):
     _SNAPSHOT_FULL = 2
 
     _METRIC_AGGR_CPU_AVG = 'Aggregated Average CPU Utilization'
-    _METRIC_AGGR_DISK_R = 'Aggregated Disk Data Read'
-    _METRIC_AGGR_DISK_W = 'Aggregated Disk Data Written'
-
     _METRIC_ENABLED = 2
 
     _STORAGE_ALLOC_SETTING_DATA_CLASS = 'Msvm_StorageAllocationSettingData'
@@ -229,19 +226,27 @@ class VMUtilsV2(vmutils.VMUtils):
         self._add_virt_resource(eth_port_data, vm.path_())
 
     def enable_vm_metrics_collection(self, vm_name):
-        metric_names = [self._METRIC_AGGR_CPU_AVG,
-                        self._METRIC_AGGR_DISK_R,
-                        self._METRIC_AGGR_DISK_W]
+        metric_names = [self._METRIC_AGGR_CPU_AVG]
 
         vm = self._lookup_vm_check(vm_name)
         metric_svc = self._conn.Msvm_MetricService()[0]
+        (disks, volumes) = self._get_vm_disks(vm)
+        filtered_disks = [d for d in disks if
+                          d.ResourceSubType is not self._IDE_DVD_RES_SUB_TYPE]
+
+        # enable metrics for disk.
+        for disk in filtered_disks:
+            self._enable_metrics(metric_svc, disk)
 
         for metric_name in metric_names:
             metric_def = self._conn.CIM_BaseMetricDefinition(Name=metric_name)
             if not metric_def:
                 LOG.debug(_("Metric not found: %s") % metric_name)
             else:
-                metric_svc.ControlMetrics(
-                    Subject=vm.path_(),
-                    Definition=metric_def[0].path_(),
-                    MetricCollectionEnabled=self._METRIC_ENABLED)
+                self._enable_metrics(metric_svc, vm, metric_def[0].path_())
+
+    def _enable_metrics(self, metric_svc, element, definition_path=None):
+        metric_svc.ControlMetrics(
+            Subject=element.path_(),
+            Definition=definition_path,
+            MetricCollectionEnabled=self._METRIC_ENABLED)
