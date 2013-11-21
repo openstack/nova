@@ -240,7 +240,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         if callable(xml):
             xml = xml()
         # execute in a native thread and block current greenthread until done
-        if not CONF.libvirt_nonblocking:
+        if not CONF.libvirt.api_thread_pool:
             # NOTE(maoy): the original implementation is to have the API called
             # in the thread pool no matter what.
             tpool.execute(self._conn.nwfilterDefineXML, xml)

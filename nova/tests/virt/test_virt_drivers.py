@@ -98,7 +98,8 @@ class _FakeDriverBackendTestCase(object):
         self.flags(rescue_image_id="2",
                    rescue_kernel_id="3",
                    rescue_ramdisk_id=None,
-                   libvirt_snapshots_directory='./')
+                   snapshots_directory='./',
+                   group='libvirt')
 
         def fake_extend(image, size):
             pass
@@ -702,7 +703,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         return self.ctxt
 
     def test_force_hard_reboot(self):
-        self.flags(libvirt_wait_soft_reboot_seconds=0)
+        self.flags(wait_soft_reboot_seconds=0, group='libvirt')
         self.test_reboot()
 
     def test_migrate_disk_and_power_off(self):

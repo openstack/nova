@@ -51,7 +51,7 @@ CONF.register_opts(opts, baremetal_group)
 
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('use_ipv6', 'nova.netconf')
-CONF.import_opt('libvirt_volume_drivers', 'nova.virt.libvirt.driver')
+CONF.import_opt('volume_drivers', 'nova.virt.libvirt.driver', group='libvirt')
 
 LOG = logging.getLogger(__name__)
 
@@ -213,7 +213,7 @@ class LibvirtVolumeDriver(VolumeDriver):
     def __init__(self, virtapi):
         super(LibvirtVolumeDriver, self).__init__(virtapi)
         self.volume_drivers = {}
-        for driver_str in CONF.libvirt_volume_drivers:
+        for driver_str in CONF.libvirt.volume_drivers:
             driver_type, _sep, driver = driver_str.partition('=')
             driver_class = importutils.import_class(driver)
             self.volume_drivers[driver_type] = driver_class(self)

@@ -786,7 +786,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                 'ephemeral_gb': 20,
                 'instance_type_id': 2}
         self.root_device_name = '/dev/vda'
-        self.libvirt_type = 'kvm'
+        self.virt_type = 'kvm'
         self.instance_type = {'swap': 4}
         self.patcher = mock.patch('nova.compute.flavors.extract_flavor',
                                   return_value=self.instance_type)
@@ -839,7 +839,7 @@ class DefaultDeviceNamesTestCase(test.TestCase):
         self.patcher.stop()
 
     def _test_default_device_names(self, update_function, *block_device_lists):
-        blockinfo.default_device_names(self.libvirt_type, self.instance,
+        blockinfo.default_device_names(self.virt_type, self.instance,
                                        self.root_device_name,
                                        update_function, *block_device_lists)
 

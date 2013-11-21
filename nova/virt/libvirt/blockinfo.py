@@ -121,8 +121,8 @@ def get_dev_prefix_for_disk_bus(disk_bus):
        exception if the disk bus is unknown.
     """
 
-    if CONF.libvirt_disk_prefix:
-        return CONF.libvirt_disk_prefix
+    if CONF.libvirt.disk_prefix:
+        return CONF.libvirt.disk_prefix
     if disk_bus == "ide":
         return "hd"
     elif disk_bus == "virtio":
