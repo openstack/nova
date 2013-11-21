@@ -660,6 +660,11 @@
 # where instances are stored on disk (string value)
 #instances_path=$state_path/instances
 
+# Where cached images are stored under $instances_path.This is
+# NOT the full path - just a folder name.For per-compute-host
+# cached images, set to _base_$my_ip (string value)
+#image_cache_subdirectory_name=_base
+
 # Generate periodic compute.instance.exists notifications
 # (boolean value)
 #instance_usage_audit=false
@@ -1968,14 +1973,9 @@
 # Options defined in nova.virt.libvirt.imagecache
 #
 
-# Where cached images are stored under $instances_path.This is
-# NOT the full path - just a folder name.For per-compute-host
-# cached images, set to _base_$my_ip (string value)
-#base_dir_name=_base
-
 # Allows image information files to be stored in non-standard
 # locations (string value)
-#image_info_filename_pattern=$instances_path/$base_dir_name/%(image)s.info
+#image_info_filename_pattern=$instances_path/$image_cache_subdirectory_name/%(image)s.info
 
 # Should unused base images be removed? (boolean value)
 #remove_unused_base_images=true

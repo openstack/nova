@@ -83,7 +83,7 @@ CONF = cfg.CONF
 CONF.import_opt('compute_manager', 'nova.service')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
-CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
+CONF.import_opt('image_cache_subdirectory_name', 'nova.compute.manager')
 CONF.import_opt('instances_path', 'nova.compute.manager')
 
 _fake_network_info = fake_network.fake_get_instance_nw_info
@@ -223,7 +223,8 @@ class CacheConcurrencyTestCase(test.TestCase):
         fileutils.ensure_tree(self.lock_path)
 
         def fake_exists(fname):
-            basedir = os.path.join(CONF.instances_path, CONF.base_dir_name)
+            basedir = os.path.join(CONF.instances_path,
+                                   CONF.image_cache_subdirectory_name)
             if fname == basedir or fname == self.lock_path:
                 return True
             return False
@@ -3493,10 +3494,11 @@ class LibvirtConnTestCase(test.TestCase):
         if os.path.isdir(path):
             shutil.rmtree(path)
 
-        path = os.path.join(CONF.instances_path, CONF.base_dir_name)
+        path = os.path.join(CONF.instances_path,
+                            CONF.image_cache_subdirectory_name)
         if os.path.isdir(path):
             shutil.rmtree(os.path.join(CONF.instances_path,
-                                       CONF.base_dir_name))
+                                       CONF.image_cache_subdirectory_name))
 
     def test_spawn_without_image_meta(self):
         self.create_image_called = False

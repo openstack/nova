@@ -42,13 +42,9 @@ from nova.virt.libvirt import utils as virtutils
 LOG = logging.getLogger(__name__)
 
 imagecache_opts = [
-    cfg.StrOpt('base_dir_name',
-               default='_base',
-               help="Where cached images are stored under $instances_path."
-                    "This is NOT the full path - just a folder name."
-                    "For per-compute-host cached images, set to _base_$my_ip"),
     cfg.StrOpt('image_info_filename_pattern',
-               default='$instances_path/$base_dir_name/%(image)s.info',
+               default='$instances_path/$image_cache_subdirectory_name/'
+                       '%(image)s.info',
                help='Allows image information files to be stored in '
                     'non-standard locations'),
     cfg.BoolOpt('remove_unused_base_images',
@@ -80,6 +76,7 @@ CONF = cfg.CONF
 CONF.register_opts(imagecache_opts)
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('instances_path', 'nova.compute.manager')
+CONF.import_opt('image_cache_subdirectory_name', 'nova.compute.manager')
 
 
 def get_cache_fname(images, key):
@@ -344,9 +341,10 @@ class ImageCacheManager(object):
                                'backing': backing_file})
 
                     if backing_file:
-                        backing_path = os.path.join(CONF.instances_path,
-                                                    CONF.base_dir_name,
-                                                    backing_file)
+                        backing_path = os.path.join(
+                            CONF.instances_path,
+                            CONF.image_cache_subdirectory_name,
+                            backing_file)
                         if backing_path not in inuse_images:
                             inuse_images.append(backing_path)
 
@@ -569,7 +567,8 @@ class ImageCacheManager(object):
         # created, but may remain from previous versions.
         self._reset_state()
 
-        base_dir = os.path.join(CONF.instances_path, CONF.base_dir_name)
+        base_dir = os.path.join(CONF.instances_path,
+                                CONF.image_cache_subdirectory_name)
         if not os.path.exists(base_dir):
             LOG.debug(_('Skipping verification, no base directory at %s'),
                       base_dir)

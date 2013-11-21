@@ -235,7 +235,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.stubs.Set(virtutils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
-        found = os.path.join(CONF.instances_path, CONF.base_dir_name,
+        found = os.path.join(CONF.instances_path,
+                             CONF.image_cache_subdirectory_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -257,7 +258,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                        lambda x: ('e97222e91fc4241f49a7f520d1dcf446751129b3_'
                                   '10737418240'))
 
-        found = os.path.join(CONF.instances_path, CONF.base_dir_name,
+        found = os.path.join(CONF.instances_path,
+                             CONF.image_cache_subdirectory_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_'
                              '10737418240')
 
@@ -278,7 +280,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.stubs.Set(virtutils, 'get_disk_backing_file',
                        lambda x: 'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
-        found = os.path.join(CONF.instances_path, CONF.base_dir_name,
+        found = os.path.join(CONF.instances_path,
+                             CONF.image_cache_subdirectory_name,
                              'e97222e91fc4241f49a7f520d1dcf446751129b3_sm')
 
         image_cache_manager = imagecache.ImageCacheManager()
@@ -561,9 +564,9 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         hashed_22 = '12c6fc06c99a462375eeb3f43dfd832b08ca9e17'
         hashed_42 = '92cfceb39d57d914ed8b14d0e37643de0797ae56'
 
-        self.flags(instances_path='/instance_path')
-        self.flags(base_dir_name='_base')
-        self.flags(remove_unused_base_images=True)
+        self.flags(instances_path='/instance_path',
+                   image_cache_subdirectory_name='_base',
+                   remove_unused_base_images=True)
 
         base_file_list = ['00000001',
                           'ephemeral_0_20_None',
