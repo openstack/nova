@@ -2000,6 +2000,12 @@ class VMOps(object):
                      migrate_data=None):
         try:
             vm_ref = self._get_vm_opaque_ref(instance)
+            if migrate_data is not None:
+                (kernel, ramdisk) = vm_utils.lookup_kernel_ramdisk(
+                    self._session, vm_ref)
+                migrate_data['kernel-file'] = kernel
+                migrate_data['ramdisk-file'] = ramdisk
+
             if block_migration:
                 if not migrate_data:
                     raise exception.InvalidParameterValue('Block Migration '
@@ -2022,11 +2028,17 @@ class VMOps(object):
                 self._session.call_xenapi("VM.pool_migrate", vm_ref,
                                           host_ref, {"live": "true"})
             post_method(context, instance, destination_hostname,
-                        block_migration)
+                        block_migration, migrate_data)
         except Exception:
             with excutils.save_and_reraise_exception():
                 recover_method(context, instance, destination_hostname,
                                block_migration)
+
+    def post_live_migration(self, context, instance, migrate_data=None):
+        if migrate_data is not None:
+            vm_utils.destroy_kernel_ramdisk(self._session, instance,
+                                            migrate_data.get('kernel-file'),
+                                            migrate_data.get('ramdisk-file'))
 
     def post_live_migration_at_destination(self, context, instance,
                                            network_info, block_migration,
@@ -2035,6 +2047,8 @@ class VMOps(object):
         # applied security groups, however this requires changes to XenServer
         self._prepare_instance_filter(instance, network_info)
         self.firewall_driver.apply_instance_filter(instance, network_info)
+        vm_utils.create_kernel_and_ramdisk(context, self._session, instance,
+                                           instance['name'])
 
         # NOTE(johngarbutt) workaround XenServer bug CA-98606
         vm_ref = self._get_vm_opaque_ref(instance)
