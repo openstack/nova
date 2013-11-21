@@ -196,7 +196,7 @@ def is_image_partitionless(image, use_cow=False):
             utils.execute('e2label', image)
         except processutils.ProcessExecutionError as e:
             LOG.debug(_('Unable to determine label for image %(image)s with '
-                        'error %(errror)s. Cannot resize.'),
+                        'error %(error)s. Cannot resize.'),
                       {'image': image,
                        'error': e})
             return False
