@@ -3960,7 +3960,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn._close_callback(conn._wrapped_conn, 'ERROR!', '')
         self.assertTrue(service_mock.disabled and
-                        service_mock.disabled_reason == disabled_reason)
+                        service_mock.disabled_reason.endswith(disabled_reason))
         self.assertRaises(exception.HypervisorUnavailable,
                           conn.get_num_instances)
 
