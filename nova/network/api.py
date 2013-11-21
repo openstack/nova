@@ -28,6 +28,7 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import instance_info_cache as info_cache_obj
+from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import policy
@@ -81,7 +82,8 @@ def update_instance_cache_with_nw_info(api, context, instance, nw_info=None,
         ic.network_info = nw_info
         ic.save(update_cells=update_cells)
     except Exception:
-        LOG.exception(_('Failed storing info cache'), instance=instance)
+        with excutils.save_and_reraise_exception():
+            LOG.exception(_('Failed storing info cache'), instance=instance)
 
 
 def wrap_check_policy(func):

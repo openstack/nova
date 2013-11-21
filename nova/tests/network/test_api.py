@@ -131,6 +131,14 @@ class ApiTestCase(test.TestCase):
         self.stubs.Set(self.network_api.db, 'instance_info_cache_update',
                        fake_instance_info_cache_update)
 
+        def fake_update_instance_cache_with_nw_info(api, context, instance,
+                                                    nw_info=None,
+                                                    update_cells=True):
+            return
+
+        self.stubs.Set(api, "update_instance_cache_with_nw_info",
+                       fake_update_instance_cache_with_nw_info)
+
         self.network_api.associate_floating_ip(self.context,
                                                new_instance,
                                                '172.24.4.225',
