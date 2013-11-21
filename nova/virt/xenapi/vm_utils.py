@@ -216,13 +216,13 @@ class ImageType(object):
         }.get(image_type_id)
 
 
-def get_vm_device_id(session, image_meta):
+def get_vm_device_id(session, image_properties):
     # NOTE: device_id should be 2 for windows VMs which run new xentools
     # (>=6.1). Refer to http://support.citrix.com/article/CTX135099 for more
     # information.
-    if image_meta is None:
-        image_meta = {}
-    device_id = image_meta.get('xenapi_device_id')
+    if image_properties is None:
+        image_properties = {}
+    device_id = image_properties.get('xenapi_device_id')
 
     # The device_id is required to be set for hypervisor version 6.1 and above
     if device_id:
