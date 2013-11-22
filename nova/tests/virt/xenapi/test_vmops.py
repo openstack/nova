@@ -83,6 +83,7 @@ class VMOpsTestCase(VMOpsTestBase):
                                                   vm_shutdown=True):
         instance = {'name': 'foo',
                     'task_state': task_states.RESIZE_MIGRATING}
+        context = 'fake_context'
 
         self.mox.StubOutWithMock(vm_utils, 'lookup')
         self.mox.StubOutWithMock(self._vmops, '_destroy')
@@ -107,7 +108,7 @@ class VMOpsTestCase(VMOpsTestBase):
 
         self.mox.ReplayAll()
 
-        self._vmops.finish_revert_migration(instance, [])
+        self._vmops.finish_revert_migration(context, instance, [])
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(True, True)

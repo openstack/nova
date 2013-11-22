@@ -303,7 +303,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute.driver.plug_vifs(instance, [])
         self.compute._get_instance_volume_block_device_info(
             self.context, instance).AndReturn([])
-        self.compute.driver.finish_revert_migration(instance, [], [], power_on)
+        self.compute.driver.finish_revert_migration(self.context, instance,
+                                                    [], [], power_on)
         instance.save()
         self.compute.driver.get_info(instance).AndReturn(
             {'state': power_state.SHUTDOWN})

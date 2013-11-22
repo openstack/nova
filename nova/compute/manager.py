@@ -672,7 +672,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 block_dev_info = self._get_instance_volume_block_device_info(
                             context, instance)
 
-                self.driver.finish_revert_migration(
+                self.driver.finish_revert_migration(context,
                     instance, net_info, block_dev_info, power_on)
 
             except Exception as e:
@@ -2952,7 +2952,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                     context, instance, refresh_conn_info=True)
 
             power_on = old_vm_state != vm_states.STOPPED
-            self.driver.finish_revert_migration(instance,
+            self.driver.finish_revert_migration(context, instance,
                                        network_info,
                                        block_device_info, power_on)
 

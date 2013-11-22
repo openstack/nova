@@ -251,11 +251,12 @@ class XenAPIDriver(driver.ComputeDriver):
         # TODO(Vek): Need to pass context in for access to auth_token
         self._vmops.confirm_migration(migration, instance, network_info)
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         """Finish reverting a resize."""
         # NOTE(vish): Xen currently does not use network info.
-        self._vmops.finish_revert_migration(instance, block_device_info,
+        self._vmops.finish_revert_migration(context, instance,
+                                            block_device_info,
                                             power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,
