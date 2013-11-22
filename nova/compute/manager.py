@@ -919,6 +919,32 @@ class ComputeManager(manager.Manager):
             instance.vm_state = vm_states.ACTIVE
             instance.save()
 
+        if instance.task_state == task_states.POWERING_OFF:
+            try:
+                LOG.debug(_("Instance in transitional state %s at start-up "
+                            "retrying stop request"),
+                            instance['task_state'], instance=instance)
+                self.stop_instance(context, instance)
+            except Exception:
+                # we don't want that an exception blocks the init_host
+                msg = _('Failed to stop instance')
+                LOG.exception(msg, instance=instance)
+            finally:
+                return
+
+        if instance.task_state == task_states.POWERING_ON:
+            try:
+                LOG.debug(_("Instance in transitional state %s at start-up "
+                            "retrying start request"),
+                            instance['task_state'], instance=instance)
+                self.start_instance(context, instance)
+            except Exception:
+                # we don't want that an exception blocks the init_host
+                msg = _('Failed to start instance')
+                LOG.exception(msg, instance=instance)
+            finally:
+                return
+
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
             self.driver.plug_vifs(instance, net_info)
