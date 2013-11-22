@@ -509,6 +509,10 @@ class VolumeNotFound(NotFound):
     msg_fmt = _("Volume %(volume_id)s could not be found.")
 
 
+class VolumeBDMNotFound(NotFound):
+    msg_fmt = _("No volume Block Device Mapping with id %(volume_id)s.")
+
+
 class SnapshotNotFound(NotFound):
     ec2_code = 'InvalidSnapshotID.NotFound'
     msg_fmt = _("Snapshot %(snapshot_id)s could not be found.")
