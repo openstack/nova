@@ -2050,9 +2050,8 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
-                                    vm_states.PAUSED, vm_states.SUSPENDED,
-                                    vm_states.ERROR],
+    @check_instance_state(vm_state=set(
+                    vm_states.ALLOW_SOFT_REBOOT + vm_states.ALLOW_HARD_REBOOT),
                           task_state=[None, task_states.REBOOTING,
                                       task_states.REBOOTING_HARD,
                                       task_states.RESUMING,
@@ -2062,10 +2061,7 @@ class API(base.Base):
     def reboot(self, context, instance, reboot_type):
         """Reboot the given instance."""
         if (reboot_type == 'SOFT' and
-                (instance['vm_state'] in [vm_states.STOPPED,
-                                          vm_states.PAUSED,
-                                          vm_states.SUSPENDED,
-                                          vm_states.ERROR])):
+            (instance['vm_state'] not in vm_states.ALLOW_SOFT_REBOOT)):
             raise exception.InstanceInvalidState(
                 attr='vm_state',
                 instance_uuid=instance['uuid'],

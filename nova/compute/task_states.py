@@ -55,7 +55,11 @@ RESIZE_CONFIRMING = 'resize_confirming'
 
 # possible task states during reboot()
 REBOOTING = 'rebooting'
+REBOOT_PENDING = 'reboot_pending'
+REBOOT_STARTED = 'reboot_started'
 REBOOTING_HARD = 'rebooting_hard'
+REBOOT_PENDING_HARD = 'reboot_pending_hard'
+REBOOT_STARTED_HARD = 'reboot_started_hard'
 
 # possible task states during pause()
 PAUSING = 'pausing'

@@ -23,6 +23,8 @@ import mock
 from oslo.config import cfg
 
 from nova.compute import flavors
+from nova.compute import power_state
+from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova import context
 from nova import db
@@ -721,3 +723,27 @@ class ComputeUtilsGetNWInfo(test.TestCase):
         self.assertIsNone(inst['info_cache'])
         result = compute_utils.get_nw_info_for_instance(inst)
         self.assertEqual(jsonutils.dumps([]), result.json())
+
+
+class ComputeUtilsGetRebootTypes(test.TestCase):
+    def setUp(self):
+        super(ComputeUtilsGetRebootTypes, self).setUp()
+        self.context = context.RequestContext('fake', 'fake')
+
+    def test_get_reboot_type_started_soft(self):
+        reboot_type = compute_utils.get_reboot_type(task_states.REBOOT_STARTED,
+                                                    power_state.RUNNING)
+        self.assertEqual(reboot_type, 'SOFT')
+
+    def test_get_reboot_type_pending_soft(self):
+        reboot_type = compute_utils.get_reboot_type(task_states.REBOOT_PENDING,
+                                                    power_state.RUNNING)
+        self.assertEqual(reboot_type, 'SOFT')
+
+    def test_get_reboot_type_hard(self):
+        reboot_type = compute_utils.get_reboot_type('foo', power_state.RUNNING)
+        self.assertEqual(reboot_type, 'HARD')
+
+    def test_get_reboot_not_running_hard(self):
+        reboot_type = compute_utils.get_reboot_type('foo', 'bar')
+        self.assertEqual(reboot_type, 'HARD')

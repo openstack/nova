@@ -360,7 +360,9 @@ class MiscFunctionsTest(test.TestCase):
     def test_task_and_vm_state_from_status(self):
         fixture1 = 'reboot'
         actual = common.task_and_vm_state_from_status(fixture1)
-        expected = [vm_states.ACTIVE], [task_states.REBOOTING]
+        expected = [vm_states.ACTIVE], [task_states.REBOOT_PENDING,
+                                        task_states.REBOOT_STARTED,
+                                        task_states.REBOOTING]
         self.assertEqual(expected, actual)
 
         fixture2 = 'resize'

@@ -848,6 +848,34 @@ class ComputeManager(manager.Manager):
             finally:
                 return
 
+        try_reboot, reboot_type = self._retry_reboot(context, instance)
+        current_power_state = self._get_power_state(context, instance)
+
+        if try_reboot:
+            LOG.debug(_("Instance in transitional state (%(task_state)s) at "
+                        "start-up and power state is (%(power_state)s), "
+                        "triggering reboot"),
+                       {'task_state': instance['task_state'],
+                        'power_state': current_power_state},
+                       instance=instance)
+            self.compute_rpcapi.reboot_instance(context, instance,
+                                                block_device_info=None,
+                                                reboot_type=reboot_type)
+            return
+
+        elif (current_power_state == power_state.RUNNING and
+           instance.task_state in [task_states.REBOOT_STARTED,
+                                   task_states.REBOOT_STARTED_HARD]):
+            LOG.warning(_("Instance in transitional state "
+                          "(%(task_state)s) at start-up and power state "
+                          "is (%(power_state)s), clearing task state"),
+                        {'task_state': instance['task_state'],
+                         'power_state': current_power_state},
+                        instance=instance)
+            instance = self._instance_update(context, instance.uuid,
+                                             vm_state=vm_states.ACTIVE,
+                                             task_state=None)
+
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
             self.driver.plug_vifs(instance, net_info)
@@ -916,6 +944,27 @@ class ComputeManager(manager.Manager):
             except NotImplementedError:
                 LOG.warning(_('Hypervisor driver does not support '
                               'firewall rules'), instance=instance)
+
+    def _retry_reboot(self, context, instance):
+        current_power_state = self._get_power_state(context, instance)
+        current_task_state = instance.task_state
+        retry_reboot = False
+        reboot_type = compute_utils.get_reboot_type(current_task_state,
+                                                    current_power_state)
+
+        pending_soft = (current_task_state == task_states.REBOOT_PENDING and
+                        instance.vm_state in vm_states.ALLOW_SOFT_REBOOT)
+        pending_hard = (current_task_state == task_states.REBOOT_PENDING_HARD
+                        and instance.vm_state in vm_states.ALLOW_HARD_REBOOT)
+        started_not_running = (current_task_state in
+                               [task_states.REBOOT_STARTED,
+                                task_states.REBOOT_STARTED_HARD] and
+                               current_power_state != power_state.RUNNING)
+
+        if pending_soft or pending_hard or started_not_running:
+            retry_reboot = True
+
+        return retry_reboot, reboot_type
 
     def handle_lifecycle_event(self, event):
         LOG.info(_("Lifecycle event %(state)d on VM %(uuid)s") %
@@ -2528,6 +2577,17 @@ class ComputeManager(manager.Manager):
     def reboot_instance(self, context, instance, block_device_info,
                         reboot_type):
         """Reboot an instance on this host."""
+        # acknowledge the request made it to the manager
+        if reboot_type == "SOFT":
+            instance.task_state = task_states.REBOOT_PENDING
+            expected_states = (task_states.REBOOTING,
+                               task_states.REBOOT_PENDING,
+                               task_states.REBOOT_STARTED)
+        else:
+            instance.task_state = task_states.REBOOT_PENDING_HARD
+            expected_states = (task_states.REBOOTING_HARD,
+                               task_states.REBOOT_PENDING_HARD,
+                               task_states.REBOOT_STARTED_HARD)
         context = context.elevated()
         LOG.audit(_("Rebooting instance"), context=context, instance=instance)
 
@@ -2541,7 +2601,7 @@ class ComputeManager(manager.Manager):
         current_power_state = self._get_power_state(context, instance)
 
         instance.power_state = current_power_state
-        instance.save()
+        instance.save(expected_task_state=expected_states)
 
         if instance['power_state'] != power_state.RUNNING:
             state = instance['power_state']
@@ -2562,7 +2622,13 @@ class ComputeManager(manager.Manager):
             else:
                 new_vm_state = vm_states.ACTIVE
             new_power_state = None
-
+            if reboot_type == "SOFT":
+                instance.task_state = task_states.REBOOT_STARTED
+                expected_state = task_states.REBOOT_PENDING
+            else:
+                instance.task_state = task_states.REBOOT_STARTED_HARD
+                expected_state = task_states.REBOOT_PENDING_HARD
+            instance.save(expected_task_state=expected_state)
             self.driver.reboot(context, instance,
                                network_info,
                                reboot_type,
