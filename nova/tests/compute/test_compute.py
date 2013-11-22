@@ -5420,24 +5420,21 @@ class ComputeTestCase(BaseTestCase):
 
     def test_complete_partial_deletion(self):
         admin_context = context.get_admin_context()
-        instance = {
-            'id': '1',
-            'vm_state': vm_states.DELETED,
-            'task_state': None,
-            'system_metadata': [{'key': 'fake_key', 'value': 'fake_value'}],
-            'vcpus': 1,
-            'memory_mb': 1,
-            'project_id': 'fake-prj',
-            'user_id': 'fake-user',
-            'deleted': 0
-            }
+        instance = instance_obj.Instance()
+        instance.id = 1
+        instance.vm_state = vm_states.DELETED
+        instance.task_state = None
+        instance.system_metadata = {'fake_key': 'fake_value'}
+        instance.vcpus = 1
+        instance.memory_mb = 1
+        instance.project_id = 'fake-prj'
+        instance.user_id = 'fake-user'
+        instance.deleted = False
 
-        def fake_conductor(context, instance):
-            instance['deleted'] = instance['id']
+        def fake_destroy():
+            instance.deleted = True
 
-        self.stubs.Set(self.compute.conductor_api,
-                       'instance_destroy',
-                        fake_conductor)
+        self.stubs.Set(instance, 'destroy', fake_destroy)
 
         self.stubs.Set(self.compute,
                        '_get_instance_volume_bdms',
@@ -5451,14 +5448,14 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute._complete_partial_deletion(admin_context, instance)
 
-        self.assertFalse(instance['deleted'] == 0)
+        self.assertFalse(instance.deleted == 0)
 
     def test_init_instance_for_partial_deletion(self):
         admin_context = context.get_admin_context()
-        instance = {'id': '1',
-                    'vm_state': vm_states.DELETED,
-                    'deleted': 0
-                    }
+        instance = instance_obj.Instance(admin_context)
+        instance.id = 1
+        instance.vm_state = vm_states.DELETED
+        instance.deleted = False
 
         def fake_partial_deletion(context, instance):
             instance['deleted'] = instance['id']
@@ -5472,10 +5469,11 @@ class ComputeTestCase(BaseTestCase):
 
     def test_partial_deletion_raise_exception(self):
         admin_context = context.get_admin_context()
-        instance = {'id': '1',
-                    'vm_state': vm_states.DELETED,
-                    'deleted': 0
-                    }
+        instance = instance_obj.Instance(admin_context)
+        instance.id = 1
+        instance.vm_state = vm_states.DELETED
+        instance.deleted = False
+
         self.mox.StubOutWithMock(self.compute, '_complete_partial_deletion')
         self.compute._complete_partial_deletion(
                                  admin_context, instance).AndRaise(ValueError)
