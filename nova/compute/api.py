@@ -606,15 +606,25 @@ class API(base.Base):
             if int(image.get('min_disk') or 0) > root_gb:
                     raise exception.FlavorDiskTooSmall()
 
-    def _check_and_transform_bdm(self, base_options, min_count, max_count,
-                                 block_device_mapping, legacy_bdm):
+    def _check_and_transform_bdm(self, base_options, image_meta, min_count,
+                                 max_count, block_device_mapping, legacy_bdm):
+        # NOTE (ndipanov): Assume root dev name is 'vda' if not supplied.
+        #                  It's needed for legacy conversion to work.
+        root_device_name = (base_options.get('root_device_name') or 'vda')
+        image_ref = base_options.get('image_ref', '')
+
+        # Get the block device mappings defined by the image.
+        image_defined_bdms = \
+            image_meta.get('properties', {}).get('block_device_mapping', [])
+
         if legacy_bdm:
-            # NOTE (ndipanov): Assume root dev name is 'vda' if not supplied.
-            #                  It's needed for legacy conversion to work.
-            root_device_name = (base_options.get('root_device_name') or 'vda')
+            block_device_mapping += image_defined_bdms
             block_device_mapping = block_device.from_legacy_mapping(
-                block_device_mapping, base_options.get('image_ref', ''),
-                root_device_name)
+                 block_device_mapping, image_ref, root_device_name)
+        elif image_defined_bdms:
+            # NOTE (ndipanov): For now assume that image mapping is legacy
+            block_device_mapping += block_device.from_legacy_mapping(
+                image_defined_bdms, None, root_device_name)
 
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: bdm['source_type'] == 'volume',
@@ -874,7 +884,7 @@ class API(base.Base):
                 block_device_mapping, auto_disk_config, reservation_id)
 
         block_device_mapping = self._check_and_transform_bdm(
-            base_options, min_count, max_count,
+            base_options, boot_meta, min_count, max_count,
             block_device_mapping, legacy_bdm)
 
         instances = self._provision_instances(context, instance_type,
@@ -1043,15 +1053,10 @@ class API(base.Base):
             image_mapping = self._prepare_image_mapping(instance_type,
                                                 instance_uuid, image_mapping)
 
-        # NOTE (ndipanov): For now assume that image mapping is legacy
-        image_bdm = block_device.from_legacy_mapping(
-            image_properties.get('block_device_mapping', []),
-            None, instance['root_device_name'])
-
         self._validate_bdm(context, instance, instance_type,
-                           block_device_mapping + image_mapping + image_bdm)
+                           block_device_mapping + image_mapping)
 
-        for mapping in (image_mapping, image_bdm, block_device_mapping):
+        for mapping in (image_mapping, block_device_mapping):
             if not mapping:
                 continue
             self._update_block_device_mapping(context,
