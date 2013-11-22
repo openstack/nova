@@ -1034,7 +1034,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                        network_info, block_device_info,
                                        injected_files, admin_password,
                                        set_access_ip=set_access_ip)
-        except exception.InstanceNotFound:
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the spawn
             # Make sure the async call finishes
             msg = _("Instance disappeared during build")
@@ -1050,18 +1051,12 @@ class ComputeManager(manager.SchedulerDependentManager):
                 instance_uuid=instance['uuid'],
                 reason=msg)
         except exception.UnexpectedTaskStateError as e:
-            exc_info = sys.exc_info()
-            # Make sure the async call finishes
-            if network_info is not None:
-                network_info.wait(do_raise=False)
-            actual_task_state = e.kwargs.get('actual', None)
-            if actual_task_state == 'deleting':
-                msg = _('Instance was deleted during spawn.')
-                LOG.debug(msg, instance=instance)
-                raise exception.BuildAbortException(
-                        instance_uuid=instance['uuid'], reason=msg)
-            else:
-                raise exc_info[0], exc_info[1], exc_info[2]
+            # Don't try to reschedule, just log and reraise.
+            with excutils.save_and_reraise_exception():
+                LOG.debug(e.format_message(), instance=instance)
+                # Make sure the async call finishes
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
         except Exception:
             exc_info = sys.exc_info()
             # try to re-schedule instance:
@@ -2475,7 +2470,8 @@ class ComputeManager(manager.SchedulerDependentManager):
 
             self._notify_about_instance_usage(context, instance,
                                               "snapshot.end")
-        except exception.InstanceNotFound:
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the snapshot
             # Quickly bail out of here
             msg = _("Instance disappeared during snapshot")
@@ -2483,13 +2479,6 @@ class ComputeManager(manager.SchedulerDependentManager):
         except exception.ImageNotFound:
             msg = _("Image not found")
             LOG.debug(msg, instance=instance)
-        except exception.UnexpectedTaskStateError as e:
-            actual_task_state = e.kwargs.get('actual', None)
-            if actual_task_state == 'deleting':
-                msg = _('Instance was deleted during snapshot.')
-                LOG.debug(msg, instance=instance)
-            else:
-                raise
 
     @rpc_common.client_exceptions(NotImplementedError)
     def volume_snapshot_create(self, context, instance, volume_id,
