@@ -310,7 +310,7 @@ class PowerVMDriver(driver.ComputeDriver):
         new_name = self._get_resize_name(instance['name'])
         self._powervm.destroy(new_name)
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         """Finish reverting a resize."""
 

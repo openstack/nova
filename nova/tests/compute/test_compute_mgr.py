@@ -311,7 +311,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         utils.instance_sys_meta(instance).AndReturn(sys_meta)
         self.compute._get_instance_volume_block_device_info(
             self.context, instance).AndReturn([])
-        self.compute.driver.finish_revert_migration(instance, [], [], power_on)
+        self.compute.driver.finish_revert_migration(self.context, instance,
+                                                    [], [], power_on)
         self.compute._instance_update(self.context, instance['uuid'],
                                       task_state=None).AndReturn(fixed)
         self.compute.driver.get_info(fixed).AndReturn(

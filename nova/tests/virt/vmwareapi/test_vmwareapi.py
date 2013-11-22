@@ -965,7 +965,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                        fake_wait_for_task)
 
         # perform the revert on our stubbed methods
-        self.conn.finish_revert_migration(instance=self.instance,
+        self.conn.finish_revert_migration(self.context,
+                                          instance=self.instance,
                                           network_info=None,
                                           power_on=power_on)
 
