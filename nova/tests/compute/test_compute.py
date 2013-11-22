@@ -1404,6 +1404,20 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance)
         self.assertIn('instance_update', called)
 
+    def test_run_instance_bails_on_deleting_instance(self):
+        # Make sure that run_instance() will quickly ignore a deleting instance
+        called = {}
+        instance = self._create_fake_instance()
+
+        def fake_instance_update(self, *a, **args):
+            called['instance_update'] = True
+            raise exception.UnexpectedDeletingTaskStateError(
+                expected='scheduling', actual='deleting')
+        self.stubs.Set(self.compute, '_instance_update', fake_instance_update)
+
+        self.compute.run_instance(self.context, instance)
+        self.assertIn('instance_update', called)
+
     def test_run_instance_bails_on_missing_instance_2(self):
         # Make sure that run_instance() will quickly ignore a deleted instance
         called = {}
