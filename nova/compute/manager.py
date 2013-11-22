@@ -4145,11 +4145,17 @@ class ComputeManager(manager.SchedulerDependentManager):
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
         # must be deleted for preparing next live migration w/o shared storage
-        is_shared_storage = True
+        is_shared_block_storage = False
+        is_shared_instance_path = False
         if migrate_data:
-            is_shared_storage = migrate_data.get('is_shared_storage', True)
-        if block_migration or not is_shared_storage:
-            self.driver.destroy(instance_ref, network_info)
+            is_shared_block_storage = migrate_data.get(
+                    'is_shared_block_storage', True)
+            is_shared_instance_path = migrate_data.get(
+                    'is_shared_instance_path', True)
+
+        if block_migration or not is_shared_instance_path:
+            self.driver.destroy(instance_ref, network_info,
+                    destroy_disks = not is_shared_block_storage)
         else:
             # self.driver.destroy() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
@@ -4272,20 +4278,23 @@ class ComputeManager(manager.SchedulerDependentManager):
         # Also Volume backed live migration w/o shared storage needs to delete
         # newly created instance-xxx dir on the destination as a part of its
         # rollback process
-        is_volume_backed = False
-        is_shared_storage = True
+        is_shared_block_storage = False
+        is_shared_instance_path = False
         if migrate_data:
-            is_volume_backed = migrate_data.get('is_volume_backed', False)
-            is_shared_storage = migrate_data.get('is_shared_storage', True)
-        if block_migration or (is_volume_backed and not is_shared_storage):
+            is_shared_block_storage = migrate_data.get(
+                    'is_shared_block_storage', True)
+            is_shared_instance_path = migrate_data.get(
+                    'is_shared_instance_path', True)
+        if block_migration or (is_shared_block_storage and not is_shared_instance_path):
             self.compute_rpcapi.rollback_live_migration_at_destination(context,
-                    instance, dest)
+                    instance, dest, destroy_disks = not is_shared_block_storage)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
 
     @wrap_exception()
-    def rollback_live_migration_at_destination(self, context, instance):
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               destroy_disks=True):
         """Cleaning up image directory that is created pre_live_migration.
 
         :param context: security context
@@ -4304,7 +4313,8 @@ class ComputeManager(manager.SchedulerDependentManager):
         #             from remote volumes if necessary
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
-        self.driver.destroy(instance, network_info, block_device_info)
+        self.driver.destroy(instance, network_info, block_device_info,
+                            destroy_disks)
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)
