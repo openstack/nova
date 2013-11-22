@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<server xmlns:os-scheduler-hints="http://docs.openstack.org/compute/ext/scheduler-hints/api/v3" xmlns="http://docs.openstack.org/compute/api/v1.1" image_ref="http://glance.openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" flavor_ref="http://openstack.example.com/flavors/1" name="new-server-test">
+  <os-scheduler-hints:scheduler_hints>
+    <hypervisor>xen</hypervisor>
+    <near>a424ff53-f7ef-405c-871f-3f8c08c6e0e9</near>
+  </os-scheduler-hints:scheduler_hints>
+</server>
