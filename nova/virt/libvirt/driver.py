@@ -2654,8 +2654,8 @@ class LibvirtDriver(driver.ComputeDriver):
            healthy hosts out of rotation.
         """
 
-        status_name = {True: 'Enabled',
-                       False: 'Disabled'}
+        status_name = {True: 'disabled',
+                       False: 'enabled'}
 
         if isinstance(enabled, bool):
             disable_service = not enabled
@@ -2683,7 +2683,7 @@ class LibvirtDriver(driver.ComputeDriver):
                        DISABLE_PREFIX + disable_reason
                        if disable_service else '')
                     service.save()
-                    LOG.debug(_('Updating compute service status to: %s'),
+                    LOG.debug(_('Updating compute service status to %s'),
                                  status_name[disable_service])
                 else:
                     LOG.debug(_('Not overriding manual compute service '
