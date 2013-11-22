@@ -65,6 +65,12 @@ class ConsoleProxyManager(manager.Manager):
         self.driver.host = self.host
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
 
+    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
+        additional_apis = additional_apis or []
+        additional_apis.append(_ConsoleV2Proxy(self))
+        return super(ConsoleProxyManager, self).create_rpc_dispatcher(
+                backdoor_port, additional_apis)
+
     def init_host(self):
         self.driver.init_host()
 
@@ -138,3 +144,17 @@ class ConsoleProxyManager(manager.Manager):
     # deprecated in favor of the method in the base API.
     def get_backdoor_port(self, context):
         return self.backdoor_port
+
+
+class _ConsoleV2Proxy(object):
+
+    RPC_API_VERSION = '2.0'
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def add_console(self, context, instance_id):
+        self.manager.add_console(context, instance_id)
+
+    def remove_console(self, context, console_id):
+        self.manager.remove_console(context, console_id)

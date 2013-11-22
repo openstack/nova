@@ -45,8 +45,10 @@ class ConsoleAPI(rpcclient.RpcProxy):
         1.1 - Added get_backdoor_port()
 
         ... Grizzly and Havana support message version 1.1.  So, any changes to
-        existing methods in 2.x after that point should be done such that they
+        existing methods in 1.x after that point should be done such that they
         can handle the version_cap being set to 1.1.
+
+        2.0 - Major API rev for Icehouse
     '''
 
     #
@@ -57,7 +59,7 @@ class ConsoleAPI(rpcclient.RpcProxy):
     # about rpc API versioning, see the docs in
     # openstack/common/rpc/dispatcher.py.
     #
-    BASE_RPC_API_VERSION = '1.0'
+    BASE_RPC_API_VERSION = '2.0'
 
     VERSION_ALIASES = {
         'grizzly': '1.1',
@@ -74,8 +76,19 @@ class ConsoleAPI(rpcclient.RpcProxy):
                 version_cap=version_cap)
         self.client = self.get_client()
 
+    def _get_compat_version(self, current, havana_compat):
+        if not self.can_send_version(current):
+            return havana_compat
+        return current
+
     def add_console(self, ctxt, instance_id):
-        self.client.cast(ctxt, 'add_console', instance_id=instance_id)
+        # NOTE(russellb) Havana compat
+        version = self._get_compat_version('2.0', '1.0')
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'add_console', instance_id=instance_id)
 
     def remove_console(self, ctxt, console_id):
-        self.client.cast(ctxt, 'remove_console', console_id=console_id)
+        # NOTE(russellb) Havana compat
+        version = self._get_compat_version('2.0', '1.0')
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'remove_console', console_id=console_id)
