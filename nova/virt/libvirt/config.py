@@ -338,6 +338,11 @@ class LibvirtConfigGuestCPU(LibvirtConfigCPU):
         self.mode = None
         self.match = "exact"
 
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestCPU, self).parse_dom(xmldoc)
+        self.mode = xmldoc.get('mode')
+        self.match = xmldoc.get('match')
+
     def format_dom(self):
         cpu = super(LibvirtConfigGuestCPU, self).format_dom()
 
@@ -1150,6 +1155,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
     def parse_dom(self, xmldoc):
         # Note: This cover only for: LibvirtConfigGuestDisks
         #                            LibvirtConfigGuestHostdevPCI
+        #                            LibvirtConfigGuestCPU
         for c in xmldoc.getchildren():
             if c.tag == 'devices':
                 for d in c.getchildren():
@@ -1161,6 +1167,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         obj = LibvirtConfigGuestHostdevPCI()
                         obj.parse_dom(d)
                         self.devices.append(obj)
+            elif c.tag == 'cpu':
+                obj = LibvirtConfigGuestCPU()
+                obj.parse_dom(c)
+                self.cpu = obj
 
     def add_device(self, dev):
         self.devices.append(dev)
