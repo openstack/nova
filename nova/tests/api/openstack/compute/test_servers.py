@@ -679,7 +679,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None):
-            self.assertIn('all_tenants', filters)
+            self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
 
         self.stubs.Set(db, 'instance_get_all_by_filters',
@@ -695,7 +695,7 @@ class ServersControllerTest(ControllerTest):
         def fake_get_all(context, filters=None, sort_key=None,
                          sort_dir='desc', limit=None, marker=None,
                          columns_to_join=None):
-            self.assertIn('all_tenants', filters)
+            self.assertNotIn('project_id', filters)
             return [fakes.stub_instance(100)]
 
         self.stubs.Set(db, 'instance_get_all_by_filters',
