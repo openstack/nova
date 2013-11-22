@@ -89,6 +89,12 @@ class EvacuateTest(test.NoDBTestCase):
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
 
+    def test_evacuate_instance_without_on_shared_storage(self):
+        req, app = self._gen_request_with_app({'host': 'my_host',
+                                               'admin_password': 'MyNewPass'})
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
+
     def test_evacuate_instance_with_bad_host(self):
         req, app = self._gen_request_with_app({'host': 'bad_host',
                                                'on_shared_storage': 'False',

@@ -46,30 +46,29 @@ class EvacuateController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
 
-        try:
-            if len(body) != 1:
-                raise exc.HTTPBadRequest(_("Malformed request body"))
+        if not self.is_valid_body(body, "evacuate"):
+            raise exc.HTTPBadRequest(_("Malformed request body"))
+        evacuate_body = body["evacuate"]
 
-            evacuate_body = body["evacuate"]
+        try:
             host = evacuate_body["host"]
             on_shared_storage = strutils.bool_from_string(
                                             evacuate_body["on_shared_storage"])
-
-            password = None
-            if 'admin_password' in evacuate_body:
-                # check that if requested to evacuate server on shared storage
-                # password not specified
-                if on_shared_storage:
-                    msg = _("admin password can't be changed on existing disk")
-                    raise exc.HTTPBadRequest(explanation=msg)
-
-                password = evacuate_body['admin_password']
-            elif not on_shared_storage:
-                password = utils.generate_password()
-
         except (TypeError, KeyError):
             msg = _("host and on_shared_storage must be specified.")
             raise exc.HTTPBadRequest(explanation=msg)
+
+        password = None
+        if 'admin_password' in evacuate_body:
+            # check that if requested to evacuate server on shared storage
+            # password not specified
+            if on_shared_storage:
+                msg = _("admin password can't be changed on existing disk")
+                raise exc.HTTPBadRequest(explanation=msg)
+
+            password = evacuate_body['admin_password']
+        elif not on_shared_storage:
+            password = utils.generate_password()
 
         try:
             self.host_api.service_get_by_compute_host(context, host)
