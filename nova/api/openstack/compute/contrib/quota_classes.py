@@ -21,6 +21,7 @@ from nova.api.openstack import xmlutil
 import nova.context
 from nova import db
 from nova import exception
+from nova.openstack.common.gettextutils import _
 from nova import quota
 
 
@@ -43,7 +44,7 @@ class QuotaClassTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1)
 
 
-class QuotaClassSetsController(object):
+class QuotaClassSetsController(wsgi.Controller):
 
     def _format_quota_set(self, quota_class, quota_set):
         """Convert the quota object to a result dict."""
@@ -71,11 +72,20 @@ class QuotaClassSetsController(object):
         context = req.environ['nova.context']
         authorize(context)
         quota_class = id
-        for key in body['quota_class_set'].keys():
+
+        if not self.is_valid_body(body, 'quota_class_set'):
+            msg = _("quota_class_set not specified")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+        quota_class_set = body['quota_class_set']
+        for key in quota_class_set.keys():
             if key in QUOTAS:
-                value = int(body['quota_class_set'][key])
                 try:
+                    value = int(quota_class_set[key])
                     db.quota_class_update(context, quota_class, key, value)
+                except (ValueError, TypeError):
+                    msg = _("Quota class '%(value)s' for %(key)s should be "
+                            "integer.") % {'value': value, 'key': key}
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
                 except exception.QuotaClassNotFound:
                     db.quota_class_create(context, quota_class, key, value)
                 except exception.AdminRequired:
