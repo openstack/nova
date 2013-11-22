@@ -94,7 +94,7 @@ def empty_get_all_flavors_sorted_list(context=None, inactive=False,
 
 
 def return_flavor_not_found(flavor_id, ctxt=None):
-    raise exception.InstanceTypeNotFound(instance_type_id=flavor_id)
+    raise exception.FlavorNotFound(flavor_id=flavor_id)
 
 
 class FlavorsTest(test.TestCase):

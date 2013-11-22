@@ -898,17 +898,12 @@ class ConsoleTypeUnavailable(Invalid):
     msg_fmt = _("Unavailable console type %(console_type)s.")
 
 
-class InstanceTypeNotFound(NotFound):
-    msg_fmt = _("Instance type %(instance_type_id)s could not be found.")
-
-
-class InstanceTypeNotFoundByName(InstanceTypeNotFound):
-    msg_fmt = _("Instance type with name %(instance_type_name)s "
-                "could not be found.")
-
-
 class FlavorNotFound(NotFound):
     msg_fmt = _("Flavor %(flavor_id)s could not be found.")
+
+
+class FlavorNotFoundByName(FlavorNotFound):
+    msg_fmt = _("Flavor with name %(flavor_name)s could not be found.")
 
 
 class FlavorAccessNotFound(NotFound):
@@ -956,8 +951,8 @@ class SchedulerHostFilterNotFound(NotFound):
     msg_fmt = _("Scheduler Host Filter %(filter_name)s could not be found.")
 
 
-class InstanceTypeExtraSpecsNotFound(NotFound):
-    msg_fmt = _("Instance Type %(instance_type_id)s has no extra specs with "
+class FlavorExtraSpecsNotFound(NotFound):
+    msg_fmt = _("Flavor %(flavor_id)s has no extra specs with "
                 "key %(extra_specs_key)s.")
 
 
@@ -1003,12 +998,12 @@ class InstanceExists(NovaException):
     msg_fmt = _("Instance %(name)s already exists.")
 
 
-class InstanceTypeExists(NovaException):
-    msg_fmt = _("Instance Type with name %(name)s already exists.")
+class FlavorExists(NovaException):
+    msg_fmt = _("Flavor with name %(name)s already exists.")
 
 
-class InstanceTypeIdExists(NovaException):
-    msg_fmt = _("Instance Type with ID %(flavor_id)s already exists.")
+class FlavorIdExists(NovaException):
+    msg_fmt = _("Flavor with ID %(flavor_id)s already exists.")
 
 
 class FlavorAccessExists(NovaException):
@@ -1058,12 +1053,12 @@ class CannotResizeDisk(NovaException):
     msg_fmt = _("Server disk was unable to be resized because: %(reason)s")
 
 
-class InstanceTypeMemoryTooSmall(NovaException):
-    msg_fmt = _("Instance type's memory is too small for requested image.")
+class FlavorMemoryTooSmall(NovaException):
+    msg_fmt = _("Flavor's memory is too small for requested image.")
 
 
-class InstanceTypeDiskTooSmall(NovaException):
-    msg_fmt = _("Instance type's disk is too small for requested image.")
+class FlavorDiskTooSmall(NovaException):
+    msg_fmt = _("Flavor's disk is too small for requested image.")
 
 
 class InsufficientFreeMemory(NovaException):
@@ -1150,8 +1145,8 @@ class AggregateHostExists(NovaException):
     msg_fmt = _("Aggregate %(aggregate_id)s already has host %(host)s.")
 
 
-class InstanceTypeCreateFailed(NovaException):
-    msg_fmt = _("Unable to create instance type")
+class FlavorCreateFailed(NovaException):
+    msg_fmt = _("Unable to create flavor")
 
 
 class InstancePasswordSetFailed(NovaException):

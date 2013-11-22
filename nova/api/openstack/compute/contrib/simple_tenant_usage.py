@@ -124,7 +124,7 @@ class SimpleTenantUsageController(object):
         try:
             it_ref = compute_api.get_instance_type(context, flavor_type)
             flavors_cache[flavor_type] = it_ref
-        except exception.InstanceTypeNotFound:
+        except exception.FlavorNotFound:
             # can't bill if there is no instance type
             it_ref = None
 

@@ -450,7 +450,7 @@ class SimpleTenantUsageControllerTest(test.TestCase):
                 if flavor_type == 1:
                     return flavors.get_default_flavor()
                 else:
-                    raise exception.InstanceTypeNotFound(flavor_type)
+                    raise exception.FlavorNotFound(flavor_id=flavor_type)
 
         self.compute_api = FakeComputeAPI()
         self.context = None

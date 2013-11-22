@@ -107,7 +107,7 @@ def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
             LOG.error(msg % {'base': path,
                              'disk_size': disk_size,
                              'size': max_size})
-            raise exception.InstanceTypeDiskTooSmall()
+            raise exception.FlavorDiskTooSmall()
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path

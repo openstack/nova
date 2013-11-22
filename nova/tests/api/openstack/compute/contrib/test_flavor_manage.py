@@ -415,7 +415,7 @@ class FlavorManageTest(test.NoDBTestCase):
 
         def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
                         flavorid, swap, rxtx_factor, is_public):
-            raise exception.InstanceTypeExists(name=name)
+            raise exception.FlavorExists(name=name)
 
         self.stubs.Set(flavors, "create", fake_create)
         url = '/v2/fake/flavors'

@@ -368,7 +368,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
         vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                "vdi").AndRaise(exception.InstanceTypeDiskTooSmall)
+                "vdi").AndRaise(exception.FlavorDiskTooSmall)
 
         self.mox.StubOutWithMock(self.session, 'call_xenapi')
         self.session.call_xenapi("VDI.get_by_uuid", "vdi").AndReturn("ref")
@@ -378,7 +378,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskTooSmall,
                 vm_utils._fetch_vhd_image, self.context, self.session,
                 self.instance, 'image_id')
 
@@ -586,7 +586,7 @@ class CheckVDISizeTestCase(VMUtilsTestBase):
 
         self.mox.ReplayAll()
 
-        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskTooSmall,
                 vm_utils._check_vdi_size, self.context, self.session,
                 self.instance, self.vdi_uuid)
 

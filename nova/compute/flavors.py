@@ -150,7 +150,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
         return db.flavor_create(context.get_admin_context(), kwargs)
     except db_exc.DBError as e:
         LOG.exception(_('DB error: %s') % e)
-        raise exception.InstanceTypeCreateFailed()
+        raise exception.FlavorCreateFailed()
 
 
 def destroy(name):
@@ -161,7 +161,7 @@ def destroy(name):
         db.flavor_destroy(context.get_admin_context(), name)
     except (ValueError, exception.NotFound):
         LOG.exception(_('Instance type %s not found for deletion') % name)
-        raise exception.InstanceTypeNotFoundByName(instance_type_name=name)
+        raise exception.FlavorNotFoundByName(flavor_name=name)
 
 
 def get_all_flavors(ctxt=None, inactive=False, filters=None):

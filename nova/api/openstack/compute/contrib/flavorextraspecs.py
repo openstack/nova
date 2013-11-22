@@ -106,7 +106,7 @@ class FlavorExtraSpecsController(object):
             extra_spec = db.flavor_extra_specs_get_item(context,
                                                                flavor_id, id)
             return extra_spec
-        except exception.InstanceTypeExtraSpecsNotFound:
+        except exception.FlavorExtraSpecsNotFound:
             raise exc.HTTPNotFound()
 
     def delete(self, req, flavor_id, id):
@@ -115,7 +115,7 @@ class FlavorExtraSpecsController(object):
         authorize(context, action='delete')
         try:
             db.flavor_extra_specs_delete(context, flavor_id, id)
-        except exception.InstanceTypeExtraSpecsNotFound as e:
+        except exception.FlavorExtraSpecsNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
 

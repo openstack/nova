@@ -6665,7 +6665,7 @@ disk size: 4.4M''', ''))
         target = 'big.qcow2'
         self.executes = []
         expected_commands = [('rm', '-f', 'big.qcow2.part')]
-        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+        self.assertRaises(exception.FlavorDiskTooSmall,
                           images.fetch_to_raw,
                           context, image_id, target, user_id, project_id,
                           max_size=1)
