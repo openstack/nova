@@ -92,7 +92,8 @@ class IronicAPIContractsTestCase(test.NoDBTestCase):
         self._check_method(driver.ComputeDriver.destroy,
                            "ComputeDriver.destroy",
                            ['self', 'context', 'instance', 'network_info',
-                            'block_device_info', 'destroy_disks'])
+                            'block_device_info', 'destroy_disks',
+                            'migrate_data'])
 
         self._check_method(driver.ComputeDriver.reboot,
                            "ComputeDriver.reboot",

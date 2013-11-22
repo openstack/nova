@@ -5208,7 +5208,7 @@ class ComputeTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         # start test
         self.mox.ReplayAll()
-        migrate_data = {'is_shared_storage': False}
+        migrate_data = {'is_shared_instance_path': False}
         ret = self.compute.pre_live_migration(c, instance=instance,
                                               block_migration=False, disk=None,
                                               migrate_data=migrate_data)
@@ -5274,7 +5274,7 @@ class ComputeTestCase(BaseTestCase):
         self.compute.compute_rpcapi.remove_volume_connection(
                 c, instance, 'vol2-id', dest_host)
         self.compute.compute_rpcapi.rollback_live_migration_at_destination(
-                c, instance, dest_host)
+                c, instance, dest_host, destroy_disks=True, migrate_data={})
 
         # start test
         self.mox.ReplayAll()
@@ -5295,7 +5295,7 @@ class ComputeTestCase(BaseTestCase):
         instance.host = self.compute.host
         dest = 'desthost'
 
-        migrate_data = {'is_shared_storage': False}
+        migrate_data = {'is_shared_instance_path': False}
 
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
@@ -5388,7 +5388,7 @@ class ComputeTestCase(BaseTestCase):
 
         # start test
         self.mox.ReplayAll()
-        migrate_data = {'is_shared_storage': False}
+        migrate_data = {'is_shared_instance_path': False}
         self.compute._post_live_migration(c, inst_ref, dest,
                                           migrate_data=migrate_data)
         self.assertIn('cleanup', result)
@@ -5588,7 +5588,8 @@ class ComputeTestCase(BaseTestCase):
                                  'rollback_live_migration_at_destination')
         self.compute.driver.rollback_live_migration_at_destination(c,
                 instance, [], {'swap': None, 'ephemerals': [],
-                               'block_device_mapping': []})
+                               'block_device_mapping': []},
+                destroy_disks=True, migrate_data=None)
 
         # start test
         self.mox.ReplayAll()

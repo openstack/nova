@@ -1580,9 +1580,16 @@ class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
 
 
-class NoBlockMigrationForConfigDriveInLibVirt(NovaException):
-    msg_fmt = _("Block migration of instances with config drives is not "
-                "supported in libvirt.")
+class NoLiveMigrationForConfigDriveInLibVirt(NovaException):
+    msg_fmt = _("Live migration of instances with config drives is not "
+                "supported in libvirt unless libvirt instance path and "
+                "drive data is shared across compute nodes.")
+
+
+class LiveMigrationWithOldNovaNotSafe(NovaException):
+    msg_fmt = _("Host %(server)s is running an old version of Nova, "
+                "live migrations involving that version may cause data loss. "
+                "Upgrade Nova on %(server)s and try again.")
 
 
 class UnshelveException(NovaException):

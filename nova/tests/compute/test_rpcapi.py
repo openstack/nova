@@ -23,6 +23,7 @@ from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import fake_block_device
@@ -157,24 +158,30 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('check_can_live_migrate_destination', 'call',
                 instance=self.fake_instance_obj,
                 destination='dest', block_migration=True,
-                disk_over_commit=True)
+                disk_over_commit=True, version='3.32')
 
+    def test_check_can_live_migrate_destination_raises_old_nova(self):
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
-        self._test_compute_api('check_can_live_migrate_destination', 'call',
-                instance=self.fake_instance_obj,
+        self.assertRaises(
+                exception.LiveMigrationWithOldNovaNotSafe,
+                self._test_compute_api, 'check_can_live_migrate_destination',
+                'call', instance=self.fake_instance_obj,
                 destination='dest', block_migration=True,
                 disk_over_commit=True, version='2.38')
 
     def test_check_can_live_migrate_source(self):
         self._test_compute_api('check_can_live_migrate_source', 'call',
                 instance=self.fake_instance_obj,
-                dest_check_data={"test": "data"})
+                dest_check_data={"test": "data"}, version='3.32')
 
+    def test_check_can_live_migrate_source_raises_old_nova(self):
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
-        self._test_compute_api('check_can_live_migrate_source', 'call',
-                instance=self.fake_instance_obj,
+        self.assertRaises(
+                exception.LiveMigrationWithOldNovaNotSafe,
+                self._test_compute_api, 'check_can_live_migrate_source',
+                'call', instance=self.fake_instance_obj,
                 dest_check_data={"test": "data"}, version='2.38')
 
     def test_check_instance_shared_storage(self):
@@ -641,13 +648,16 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
                 'cast', instance=self.fake_instance_obj, host='host',
-                version='3.26')
+                destroy_disks=True, migrate_data=None, version='3.32')
 
+    def test_rollback_live_migration_at_destination_raises_old_nova(self):
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
-        self._test_compute_api('rollback_live_migration_at_destination',
-                'cast', instance=self.fake_instance, host='host',
-                version='2.0')
+        self.assertRaises(
+                exception.LiveMigrationWithOldNovaNotSafe,
+                self._test_compute_api,
+                'rollback_live_migration_at_destination', 'cast',
+                instance=self.fake_instance, host='host', version='2.0')
 
     def test_run_instance(self):
         self._test_compute_api('run_instance', 'cast',
