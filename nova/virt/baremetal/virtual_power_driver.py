@@ -27,8 +27,8 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import base
+from nova.virt.baremetal import common as connection
 from nova.virt.baremetal import db
-import nova.virt.powervm.common as connection
 
 opts = [
     cfg.StrOpt('virtual_power_ssh_host',

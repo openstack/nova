@@ -27,9 +27,9 @@ from nova.tests.image import fake as fake_image
 from nova.tests import utils
 from nova.tests.virt.baremetal.db import base as bm_db_base
 from nova.tests.virt.baremetal.db import utils as bm_db_utils
+from nova.virt.baremetal import common as connection
 from nova.virt.baremetal import db
 from nova.virt.baremetal import virtual_power_driver
-import nova.virt.powervm.common as connection
 
 CONF = cfg.CONF
 
