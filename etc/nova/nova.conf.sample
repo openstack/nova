@@ -1389,7 +1389,7 @@
 #logging_exception_prefix=%(asctime)s.%(msecs)03d %(process)d TRACE %(name)s %(instance)s
 
 # list of logger=LEVEL pairs (list value)
-#default_log_levels=amqplib=WARN,sqlalchemy=WARN,boto=WARN,suds=INFO,keystone=INFO,eventlet.wsgi.server=WARN
+#default_log_levels=amqp=WARN,amqplib=WARN,boto=WARN,keystone=INFO,qpid=WARN,sqlalchemy=WARN,suds=INFO
 
 # publish error events (boolean value)
 #publish_errors=false
@@ -1405,12 +1405,12 @@
 # it like this (string value)
 #instance_uuid_format="[instance: %(uuid)s] "
 
-# If this option is specified, the logging configuration file
-# specified is used and overrides any other logging options
-# specified. Please see the Python logging module
-# documentation for details on logging configuration files.
-# (string value)
-#log_config=<None>
+# The name of logging configuration file. It does not disable
+# existing loggers, but just appends specified logging
+# configuration to any other existing logging options. Please
+# see the Python logging module documentation for details on
+# logging configuration files. (string value)
+#log_config_append=<None>
 
 # DEPRECATED. A logging.Formatter log message format string
 # which may use any of the available logging.LogRecord
