@@ -1,0 +1,57 @@
+{
+    "server": {
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "mac_addr": "aa:bb:cc:dd:ee:ff",
+                    "type": "fixed",
+                    "version": 4
+                }
+            ]
+        },
+        "created": "2013-09-11T03:23:12Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "host_id": "b3a6fd97c027e18d6d9c7506eea8a236cf2ceca420cfdfe0239a64a8",
+        "id": "5eedbf0c-c303-4ed3-933a-a4d3732cfa0a",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/5eedbf0c-c303-4ed3-933a-a4d3732cfa0a",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/5eedbf0c-c303-4ed3-933a-a4d3732cfa0a",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "My Server Name": "Apache1"
+        },
+        "name": "new-server-test",
+        "os-access-ips:access_ip_v4": "1.2.3.4",
+        "os-access-ips:access_ip_v6": "fe80::",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2013-09-11T03:23:13Z",
+        "user_id": "fake",
+        "key_name": null
+    }
+}
