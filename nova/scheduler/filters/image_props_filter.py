@@ -79,7 +79,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
                 if _compare_product_version(hypervisor_version, image_props):
                     LOG.debug(_("Instance properties %(image_props)s "
                                 "are satisfied by compute host hypervisor "
-                                "version %(hypervisor_version) and "
+                                "version %(hypervisor_version)s and "
                                 "supported instances %(supp_instances)s"),
                               {'image_props': image_props,
                                'supp_instances': supp_instances,
