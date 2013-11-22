@@ -56,6 +56,7 @@ from nova.network import api as network_api
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -72,6 +73,7 @@ from nova import quota
 from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
@@ -6869,11 +6871,47 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
-    def test_rescue_volume_backed(self):
+    def _fake_rescue_block_devices(self, instance, status="in-use"):
+        fake_bdms = block_device_obj.block_device_make_list(self.context,
+                    [fake_block_device.FakeDbBlockDeviceDict(
+                     {'device_name': '/dev/vda',
+                     'source_type': 'volume',
+                     'boot_index': 0,
+                     'destination_type': 'volume',
+                     'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'})])
+
+        volume = {'id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66',
+                  'state': 'active', 'instance_uuid': instance['uuid']}
+
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                   'get_by_instance_uuid')
+        self.mox.StubOutWithMock(cinder.API, 'get')
+
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, instance['uuid']).AndReturn(fake_bdms)
+        cinder.API.get(self.context, volume['id']).AndReturn(
+            {'id': volume['id'], 'status': status})
+
+    def test_rescue_volume_backed_no_image(self):
         # Instance started without an image
         volume_backed_inst_1 = jsonutils.to_primitive(
             self._create_fake_instance({'image_ref': ''}))
 
+        self._fake_rescue_block_devices(volume_backed_inst_1)
+        self.mox.ReplayAll()
+
+        self.compute.run_instance(self.context,
+                                  volume_backed_inst_1, {}, {}, None, None,
+                                  None, True, None, False)
+
+        self.assertRaises(exception.InstanceNotRescuable,
+                          self.compute_api.rescue, self.context,
+                          volume_backed_inst_1)
+
+        self.compute.terminate_instance(self.context,
+                self._objectify(volume_backed_inst_1), [], [])
+
+    def test_rescue_volume_backed_placeholder_image(self):
         # Instance started with a placeholder image (for metadata)
         volume_backed_inst_2 = jsonutils.to_primitive(
             self._create_fake_instance(
@@ -6881,37 +6919,17 @@ class ComputeAPITestCase(BaseTestCase):
                  'root_device_name': '/dev/vda'})
             )
 
-        def fake_get_instance_bdms(*args, **kwargs):
-            return [{'device_name': '/dev/vda',
-                     'source_type': 'volume',
-                     'boot_index': 0,
-                     'destination_type': 'volume',
-                     'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
+        self._fake_rescue_block_devices(volume_backed_inst_2)
+        self.mox.ReplayAll()
 
-        self.stubs.Set(self.compute_api, 'get_instance_bdms',
-                       fake_get_instance_bdms)
-
-        def fake_volume_get(self, context, volume_id):
-            return {'id': volume_id, 'status': 'in-use'}
-
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
-
-        self.compute.run_instance(self.context,
-                                  volume_backed_inst_1, {}, {}, None, None,
-                                  None, True, None, False)
         self.compute.run_instance(self.context,
                                   volume_backed_inst_2, {}, {}, None, None,
                                   None, True, None, False)
 
         self.assertRaises(exception.InstanceNotRescuable,
                           self.compute_api.rescue, self.context,
-                          volume_backed_inst_1)
-        self.assertRaises(exception.InstanceNotRescuable,
-                          self.compute_api.rescue, self.context,
                           volume_backed_inst_2)
 
-        self.compute.terminate_instance(self.context,
-                self._objectify(volume_backed_inst_1), [], [])
         self.compute.terminate_instance(self.context,
                 self._objectify(volume_backed_inst_2), [], [])
 
@@ -7611,33 +7629,46 @@ class ComputeAPITestCase(BaseTestCase):
 
         instance = self._create_fake_instance({'root_device_name': 'vda'})
         self.assertFalse(
-            self.compute_api.is_volume_backed_instance(ctxt, instance, []))
+            self.compute_api.is_volume_backed_instance(
+                ctxt, instance,
+                block_device_obj.block_device_make_list(ctxt, [])))
 
-        bdms = [{'device_name': '/dev/vda',
-                 'volume_id': 'fake_volume_id',
-                 'boot_index': 0,
-                 'destination_type': 'volume'}]
+        bdms = block_device_obj.block_device_make_list(ctxt,
+                            [fake_block_device.FakeDbBlockDeviceDict(
+                                {'source_type': 'volume',
+                                 'device_name': '/dev/vda',
+                                 'volume_id': 'fake_volume_id',
+                                 'boot_index': 0,
+                                 'destination_type': 'volume'})])
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
-        bdms = [{'device_name': '/dev/vda',
+        bdms = block_device_obj.block_device_make_list(ctxt,
+               [fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vda',
                  'volume_id': 'fake_volume_id',
                  'destination_type': 'local',
                  'boot_index': 0,
-                 'snapshot_id': None},
-                {'device_name': '/dev/vdb',
+                 'snapshot_id': None}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vdb',
                  'boot_index': 1,
                  'destination_type': 'volume',
                  'volume_id': 'c2ec2156-d75e-11e2-985b-5254009297d6',
-                 'snapshot_id': None}]
+                 'snapshot_id': None})])
         self.assertFalse(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
-        bdms = [{'device_name': '/dev/vda',
+        bdms = block_device_obj.block_device_make_list(ctxt,
+               [fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vda',
                  'snapshot_id': 'de8836ac-d75e-11e2-8271-5254009297d6',
                  'destination_type': 'volume',
                  'boot_index': 0,
-                 'volume_id': None}]
+                 'volume_id': None})])
         self.assertTrue(
             self.compute_api.is_volume_backed_instance(ctxt, instance, bdms))
 
@@ -7645,9 +7676,11 @@ class ComputeAPITestCase(BaseTestCase):
         ctxt = self.context
         instance = self._create_fake_instance()
 
-        self.mox.StubOutWithMock(self.compute_api, 'get_instance_bdms')
-        self.compute_api.get_instance_bdms(ctxt, instance,
-                                           legacy=False).AndReturn([])
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                    ctxt, instance['uuid']).AndReturn(
+                            block_device_obj.block_device_make_list(ctxt, []))
         self.mox.ReplayAll()
 
         self.compute_api.is_volume_backed_instance(ctxt, instance, None)
@@ -7805,19 +7838,9 @@ class ComputeAPITestCase(BaseTestCase):
         # Make sure a VM cannot be rescued while volume is being attached
         instance = self._create_fake_instance()
 
-        def fake_get_instance_bdms(*args, **kwargs):
-            return [{'device_name': '/dev/vda',
-                     'source_type': 'volume',
-                     'destination_type': 'volume',
-                     'volume_id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66'}]
+        self._fake_rescue_block_devices(instance, status="attaching")
+        self.mox.ReplayAll()
 
-        self.stubs.Set(self.compute_api, 'get_instance_bdms',
-                       fake_get_instance_bdms)
-
-        def fake_volume_get(self, context, volume_id):
-            return {'id': volume_id, 'status': 'attaching'}
-
-        self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.assertRaises(exception.InvalidVolume,
                 self.compute_api.rescue, self.context, instance)
 
