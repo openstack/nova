@@ -33,3 +33,26 @@ class CallXenAPIHelpersTestCase(stubs.XenAPITestBaseNoDB):
         session = mock.Mock()
         volume_utils.vbd_plug(session, "vbd_ref", "vm_ref:123")
         mock_synchronized.assert_called_once_with("xenapi-vbd-plug-vm_ref:123")
+
+
+class ISCSIParametersTestCase(stubs.XenAPITestBaseNoDB):
+    def test_target_host(self):
+        self.assertEqual(volume_utils._get_target_host('host:port'),
+                         'host')
+
+        self.assertEqual(volume_utils._get_target_host('host'),
+                         'host')
+
+        # There is no default value
+        self.assertEqual(volume_utils._get_target_host(':port'),
+                         None)
+
+        self.assertEqual(volume_utils._get_target_host(None),
+                         None)
+
+    def test_target_port(self):
+        self.assertEqual(volume_utils._get_target_port('host:port'),
+                         'port')
+
+        self.assertEqual(volume_utils._get_target_port('host'),
+                         '3260')

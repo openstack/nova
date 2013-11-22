@@ -88,15 +88,16 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
         self.mox.VerifyAll()
 
-    def _get_upload_params(self, auto_disk_config=True):
+    def _get_upload_params(self, auto_disk_config=True,
+                           expected_os_type='default'):
         params = self._get_params()
         params['vdi_uuids'] = ['fake_vdi_uuid']
         params['properties'] = {'auto_disk_config': auto_disk_config,
-                                'os_type': 'default'}
+                                'os_type': expected_os_type}
         return params
 
-    def _test_upload_image(self, auto_disk_config):
-        params = self._get_upload_params(auto_disk_config)
+    def _test_upload_image(self, auto_disk_config, expected_os_type='default'):
+        params = self._get_upload_params(auto_disk_config, expected_os_type)
 
         self.mox.StubOutWithMock(self.session, 'call_plugin_serialized')
         self.session.call_plugin_serialized('glance', 'upload_vhd', **params)
@@ -108,6 +109,14 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
 
     def test_upload_image(self):
         self._test_upload_image(True)
+
+    def test_upload_image_None_os_type(self):
+        self.instance['os_type'] = None
+        self._test_upload_image(True, 'linux')
+
+    def test_upload_image_no_os_type(self):
+        del self.instance['os_type']
+        self._test_upload_image(True, 'linux')
 
     def test_upload_image_auto_config_disk_disabled(self):
         sys_meta = [{"key": "image_auto_disk_config", "value": "Disabled"}]

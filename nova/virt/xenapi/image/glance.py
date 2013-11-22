@@ -59,7 +59,8 @@ class GlanceStore(object):
 
         props = params['properties'] = {}
         props['auto_disk_config'] = instance['auto_disk_config']
-        props['os_type'] = instance['os_type'] or CONF.default_os_type
+        props['os_type'] = instance.get('os_type', None) or (
+                CONF.xenserver.default_os_type)
 
         compression_level = vm_utils.get_compression_level()
         if compression_level:
