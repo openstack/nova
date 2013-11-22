@@ -1912,12 +1912,18 @@ class API(base.Base):
             properties['root_device_name'] = instance['root_device_name']
         properties.update(extra_properties or {})
 
+        # TODO(xqueralt): Use new style BDM in volume snapshots
         bdms = self.get_instance_bdms(context, instance)
 
         mapping = []
         for bdm in bdms:
             if bdm['no_device']:
                 continue
+
+            # Clean the BDM of the database related fields to prevent
+            # duplicates in the future (e.g. the id was being preserved)
+            for field in block_device.BlockDeviceDict._db_only_fields:
+                bdm.pop(field, None)
 
             volume_id = bdm.get('volume_id')
             if volume_id:
@@ -1930,7 +1936,11 @@ class API(base.Base):
                 snapshot = self.volume_api.create_snapshot_force(
                     context, volume['id'], name, volume['display_description'])
                 bdm['snapshot_id'] = snapshot['id']
-                bdm['volume_id'] = None
+
+                # Clean the extra volume related fields that will be generated
+                # when booting from the new snapshot.
+                bdm.pop('volume_id')
+                bdm.pop('connection_info')
 
             mapping.append(bdm)
 
