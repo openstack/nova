@@ -539,7 +539,8 @@ class VMOps(object):
             self._virtapi.instance_update(context,
                                           instance['uuid'], {'vm_mode': mode})
 
-        device_id = vm_utils.get_vm_device_id(self._session, image_meta)
+        image_properties = image_meta.get("properties")
+        device_id = vm_utils.get_vm_device_id(self._session, image_properties)
         use_pv_kernel = (mode == vm_mode.XEN)
         LOG.debug(_("Using PV kernel: %s") % use_pv_kernel, instance=instance)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,

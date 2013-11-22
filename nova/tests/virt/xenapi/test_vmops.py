@@ -763,8 +763,9 @@ class CreateVMRecordTestCase(VMOpsTestBase):
         disk_image_type = "vhd"
         kernel_file = "kernel"
         ramdisk_file = "ram"
-        image_meta = "image_meta"
         device_id = "0002"
+        image_properties = {"xenapi_device_id": device_id}
+        image_meta = {"properties": image_properties}
         session = "session"
         self.vmops._session = session
         mock_get_vm_device_id.return_value = device_id
@@ -773,6 +774,6 @@ class CreateVMRecordTestCase(VMOpsTestBase):
         self.vmops._create_vm_record(context, instance, name_label,
             disk_image_type, kernel_file, ramdisk_file, image_meta)
 
-        vm_utils.get_vm_device_id.assert_called_with(session, image_meta)
+        mock_get_vm_device_id.assert_called_with(session, image_properties)
         mock_create_vm.assert_called_with(session, instance, name_label,
             kernel_file, ramdisk_file, False, device_id)
