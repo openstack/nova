@@ -36,13 +36,14 @@ from nova import block_device
 from nova.cloudpipe import pipelib
 from nova import compute
 from nova.compute import api as compute_api
-from nova.compute import flavors
 from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
+from nova.objects import base as obj_base
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -979,7 +980,8 @@ class CloudController(object):
 
         validate_ec2_id(instance_id)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
-        instance = self.compute_api.get(context, instance_uuid)
+        instance = self.compute_api.get(context, instance_uuid,
+                                        want_objects=True)
         result = {'instance_id': instance_id}
         fn(instance, result)
         return result
@@ -1071,8 +1073,8 @@ class CloudController(object):
 
     @staticmethod
     def _format_instance_type(instance, result):
-        instance_type = flavors.extract_flavor(instance)
-        result['instanceType'] = instance_type['name']
+        flavor = instance.get_flavor()
+        result['instanceType'] = flavor.name
 
     @staticmethod
     def _format_group_set(instance, result):
@@ -1104,7 +1106,8 @@ class CloudController(object):
                     try:
                         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context,
                                                                      ec2_id)
-                        instance = self.compute_api.get(context, instance_uuid)
+                        instance = self.compute_api.get(context, instance_uuid,
+                                                        want_objects=True)
                     except exception.NotFound:
                         continue
                     instances.append(instance)
@@ -1114,7 +1117,8 @@ class CloudController(object):
                 search_opts['deleted'] = False
                 instances = self.compute_api.get_all(context,
                                                      search_opts=search_opts,
-                                                     sort_dir='asc')
+                                                     sort_dir='asc',
+                                                     want_objects=True)
             except exception.NotFound:
                 instances = []
 
@@ -1291,9 +1295,12 @@ class CloudController(object):
             msg = _('Image must be available')
             raise exception.ImageNotActive(message=msg)
 
+        flavor = flavor_obj.Flavor.get_by_name(context,
+                                               kwargs.get('instance_type',
+                                                          None))
+
         (instances, resv_id) = self.compute_api.create(context,
-            instance_type=flavors.get_flavor_by_name(
-                kwargs.get('instance_type', None)),
+            instance_type=obj_base.obj_to_primitive(flavor),
             image_href=image_uuid,
             max_count=int(kwargs.get('max_count', min_count)),
             min_count=min_count,
