@@ -220,3 +220,7 @@ def list_rbd_volumes(pool):
 
 def remove_rbd_volumes(pool, *names):
     pass
+
+
+def ascii_str(s):
+    return libvirt_utils.ascii_str(s)

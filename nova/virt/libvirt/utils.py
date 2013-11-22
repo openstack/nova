@@ -45,6 +45,13 @@ CONF.register_opts(libvirt_opts)
 CONF.import_opt('instances_path', 'nova.compute.manager')
 LOG = logging.getLogger(__name__)
 
+try:
+    import rados
+    import rbd
+except ImportError:
+    rados = None
+    rbd = None
+
 
 def execute(*args, **kwargs):
     return utils.execute(*args, **kwargs)
@@ -258,6 +265,33 @@ def create_lvm_image(vg, lv, size, sparse=False):
     execute(*cmd, run_as_root=True, attempts=3)
 
 
+def ascii_str(s):
+    """Convert a string to ascii, or return None if the input is None.
+
+    This is useful when a parameter is None by default, or a string. LibRBD
+    only accepts ascii, hence the need for conversion.
+    """
+    if s is None:
+        return s
+    return str(s)
+
+
+def _connect_to_rados(pool=None):
+    ceph_conf = ascii_str(CONF.libvirt_images_rbd_ceph_conf)
+    rbd_user = ascii_str(CONF.rbd_user)
+    client = rados.Rados(rados_id=rbd_user,
+                              conffile=ceph_conf)
+    try:
+        client.connect()
+        pool_to_open = str(pool)
+        ioctx = client.open_ioctx(pool_to_open)
+        return client, ioctx
+    except rados.Error:
+        # shutdown cannot raise an exception
+        client.shutdown()
+        raise
+
+
 def import_rbd_image(*args):
     execute('rbd', 'import', *args)
 
@@ -267,18 +301,20 @@ def list_rbd_volumes(pool):
 
     :param pool: ceph pool name
     """
-    out, err = utils.execute('rbd', '-p', pool, 'ls')
-
-    return [line.strip() for line in out.splitlines()]
+    client, ioctx = _connect_to_rados(pool)
+    rbd_inst = rbd.RBD()
+    return rbd_inst.list(ioctx)
 
 
 def remove_rbd_volumes(pool, *names):
     """Remove one or more rbd volume."""
+    client, ioctx = _connect_to_rados(pool)
+    rbd_inst = rbd.RBD()
     for name in names:
-        rbd_remove = ('rbd', '-p', pool, 'rm', name)
         try:
-            execute(*rbd_remove, attempts=3, run_as_root=True)
-        except processutils.ProcessExecutionError:
+            # Retry if ImageBusy raised
+            rbd_inst.remove(ioctx, name)
+        except rbd.ImageNotFound, rbd.ImageHasSnapshots:
             LOG.warn(_("rbd remove %(name)s in pool %(pool)s failed"),
                      {'name': name, 'pool': pool})
 

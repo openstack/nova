@@ -534,7 +534,8 @@ class RBDVolumeProxy(object):
         client, ioctx = driver._connect_to_rados(pool)
         try:
             self.volume = driver.rbd.Image(ioctx, str(name),
-                                           snapshot=ascii_str(snapshot),
+                                           snapshot=libvirt_utils.ascii_str(
+                                                        snapshot),
                                            read_only=read_only)
         except driver.rbd.Error:
             LOG.exception(_("error opening rbd image %s"), name)
@@ -570,17 +571,6 @@ class RADOSClient(object):
         self.driver._disconnect_from_rados(self.cluster, self.ioctx)
 
 
-def ascii_str(s):
-    """Convert a string to ascii, or return None if the input is None.
-
-    This is useful when a parameter is None by default, or a string. LibRBD
-    only accepts ascii, hence the need for conversion.
-    """
-    if s is None:
-        return s
-    return str(s)
-
-
 class Rbd(Image):
     def __init__(self, instance=None, disk_name=None, path=None,
                  snapshot_name=None, **kwargs):
@@ -598,8 +588,9 @@ class Rbd(Image):
                                  ' libvirt_images_rbd_pool'
                                  ' flag to use rbd images.'))
         self.pool = str(CONF.libvirt_images_rbd_pool)
-        self.ceph_conf = ascii_str(CONF.libvirt_images_rbd_ceph_conf)
-        self.rbd_user = ascii_str(CONF.rbd_user)
+        self.ceph_conf = libvirt_utils.ascii_str(
+                         CONF.libvirt_images_rbd_ceph_conf)
+        self.rbd_user = libvirt_utils.ascii_str(CONF.rbd_user)
         self.rbd = kwargs.get('rbd', rbd)
         self.rados = kwargs.get('rados', rados)
 
