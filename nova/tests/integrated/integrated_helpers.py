@@ -78,22 +78,22 @@ class _IntegratedTestBase(test.TestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.flags(scheduler_driver='nova.scheduler.'
                     'chance.ChanceScheduler')
+        self._setup_services()
+        self._start_api_service()
 
-        # set up services
+        self.api = self._get_test_client()
+
+        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+    def _setup_services(self):
         self.conductor = self.start_service('conductor',
-                manager=CONF.conductor.manager)
+                                            manager=CONF.conductor.manager)
         self.compute = self.start_service('compute')
         self.cert = self.start_service('cert')
         self.consoleauth = self.start_service('consoleauth')
         self.network = self.start_service('network')
         self.scheduler = self.start_service('scheduler')
         self.cells = self.start_service('cells', manager=CONF.cells.manager)
-
-        self._start_api_service()
-
-        self.api = self._get_test_client()
-
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
     def tearDown(self):
         self.osapi.stop()
