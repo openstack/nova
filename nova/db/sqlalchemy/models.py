@@ -135,11 +135,12 @@ class ComputeNodeStat(BASE, NovaBase):
     value = Column(String(255))
     compute_node_id = Column(Integer, ForeignKey('compute_nodes.id'),
                              nullable=False)
-
-    primary_join = ('and_(ComputeNodeStat.compute_node_id == '
-                    'ComputeNode.id, ComputeNodeStat.deleted == 0)')
-    stats = relationship("ComputeNode", backref="stats",
-            primaryjoin=primary_join)
+    compute_node = relationship(ComputeNode, backref=backref('stats'),
+                                foreign_keys=compute_node_id,
+                                primaryjoin='and_('
+                                    'ComputeNodeStat.compute_node_id == '
+                                      'ComputeNode.id,'
+                                    'ComputeNodeStat.deleted == 0)')
 
     def __str__(self):
         return "{%d: %s = %s}" % (self.compute_node_id, self.key, self.value)
