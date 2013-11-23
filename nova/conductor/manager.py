@@ -690,7 +690,8 @@ class ComputeTaskManager(base.Base):
             if reservations:
                 self.quotas.rollback(context, reservations)
 
-            LOG.warning(_("No valid host found for cold migrate"))
+            LOG.warning(_("No valid host found for cold migrate"),
+                        instance=instance)
             return
 
         try:
