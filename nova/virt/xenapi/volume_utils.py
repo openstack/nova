@@ -300,17 +300,18 @@ def _get_volume_id(path_or_id):
 def _get_target_host(iscsi_string):
     """Retrieve target host."""
     if iscsi_string:
-        return iscsi_string[0:iscsi_string.find(':')]
-    elif iscsi_string is None or CONF.target_host:
-        return CONF.target_host
+        host = iscsi_string.split(':')[0]
+        if len(host) > 0:
+            return host
+    return CONF.xenserver.target_host
 
 
 def _get_target_port(iscsi_string):
     """Retrieve target port."""
-    if iscsi_string:
-        return iscsi_string[iscsi_string.find(':') + 1:]
-    elif iscsi_string is None or CONF.target_port:
-        return CONF.target_port
+    if iscsi_string and ':' in iscsi_string:
+        return iscsi_string.split(':')[1]
+
+    return CONF.xenserver.target_port
 
 
 def vbd_plug(session, vbd_ref, vm_ref):
