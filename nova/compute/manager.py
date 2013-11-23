@@ -3498,10 +3498,10 @@ class ComputeManager(manager.SchedulerDependentManager):
                 task_states.SHELVING,
                 task_states.SHELVING_IMAGE_UPLOADING])
 
+        self._notify_about_instance_usage(context, instance, 'shelve.end')
+
         if CONF.shelved_offload_time == 0:
             self.shelve_offload_instance(context, instance)
-
-        self._notify_about_instance_usage(context, instance, 'shelve.end')
 
     @wrap_exception()
     @reverts_task_state

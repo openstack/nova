@@ -28,8 +28,8 @@ CONF = cfg.CONF
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
-    def test_shelve(self):
-        CONF.shelved_offload_time = -1
+    def _shelve_instance(self, shelved_offload_time):
+        CONF.shelved_offload_time = shelved_offload_time
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, instance=db_instance)
         instance = instance_obj.Instance.get_by_uuid(
@@ -61,23 +61,49 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.compute.driver.snapshot(self.context, instance, 'fake_image_id',
                 mox.IgnoreArg())
 
+        update_values = {'power_state': 123,
+                         'vm_state': vm_states.SHELVED,
+                         'task_state': None,
+                         'expected_task_state': [task_states.SHELVING,
+                                task_states.SHELVING_IMAGE_UPLOADING],
+                         'system_metadata': sys_meta}
+        if CONF.shelved_offload_time == 0:
+            update_values['task_state'] = task_states.SHELVING_OFFLOADING
         db.instance_update_and_get_original(self.context, instance['uuid'],
-                {'power_state': 123,
-                 'vm_state': vm_states.SHELVED,
-                 'task_state': None,
-                 'expected_task_state': [task_states.SHELVING,
-                    task_states.SHELVING_IMAGE_UPLOADING],
-                 'system_metadata': sys_meta},
-                 update_cells=False,
+                 update_values, update_cells=False,
                  columns_to_join=['metadata', 'system_metadata'],
                 ).AndReturn((db_instance,
                                                 db_instance))
         self.compute._notify_about_instance_usage(self.context,
                                                   instance, 'shelve.end')
+        if CONF.shelved_offload_time == 0:
+            self.compute._notify_about_instance_usage(self.context, instance,
+                'shelve_offload.start')
+            self.compute.driver.power_off(instance)
+            self.compute._get_power_state(self.context,
+                                          instance).AndReturn(123)
+            db.instance_update_and_get_original(self.context,
+                              instance['uuid'],
+                              {'power_state': 123, 'host': None, 'node': None,
+                               'vm_state': vm_states.SHELVED_OFFLOADED,
+                               'task_state': None,
+                               'expected_task_state': [task_states.SHELVING,
+                                           task_states.SHELVING_OFFLOADING]},
+                              update_cells=False,
+                              columns_to_join=['metadata', 'system_metadata'],
+                              ).AndReturn((db_instance, db_instance))
+            self.compute._notify_about_instance_usage(self.context, instance,
+                                                      'shelve_offload.end')
         self.mox.ReplayAll()
 
         self.compute.shelve_instance(self.context, instance,
                 image_id=image_id)
+
+    def test_shelve(self):
+        self._shelve_instance(-1)
+
+    def test_shelve_offload(self):
+        self._shelve_instance(0)
 
     def test_shelve_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
