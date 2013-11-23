@@ -50,7 +50,7 @@ class MemcachedServiceGroupTestCase(test.TestCase):
         super(MemcachedServiceGroupTestCase, self).setUp()
         servicegroup.API._driver = None
         self.flags(servicegroup_driver='mc')
-        self.down_time = 3
+        self.down_time = 15
         self.flags(enable_new_services=True)
         self.flags(service_down_time=self.down_time)
         self.servicegroup_api = servicegroup.API(test=True)
@@ -138,7 +138,7 @@ class MemcachedServiceGroupTestCase(test.TestCase):
                                              self._host,
                                              self._binary)
         fake_now = 1000
-        down_time = 5
+        down_time = 15
         self.flags(service_down_time=down_time)
         self.mox.StubOutWithMock(timeutils, 'utcnow_ts')
         self.servicegroup_api = servicegroup.API()

@@ -49,7 +49,7 @@ class DBServiceGroupTestCase(test.TestCase):
         super(DBServiceGroupTestCase, self).setUp()
         servicegroup.API._driver = None
         self.flags(servicegroup_driver='db')
-        self.down_time = 3
+        self.down_time = 15
         self.flags(enable_new_services=True)
         self.flags(service_down_time=self.down_time)
         self.servicegroup_api = servicegroup.API()
@@ -112,7 +112,7 @@ class DBServiceGroupTestCase(test.TestCase):
     def test_service_is_up(self):
         fts_func = datetime.datetime.fromtimestamp
         fake_now = 1000
-        down_time = 5
+        down_time = 15
         self.flags(service_down_time=down_time)
         self.mox.StubOutWithMock(timeutils, 'utcnow')
         self.servicegroup_api = servicegroup.API()
