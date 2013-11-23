@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<server xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="2013-11-14T06:29:08Z" user_id="fake" name="foobar" created="2013-11-14T06:29:06Z" tenant_id="openstack" progress="0" host_id="1164852fb47207cb81b7cf7b010fc0c4243ef2b958d7e64072385b24" id="72167553-54cb-4bb0-b1bd-683e7ce4f524" admin_password="seekr3t">
+  <image id="70a599e0-31e7-49b7-b260-868f441e862b">
+    <atom:link href="http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b" rel="bookmark"/>
+  </image>
+  <flavor id="1">
+    <atom:link href="http://openstack.example.com/flavors/1" rel="bookmark"/>
+  </flavor>
+  <metadata>
+    <meta key="meta_var">meta_val</meta>
+  </metadata>
+  <addresses>
+    <network id="private">
+      <ip version="4" type="fixed" addr="192.168.0.3" mac_addr="aa:bb:cc:dd:ee:ff"/>
+    </network>
+  </addresses>
+  <atom:link href="http://openstack.example.com/v3/servers/72167553-54cb-4bb0-b1bd-683e7ce4f524" rel="self"/>
+  <atom:link href="http://openstack.example.com/servers/72167553-54cb-4bb0-b1bd-683e7ce4f524" rel="bookmark"/>
+</server>

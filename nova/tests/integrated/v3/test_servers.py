@@ -94,6 +94,28 @@ class ServersActionsJsonTest(ServersSampleBase):
             self.assertEqual(response.status, code)
             self.assertEqual(response.read(), "")
 
+    def test_server_reboot_hard(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, "reboot",
+                                 {"type": "HARD"})
+
+    def test_server_reboot_soft(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, "reboot",
+                                 {"type": "SOFT"})
+
+    def test_server_rebuild(self):
+        uuid = self._post_server()
+        image = fake.get_valid_image_id()
+        subs = {'host': self._get_host(),
+                'uuid': image,
+                'name': 'foobar',
+                'pass': 'seekr3t',
+                'hostid': '[a-f0-9]+',
+                }
+        self._test_server_action(uuid, 'rebuild', subs,
+                                 'server-action-rebuild-resp')
+
     def test_server_resize(self):
         self.flags(allow_resize_to_same_host=True)
         uuid = self._post_server()
@@ -102,9 +124,18 @@ class ServersActionsJsonTest(ServersSampleBase):
                                   "host": self._get_host()})
         return uuid
 
+    def test_server_revert_resize(self):
+        uuid = self.test_server_resize()
+        self._test_server_action(uuid, "revert_resize")
+
     def test_server_confirm_resize(self):
         uuid = self.test_server_resize()
         self._test_server_action(uuid, "confirm_resize")
+
+    def test_server_create_image(self):
+        uuid = self._post_server()
+        self._test_server_action(uuid, 'create_image',
+                                 {'name': 'foo-image'})
 
 
 class ServersActionsXmlTest(ServersActionsJsonTest):
