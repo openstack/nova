@@ -539,6 +539,21 @@ class ServersController(wsgi.Controller):
                 msg = _("Only administrators may list deleted instances")
                 raise exc.HTTPBadRequest(explanation=msg)
 
+        # If tenant_id is passed as a search parameter this should
+        # imply that all_tenants is also enabled unless explicitly
+        # disabled. Note that the tenant_id parameter is filtered out
+        # by remove_invalid_options above unless the requestor is an
+        # admin.
+        if 'tenant_id' in search_opts and not 'all_tenants' in search_opts:
+            # We do not need to add the all_tenants flag if the tenant
+            # id associated with the token is the tenant id
+            # specified. This is done so a request that does not need
+            # the all_tenants flag does not fail because of lack of
+            # policy permission for compute:get_all_tenants when it
+            # doesn't actually need it.
+            if context.project_id != search_opts.get('tenant_id'):
+                search_opts['all_tenants'] = 1
+
         # If all tenants is passed with 0 or false as the value
         # then remove it from the search options. Nothing passed as
         # the value for all_tenants is considered to enable the feature
