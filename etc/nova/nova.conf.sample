@@ -1281,9 +1281,6 @@
 # requests. (string value)
 #neutron_ca_certificates_file=<None>
 
-# Use per-port DHCP options with Neutron (boolean value)
-#dhcp_options_enabled=false
-
 
 #
 # Options defined in nova.network.rpcapi

@@ -275,12 +275,10 @@ class TestNeutronv2Base(test.TestCase):
         self.mox.StubOutWithMock(api, '_get_instance_nw_info')
         has_portbinding = False
         has_extra_dhcp_opts = False
-        # Note: (dkehn) this option check should be removed as soon as support
-        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
-        if (cfg.CONF.dhcp_options_enabled == True and kwargs.get(
-                'dhcp_options', None) != None):
+        dhcp_options = kwargs.get('dhcp_options')
+        if dhcp_options is not None:
             has_extra_dhcp_opts = True
-            dhcp_options = kwargs.get('dhcp_options')
+
         if kwargs.get('portbinding'):
             has_portbinding = True
             api.extensions[constants.PORTBINDING_EXT] = 1
@@ -1796,16 +1794,9 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
             self.moxed_client)
 
     def test_allocate_for_instance_1_with_extra_dhcp_opts_turned_off(self):
-        # Note: (dkehn) this option check should be removed as soon as support
-        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
-        CONF.set_override('dhcp_options_enabled', True)
         self._allocate_for_instance(1, extra_dhcp_opts=False)
-        CONF.set_override('dhcp_options_enabled', False)
 
     def test_allocate_for_instance_extradhcpopts(self):
-        # Note: (dkehn) this option check should be removed as soon as support
-        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
-        CONF.set_override('dhcp_options_enabled', True)
         dhcp_opts = [{'opt_name': 'bootfile-name',
                           'opt_value': 'pxelinux.0'},
                          {'opt_name': 'tftp-server',
@@ -1814,7 +1805,6 @@ class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
                           'opt_value': '123.123.123.456'}]
 
         self._allocate_for_instance(1, dhcp_options=dhcp_opts)
-        CONF.set_override('dhcp_options_enabled', False)
 
 
 class TestNeutronClientForAdminScenarios(test.TestCase):
