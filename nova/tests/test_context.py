@@ -95,7 +95,9 @@ class ContextTestCase(test.NoDBTestCase):
                 {u'type': u'volume', u'name': u'cinder'},
                 {u'type': u'ec2', u'name': u'ec2'},
                 {u'type': u'object-store', u'name': u'swift'},
-                {u'type': u'identity', u'name': u'keystone'}]
+                {u'type': u'identity', u'name': u'keystone'},
+                {u'type': None, u'name': u'S_withouttype'},
+                {u'type': u'vo', u'name': u'S_partofvolume'}]
 
         volume_catalog = [{u'type': u'volume', u'name': u'cinder'}]
         ctxt = context.RequestContext('111', '222',
