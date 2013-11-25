@@ -351,6 +351,9 @@ class ComputeVolumeTestCase(BaseTestCase):
             'name': 'fake',
             'root_device_name': '/dev/vda',
         }
+        self.instance_object = instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(),
+                fake_instance.fake_db_instance())
         self.stubs.Set(self.compute.volume_api, 'get', lambda *a, **kw:
                        {'id': self.volume_id})
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
@@ -898,24 +901,24 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_volume_snapshot_create(self):
         self.assertRaises(rpc_common.ClientException,
                 self.compute.volume_snapshot_create, self.context,
-                self.instance, 'fake_id', {})
+                self.instance_object, 'fake_id', {})
 
         self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                 self.compute.volume_snapshot_create, self.context,
-                self.instance, 'fake_id', {})
+                self.instance_object, 'fake_id', {})
 
     def test_volume_snapshot_delete(self):
         self.assertRaises(rpc_common.ClientException,
                 self.compute.volume_snapshot_delete, self.context,
-                self.instance, 'fake_id', 'fake_id2', {})
+                self.instance_object, 'fake_id', 'fake_id2', {})
 
         self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                 self.compute.volume_snapshot_delete, self.context,
-                self.instance, 'fake_id', 'fake_id2', {})
+                self.instance_object, 'fake_id', 'fake_id2', {})
 
 
 class ComputeTestCase(BaseTestCase):

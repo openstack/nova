@@ -30,6 +30,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
@@ -38,6 +39,7 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
@@ -1512,22 +1514,27 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_volume_snapshot_create(self):
         volume_id = '1'
         create_info = {'id': 'eyedee'}
-        fake_bdm = {
-            'instance': {
-                'uuid': 'fake_uuid',
-                'vm_state': vm_states.ACTIVE,
-            },
-        }
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
+                    'id': 123,
+                    'device_name': '/dev/sda2',
+                    'source_type': 'volume',
+                    'destination_type': 'volume',
+                    'connection_info': "{'fake': 'connection_info'}",
+                    'volume_id': 1,
+                    'boot_index': -1})
+        fake_bdm['instance'] = fake_instance.fake_db_instance()
+        fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
+        fake_bdm = block_device_obj.BlockDeviceMapping._from_db_object(
+                self.context, block_device_obj.BlockDeviceMapping(),
+                fake_bdm, ['instance'])
 
-        def fake_get_bdm(context, _volume_id, columns_to_join):
-            self.assertEqual(volume_id, _volume_id)
-            return fake_bdm
-
-        self.stubs.Set(self.compute_api.db,
-                'block_device_mapping_get_by_volume_id', fake_get_bdm)
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+                                 'get_by_volume_id')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_create')
 
+        block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                self.context, volume_id, ['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_create(self.context,
                 fake_bdm['instance'], volume_id, create_info)
 
@@ -1547,22 +1554,27 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_volume_snapshot_delete(self):
         volume_id = '1'
         snapshot_id = '2'
-        fake_bdm = {
-            'instance': {
-                'uuid': 'fake_uuid',
-                'vm_state': vm_states.ACTIVE,
-            },
-        }
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
+                    'id': 123,
+                    'device_name': '/dev/sda2',
+                    'source_type': 'volume',
+                    'destination_type': 'volume',
+                    'connection_info': "{'fake': 'connection_info'}",
+                    'volume_id': 1,
+                    'boot_index': -1})
+        fake_bdm['instance'] = fake_instance.fake_db_instance()
+        fake_bdm['instance_uuid'] = fake_bdm['instance']['uuid']
+        fake_bdm = block_device_obj.BlockDeviceMapping._from_db_object(
+                self.context, block_device_obj.BlockDeviceMapping(),
+                fake_bdm, ['instance'])
 
-        def fake_get_bdm(context, _volume_id, columns_to_join):
-            self.assertEqual(volume_id, _volume_id)
-            return fake_bdm
-
-        self.stubs.Set(self.compute_api.db,
-                'block_device_mapping_get_by_volume_id', fake_get_bdm)
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+                                 'get_by_volume_id')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_delete')
 
+        block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                self.context, volume_id, ['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_delete(self.context,
                 fake_bdm['instance'], volume_id, snapshot_id, {})
 

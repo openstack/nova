@@ -413,7 +413,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.5'
+    RPC_API_VERSION = '3.6'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2534,12 +2534,14 @@ class ComputeManager(manager.Manager):
             msg = _("Image not found during snapshot")
             LOG.warn(msg, instance=instance)
 
+    @object_compat
     @rpc_common.client_exceptions(NotImplementedError)
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
         self.driver.volume_snapshot_create(context, instance, volume_id,
                                            create_info)
 
+    @object_compat
     @rpc_common.client_exceptions(NotImplementedError)
     def volume_snapshot_delete(self, context, instance, volume_id,
                                snapshot_id, delete_info):
