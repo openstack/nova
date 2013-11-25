@@ -1239,8 +1239,8 @@ def _create_cached_image(context, session, instance, name_label,
             new_vdi_ref = session.call_xenapi("VDI.copy", cache_vdi_ref,
                                               sr_ref)
 
-        session.call_xenapi('VDI.set_name_label', cache_vdi_ref, '')
-        session.call_xenapi('VDI.set_name_description', cache_vdi_ref, '')
+        session.call_xenapi('VDI.set_name_label', new_vdi_ref, '')
+        session.call_xenapi('VDI.set_name_description', new_vdi_ref, '')
         session.call_xenapi('VDI.remove_from_other_config',
                             new_vdi_ref, 'image-id')
 
