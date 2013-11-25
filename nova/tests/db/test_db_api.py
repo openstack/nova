@@ -156,6 +156,9 @@ class DecoratorTestCase(test.TestCase):
     def test_require_admin_context_decorator_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(sqlalchemy_api.require_admin_context)
 
+    def test_require_deadlock_retry_wraps_functions_properly(self):
+        self._test_decorator_wraps_helper(sqlalchemy_api._retry_on_deadlock)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate'}
