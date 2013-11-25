@@ -339,18 +339,21 @@ def object_compat(function):
 
     @functools.wraps(function)
     def decorated_function(self, context, *args, **kwargs):
+        def _load_instance(instance_or_dict):
+            if isinstance(instance_or_dict, dict):
+                instance = instance_obj.Instance._from_db_object(
+                    context, instance_obj.Instance(), instance_or_dict,
+                    expected_attrs=metas)
+                instance._context = context
+                return instance
+            return instance_or_dict
+
         metas = ['metadata', 'system_metadata']
         try:
-            instance = kwargs['instance']
+            kwargs['instance'] = _load_instance(kwargs['instance'])
         except KeyError:
-            instance = args[0]
-            args = args[1:]
-        if isinstance(instance, dict):
-            instance = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance,
-                expected_attrs=metas)
-            instance._context = context
-        kwargs['instance'] = instance
+            args = (_load_instance(args[0]),) + args[1:]
+
         migration = kwargs.get('migration')
         if isinstance(migration, dict):
             migration = migration_obj.Migration._from_db_object(

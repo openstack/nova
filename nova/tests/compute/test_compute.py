@@ -1039,6 +1039,18 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(instance.uuid, db_inst['uuid'])
         test_fn(None, self.context, instance=db_inst)
 
+    def test_object_compat_more_positional_args(self):
+        db_inst = fake_instance.fake_db_instance()
+
+        @compute_manager.object_compat
+        def test_fn(_self, context, instance, pos_arg_1, pos_arg_2):
+            self.assertIsInstance(instance, instance_obj.Instance)
+            self.assertEqual(instance.uuid, db_inst['uuid'])
+            self.assertEqual(pos_arg_1, 'fake_pos_arg1')
+            self.assertEqual(pos_arg_2, 'fake_pos_arg2')
+
+        test_fn(None, self.context, db_inst, 'fake_pos_arg1', 'fake_pos_arg2')
+
     def test_create_instance_with_img_ref_associates_config_drive(self):
         # Make sure create associates a config drive.
 
