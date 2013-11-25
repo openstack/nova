@@ -454,9 +454,8 @@ class LibvirtVifTestCase(test.TestCase):
             self.vif_8021qbg,
             self.vif_iovisor,
             self.vif_mlnx,
+            self.vif_ovs,
         )
-        self._test_model_qemu(self.vif_ovs,
-                              libvirt_version=vif.LIBVIRT_OVS_VPORT_VERSION)
 
     def test_model_qemu_iptables(self):
         self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
@@ -507,23 +506,8 @@ class LibvirtVifTestCase(test.TestCase):
         script = node.find("script").get("path")
         self.assertEqual(script, "")
 
-    def _check_ovs_ethernet_driver(self, d, vif, dev_prefix):
-        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
-        xml = self._get_instance_xml(d, vif)
-        node = self._get_node(xml)
-        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
-                                     self.vif_ovs, prefix=dev_prefix)
-        script = node.find("script").get("path")
-        self.assertEqual(script, "")
-
-    def test_ovs_ethernet_driver(self):
-        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
-        self._check_ovs_ethernet_driver(d,
-                                        self.vif_ovs,
-                                        "tap")
-
     def test_unplug_ivs_ethernet(self):
-        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        d = vif.LibvirtGenericVIFDriver(self._get_conn())
         with mock.patch.object(linux_net, 'delete_ivs_vif_port') as delete:
             delete.side_effect = processutils.ProcessExecutionError
             d.unplug_ivs_ethernet(None, self.vif_ovs)
@@ -810,7 +794,7 @@ class LibvirtVifTestCase(test.TestCase):
         br_want = self.vif_midonet['devname']
         xml = self._get_instance_xml(d, self.vif_ovs_filter_cap)
         node = self._get_node(xml)
-        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+        self._assertTypeAndMacEquals(node, "bridge", "target", "dev",
                                      self.vif_ovs_filter_cap, br_want)
 
     def _check_neutron_hybrid_driver(self, d, vif, br_want):

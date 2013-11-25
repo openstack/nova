@@ -46,9 +46,6 @@ CONF.register_opts(libvirt_vif_opts, 'libvirt')
 CONF.import_opt('virt_type', 'nova.virt.libvirt.driver', group='libvirt')
 CONF.import_opt('use_ipv6', 'nova.netconf')
 
-# Since libvirt 0.9.11, <interface type='bridge'>
-# supports OpenVSwitch natively.
-LIBVIRT_OVS_VPORT_VERSION = 9011
 DEV_PREFIX_ETH = 'eth'
 
 
@@ -86,19 +83,9 @@ class LibvirtBaseVIFDriver(object):
 
     def __init__(self, get_connection):
         self.get_connection = get_connection
-        self.libvirt_version = None
 
     def _normalize_vif_type(self, vif_type):
         return vif_type.replace('2.1q', '2q')
-
-    def has_libvirt_version(self, want):
-        if self.libvirt_version is None:
-            conn = self.get_connection()
-            self.libvirt_version = conn.getLibVersion()
-
-        if self.libvirt_version >= want:
-            return True
-        return False
 
     def get_vif_devname(self, vif):
         if 'devname' in vif:
@@ -232,14 +219,10 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             return self.get_config_ovs_hybrid(instance, vif,
                                               image_meta,
                                               inst_type)
-        elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
+        else:
             return self.get_config_ovs_bridge(instance, vif,
                                               image_meta,
                                               inst_type)
-        else:
-            return self.get_config_ovs_ethernet(instance, vif,
-                                                image_meta,
-                                                inst_type)
 
     def get_config_ivs_hybrid(self, instance, vif, image_meta,
                               inst_type):
@@ -442,10 +425,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
     def plug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.plug_ovs_hybrid(instance, vif)
-        elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
-            self.plug_ovs_bridge(instance, vif)
         else:
-            self.plug_ovs_ethernet(instance, vif)
+            self.plug_ovs_bridge(instance, vif)
 
     def plug_ivs_ethernet(self, instance, vif):
         super(LibvirtGenericVIFDriver,
@@ -633,10 +614,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
     def unplug_ovs(self, instance, vif):
         if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.unplug_ovs_hybrid(instance, vif)
-        elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
-            self.unplug_ovs_bridge(instance, vif)
         else:
-            self.unplug_ovs_ethernet(instance, vif)
+            self.unplug_ovs_bridge(instance, vif)
 
     def unplug_ivs_ethernet(self, instance, vif):
         """Unplug the VIF by deleting the port from the bridge."""
