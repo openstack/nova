@@ -5323,7 +5323,7 @@ def actions_get(context, instance_uuid):
     """Get all instance actions for the provided uuid."""
     actions = model_query(context, models.InstanceAction).\
                           filter_by(instance_uuid=instance_uuid).\
-                          order_by(desc("created_at")).\
+                          order_by(desc("created_at"), desc("id")).\
                           all()
     return actions
 
@@ -5397,7 +5397,7 @@ def action_event_finish(context, values):
 def action_events_get(context, action_id):
     events = model_query(context, models.InstanceActionEvent).\
                          filter_by(action_id=action_id).\
-                         order_by(desc("created_at")).\
+                         order_by(desc("created_at"), desc("id")).\
                          all()
 
     return events
