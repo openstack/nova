@@ -1193,9 +1193,11 @@ def _execute(*cmd, **kwargs):
 
 def device_exists(device):
     """Check if ethernet device exists."""
-    (_out, err) = _execute('ip', 'link', 'show', 'dev', device,
-                           check_exit_code=False, run_as_root=True)
-    return not err
+    try:
+        _execute('ip', 'link', 'show', 'dev', device, run_as_root=True)
+    except processutils.ProcessExecutionError:
+        return False
+    return True
 
 
 def _dhcp_file(dev, kind):
