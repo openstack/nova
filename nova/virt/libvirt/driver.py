@@ -217,12 +217,6 @@ libvirt_opts = [
                     ' if instance does not shutdown within this window.',
                deprecated_name='libvirt_wait_soft_reboot_seconds',
                deprecated_group='DEFAULT'),
-    cfg.BoolOpt('api_thread_pool',
-                default=True,
-                help='Use a separated OS thread pool to realize non-blocking'
-                     ' libvirt calls',
-                deprecated_name='libvirt_non_blocking',
-                deprecated_group='DEFAULT'),
     cfg.StrOpt('cpu_mode',
                help='Set to "host-model" to clone the host CPU feature flags; '
                     'to "host-passthrough" to use the host CPU model exactly; '
@@ -736,15 +730,12 @@ class LibvirtDriver(driver.ComputeDriver):
             flags = 0
             if read_only:
                 flags = libvirt.VIR_CONNECT_RO
-            if not CONF.libvirt.api_thread_pool:
-                return libvirt.openAuth(uri, auth, flags)
-            else:
-                # tpool.proxy_call creates a native thread. Due to limitations
-                # with eventlet locking we cannot use the logging API inside
-                # the called function.
-                return tpool.proxy_call(
-                    (libvirt.virDomain, libvirt.virConnect),
-                    libvirt.openAuth, uri, auth, flags)
+            # tpool.proxy_call creates a native thread. Due to limitations
+            # with eventlet locking we cannot use the logging API inside
+            # the called function.
+            return tpool.proxy_call(
+                (libvirt.virDomain, libvirt.virConnect),
+                libvirt.openAuth, uri, auth, flags)
         except libvirt.libvirtError as ex:
             LOG.exception(_("Connection to libvirt failed: %s"), ex)
             payload = dict(ip=LibvirtDriver.get_host_ip_addr(),

@@ -2533,10 +2533,6 @@
 # value)
 #wait_soft_reboot_seconds=120
 
-# Use a separated OS thread pool to realize non-blocking
-# libvirt calls (boolean value)
-#api_thread_pool=true
-
 # Set to "host-model" to clone the host CPU feature flags; to
 # "host-passthrough" to use the host CPU model exactly; to
 # "custom" to use a named CPU model; to "none" to not set any

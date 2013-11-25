@@ -7432,11 +7432,11 @@ class LibvirtVolumeUsageTestCase(test.TestCase):
 
 
 class LibvirtNonblockingTestCase(test.TestCase):
-    """Test nonblocking option."""
+    """Test libvirtd calls are nonblocking."""
 
     def setUp(self):
         super(LibvirtNonblockingTestCase, self).setUp()
-        self.flags(api_thread_pool=True, connection_uri="test:///default",
+        self.flags(connection_uri="test:///default",
                    group='libvirt')
 
     def test_connection_to_primitive(self):

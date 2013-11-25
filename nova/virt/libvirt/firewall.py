@@ -17,7 +17,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from eventlet import tpool
 from oslo.config import cfg
 
 from nova.cloudpipe import pipelib
@@ -239,14 +238,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
     def _define_filter(self, xml):
         if callable(xml):
             xml = xml()
-        # execute in a native thread and block current greenthread until done
-        if not CONF.libvirt.api_thread_pool:
-            # NOTE(maoy): the original implementation is to have the API called
-            # in the thread pool no matter what.
-            tpool.execute(self._conn.nwfilterDefineXML, xml)
-        else:
-            # NOTE(maoy): self._conn is an eventlet.tpool.Proxy object
-            self._conn.nwfilterDefineXML(xml)
+        self._conn.nwfilterDefineXML(xml)
 
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
