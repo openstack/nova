@@ -628,10 +628,13 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             br_name = self.get_br_name(vif['id'])
             v1_name, v2_name = self.get_veth_pair_names(vif['id'])
 
-            utils.execute('brctl', 'delif', br_name, v1_name, run_as_root=True)
-            utils.execute('ip', 'link', 'set', br_name, 'down',
-                          run_as_root=True)
-            utils.execute('brctl', 'delbr', br_name, run_as_root=True)
+            if linux_net.device_exists(br_name):
+                utils.execute('brctl', 'delif', br_name, v1_name,
+                              run_as_root=True)
+                utils.execute('ip', 'link', 'set', br_name, 'down',
+                              run_as_root=True)
+                utils.execute('brctl', 'delbr', br_name,
+                              run_as_root=True)
 
             linux_net.delete_ovs_vif_port(self.get_bridge_name(vif),
                                           v2_name)
