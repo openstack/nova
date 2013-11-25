@@ -147,10 +147,16 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 class AggregateList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added key argument to get_by_host()
+    #              Aggregate <= version 1.1
     VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Aggregate'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        '1.1': '1.1',
+        # NOTE(danms): Aggregate was at 1.1 before we added this
         }
 
     @base.remotable_classmethod

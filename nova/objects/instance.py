@@ -531,11 +531,18 @@ def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
 class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added use_slave to get_by_host
-    VERSION = '1.1'
+    #              Instance <= version 1.9
+    # Version 1.2: Instance <= version 1.11
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
     }
+    child_versions = {
+        '1.1': '1.9',
+        # NOTE(danms): Instance was at 1.9 before we added this
+        '1.2': '1.11',
+        }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,

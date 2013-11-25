@@ -82,8 +82,16 @@ def _make_secgroup_list(context, secgroup_list, db_secgroup_list):
 
 
 class SecurityGroupList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              SecurityGroup <= version 1.1
+    VERSION = '1.0'
+
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroup'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        # NOTE(danms): SecurityGroup was at 1.1 before we added this
         }
 
     def __init__(self):

@@ -124,8 +124,16 @@ class Service(base.NovaPersistentObject, base.NovaObject):
 
 
 class ServiceList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              Service <= version 1.2
+    VERSION = '1.0'
+
     fields = {
         'objects': fields.ListOfObjectsField('Service'),
+        }
+    child_versions = {
+        '1.0': '1.2',
+        # NOTE(danms): Service was at 1.2 before we added this
         }
 
     @base.remotable_classmethod

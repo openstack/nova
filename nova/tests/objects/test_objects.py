@@ -721,6 +721,27 @@ class TestObjectListBase(test.TestCase):
         self.assertEqual([x.foo for x in obj],
                          [y.foo for y in obj2])
 
+    def _test_object_list_version_mappings(self, list_obj_class):
+        # Figure out what sort of object this list is for
+        list_field = list_obj_class.fields['objects']
+        item_obj_field = list_field._type._element_type
+        item_obj_name = item_obj_field._type._obj_name
+
+        # Look through all object classes of this type and make sure that
+        # the versions we find are covered by the parent list class
+        for item_class in base.NovaObject._obj_classes[item_obj_name]:
+            self.assertIn(
+                item_class.VERSION,
+                list_obj_class.child_versions.values())
+
+    def test_object_version_mappings(self):
+        # Find all object list classes and make sure that they at least handle
+        # all the current object versions
+        for obj_classes in base.NovaObject._obj_classes.values():
+            for obj_class in obj_classes:
+                if issubclass(obj_class, base.ObjectListBase):
+                    self._test_object_list_version_mappings(obj_class)
+
 
 class TestObjectSerializer(_BaseTestCase):
     def test_serialize_entity_primitive(self):

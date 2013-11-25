@@ -435,6 +435,11 @@ class ObjectListBase(object):
         'objects': fields.ListOfObjectsField('NovaObject'),
         }
 
+    # This is a dictionary of my_version:child_version mappings so that
+    # we can support backleveling our contents based on the version
+    # requested of the list object.
+    child_versions = {}
+
     def __iter__(self):
         """List iterator interface."""
         return iter(self.objects)
@@ -477,6 +482,15 @@ class ObjectListBase(object):
             obj = NovaObject.obj_from_primitive(entity, context=self._context)
             objects.append(obj)
         return objects
+
+    def obj_make_compatible(self, primitive, target_version):
+        primitives = primitive['objects']
+        child_target_version = self.child_versions.get(target_version, '1.0')
+        for index, item in enumerate(self.objects):
+            self.objects[index].obj_make_compatible(
+                primitives[index]['nova_object.data'],
+                child_target_version)
+            primitives[index]['nova_object.version'] = child_target_version
 
 
 class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
