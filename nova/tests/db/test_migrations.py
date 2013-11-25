@@ -2885,15 +2885,22 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
                                    'supported_instance')
 
     def _data_209(self):
-        ret = {"compute_nodes": {"service_id": 999, "vcpus": 1, "memory_mb": 1,
-                                 "local_gb": 1, "vcpus_used": 1,
-                                 "memory_mb_used": 1, "local_gb_used": 1,
-                                 "hypervisor_type": "fake_type",
-                                 "hypervisor_version": 1, "cpu_info": "info"},
-               "instance_actions": {"instance_uuid": "fake"},
-               "migrations": {"instance_uuid": "fake"},
-               "instance_faults": {"instance_uuid": "fake", "code": 1},
-               "compute_node_stats": {"compute_node_id": 1, "key": "fake"}}
+        ret = {
+            "compute_nodes": ({"service_id": 999, "vcpus": 1, "memory_mb": 1,
+                               "local_gb": 1, "vcpus_used": 1,
+                               "memory_mb_used": 1, "local_gb_used": 1,
+                               "hypervisor_type": "fake_type",
+                               "hypervisor_version": 1, "cpu_info": "info"},
+                              ("compute_node_stats", "compute_node_id",
+                               {"key": "fake", "value": "bar"})),
+           "instance_actions": ({"instance_uuid": "fake"},
+                                ("instance_actions_events", "action_id",
+                                 {"event": "fake"})),
+           "migrations": ({"instance_uuid": "fake"}, None),
+           "instance_faults": ({"instance_uuid": "fake", "code": 1}, None),
+           "compute_node_stats": ({"compute_node_id": 1, "key": "fake"},
+                                  None),
+        }
         return ret
 
     def _constraints_209(self):
@@ -2906,16 +2913,25 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _pre_upgrade_209(self, engine):
         if engine.name == 'sqlite':
             return
+
         instances = db_utils.get_table(engine, 'instances')
         instances.delete().where(instances.c.uuid == None).execute()
-        tables = ["compute_nodes", "instance_actions", "migrations",
-                  "instance_faults", "compute_node_stats"]
-        change_tables = dict((i, db_utils.get_table(engine, i))
-                             for i in tables)
-        data = self._data_209()
-        for i in tables:
-            change_tables[i].delete().execute()
-            change_tables[i].insert().values(data[i]).execute()
+
+        for table_name, (row, child) in self._data_209().iteritems():
+            table = db_utils.get_table(engine, table_name)
+            table.delete().execute()
+            result = table.insert().values(row).execute()
+
+            if child:
+                # Get id of row
+                child_table_name, child_column_name, child_row = child
+
+                child_row = child_row.copy()
+                child_row[child_column_name] = result.inserted_primary_key[0]
+
+                child_table = db_utils.get_table(engine, child_table_name)
+                child_table.delete().execute()
+                child_table.insert().values(child_row).execute()
 
         # NOTE(jhesketh): Add instance with NULL uuid to check the backups
         #                 still work correctly and avoid violating the foreign
@@ -2924,49 +2940,35 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         #                 this instance inserted here causes migration 209 to
         #                 fail unless the IN set sub-query is modified
         #                 appropriately. See bug/1240325
-        db_utils.get_table(engine, 'instances').insert(
-            {'uuid': None}
-        ).execute()
+        instances.insert({'uuid': None}).execute()
 
     def _check_209(self, engine, data):
         if engine.name == 'sqlite':
             return
-        tables = ["compute_nodes", "instance_actions", "migrations",
-                  "instance_faults", "compute_node_stats"]
-        change_tables = dict((i, db_utils.get_table(engine, i))
-                             for i in tables)
-        data = self._data_209()
-        for i in tables:
-            insert_values = data[i]
-            table = change_tables[i]
+        for table_name, (row, child) in self._data_209().iteritems():
+            table = db_utils.get_table(engine, table_name)
             self.assertRaises(sqlalchemy.exc.IntegrityError,
-                              table.insert().execute,
-                              insert_values)
-            dump_table = db_utils.get_table(engine, 'dump_' + i)
+                              table.insert().values(row).execute)
+            dump_table = db_utils.get_table(engine, 'dump_' + table_name)
             self.assertEqual(len(dump_table.select().execute().fetchall()), 1)
             table.delete().execute()
             fks = [(f.column.table.name, f.column.name)
                    for f in table.foreign_keys]
-            self.assertIn(self._constraints_209().get(i), fks)
+            self.assertIn(self._constraints_209().get(table_name), fks)
 
     def _post_downgrade_209(self, engine):
         if engine.name == 'sqlite':
             return
         check_tables = engine.table_names()
-        tables = ["compute_nodes", "instance_actions", "migrations",
-                  "instance_faults", "compute_node_stats"]
-        change_tables = dict((i, db_utils.get_table(engine, i))
-                             for i in tables)
-        data = self._data_209()
-        for i in tables:
-            dump_table_name = 'dump_' + i
+        for table_name, (row, child) in self._data_209().iteritems():
+            table = db_utils.get_table(engine, table_name)
+            dump_table_name = 'dump_' + table_name
             self.assertNotIn(dump_table_name, check_tables)
-            table = change_tables[i]
-            table.insert().values(data[i]).execute()
+            table.insert().values(row).execute()
             self.assertEqual(len(table.select().execute().fetchall()), 2)
             fks = [(f.column.table.name, f.column.name)
                    for f in table.foreign_keys]
-            self.assertNotIn(self._constraints_209().get(i), fks)
+            self.assertNotIn(self._constraints_209().get(table_name), fks)
 
     def _check_210(self, engine, data):
         project_user_quotas = db_utils.get_table(engine, 'project_user_quotas')
