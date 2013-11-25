@@ -174,32 +174,6 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
-    @extensions.expected_errors(404)
-    @wsgi.action('lock')
-    def _lock(self, req, id, body):
-        """Lock a server instance."""
-        context = req.environ['nova.context']
-        authorize(context, 'lock')
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-            self.compute_api.lock(context, instance)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
-
-    @extensions.expected_errors(404)
-    @wsgi.action('unlock')
-    def _unlock(self, req, id, body):
-        """Unlock a server instance."""
-        context = req.environ['nova.context']
-        authorize(context, 'unlock')
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-            self.compute_api.unlock(context, instance)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
-
     @extensions.expected_errors((400, 404, 409, 413))
     @wsgi.action('create_backup')
     def _create_backup(self, req, id, body):

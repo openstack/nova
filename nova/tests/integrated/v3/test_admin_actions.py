@@ -75,19 +75,6 @@ class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
                                  'admin-actions-inject-network-info', {})
         self.assertEqual(response.status, 202)
 
-    def test_post_lock_server(self):
-        # Get api samples to lock server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-lock-server', {})
-        self.assertEqual(response.status, 202)
-
-    def test_post_unlock_server(self):
-        # Get api samples to unlock server request.
-        self.test_post_lock_server()
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-unlock-server', {})
-        self.assertEqual(response.status, 202)
-
     def test_post_backup_server(self):
         # Get api samples to backup server request.
         def image_details(self, context, **kwargs):
