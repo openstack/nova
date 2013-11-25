@@ -55,8 +55,10 @@ class MultipleCreate(extensions.V3APIExtensionBase):
         max_count = server_dict.get(MAX_ATTRIBUTE_NAME, min_count)
 
         try:
-            utils.validate_integer(min_count, "min_count", min_value=1)
-            utils.validate_integer(max_count, "max_count", min_value=1)
+            min_count = utils.validate_integer(min_count,
+                                               "min_count", min_value=1)
+            max_count = utils.validate_integer(max_count,
+                                               "max_count", min_value=1)
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 

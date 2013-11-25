@@ -179,6 +179,25 @@ class ServersControllerCreateTest(test.TestCase):
             params,
             override_controller=self.no_mult_create_controller)
 
+    def test_multiple_create_with_string_type_min_and_max(self):
+        min_count = '2'
+        max_count = '3'
+        params = {
+            multiple_create.MIN_ATTRIBUTE_NAME: min_count,
+            multiple_create.MAX_ATTRIBUTE_NAME: max_count,
+        }
+        old_create = compute_api.API.create
+
+        def create(*args, **kwargs):
+            self.assertIsInstance(kwargs['min_count'], int)
+            self.assertIsInstance(kwargs['max_count'], int)
+            self.assertEqual(kwargs['min_count'], 2)
+            self.assertEqual(kwargs['max_count'], 3)
+            return old_create(*args, **kwargs)
+
+        self.stubs.Set(compute_api.API, 'create', create)
+        self._test_create_extra(params)
+
     def test_create_instance_with_multiple_create_enabled(self):
         min_count = 2
         max_count = 3
