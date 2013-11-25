@@ -86,7 +86,7 @@ def reset():
     for c in _CLASSES:
         _db_content[c] = {}
     host = create_host('fake')
-    create_vm('fake',
+    create_vm('fake dom 0',
               'Running',
               is_a_template=False,
               is_control_domain=True,
@@ -127,12 +127,19 @@ def create_network(name_label, bridge):
 
 
 def create_vm(name_label, status, **kwargs):
-    domid = status == 'Running' and random.randrange(1, 1 << 16) or -1
+    if status == 'Running':
+        domid = random.randrange(1, 1 << 16)
+        resident_on = _db_content['host'].keys()[0]
+    else:
+        domid = -1
+        resident_on = ''
+
     vm_rec = kwargs.copy()
     vm_rec.update({'name_label': name_label,
                    'domid': domid,
                    'power_state': status,
-                   'blocked_operations': {}})
+                   'blocked_operations': {},
+                   'resident_on': resident_on})
     vm_ref = _create_object('VM', vm_rec)
     after_VM_create(vm_ref, vm_rec)
     return vm_ref
@@ -234,6 +241,7 @@ def after_VBD_create(vbd_ref, vbd_rec):
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
     vm_rec.setdefault('is_control_domain', False)
+    vm_rec.setdefault('is_a_template', False)
     vm_rec.setdefault('memory_static_max', str(8 * units.Gi))
     vm_rec.setdefault('memory_dynamic_max', str(8 * units.Gi))
     vm_rec.setdefault('VCPUs_max', str(4))
@@ -395,7 +403,15 @@ def _query_matches(record, query):
 
     field = field.replace("__", "_").strip(" \"'")
     value = value.strip(" \"'")
-    return record[field] == value
+
+    # Strings should be directly compared
+    if isinstance(record[field], str):
+        return record[field] == value
+
+    # But for all other value-checks, convert to a string first
+    # (Notably used for booleans - which can be lower or camel
+    # case and are interpreted/sanitised by XAPI)
+    return str(record[field]).lower() == value.lower()
 
 
 def get_all_records_where(table_name, query):

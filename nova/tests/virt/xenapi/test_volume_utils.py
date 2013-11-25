@@ -46,6 +46,26 @@ class CallXenAPIHelpersTestCase(stubs.XenAPITestBaseNoDB):
         mock_synchronized.assert_called_once_with("xenapi-events-vm_ref:123")
 
 
+class SROps(stubs.XenAPITestBaseNoDB):
+    def test_find_sr_valid_uuid(self):
+        self.session = mock.Mock()
+        self.session.call_xenapi.return_value = 'sr_ref'
+        self.assertEqual(volume_utils.find_sr_by_uuid(self.session,
+                                                      'sr_uuid'),
+                         'sr_ref')
+
+    def test_find_sr_invalid_uuid(self):
+        class UUIDException(Exception):
+            details = ["UUID_INVALID", "", "", ""]
+
+        self.session = mock.Mock()
+        self.session.XenAPI.Failure = UUIDException
+        self.session.call_xenapi.side_effect = UUIDException
+        self.assertEqual(volume_utils.find_sr_by_uuid(self.session,
+                                                      'sr_uuid'),
+                         None)
+
+
 class ISCSIParametersTestCase(stubs.XenAPITestBaseNoDB):
     def test_target_host(self):
         self.assertEqual(volume_utils._get_target_host('host:port'),
