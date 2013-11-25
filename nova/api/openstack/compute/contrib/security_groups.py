@@ -521,20 +521,15 @@ class SecurityGroupsOutputController(wsgi.Controller):
             # neutron security groups the requested security groups for the
             # instance are not in the db and have not been sent to neutron yet.
             if req.method != 'POST':
-                if len(servers) == 1:
-                    group = (self.security_group_api
-                             .get_instance_security_groups(context,
-                                                           servers[0]['id']))
-                    if group:
-                        servers[0][key] = group
-                else:
-                    sg_instance_bindings = (
+                sg_instance_bindings = (
                         self.security_group_api
-                        .get_instances_security_groups_bindings(context))
-                    for server in servers:
-                        groups = sg_instance_bindings.get(server['id'])
-                        if groups:
-                            server[key] = groups
+                        .get_instances_security_groups_bindings(context,
+                                                                servers))
+                for server in servers:
+                    groups = sg_instance_bindings.get(server['id'])
+                    if groups:
+                        server[key] = groups
+
             # In this section of code len(servers) == 1 as you can only POST
             # one server in an API request.
             else:
