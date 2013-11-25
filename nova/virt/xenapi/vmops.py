@@ -627,7 +627,7 @@ class VMOps(object):
                   instance=instance)
         expiration = time.time() + CONF.xenserver.running_timeout
         while time.time() < expiration:
-            state = self.get_info(instance, vm_ref)['state']
+            state = vm_utils.get_power_state(self._session, vm_ref)
             if state == power_state.RUNNING:
                 break
             greenthread.sleep(0.5)
@@ -1283,8 +1283,7 @@ class VMOps(object):
     def _destroy_rescue_instance(self, rescue_vm_ref, original_vm_ref):
         """Destroy a rescue instance."""
         # Shutdown Rescue VM
-        vm_rec = self._session.call_xenapi("VM.get_record", rescue_vm_ref)
-        state = vm_utils.compile_info(vm_rec)['state']
+        state = vm_utils.get_power_state(self._session, rescue_vm_ref)
         if state != power_state.SHUTDOWN:
             self._session.call_xenapi("VM.hard_shutdown", rescue_vm_ref)
 
@@ -1486,8 +1485,7 @@ class VMOps(object):
     def get_info(self, instance, vm_ref=None):
         """Return data about VM instance."""
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance)
-        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-        return vm_utils.compile_info(vm_rec)
+        return vm_utils.compile_info(self._session, vm_ref)
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""

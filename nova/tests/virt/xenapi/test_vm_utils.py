@@ -25,6 +25,7 @@ import mox
 from oslo.config import cfg
 
 from nova.compute import flavors
+from nova.compute import power_state
 from nova.compute import vm_mode
 from nova import context
 from nova import exception
@@ -2030,3 +2031,58 @@ class ResizeFunctionTestCase(test.NoDBTestCase):
 
     def test_bad_version(self):
         self._test_is_resize("XenServer", "asdf")
+
+
+class VMInfoTests(VMUtilsTestBase):
+    def setUp(self):
+        super(VMInfoTests, self).setUp()
+        self.session = mock.Mock()
+
+    def test_get_power_state_valid(self):
+        # Save on test setup calls by having these simple tests in one method
+        self.session.call_xenapi.return_value = "Running"
+        self.assertEqual(vm_utils.get_power_state(self.session, "ref"),
+                         power_state.RUNNING)
+
+        self.session.call_xenapi.return_value = "Halted"
+        self.assertEqual(vm_utils.get_power_state(self.session, "ref"),
+                         power_state.SHUTDOWN)
+
+        self.session.call_xenapi.return_value = "Paused"
+        self.assertEqual(vm_utils.get_power_state(self.session, "ref"),
+                         power_state.PAUSED)
+
+        self.session.call_xenapi.return_value = "Suspended"
+        self.assertEqual(vm_utils.get_power_state(self.session, "ref"),
+                         power_state.SUSPENDED)
+
+        self.session.call_xenapi.return_value = "Crashed"
+        self.assertEqual(vm_utils.get_power_state(self.session, "ref"),
+                         power_state.CRASHED)
+
+    def test_get_power_state_invalid(self):
+        self.session.call_xenapi.return_value = "Invalid"
+        self.assertRaises(KeyError,
+                          vm_utils.get_power_state, self.session, "ref")
+
+    _XAPI_record = {'power_state': 'Running',
+                    'memory_static_max': str(10 << 10),
+                    'memory_dynamic_max': str(9 << 10),
+                    'VCPUs_max': '5'}
+
+    def test_compile_info(self):
+
+        def call_xenapi(method, *args):
+            if method.startswith('VM.get_') and args[0] == 'dummy':
+                return self._XAPI_record[method[7:]]
+
+        self.session.call_xenapi.side_effect = call_xenapi
+
+        expected = {'state': power_state.RUNNING,
+                    'max_mem': 10L,
+                    'mem': 9L,
+                    'num_cpu': '5',
+                    'cpu_time': 0}
+
+        self.assertEqual(vm_utils.compile_info(self.session, "dummy"),
+                         expected)

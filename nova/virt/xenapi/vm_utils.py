@@ -377,8 +377,7 @@ def hard_shutdown_vm(session, instance, vm_ref):
 
 
 def is_vm_shutdown(session, vm_ref):
-    vm_rec = session.call_xenapi("VM.get_record", vm_ref)
-    state = compile_info(vm_rec)['state']
+    state = get_power_state(session, vm_ref)
     if state == power_state.SHUTDOWN:
         return True
     return False
@@ -1773,12 +1772,22 @@ def is_snapshot(session, vm):
         return False
 
 
-def compile_info(record):
+def get_power_state(session, vm_ref):
+    xapi_state = session.call_xenapi("VM.get_power_state", vm_ref)
+    return XENAPI_POWER_STATE[xapi_state]
+
+
+def compile_info(session, vm_ref):
     """Fill record with VM status information."""
-    return {'state': XENAPI_POWER_STATE[record['power_state']],
-            'max_mem': long(record['memory_static_max']) >> 10,
-            'mem': long(record['memory_dynamic_max']) >> 10,
-            'num_cpu': record['VCPUs_max'],
+    power_state = get_power_state(session, vm_ref)
+    max_mem = session.call_xenapi("VM.get_memory_static_max", vm_ref)
+    mem = session.call_xenapi("VM.get_memory_dynamic_max", vm_ref)
+    num_cpu = session.call_xenapi("VM.get_VCPUs_max", vm_ref)
+
+    return {'state': power_state,
+            'max_mem': long(max_mem) >> 10,
+            'mem': long(mem) >> 10,
+            'num_cpu': num_cpu,
             'cpu_time': 0}
 
 
