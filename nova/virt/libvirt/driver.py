@@ -4595,7 +4595,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return shared_storage
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info,
+                                   flavor, network_info,
                                    block_device_info=None):
         LOG.debug(_("Starting migrate_disk_and_power_off"),
                    instance=instance)

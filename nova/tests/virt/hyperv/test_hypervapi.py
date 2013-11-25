@@ -1384,7 +1384,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
         else:
             flavor = 'm1.small'
 
-        instance_type = db.flavor_get_by_name(self._context, flavor)
+        flavor = db.flavor_get_by_name(self._context, flavor)
 
         if not size_exception:
             fake_root_vhd_path = 'C:\\FakePath\\root.vhd'
@@ -1432,52 +1432,52 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                                         remove_dir=True)
                     m.AndReturn(self._test_instance_dir)
 
-        return (instance, fake_dest_ip, network_info, instance_type)
+        return (instance, fake_dest_ip, network_info, flavor)
 
     def test_migrate_disk_and_power_off(self):
         (instance,
          fake_dest_ip,
          network_info,
-         instance_type) = self._setup_test_migrate_disk_and_power_off_mocks()
+         flavor) = self._setup_test_migrate_disk_and_power_off_mocks()
 
         self._mox.ReplayAll()
         self._conn.migrate_disk_and_power_off(self._context, instance,
-                                              fake_dest_ip, instance_type,
+                                              fake_dest_ip, flavor,
                                               network_info)
         self._mox.VerifyAll()
 
     def test_migrate_disk_and_power_off_same_host(self):
         args = self._setup_test_migrate_disk_and_power_off_mocks(
             same_host=True)
-        (instance, fake_dest_ip, network_info, instance_type) = args
+        (instance, fake_dest_ip, network_info, flavor) = args
 
         self._mox.ReplayAll()
         self._conn.migrate_disk_and_power_off(self._context, instance,
-                                              fake_dest_ip, instance_type,
+                                              fake_dest_ip, flavor,
                                               network_info)
         self._mox.VerifyAll()
 
     def test_migrate_disk_and_power_off_copy_exception(self):
         args = self._setup_test_migrate_disk_and_power_off_mocks(
             copy_exception=True)
-        (instance, fake_dest_ip, network_info, instance_type) = args
+        (instance, fake_dest_ip, network_info, flavor) = args
 
         self._mox.ReplayAll()
         self.assertRaises(shutil.Error, self._conn.migrate_disk_and_power_off,
                           self._context, instance, fake_dest_ip,
-                          instance_type, network_info)
+                          flavor, network_info)
         self._mox.VerifyAll()
 
     def test_migrate_disk_and_power_off_smaller_root_vhd_size_exception(self):
         args = self._setup_test_migrate_disk_and_power_off_mocks(
             size_exception=True)
-        (instance, fake_dest_ip, network_info, instance_type) = args
+        (instance, fake_dest_ip, network_info, flavor) = args
 
         self._mox.ReplayAll()
         self.assertRaises(vmutils.VHDResizeException,
                           self._conn.migrate_disk_and_power_off,
                           self._context, instance, fake_dest_ip,
-                          instance_type, network_info)
+                          flavor, network_info)
         self._mox.VerifyAll()
 
     def _test_finish_migration(self, power_on, ephemeral_storage=False):

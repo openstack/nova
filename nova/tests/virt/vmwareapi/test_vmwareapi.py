@@ -1229,13 +1229,13 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
             return None
 
         self._create_vm()
-        instance_type = {'name': 'fake', 'flavorid': 'fake_id'}
+        flavor = {'name': 'fake', 'flavorid': 'fake_id'}
         self.stubs.Set(self.conn._vmops, "_update_instance_progress",
                        fake_update_instance_progress)
         self.stubs.Set(self.conn._vmops, "_get_host_ref_from_name",
                        fake_get_host_ref_from_name)
         self.conn.migrate_disk_and_power_off(self.context, self.instance,
-                                             'fake_dest', instance_type,
+                                             'fake_dest', flavor,
                                              None)
 
     def test_confirm_migration(self):

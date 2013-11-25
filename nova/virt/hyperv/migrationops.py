@@ -96,8 +96,8 @@ class MigrationOps(object):
             LOG.exception(ex)
             LOG.error(_("Cannot cleanup migration files"))
 
-    def _check_target_instance_type(self, instance, instance_type):
-        new_root_gb = instance_type['root_gb']
+    def _check_target_flavor(self, instance, flavor):
+        new_root_gb = flavor['root_gb']
         curr_root_gb = instance['root_gb']
 
         if new_root_gb < curr_root_gb:
@@ -108,11 +108,11 @@ class MigrationOps(object):
                 {'curr_root_gb': curr_root_gb, 'new_root_gb': new_root_gb})
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info,
+                                   flavor, network_info,
                                    block_device_info=None):
         LOG.debug(_("migrate_disk_and_power_off called"), instance=instance)
 
-        self._check_target_instance_type(instance, instance_type)
+        self._check_target_flavor(instance, flavor)
 
         self._vmops.power_off(instance)
 

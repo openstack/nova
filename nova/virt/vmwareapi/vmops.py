@@ -1114,7 +1114,7 @@ class VMwareVMOps(object):
                                       {'progress': progress})
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type):
+                                   flavor):
         """
         Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.

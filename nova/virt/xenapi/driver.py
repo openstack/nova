@@ -305,14 +305,14 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.unpause(instance)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info,
+                                   flavor, network_info,
                                    block_device_info=None):
         """Transfers the VHD of a running instance to another host, then shuts
         off the instance copies over the COW disk
         """
         # NOTE(vish): Xen currently does not use network info.
         return self._vmops.migrate_disk_and_power_off(context, instance,
-                    dest, instance_type, block_device_info)
+                    dest, flavor, block_device_info)
 
     def suspend(self, instance):
         """suspend the specified instance."""
