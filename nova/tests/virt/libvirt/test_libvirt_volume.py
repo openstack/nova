@@ -722,6 +722,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.assertEqual(source.get('protocol'), 'gluster')
         self.assertEqual(source.get('name'), 'volume-00001/volume-00001')
         self.assertEqual(source.find('./host').get('name'), '192.168.1.1')
+        self.assertEqual(source.find('./host').get('port'), '24007')
 
         libvirt_driver.disconnect_volume(connection_info, "vde")
 

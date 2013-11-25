@@ -717,7 +717,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             vol_name = data['export'].split('/')[1]
             source_host = data['export'].split('/')[0][:-1]
 
-            conf.source_ports = [None]
+            conf.source_ports = ['24007']
             conf.source_type = 'network'
             conf.source_protocol = 'gluster'
             conf.source_hosts = [source_host]
