@@ -698,7 +698,7 @@ class CloudController(object):
 
     def create_security_group(self, context, group_name, group_description):
         if isinstance(group_name, unicode):
-            group_name = group_name.encode('utf-8')
+            group_name = utils.utf8(group_name)
         if CONF.ec2_strict_validation:
             # EC2 specification gives constraints for name and description:
             # Accepts alphanumeric characters, spaces, dashes, and underscores

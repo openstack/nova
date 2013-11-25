@@ -31,6 +31,7 @@ from nova.openstack.common import gettextutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import utils
 from nova import wsgi
 
 
@@ -629,8 +630,8 @@ class ResponseObject(object):
         response = webob.Response()
         response.status_int = self.code
         for hdr, value in self._headers.items():
-            response.headers[hdr] = str(value)
-        response.headers['Content-Type'] = content_type
+            response.headers[hdr] = utils.utf8(str(value))
+        response.headers['Content-Type'] = utils.utf8(content_type)
         if self.obj is not None:
             response.body = serializer.serialize(self.obj)
 
@@ -1021,8 +1022,14 @@ class Resource(wsgi.Application):
                 response = resp_obj.serialize(request, accept,
                                               self.default_serializers)
 
-        if context and hasattr(response, 'headers'):
-            response.headers.add('x-compute-request-id', context.request_id)
+        if hasattr(response, 'headers'):
+            if context:
+                response.headers.add('x-compute-request-id',
+                                     context.request_id)
+
+            for hdr, val in response.headers.items():
+                # Headers must be utf-8 strings
+                response.headers[hdr] = utils.utf8(str(val))
 
         return response
 

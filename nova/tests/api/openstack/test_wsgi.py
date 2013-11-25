@@ -1048,6 +1048,28 @@ class ResourceTest(test.NoDBTestCase):
         except wsgi.Fault as fault:
             self.assertEqual(400, fault.status_int)
 
+    def test_resource_headers_are_utf8(self):
+        resp = webob.Response(status_int=202)
+        resp.headers['x-header1'] = 1
+        resp.headers['x-header2'] = u'header2'
+        resp.headers['x-header3'] = u'header3'
+
+        class Controller(object):
+            def index(self, req):
+                return resp
+
+        req = webob.Request.blank('/tests')
+        app = fakes.TestRouter(Controller())
+        response = req.get_response(app)
+
+        for hdr, val in response.headers.iteritems():
+            # All headers must be utf8
+            self.assertIsInstance(hdr, str)
+            self.assertIsInstance(val, str)
+        self.assertEqual(response.headers['x-header1'], '1')
+        self.assertEqual(response.headers['x-header2'], 'header2')
+        self.assertEqual(response.headers['x-header3'], 'header3')
+
     def test_resource_valid_utf8_body(self):
         class Controller(object):
             def update(self, req, id, body):
@@ -1163,12 +1185,17 @@ class ResponseObjectTest(test.NoDBTestCase):
         robj['X-header1'] = 'header1'
         robj['X-header2'] = 'header2'
         robj['X-header3'] = 3
+        robj['X-header-unicode'] = u'header-unicode'
 
         for content_type, mtype in wsgi._MEDIA_TYPE_MAP.items():
             request = wsgi.Request.blank('/tests/123')
             response = robj.serialize(request, content_type)
 
             self.assertEqual(response.headers['Content-Type'], content_type)
+            for hdr, val in response.headers.iteritems():
+                # All headers must be utf8
+                self.assertIsInstance(hdr, str)
+                self.assertIsInstance(val, str)
             self.assertEqual(response.headers['X-header1'], 'header1')
             self.assertEqual(response.headers['X-header2'], 'header2')
             self.assertEqual(response.headers['X-header3'], '3')
