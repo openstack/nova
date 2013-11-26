@@ -164,7 +164,7 @@ class HostState(object):
             metrics = jsonutils.loads(metrics)
         for metric in metrics:
             # 'name', 'value', 'timestamp' and 'source' are all required
-            # to be valid keys, just let KeyError happend if any one of
+            # to be valid keys, just let KeyError happen if any one of
             # them is missing. But we also require 'name' to be True.
             name = metric['name']
             item = MetricItem(value=metric['value'],
