@@ -169,7 +169,7 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions_with_non_existed_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume',
                    'resetNetwork', 'injectNetworkInfo', 'lock',
-                   'unlock', 'os-resetState', 'migrate']
+                   'unlock', 'os-resetState', 'migrate', 'os-migrateLive']
         body_map = {'os-resetState': {'state': 'active'},
                     'os-migrateLive':
                                   {'host': 'hostname',
