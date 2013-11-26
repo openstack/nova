@@ -156,7 +156,7 @@ class CommonMixin(object):
 
 class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions(self):
-        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
+        actions = ['suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info']
         method_translations = {'migrate': 'resize'}
 
@@ -168,8 +168,7 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_actions_raise_conflict_on_invalid_state(self):
-        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
-                   'migrate_live']
+        actions = ['suspend', 'resume', 'migrate', 'migrate_live']
         method_translations = {'migrate': 'resize',
                                'migrate_live': 'live_migrate'}
 
@@ -188,7 +187,7 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_actions_with_non_existed_instance(self):
-        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
+        actions = ['suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info',
                    'reset_state', 'migrate_live']
         body_map = {'reset_state': {'state': 'active'},
@@ -202,7 +201,7 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_actions_with_locked_instance(self):
-        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
+        actions = ['suspend', 'resume', 'migrate',
                    'reset_network', 'inject_network_info']
         method_translations = {'migrate': 'resize'}
 

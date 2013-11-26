@@ -45,42 +45,6 @@ class AdminActionsController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @extensions.expected_errors((404, 409))
-    @wsgi.action('pause')
-    def _pause(self, req, id, body):
-        """Permit Admins to pause the server."""
-        ctxt = req.environ['nova.context']
-        authorize(ctxt, 'pause')
-        try:
-            server = self.compute_api.get(ctxt, id, want_objects=True)
-            self.compute_api.pause(ctxt, server)
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'pause')
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
-
-    @extensions.expected_errors((404, 409))
-    @wsgi.action('unpause')
-    def _unpause(self, req, id, body):
-        """Permit Admins to unpause the server."""
-        ctxt = req.environ['nova.context']
-        authorize(ctxt, 'unpause')
-        try:
-            server = self.compute_api.get(ctxt, id, want_objects=True)
-            self.compute_api.unpause(ctxt, server)
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'unpause')
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        return webob.Response(status_int=202)
-
-    @extensions.expected_errors((404, 409))
     @wsgi.action('suspend')
     def _suspend(self, req, id, body):
         """Permit admins to suspend the server."""
