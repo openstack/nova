@@ -82,7 +82,7 @@ class QuotaClassSetsController(wsgi.Controller):
                 try:
                     value = int(quota_class_set[key])
                 except ValueError:
-                    msg = _("The value %s(val) of %(key)s isn't an "
+                    msg = _("The value %(val)s of %(key)s isn't an "
                             "integer") % {'val': body['quota_class_set'][key],
                                           'key': key}
                     raise webob.exc.HTTPBadRequest(explanation=msg)
