@@ -1912,6 +1912,7 @@ class API(base.Base):
         :returns: the new image metadata
         """
         image_meta['name'] = name
+        image_meta['is_public'] = False
         properties = image_meta['properties']
         if instance['root_device_name']:
             properties['root_device_name'] = instance['root_device_name']
