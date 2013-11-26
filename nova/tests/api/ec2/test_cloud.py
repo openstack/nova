@@ -304,6 +304,16 @@ class CloudTestCase(test.TestCase):
                                       'floating_ips': []})
         self.stubs.Set(network_api.API, 'get_instance_id_by_floating_address',
                        lambda *args: 1)
+
+        def fake_update_instance_cache_with_nw_info(api, context, instance,
+                                                    nw_info=None,
+                                                    update_cells=True):
+
+            return
+
+        self.stubs.Set(network_api, "update_instance_cache_with_nw_info",
+                       fake_update_instance_cache_with_nw_info)
+
         self.cloud.associate_address(self.context,
                                      instance_id=ec2_id,
                                      public_ip=address)
