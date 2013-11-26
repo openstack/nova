@@ -4440,7 +4440,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         This is implemented by keeping a cache of uuids of instances
         that live on this host.  On each call, we pop one off of a
         list, pull the DB record, and try the call to the network API.
-        If anything errors, we don't care.  It's possible the instance
+        If anything errors don't fail, as it's possible the instance
         has been deleted, etc.
         """
         heal_interval = CONF.heal_instance_info_cache_interval
@@ -4481,9 +4481,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._get_instance_nw_info(context, instance)
             LOG.debug(_('Updated the info_cache for instance'),
                       instance=instance)
-        except Exception:
-            # We don't care about any failures
-            pass
+        except Exception as e:
+            LOG.debug(_("An error occurred: %s"), e)
 
     @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):
