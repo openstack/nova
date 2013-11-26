@@ -3442,7 +3442,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
 
-        self.driver.resume(instance, network_info,
+        self.driver.resume(context, instance, network_info,
                            block_device_info)
 
         instance.power_state = self._get_power_state(context, instance)

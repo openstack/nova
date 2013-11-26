@@ -49,6 +49,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
 from nova.openstack.common import uuidutils
+from nova.pci import pci_manager
 from nova import test
 from nova.tests import fake_network
 import nova.tests.image.fake
@@ -4391,6 +4392,41 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn._hard_reboot(self.context, instance, network_info,
                           block_device_info)
+
+    def test_resume(self):
+        dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
+                    "<devices>"
+                    "<disk type='file'><driver name='qemu' type='raw'/>"
+                    "<source file='/test/disk'/>"
+                    "<target dev='vda' bus='virtio'/></disk>"
+                    "<disk type='file'><driver name='qemu' type='qcow2'/>"
+                    "<source file='/test/disk.local'/>"
+                    "<target dev='vdb' bus='virtio'/></disk>"
+                    "</devices></domain>")
+        instance = db.instance_create(self.context, self.test_instance)
+        network_info = _fake_network_info(self.stubs, 1)
+        block_device_info = None
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+            mock.patch.object(conn, '_get_existing_domain_xml',
+                              return_value=dummyxml),
+            mock.patch.object(conn, '_create_domain_and_network',
+                              return_value='fake_dom'),
+            mock.patch.object(conn, '_attach_pci_devices'),
+            mock.patch.object(pci_manager, 'get_instance_pci_devs',
+                              return_value='fake_pci_devs'),
+        ) as (_get_existing_domain_xml, _create_domain_and_network,
+              _attach_pci_devices, get_instance_pci_devs):
+            conn.resume(self.context, instance, network_info,
+                        block_device_info)
+            _get_existing_domain_xml.assert_has_calls([mock.call(instance,
+                                            network_info, block_device_info)])
+            _create_domain_and_network.assert_has_calls([mock.call(dummyxml,
+                                          instance, network_info,
+                                          block_device_info=block_device_info,
+                                          context=self.context)])
+            _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
+                                                 'fake_pci_devs')])
 
     def test_destroy_undefines(self):
         mock = self.mox.CreateMock(libvirt.virDomain)

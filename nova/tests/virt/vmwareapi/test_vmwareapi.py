@@ -497,7 +497,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.SUSPENDED)
-        self.conn.resume(self.instance, self.network_info)
+        self.conn.resume(self.context, self.instance, self.network_info)
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
@@ -505,7 +505,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_resume_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.resume,
-                          self.instance, self.network_info)
+                          self.context, self.instance, self.network_info)
 
     def test_resume_not_suspended(self):
         self._create_vm()
@@ -513,7 +513,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertRaises(exception.InstanceResumeFailure, self.conn.resume,
-                          self.instance, self.network_info)
+                          self.context, self.instance, self.network_info)
 
     def test_power_on(self):
         self._create_vm()
