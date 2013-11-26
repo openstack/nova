@@ -337,7 +337,7 @@ class APIRouterV3(base_wsgi.Router):
     def get_missing_core_extensions(extensions_loaded):
         extensions_loaded = set(extensions_loaded)
         missing_extensions = API_V3_CORE_EXTENSIONS - extensions_loaded
-        return missing_extensions
+        return list(missing_extensions)
 
     @property
     def loaded_extension_info(self):
