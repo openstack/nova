@@ -526,7 +526,7 @@ class ServerActionsControllerTest(test.TestCase):
                 image_ref=self._image_href,
                 kernel_id="", ramdisk_id="",
                 task_state=task_states.REBUILDING,
-                expected_task_state=None,
+                expected_task_state=[None],
                 progress=0, **attributes).AndReturn(
                         fakes.stub_instance(1, host='fake_host'))
         self.mox.ReplayAll()

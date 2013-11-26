@@ -181,7 +181,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'suspend_instance')
 
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.SUSPEND)
         rpcapi.suspend_instance(self.context, instance)
@@ -209,7 +209,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'resume_instance')
 
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.RESUME)
         rpcapi.resume_instance(self.context, instance)
@@ -229,7 +229,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
 
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.START)
 
@@ -270,7 +270,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api,
                 '_record_action_start')
 
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.STOP)
 
@@ -799,7 +799,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(task_states.RESIZE_REVERTING,
                              fake_inst.task_state)
 
-        fake_inst.save(expected_task_state=None).WithSideEffects(
+        fake_inst.save(expected_task_state=[None]).WithSideEffects(
                 _check_state)
 
         def _check_mig(expected_task_state=None):
@@ -853,7 +853,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         exc = exception.UnexpectedTaskStateError(
             actual=task_states.RESIZE_REVERTING, expected=None)
-        fake_inst.save(expected_task_state=None).AndRaise(exc)
+        fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
         quota.QUOTAS.rollback(self.context, resvs)
 
@@ -920,7 +920,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 for key, value in extra_kwargs.items():
                     self.assertEqual(value, getattr(fake_inst, key))
 
-            fake_inst.save(expected_task_state=None).WithSideEffects(
+            fake_inst.save(expected_task_state=[None]).WithSideEffects(
                     _check_state)
 
             if allow_same_host:
@@ -1109,7 +1109,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'pause_instance')
 
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.PAUSE)
         rpcapi.pause_instance(self.context, instance)
@@ -1137,7 +1137,7 @@ class _ComputeAPIUnitTestMixIn(object):
             rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'unpause_instance')
 
-        instance.save(expected_task_state=None)
+        instance.save(expected_task_state=[None])
         self.compute_api._record_action_start(self.context,
                 instance, instance_actions.UNPAUSE)
         rpcapi.unpause_instance(self.context, instance)
@@ -1333,7 +1333,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(expected_state, instance.task_state)
 
         if not create_fails:
-            instance.save(expected_task_state=None).WithSideEffects(
+            instance.save(expected_task_state=[None]).WithSideEffects(
                     check_state)
             if is_snapshot:
                 self.compute_api.compute_rpcapi.snapshot_instance(
