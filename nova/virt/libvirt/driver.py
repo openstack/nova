@@ -2390,11 +2390,6 @@ class LibvirtDriver(driver.ComputeDriver):
             or 'disk' not in disk_mapping
         )
 
-        # syntactic nicety
-        def basepath(fname='', suffix=suffix):
-            return os.path.join(libvirt_utils.get_instance_path(instance),
-                                fname + suffix)
-
         def image(fname, image_type=CONF.libvirt.images_type):
             return self.image_backend.image(instance,
                                             fname + suffix, image_type)
@@ -2403,7 +2398,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return image(fname, image_type='raw')
 
         # ensure directories exist and are writable
-        fileutils.ensure_tree(basepath(suffix=''))
+        fileutils.ensure_tree(libvirt_utils.get_instance_path(instance))
 
         LOG.info(_('Creating image'), instance=instance)
 
@@ -2523,7 +2518,7 @@ class LibvirtDriver(driver.ComputeDriver):
             inst_md = instance_metadata.InstanceMetadata(instance,
                 content=files, extra_md=extra_md, network_info=network_info)
             with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
-                configdrive_path = basepath(fname='disk.config')
+                configdrive_path = self._get_disk_config_path(instance)
                 LOG.info(_('Creating config drive at %(path)s'),
                          {'path': configdrive_path}, instance=instance)
 
