@@ -1940,15 +1940,6 @@
 
 
 #
-# Options defined in nova.virt.libvirt.vif
-#
-
-# Use virtio for bridge interfaces with KVM/QEMU (boolean
-# value)
-#libvirt_use_virtio_for_bridges=true
-
-
-#
 # Options defined in nova.virt.libvirt.volume
 #
 
@@ -2672,6 +2663,15 @@
 # Compress snapshot images when possible. This currently
 # applies exclusively to qcow2 images (boolean value)
 #snapshot_compression=false
+
+
+#
+# Options defined in nova.virt.libvirt.vif
+#
+
+# Use virtio for bridge interfaces with KVM/QEMU (boolean
+# value)
+#use_virtio_for_bridges=true
 
 
 [baremetal]
