@@ -62,26 +62,64 @@ class CertRpcAPITestCase(test.NoDBTestCase):
     def test_revoke_certs_by_user(self):
         self._test_cert_api('revoke_certs_by_user', user_id='fake_user_id')
 
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('revoke_certs_by_user', user_id='fake_user_id',
+                version='1.0')
+
     def test_revoke_certs_by_project(self):
         self._test_cert_api('revoke_certs_by_project',
                             project_id='fake_project_id')
+
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('revoke_certs_by_project',
+                            project_id='fake_project_id', version='1.0')
 
     def test_revoke_certs_by_user_and_project(self):
         self._test_cert_api('revoke_certs_by_user_and_project',
                             user_id='fake_user_id',
                             project_id='fake_project_id')
 
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('revoke_certs_by_user_and_project',
+                            user_id='fake_user_id',
+                            project_id='fake_project_id', version='1.0')
+
     def test_generate_x509_cert(self):
         self._test_cert_api('generate_x509_cert',
                             user_id='fake_user_id',
                             project_id='fake_project_id')
 
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('generate_x509_cert',
+                            user_id='fake_user_id',
+                            project_id='fake_project_id', version='1.0')
+
     def test_fetch_ca(self):
         self._test_cert_api('fetch_ca', project_id='fake_project_id')
+
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('fetch_ca', project_id='fake_project_id',
+                version='1.0')
 
     def test_fetch_crl(self):
         self._test_cert_api('fetch_crl', project_id='fake_project_id')
 
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('fetch_crl', project_id='fake_project_id',
+                version='1.0')
+
     def test_decrypt_text(self):
         self._test_cert_api('decrypt_text',
                             project_id='fake_project_id', text='blah')
+
+        # NOTE(russellb) Havana compat
+        self.flags(cert='havana', group='upgrade_levels')
+        self._test_cert_api('decrypt_text',
+                            project_id='fake_project_id', text='blah',
+                            version='1.0')
