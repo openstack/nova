@@ -1272,10 +1272,9 @@ class VMUtilsSRPath(VMUtilsTestBase):
     def test_defined(self):
         self.mox.StubOutWithMock(vm_utils, "safe_find_sr")
         self.mox.StubOutWithMock(self.session, "call_xenapi")
-        self.mox.StubOutWithMock(self.session, "get_xenapi_host")
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr_ref")
-        self.session.get_xenapi_host().AndReturn("host_ref")
+        self.session.host_ref = "host_ref"
         self.session.call_xenapi('PBD.get_all_records_where',
             'field "host"="host_ref" and field "SR"="sr_ref"').AndReturn(
             {'pbd_ref': {'device_config': {'path': 'sr_path'}}})
@@ -1286,10 +1285,9 @@ class VMUtilsSRPath(VMUtilsTestBase):
     def test_default(self):
         self.mox.StubOutWithMock(vm_utils, "safe_find_sr")
         self.mox.StubOutWithMock(self.session, "call_xenapi")
-        self.mox.StubOutWithMock(self.session, "get_xenapi_host")
 
         vm_utils.safe_find_sr(self.session).AndReturn("sr_ref")
-        self.session.get_xenapi_host().AndReturn("host_ref")
+        self.session.host_ref = "host_ref"
         self.session.call_xenapi('PBD.get_all_records_where',
             'field "host"="host_ref" and field "SR"="sr_ref"').AndReturn(
             {'pbd_ref': {'device_config': {}}})

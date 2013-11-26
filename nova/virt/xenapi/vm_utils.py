@@ -380,9 +380,8 @@ def is_vm_shutdown(session, vm_ref):
 def is_enough_free_mem(session, instance):
     instance_type = flavors.extract_flavor(instance)
     mem = long(instance_type['memory_mb']) * unit.Mi
-    host = session.get_xenapi_host()
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
-                                             host))
+                                             session.host_ref))
     return host_free_mem >= mem
 
 
@@ -802,10 +801,10 @@ def get_sr_path(session, sr_ref=None):
     """
     if sr_ref is None:
         sr_ref = safe_find_sr(session)
-    host_ref = session.get_xenapi_host()
     pbd_rec = session.call_xenapi("PBD.get_all_records_where",
                                   'field "host"="%s" and '
-                                  'field "SR"="%s"' % (host_ref, sr_ref))
+                                  'field "SR"="%s"' %
+                                  (session.host_ref, sr_ref))
 
     # NOTE(bobball): There can only be one PBD for a host/SR pair, but path is
     # not always present - older versions of XS do not set it.
@@ -1619,7 +1618,7 @@ def set_vm_name_label(session, vm_ref, name_label):
 
 def list_vms(session):
     for vm_ref, vm_rec in session.get_all_refs_and_recs('VM'):
-        if (vm_rec["resident_on"] != session.get_xenapi_host() or
+        if (vm_rec["resident_on"] != session.host_ref or
                 vm_rec["is_a_template"] or vm_rec["is_control_domain"]):
             continue
         else:
@@ -1797,7 +1796,7 @@ def safe_find_sr(session):
 
 def _find_sr(session):
     """Return the storage repository to hold VM images."""
-    host = session.get_xenapi_host()
+    host = session.host_ref
     try:
         tokens = CONF.xenserver.sr_matching_filter.split(':')
         filter_criteria = tokens[0]
@@ -1844,7 +1843,7 @@ def _safe_find_iso_sr(session):
 
 def _find_iso_sr(session):
     """Return the storage repository to hold ISO images."""
-    host = session.get_xenapi_host()
+    host = session.host_ref
     for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
         LOG.debug(_("ISO: looking at SR %s"), sr_rec)
         if not sr_rec['content_type'] == 'iso':
@@ -2127,10 +2126,10 @@ def _get_sys_hypervisor_uuid():
 def get_this_vm_uuid(session):
     if session and session.is_local_connection:
         # UUID is the control domain running on this host
-        host_ref = session.get_xenapi_host()
         vms = session.call_xenapi("VM.get_all_records_where",
                                   'field "is_control_domain"="true" and '
-                                  'field "resident_on"="%s"' % host_ref)
+                                  'field "resident_on"="%s"' %
+                                  session.host_ref)
         return vms[vms.keys()[0]]['uuid']
     try:
         return _get_sys_hypervisor_uuid()
