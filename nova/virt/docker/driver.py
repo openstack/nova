@@ -161,7 +161,7 @@ class DockerDriver(driver.ComputeDriver):
             'local_gb_used': disk['used'] / unit.Gi,
             'disk_available_least': disk['available'] / unit.Gi,
             'hypervisor_type': 'docker',
-            'hypervisor_version': '1.0',
+            'hypervisor_version': utils.convert_version_to_int('1.0'),
             'hypervisor_hostname': self._nodename,
             'cpu_info': '?',
             'supported_instances': jsonutils.dumps([
