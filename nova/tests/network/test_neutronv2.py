@@ -115,6 +115,37 @@ class TestNeutronClient(test.TestCase):
                           neutronv2.get_client,
                           my_context)
 
+    def test_withtoken_context_is_admin(self):
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
+        my_context = context.RequestContext('userid',
+                                            'my_tenantid',
+                                            auth_token='token',
+                                            is_admin=True)
+        self.mox.StubOutWithMock(client.Client, "__init__")
+        client.Client.__init__(
+            auth_strategy=None,
+            endpoint_url=CONF.neutron_url,
+            token=my_context.auth_token,
+            timeout=CONF.neutron_url_timeout,
+            insecure=False,
+            ca_cert=None).AndReturn(None)
+        self.mox.ReplayAll()
+        # Note that although we have admin set in the context we
+        # are not asking for an admin client, and so we auth with
+        # our own token
+        neutronv2.get_client(my_context)
+
+    def test_withouttoken_context_is_admin(self):
+        my_context = context.RequestContext('userid', 'my_tenantid',
+                                            is_admin=True)
+        # Note that although we have admin set in the context we
+        # are not asking for an admin client, and so we auth with
+        # our own token - which is null, and so this is an error
+        self.assertRaises(exceptions.Unauthorized,
+                          neutronv2.get_client,
+                          my_context)
+
     def test_withouttoken_keystone_connection_error(self):
         self.flags(neutron_auth_strategy='keystone')
         self.flags(neutron_url='http://anyhost/')
@@ -123,11 +154,12 @@ class TestNeutronClient(test.TestCase):
                           neutronv2.get_client,
                           my_context)
 
-    def test_withouttoken_keystone_not_auth(self):
+    def test_admin(self):
         self.flags(neutron_auth_strategy=None)
         self.flags(neutron_url='http://anyhost/')
         self.flags(neutron_url_timeout=30)
-        my_context = context.RequestContext('userid', 'my_tenantid')
+        my_context = context.RequestContext('userid', 'my_tenantid',
+                                            auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
             auth_url=CONF.neutron_admin_auth_url,
@@ -142,7 +174,8 @@ class TestNeutronClient(test.TestCase):
         self.mox.ReplayAll()
 
         # Note that the context is not elevated, but the True is passed in
-        # which will force an elevation to admin credentials
+        # which will force an elevation to admin credentials even though
+        # the context has an auth_token
         neutronv2.get_client(my_context, True)
 
 
@@ -618,6 +651,12 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_refresh_neutron_extensions_cache(self):
         api = neutronapi.API()
+
+        # Note: Don't want the default get_client from setUp()
+        self.mox.ResetAll()
+        neutronv2.get_client(mox.IgnoreArg(),
+                             admin=True).AndReturn(
+            self.moxed_client)
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
@@ -626,6 +665,12 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_populate_neutron_extension_values_rxtx_factor(self):
         api = neutronapi.API()
+
+        # Note: Don't want the default get_client from setUp()
+        self.mox.ResetAll()
+        neutronv2.get_client(mox.IgnoreArg(),
+                             admin=True).AndReturn(
+            self.moxed_client)
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
@@ -819,6 +864,9 @@ class TestNeutronv2(TestNeutronv2Base):
                 {'networks': self.nets2})
         self.moxed_client.list_networks(shared=True).AndReturn(
                 {'networks': []})
+        neutronv2.get_client(mox.IgnoreArg(),
+                             admin=True).AndReturn(
+            self.moxed_client)
         port_req_body = {
             'port': {
                 'network_id': self.nets2[0]['id'],
@@ -1729,7 +1777,7 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
 
     def test_populate_neutron_extension_values_binding(self):
         api = neutronapi.API()
-        neutronv2.get_client(mox.IgnoreArg()).AndReturn(
+        neutronv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
                 self.moxed_client)
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': constants.PORTBINDING_EXT}]})

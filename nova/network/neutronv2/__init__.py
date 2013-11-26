@@ -54,7 +54,7 @@ def get_client(context, admin=False):
     # will go away once BP auth-plugins is implemented.
     # That blue print will ensure that tokens can be shared
     # across clients as well
-    if admin or context.is_admin:
+    if admin:
         if not hasattr(local.strong_store, 'neutron_client'):
             local.strong_store.neutron_client = _get_client(token=None)
         return local.strong_store.neutron_client
