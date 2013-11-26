@@ -167,7 +167,7 @@ class FakeDriver(driver.ComputeDriver):
                                    block_device_info=None):
         pass
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         pass
 

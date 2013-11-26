@@ -231,7 +231,8 @@ class VMOps(object):
                                           mount_device,
                                           hotplug=False)
 
-    def finish_revert_migration(self, instance, block_device_info=None,
+    def finish_revert_migration(self, context, instance,
+                                block_device_info=None,
                                 power_on=True):
         self._restore_orig_vm_and_cleanup_orphan(instance, block_device_info,
                                                  power_on)

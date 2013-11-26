@@ -440,9 +440,11 @@ class PowerVMDriverTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        self.powervm_connection.finish_revert_migration(inst, network_info,
-                                                    block_device_info=None,
-                                                    power_on=power_on)
+        self.powervm_connection.finish_revert_migration(
+                                                context.get_admin_context(),
+                                                inst, network_info,
+                                                block_device_info=None,
+                                                power_on=power_on)
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(True, True, True)

@@ -1193,7 +1193,7 @@ class VMwareVMOps(object):
             LOG.warn(_("In vmwareapi:vmops:confirm_migration, got this "
                      "exception while destroying the VM: %s") % str(excep))
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):
         """Finish reverting a resize."""
         # The original vm was suffixed with '-orig'; find it using

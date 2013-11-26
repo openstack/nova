@@ -1997,9 +1997,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, context=context,
-                                        reboot=True)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info, reboot=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance))
 
@@ -2048,8 +2047,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """resume the specified instance."""
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
-        dom = self._create_domain_and_network(xml, instance, network_info,
-                         block_device_info=block_device_info, context=context)
+        dom = self._create_domain_and_network(context, xml, instance,
+                           network_info, block_device_info=block_device_info)
         self._attach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
 
@@ -2158,8 +2157,8 @@ class LibvirtDriver(driver.ComputeDriver):
                           block_device_info=block_device_info,
                           write_to_disk=True)
 
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, context=context)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info)
         LOG.debug(_("Instance is running"), instance=instance)
 
         def _wait_for_boot():
@@ -3358,9 +3357,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return domain
 
-    def _create_domain_and_network(self, xml, instance, network_info,
+    def _create_domain_and_network(self, context, xml, instance, network_info,
                                    block_device_info=None, power_on=True,
-                                   context=None, reboot=False):
+                                   reboot=False):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -4745,9 +4744,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(context, instance, network_info, disk_info,
                           block_device_info=block_device_info,
                           write_to_disk=True)
-        self._create_domain_and_network(xml, instance, network_info,
-                                        block_device_info, power_on,
-                                        context=context)
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info, power_on)
         if power_on:
             timer = loopingcall.FixedIntervalLoopingCall(
                                                     self._wait_for_running,
@@ -4764,7 +4762,7 @@ class LibvirtDriver(driver.ComputeDriver):
             if e.errno != errno.ENOENT:
                 raise
 
-    def finish_revert_migration(self, instance, network_info,
+    def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
         LOG.debug(_("Starting finish_revert_migration"),
                    instance=instance)
@@ -4783,10 +4781,9 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
                                             block_device_info)
-        xml = self.to_xml(nova_context.get_admin_context(),
-                          instance, network_info, disk_info,
+        xml = self.to_xml(context, instance, network_info, disk_info,
                           block_device_info=block_device_info)
-        self._create_domain_and_network(xml, instance, network_info,
+        self._create_domain_and_network(context, xml, instance, network_info,
                                         block_device_info, power_on)
 
         if power_on:

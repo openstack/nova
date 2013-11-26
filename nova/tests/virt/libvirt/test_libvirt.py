@@ -4385,9 +4385,9 @@ class LibvirtConnTestCase(test.TestCase):
         conn._create_images_and_backing(self.context, instance,
                                 libvirt_utils.get_instance_path(instance),
                                 disk_info_json)
-        conn._create_domain_and_network(dummyxml, instance,
+        conn._create_domain_and_network(self.context, dummyxml, instance,
                                         network_info, block_device_info,
-                                        context=self.context, reboot=True)
+                                        reboot=True)
         self.mox.ReplayAll()
 
         conn._hard_reboot(self.context, instance, network_info,
@@ -4421,10 +4421,10 @@ class LibvirtConnTestCase(test.TestCase):
                         block_device_info)
             _get_existing_domain_xml.assert_has_calls([mock.call(instance,
                                             network_info, block_device_info)])
-            _create_domain_and_network.assert_has_calls([mock.call(dummyxml,
-                                          instance, network_info,
-                                          block_device_info=block_device_info,
-                                          context=self.context)])
+            _create_domain_and_network.assert_has_calls([mock.call(
+                                        self.context, dummyxml,
+                                        instance, network_info,
+                                        block_device_info=block_device_info)])
             _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
                                                  'fake_pci_devs')])
 
@@ -7059,8 +7059,9 @@ class LibvirtDriverTestCase(test.TestCase):
             f = open(libvirt_xml_path, 'w')
             f.close()
 
-            self.libvirtconnection.finish_revert_migration(ins_ref, None,
-                                                           None, power_on)
+            self.libvirtconnection.finish_revert_migration(
+                                       context.get_admin_context(), ins_ref,
+                                       None, None, power_on)
             self.assertTrue(self.fake_create_domain_called)
 
     def test_finish_revert_migration_power_on(self):
@@ -7077,6 +7078,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
             def wait(self):
                 return None
+        context = 'fake_context'
 
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -7102,7 +7104,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.mox.ReplayAll()
 
-        self.libvirtconnection.finish_revert_migration({}, [])
+        self.libvirtconnection.finish_revert_migration(context, {}, [])
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(backup_made=True)
