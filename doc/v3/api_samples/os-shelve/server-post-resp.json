@@ -1,0 +1,16 @@
+{
+    "server": {
+        "admin_password": "LJGRdNsvzh6z",
+        "id": "1d08717a-835e-4dca-9bfb-166fa18a6715",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v3/servers/1d08717a-835e-4dca-9bfb-166fa18a6715",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/servers/1d08717a-835e-4dca-9bfb-166fa18a6715",
+                "rel": "bookmark"
+            }
+        ]
+    }
+}
