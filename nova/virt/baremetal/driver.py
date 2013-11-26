@@ -23,6 +23,7 @@ A driver for Bare-metal platform.
 
 from oslo.config import cfg
 
+from nova.compute import flavors
 from nova.compute import power_state
 from nova import context as nova_context
 from nova import exception
@@ -216,9 +217,18 @@ class BareMetalDriver(driver.ComputeDriver):
         ifaces = db.bm_interface_get_all_by_bm_node_id(context, node['id'])
         return set(iface['address'] for iface in ifaces)
 
+    def _set_default_ephemeral_device(self, instance):
+        instance_type = flavors.extract_flavor(instance)
+        if instance_type['ephemeral_gb']:
+            self.virtapi.instance_update(
+                nova_context.get_admin_context(), instance['uuid'],
+                {'default_ephemeral_device':
+                    '/dev/sda1'})
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         node_uuid = self._require_node(instance)
+        self._set_default_ephemeral_device(instance)
 
         # NOTE(deva): this db method will raise an exception if the node is
         #             already in use. We call it here to ensure no one else
