@@ -115,6 +115,7 @@ class KeypairController(object):
         except exception.KeyPairExists as exc:
             raise webob.exc.HTTPConflict(explanation=exc.format_message())
 
+    @wsgi.response(204)
     @extensions.expected_errors(404)
     def delete(self, req, id):
         """
@@ -126,7 +127,6 @@ class KeypairController(object):
             self.api.delete_key_pair(context, context.user_id, id)
         except exception.KeypairNotFound:
             raise webob.exc.HTTPNotFound()
-        return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=KeypairTemplate)
     @extensions.expected_errors(404)

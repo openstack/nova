@@ -274,7 +274,7 @@ class KeypairsTest(test.TestCase):
         req.method = 'DELETE'
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
-        self.assertEqual(res.status_int, 202)
+        self.assertEqual(res.status_int, 204)
 
     def test_keypair_get_keypair_not_found(self):
         req = webob.Request.blank('/v3/keypairs/DOESNOTEXIST')
@@ -451,8 +451,7 @@ class KeypairPolicyTest(test.TestCase):
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v3/keypairs/FAKE')
         req.method = 'DELETE'
-        res = self.KeyPairController.delete(req, 'FAKE')
-        self.assertEqual(res.status_int, 202)
+        self.assertIsNone(self.KeyPairController.delete(req, 'FAKE'))
 
 
 class KeypairsXMLSerializerTest(test.TestCase):
