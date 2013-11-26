@@ -59,7 +59,6 @@ from nova import baserpc
 from nova.db import base
 from nova import notifier
 from nova.objects import base as objects_base
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import dispatcher as rpc_dispatcher
@@ -153,16 +152,3 @@ class SchedulerDependentManager(Manager):
         if not isinstance(capabilities, list):
             capabilities = [capabilities]
         self.last_capabilities = capabilities
-
-    def publish_service_capabilities(self, context):
-        """Pass data back to the scheduler.
-
-        Called at a periodic interval. And also called via rpc soon after
-        the start of the scheduler.
-        """
-        #NOTE(jogo): this is now deprecated, unused and can be removed in
-        #V3.0 of compute  RPCAPI
-        if self.last_capabilities:
-            LOG.debug(_('Notifying Schedulers of capabilities ...'))
-            self.scheduler_rpcapi.update_service_capabilities(context,
-                    self.service_name, self.host, self.last_capabilities)
