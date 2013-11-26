@@ -802,6 +802,25 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_host_cpu_stats(self):
+        """Get the currently known host CPU stats.
+
+        :returns: a dict containing the CPU stat info, eg:
+                  {'kernel': kern,
+                   'idle': idle,
+                   'user': user,
+                   'iowait': wait,
+                   'frequency': freq},
+                  where kern and user indicate the cumulative CPU time
+                  (nanoseconds) spent by kernel and user processes
+                  respectively, idle indicates the cumulative idle CPU time
+                  (nanoseconds), wait indicates the cumulative I/O wait CPU
+                  time (nanoseconds), since the host is booting up; freq
+                  indicates the current CPU frequency (MHz). All values are
+                  long integers.
+        """
+        raise NotImplementedError()
+
     def block_stats(self, instance_name, disk_id):
         """
         Return performance counters associated with the given disk_id on the

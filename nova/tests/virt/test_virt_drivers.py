@@ -581,6 +581,19 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self._check_available_resouce_fields(available_resource)
 
     @catch_notimplementederror
+    def _check_host_cpu_status_fields(self, host_cpu_status):
+        self.assertIn('kernel', host_cpu_status)
+        self.assertIn('idle', host_cpu_status)
+        self.assertIn('user', host_cpu_status)
+        self.assertIn('iowait', host_cpu_status)
+        self.assertIn('frequency', host_cpu_status)
+
+    @catch_notimplementederror
+    def test_get_host_cpu_stats(self):
+        host_cpu_status = self.connection.get_host_cpu_stats()
+        self._check_host_cpu_status_fields(host_cpu_status)
+
+    @catch_notimplementederror
     def test_set_host_enabled(self):
         self.connection.set_host_enabled('a useless argument?', True)
 

@@ -1399,6 +1399,10 @@ class ImageDownloadModuleConfigurationError(ImageDownloadModuleError):
     msg_fmt = _("The module %(module)s is misconfigured: %(reason)s.")
 
 
+class ResourceMonitorError(NovaException):
+    msg_fmt = _("Error when creating resource monitor: %(monitor)s")
+
+
 class PciDeviceWrongAddressFormat(NovaException):
     msg_fmt = _("The PCI address %(address)s has an incorrect format.")
 
