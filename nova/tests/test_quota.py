@@ -977,6 +977,28 @@ class DbQuotaDriverTestCase(test.TestCase):
                     ),
                 ))
 
+    def _stub_get_by_project_and_user_specific(self):
+        def fake_quota_get(context, project_id, resource, user_id=None):
+            self.calls.append('quota_get')
+            self.assertEqual(project_id, 'test_project')
+            self.assertEqual(user_id, 'fake_user')
+            self.assertEqual(resource, 'test_resource')
+            return dict(
+                test_resource=dict(in_use=20, reserved=10),
+                )
+        self.stubs.Set(db, 'quota_get', fake_quota_get)
+
+    def test_get_by_project_and_user(self):
+        self._stub_get_by_project_and_user_specific()
+        result = self.driver.get_by_project_and_user(
+            FakeContext('test_project', 'test_class'),
+            'test_project', 'fake_user', 'test_resource')
+
+        self.assertEqual(self.calls, ['quota_get'])
+        self.assertEqual(result, dict(
+            test_resource=dict(in_use=20, reserved=10),
+            ))
+
     def _stub_get_by_project(self):
         def fake_qgabp(context, project_id):
             self.calls.append('quota_get_all_by_project')

@@ -97,7 +97,7 @@ class DbQuotaDriver(object):
     def get_by_project_and_user(self, context, project_id, user_id, resource):
         """Get a specific quota by project and user."""
 
-        return db.quota_get(context, project_id, user_id, resource)
+        return db.quota_get(context, project_id, resource, user_id=user_id)
 
     def get_by_project(self, context, project_id, resource):
         """Get a specific quota by project."""
