@@ -1009,15 +1009,15 @@ class VMOps(object):
             raise exception.ResizeError(reason)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, block_device_info):
+                                   flavor, block_device_info):
         """Copies a VHD from one host machine to another, possibly
         resizing filesystem before hand.
 
         :param instance: the instance that owns the VHD in question.
         :param dest: the destination host machine.
-        :param instance_type: instance_type to resize to
+        :param flavor: flavor to resize to
         """
-        self._ensure_not_resize_ephemeral(instance, instance_type)
+        self._ensure_not_resize_ephemeral(instance, flavor)
 
         # 0. Zero out the progress to begin
         self._update_instance_progress(context, instance,
@@ -1025,7 +1025,7 @@ class VMOps(object):
                                        total_steps=RESIZE_TOTAL_STEPS)
 
         old_gb = instance['root_gb']
-        new_gb = instance_type['root_gb']
+        new_gb = flavor['root_gb']
         resize_down = old_gb > new_gb
 
         if new_gb == 0 and old_gb != 0:
@@ -1037,7 +1037,7 @@ class VMOps(object):
 
         if resize_down:
             self._migrate_disk_resizing_down(
-                    context, instance, dest, instance_type, vm_ref, sr_path)
+                    context, instance, dest, flavor, vm_ref, sr_path)
         else:
             self._migrate_disk_resizing_up(
                     context, instance, dest, vm_ref, sr_path)

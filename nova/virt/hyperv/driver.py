@@ -168,11 +168,11 @@ class HyperVDriver(driver.ComputeDriver):
         LOG.debug(_("unfilter_instance called"), instance=instance)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info,
+                                   flavor, network_info,
                                    block_device_info=None):
         return self._migrationops.migrate_disk_and_power_off(context,
                                                              instance, dest,
-                                                             instance_type,
+                                                             flavor,
                                                              network_info,
                                                              block_device_info)
 

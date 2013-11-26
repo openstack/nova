@@ -544,7 +544,7 @@ class PowerVMDriverTestCase(test.TestCase):
         instance = self.instance
         context = 'fake_context'
         dest = '10.8.46.20'  # Some fake dest IP
-        instance_type = 'fake_instance_type'
+        flavor = 'fake_flavor'
         network_info = []
         network_info.append({'address': 'fa:89:f0:8b:9b:39'})
         block_device_info = None
@@ -577,7 +577,7 @@ class PowerVMDriverTestCase(test.TestCase):
                        fake_set_lpar_mac_base_value)
         disk_info = self.powervm_connection.migrate_disk_and_power_off(
                         context, instance,
-                        dest, instance_type, network_info, block_device_info)
+                        dest, flavor, network_info, block_device_info)
 
     def test_migrate_build_scp_command(self):
         lv_name = 'logical-vol-name'

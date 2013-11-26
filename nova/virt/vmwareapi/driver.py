@@ -431,7 +431,7 @@ class VMwareVCDriver(VMwareESXDriver):
         self._vc_state = self._resources.get(first_cluster).get('vcstate')
 
     def migrate_disk_and_power_off(self, context, instance, dest,
-                                   instance_type, network_info,
+                                   flavor, network_info,
                                    block_device_info=None):
         """
         Transfers the disk of a running instance in multiple phases, turning
@@ -439,7 +439,7 @@ class VMwareVCDriver(VMwareESXDriver):
         """
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         return _vmops.migrate_disk_and_power_off(context, instance,
-                                                 dest, instance_type)
+                                                 dest, flavor)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""

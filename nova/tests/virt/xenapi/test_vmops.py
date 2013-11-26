@@ -590,10 +590,10 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
     def test_migrate_disk_and_power_off_works_down(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"root_gb": 2, "ephemeral_gb": 0, "uuid": "uuid"}
-        ins_type = {"root_gb": 1, "ephemeral_gb": 0}
+        flavor = {"root_gb": 1, "ephemeral_gb": 0}
 
         self.vmops.migrate_disk_and_power_off(None, instance, None,
-                ins_type, None)
+                flavor, None)
 
         self.assertFalse(migrate_up.called)
         self.assertTrue(migrate_down.called)
@@ -601,10 +601,10 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
     def test_migrate_disk_and_power_off_works_ephemeral_same_up(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"root_gb": 1, "ephemeral_gb": 1, "uuid": "uuid"}
-        ins_type = {"root_gb": 2, "ephemeral_gb": 1}
+        flavor = {"root_gb": 2, "ephemeral_gb": 1}
 
         self.vmops.migrate_disk_and_power_off(None, instance, None,
-                ins_type, None)
+                flavor, None)
 
         self.assertFalse(migrate_down.called)
         self.assertTrue(migrate_up.called)
@@ -612,20 +612,20 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
     def test_migrate_disk_and_power_off_resize_down_ephemeral_fails(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"ephemeral_gb": 2}
-        ins_type = {"ephemeral_gb": 1}
+        flavor = {"ephemeral_gb": 1}
 
         self.assertRaises(exception.ResizeError,
                           self.vmops.migrate_disk_and_power_off,
-                          None, instance, None, ins_type, None)
+                          None, instance, None, flavor, None)
 
     def test_migrate_disk_and_power_off_resize_up_ephemeral_fails(self,
                 migrate_up, migrate_down, *mocks):
         instance = {"ephemeral_gb": 1}
-        ins_type = {"ephemeral_gb": 2}
+        flavor = {"ephemeral_gb": 2}
 
         self.assertRaises(exception.ResizeError,
                           self.vmops.migrate_disk_and_power_off,
-                          None, instance, None, ins_type, None)
+                          None, instance, None, flavor, None)
 
 
 @mock.patch.object(vm_utils, 'migrate_vhd')
