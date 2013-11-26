@@ -2956,6 +2956,24 @@ class ServersViewBuilderTest(test.TestCase):
         output = self.view_builder.show(self.request, self.instance)
         self.assertThat(output, matchers.DictMatches(expected_server))
 
+    def test_build_server_detail_with_fault_that_has_been_deleted(self):
+        self.instance['deleted'] = 1
+        self.instance['vm_state'] = vm_states.ERROR
+        fault = fake_instance.fake_fault_obj(self.uuid, code=500,
+                                             message="No valid host was found")
+        self.instance['fault'] = fault
+
+        expected_fault = {"code": 500,
+                          "created": "2010-10-10T12:00:00Z",
+                          "message": "No valid host was found"}
+
+        self.request.context = context.RequestContext('fake', 'fake')
+        output = self.view_builder.show(self.request, self.instance)
+        # Regardless of vm_state deleted servers sholud be DELETED
+        self.assertEqual("DELETED", output['server']['status'])
+        self.assertThat(output['server']['fault'],
+                        matchers.DictMatches(expected_fault))
+
     def test_build_server_detail_with_fault_no_details_not_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
         self.instance['fault'] = fake_instance.fake_fault_obj(
