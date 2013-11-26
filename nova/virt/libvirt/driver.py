@@ -3157,7 +3157,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # at the same time. We're not trying to second guess which
         # those versions are. We'll just let libvirt report the
         # errors appropriately if the user enables both.
-
+        add_video_driver = False
         if ((CONF.vnc_enabled and
              CONF.libvirt.virt_type not in ('lxc', 'uml'))):
             graphics = vconfig.LibvirtConfigGuestGraphics()
@@ -3165,6 +3165,7 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics.keymap = CONF.vnc_keymap
             graphics.listen = CONF.vncserver_listen
             guest.add_device(graphics)
+            add_video_driver = True
 
         if CONF.spice.enabled and \
                 CONF.libvirt.virt_type not in ('lxc', 'uml', 'xen'):
@@ -3173,6 +3174,15 @@ class LibvirtDriver(driver.ComputeDriver):
             graphics.keymap = CONF.spice.keymap
             graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)
+            add_video_driver = True
+
+        if add_video_driver:
+            video = vconfig.LibvirtConfigGuestVideo()
+            if CONF.spice.enabled:
+                video.type = 'qxl'
+            if guest.os_type == vm_mode.XEN:
+                video.type = 'xen'
+            guest.add_device(video)
 
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
         if CONF.libvirt.virt_type in ('qemu', 'kvm'):
