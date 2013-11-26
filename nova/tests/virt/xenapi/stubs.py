@@ -21,7 +21,7 @@ import random
 from nova.openstack.common import jsonutils
 from nova import test
 import nova.tests.image.fake
-from nova.virt.xenapi import driver as xenapi_conn
+from nova.virt.xenapi.client import session
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
@@ -55,9 +55,9 @@ def stubout_instance_snapshot(stubs):
 def stubout_session(stubs, cls, product_version=(5, 6, 2),
                     product_brand='XenServer', **opt_args):
     """Stubs out methods from XenAPISession."""
-    stubs.Set(xenapi_conn.XenAPISession, '_create_session',
+    stubs.Set(session.XenAPISession, '_create_session',
               lambda s, url: cls(url, **opt_args))
-    stubs.Set(xenapi_conn.XenAPISession, '_get_product_version_and_brand',
+    stubs.Set(session.XenAPISession, '_get_product_version_and_brand',
               lambda s: (product_version, product_brand))
 
 

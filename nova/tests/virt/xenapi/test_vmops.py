@@ -25,7 +25,7 @@ from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
-from nova.virt.xenapi import driver as xenapi_conn
+from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import fake as xenapi_fake
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
@@ -39,9 +39,8 @@ class VMOpsTestBase(stubs.XenAPITestBaseNoDB):
 
     def _setup_mock_vmops(self, product_brand=None, product_version=None):
         stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)
-        self._session = xenapi_conn.XenAPISession('test_url', 'root',
-                                                  'test_pass',
-                                                  fake.FakeVirtAPI())
+        self._session = xenapi_session.XenAPISession('test_url', 'root',
+                                                     'test_pass')
         self.vmops = vmops.VMOps(self._session, fake.FakeVirtAPI())
 
     def create_vm(self, name, state="running"):
