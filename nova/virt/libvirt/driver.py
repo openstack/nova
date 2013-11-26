@@ -1020,11 +1020,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
             self._cleanup_lvm(instance)
             #NOTE(haomai): destroy volumes if needed
-            if CONF.libvirt_images_type == 'rbd':
+            if CONF.libvirt.images_type == 'rbd':
                 self._cleanup_rbd(instance)
 
     def _cleanup_rbd(self, instance):
-        pool = CONF.libvirt_images_rbd_pool
+        pool = CONF.libvirt.images_rbd_pool
         volumes = libvirt_utils.list_rbd_volumes(pool)
         pattern = instance['uuid']
 
@@ -1044,8 +1044,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _lvm_disks(self, instance):
         """Returns all LVM disks for given instance object."""
-        if CONF.libvirt_images_volume_group:
-            vg = os.path.join('/dev', CONF.libvirt_images_volume_group)
+        if CONF.libvirt.images_volume_group:
+            vg = os.path.join('/dev', CONF.libvirt.images_volume_group)
             if not os.path.exists(vg):
                 return []
             pattern = '%s_' % instance['name']
@@ -2391,7 +2391,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return os.path.join(libvirt_utils.get_instance_path(instance),
                                 fname + suffix)
 
-        def image(fname, image_type=CONF.libvirt_images_type):
+        def image(fname, image_type=CONF.libvirt.images_type):
             return self.image_backend.image(instance,
                                             fname + suffix, image_type)
 
@@ -3565,9 +3565,9 @@ class LibvirtDriver(driver.ComputeDriver):
              :used: How much space is used (in gigabytes)
         """
 
-        if CONF.libvirt_images_type == 'lvm':
+        if CONF.libvirt.images_type == 'lvm':
             info = libvirt_utils.get_volume_group_info(
-                                 CONF.libvirt_images_volume_group)
+                                 CONF.libvirt.images_volume_group)
         else:
             info = libvirt_utils.get_fs_info(CONF.instances_path)
 
@@ -4380,7 +4380,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 image = self.image_backend.image(instance,
                                                  instance_disk,
-                                                 CONF.libvirt_images_type)
+                                                 CONF.libvirt.images_type)
                 image.cache(fetch_func=libvirt_utils.fetch_image,
                             context=context,
                             filename=cache_name,

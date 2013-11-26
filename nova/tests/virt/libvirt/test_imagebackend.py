@@ -365,7 +365,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
     def setUp(self):
         self.image_class = imagebackend.Lvm
         super(LvmTestCase, self).setUp()
-        self.flags(libvirt_images_volume_group=self.VG)
+        self.flags(images_volume_group=self.VG, group='libvirt')
         self.LV = '%s_%s' % (self.INSTANCE['name'], self.NAME)
         self.OLD_STYLE_INSTANCE_PATH = None
         self.PATH = os.path.join('/dev', self.VG, self.LV)
@@ -436,21 +436,21 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self._create_image(False)
 
     def test_create_image_sparsed(self):
-        self.flags(libvirt_sparse_logical_volumes=True)
+        self.flags(sparse_logical_volumes=True, group='libvirt')
         self._create_image(True)
 
     def test_create_image_generated(self):
         self._create_image_generated(False)
 
     def test_create_image_generated_sparsed(self):
-        self.flags(libvirt_sparse_logical_volumes=True)
+        self.flags(sparse_logical_volumes=True, group='libvirt')
         self._create_image_generated(True)
 
     def test_create_image_resize(self):
         self._create_image_resize(False)
 
     def test_create_image_resize_sparsed(self):
-        self.flags(libvirt_sparse_logical_volumes=True)
+        self.flags(sparse_logical_volumes=True, group='libvirt')
         self._create_image_resize(True)
 
     def test_create_image_negative(self):
@@ -519,9 +519,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def setUp(self):
         self.image_class = imagebackend.Rbd
         super(RbdTestCase, self).setUp()
-        self.flags(libvirt_images_rbd_pool=self.POOL)
+        self.flags(images_rbd_pool=self.POOL, group='libvirt')
         self.flags(rbd_user=self.USER)
-        self.flags(libvirt_images_rbd_ceph_conf=self.CONF)
+        self.flags(images_rbd_ceph_conf=self.CONF, group='libvirt')
         self.libvirt_utils = imagebackend.libvirt_utils
         self.utils = imagebackend.utils
         self.rbd = self.mox.CreateMockAnything()
@@ -678,14 +678,14 @@ class BackendTestCase(test.NoDBTestCase):
         self._test_image('qcow2', imagebackend.Qcow2, imagebackend.Qcow2)
 
     def test_image_lvm(self):
-        self.flags(libvirt_images_volume_group='FakeVG')
+        self.flags(images_volume_group='FakeVG', group='libvirt')
         self._test_image('lvm', imagebackend.Lvm, imagebackend.Lvm)
 
     def test_image_rbd(self):
         conf = "FakeConf"
         pool = "FakePool"
-        self.flags(libvirt_images_rbd_pool=pool)
-        self.flags(libvirt_images_rbd_ceph_conf=conf)
+        self.flags(images_rbd_pool=pool, group='libvirt')
+        self.flags(images_rbd_ceph_conf=conf, group='libvirt')
         self._test_image('rbd', imagebackend.Rbd, imagebackend.Rbd)
 
     def test_image_default(self):

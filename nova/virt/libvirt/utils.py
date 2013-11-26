@@ -572,7 +572,7 @@ def find_disk(virt_dom):
     else:
         source = domain.find('devices/disk/source')
         disk_path = source.get('file') or source.get('dev')
-        if not disk_path and CONF.libvirt_images_type == 'rbd':
+        if not disk_path and CONF.libvirt.images_type == 'rbd':
             disk_path = source.get('name')
             if disk_path:
                 disk_path = 'rbd:' + disk_path
