@@ -86,15 +86,19 @@ def _make_list(context, list_obj, item_cls, db_list):
 
 
 class MigrationList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added use_slave to get_unconfirmed_by_dest_compute
+    VERSION = '1.1'
+
     fields = {
         'objects': fields.ListOfObjectsField('Migration'),
         }
 
     @base.remotable_classmethod
     def get_unconfirmed_by_dest_compute(cls, context, confirm_window,
-                                        dest_compute):
+                                        dest_compute, use_slave=False):
         db_migrations = db.migration_get_unconfirmed_by_dest_compute(
-            context, confirm_window, dest_compute)
+            context, confirm_window, dest_compute, use_slave=use_slave)
         return _make_list(context, MigrationList(), Migration, db_migrations)
 
     @base.remotable_classmethod

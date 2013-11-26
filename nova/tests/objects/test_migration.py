@@ -118,11 +118,12 @@ class _TestMigrationObject(object):
         self.mox.StubOutWithMock(
             db, 'migration_get_unconfirmed_by_dest_compute')
         db.migration_get_unconfirmed_by_dest_compute(
-            ctxt, 'window', 'foo').AndReturn(db_migrations)
+            ctxt, 'window', 'foo',
+            use_slave=False).AndReturn(db_migrations)
         self.mox.ReplayAll()
         migrations = (
             migration.MigrationList.get_unconfirmed_by_dest_compute(
-                ctxt, 'window', 'foo'))
+                ctxt, 'window', 'foo', use_slave=False))
         self.assertEqual(2, len(migrations))
         for index, db_migration in enumerate(db_migrations):
             self.compare_obj(migrations[index], db_migration)

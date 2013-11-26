@@ -4029,15 +4029,16 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 
 @require_admin_context
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
-                                              dest_compute):
+                                              dest_compute, use_slave=False):
     confirm_window = (timeutils.utcnow() -
                       datetime.timedelta(seconds=confirm_window))
 
-    return model_query(context, models.Migration, read_deleted="yes").\
-            filter(models.Migration.updated_at <= confirm_window).\
-            filter_by(status="finished").\
-            filter_by(dest_compute=dest_compute).\
-            all()
+    return model_query(context, models.Migration, read_deleted="yes",
+                       use_slave=use_slave).\
+             filter(models.Migration.updated_at <= confirm_window).\
+             filter_by(status="finished").\
+             filter_by(dest_compute=dest_compute).\
+             all()
 
 
 @require_admin_context
