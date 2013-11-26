@@ -327,6 +327,9 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=ex.format_message())
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'os-migrateLive')
         except Exception:
             if host is None:
                 msg = _("Live migration of instance %s to another host "

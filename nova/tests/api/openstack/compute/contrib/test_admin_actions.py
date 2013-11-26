@@ -174,13 +174,21 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_actions_raise_conflict_on_invalid_state(self):
-        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate']
-        method_translations = {'migrate': 'resize'}
+        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
+                   'os-migrateLive']
+        method_translations = {'migrate': 'resize',
+                               'os-migrateLive': 'live_migrate'}
+        body_map = {'os-migrateLive':
+                        {'host': 'hostname',
+                         'block_migration': False,
+                         'disk_over_commit': False}}
+        args_map = {'os-migrateLive': ((False, False, 'hostname'), {})}
 
         for action in actions:
             method = method_translations.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_invalid_state(action, method=method)
+            self._test_invalid_state(action, method=method, body_map=body_map,
+                                     compute_api_args_map=args_map)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
