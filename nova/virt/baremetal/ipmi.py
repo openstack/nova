@@ -65,7 +65,10 @@ def _make_password_file(password):
     fd, path = tempfile.mkstemp()
     os.fchmod(fd, stat.S_IRUSR | stat.S_IWUSR)
     with os.fdopen(fd, "w") as f:
-        f.write(password)
+        # NOTE(r-mibu): Since ipmitool hangs with an empty password file,
+        #               we have to write '\0' if password was empty.
+        # see https://bugs.launchpad.net/nova/+bug/1237802 for more details
+        f.write(password or b"\0")
     return path
 
 
