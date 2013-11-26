@@ -88,7 +88,7 @@ class ViewBuilder(common.ViewBuilder):
             "server": {
                 "id": instance["uuid"],
                 "name": instance["display_name"],
-                "status": self._get_vm_state(instance),
+                "status": self._get_vm_status(instance),
                 "tenant_id": instance.get("project_id") or "",
                 "user_id": instance.get("user_id") or "",
                 "metadata": self._get_metadata(instance),
@@ -146,7 +146,7 @@ class ViewBuilder(common.ViewBuilder):
             return utils.instance_meta(instance)
 
     @staticmethod
-    def _get_vm_state(instance):
+    def _get_vm_status(instance):
         # If the instance is deleted the vm and task states don't really matter
         if instance.get("deleted"):
             return "DELETED"
@@ -241,7 +241,7 @@ class ViewBuilderV3(ViewBuilder):
             "server": {
                 "id": instance["uuid"],
                 "name": instance["display_name"],
-                "status": self._get_vm_state(instance),
+                "status": self._get_vm_status(instance),
                 "tenant_id": instance.get("project_id") or "",
                 "user_id": instance.get("user_id") or "",
                 "metadata": self._get_metadata(instance),
