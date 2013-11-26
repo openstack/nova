@@ -14,6 +14,7 @@
 #    under the License.
 
 from cinderclient import exceptions as cinder_exception
+import mock
 
 from nova import context
 from nova import exception
@@ -108,22 +109,46 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_check_attach_availability_zone_differs(self):
         volume = {'status': 'available'}
         volume['attach_status'] = "detached"
-        instance = {'availability_zone': 'zone1'}
-        volume['availability_zone'] = 'zone2'
-        cinder.CONF.set_override('cinder_cross_az_attach', False)
-        self.assertRaises(exception.InvalidVolume,
-                          self.api.check_attach, self.ctx, volume, instance)
-        volume['availability_zone'] = 'zone1'
-        self.assertIsNone(self.api.check_attach(self.ctx, volume, instance))
-        cinder.CONF.reset()
+        instance = {'availability_zone': 'zone1', 'host': 'fakehost'}
+
+        with mock.patch.object(cinder.az, 'get_instance_availability_zone',
+                               side_effect=lambda context,
+                               instance: 'zone1') as mock_get_instance_az:
+
+            cinder.CONF.set_override('cinder_cross_az_attach', False)
+            volume['availability_zone'] = 'zone1'
+            self.assertIsNone(self.api.check_attach(self.ctx,
+                                                    volume, instance))
+            mock_get_instance_az.assert_called_once_with(self.ctx, instance)
+            mock_get_instance_az.reset_mock()
+            volume['availability_zone'] = 'zone2'
+            self.assertRaises(exception.InvalidVolume,
+                            self.api.check_attach, self.ctx, volume, instance)
+            mock_get_instance_az.assert_called_once_with(self.ctx, instance)
+            mock_get_instance_az.reset_mock()
+            del instance['host']
+            volume['availability_zone'] = 'zone1'
+            self.assertIsNone(self.api.check_attach(
+                self.ctx, volume, instance))
+            mock_get_instance_az.assert_not_called()
+            volume['availability_zone'] = 'zone2'
+            self.assertRaises(exception.InvalidVolume,
+                            self.api.check_attach, self.ctx, volume, instance)
+            mock_get_instance_az.assert_not_called()
+            cinder.CONF.reset()
 
     def test_check_attach(self):
         volume = {'status': 'available'}
         volume['attach_status'] = "detached"
         volume['availability_zone'] = 'zone1'
-        instance = {'availability_zone': 'zone1'}
+        instance = {'availability_zone': 'zone1', 'host': 'fakehost'}
         cinder.CONF.set_override('cinder_cross_az_attach', False)
-        self.assertIsNone(self.api.check_attach(self.ctx, volume, instance))
+
+        with mock.patch.object(cinder.az, 'get_instance_availability_zone',
+                               side_effect=lambda context, instance: 'zone1'):
+            self.assertIsNone(self.api.check_attach(
+                self.ctx, volume, instance))
+
         cinder.CONF.reset()
 
     def test_check_detach(self):
