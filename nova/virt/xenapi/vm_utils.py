@@ -1998,8 +1998,9 @@ def get_instance_vdis_for_sr(session, vm_ref, sr_ref):
             continue
 
 
-def _get_vhd_parent_uuid(session, vdi_ref):
-    vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
+def _get_vhd_parent_uuid(session, vdi_ref, vdi_rec=None):
+    if vdi_rec is None:
+        vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
 
     if 'vhd-parent' not in vdi_rec['sm_config']:
         return None
@@ -2019,7 +2020,7 @@ def _walk_vdi_chain(session, vdi_uuid):
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
         yield vdi_rec
 
-        parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
+        parent_uuid = _get_vhd_parent_uuid(session, vdi_ref, vdi_rec)
         if not parent_uuid:
             break
 
@@ -2038,7 +2039,7 @@ def _child_vhds(session, sr_ref, vdi_uuid):
         if rec_uuid == vdi_uuid:
             continue
 
-        parent_uuid = _get_vhd_parent_uuid(session, ref)
+        parent_uuid = _get_vhd_parent_uuid(session, ref, rec)
         if parent_uuid != vdi_uuid:
             continue
 
@@ -2068,8 +2069,9 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     def _another_child_vhd():
         # Search for any other vdi which parents to original parent and is not
         # in the active vm/instance vdi chain.
-        vdi_uuid = session.call_xenapi('VDI.get_record', vdi_ref)['uuid']
-        parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref)
+        vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+        vdi_uuid = vdi_rec['uuid']
+        parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref, vdi_rec)
         for _ref, rec in _get_all_vdis_in_sr(session, sr_ref):
             if ((rec['uuid'] != vdi_uuid) and
                (rec['uuid'] != parent_vdi_uuid) and

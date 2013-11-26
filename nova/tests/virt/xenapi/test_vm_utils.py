@@ -1838,6 +1838,15 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
         mock_set_info.assert_called_once_with(session, 'vdi_ref', 'disk_type',
                 'vdi_label', 'disk_type', instance)
 
+    def test_get_vhd_parent_uuid_rec_provided(self):
+        session = mock.Mock()
+        vdi_ref = 'vdi_ref'
+        vdi_rec = {'sm_config': {}}
+        self.assertEqual(None, vm_utils._get_vhd_parent_uuid(session,
+                                                             vdi_ref,
+                                                             vdi_rec))
+        self.assertFalse(session.call_xenapi.called)
+
 
 class MigrateVHDTestCase(VMUtilsTestBase):
     def _assert_transfer_called(self, session, label):
