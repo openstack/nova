@@ -18,7 +18,7 @@ import fixtures
 import os
 import sys
 
-from posix import stat_result
+import posix
 
 from nova import exception
 from nova import test
@@ -40,10 +40,10 @@ class VirtDiskTest(test.NoDBTestCase):
 
         def fake_stat(arg):
             if arg == '/some/file':  # fake success
-                return stat_result((16877, 2, 2049L,
-                                    23, 0, 0,
-                                    4096, 1381787843,
-                                    1381635971, 1381635971))
+                return posix.stat_result((16877, 2, 2049L,
+                                          23, 0, 0,
+                                          4096, 1381787843,
+                                          1381635971, 1381635971))
             else:
                 return orig_os_stat(arg)
 

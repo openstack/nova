@@ -40,7 +40,7 @@ class ResourceMonitorBaseTestCase(test.TestCase):
 
     def test_get_metric_names(self):
         names = self.monitor.get_metric_names()
-        self.assertEquals(2, len(names))
+        self.assertEqual(2, len(names))
         self.assertIn("foo.metric1", names)
         self.assertIn("foo.metric2", names)
 
@@ -52,8 +52,8 @@ class ResourceMonitorBaseTestCase(test.TestCase):
             self.assertIn(metric['name'], names)
             metrics[metric['name']] = metric['value']
 
-        self.assertEquals(metrics["foo.metric1"], '1000')
-        self.assertEquals(metrics["foo.metric2"], '99.999')
+        self.assertEqual(metrics["foo.metric1"], '1000')
+        self.assertEqual(metrics["foo.metric2"], '99.999')
 
 
 class ResourceMonitorsTestCase(test.TestCase):

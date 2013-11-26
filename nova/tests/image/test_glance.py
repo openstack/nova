@@ -26,7 +26,7 @@ import time
 import sys
 import testtools
 
-from mock import patch
+import mock
 import mox
 
 import glanceclient.exc
@@ -35,7 +35,6 @@ from oslo.config import cfg
 from nova import context
 from nova import exception
 from nova.image import glance
-from nova.image.glance import GlanceClientWrapper
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests.glance import stubs as glance_stubs
@@ -307,7 +306,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.assertEqual(len(image_metas), 5)
 
     def test_page_size(self):
-        with patch.object(GlanceClientWrapper, 'call') as a_mock:
+        with mock.patch.object(glance.GlanceClientWrapper, 'call') as a_mock:
             self.service.detail(self.context, page_size=5)
             self.assertEqual(a_mock.called, True)
             a_mock.assert_called_with(self.context, 1, 'list',

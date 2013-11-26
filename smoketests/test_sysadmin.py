@@ -64,7 +64,7 @@ class ImageTests(base.UserSmokeTestCase):
     def test_003_can_register_image(self):
         image_id = self.conn.register_image('%s/%s.manifest.xml' %
                                             (TEST_BUCKET, FLAGS.bundle_image))
-        self.assert_(image_id is not None)
+        self.assertTrue(image_id is not None)
         self.data['image_id'] = image_id
 
     def test_004_can_bundle_kernel(self):
@@ -76,7 +76,7 @@ class ImageTests(base.UserSmokeTestCase):
     def test_006_can_register_kernel(self):
         kernel_id = self.conn.register_image('%s/%s.manifest.xml' %
                                             (TEST_BUCKET, FLAGS.bundle_kernel))
-        self.assert_(kernel_id is not None)
+        self.assertTrue(kernel_id is not None)
         self.data['kernel_id'] = kernel_id
 
     def test_007_images_are_available_within_10_seconds(self):
@@ -86,8 +86,8 @@ class ImageTests(base.UserSmokeTestCase):
                 break
             time.sleep(1)
         else:
-            self.assert_(False)  # wasn't available within 10 seconds
-        self.assert_(image.type == 'machine')
+            self.assertTrue(False)  # wasn't available within 10 seconds
+        self.assertTrue(image.type == 'machine')
 
         for i in xrange(10):
             kernel = self.conn.get_image(self.data['kernel_id'])
@@ -95,13 +95,13 @@ class ImageTests(base.UserSmokeTestCase):
                 break
             time.sleep(1)
         else:
-            self.assert_(False)    # wasn't available within 10 seconds
-        self.assert_(kernel.type == 'kernel')
+            self.assertTrue(False)    # wasn't available within 10 seconds
+        self.assertTrue(kernel.type == 'kernel')
 
     def test_008_can_describe_image_attribute(self):
         attrs = self.conn.get_image_attribute(self.data['image_id'],
                                                'launchPermission')
-        self.assert_(attrs.name, 'launch_permission')
+        self.assertTrue(attrs.name, 'launch_permission')
 
     def test_009_can_add_image_launch_permission(self):
         image = self.conn.get_image(self.data['image_id'])
