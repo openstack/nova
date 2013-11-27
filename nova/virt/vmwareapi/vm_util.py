@@ -827,10 +827,9 @@ def get_host_ref(session, cluster=None):
         host_ret = session._call_method(vim_util, "get_dynamic_property",
                                         cluster, "ClusterComputeResource",
                                         "host")
-        if host_ret is None:
-            return
-        if not host_ret.ManagedObjectReference:
-            return
+        if not host_ret or not host_ret.ManagedObjectReference:
+            msg = _('No host available on cluster')
+            raise exception.NoValidHost(reason=msg)
         host_mor = host_ret.ManagedObjectReference[0]
 
     return host_mor
@@ -925,7 +924,7 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                         "get_dynamic_property", host,
                                         "HostSystem", "datastore")
 
-        if datastore_ret is None:
+        if not datastore_ret:
             raise exception.DatastoreNotFound()
         data_store_mors = datastore_ret.ManagedObjectReference
         data_stores = session._call_method(vim_util,
