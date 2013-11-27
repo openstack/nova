@@ -262,7 +262,7 @@ def exact_filter(query, model, filters, legal_keys):
         # OK, filtering on this key; what value do we search for?
         value = filters.pop(key)
 
-        if key == 'metadata' or key == 'system_metadata':
+        if key in ('metadata', 'system_metadata'):
             column_attr = getattr(model, key)
             if isinstance(value, list):
                 for item in value:
