@@ -20,9 +20,11 @@
 import webob
 import webob.exc
 
+from nova.api.openstack.compute.schemas.v3 import keypairs_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api import validation
 from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -67,6 +69,7 @@ class KeypairController(object):
     @wsgi.serializers(xml=KeypairTemplate)
     @extensions.expected_errors((400, 409, 413))
     @wsgi.response(201)
+    @validation.schema(request_body_schema=keypairs_schema.create)
     def create(self, req, body):
         """
         Create or import keypair.
@@ -84,12 +87,8 @@ class KeypairController(object):
         context = req.environ['nova.context']
         authorize(context, action='create')
 
-        try:
-            params = body['keypair']
-            name = params['name']
-        except KeyError:
-            msg = _("Invalid request body")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
+        params = body['keypair']
+        name = params['name']
 
         try:
             if 'public_key' in params:

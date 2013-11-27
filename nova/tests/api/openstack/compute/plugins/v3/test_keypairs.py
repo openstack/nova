@@ -101,6 +101,30 @@ class KeypairsTest(test.TestCase):
         self.assertTrue(len(res_dict['keypair']['fingerprint']) > 0)
         self.assertTrue(len(res_dict['keypair']['private_key']) > 0)
 
+    def test_keypair_create_without_keypair(self):
+        body = {'foo': None}
+        req = webob.Request.blank('/v3/keypairs')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+
+    def test_keypair_create_without_name(self):
+        body = {'keypair': {'public_key': 'public key'}}
+        req = webob.Request.blank('/v3/keypairs')
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['Content-Type'] = 'application/json'
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual("Invalid input for field/attribute keypair. "
+                         "Value: {u'public_key': u'public key'}. "
+                         "'name' is a required property",
+                         res_dict['badRequest']['message'])
+
     def test_keypair_create_with_empty_name(self):
         body = {'keypair': {'name': ''}}
         req = webob.Request.blank('/v3/keypairs')
@@ -110,15 +134,15 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
         res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            'Keypair data is invalid: '
-            'Keypair name must be between 1 and 255 characters long',
-            res_dict['badRequest']['message'])
+        self.assertEqual("Invalid input for field/attribute name. "
+                         "Value: . u'' is too short",
+                         res_dict['badRequest']['message'])
 
     def test_keypair_create_with_name_too_long(self):
+        name = 'a' * 256
         body = {
             'keypair': {
-                'name': 'a' * 256
+                'name': name
             }
         }
         req = webob.Request.blank('/v3/keypairs')
@@ -128,10 +152,9 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
         res_dict = jsonutils.loads(res.body)
-        self.assertEqual(
-            'Keypair data is invalid: '
-            'Keypair name must be between 1 and 255 characters long',
-            res_dict['badRequest']['message'])
+        expected_message = "Invalid input for field/attribute name. "\
+                           "Value: %s. u'%s' is too long" % (name, name)
+        self.assertEqual(expected_message, res_dict['badRequest']['message'])
 
     def test_keypair_create_with_non_alphanumeric_name(self):
         body = {
@@ -148,8 +171,8 @@ class KeypairsTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
-            "Keypair data is invalid: "
-            "Keypair name contains unsafe characters",
+            "Invalid input for field/attribute name. Value: test/keypair. "
+            "u'test/keypair' does not match '^[a-zA-Z0-9 _-]+$'",
             res_dict['badRequest']['message'])
 
     def test_keypair_import(self):
@@ -358,8 +381,6 @@ class KeypairsTest(test.TestCase):
         res = req.get_response(self.app)
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
-        self.assertEqual(res_dict['badRequest']['message'],
-                         "Invalid request body")
 
 
 class KeypairPolicyTest(test.TestCase):
@@ -423,7 +444,7 @@ class KeypairPolicyTest(test.TestCase):
         req.method = 'POST'
         self.assertRaises(exception.NotAuthorized,
                           self.KeyPairController.create,
-                          req, {})
+                          req, body={'keypair': {'name': 'create_test'}})
 
     def test_keypair_create_pass_policy(self):
         body = {'keypair': {'name': 'create_test'}}
@@ -432,7 +453,7 @@ class KeypairPolicyTest(test.TestCase):
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v3/keypairs')
         req.method = 'POST'
-        res = self.KeyPairController.create(req, body)
+        res = self.KeyPairController.create(req, body=body)
         self.assertIn('keypair', res)
 
     def test_keypair_delete_fail_policy(self):
