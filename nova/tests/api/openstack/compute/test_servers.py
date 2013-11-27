@@ -51,6 +51,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
+from nova.openstack.common import timeutils
 from nova import policy
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -1267,6 +1268,8 @@ class ServersControllerDeleteTest(ControllerTest):
 
         def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
+            deleted_at = timeutils.utcnow()
+            return fake_instance.fake_db_instance(deleted_at=deleted_at)
 
         self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
 
@@ -1321,6 +1324,8 @@ class ServersControllerDeleteTest(ControllerTest):
 
         def instance_destroy_mock(*args, **kwargs):
             self.server_delete_called = True
+            deleted_at = timeutils.utcnow()
+            return fake_instance.fake_db_instance(deleted_at=deleted_at)
         self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
 
         self.controller.delete(req, FAKE_UUID)

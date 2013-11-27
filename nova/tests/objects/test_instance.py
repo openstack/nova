@@ -67,7 +67,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.10',
+                    'nova_object.version': '1.11',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -83,7 +83,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.10',
+                    'nova_object.version': '1.11',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
@@ -657,10 +657,17 @@ class _TestInstanceObject(object):
 
     def test_destroy_stubbed(self):
         self.mox.StubOutWithMock(db, 'instance_destroy')
-        db.instance_destroy(self.context, 'fake-uuid', constraint=None)
+        deleted_at = datetime.datetime(1955, 11, 6)
+        fake_inst = fake_instance.fake_db_instance(deleted_at=deleted_at,
+                                                   deleted=True)
+        db.instance_destroy(self.context, 'fake-uuid',
+                            constraint=None).AndReturn(fake_inst)
         self.mox.ReplayAll()
         inst = instance.Instance(id=1, uuid='fake-uuid', host='foo')
         inst.destroy(self.context)
+        self.assertEqual(timeutils.normalize_time(inst.deleted_at),
+                         timeutils.normalize_time(deleted_at))
+        self.assertTrue(inst.deleted)
 
     def test_destroy(self):
         values = {'user_id': self.context.user_id,

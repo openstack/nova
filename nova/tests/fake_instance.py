@@ -54,6 +54,8 @@ def fake_db_instance(**updates):
         'security_groups': [],
         'metadata': {},
         'system_metadata': {},
+        'root_gb': 0,
+        'ephemeral_gb': 0
         }
 
     for name, field in instance_obj.Instance.fields.items():

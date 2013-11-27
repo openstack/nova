@@ -36,6 +36,7 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
+from nova.tests import fake_instance
 from nova.tests.image import fake as fake_image
 from nova.tests.objects import test_migration
 from nova.tests.objects import test_service
@@ -433,7 +434,11 @@ class _ComputeAPIUnitTestMixIn(object):
                         'terminated_at': delete_time})
         inst.save()
 
-        db.instance_destroy(self.context, inst.uuid, constraint=None)
+        updates.update({'deleted_at': delete_time,
+                        'deleted': True})
+        fake_inst = fake_instance.fake_db_instance(**updates)
+        db.instance_destroy(self.context, inst.uuid,
+                            constraint=None).AndReturn(fake_inst)
         compute_utils.notify_about_instance_usage(
                 mox.IgnoreArg(),
                 self.context, inst, '%s.end' % delete_type,
@@ -612,8 +617,13 @@ class _ComputeAPIUnitTestMixIn(object):
                                                       inst,
                                                       'delete.start')
             db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
+            delete_time = datetime.datetime(1955, 11, 5, 9, 30,
+                                            tzinfo=iso8601.iso8601.Utc())
+            updates['deleted_at'] = delete_time
+            updates['deleted'] = True
+            fake_inst = fake_instance.fake_db_instance(**updates)
             db.instance_destroy(self.context, inst.uuid,
-                                constraint='constraint')
+                                constraint='constraint').AndReturn(fake_inst)
             compute_utils.notify_about_instance_usage(
                     mox.IgnoreArg(), self.context, inst, 'delete.end',
                     system_metadata=inst.system_metadata)
