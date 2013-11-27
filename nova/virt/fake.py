@@ -313,7 +313,7 @@ class FakeDriver(driver.ComputeDriver):
                 'host': 'fakevncconsole.com',
                 'port': 6969}
 
-    def get_spice_console(self, instance):
+    def get_spice_console(self, context, instance):
         return {'internal_access_path': 'FAKE',
                 'host': 'fakespiceconsole.com',
                 'port': 6969,

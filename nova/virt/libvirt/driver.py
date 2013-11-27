@@ -2272,7 +2272,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return {'host': host, 'port': port, 'internal_access_path': None}
 
-    def get_spice_console(self, instance):
+    def get_spice_console(self, context, instance):
         def get_spice_ports_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)

@@ -3615,6 +3615,9 @@ class ComputeManager(manager.Manager):
         LOG.debug(_("Getting spice console"), instance=instance)
         token = str(uuid.uuid4())
 
+        instance = instance_obj.Instance._from_db_object(
+            context, instance_obj.Instance(), instance)
+
         if not CONF.spice.enabled:
             raise exception.ConsoleTypeInvalid(console_type=console_type)
 
@@ -3629,7 +3632,7 @@ class ComputeManager(manager.Manager):
         try:
             # Retrieve connect info from driver, and then decorate with our
             # access info token
-            connect_info = self.driver.get_spice_console(instance)
+            connect_info = self.driver.get_spice_console(context, instance)
             connect_info['token'] = token
             connect_info['access_url'] = access_url
         except exception.InstanceNotFound:
@@ -3645,7 +3648,9 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def validate_console_port(self, ctxt, instance, port, console_type):
         if console_type == "spice-html5":
-            console_info = self.driver.get_spice_console(instance)
+            instance = instance_obj.Instance._from_db_object(
+                ctxt, instance_obj.Instance(), instance)
+            console_info = self.driver.get_spice_console(ctxt, instance)
         else:
             console_info = self.driver.get_vnc_console(instance)
 
