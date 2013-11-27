@@ -225,6 +225,11 @@ class Integer(FieldType):
         return int(value)
 
 
+class Float(FieldType):
+    def coerce(self, obj, attr, value):
+        return float(value)
+
+
 class Boolean(FieldType):
     def coerce(self, obj, attr, value):
         return bool(value)
@@ -412,6 +417,10 @@ class UUIDField(AutoTypedField):
 
 class IntegerField(AutoTypedField):
     AUTO_TYPE = Integer()
+
+
+class FloatField(AutoTypedField):
+    AUTO_TYPE = Float()
 
 
 class BooleanField(AutoTypedField):
