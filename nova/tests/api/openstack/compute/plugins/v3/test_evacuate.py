@@ -89,6 +89,40 @@ class EvacuateTest(test.NoDBTestCase):
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
 
+    def test_evacuate_instance_with_empty_host(self):
+        req, app = self._gen_request_with_app({'host': '',
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
+        res = req.get_response(app)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_too_long_host(self):
+        host = 'a' * 256
+        req, app = self._gen_request_with_app({'host': host,
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
+        res = req.get_response(app)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_invalid_characters_host(self):
+        host = 'abc!#'
+        req, app = self._gen_request_with_app({'host': host,
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
+        res = req.get_response(app)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(400, res.status_int)
+
+    def test_evacuate_instance_with_invalid_on_shared_storage(self):
+        req, app = self._gen_request_with_app({'host': 'my-host',
+                                               'on_shared_storage': 'foo',
+                                               'admin_password': 'MyNewPass'})
+        res = req.get_response(app)
+        res_dict = jsonutils.loads(res.body)
+        self.assertEqual(400, res.status_int)
+
     def test_evacuate_instance_without_on_shared_storage(self):
         req, app = self._gen_request_with_app({'host': 'my-host',
                                                'admin_password': 'MyNewPass'})
