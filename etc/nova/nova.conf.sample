@@ -1994,32 +1994,6 @@
 
 
 #
-# Options defined in nova.virt.powervm.driver
-#
-
-# PowerVM manager type (ivm, hmc) (string value)
-#powervm_mgr_type=ivm
-
-# PowerVM manager host or ip (string value)
-#powervm_mgr=<None>
-
-# PowerVM manager user name (string value)
-#powervm_mgr_user=<None>
-
-# PowerVM manager user password (string value)
-#powervm_mgr_passwd=<None>
-
-# PowerVM image remote path where images will be moved. Make
-# sure this path can fit your biggest image in glance (string
-# value)
-#powervm_img_remote_path=/home/padmin
-
-# Local directory to download glance images to. Make sure this
-# path can fit your biggest image in glance (string value)
-#powervm_img_local_path=/tmp
-
-
-#
 # Options defined in nova.vnc
 #
 
