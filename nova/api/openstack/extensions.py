@@ -483,6 +483,11 @@ def expected_errors(errors):
                     # calls. ResourceExceptionHandler silently
                     # converts NotAuthorized to HTTPForbidden
                     raise
+                elif isinstance(exc, exception.ValidationError):
+                    # Note(oomichi): Handle a validation error, which
+                    # happens due to invalid API parameters, as an
+                    # expected error.
+                    raise
 
                 LOG.exception(_("Unexpected exception in API method"))
                 msg = _('Unexpected API Error. Please report this at '
