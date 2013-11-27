@@ -1191,9 +1191,8 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 out_path = os.path.join(tmpdir, snapshot_name)
                 if live_snapshot:
-                    # NOTE (rmk): libvirt needs to be able to write to the
-                    #             temp directory, which is owned nova.
-                    utils.execute('chmod', '777', tmpdir, run_as_root=True)
+                    # NOTE(xqueralt): libvirt needs o+x in the temp directory
+                    os.chmod(tmpdir, 0o701)
                     self._live_snapshot(virt_dom, disk_path, out_path,
                                         image_format)
                 else:
