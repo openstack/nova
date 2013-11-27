@@ -171,7 +171,6 @@
     "compute_extension:v3:keypairs:show": "",
     "compute_extension:v3:keypairs:create": "",
     "compute_extension:v3:keypairs:delete": "",
-    "compute_extension:v3:limits:discoverable": "",
     "compute_extension:multinic": "",
     "compute_extension:v3:os-multinic": "",
     "compute_extension:v3:os-multinic:discoverable": "",

@@ -32,7 +32,9 @@ from nova import wsgi
 auth_opts = [
     cfg.BoolOpt('api_rate_limit',
                 default=False,
-                help='whether to use per-user rate limiting for the api.'),
+                help=('whether to use per-user rate limiting for the api. '
+                      'This option is only used by v2 api. rate limiting '
+                      'is removed from v3 api.')),
     cfg.StrOpt('auth_strategy',
                default='noauth',
                help='The strategy to use for auth: noauth or keystone.'),
@@ -48,6 +50,15 @@ CONF.register_opts(auth_opts)
 LOG = logging.getLogger(__name__)
 
 
+def _load_pipeline(loader, pipeline):
+    filters = [loader.get_filter(n) for n in pipeline[:-1]]
+    app = loader.get_app(pipeline[-1])
+    filters.reverse()
+    for filter in filters:
+        app = filter(app)
+    return app
+
+
 def pipeline_factory(loader, global_conf, **local_conf):
     """A paste pipeline replica that keys off of auth_strategy."""
     pipeline = local_conf[CONF.auth_strategy]
@@ -55,12 +66,18 @@ def pipeline_factory(loader, global_conf, **local_conf):
         limit_name = CONF.auth_strategy + '_nolimit'
         pipeline = local_conf.get(limit_name, pipeline)
     pipeline = pipeline.split()
-    filters = [loader.get_filter(n) for n in pipeline[:-1]]
-    app = loader.get_app(pipeline[-1])
-    filters.reverse()
-    for filter in filters:
-        app = filter(app)
-    return app
+    # NOTE (Alex Xu): This is just for configuration file compatibility.
+    # If the configuration file still contains 'ratelimit_v3', just ignore it.
+    # We will remove this code at next release (J)
+    if 'ratelimit_v3' in pipeline:
+        LOG.warn(_('ratelimit_v3 is removed from v3 api.'))
+        pipeline.remove('ratelimit_v3')
+    return _load_pipeline(loader, pipeline)
+
+
+def pipeline_factory_v3(loader, global_conf, **local_conf):
+    """A paste pipeline replica that keys off of auth_strategy."""
+    return _load_pipeline(loader, local_conf[CONF.auth_strategy].split())
 
 
 class InjectContext(wsgi.Middleware):

@@ -320,8 +320,9 @@
 # Options defined in nova.api.auth
 #
 
-# whether to use per-user rate limiting for the api. (boolean
-# value)
+# whether to use per-user rate limiting for the api. This
+# option is only used by v2 api. rate limiting is removed from
+# v3 api. (boolean value)
 #api_rate_limit=false
 
 # The strategy to use for auth: noauth or keystone. (string
