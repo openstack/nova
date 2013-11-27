@@ -138,6 +138,24 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    def _test_locked_instance(self, action, method=None):
+        if method is None:
+            method = action
+
+        instance = self._stub_instance_get()
+        getattr(self.compute_api, method)(self.context, instance).AndRaise(
+                exception.InstanceIsLocked(instance_uuid=instance['uuid']))
+
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance['uuid'],
+                                 {action: None})
+        self.assertEqual(409, res.status_int)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
 
 class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions(self):
@@ -178,6 +196,20 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
         for action in actions:
             self._test_non_existing_instance(action,
                                              body_map=body_map)
+            # Re-mock this.
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+
+    def test_actions_with_locked_instance(self):
+        actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
+                   'resetNetwork', 'injectNetworkInfo']
+        method_translations = {'migrate': 'resize',
+                               'resetNetwork': 'reset_network',
+                               'injectNetworkInfo': 'inject_network_info'}
+
+        for action in actions:
+            method = method_translations.get(action)
+            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self._test_locked_instance(action, method=method)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
