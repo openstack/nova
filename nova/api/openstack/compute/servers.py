@@ -967,7 +967,6 @@ class Controller(wsgi.Controller):
         except (exception.ImageNotActive,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
-                exception.FlavorNotFound,
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
                 exception.MultiplePortsNotApplicable,
