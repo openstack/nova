@@ -135,16 +135,6 @@ class SchedulerAPI(rpcclient.RpcProxy):
                          filter_properties=filter_properties,
                          reservations=reservations_p)
 
-    def update_service_capabilities(self, ctxt, service_name, host,
-            capabilities):
-        #NOTE(jogo) This is deprecated, but is used by the deprecated
-        # publish_service_capabilities call. So this can begin its removal
-        # process once publish_service_capabilities is removed.
-        cctxt = self.client.prepare(fanout=True, version='2.4')
-        cctxt.cast(ctxt, 'update_service_capabilities',
-                   service_name=service_name, host=host,
-                   capabilities=capabilities)
-
     def select_hosts(self, ctxt, request_spec, filter_properties):
         cctxt = self.client.prepare(version='2.6')
         return cctxt.call(ctxt, 'select_hosts',
