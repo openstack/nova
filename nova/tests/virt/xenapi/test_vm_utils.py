@@ -982,13 +982,10 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
         def VDI_add_to_other_config(ref, key, value):
             other_config[key] = value
 
-        def VDI_get_record(ref):
-            return {'other_config': {}}
-
         # Stubbing on the session object and not class so we don't pollute
         # other tests
         self.session.VDI_add_to_other_config = VDI_add_to_other_config
-        self.session.VDI_get_record = VDI_get_record
+        self.session.VDI_get_other_config = lambda vdi: {}
 
         vm_utils._create_image(self.context, self.session, self.fake_instance,
                 'myvdi', 'image1', vm_utils.ImageType.DISK_VHD)
@@ -1005,16 +1002,13 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
         def VDI_add_to_other_config(ref, key, value):
             other_config[key] = value
 
-        def VDI_get_record(ref):
-            return {'other_config': {}}
-
         def call_plugin_serialized(*args, **kwargs):
             return {'root': {'uuid': 'aaaa-bbbb-cccc-dddd'}}
 
         # Stubbing on the session object and not class so we don't pollute
         # other tests
         self.session.VDI_add_to_other_config = VDI_add_to_other_config
-        self.session.VDI_get_record = VDI_get_record
+        self.session.VDI_get_other_config = lambda vdi: {}
         self.session.call_plugin_serialized = call_plugin_serialized
 
         self.stubs.Set(vm_utils, 'get_sr_path', lambda *a, **k: None)
@@ -1902,16 +1896,25 @@ class StripBaseMirrorTestCase(VMUtilsTestBase):
 
     @mock.patch.object(vm_utils, '_try_strip_base_mirror_from_vdi')
     def test_strip_base_mirror_from_vdis(self, mock_strip):
+        def call_xenapi(method, arg):
+            if method == "VM.get_VBDs":
+                return ['VBD_ref_1', 'VBD_ref_2']
+            if method == "VBD.get_VDI":
+                return 'VDI' + arg[3:]
+            return "Unexpected call_xenapi: %s.%s" % (method, arg)
+
         session = mock.Mock()
-        session.call_xenapi.return_value = {"VDI": "ref", "foo": "bar"}
+        session.call_xenapi.side_effect = call_xenapi
 
         vm_utils.strip_base_mirror_from_vdis(session, "vm_ref")
 
         expected = [mock.call('VM.get_VBDs', "vm_ref"),
-                    mock.call('VBD.get_record', "VDI"),
-                    mock.call('VBD.get_record', "foo")]
+                    mock.call('VBD.get_VDI', "VBD_ref_1"),
+                    mock.call('VBD.get_VDI', "VBD_ref_2")]
         self.assertEqual(expected, session.call_xenapi.call_args_list)
-        expected = [mock.call(session, "ref"), mock.call(session, "ref")]
+
+        expected = [mock.call(session, "VDI_ref_1"),
+                    mock.call(session, "VDI_ref_2")]
         self.assertEqual(expected, mock_strip.call_args_list)
 
 

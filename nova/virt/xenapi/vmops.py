@@ -1199,8 +1199,10 @@ class VMOps(object):
                 try:
                     self._delete_from_xenstore(instance, location,
                                                vm_ref=vm_ref)
-                except KeyError:
-                    # catch KeyError for domid if instance isn't running
+                except exception.InstanceNotFound:
+                    # If the VM is not running then no need to update
+                    # the live xenstore - the param xenstore will be
+                    # used next time the VM is booted
                     pass
             elif change[0] == '+':
                 self._add_to_param_xenstore(vm_ref, location,
@@ -1208,8 +1210,9 @@ class VMOps(object):
                 try:
                     self._write_to_xenstore(instance, location, change[1],
                                             vm_ref=vm_ref)
-                except KeyError:
-                    # catch KeyError for domid if instance isn't running
+                except exception.InstanceNotFound:
+                    # If the VM is not running then no need to update
+                    # the live xenstore
                     pass
 
         @utils.synchronized('xenstore-' + instance['uuid'])
@@ -1642,8 +1645,9 @@ class VMOps(object):
                 try:
                     self._write_to_xenstore(instance, location, xs_data,
                                             vm_ref=vm_ref)
-                except KeyError:
-                    # catch KeyError for domid if instance isn't running
+                except exception.InstanceNotFound:
+                    # If the VM is not running, no need to update the
+                    # live xenstore
                     pass
         update_nwinfo()
 
@@ -1653,7 +1657,7 @@ class VMOps(object):
         LOG.debug(_("Creating vifs"), instance=instance)
 
         # this function raises if vm_ref is not a vm_opaque_ref
-        self._session.call_xenapi("VM.get_record", vm_ref)
+        self._session.call_xenapi("VM.get_domid", vm_ref)
 
         for device, vif in enumerate(network_info):
             vif_rec = self.vif_driver.plug(instance, vif,
@@ -1767,8 +1771,10 @@ class VMOps(object):
 
     def _get_dom_id(self, instance=None, vm_ref=None, check_rescue=False):
         vm_ref = vm_ref or self._get_vm_opaque_ref(instance, check_rescue)
-        vm_rec = self._session.call_xenapi("VM.get_record", vm_ref)
-        return vm_rec['domid']
+        domid = self._session.call_xenapi("VM.get_domid", vm_ref)
+        if not domid or domid == -1:
+            raise exception.InstanceNotFound(instance_id=instance['name'])
+        return domid
 
     def _add_to_param_xenstore(self, vm_ref, key, val):
         """

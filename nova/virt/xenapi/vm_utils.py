@@ -397,8 +397,9 @@ def find_vbd_by_number(session, vm_ref, number):
     if vbd_refs:
         for vbd_ref in vbd_refs:
             try:
-                vbd_rec = session.call_xenapi("VBD.get_record", vbd_ref)
-                if vbd_rec['userdevice'] == str(number):
+                user_device = session.call_xenapi("VBD.get_userdevice",
+                                                  vbd_ref)
+                if user_device == str(number):
                     return vbd_ref
             except session.XenAPI.Failure as exc:
                 LOG.exception(exc)
@@ -561,8 +562,7 @@ def get_vdi_uuid_for_volume(session, connection_data):
     else:
         try:
             vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
-            vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
-            vdi_uuid = vdi_rec['uuid']
+            vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
         except volume_utils.StorageError as exc:
             LOG.exception(exc)
             volume_utils.forget_sr(session, sr_ref)
@@ -689,14 +689,15 @@ def _get_vdi_other_config(disk_type, instance=None):
 
 def _set_vdi_info(session, vdi_ref, vdi_type, name_label, description,
                   instance):
-    vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+    existing_other_config = session.call_xenapi('VDI.get_other_config',
+                                                vdi_ref)
 
     session.call_xenapi('VDI.set_name_label', vdi_ref, name_label)
     session.call_xenapi('VDI.set_name_description', vdi_ref, description)
 
     other_config = _get_vdi_other_config(vdi_type, instance=instance)
     for key, value in other_config.iteritems():
-        if key not in vdi_rec['other_config']:
+        if key not in existing_other_config:
             session.call_xenapi(
                     "VDI.add_to_other_config", vdi_ref, key, value)
 
@@ -754,9 +755,8 @@ def _try_strip_base_mirror_from_vdi(session, vdi_ref):
 def strip_base_mirror_from_vdis(session, vm_ref):
     # NOTE(johngarbutt) part of workaround for XenServer bug CA-98606
     vbd_refs = session.call_xenapi("VM.get_VBDs", vm_ref)
-    for vbd in vbd_refs:
-        vbd_rec = session.call_xenapi("VBD.get_record", vbd)
-        vdi_ref = vbd_rec['VDI']
+    for vbd_ref in vbd_refs:
+        vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
         _try_strip_base_mirror_from_vdi(session, vdi_ref)
 
 
@@ -1278,7 +1278,7 @@ def _get_image_vdi_label(image_id):
 def _create_cached_image(context, session, instance, name_label,
                          image_id, image_type):
     sr_ref = safe_find_sr(session)
-    sr_type = session.call_xenapi('SR.get_record', sr_ref)["type"]
+    sr_type = session.call_xenapi('SR.get_type', sr_ref)
 
     if CONF.use_cow_images and sr_type != "ext":
         LOG.warning(_("Fast cloning is only supported on default local SR "
@@ -1708,8 +1708,8 @@ def lookup_vm_vdis(session, vm_ref):
             try:
                 vdi_ref = session.call_xenapi("VBD.get_VDI", vbd_ref)
                 # Test valid VDI
-                record = session.call_xenapi("VDI.get_record", vdi_ref)
-                LOG.debug(_('VDI %s is still available'), record['uuid'])
+                vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
+                LOG.debug(_('VDI %s is still available'), vdi_uuid)
                 vbd_other_config = session.call_xenapi("VBD.get_other_config",
                                                        vbd_ref)
                 if not vbd_other_config.get('osvol'):
@@ -2153,8 +2153,8 @@ def cleanup_attached_vdis(session):
     vbd_refs = session.call_xenapi('VM.get_VBDs', this_vm_ref)
     for vbd_ref in vbd_refs:
         try:
-            vbd_rec = session.call_xenapi('VBD.get_record', vbd_ref)
-            vdi_rec = session.call_xenapi('VDI.get_record', vbd_rec['VDI'])
+            vdi_ref = session.call_xenapi('VBD.get_VDI', vbd_ref)
+            vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
         except session.XenAPI.Failure as e:
             if e.details[0] != 'HANDLE_INVALID':
                 raise

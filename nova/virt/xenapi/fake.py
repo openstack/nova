@@ -240,6 +240,7 @@ def after_VBD_create(vbd_ref, vbd_rec):
 
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
+    vm_rec.setdefault('domid', -1)
     vm_rec.setdefault('is_control_domain', False)
     vm_rec.setdefault('is_a_template', False)
     vm_rec.setdefault('memory_static_max', str(8 * units.Gi))
@@ -720,6 +721,7 @@ class SessionBase(object):
             raise Failure(['VM_BAD_POWER_STATE',
                 'fake-opaque-ref', db_ref['power_state'].lower(), 'halted'])
         db_ref['power_state'] = 'Running'
+        db_ref['domid'] = random.randrange(1, 1 << 16)
 
     def VM_clean_reboot(self, session, vm_ref):
         return self._VM_reboot(session, vm_ref)
@@ -730,6 +732,7 @@ class SessionBase(object):
     def VM_hard_shutdown(self, session, vm_ref):
         db_ref = _db_content['VM'][vm_ref]
         db_ref['power_state'] = 'Halted'
+        db_ref['domid'] = -1
     VM_clean_shutdown = VM_hard_shutdown
 
     def VM_suspend(self, session, vm_ref):

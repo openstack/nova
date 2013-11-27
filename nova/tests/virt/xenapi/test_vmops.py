@@ -43,7 +43,7 @@ class VMOpsTestBase(stubs.XenAPITestBaseNoDB):
                                                      'test_pass')
         self.vmops = vmops.VMOps(self._session, fake.FakeVirtAPI())
 
-    def create_vm(self, name, state="running"):
+    def create_vm(self, name, state="Running"):
         vm_ref = xenapi_fake.create_vm(name, state)
         self.vms.append(vm_ref)
         vm = xenapi_fake.get_record("VM", vm_ref)
