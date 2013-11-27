@@ -52,11 +52,11 @@ class AdminActionsController(wsgi.Controller):
         try:
             server = self.compute_api.get(ctxt, id, want_objects=True)
             self.compute_api.pause(ctxt, server)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'pause')
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
@@ -70,13 +70,13 @@ class AdminActionsController(wsgi.Controller):
         try:
             server = self.compute_api.get(ctxt, id, want_objects=True)
             self.compute_api.unpause(ctxt, server)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'unpause')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
@@ -88,13 +88,13 @@ class AdminActionsController(wsgi.Controller):
         try:
             server = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.suspend(context, server)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'suspend')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
@@ -106,13 +106,13 @@ class AdminActionsController(wsgi.Controller):
         try:
             server = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.resume(context, server)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'resume')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404, 409, 413))
@@ -124,13 +124,13 @@ class AdminActionsController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.resize(req.environ['nova.context'], instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.FlavorNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.CannotResizeToSameFlavor as e:
