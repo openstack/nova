@@ -696,10 +696,6 @@
 # updates (integer value)
 #heal_instance_info_cache_interval=60
 
-# Interval in seconds for querying the host status (integer
-# value)
-#host_state_interval=120
-
 # Number of seconds to wait between runs of the image cache
 # manager (integer value)
 #image_cache_manager_interval=2400
