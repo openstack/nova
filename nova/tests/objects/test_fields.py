@@ -121,6 +121,23 @@ class TestDateTime(TestField):
         self.from_primitive_values = [(timeutils.isotime(self.dt), self.dt)]
 
 
+class TestIPAddress(TestField):
+    def setUp(self):
+        super(TestIPAddress, self).setUp()
+        self.field = fields.IPAddressField()
+        self.coerce_good_values = [('1.2.3.4', netaddr.IPAddress('1.2.3.4')),
+                                   ('::1', netaddr.IPAddress('::1')),
+                                   (netaddr.IPAddress('::1'),
+                                    netaddr.IPAddress('::1'))]
+        self.coerce_bad_values = ['1-2', 'foo']
+        self.to_primitive_values = [(netaddr.IPAddress('1.2.3.4'), '1.2.3.4'),
+                                    (netaddr.IPAddress('::1'), '::1')]
+        self.from_primitive_values = [('1.2.3.4',
+                                       netaddr.IPAddress('1.2.3.4')),
+                                      ('::1',
+                                       netaddr.IPAddress('::1'))]
+
+
 class TestIPAddressV4(TestField):
     def setUp(self):
         super(TestIPAddressV4, self).setUp()
