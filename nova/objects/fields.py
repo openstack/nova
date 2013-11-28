@@ -386,7 +386,7 @@ class CIDR(FieldType):
         try:
             network = netaddr.IPAddress(network)
         except netaddr.AddrFormatError:
-            raise ValueError(_('Network "%s is not valid') % network)
+            raise ValueError(_('Network "%s" is not valid') % network)
         try:
             length = int(length)
             assert (length >= 0)
