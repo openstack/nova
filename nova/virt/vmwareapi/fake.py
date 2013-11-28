@@ -110,6 +110,16 @@ class FakeRetrieveResult(object):
         self.objects.append(object)
 
 
+class MissingProperty(object):
+    """Missing object in ObjectContent's missing set."""
+    def __init__(self, path='fake-path', message='fake_message',
+                 method_fault=None):
+        self.path = path
+        self.fault = DataObject()
+        self.fault.localizedMessage = message
+        self.fault.fault = method_fault
+
+
 def _get_object_refs(obj_type):
     """Get object References of the type."""
     lst_objs = []
