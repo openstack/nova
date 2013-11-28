@@ -223,6 +223,14 @@ class BlockDeviceDict(dict):
 
         return legacy_block_device
 
+    def get_image_mapping(self):
+        drop_fields = (set(['connection_info', 'device_name']) |
+                       self._db_only_fields)
+        mapping_dict = dict(self)
+        for fld in drop_fields:
+            mapping_dict.pop(fld, None)
+        return mapping_dict
+
 
 def is_safe_for_update(block_device_dict):
     """Determine if passed dict is a safe subset for update.
@@ -252,6 +260,18 @@ def create_image_bdm(image_ref, boot_index=0):
          'destination_type': 'local'})
 
 
+def snapshot_from_bdm(snapshot_id, template):
+    """Create a basic volume snapshot BDM from a given template bdm."""
+
+    copy_from_template = ['disk_bus', 'device_type', 'boot_index']
+    snapshot_dict = {'source_type': 'snapshot',
+                     'destination_type': 'volume',
+                     'snapshot_id': snapshot_id}
+    for key in copy_from_template:
+        snapshot_dict[key] = template.get(key)
+    return BlockDeviceDict(snapshot_dict)
+
+
 def legacy_mapping(block_device_mapping):
     """Transform a list of block devices of an instance back to the
     legacy data format.
@@ -277,11 +297,19 @@ def legacy_mapping(block_device_mapping):
 
 
 def from_legacy_mapping(legacy_block_device_mapping, image_uuid='',
-                        root_device_name=None):
+                        root_device_name=None, no_root=False):
     """Transform a legacy list of block devices to the new data format."""
 
     new_bdms = [BlockDeviceDict.from_legacy(legacy_bdm)
                 for legacy_bdm in legacy_block_device_mapping]
+    # NOTE (ndipanov): We will not decide which device is root here - we assume
+    # that it will be supplied later. This is useful for having the root device
+    # as part of the image defined mappings that are already in the v2 format.
+    if no_root:
+        for bdm in new_bdms:
+            bdm['boot_index'] = -1
+        return new_bdms
+
     image_bdm = None
     volume_backed = False
 

@@ -18,7 +18,6 @@ import datetime
 import iso8601
 import mox
 
-from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
@@ -1449,12 +1448,13 @@ class _ComputeAPIUnitTestMixIn(object):
 
         expect_meta = {
             'name': 'test-snapshot',
-            'properties': {'root_device_name': 'vda', 'mappings': 'DONTCARE'},
+            'properties': {'root_device_name': 'vda',
+                           'mappings': 'DONTCARE'},
             'size': 0,
             'is_public': False
         }
 
-        def fake_get_instance_bdms(context, instance):
+        def fake_get_all_by_instance(context, instance):
             return copy.deepcopy(instance_bdms)
 
         def fake_image_create(context, image_meta, data):
@@ -1466,8 +1466,8 @@ class _ComputeAPIUnitTestMixIn(object):
         def fake_volume_create_snapshot(context, volume_id, name, description):
             return {'id': '%s-snapshot' % volume_id}
 
-        self.stubs.Set(self.compute_api, 'get_instance_bdms',
-                       fake_get_instance_bdms)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_get_all_by_instance)
         self.stubs.Set(self.compute_api.image_service, 'create',
                        fake_image_create)
         self.stubs.Set(self.compute_api.volume_api, 'get',
@@ -1479,33 +1479,34 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.snapshot_volume_backed(
             self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
 
-        bdm = {'no_device': False, 'volume_id': '1',
-               'connection_info': 'inf', 'device_name': '/dev/vda'}
-
-        for key in block_device.BlockDeviceDict._db_only_fields:
-            bdm[key] = 'MUST DELETE'
-
+        bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'no_device': False, 'volume_id': '1', 'boot_index': 0,
+                 'connection_info': 'inf', 'device_name': '/dev/vda',
+                 'source_type': 'volume', 'destination_type': 'volume'})
         instance_bdms.append(bdm)
 
+        expect_meta['properties']['bdm_v2'] = True
         expect_meta['properties']['block_device_mapping'] = []
-
         expect_meta['properties']['block_device_mapping'].append(
-            {'no_device': False, 'snapshot_id': '1-snapshot',
-             'device_name': '/dev/vda'})
+            {'guest_format': None, 'boot_index': 0, 'no_device': None,
+             'image_id': None, 'volume_id': None, 'disk_bus': None,
+             'volume_size': None, 'source_type': 'snapshot',
+             'device_type': None, 'snapshot_id': '1-snapshot',
+             'destination_type': 'volume', 'delete_on_termination': None})
 
         # All the db_only fields and the volume ones are removed
         self.compute_api.snapshot_volume_backed(
             self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
 
-        image_mappings = [{'device': 'vda', 'virtual': 'ephemeral0'},
+        image_mappings = [{'virtual': 'ami', 'device': 'vda'},
+                          {'device': 'vda', 'virtual': 'ephemeral0'},
                           {'device': 'vdb', 'virtual': 'swap'},
                           {'device': 'vdc', 'virtual': 'ephemeral1'}]
 
         image_meta['properties']['mappings'] = image_mappings
 
-        expect_meta['properties']['block_device_mapping'].extend([
-            {'no_device': True, 'device_name': '/dev/vdb'},
-            {'no_device': True, 'device_name': '/dev/vdc'}])
+        expect_meta['properties']['mappings'] = [
+            {'virtual': 'ami', 'device': 'vda'}]
 
         # Check that the mappgins from the image properties are included
         self.compute_api.snapshot_volume_backed(

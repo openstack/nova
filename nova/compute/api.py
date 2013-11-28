@@ -626,15 +626,40 @@ class API(base.Base):
         # Get the block device mappings defined by the image.
         image_defined_bdms = \
             image_meta.get('properties', {}).get('block_device_mapping', [])
+        legacy_image_defined = not image_meta.get(
+                'properties', {}).get('bdm_v2', False)
+
+        if not legacy_image_defined:
+            image_defined_bdms = map(block_device.BlockDeviceDict,
+                                     image_defined_bdms)
 
         if legacy_bdm:
+            if legacy_image_defined:
+                block_device_mapping += image_defined_bdms
+                block_device_mapping = block_device.from_legacy_mapping(
+                     block_device_mapping, image_ref, root_device_name)
+            else:
+                root_in_image_bdms = block_device.get_root_bdm(
+                        image_defined_bdms) is not None
+                block_device_mapping = block_device.from_legacy_mapping(
+                     block_device_mapping, image_ref, root_device_name,
+                     no_root=root_in_image_bdms) + image_defined_bdms
+        else:
+            # NOTE (ndipanov): client will insert an image mapping into the v2
+            # block_device_mapping, but if there is a bootable device in image
+            # mappings - we need to get rid of the inserted image.
+            if legacy_image_defined:
+                image_defined_bdms = block_device.from_legacy_mapping(
+                    image_defined_bdms, None, root_device_name)
+            root_in_image_bdms = block_device.get_root_bdm(
+                    image_defined_bdms) is not None
+            if image_ref and root_in_image_bdms:
+                block_device_mapping = [bdm for bdm in block_device_mapping
+                                        if not (
+                                            bdm.get('source_type') == 'image'
+                                            and bdm.get('boot_index') == 0)]
+
             block_device_mapping += image_defined_bdms
-            block_device_mapping = block_device.from_legacy_mapping(
-                 block_device_mapping, image_ref, root_device_name)
-        elif image_defined_bdms:
-            # NOTE (ndipanov): For now assume that image mapping is legacy
-            block_device_mapping += block_device.from_legacy_mapping(
-                image_defined_bdms, None, root_device_name)
 
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: bdm['source_type'] == 'volume',
@@ -1963,57 +1988,41 @@ class API(base.Base):
             properties['root_device_name'] = instance['root_device_name']
         properties.update(extra_properties or {})
 
-        # TODO(xqueralt): Use new style BDM in volume snapshots
-        bdms = self.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
 
         mapping = []
         for bdm in bdms:
-            if bdm['no_device']:
+            if bdm.no_device:
                 continue
 
-            # Clean the BDM of the database related fields to prevent
-            # duplicates in the future (e.g. the id was being preserved)
-            for field in block_device.BlockDeviceDict._db_only_fields:
-                bdm.pop(field, None)
-
-            volume_id = bdm.get('volume_id')
-            if volume_id:
+            if bdm.is_volume:
                 # create snapshot based on volume_id
-                volume = self.volume_api.get(context, volume_id)
+                volume = self.volume_api.get(context, bdm.volume_id)
                 # NOTE(yamahata): Should we wait for snapshot creation?
                 #                 Linux LVM snapshot creation completes in
                 #                 short time, it doesn't matter for now.
                 name = _('snapshot for %s') % image_meta['name']
                 snapshot = self.volume_api.create_snapshot_force(
                     context, volume['id'], name, volume['display_description'])
-                bdm['snapshot_id'] = snapshot['id']
+                mapping_dict = block_device.snapshot_from_bdm(snapshot['id'],
+                                                              bdm)
+                mapping_dict = mapping_dict.get_image_mapping()
+            else:
+                mapping_dict = bdm.get_image_mapping()
 
-                # Clean the extra volume related fields that will be generated
-                # when booting from the new snapshot.
-                bdm.pop('volume_id')
-                bdm.pop('connection_info')
+            mapping.append(mapping_dict)
 
-            mapping.append(bdm)
-
-        for m in block_device.mappings_prepend_dev(properties.get('mappings',
-                                                                  [])):
-            virtual_name = m['virtual']
-            if virtual_name in ('ami', 'root'):
-                continue
-
-            assert block_device.is_swap_or_ephemeral(virtual_name)
-            device_name = m['device']
-            if device_name in [b['device_name'] for b in mapping
-                               if not b.get('no_device', False)]:
-                continue
-
-            # NOTE(yamahata): swap and ephemeral devices are specified in
-            #                 AMI, but disabled for this instance by user.
-            #                 So disable those device by no_device.
-            mapping.append({'device_name': device_name, 'no_device': True})
-
+        # NOTE (ndipanov): Remove swap/ephemerals from mappings as they will be
+        # in the block_device_mapping for the new image.
+        image_mappings = properties.get('mappings')
+        if image_mappings:
+            properties['mappings'] = [m for m in image_mappings
+                                      if not block_device.is_swap_or_ephemeral(
+                                          m['virtual'])]
         if mapping:
             properties['block_device_mapping'] = mapping
+            properties['bdm_v2'] = True
 
         for attr in ('status', 'location', 'id'):
             image_meta.pop(attr, None)
