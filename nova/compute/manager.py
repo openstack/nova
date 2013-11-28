@@ -1620,7 +1620,7 @@ class ComputeManager(manager.Manager):
                         requested_networks)
             except Exception:
                 # Should not reach here.
-                msg = 'Unexpected build failure, not rescheduling build.'
+                msg = _('Unexpected build failure, not rescheduling build.')
                 LOG.exception(msg, instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
@@ -1685,7 +1685,8 @@ class ComputeManager(manager.Manager):
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpLimitExceeded,
                 exception.NoMoreNetworks):
-            LOG.exception('Failed to allocate network(s)', instance=instance)
+            LOG.exception(_('Failed to allocate network(s)'),
+                          instance=instance)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
