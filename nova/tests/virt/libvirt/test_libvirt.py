@@ -384,8 +384,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-                       'set_host_enabled', mock.Mock())
 
         def fake_extend(image, size, use_cow=False):
             pass
@@ -486,13 +484,38 @@ class LibvirtConnTestCase(test.TestCase):
     def fake_execute(self, *args, **kwargs):
         open(args[-1], "a").close()
 
-    def create_service(self, **kwargs):
+    def _create_service(self, **kwargs):
         service_ref = {'host': kwargs.get('host', 'dummy'),
+                       'disabled': kwargs.get('disabled', False),
                        'binary': 'nova-compute',
                        'topic': 'compute',
                        'report_count': 0}
 
         return db.service_create(context.get_admin_context(), service_ref)
+
+    def test_set_host_enabled_with_disable(self):
+        # Tests disabling an enabled host.
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self._create_service(host='fake-mini')
+        self.assertEqual('disabled', conn.set_host_enabled('fake-mini', False))
+
+    def test_set_host_enabled_with_enable(self):
+        # Tests enabling a disabled host.
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self._create_service(disabled=True, host='fake-mini')
+        self.assertEqual('enabled', conn.set_host_enabled('fake-mini', True))
+
+    def test_set_host_enabled_with_enable_state_enabled(self):
+        # Tests enabling an enabled host.
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self._create_service(disabled=False, host='fake-mini')
+        self.assertEqual('enabled', conn.set_host_enabled('fake-mini', True))
+
+    def test_set_host_enabled_with_disable_state_disabled(self):
+        # Tests disabling a disabled host.
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self._create_service(disabled=True, host='fake-mini')
+        self.assertEqual('disabled', conn.set_host_enabled('fake-mini', False))
 
     def create_instance_obj(self, context, **params):
         default_params = self.test_instance
