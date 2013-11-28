@@ -260,10 +260,6 @@ class IptablesFirewallDriver(FirewallDriver):
         if CONF.use_ipv6:
             self.iptables.ipv6['filter'].remove_chain(chain_name)
 
-    @staticmethod
-    def _security_group_chain_name(security_group_id):
-        return 'nova-sg-%s' % (security_group_id,)
-
     def _instance_chain_name(self, instance):
         return 'inst-%s' % (instance['id'],)
 
