@@ -666,6 +666,13 @@ def _get_object_for_value(results, value):
             return object.obj
 
 
+def _get_object_for_optionvalue(results, value):
+    for object in results.objects:
+        if hasattr(object, "propSet") and object.propSet:
+            if object.propSet[0].val.value == value:
+                return object.obj
+
+
 def _get_object_from_results(session, results, value, func):
     while results:
         token = _get_token(results)
@@ -740,11 +747,20 @@ def _get_vm_ref_from_vm_uuid(session, instance_uuid):
         return vm_refs[0]
 
 
+def _get_vm_ref_from_extraconfig(session, instance_uuid):
+    """Get reference to the VM with the uuid specified."""
+    vms = session._call_method(vim_util, "get_objects",
+                "VirtualMachine", ['config.extraConfig["nvp.vm-uuid"]'])
+    return _get_object_from_results(session, vms, instance_uuid,
+                                     _get_object_for_optionvalue)
+
+
 @vm_ref_cache_from_instance
 def get_vm_ref(session, instance):
     """Get reference to the VM through uuid or vm name."""
     uuid = instance['uuid']
     vm_ref = (_get_vm_ref_from_vm_uuid(session, uuid) or
+                  _get_vm_ref_from_extraconfig(session, uuid) or
                   _get_vm_ref_from_uuid(session, uuid) or
                   _get_vm_ref_from_name(session, instance['name']))
     if vm_ref is None:

@@ -103,6 +103,13 @@ def _convert_to_array_of_mor(mors):
     return array_of_mors
 
 
+def _convert_to_array_of_opt_val(optvals):
+    """Wraps the given array into a DataObject."""
+    array_of_optv = DataObject()
+    array_of_optv.OptionValue = optvals
+    return array_of_optv
+
+
 class FakeRetrieveResult(object):
     """Object to retrieve a ObjectContent list."""
 
@@ -335,7 +342,12 @@ class VirtualMachine(ManagedObject):
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
         self.set("summary.config.instanceUuid", kwargs.get("instanceUuid"))
         self.set("config.hardware.device", kwargs.get("virtual_device", None))
-        self.set("config.extraConfig", kwargs.get("extra_config", None))
+        exconfig_do = kwargs.get("extra_config", None)
+        self.set("config.extraConfig",
+                 _convert_to_array_of_opt_val(exconfig_do))
+        if exconfig_do:
+            for optval in exconfig_do:
+                self.set('config.extraConfig["%s"]' % optval.key, optval)
         self.set('runtime.host', kwargs.get("runtime_host", None))
         self.device = kwargs.get("virtual_device")
         # Sample of diagnostics data is below.
