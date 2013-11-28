@@ -3173,8 +3173,16 @@ class LibvirtDriver(driver.ComputeDriver):
             add_video_driver = True
 
         if add_video_driver:
+            VALID_VIDEO_DEVICES = ("vga", "cirrus", "vmvga", "xen", "qxl")
             video = vconfig.LibvirtConfigGuestVideo()
-            if CONF.spice.enabled:
+            meta_prop = image_meta.get('properties', {}) if image_meta else {}
+
+            if meta_prop.get('hw_video_model'):
+                video.type = meta_prop.get('hw_video_model')
+                if (video.type not in VALID_VIDEO_DEVICES):
+                    raise exception.InvalidVideoMode(model=video.type)
+
+            elif CONF.spice.enabled:
                 video.type = 'qxl'
             if guest.os_type == vm_mode.XEN:
                 video.type = 'xen'

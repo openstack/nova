@@ -1490,3 +1490,7 @@ class PciDeviceUnsupportedHypervisor(NovaException):
 
 class KeyManagerError(NovaException):
     msg_fmt = _("Key manager error: %(reason)s")
+
+
+class InvalidVideoMode(Invalid):
+    msg_fmt = _("Provided video model (%(model)s) is not supported.")
