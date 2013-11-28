@@ -15,6 +15,8 @@
 
 """Tests for the conductor service."""
 
+import contextlib
+import mock
 import mox
 
 from nova.api.ec2 import ec2utils
@@ -1459,6 +1461,33 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_image_id'] = 'fake_image_id'
         system_metadata['shelved_host'] = 'fake-mini'
         self.conductor_manager.unshelve_instance(self.context, instance)
+
+    def test_unshelve_instance_schedule_and_rebuild_novalid_host(self):
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = instance_obj.Instance.get_by_uuid(self.context,
+                db_instance['uuid'], expected_attrs=['system_metadata'])
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.save()
+        filter_properties = {}
+        system_metadata = instance.system_metadata
+
+        def fake_schedule_instances(context, image, filter_properties,
+                                    *instances):
+            raise exc.NoValidHost(reason='')
+
+        with contextlib.nested(
+            mock.patch.object(self.conductor_manager, '_get_image',
+                              return_value='fake_image'),
+            mock.patch.object(self.conductor_manager, '_schedule_instances',
+                              fake_schedule_instances)
+        ) as (_get_image, _schedule_instances):
+            system_metadata['shelved_at'] = timeutils.utcnow()
+            system_metadata['shelved_image_id'] = 'fake_image_id'
+            system_metadata['shelved_host'] = 'fake-mini'
+            self.conductor_manager.unshelve_instance(self.context, instance)
+            _get_image.assert_has_calls([mock.call(self.context,
+                                      system_metadata['shelved_image_id'])])
+            self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
 
     def test_unshelve_instance_schedule_and_rebuild_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())

@@ -817,12 +817,23 @@ class ComputeTaskManager(base.Base):
                     instance.vm_state = vm_states.ERROR
                     instance.save()
 
-            filter_properties = {}
-            hosts = self._schedule_instances(context, image,
-                                             filter_properties, instance)
-            host = hosts.pop(0)['host']
-            self.compute_rpcapi.unshelve_instance(context, instance, host,
-                    image)
+            try:
+                with compute_utils.EventReporter(context, self.db,
+                                                 'schedule_instances',
+                                                 instance.uuid):
+                    filter_properties = {}
+                    hosts = self._schedule_instances(context, image,
+                                                     filter_properties,
+                                                     instance)
+                    host = hosts.pop(0)['host']
+                    self.compute_rpcapi.unshelve_instance(context, instance,
+                                                          host, image)
+            except exception.NoValidHost as ex:
+                instance.task_state = None
+                instance.save()
+                LOG.warning(_("No valid host found for unshelve instance"),
+                            instance=instance)
+                return
         else:
             LOG.error(_('Unshelve attempted but vm_state not SHELVED or '
                         'SHELVED_OFFLOADED'), instance=instance)
