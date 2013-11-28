@@ -373,6 +373,31 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
 
+    def _create_fake_vms(self):
+        fake_vms = fake.FakeRetrieveResult()
+        OptionValue = collections.namedtuple('OptionValue', ['key', 'value'])
+        for i in range(10):
+            vm = fake.ManagedObject()
+            opt_val = OptionValue(key='', value=5900 + i)
+            vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
+            fake_vms.add_object(vm)
+        return fake_vms
+
+    def test_get_vnc_port(self):
+        fake_vms = self._create_fake_vms()
+        self.flags(vnc_port=5900, group='vmware')
+        self.flags(vnc_port_total=10000, group='vmware')
+        actual = vm_util.get_vnc_port(fake_session(fake_vms))
+        self.assertEqual(actual, 5910)
+
+    def test_get_vnc_port_exhausted(self):
+        fake_vms = self._create_fake_vms()
+        self.flags(vnc_port=5900, group='vmware')
+        self.flags(vnc_port_total=10, group='vmware')
+        self.assertRaises(exception.ConsolePortRangeExhausted,
+                          vm_util.get_vnc_port,
+                          fake_session(fake_vms))
+
     def test_get_all_cluster_refs_by_name_none(self):
         fake_objects = fake.FakeRetrieveResult()
         refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
