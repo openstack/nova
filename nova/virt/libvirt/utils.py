@@ -265,12 +265,27 @@ def import_rbd_image(*args):
     execute('rbd', 'import', *args)
 
 
+def _run_rbd(*args, **kwargs):
+    total = list(args)
+
+    if CONF.libvirt.rbd_user:
+        total.extend(['--id', str(CONF.libvirt.rbd_user)])
+    if CONF.libvirt.images_rbd_ceph_conf:
+        total.extend(['--conf', str(CONF.libvirt.images_rbd_ceph_conf)])
+
+    return utils.execute(*total, **kwargs)
+
+
 def list_rbd_volumes(pool):
     """List volumes names for given ceph pool.
 
     :param pool: ceph pool name
     """
-    out, err = utils.execute('rbd', '-p', pool, 'ls')
+    try:
+        out, err = _run_rbd('rbd', '-p', pool, 'ls')
+    except processutils.ProcessExecutionError:
+        # No problem when no volume in rbd pool
+        return []
 
     return [line.strip() for line in out.splitlines()]
 
@@ -278,9 +293,9 @@ def list_rbd_volumes(pool):
 def remove_rbd_volumes(pool, *names):
     """Remove one or more rbd volume."""
     for name in names:
-        rbd_remove = ('rbd', '-p', pool, 'rm', name)
+        rbd_remove = ['rbd', '-p', pool, 'rm', name]
         try:
-            execute(*rbd_remove, attempts=3, run_as_root=True)
+            _run_rbd(*rbd_remove, attempts=3, run_as_root=True)
         except processutils.ProcessExecutionError:
             LOG.warn(_("rbd remove %(name)s in pool %(pool)s failed"),
                      {'name': name, 'pool': pool})
