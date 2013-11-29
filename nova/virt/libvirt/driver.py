@@ -1826,9 +1826,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                 project_id=instance['project_id'])
 
         # Lookup the filesystem type if required
-        os_type_with_default = instance['os_type']
-        if not os_type_with_default:
-            os_type_with_default = 'default'
+        os_type_with_default = disk.get_fs_type_for_os_type(
+                                                          instance['os_type'])
 
         ephemeral_gb = instance['ephemeral_gb']
         if 'disk.local' in disk_mapping:

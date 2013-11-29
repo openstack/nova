@@ -2725,7 +2725,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(self.cache_called_for_disk)
         db.instance_destroy(self.context, instance['uuid'])
 
-    def test_create_image_plain(self):
+    def _test_create_image_plain(self, os_type='', filename='', mkfs=False):
         gotFiles = []
 
         def fake_image(self, instance, name, image_type=''):
@@ -2760,11 +2760,15 @@ class LibvirtConnTestCase(test.TestCase):
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 1
         instance = db.instance_create(self.context, instance_ref)
+        instance['os_type'] = os_type
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, 'to_xml', fake_none)
         self.stubs.Set(conn, '_create_domain_and_network', fake_none)
         self.stubs.Set(conn, 'get_info', fake_get_info)
+        if mkfs:
+            self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
+                       {os_type: 'mkfs.ext3 --label %(fs_label)s %(target)s'})
 
         image_meta = {'id': instance['image_ref']}
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
@@ -2779,10 +2783,30 @@ class LibvirtConnTestCase(test.TestCase):
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
              'size': 10 * 1024 * 1024 * 1024},
-            {'filename': 'ephemeral_20_default',
+            {'filename': filename,
              'size': 20 * 1024 * 1024 * 1024},
             ]
         self.assertEquals(gotFiles, wantFiles)
+
+    def test_create_image_plain_os_type_blank(self):
+        self._test_create_image_plain(os_type='',
+                                      filename='ephemeral_20_default',
+                                      mkfs=False)
+
+    def test_create_image_plain_os_type_none(self):
+        self._test_create_image_plain(os_type=None,
+                                      filename='ephemeral_20_default',
+                                      mkfs=False)
+
+    def test_create_image_plain_os_type_set_no_fs(self):
+        self._test_create_image_plain(os_type='test',
+                                      filename='ephemeral_20_default',
+                                      mkfs=False)
+
+    def test_create_image_plain_os_type_set_with_fs(self):
+        self._test_create_image_plain(os_type='test',
+                                      filename='ephemeral_20_test',
+                                      mkfs=True)
 
     def test_create_image_with_swap(self):
         gotFiles = []
