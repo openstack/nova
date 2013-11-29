@@ -95,6 +95,10 @@ for s in CONF.virt_mkfs:
         _DEFAULT_MKFS_COMMAND = mkfs_command
 
 
+def get_fs_type_for_os_type(os_type):
+    return os_type if _MKFS_COMMAND.get(os_type) else 'default'
+
+
 def mkfs(os_type, fs_label, target, run_as_root=True):
     """Format a file or block device using
        a user provided command for each os type.
