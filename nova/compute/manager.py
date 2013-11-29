@@ -1590,11 +1590,6 @@ class ComputeManager(manager.Manager):
                 self._build_and_run_instance(context, instance, image,
                         decoded_files, admin_password, requested_networks,
                         security_groups, block_device_mapping, node, limits)
-            except exception.BuildAbortException as e:
-                LOG.exception(e.format_message(), instance=instance)
-                self._cleanup_allocated_networks(context, instance,
-                        requested_networks)
-                self._set_instance_error_state(context, instance['uuid'])
             except exception.RescheduledException as e:
                 LOG.debug(e.format_message(), instance=instance)
                 # dhcp_options are per host, so if they're set we need to
@@ -1613,7 +1608,8 @@ class ComputeManager(manager.Manager):
             except exception.InstanceNotFound:
                 msg = _('Instance disappeared during build.')
                 LOG.debug(msg, instance=instance)
-            except exception.BuildAbortException:
+            except exception.BuildAbortException as e:
+                LOG.exception(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
                 self._set_instance_error_state(context, instance['uuid'])
