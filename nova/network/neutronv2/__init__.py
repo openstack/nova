@@ -47,14 +47,19 @@ def _get_client(token=None):
 
 
 def get_client(context, admin=False):
-    # NOTE(dims): We need to use admin token, let us cache a
-    # thread local copy for re-using this client
-    # multiple times and to avoid excessive calls
-    # to neutron to fetch tokens. Some of the hackiness in this code
-    # will go away once BP auth-plugins is implemented.
-    # That blue print will ensure that tokens can be shared
-    # across clients as well
-    if admin:
+    # NOTE(dprince): In the case where no auth_token is present
+    # we allow use of neutron admin tenant credentials if
+    # it is an admin context.
+    # This is to support some services (metadata API) where
+    # an admin context is used without an auth token.
+    if admin or (context.is_admin and not context.auth_token):
+        # NOTE(dims): We need to use admin token, let us cache a
+        # thread local copy for re-using this client
+        # multiple times and to avoid excessive calls
+        # to neutron to fetch tokens. Some of the hackiness in this code
+        # will go away once BP auth-plugins is implemented.
+        # That blue print will ensure that tokens can be shared
+        # across clients as well
         if not hasattr(local.strong_store, 'neutron_client'):
             local.strong_store.neutron_client = _get_client(token=None)
         return local.strong_store.neutron_client

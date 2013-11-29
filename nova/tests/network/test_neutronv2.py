@@ -136,16 +136,6 @@ class TestNeutronClient(test.TestCase):
         # our own token
         neutronv2.get_client(my_context)
 
-    def test_withouttoken_context_is_admin(self):
-        my_context = context.RequestContext('userid', 'my_tenantid',
-                                            is_admin=True)
-        # Note that although we have admin set in the context we
-        # are not asking for an admin client, and so we auth with
-        # our own token - which is null, and so this is an error
-        self.assertRaises(exceptions.Unauthorized,
-                          neutronv2.get_client,
-                          my_context)
-
     def test_withouttoken_keystone_connection_error(self):
         self.flags(neutron_auth_strategy='keystone')
         self.flags(neutron_url='http://anyhost/')
@@ -153,30 +143,6 @@ class TestNeutronClient(test.TestCase):
         self.assertRaises(NEUTRON_CLIENT_EXCEPTION,
                           neutronv2.get_client,
                           my_context)
-
-    def test_admin(self):
-        self.flags(neutron_auth_strategy=None)
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
-        my_context = context.RequestContext('userid', 'my_tenantid',
-                                            auth_token='token')
-        self.mox.StubOutWithMock(client.Client, "__init__")
-        client.Client.__init__(
-            auth_url=CONF.neutron_admin_auth_url,
-            password=CONF.neutron_admin_password,
-            tenant_name=CONF.neutron_admin_tenant_name,
-            username=CONF.neutron_admin_username,
-            endpoint_url=CONF.neutron_url,
-            auth_strategy=None,
-            timeout=CONF.neutron_url_timeout,
-            insecure=False,
-            ca_cert=None).AndReturn(None)
-        self.mox.ReplayAll()
-
-        # Note that the context is not elevated, but the True is passed in
-        # which will force an elevation to admin credentials even though
-        # the context has an auth_token
-        neutronv2.get_client(my_context, True)
 
 
 class TestNeutronv2Base(test.TestCase):
@@ -1909,3 +1875,60 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
         self.assertRaises(exceptions.Unauthorized,
                           neutronv2.get_client,
                           my_context)
+
+    def test_get_client_for_admin(self):
+
+        self.flags(neutron_auth_strategy=None)
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
+        my_context = context.RequestContext('userid', 'my_tenantid',
+                                            auth_token='token')
+        self.mox.StubOutWithMock(client.Client, "__init__")
+        client.Client.__init__(
+            auth_url=CONF.neutron_admin_auth_url,
+            password=CONF.neutron_admin_password,
+            tenant_name=CONF.neutron_admin_tenant_name,
+            username=CONF.neutron_admin_username,
+            endpoint_url=CONF.neutron_url,
+            auth_strategy=None,
+            timeout=CONF.neutron_url_timeout,
+            insecure=False,
+            ca_cert=None).AndReturn(None)
+        self.mox.ReplayAll()
+
+        # clear the cache
+        if hasattr(local.strong_store, 'neutron_client'):
+            delattr(local.strong_store, 'neutron_client')
+
+        # Note that the context is not elevated, but the True is passed in
+        # which will force an elevation to admin credentials even though
+        # the context has an auth_token.
+        neutronv2.get_client(my_context, True)
+
+    def test_get_client_for_admin_context(self):
+
+        self.flags(neutron_auth_strategy=None)
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
+        my_context = context.get_admin_context()
+        self.mox.StubOutWithMock(client.Client, "__init__")
+        client.Client.__init__(
+            auth_url=CONF.neutron_admin_auth_url,
+            password=CONF.neutron_admin_password,
+            tenant_name=CONF.neutron_admin_tenant_name,
+            username=CONF.neutron_admin_username,
+            endpoint_url=CONF.neutron_url,
+            auth_strategy=None,
+            timeout=CONF.neutron_url_timeout,
+            insecure=False,
+            ca_cert=None).AndReturn(None)
+        self.mox.ReplayAll()
+
+        # clear the cache
+        if hasattr(local.strong_store, 'neutron_client'):
+            delattr(local.strong_store, 'neutron_client')
+
+        # Note that the context does not contain a token but is
+        # an admin context  which will force an elevation to admin
+        # credentials.
+        neutronv2.get_client(my_context)
