@@ -16,6 +16,8 @@
 
 import pbr.version
 
+from nova.openstack.common.gettextutils import _
+
 NOVA_VENDOR = "OpenStack Foundation"
 NOVA_PRODUCT = "OpenStack Nova"
 NOVA_PACKAGE = None  # OS distro package version suffix
@@ -62,7 +64,7 @@ def _load_config():
             NOVA_PACKAGE = cfg.get("Nova", "package")
     except Exception as ex:
         LOG = logging.getLogger(__name__)
-        LOG.error("Failed to load %(cfgfile)s: %(ex)s",
+        LOG.error(_("Failed to load %(cfgfile)s: %(ex)s"),
                   {'cfgfile': cfgfile, 'ex': ex})
 
 

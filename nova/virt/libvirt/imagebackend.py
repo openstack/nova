@@ -206,8 +206,9 @@ class Image(object):
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
             if not can_fallocate:
-                LOG.error('Unable to preallocate_images=%s at path: %s' %
-                          (CONF.preallocate_images, self.path))
+                LOG.error(_('Unable to preallocate_images=%(imgs)s at path: '
+                            '%(path)s'), {'imgs': CONF.preallocate_images,
+                                           'path': self.path})
         return can_fallocate
 
     @staticmethod

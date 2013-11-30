@@ -29,6 +29,7 @@ import nova.db.api
 from nova import exception
 from nova import objects
 from nova.objects import base as objects_base
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
@@ -46,7 +47,8 @@ def block_db_access():
         def __call__(self, *args, **kwargs):
             stacktrace = "".join(traceback.format_stack())
             LOG = logging.getLogger('nova.compute')
-            LOG.error('No db access allowed in nova-compute: %s', stacktrace)
+            LOG.error(_('No db access allowed in nova-compute: %s'),
+                      stacktrace)
             raise exception.DBNotAllowed('nova-compute')
 
     nova.db.api.IMPL = NoDB()
