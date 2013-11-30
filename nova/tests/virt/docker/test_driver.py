@@ -58,6 +58,10 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
 
         self.context = context.RequestContext('fake_user', 'fake_project')
 
+    def test_driver_capabilities(self):
+        self.assertFalse(self.connection.capabilities['has_imagecache'])
+        self.assertFalse(self.connection.capabilities['supports_recreate'])
+
     #NOTE(bcwaldon): This exists only because _get_running_instance on the
     # base class will not let us set a custom disk/container_format.
     def _get_running_instance(self, obj=False):
