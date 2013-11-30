@@ -659,7 +659,7 @@ class ComputeTaskManager(base.Base):
                                block_migration, disk_over_commit)
         elif not live and not rebuild and flavor:
             instance_uuid = instance['uuid']
-            with compute_utils.EventReporter(context, ConductorManager(),
+            with compute_utils.EventReporter(context, self.db,
                                          'cold_migrate', instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
