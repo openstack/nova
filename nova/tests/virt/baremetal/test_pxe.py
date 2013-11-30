@@ -48,7 +48,7 @@ COMMON_FLAGS = dict(
 
 BAREMETAL_FLAGS = dict(
     driver='nova.virt.baremetal.pxe.PXE',
-    instance_type_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
+    flavor_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
     power_manager='nova.virt.baremetal.fake.FakePowerManager',
     vif_driver='nova.virt.baremetal.fake.FakeVifDriver',
     volume_driver='nova.virt.baremetal.fake.FakeVolumeDriver',
@@ -274,30 +274,30 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
 
     def test_swap_not_zero(self):
         # override swap to 0
-        instance_type = utils.get_test_instance_type(self.context)
-        instance_type['swap'] = 0
-        self.instance = utils.get_test_instance(self.context, instance_type)
+        flavor = utils.get_test_instance_type(self.context)
+        flavor['swap'] = 0
+        self.instance = utils.get_test_instance(self.context, flavor)
 
         sizes = pxe.get_partition_sizes(self.instance)
         self.assertEqual(sizes[0], 40960)
         self.assertEqual(sizes[1], 1)
 
     def test_get_tftp_image_info(self):
-        instance_type = utils.get_test_instance_type()
+        flavor = utils.get_test_instance_type()
         # Raises an exception when options are neither specified
         # on the instance nor in configuration file
         CONF.baremetal.deploy_kernel = None
         CONF.baremetal.deploy_ramdisk = None
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance, instance_type)
+                self.instance, flavor)
 
         # Test that other non-true values also raise an exception
         CONF.baremetal.deploy_kernel = ""
         CONF.baremetal.deploy_ramdisk = ""
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance, instance_type)
+                self.instance, flavor)
 
         # Even if the instance includes kernel_id and ramdisk_id,
         # we still need deploy_kernel_id and deploy_ramdisk_id.
@@ -307,7 +307,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         self.instance['ramdisk_id'] = 'bbbb'
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance, instance_type)
+                self.instance, flavor)
 
         # If an instance doesn't specify deploy_kernel_id or deploy_ramdisk_id,
         # but defaults are set in the config file, we should use those.
@@ -317,7 +317,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         CONF.baremetal.deploy_kernel = 'cccc'
         CONF.baremetal.deploy_ramdisk = 'dddd'
         base = os.path.join(CONF.baremetal.tftp_root, self.instance['uuid'])
-        res = pxe.get_tftp_image_info(self.instance, instance_type)
+        res = pxe.get_tftp_image_info(self.instance, flavor)
         expected = {
                 'kernel': ['aaaa', os.path.join(base, 'kernel')],
                 'ramdisk': ['bbbb', os.path.join(base, 'ramdisk')],
@@ -330,13 +330,13 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         # If deploy_kernel_id and deploy_ramdisk_id are specified on
         # image extra_specs, this should override any default configuration.
         # Note that it is passed on the 'instance' object, despite being
-        # inherited from the instance_types_extra_specs table.
+        # inherited from the flavor_extra_specs table.
         extra_specs = {
                 'baremetal:deploy_kernel_id': 'eeee',
                 'baremetal:deploy_ramdisk_id': 'ffff',
             }
-        instance_type['extra_specs'] = extra_specs
-        res = pxe.get_tftp_image_info(self.instance, instance_type)
+        flavor['extra_specs'] = extra_specs
+        res = pxe.get_tftp_image_info(self.instance, flavor)
         self.assertEqual(res['deploy_kernel'][0], 'eeee')
         self.assertEqual(res['deploy_ramdisk'][0], 'ffff')
 
@@ -346,10 +346,10 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 'baremetal:deploy_kernel_id': '',
                 'baremetal:deploy_ramdisk_id': '',
             }
-        instance_type['extra_specs'] = extra_specs
+        flavor['extra_specs'] = extra_specs
         self.assertRaises(exception.NovaException,
                 pxe.get_tftp_image_info,
-                self.instance, instance_type)
+                self.instance, flavor)
 
 
 class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
@@ -364,13 +364,13 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
     def test_cache_tftp_images(self):
         self.instance['kernel_id'] = 'aaaa'
         self.instance['ramdisk_id'] = 'bbbb'
-        instance_type = utils.get_test_instance_type()
+        flavor = utils.get_test_instance_type()
         extra_specs = {
                 'baremetal:deploy_kernel_id': 'cccc',
                 'baremetal:deploy_ramdisk_id': 'dddd',
             }
-        instance_type['extra_specs'] = extra_specs
-        image_info = pxe.get_tftp_image_info(self.instance, instance_type)
+        flavor['extra_specs'] = extra_specs
+        image_info = pxe.get_tftp_image_info(self.instance, flavor)
 
         self.mox.StubOutWithMock(os, 'makedirs')
         self.mox.StubOutWithMock(os.path, 'exists')
@@ -518,7 +518,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_activate_and_deactivate_bootloader(self):
         self._create_node()
-        instance_type = {
+        flavor = {
             'extra_specs': {
                 'baremetal:deploy_kernel_id': 'eeee',
                 'baremetal:deploy_ramdisk_id': 'ffff',
@@ -534,7 +534,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
         self.driver.virtapi.flavor_get(
             self.context, self.instance['instance_type_id']).AndReturn(
-                instance_type)
+                flavor)
 
         # create the config file
         bm_utils.write_to_file(mox.StrContains('fake-uuid'),

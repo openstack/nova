@@ -3088,10 +3088,10 @@
 #volume_driver=nova.virt.baremetal.volume_driver.LibvirtVolumeDriver
 
 # a list of additional capabilities corresponding to
-# instance_type_extra_specs for this compute host to
-# advertise. Valid entries are name=value, pairs For example,
-# "key1:val1, key2:val2" (list value)
-#instance_type_extra_specs=
+# flavor_extra_specs for this compute host to advertise. Valid
+# entries are name=value, pairs For example, "key1:val1,
+# key2:val2" (list value)
+#flavor_extra_specs=
 
 # Baremetal driver back-end (pxe or tilera) (string value)
 #driver=nova.virt.baremetal.pxe.PXE

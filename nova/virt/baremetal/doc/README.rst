@@ -43,8 +43,8 @@ Additional setting for bare-metal provisioning [nova.conf]
   baremetal_driver = {nova.virt.baremetal.tilera.Tilera | nova.virt.baremetal.pxe.PXE}
   power_manager = {nova.virt.baremetal.tilera_pdu.Pdu | nova.virt.baremetal.ipmi.Ipmi}
 
-  # instance_type_extra_specs this baremetal compute
-  instance_type_extra_specs = cpu_arch:{tilepro64 | x86_64 | arm}
+  # flavor_extra_specs this baremetal compute
+  flavor_extra_specs = cpu_arch:{tilepro64 | x86_64 | arm}
 
   # TFTP root
   baremetal_tftp_root = /tftpboot
