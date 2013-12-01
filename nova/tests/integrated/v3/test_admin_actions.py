@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.conductor import manager as conductor_manager
-from nova import db
 from nova.tests.image import fake
 from nova.tests.integrated.v3 import test_servers
 
@@ -29,12 +27,6 @@ class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
         """
         super(AdminActionsSamplesJsonTest, self).setUp()
         self.uuid = self._post_server()
-
-    def test_post_migrate(self):
-        # Get api samples to migrate server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-migrate', {})
-        self.assertEqual(response.status, 202)
 
     def test_post_reset_network(self):
         # Get api samples to reset server network request.
@@ -61,35 +53,6 @@ class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-backup-server', {})
-        self.assertEqual(response.status, 202)
-
-    def test_post_live_migrate_server(self):
-        # Get api samples to server live migrate request.
-        def fake_live_migrate(_self, context, instance, scheduler_hint,
-                              block_migration, disk_over_commit):
-            self.assertEqual(self.uuid, instance["uuid"])
-            host = scheduler_hint["host"]
-            self.assertEqual(self.compute.host, host)
-
-        self.stubs.Set(conductor_manager.ComputeTaskManager,
-                       '_live_migrate',
-                       fake_live_migrate)
-
-        def fake_get_compute(context, host):
-            service = dict(host=host,
-                           binary='nova-compute',
-                           topic='compute',
-                           report_count=1,
-                           updated_at='foo',
-                           hypervisor_type='bar',
-                           hypervisor_version='1',
-                           disabled=False)
-            return {'compute_node': [service]}
-        self.stubs.Set(db, "service_get_by_compute_host", fake_get_compute)
-
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-live-migrate',
-                                 {'hostname': self.compute.host})
         self.assertEqual(response.status, 202)
 
     def test_post_reset_state(self):
