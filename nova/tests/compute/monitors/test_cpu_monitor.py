@@ -51,7 +51,7 @@ class ComputeDriverCPUMonitorTestCase(test.TestCase):
 
     def test_get_metric_names(self):
         names = self.monitor.get_metric_names()
-        self.assertEquals(10, len(names))
+        self.assertEqual(10, len(names))
         self.assertIn("cpu.frequency", names)
         self.assertIn("cpu.user.time", names)
         self.assertIn("cpu.kernel.time", names)
