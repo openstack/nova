@@ -142,8 +142,18 @@ class VMwareVMOps(object):
                 datacenter=dc_ref,
                 newCapacityKb=requested_size,
                 eagerZero=False)
-        self._session._wait_for_task(instance['uuid'],
-                                     vmdk_extend_task)
+        try:
+            self._session._wait_for_task(instance['uuid'],
+                                         vmdk_extend_task)
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_('Extending virtual disk failed with error: %s'),
+                          e, instance=instance)
+                # Clean up files created during the extend operation
+                files = [name.replace(".vmdk", "-flat.vmdk"), name]
+                for file in files:
+                    self._delete_datastore_file(instance, file, dc_ref)
+
         LOG.debug(_("Extended root virtual disk"))
 
     def _delete_datastore_file(self, instance, datastore_path, dc_ref):
