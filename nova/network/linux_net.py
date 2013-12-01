@@ -1028,8 +1028,7 @@ def restart_dhcp(context, dev, network_ref):
         write_to_file(optsfile, get_dhcp_opts(context, network_ref))
         os.chmod(optsfile, 0o644)
 
-    if network_ref['multi_host']:
-        _add_dhcp_mangle_rule(dev)
+    _add_dhcp_mangle_rule(dev)
 
     # Make sure dnsmasq can actually read it (it setuid()s to "nobody")
     os.chmod(conffile, 0o644)
