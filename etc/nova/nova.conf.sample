@@ -1063,7 +1063,7 @@
 # Interface for public IP addresses (string value)
 #public_interface=eth0
 
-# MTU setting for vlan (string value)
+# MTU setting for network interface (string value)
 #network_device_mtu=<None>
 
 # location of nova-dhcpbridge (string value)
