@@ -1001,6 +1001,7 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
         self.assertEqual(stats['disk_used'], 1024 - 500)
         self.assertEqual(stats['host_memory_total'], 1024)
         self.assertEqual(stats['host_memory_free'], 1024 - 500)
+        self.assertEqual(stats['hypervisor_version'], 5000000)
         supported_instances = [('i686', 'vmware', 'hvm'),
                                ('x86_64', 'vmware', 'hvm')]
         self.assertEqual(stats['supported_instances'], supported_instances)
@@ -1065,7 +1066,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEqual(stats['memory_mb'], 1000)
         self.assertEqual(stats['memory_mb_used'], 500)
         self.assertEqual(stats['hypervisor_type'], 'VMware vCenter Server')
-        self.assertEqual(stats['hypervisor_version'], '5.1.0')
+        self.assertEqual(stats['hypervisor_version'], 5001000)
         self.assertEqual(stats['hypervisor_hostname'], self.node_name)
         self.assertEqual(stats['cpu_info'], jsonutils.dumps(cpu_info))
         self.assertEqual(stats['supported_instances'],
