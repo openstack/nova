@@ -55,7 +55,7 @@ linux_net_opts = [
                default='eth0',
                help='Interface for public IP addresses'),
     cfg.StrOpt('network_device_mtu',
-               help='MTU setting for vlan'),
+               help='MTU setting for network interface'),
     cfg.StrOpt('dhcpbridge',
                default=paths.bindir_def('nova-dhcpbridge'),
                help='location of nova-dhcpbridge'),
