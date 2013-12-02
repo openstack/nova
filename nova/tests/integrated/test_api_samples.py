@@ -70,6 +70,9 @@ from nova.volume import cinder
 
 CONF = cfg.CONF
 CONF.import_opt('allow_resize_to_same_host', 'nova.compute.api')
+CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
+CONF.import_opt('enable_network_quota',
+                'nova.api.openstack.compute.contrib.os_tenant_networks')
 CONF.import_opt('osapi_compute_extension',
                 'nova.api.openstack.compute.extensions')
 CONF.import_opt('vpn_image_id', 'nova.cloudpipe.pipelib')
@@ -1244,7 +1247,7 @@ class ShelveJsonTest(ServersSampleBase):
     def setUp(self):
         super(ShelveJsonTest, self).setUp()
         # Don't offload instance, so we can test the offload call.
-        CONF.shelved_offload_time = -1
+        CONF.set_override('shelved_offload_time', -1)
 
     def _test_server_action(self, uuid, action):
         response = self._do_post('servers/%s/action' % uuid,

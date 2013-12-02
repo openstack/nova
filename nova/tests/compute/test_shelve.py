@@ -25,11 +25,12 @@ from nova.tests.image import fake as fake_image
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def _shelve_instance(self, shelved_offload_time):
-        CONF.shelved_offload_time = shelved_offload_time
+        CONF.set_override('shelved_offload_time', shelved_offload_time)
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         self.compute.run_instance(self.context, db_instance, {}, {}, [], None,
                 None, True, None, False)

@@ -19,6 +19,7 @@ from oslo.config import cfg
 from nova.tests.integrated.v3 import test_servers
 
 CONF = cfg.CONF
+CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
 
 
 class ShelveJsonTest(test_servers.ServersSampleBase):
