@@ -271,6 +271,8 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         cpu_mask = ",".join(str(cpu_id) for cpu_id in cpu_mask_list)
         vcpu_params["mask"] = cpu_mask
 
+    viridian = 'true' if instance['os_type'] == 'windows' else 'false'
+
     rec = {
         'actions_after_crash': 'destroy',
         'actions_after_reboot': 'restart',
@@ -292,7 +294,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         'other_config': {'nova_uuid': str(instance['uuid'])},
         'PCI_bus': '',
         'platform': {'acpi': 'true', 'apic': 'true', 'pae': 'true',
-                     'viridian': 'true', 'timeoffset': '0'},
+                     'viridian': viridian, 'timeoffset': '0'},
         'PV_args': '',
         'PV_bootloader': '',
         'PV_bootloader_args': '',
