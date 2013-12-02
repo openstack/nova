@@ -193,19 +193,22 @@
 # a list of APIs with enabled SSL (list value)
 #enabled_ssl_apis=
 
-# IP address for EC2 API to listen (string value)
+# The IP address on which the EC2 API will listen. (string
+# value)
 #ec2_listen=0.0.0.0
 
-# port for ec2 api to listen (integer value)
+# The port on which the EC2 API will listen. (integer value)
 #ec2_listen_port=8773
 
 # Number of workers for EC2 API service (integer value)
 #ec2_workers=<None>
 
-# IP address for OpenStack API to listen (string value)
+# The IP address on which the OpenStack API will listen.
+# (string value)
 #osapi_compute_listen=0.0.0.0
 
-# port for osapi compute to listen (integer value)
+# The port on which the OpenStack API will listen. (integer
+# value)
 #osapi_compute_listen_port=8774
 
 # Number of workers for OpenStack API service (integer value)
@@ -214,10 +217,12 @@
 # OpenStack metadata service manager (string value)
 #metadata_manager=nova.api.manager.MetadataManager
 
-# IP address for metadata api to listen (string value)
+# The IP address on which the metadata API will listen.
+# (string value)
 #metadata_listen=0.0.0.0
 
-# port for metadata api to listen (integer value)
+# The port on which the metadata API will listen. (integer
+# value)
 #metadata_listen_port=8775
 
 # Number of workers for metadata service (integer value)
