@@ -93,6 +93,13 @@ def vm_ref_cache_from_name(func):
 VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 
 
+def _iface_id_option_value(client_factory, iface_id, port_index):
+    opt = client_factory.create('ns0:OptionValue')
+    opt.key = "nvp.iface-id.%d" % port_index
+    opt.value = iface_id
+    return opt
+
+
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
                        vif_infos, os_type=constants.DEFAULT_OS_TYPE):
     """Builds the VM Create spec."""
@@ -125,7 +132,7 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
 
     vif_spec_list = []
     for vif_info in vif_infos:
-        vif_spec = create_network_spec(client_factory, vif_info)
+        vif_spec = _create_vif_spec(client_factory, vif_info)
         vif_spec_list.append(vif_spec)
 
     device_config_spec = vif_spec_list
@@ -139,14 +146,13 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     opt.value = instance['uuid']
     extra_config.append(opt)
 
-    i = 0
+    port_index = 0
     for vif_info in vif_infos:
         if vif_info['iface_id']:
-            opt = client_factory.create('ns0:OptionValue')
-            opt.key = "nvp.iface-id.%d" % i
-            opt.value = vif_info['iface_id']
-            extra_config.append(opt)
-            i += 1
+            extra_config.append(_iface_id_option_value(client_factory,
+                                                       vif_info['iface_id'],
+                                                       port_index))
+            port_index += 1
 
     config_spec.extraConfig = extra_config
 
@@ -187,7 +193,7 @@ def create_controller_spec(client_factory, key,
     return virtual_device_config
 
 
-def _convert_vif_model(name):
+def convert_vif_model(name):
     """Converts standard VIF_MODEL types to the internal VMware ones."""
     if name == network_model.VIF_MODEL_E1000:
         return 'VirtualE1000'
@@ -199,7 +205,7 @@ def _convert_vif_model(name):
     return name
 
 
-def create_network_spec(client_factory, vif_info):
+def _create_vif_spec(client_factory, vif_info):
     """Builds a config spec for the addition of a new network
     adapter to the VM.
     """
@@ -207,7 +213,7 @@ def create_network_spec(client_factory, vif_info):
     network_spec.operation = "add"
 
     # Keep compatible with other Hyper vif model parameter.
-    vif_info['vif_model'] = _convert_vif_model(vif_info['vif_model'])
+    vif_info['vif_model'] = convert_vif_model(vif_info['vif_model'])
 
     vif = 'ns0:' + vif_info['vif_model']
     net_device = client_factory.create(vif)
@@ -258,6 +264,38 @@ def create_network_spec(client_factory, vif_info):
 
     network_spec.device = net_device
     return network_spec
+
+
+def get_network_attach_config_spec(client_factory, vif_info, index):
+    """Builds the vif attach config spec."""
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    vif_spec = _create_vif_spec(client_factory, vif_info)
+    config_spec.deviceChange = [vif_spec]
+    if vif_info['iface_id'] is not None:
+        config_spec.extraConfig = [_iface_id_option_value(client_factory,
+                                                          vif_info['iface_id'],
+                                                          index)]
+    return config_spec
+
+
+def get_network_detach_config_spec(client_factory, device, port_index):
+    """Builds the vif detach config spec."""
+    config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    virtual_device_config = client_factory.create(
+                            'ns0:VirtualDeviceConfigSpec')
+    virtual_device_config.operation = "remove"
+    virtual_device_config.device = device
+    config_spec.deviceChange = [virtual_device_config]
+    # If a key is already present then it cannot be deleted, only updated.
+    # This enables us to reuse this key if there is an additional
+    # attachment. The keys need to be preserved. This is due to the fact
+    # that there is logic on the ESX that does the network wiring
+    # according to these values. If they are changed then this will
+    # break networking to and from the interface.
+    config_spec.extraConfig = [_iface_id_option_value(client_factory,
+                                                      'free',
+                                                      port_index)]
+    return config_spec
 
 
 def get_vmdk_attach_config_spec(client_factory,
@@ -1531,3 +1569,46 @@ def get_values_from_object_properties(session, props, properties):
                                      "continue_to_get_objects",
                                      token)
     return dictionary
+
+
+def _get_vm_port_indices(session, vm_ref):
+    extra_config = session._call_method(vim_util,
+                                        'get_dynamic_property',
+                                        vm_ref, 'VirtualMachine',
+                                        'config.extraConfig')
+    ports = []
+    if extra_config is not None:
+        options = extra_config.OptionValue
+        for option in options:
+            if (option.key.startswith('nvp.iface-id.') and
+                    option.value != 'free'):
+                ports.append(int(option.key.split('.')[2]))
+    return ports
+
+
+def get_attach_port_index(session, vm_ref):
+    """Get the first free port index."""
+    ports = _get_vm_port_indices(session, vm_ref)
+    # No ports are configured on the VM
+    if not ports:
+        return 0
+    ports.sort()
+    configured_ports_len = len(ports)
+    # Find the first free port index
+    for port_index in range(configured_ports_len):
+        if port_index != ports[port_index]:
+            return port_index
+    return configured_ports_len
+
+
+def get_vm_detach_port_index(session, vm_ref, iface_id):
+    extra_config = session._call_method(vim_util,
+                                        'get_dynamic_property',
+                                        vm_ref, 'VirtualMachine',
+                                        'config.extraConfig')
+    if extra_config is not None:
+        options = extra_config.OptionValue
+        for option in options:
+            if (option.key.startswith('nvp.iface-id.') and
+                option.value == iface_id):
+                return int(option.key.split('.')[2])

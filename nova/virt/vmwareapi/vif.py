@@ -154,18 +154,33 @@ def get_network_ref(session, cluster, vif, is_neutron):
     return network_ref
 
 
+def get_vif_dict(session, cluster, vif_model, is_neutron, vif):
+    mac = vif['address']
+    name = vif['network']['bridge'] or CONF.vmware.integration_bridge
+    ref = get_network_ref(session, cluster, vif, is_neutron)
+    return {'network_name': name,
+            'mac_address': mac,
+            'network_ref': ref,
+            'iface_id': vif['id'],
+            'vif_model': vif_model}
+
+
 def get_vif_info(session, cluster, is_neutron, vif_model, network_info):
     vif_infos = []
     if not network_info:
         return vif_infos
     for vif in network_info:
-        mac_address = vif['address']
-        net_name = vif['network']['bridge'] or CONF.vmware.integration_bridge
-        network_ref = get_network_ref(session, cluster, vif, is_neutron)
-        vif_infos.append({'network_name': net_name,
-                          'mac_address': mac_address,
-                          'network_ref': network_ref,
-                          'iface_id': vif['id'],
-                          'vif_model': vif_model
-                         })
+        vif_infos.append(get_vif_dict(session, cluster, vif_model,
+                         is_neutron, vif))
     return vif_infos
+
+
+def get_network_device(hardware_devices, mac_address):
+    """Return the network device with MAC 'mac_address'."""
+    if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        hardware_devices = hardware_devices.VirtualDevice
+    for device in hardware_devices:
+        if device.__class__.__name__ in vm_util.ALL_SUPPORTED_NETWORK_DEVICES:
+            if hasattr(device, 'macAddress'):
+                if device.macAddress == mac_address:
+                    return device

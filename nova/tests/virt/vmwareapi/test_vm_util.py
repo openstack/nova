@@ -699,18 +699,18 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_convert_vif_model(self):
         expected = "VirtualE1000"
-        result = vm_util._convert_vif_model(network_model.VIF_MODEL_E1000)
+        result = vm_util.convert_vif_model(network_model.VIF_MODEL_E1000)
         self.assertEqual(expected, result)
         expected = "VirtualE1000e"
-        result = vm_util._convert_vif_model(network_model.VIF_MODEL_E1000E)
+        result = vm_util.convert_vif_model(network_model.VIF_MODEL_E1000E)
         self.assertEqual(expected, result)
         types = ["VirtualE1000", "VirtualE1000e", "VirtualPCNet32",
                  "VirtualVmxnet"]
         for type in types:
             self.assertEqual(type,
-                             vm_util._convert_vif_model(type))
+                             vm_util.convert_vif_model(type))
         self.assertRaises(exception.Invalid,
-                          vm_util._convert_vif_model,
+                          vm_util.convert_vif_model,
                           "InvalidVifModel")
 
     def test_power_on_instance_with_vm_ref(self):
@@ -855,3 +855,98 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 'ReconfigVM_Task', 'fake-ref', spec='fake-spec')
             _wait_for_task.assert_called_once_with(
                 'fake_reconfigure_task')
+
+    def test_get_network_attach_config_spec_opaque(self):
+        vif_info = {'network_name': 'br-int',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'OpaqueNetwork',
+                            'network-id': 'fake-network-id',
+                            'network-type': 'opaque'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        result = vm_util.get_network_attach_config_spec(
+                fake.FakeFactory(), vif_info, 1)
+        card = 'ns0:VirtualEthernetCardOpaqueNetworkBackingInfo'
+        expected = """{
+            'extraConfig': [{'value': 7,
+                             'key': 'nvp.iface-id.1',
+                             'obj_name':'ns0:OptionValue'}],
+            'deviceChange': [
+                {'device': {
+                     'macAddress':'00:00:00:ca:fe:01',
+                     'addressType': 'manual',
+                     'connectable': {
+                         'allowGuestControl':True,
+                         'startConnected': True,
+                         'connected': True,
+                         'obj_name':'ns0:VirtualDeviceConnectInfo'},
+                     'backing': {
+                         'opaqueNetworkType': 'opaque',
+                         'opaqueNetworkId': 'fake-network-id',
+                         'obj_name': '%(card)s'},
+                     'key': -47,
+                     'obj_name': 'ns0:VirtualE1000',
+                     'wakeOnLanEnabled': True},
+                 'operation': 'add',
+                 'obj_name': 'ns0:VirtualDeviceConfigSpec'}],
+            'obj_name':'ns0:VirtualMachineConfigSpec'}""" % {'card': card}
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    def test_get_network_attach_config_spec_dvs(self):
+        vif_info = {'network_name': 'br100',
+            'mac_address': '00:00:00:ca:fe:01',
+            'network_ref': {'type': 'DistributedVirtualPortgroup',
+                            'dvsw': 'fake-network-id',
+                            'dvpg': 'fake-group'},
+            'iface_id': 7,
+            'vif_model': 'VirtualE1000'}
+        result = vm_util.get_network_attach_config_spec(
+                fake.FakeFactory(), vif_info, 1)
+        port = 'ns0:DistributedVirtualSwitchPortConnection'
+        backing = 'ns0:VirtualEthernetCardDistributedVirtualPortBackingInfo'
+        expected = """{
+            'extraConfig': [{'value': 7,
+                             'key': 'nvp.iface-id.1',
+                             'obj_name': 'ns0:OptionValue'}],
+            'deviceChange': [
+                {'device': {'macAddress': '00:00:00:ca:fe:01',
+                            'addressType': 'manual',
+                            'connectable': {
+                                'allowGuestControl': True,
+                                'startConnected': True,
+                                'connected': True,
+                                'obj_name': 'ns0:VirtualDeviceConnectInfo'},
+                 'backing': {
+                     'port': {
+                         'portgroupKey': 'fake-group',
+                         'switchUuid': 'fake-network-id',
+                         'obj_name': '%(obj_name_port)s'},
+                     'obj_name': '%(obj_name_backing)s'},
+                     'key': -47,
+                     'obj_name': 'ns0:VirtualE1000',
+                     'wakeOnLanEnabled': True},
+                 'operation': 'add',
+                 'obj_name': 'ns0:VirtualDeviceConfigSpec'}],
+            'obj_name':'ns0:VirtualMachineConfigSpec'}""" % {
+                    'obj_name_backing': backing,
+                    'obj_name_port': port}
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
+
+    def test_get_network_detach_config_spec(self):
+        result = vm_util.get_network_detach_config_spec(
+                fake.FakeFactory(), 'fake-device', 2)
+        expected = """{
+            'extraConfig': [{'value': 'free',
+                             'key': 'nvp.iface-id.2',
+                             'obj_name': 'ns0:OptionValue'}],
+            'deviceChange': [{'device': 'fake-device',
+                              'operation': 'remove',
+                              'obj_name': 'ns0:VirtualDeviceConfigSpec'}],
+            'obj_name':'ns0:VirtualMachineConfigSpec'}"""
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
