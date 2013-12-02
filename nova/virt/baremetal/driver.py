@@ -25,6 +25,7 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
@@ -236,8 +237,14 @@ class BareMetalDriver(driver.ComputeDriver):
         node = db.bm_node_associate_and_update(context, node_uuid,
                     {'instance_uuid': instance['uuid'],
                      'instance_name': instance['hostname'],
-                     'task_state': baremetal_states.BUILDING})
+                     'task_state': baremetal_states.BUILDING,
+                     'preserve_ephemeral': False})
+        self._spawn(node, context, instance, image_meta, injected_files,
+            admin_password, network_info=network_info,
+            block_device_info=block_device_info)
 
+    def _spawn(self, node, context, instance, image_meta, injected_files,
+            admin_password, network_info=None, block_device_info=None):
         try:
             self._plug_vifs(instance, network_info, context=context)
             self._attach_block_devices(instance, block_device_info)
@@ -282,6 +289,51 @@ class BareMetalDriver(driver.ComputeDriver):
                 self._unplug_vifs(instance, network_info)
 
                 _update_state(context, node, None, baremetal_states.DELETED)
+
+    def rebuild(self, context, instance, image_meta, injected_files,
+                admin_password, bdms, detach_block_devices,
+                attach_block_devices, network_info=None, recreate=False,
+                block_device_info=None, preserve_ephemeral=False):
+        """Destroy and re-make this instance.
+
+        A 'rebuild' effectively purges all existing data from the system and
+        remakes the VM with given 'metadata' and 'personalities'.
+
+        :param context: Security context.
+        :param instance: Instance object.
+        :param image_meta: Image object returned by nova.image.glance that
+                           defines the image from which to boot this instance.
+        :param injected_files: User files to inject into instance.
+        :param admin_password: Administrator password to set in instance.
+        :param bdms: block-device-mappings to use for rebuild
+        :param detach_block_devices: function to detach block devices. See
+            nova.compute.manager.ComputeManager:_rebuild_default_impl for
+            usage.
+        :param attach_block_devices: function to attach block devices. See
+            nova.compute.manager.ComputeManager:_rebuild_default_impl for
+            usage.
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param block_device_info: Information about block devices to be
+                                  attached to the instance.
+        :param recreate: True if instance should be recreated with same disk.
+        :param preserve_ephemeral: True if the default ephemeral storage
+                                   partition must be preserved on rebuild.
+        """
+
+        instance.task_state = task_states.REBUILD_SPAWNING
+        instance.save(expected_task_state=[task_states.REBUILDING])
+
+        node_uuid = self._require_node(instance)
+        node = db.bm_node_get_by_node_uuid(context, node_uuid)
+        db.bm_node_update(
+            context, node['id'],
+            {'task_state': baremetal_states.BUILDING,
+             'preserve_ephemeral': preserve_ephemeral}
+        )
+        self._spawn(node, context, instance, image_meta, injected_files,
+                    admin_password, network_info=network_info,
+                    block_device_info=block_device_info)
 
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):

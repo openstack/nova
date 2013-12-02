@@ -2568,6 +2568,29 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_008(self, engine):
         db_utils.get_table(engine, 'bm_pxe_ips')
 
+    def _pre_upgrade_010(self, engine):
+        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        data = [{'id': 10, 'prov_mac_address': 'cc:cc:cc:cc:cc:cc'}]
+        engine.execute(bm_nodes.insert(), data)
+
+        return data
+
+    def _check_010(self, engine, data):
+        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        self.assertIn('preserve_ephemeral', bm_nodes.columns)
+
+        default = engine.execute(
+            sqlalchemy.select([bm_nodes.c.preserve_ephemeral])
+                      .where(bm_nodes.c.id == data[0]['id'])
+        ).scalar()
+        self.assertEqual(default, False)
+
+        bm_nodes.delete().where(bm_nodes.c.id == data[0]['id']).execute()
+
+    def _post_downgrade_010(self, engine):
+        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        self.assertNotIn('preserve_ephemeral', bm_nodes.columns)
+
 
 class ProjectTestCase(test.NoDBTestCase):
 

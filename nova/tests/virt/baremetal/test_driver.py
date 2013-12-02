@@ -24,8 +24,10 @@ import mox
 from oslo.config import cfg
 
 from nova.compute import power_state
+from nova.compute import task_states
 from nova import db as main_db
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
@@ -134,6 +136,23 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
                 block_device_info=result['spawn_params']['block_device_info'],
             )
 
+        instance = instance_obj.Instance._from_db_object(
+            self.context, instance_obj.Instance(), result['instance'])
+        instance.node = result['node']['uuid']
+
+        result['rebuild_params'] = dict(
+            context=self.context,
+            instance=instance,
+            image_meta=utils.get_test_image_info(None, result['instance']),
+            injected_files=[('/fake/path', 'hello world')],
+            admin_password='test_pass',
+            bdms={},
+            detach_block_devices=self.mox.CreateMockAnything(),
+            attach_block_devices=self.mox.CreateMockAnything(),
+            network_info=result['spawn_params']['network_info'],
+            block_device_info=result['spawn_params']['block_device_info'],
+        )
+
         return result
 
     def test_get_host_stats(self):
@@ -171,6 +190,29 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         instance = main_db.instance_get_by_uuid(self.context,
                 node['instance']['uuid'])
         self.assertEqual(instance['default_ephemeral_device'], None)
+
+    def _test_rebuild(self, ephemeral):
+        node = self._create_node(ephemeral=ephemeral)
+        self.driver.spawn(**node['spawn_params'])
+        after_spawn = db.bm_node_get(self.context, node['node']['id'])
+
+        instance = node['rebuild_params']['instance']
+        instance.task_state = task_states.REBUILDING
+        instance.save(expected_task_state=[None])
+        self.driver.rebuild(preserve_ephemeral=ephemeral,
+                            **node['rebuild_params'])
+        after_rebuild = db.bm_node_get(self.context, node['node']['id'])
+
+        self.assertEqual(after_rebuild['task_state'], baremetal_states.ACTIVE)
+        self.assertEqual(after_rebuild['preserve_ephemeral'], ephemeral)
+        self.assertEqual(after_spawn['instance_uuid'],
+                         after_rebuild['instance_uuid'])
+
+    def test_rebuild_ok(self):
+        self._test_rebuild(ephemeral=False)
+
+    def test_rebuild_preserve_ephemeral(self):
+        self._test_rebuild(ephemeral=True)
 
     def test_macs_from_nic_for_instance(self):
         node = self._create_node()

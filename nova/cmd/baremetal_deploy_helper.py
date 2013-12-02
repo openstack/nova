@@ -352,6 +352,7 @@ class BareMetalDeploy(object):
                   'root_mb': int(d['root_mb']),
                   'swap_mb': int(d['swap_mb']),
                   'ephemeral_mb': int(d['ephemeral_mb']),
+                  'preserve_ephemeral': d['preserve_ephemeral'],
                  }
         # Restart worker, if needed
         if not self.worker.isAlive():
