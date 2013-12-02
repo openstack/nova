@@ -214,10 +214,18 @@ class NovaObject(object):
                         '%(objtype)s') % dict(objtype=objname))
             raise exception.UnsupportedObjectError(objtype=objname)
 
+        latest = None
         compatible_match = None
         for objclass in cls._obj_classes[objname]:
             if objclass.VERSION == objver:
                 return objclass
+
+            version_bits = tuple([int(x) for x in objclass.VERSION.split(".")])
+            if latest is None:
+                latest = version_bits
+            elif latest < version_bits:
+                latest = version_bits
+
             try:
                 check_object_version(objclass.VERSION, objver)
                 compatible_match = objclass
@@ -227,8 +235,10 @@ class NovaObject(object):
         if compatible_match:
             return compatible_match
 
+        latest_ver = '%i.%i' % latest
         raise exception.IncompatibleObjectVersion(objname=objname,
-                                                  objver=objver)
+                                                  objver=objver,
+                                                  supported=latest_ver)
 
     def _attr_from_primitive(self, attribute, value):
         """Attribute deserialization dispatcher.
@@ -510,6 +520,22 @@ class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
     that needs to accept or return NovaObjects as arguments or result values
     should pass this to its RpcProxy and RpcDispatcher objects.
     """
+
+    @property
+    def conductor(self):
+        if not hasattr(self, '_conductor'):
+            from nova.conductor import api as conductor_api
+            self._conductor = conductor_api.API()
+        return self._conductor
+
+    def _process_object(self, context, objprim):
+        try:
+            objinst = NovaObject.obj_from_primitive(objprim, context=context)
+        except exception.IncompatibleObjectVersion as e:
+            objinst = self.conductor.object_backport(context, objprim,
+                                                     e.kwargs['supported'])
+        return objinst
+
     def _process_iterable(self, context, action_fn, values):
         """Process an iterable, taking an action on each value.
         :param:context: Request context
@@ -537,7 +563,7 @@ class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
 
     def deserialize_entity(self, context, entity):
         if isinstance(entity, dict) and 'nova_object.name' in entity:
-            entity = NovaObject.obj_from_primitive(entity, context=context)
+            entity = self._process_object(context, entity)
         elif isinstance(entity, (tuple, list, set)):
             entity = self._process_iterable(context, self.deserialize_entity,
                                             entity)

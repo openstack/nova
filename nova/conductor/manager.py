@@ -599,6 +599,9 @@ class ConductorManager(manager.Manager):
     def compute_reboot(self, context, instance, reboot_type):
         self.compute_api.reboot(context, instance, reboot_type)
 
+    def object_backport(self, context, objinst, target_version):
+        return objinst.obj_to_primitive(target_version=target_version)
+
 
 class ComputeTaskManager(base.Base):
     """Namespace for compute methods.

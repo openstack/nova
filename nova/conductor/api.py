@@ -327,6 +327,9 @@ class LocalAPI(object):
     def compute_unrescue(self, context, instance):
         return self._manager.compute_unrescue(context, instance)
 
+    def object_backport(self, context, objinst, target_version):
+        return self._manager.object_backport(context, objinst, target_version)
+
 
 class LocalComputeTaskAPI(object):
     def __init__(self):
