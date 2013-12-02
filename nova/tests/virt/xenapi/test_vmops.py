@@ -777,3 +777,40 @@ class CreateVMRecordTestCase(VMOpsTestBase):
         mock_get_vm_device_id.assert_called_with(session, image_properties)
         mock_create_vm.assert_called_with(session, instance, name_label,
             kernel_file, ramdisk_file, False, device_id)
+
+
+class BootableTestCase(VMOpsTestBase):
+
+    def setUp(self):
+        super(BootableTestCase, self).setUp()
+
+        self.instance = {"name": "test", "uuid": "fake"}
+        vm_rec, self.vm_ref = self.create_vm('test')
+
+        # sanity check bootlock is initially disabled:
+        self.assertEqual({}, vm_rec['blocked_operations'])
+
+    def _get_blocked(self):
+        vm_rec = self._session.call_xenapi("VM.get_record", self.vm_ref)
+        return vm_rec['blocked_operations']
+
+    def test_acquire_bootlock(self):
+        self.vmops._acquire_bootlock(self.vm_ref)
+        blocked = self._get_blocked()
+        self.assertIn('start', blocked)
+
+    def test_release_bootlock(self):
+        self.vmops._acquire_bootlock(self.vm_ref)
+        self.vmops._release_bootlock(self.vm_ref)
+        blocked = self._get_blocked()
+        self.assertNotIn('start', blocked)
+
+    def test_set_bootable(self):
+        self.vmops.set_bootable(self.instance, True)
+        blocked = self._get_blocked()
+        self.assertNotIn('start', blocked)
+
+    def test_set_not_bootable(self):
+        self.vmops.set_bootable(self.instance, False)
+        blocked = self._get_blocked()
+        self.assertIn('start', blocked)

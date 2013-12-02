@@ -69,3 +69,15 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         expected = math.ceil(251.832)
         overhead = driver.estimate_instance_overhead(instance)
         self.assertEqual(expected, overhead['memory_mb'])
+
+    def test_set_bootable(self):
+        self.flags(connection_url='test_url', connection_password='test_pass',
+                   group='xenserver')
+        stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
+        driver = xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        self.mox.StubOutWithMock(driver._vmops, 'set_bootable')
+        driver._vmops.set_bootable('inst', True)
+        self.mox.ReplayAll()
+
+        driver.set_bootable('inst', True)

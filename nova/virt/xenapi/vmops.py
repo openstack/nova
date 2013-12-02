@@ -1420,6 +1420,14 @@ class VMOps(object):
         self.spawn(context, instance, image_meta, [], rescue_password,
                    network_info, name_label=rescue_name_label, rescue=True)
 
+    def set_bootable(self, instance, is_bootable):
+        """Set the ability to power on/off an instance."""
+        vm_ref = self._get_vm_opaque_ref(instance)
+        if is_bootable:
+            self._release_bootlock(vm_ref)
+        else:
+            self._acquire_bootlock(vm_ref)
+
     def unrescue(self, instance):
         """Unrescue the specified instance.
 
