@@ -71,7 +71,7 @@ service_opts = [
                help='IP address for OpenStack API to listen'),
     cfg.IntOpt('osapi_compute_listen_port',
                default=8774,
-               help='list port for osapi compute'),
+               help='port for osapi compute to listen'),
     cfg.IntOpt('osapi_compute_workers',
                help='Number of workers for OpenStack API service'),
     cfg.StrOpt('metadata_manager',
