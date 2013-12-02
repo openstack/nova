@@ -4280,16 +4280,18 @@ def flavor_get_all(context, inactive=False, filters=None,
         else:
             query = query.filter(the_filter[0])
 
+    marker_row = None
     if marker is not None:
-        marker = _flavor_get_query(context, read_deleted=read_deleted).\
+        marker_row = _flavor_get_query(context, read_deleted=read_deleted).\
                     filter_by(flavorid=marker).\
                     first()
-        if not marker:
+        if not marker_row:
             raise exception.MarkerNotFound(marker)
 
     query = sqlalchemyutils.paginate_query(query, models.InstanceTypes, limit,
                                            [sort_key, 'id'],
-                                           marker=marker, sort_dir=sort_dir)
+                                           marker=marker_row,
+                                           sort_dir=sort_dir)
 
     inst_types = query.all()
 

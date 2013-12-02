@@ -2663,6 +2663,10 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         expected_results = all_flavors[3:]
         self.assertEqual(expected_results, marked_flavors)
 
+    def test_flavor_get_all_marker_not_found(self):
+        self.assertRaises(exception.MarkerNotFound,
+                db.flavor_get_all, self.ctxt, marker='invalid')
+
     def test_flavor_get(self):
         flavors = [{'name': 'abc', 'flavorid': '123'},
                    {'name': 'def', 'flavorid': '456'},
