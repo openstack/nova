@@ -1945,60 +1945,6 @@
 
 
 #
-# Options defined in nova.virt.libvirt.volume
-#
-
-# number of times to rescan iSCSI target to find volume
-# (integer value)
-#num_iscsi_scan_tries=3
-
-# number of times to rescan iSER target to find volume
-# (integer value)
-#num_iser_scan_tries=3
-
-# the RADOS client name for accessing rbd volumes (string
-# value)
-#rbd_user=<None>
-
-# the libvirt uuid of the secret for the rbd_uservolumes
-# (string value)
-#rbd_secret_uuid=<None>
-
-# Dir where the nfs volume is mounted on the compute node
-# (string value)
-#nfs_mount_point_base=$state_path/mnt
-
-# Mount options passed to the nfs client. See section of the
-# nfs man page for details (string value)
-#nfs_mount_options=<None>
-
-# number of times to rediscover AoE target to find volume
-# (integer value)
-#num_aoe_discover_tries=3
-
-# Dir where the glusterfs volume is mounted on the compute
-# node (string value)
-#glusterfs_mount_point_base=$state_path/mnt
-
-# use multipath connection of the iSCSI volume (boolean value)
-#libvirt_iscsi_use_multipath=false
-
-# use multipath connection of the iSER volume (boolean value)
-#libvirt_iser_use_multipath=false
-
-# Path or URL to Scality SOFS configuration file (string
-# value)
-#scality_sofs_config=<None>
-
-# Base dir where Scality SOFS shall be mounted (string value)
-#scality_sofs_mount_point=$state_path/scality
-
-# Protocols listed here will be accessed directly from QEMU.
-# Currently supported protocols: [gluster] (list value)
-#qemu_allowed_storage_drivers=
-
-
-#
 # Options defined in nova.vnc
 #
 
@@ -2651,6 +2597,60 @@
 # Use virtio for bridge interfaces with KVM/QEMU (boolean
 # value)
 #use_virtio_for_bridges=true
+
+
+#
+# Options defined in nova.virt.libvirt.volume
+#
+
+# number of times to rescan iSCSI target to find volume
+# (integer value)
+#num_iscsi_scan_tries=3
+
+# number of times to rescan iSER target to find volume
+# (integer value)
+#num_iser_scan_tries=3
+
+# the RADOS client name for accessing rbd volumes (string
+# value)
+#rbd_user=<None>
+
+# the libvirt uuid of the secret for the rbd_uservolumes
+# (string value)
+#rbd_secret_uuid=<None>
+
+# Dir where the nfs volume is mounted on the compute node
+# (string value)
+#nfs_mount_point_base=$state_path/mnt
+
+# Mount options passed to the nfs client. See section of the
+# nfs man page for details (string value)
+#nfs_mount_options=<None>
+
+# number of times to rediscover AoE target to find volume
+# (integer value)
+#num_aoe_discover_tries=3
+
+# Dir where the glusterfs volume is mounted on the compute
+# node (string value)
+#glusterfs_mount_point_base=$state_path/mnt
+
+# use multipath connection of the iSCSI volume (boolean value)
+#iscsi_use_multipath=false
+
+# use multipath connection of the iSER volume (boolean value)
+#iser_use_multipath=false
+
+# Path or URL to Scality SOFS configuration file (string
+# value)
+#scality_sofs_config=<None>
+
+# Base dir where Scality SOFS shall be mounted (string value)
+#scality_sofs_mount_point=$state_path/scality
+
+# Protocols listed here will be accessed directly from QEMU.
+# Currently supported protocols: [gluster] (list value)
+#qemu_allowed_storage_drivers=
 
 
 [baremetal]

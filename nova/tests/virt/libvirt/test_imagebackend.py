@@ -519,9 +519,10 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
     def setUp(self):
         self.image_class = imagebackend.Rbd
         super(RbdTestCase, self).setUp()
-        self.flags(images_rbd_pool=self.POOL, group='libvirt')
-        self.flags(rbd_user=self.USER)
-        self.flags(images_rbd_ceph_conf=self.CONF, group='libvirt')
+        self.flags(images_rbd_pool=self.POOL,
+                   rbd_user=self.USER,
+                   images_rbd_ceph_conf=self.CONF,
+                   group='libvirt')
         self.libvirt_utils = imagebackend.libvirt_utils
         self.utils = imagebackend.utils
         self.rbd = self.mox.CreateMockAnything()
