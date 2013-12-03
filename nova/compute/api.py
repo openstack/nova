@@ -3000,6 +3000,7 @@ class API(base.Base):
             return False
         return root_bdm.is_volume
 
+    @check_instance_lock
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE])
     def live_migrate(self, context, instance, block_migration,
