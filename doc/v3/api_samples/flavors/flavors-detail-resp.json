@@ -4,6 +4,7 @@
             "disabled": false,
             "disk": 1,
             "ephemeral": 0,
+            "flavor-access:is_public": true,
             "id": "1",
             "links": [
                 {
@@ -24,6 +25,7 @@
             "disabled": false,
             "disk": 20,
             "ephemeral": 0,
+            "flavor-access:is_public": true,
             "id": "2",
             "links": [
                 {
@@ -44,6 +46,7 @@
             "disabled": false,
             "disk": 40,
             "ephemeral": 0,
+            "flavor-access:is_public": true,
             "id": "3",
             "links": [
                 {
@@ -64,6 +67,7 @@
             "disabled": false,
             "disk": 80,
             "ephemeral": 0,
+            "flavor-access:is_public": true,
             "id": "4",
             "links": [
                 {
@@ -84,6 +88,7 @@
             "disabled": false,
             "disk": 160,
             "ephemeral": 0,
+            "flavor-access:is_public": true,
             "id": "5",
             "links": [
                 {

@@ -26,7 +26,7 @@ from nova.compute import flavors
 from nova import exception
 from nova.openstack.common.gettextutils import _
 
-ALIAS = 'os-flavor-access'
+ALIAS = 'flavor-access'
 soft_authorize = extensions.soft_extension_authorizer('compute',
                                                       'v3:' + ALIAS)
 authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
@@ -217,7 +217,7 @@ class FlavorAccess(extensions.V3APIExtensionBase):
 
     name = "FlavorAccess"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
+    namespace = "http://docs.openstack.org/compute/core/%s/api/v3" % ALIAS
     version = 1
 
     def get_resources(self):

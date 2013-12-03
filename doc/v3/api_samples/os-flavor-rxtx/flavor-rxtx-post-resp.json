@@ -3,6 +3,7 @@
         "disabled": false,
         "disk": 10,
         "ephemeral": 0,
+        "flavor-access:is_public": true,
         "id": "100",
         "links": [
             {

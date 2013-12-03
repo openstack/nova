@@ -3,6 +3,7 @@
         "disabled": false,
         "disk": 10,
         "ephemeral": 0,
+        "flavor-access:is_public": false,
         "id": "10",
         "links": [
             {
@@ -15,7 +16,6 @@
             }
         ],
         "name": "test_flavor",
-        "os-flavor-access:is_public": false,
         "ram": 1024,
         "swap": 0,
         "vcpus": 2

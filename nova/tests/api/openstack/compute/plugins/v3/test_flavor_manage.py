@@ -92,7 +92,7 @@ class FlavorManageTest(test.NoDBTestCase):
         self.app = fakes.wsgi_app_v3(init_only=('servers', 'flavors',
                                                 'flavor-manage',
                                                 'os-flavor-rxtx',
-                                                'os-flavor-access'))
+                                                'flavor-access'))
 
         self.expected_flavor = {
             "flavor": {
@@ -104,7 +104,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "id": unicode('1234'),
                 "swap": 512,
                 "rxtx_factor": 1,
-                "os-flavor-access:is_public": True,
+                "flavor-access:is_public": True,
             }
         }
 
@@ -180,7 +180,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "id": 1235,
                 "swap": 512,
                 "rxtx_factor": 1,
-                "os-flavor-access:is_public": True,
+                "flavor-access:is_public": True,
             }
         }
 
@@ -288,7 +288,7 @@ class PrivateFlavorManageTest(test.TestCase):
                 "OS-FLV-EXT-DATA:ephemeral": 1,
                 "swap": 512,
                 "rxtx_factor": 1,
-                "os-flavor-access:is_public": False
+                "flavor-access:is_public": False
             }
         }
         expected = {
@@ -326,7 +326,7 @@ class PrivateFlavorManageTest(test.TestCase):
                 "OS-FLV-EXT-DATA:ephemeral": 1,
                 "swap": 512,
                 "rxtx_factor": 1,
-                "os-flavor-access:is_public": True
+                "flavor-access:is_public": True
             }
         }
         expected = {
