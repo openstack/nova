@@ -48,39 +48,37 @@ def get_test_image_info(context, instance_ref):
     return image_service.show(context, image_id)
 
 
-def get_test_instance_type(context=None, options=None):
+def get_test_flavor(context=None, options=None):
     options = options or {}
     if not context:
         context = get_test_admin_context()
 
-    test_instance_type = {'name': 'kinda.big',
-                          'flavorid': 'someid',
-                          'memory_mb': 2048,
-                          'vcpus': 4,
-                          'root_gb': 40,
-                          'ephemeral_gb': 80,
-                          'swap': 1024}
+    test_flavor = {'name': 'kinda.big',
+                   'flavorid': 'someid',
+                   'memory_mb': 2048,
+                   'vcpus': 4,
+                   'root_gb': 40,
+                   'ephemeral_gb': 80,
+                   'swap': 1024}
 
-    test_instance_type.update(options)
+    test_flavor.update(options)
 
     try:
-        instance_type_ref = nova.db.flavor_create(context,
-                                                         test_instance_type)
+        flavor_ref = nova.db.flavor_create(context, test_flavor)
     except (exception.FlavorExists, exception.FlavorIdExists):
-        instance_type_ref = nova.db.flavor_get_by_name(context,
-                                                              'kinda.big')
-    return instance_type_ref
+        flavor_ref = nova.db.flavor_get_by_name(context, 'kinda.big')
+    return flavor_ref
 
 
-def get_test_instance(context=None, instance_type=None, obj=False):
+def get_test_instance(context=None, flavor=None, obj=False):
     if not context:
         context = get_test_admin_context()
 
-    if not instance_type:
-        instance_type = get_test_instance_type(context)
+    if not flavor:
+        flavor = get_test_flavor(context)
 
     metadata = {}
-    flavors.save_flavor_info(metadata, instance_type, '')
+    flavors.save_flavor_info(metadata, flavor, '')
 
     test_instance = {'memory_kb': '2048000',
                      'basepath': '/some/path',

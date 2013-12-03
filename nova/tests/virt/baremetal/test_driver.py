@@ -116,8 +116,8 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         if ephemeral:
             result['instance'] = utils.get_test_instance()
         else:
-            flavor = utils.get_test_instance_type(options={'ephemeral_gb': 0})
-            result['instance'] = utils.get_test_instance(instance_type=flavor)
+            flavor = utils.get_test_flavor(options={'ephemeral_gb': 0})
+            result['instance'] = utils.get_test_instance(flavor=flavor)
         result['instance']['node'] = result['node']['uuid']
         result['spawn_params'] = dict(
                 admin_password='test_pass',

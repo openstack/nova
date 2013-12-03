@@ -167,7 +167,7 @@ class TileraClassMethodsTestCase(BareMetalTileraTestCase):
 
     def test_swap_not_zero(self):
         # override swap to 0
-        flavor = utils.get_test_instance_type(self.context)
+        flavor = utils.get_test_flavor(self.context)
         flavor['swap'] = 0
         self.instance = utils.get_test_instance(self.context, flavor)
 
