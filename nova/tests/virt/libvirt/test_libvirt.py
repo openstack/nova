@@ -3155,23 +3155,31 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
-    def test_create_images_and_backing(self):
+    def _do_test_create_images_and_backing(self, disk_type):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
         self.mox.StubOutWithMock(libvirt_driver.libvirt_utils, 'create_image')
 
-        libvirt_driver.libvirt_utils.create_image(mox.IgnoreArg(),
-                                                  mox.IgnoreArg(),
-                                                  mox.IgnoreArg())
+        disk_info = {'path': 'foo', 'type': disk_type,
+                     'disk_size': 1 * 1024 ** 3,
+                     'virt_disk_size': 20 * 1024 ** 3,
+                     'backing_file': None}
+        disk_info_json = jsonutils.dumps([disk_info])
+
+        libvirt_driver.libvirt_utils.create_image(
+            disk_info['type'], mox.IgnoreArg(), disk_info['virt_disk_size'])
         conn._fetch_instance_kernel_ramdisk(self.context, self.test_instance)
         self.mox.ReplayAll()
 
         self.stubs.Set(os.path, 'exists', lambda *args: False)
-        disk_info_json = jsonutils.dumps([{'path': 'foo', 'type': None,
-                                           'disk_size': 0,
-                                           'backing_file': None}])
         conn._create_images_and_backing(self.context, self.test_instance,
                                         "/fake/instance/dir", disk_info_json)
+
+    def test_create_images_and_backing_qcow2(self):
+        self._do_test_create_images_and_backing('qcow2')
+
+    def test_create_images_and_backing_raw(self):
+        self._do_test_create_images_and_backing('raw')
 
     def test_create_images_and_backing_disk_info_none(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
