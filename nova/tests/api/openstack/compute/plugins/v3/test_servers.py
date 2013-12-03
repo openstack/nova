@@ -912,7 +912,7 @@ class ServersControllerTest(ControllerTest):
                          limit=None, marker=None, want_objects=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('vm_state', search_opts)
-            self.assertEqual(search_opts['vm_state'], vm_states.ACTIVE)
+            self.assertEqual(search_opts['vm_state'], [vm_states.ACTIVE])
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
                 context, instance_obj.InstanceList(), db_list, FIELDS)
@@ -948,6 +948,29 @@ class ServersControllerTest(ControllerTest):
         self.assertEqual(len(servers), 1)
         self.assertEqual(servers[0]['id'], server_uuid)
 
+    def test_get_servers_resize_status(self):
+        # Test when resize status, it maps list of vm states.
+        server_uuid = str(uuid.uuid4())
+
+        def fake_get_all(compute_self, context, search_opts=None,
+                         sort_key=None, sort_dir='desc',
+                         limit=None, marker=None, want_objects=False):
+            self.assertIn('vm_state', search_opts)
+            self.assertEqual(search_opts['vm_state'],
+                             [vm_states.ACTIVE, vm_states.STOPPED])
+
+            db_list = [fakes.stub_instance(100, uuid=server_uuid)]
+            return instance_obj._make_instance_list(
+                context, instance_obj.InstanceList(), db_list, FIELDS)
+
+        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+
+        req = fakes.HTTPRequestV3.blank('/servers?status=resize')
+
+        servers = self.controller.detail(req)['servers']
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], server_uuid)
+
     def test_get_servers_invalid_status(self):
         # Test getting servers by invalid status.
         req = fakes.HTTPRequestV3.blank('/servers?status=baloney',
@@ -968,7 +991,7 @@ class ServersControllerTest(ControllerTest):
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False):
             self.assertIn('vm_state', search_opts)
-            self.assertEqual(search_opts['vm_state'], 'deleted')
+            self.assertEqual(search_opts['vm_state'], ['deleted'])
 
             db_list = [fakes.stub_instance(100, uuid=server_uuid)]
             return instance_obj._make_instance_list(
