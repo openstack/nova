@@ -106,9 +106,6 @@
   <extension alias="os-consoles" updated="2011-12-23T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/os-consoles/api/v2" name="Consoles">
     <description>Interactive Console support.</description>
   </extension>
-  <extension alias="os-coverage" updated="2012-10-15T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/coverage/api/v2" name="Coverage">
-    <description>Enable Nova Coverage.</description>
-  </extension>
   <extension alias="os-create-server-ext" updated="2011-07-19T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/createserverext/api/v1.1" name="Createserverext">
     <description>Extended support to the Create Server v1.1 API.</description>
   </extension>

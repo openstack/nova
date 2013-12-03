@@ -23,12 +23,10 @@ import os
 import urllib
 import uuid as uuid_lib
 
-import coverage
 from lxml import etree
 from oslo.config import cfg
 
 from nova.api.metadata import password
-from nova.api.openstack.compute.contrib import coverage_ext
 from nova.api.openstack.compute.contrib import fping
 from nova.api.openstack.compute import extensions
 # Import extensions to pull in osapi_compute_extension CONF option used below.
@@ -51,7 +49,6 @@ from nova.openstack.common import timeutils
 import nova.quota
 from nova.servicegroup import api as service_group_api
 from nova import test
-from nova.tests.api.openstack.compute.contrib import test_coverage_ext
 from nova.tests.api.openstack.compute.contrib import test_fping
 from nova.tests.api.openstack.compute.contrib import test_networks
 from nova.tests.api.openstack.compute.contrib import test_services
@@ -472,74 +469,6 @@ class LimitsSampleJsonTest(ApiSampleTestBaseV2):
 
 class LimitsSampleXmlTest(LimitsSampleJsonTest):
     ctype = 'xml'
-
-
-class CoverageExtJsonTests(ApiSampleTestBaseV2):
-    extension_name = ("nova.api.openstack.compute.contrib.coverage_ext."
-                      "Coverage_ext")
-
-    def setUp(self):
-        super(CoverageExtJsonTests, self).setUp()
-
-        def _fake_check_coverage(self):
-            return False
-
-        def _fake_xml_report(self, outfile=None):
-            return
-
-        self.stubs.Set(coverage_ext.CoverageController, '_check_coverage',
-                       _fake_check_coverage)
-        self.stubs.Set(coverage, 'coverage', test_coverage_ext.FakeCoverage)
-
-    def test_start_coverage(self):
-        # Start coverage data collection.
-        subs = {}
-        response = self._do_post('os-coverage/action',
-                                 'coverage-start-post-req', subs)
-        self.assertEqual(response.status, 200)
-
-    def test_start_coverage_combine(self):
-        # Start coverage data collection.
-        subs = {}
-        response = self._do_post('os-coverage/action',
-                                 'coverage-start-combine-post-req', subs)
-        self.assertEqual(response.status, 200)
-
-    def test_stop_coverage(self):
-        # Stop coverage data collection.
-        subs = {
-            'path': '/.*',
-        }
-        response = self._do_post('os-coverage/action',
-                                 'coverage-stop-post-req', subs)
-        subs.update(self._get_regexes())
-        self._verify_response('coverage-stop-post-resp', subs, response, 200)
-
-    def test_report_coverage(self):
-        # Generate a coverage report.
-        subs = {
-            'filename': 'report',
-            'path': '/.*/report',
-        }
-        response = self._do_post('os-coverage/action',
-                                 'coverage-report-post-req', subs)
-        subs.update(self._get_regexes())
-        self._verify_response('coverage-report-post-resp', subs, response, 200)
-
-    def test_xml_report_coverage(self):
-        subs = {
-            'filename': 'report',
-            'path': '/.*/report',
-        }
-        response = self._do_post('os-coverage/action',
-                                 'coverage-xml-report-post-req', subs)
-        subs.update(self._get_regexes())
-        self._verify_response('coverage-xml-report-post-resp',
-                              subs, response, 200)
-
-
-class CoverageExtXmlTests(CoverageExtJsonTests):
-    ctype = "xml"
 
 
 class ServersActionsJsonTest(ServersSampleBase):
