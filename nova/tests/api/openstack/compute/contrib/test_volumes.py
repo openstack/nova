@@ -442,13 +442,34 @@ class VolumeAttachTests(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
                           req, FAKE_UUID, body)
 
-    def _test_swap(self, uuid=FAKE_UUID_A, fake_func=None):
+    def test_attach_volume_without_volumeId(self):
+        self.stubs.Set(compute_api.API,
+                       'attach_volume',
+                       fake_attach_volume)
+
+        body = {
+            'volumeAttachment': {
+                'device': None
+            }
+        }
+
+        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
+                          req, FAKE_UUID, body)
+
+    def _test_swap(self, uuid=FAKE_UUID_A, fake_func=None, body=None):
         fake_func = fake_func or fake_swap_volume
         self.stubs.Set(compute_api.API,
                        'swap_volume',
                        fake_func)
-        body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
-                                    'device': '/dev/fake'}}
+        body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B,
+                                             'device': '/dev/fake'}}
+
         req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
         req.method = 'PUT'
         req.body = jsonutils.dumps({})
@@ -479,6 +500,13 @@ class VolumeAttachTests(test.TestCase):
         self.ext_mgr.extensions['os-volume-attachment-update'] = True
 
         self.assertRaises(exc.HTTPNotFound, self._test_swap, FAKE_UUID_C)
+
+    def test_swap_volume_without_volumeId(self):
+        self.ext_mgr.extensions['os-volume-attachment-update'] = True
+        body = {'volumeAttachment': {'device': '/dev/fake'}}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_swap,
+                          body=body)
 
 
 class VolumeSerializerTest(test.TestCase):
