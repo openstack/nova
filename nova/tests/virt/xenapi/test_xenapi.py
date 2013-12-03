@@ -4009,7 +4009,6 @@ class XenAPISessionTestCase(test.NoDBTestCase):
         with open(path) as plugin_file:
             for line in plugin_file:
                 if "PLUGIN_VERSION = " in line:
-                    print line
                     plugin_version = line.strip()[17:].strip('"')
 
         self.assertEqual(session.PLUGIN_REQUIRED_VERSION,

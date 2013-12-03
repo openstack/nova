@@ -82,7 +82,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         try:
             compute.API().create(self.context, min_count=1, max_count=1,
                              instance_type=inst_type, image_href=image_uuid)
-        except exception.QuotaError, e:
+        except exception.QuotaError as e:
             expected_kwargs = {'code': 413, 'resource': 'cores', 'req': 1,
                           'used': 4, 'allowed': 4, 'overs': 'cores,instances'}
             self.assertEqual(e.kwargs, expected_kwargs)
@@ -98,7 +98,7 @@ class QuotaIntegrationTestCase(test.TestCase):
         try:
             compute.API().create(self.context, min_count=1, max_count=1,
                              instance_type=inst_type, image_href=image_uuid)
-        except exception.QuotaError, e:
+        except exception.QuotaError as e:
             expected_kwargs = {'code': 413, 'resource': 'cores', 'req': 1,
                           'used': 4, 'allowed': 4, 'overs': 'cores'}
             self.assertEqual(e.kwargs, expected_kwargs)
@@ -2332,7 +2332,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         try:
             sqa_api.quota_reserve(context, self.resources, self.quotas,
                           self.quotas, self.deltas, self.expire, 0, 0)
-        except exception.OverQuota, e:
+        except exception.OverQuota as e:
             expected_kwargs = {'code': 500,
                 'usages': {'instances': {'reserved': 0, 'in_use': 4},
                 'ram': {'reserved': 0, 'in_use': 10240},

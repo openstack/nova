@@ -19,7 +19,7 @@ import fixtures
 import sys
 import traceback
 
-from mock import MagicMock
+import mock
 import netaddr
 import six
 
@@ -712,7 +712,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
         self.stubs.Set(self.connection,
-                                 'set_host_enabled', MagicMock())
+                       'set_host_enabled', mock.MagicMock())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.get_admin_context',
             self._fake_admin_context))
@@ -731,7 +731,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
 
     def test_set_host_enabled(self):
         self.mox.UnsetStubs()
-        service_mock = MagicMock()
+        service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: False
         # service_mock.__getitem__.return_value = False
@@ -749,7 +749,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
 
     def test_set_host_enabled_when_auto_disabled(self):
         self.mox.UnsetStubs()
-        service_mock = MagicMock()
+        service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: True, 'AUTO: ERROR'
         service_mock.configure_mock(disabled_reason='AUTO: ERROR',
@@ -766,7 +766,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
 
     def test_set_host_enabled_when_manually_disabled(self):
         self.mox.UnsetStubs()
-        service_mock = MagicMock()
+        service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: True, 'Manually disabled'
         service_mock.configure_mock(disabled_reason='Manually disabled',
@@ -783,7 +783,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
 
     def test_set_host_enabled_dont_override_manually_disabled(self):
         self.mox.UnsetStubs()
-        service_mock = MagicMock()
+        service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: True, 'Manually disabled'
         service_mock.configure_mock(disabled_reason='Manually disabled',

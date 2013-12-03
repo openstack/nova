@@ -20,7 +20,7 @@ import os
 import fixtures
 from oslo.config import cfg
 
-from inspect import getargspec
+import inspect
 
 from nova import exception
 from nova.openstack.common import uuidutils
@@ -645,8 +645,8 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertEqual(fake_processutils.fake_execute_get_log(), [])
 
     def test_parent_compatible(self):
-        self.assertEqual(getargspec(imagebackend.Image.libvirt_info),
-             getargspec(self.image_class.libvirt_info))
+        self.assertEqual(inspect.getargspec(imagebackend.Image.libvirt_info),
+                         inspect.getargspec(self.image_class.libvirt_info))
 
 
 class BackendTestCase(test.NoDBTestCase):
