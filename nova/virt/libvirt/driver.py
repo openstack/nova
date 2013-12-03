@@ -4211,7 +4211,7 @@ class LibvirtDriver(driver.ComputeDriver):
             instance_disk = os.path.join(instance_dir, base)
             if not info['backing_file'] and not os.path.exists(instance_disk):
                 libvirt_utils.create_image(info['type'], instance_disk,
-                                           info['disk_size'])
+                                           info['virt_disk_size'])
             elif info['backing_file']:
                 # Creating backing file follows same way as spawning instances.
                 cache_name = os.path.basename(info['backing_file'])
@@ -4367,7 +4367,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 over_commit_size = int(virt_size) - dk_size
             else:
                 backing_file = ""
-                virt_size = 0
+                virt_size = dk_size
                 over_commit_size = 0
 
             disk_info.append({'type': disk_type,
