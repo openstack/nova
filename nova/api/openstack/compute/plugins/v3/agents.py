@@ -17,13 +17,13 @@
 
 import webob.exc
 
+from nova.api.openstack.compute.schemas.v3 import agents_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api import validation
 from nova import db
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova import utils
 
 
 ALIAS = "os-agents"
@@ -93,28 +93,16 @@ class AgentController(object):
         return {'agents': agents}
 
     @extensions.expected_errors((400, 404))
+    @validation.schema(request_body_schema=agents_schema.update)
     def update(self, req, id, body):
         """Update an existing agent build."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            para = body['agent']
-            url = para['url']
-            md5hash = para['md5hash']
-            version = para['version']
-        except TypeError as e:
-            raise webob.exc.HTTPBadRequest()
-        except KeyError as e:
-            raise webob.exc.HTTPBadRequest(explanation=_(
-                "Could not find %s parameter in the request") % e.args[0])
-
-        try:
-            utils.check_string_length(url, 'url', max_length=255)
-            utils.check_string_length(md5hash, 'md5hash', max_length=255)
-            utils.check_string_length(version, 'version', max_length=255)
-        except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+        para = body['agent']
+        url = para['url']
+        md5hash = para['md5hash']
+        version = para['version']
 
         try:
             db.agent_build_update(context, id,
@@ -141,35 +129,19 @@ class AgentController(object):
 
     @extensions.expected_errors((400, 409))
     @wsgi.response(201)
+    @validation.schema(request_body_schema=agents_schema.create)
     def create(self, req, body):
         """Creates a new agent build."""
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            agent = body['agent']
-            hypervisor = agent['hypervisor']
-            os = agent['os']
-            architecture = agent['architecture']
-            version = agent['version']
-            url = agent['url']
-            md5hash = agent['md5hash']
-        except TypeError as e:
-            raise webob.exc.HTTPBadRequest()
-        except KeyError as e:
-            raise webob.exc.HTTPBadRequest(explanation=_(
-                "Could not find %s parameter in the request") % e.args[0])
-
-        try:
-            utils.check_string_length(hypervisor, 'hypervisor', max_length=255)
-            utils.check_string_length(os, 'os', max_length=255)
-            utils.check_string_length(architecture, 'architecture',
-                                      max_length=255)
-            utils.check_string_length(version, 'version', max_length=255)
-            utils.check_string_length(url, 'url', max_length=255)
-            utils.check_string_length(md5hash, 'md5hash', max_length=255)
-        except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+        agent = body['agent']
+        hypervisor = agent['hypervisor']
+        os = agent['os']
+        architecture = agent['architecture']
+        version = agent['version']
+        url = agent['url']
+        md5hash = agent['md5hash']
 
         try:
             agent_build_ref = db.agent_build_create(context,
