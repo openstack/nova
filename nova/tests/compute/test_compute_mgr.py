@@ -12,8 +12,10 @@
 
 """Unit tests for ComputeManager()."""
 
+import contextlib
 import time
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -324,6 +326,63 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_init_instance_reverts_crashed_migration_no_old_state(self):
         self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
+
+    def test_init_instance_sets_building_error(self):
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_instance_update')
+          ) as (
+            _instance_update,
+          ):
+
+            instance = instance_obj.Instance(self.context)
+            instance.uuid = 'foo'
+            instance.vm_state = vm_states.BUILDING
+            instance.task_state = None
+            self.compute._init_instance(self.context, instance)
+            call = mock.call(self.context, 'foo',
+                             task_state=None,
+                             vm_state=vm_states.ERROR)
+            _instance_update.assert_has_calls([call])
+
+    def _test_init_instance_sets_building_tasks_error(self, instance):
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_instance_update')
+          ) as (
+            _instance_update,
+          ):
+            self.compute._init_instance(self.context, instance)
+            call = mock.call(self.context, 'foo',
+                             task_state=None,
+                             vm_state=vm_states.ERROR)
+            _instance_update.assert_has_calls([call])
+
+    def test_init_instance_sets_building_tasks_error_scheduling(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = None
+        instance.task_state = task_states.SCHEDULING
+        self._test_init_instance_sets_building_tasks_error(instance)
+
+    def test_init_instance_sets_building_tasks_error_block_device(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = None
+        instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+        self._test_init_instance_sets_building_tasks_error(instance)
+
+    def test_init_instance_sets_building_tasks_error_networking(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = None
+        instance.task_state = task_states.NETWORKING
+        self._test_init_instance_sets_building_tasks_error(instance)
+
+    def test_init_instance_sets_building_tasks_error_spawning(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = None
+        instance.task_state = task_states.SPAWNING
+        self._test_init_instance_sets_building_tasks_error(instance)
 
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
