@@ -64,7 +64,7 @@ def handle_password(req, meta_data):
 
         conductor_api = conductor.API()
         instance = conductor_api.instance_get_by_uuid(ctxt, meta_data.uuid)
-        sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+        sys_meta = utils.instance_sys_meta(instance)
         sys_meta.update(convert_password(ctxt, req.body))
         conductor_api.instance_update(ctxt, meta_data.uuid,
                                       system_metadata=sys_meta)
