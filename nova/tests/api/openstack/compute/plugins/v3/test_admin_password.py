@@ -105,7 +105,7 @@ class AdminPasswordTest(test.NoDBTestCase):
         res = self._make_request(url, body)
         self.assertEqual(res.status_int, 409)
 
-    def test_change_password_with_bad_request(self):
+    def test_change_password_without_admin_password(self):
         url = '/v3/servers/1/action'
         body = {'change_password': {}}
         res = self._make_request(url, body)
