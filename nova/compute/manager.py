@@ -1675,9 +1675,10 @@ class ComputeManager(manager.Manager):
                             extra_usage_info={'message': _('Success')},
                             network_info=network_info)
         except exception.InstanceNotFound as e:
-            self._notify_about_instance_usage(context, instance, 'create.end',
-                    extra_usage_info={'message': e.format_message()})
-            raise
+            with excutils.save_and_reraise_exception():
+                self._notify_about_instance_usage(context, instance,
+                        'create.end',
+                        extra_usage_info={'message': e.format_message()})
         except exception.UnexpectedTaskStateError as e:
             with excutils.save_and_reraise_exception():
                 msg = e.format_message()
@@ -1694,14 +1695,17 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 LOG.debug(e.format_message, instance=instance)
                 self._notify_about_instance_usage(context, instance,
-                        'create.end', extra_usage_info={'message':
+                        'create.error', extra_usage_info={'message':
                                                         e.format_message()})
         except (exception.VirtualInterfaceCreateException,
                 exception.VirtualInterfaceMacAddressException,
                 exception.FixedIpLimitExceeded,
-                exception.NoMoreNetworks):
+                exception.NoMoreNetworks) as e:
             LOG.exception(_('Failed to allocate network(s)'),
                           instance=instance)
+            self._notify_about_instance_usage(context, instance,
+                    'create.error', extra_usage_info={'message':
+                        e.format_message()})
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)

@@ -1131,6 +1131,59 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.security_groups, self.block_device_mapping, self.node,
                 self.limits)
 
+    def test_spawn_network_alloc_failure(self):
+        # Because network allocation is asynchronous, failures may not present
+        # themselves until the virt spawn method is called.
+        exc = exception.NoMoreNetworks()
+        with contextlib.nested(
+                mock.patch.object(self.compute.driver, 'spawn',
+                    side_effect=exc),
+                mock.patch.object(conductor_rpcapi.ConductorAPI,
+                    'instance_update'),
+                mock.patch.object(self.compute, '_instance_update',
+                    side_effect=[self.instance, self.instance]),
+                mock.patch.object(self.compute,
+                    '_build_networks_for_instance',
+                    return_value=self.network_info),
+                mock.patch.object(self.compute,
+                    '_notify_about_instance_usage')
+        ) as (spawn, instance_update, _instance_update,
+                _build_networks_for_instance, _notify_about_instance_usage):
+
+            self.assertRaises(exception.BuildAbortException,
+                    self.compute._build_and_run_instance, self.context,
+                    self.instance, self.image, self.injected_files,
+                    self.admin_pass, self.requested_networks,
+                    self.security_groups, self.block_device_mapping, self.node,
+                    self.limits)
+
+            _build_networks_for_instance.assert_has_calls(
+                    mock.call(self.context, self.instance,
+                        self.requested_networks, self.security_groups))
+
+            _notify_about_instance_usage.assert_has_calls([
+                mock.call(self.context, self.instance, 'create.start',
+                    extra_usage_info={'image_name': self.image.get('name')}),
+                mock.call(self.context, self.instance, 'create.error',
+                    extra_usage_info={'message': exc.format_message()})])
+
+            _instance_update.assert_has_calls([
+                mock.call(self.context, self.instance['uuid'],
+                    vm_state=vm_states.BUILDING,
+                    task_state=task_states.BLOCK_DEVICE_MAPPING),
+                mock.call(self.context, self.instance['uuid'],
+                    vm_state=vm_states.BUILDING,
+                    task_state=task_states.SPAWNING,
+                    expected_task_state=task_states.BLOCK_DEVICE_MAPPING)])
+
+            spawn.assert_has_calls(mock.call(self.context, self.instance,
+                self.image, self.injected_files, self.admin_pass,
+                network_info=self.network_info,
+                block_device_info=self.block_device_info))
+
+            instance_update.assert_has_calls(mock.call(self.context,
+                self.instance['uuid'], mock.ANY, 'conductor'))
+
     def test_reschedule_on_resources_unavailable(self):
         exc = exception.ComputeResourcesUnavailable()
 
@@ -1184,7 +1237,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._build_resources(self.context, self.instance,
                 self.requested_networks, self.security_groups, self.image,
                 self.block_device_mapping).AndRaise(exc)
-        self._notify_about_instance_usage('create.end',
+        self._notify_about_instance_usage('create.error',
             extra_usage_info={'message': exc.format_message()}, stub=False)
         self.mox.ReplayAll()
         self.assertRaises(exception.BuildAbortException,
