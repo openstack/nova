@@ -79,8 +79,6 @@
     "compute_extension:v3:os-remote-consoles": "",
     "compute_extension:v3:os-remote-consoles:discoverable": "",
     "compute_extension:coverage_ext": "rule:admin_api",
-    "compute_extension:v3:os-coverage": "rule:admin_api",
-    "compute_extension:v3:os-coverage:discoverable": "",
     "compute_extension:createserverext": "",
     "compute_extension:deferred_delete": "",
     "compute_extension:v3:os-deferred-delete": "",
