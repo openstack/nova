@@ -165,3 +165,13 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
         instance_href = utils.get_test_instance()
         self.connection.destroy(self.context, instance_href,
                 'fake_networkinfo')
+
+    def test_get_memory_limit_from_sys_meta_in_object(self):
+        instance = utils.get_test_instance(obj=True)
+        limit = self.connection._get_memory_limit_bytes(instance)
+        self.assertEqual(2048 * unit.Mi, limit)
+
+    def test_get_memory_limit_from_sys_meta_in_db_instance(self):
+        instance = utils.get_test_instance(obj=False)
+        limit = self.connection._get_memory_limit_bytes(instance)
+        self.assertEqual(2048 * unit.Mi, limit)

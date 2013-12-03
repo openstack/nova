@@ -259,12 +259,8 @@ class DockerDriver(driver.ComputeDriver):
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)
 
     def _get_memory_limit_bytes(self, instance):
-        for metadata in instance.get('system_metadata', []):
-            if metadata['deleted']:
-                continue
-            if metadata['key'] == 'instance_type_memory_mb':
-                return int(metadata['value']) * unit.Mi
-        return 0
+        system_meta = utils.instance_sys_meta(instance)
+        return int(system_meta.get('instance_type_memory_mb', 0)) * unit.Mi
 
     def _get_image_name(self, context, instance, image):
         fmt = image['container_format']
