@@ -148,7 +148,7 @@ class VolumeOps(object):
 
         # Unplug VBD if we're NOT shutdown
         unplug = not vm_utils.is_vm_shutdown(self._session, vm_ref)
-        self._detach_vbd(vbd_ref, unplug=unplug)
+        self._detach_vbd(vbd_ref, unplug, vm_ref)
 
         LOG.info(_('Mountpoint %(mountpoint)s detached from instance'
                    ' %(instance_name)s'),
@@ -163,9 +163,9 @@ class VolumeOps(object):
             if other_config.get('osvol'):
                 yield vbd_ref
 
-    def _detach_vbd(self, vbd_ref, unplug=False):
+    def _detach_vbd(self, vbd_ref, unplug, vm_ref):
         if unplug:
-            vm_utils.unplug_vbd(self._session, vbd_ref)
+            vm_utils.unplug_vbd(self._session, vbd_ref, vm_ref)
 
         sr_ref = volume_utils.find_sr_from_vbd(self._session, vbd_ref)
         vm_utils.destroy_vbd(self._session, vbd_ref)
@@ -182,7 +182,7 @@ class VolumeOps(object):
 
         vbd_refs = self._get_all_volume_vbd_refs(vm_ref)
         for vbd_ref in vbd_refs:
-            self._detach_vbd(vbd_ref, unplug=unplug)
+            self._detach_vbd(vbd_ref, unplug, vm_ref)
 
     def find_bad_volumes(self, vm_ref):
         """Find any volumes with their connection severed.

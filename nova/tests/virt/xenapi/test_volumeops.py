@@ -52,7 +52,7 @@ class VolumeAttachTestCase(test.NoDBTestCase):
         volumeops.vm_utils.is_vm_shutdown('session', 'vmref').AndReturn(
             False)
 
-        volumeops.vm_utils.unplug_vbd('session', 'vbdref')
+        volumeops.vm_utils.unplug_vbd('session', 'vbdref', 'vmref')
 
         volumeops.vm_utils.destroy_vbd('session', 'vbdref').WithSideEffects(
             regcall('destroy_vbd'))
