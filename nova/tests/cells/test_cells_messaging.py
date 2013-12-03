@@ -1288,7 +1288,8 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.mox.StubOutWithMock(meth_cls.compute_rpcapi, 'snapshot_instance')
 
         def check_state(expected_task_state=None):
-            self.assertEqual(task_states.IMAGE_SNAPSHOT, inst.task_state)
+            self.assertEqual(task_states.IMAGE_SNAPSHOT_PENDING,
+                             inst.task_state)
 
         inst.refresh()
         inst.save(expected_task_state=[None]).WithSideEffects(check_state)

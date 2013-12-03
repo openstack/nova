@@ -2515,7 +2515,7 @@ class ComputeTestCase(BaseTestCase):
                 None, True, None, False)
         instance = db.instance_update(
                 self.context, instance['uuid'],
-                {"task_state": task_states.IMAGE_SNAPSHOT})
+                {"task_state": task_states.IMAGE_SNAPSHOT_PENDING})
         return self._objectify(instance)
 
     def test_snapshot(self):

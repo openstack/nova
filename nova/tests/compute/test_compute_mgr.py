@@ -384,6 +384,37 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.task_state = task_states.SPAWNING
         self._test_init_instance_sets_building_tasks_error(instance)
 
+    def _test_init_instance_cleans_image_states(self, instance):
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_instance_update')
+          ) as (
+            _instance_update,
+          ):
+                self.compute._init_instance(self.context, instance)
+                call = mock.call(self.context, 'foo', task_state=None)
+                _instance_update.assert_has_calls([call])
+
+    def test_init_instance_cleans_image_state_pending_upload(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_PENDING_UPLOAD
+        self._test_init_instance_cleans_image_states(instance)
+
+    def test_init_instance_cleans_image_state_uploading(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_UPLOADING
+        self._test_init_instance_cleans_image_states(instance)
+
+    def test_init_instance_cleans_image_state_snapshot(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_SNAPSHOT
+        self._test_init_instance_cleans_image_states(instance)
+
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
 

@@ -1328,7 +1328,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_method.AndReturn(fake_image)
 
         def check_state(expected_task_state=None):
-            expected_state = (is_snapshot and task_states.IMAGE_SNAPSHOT or
+            expected_state = (is_snapshot and
+                              task_states.IMAGE_SNAPSHOT_PENDING or
                               task_states.IMAGE_BACKUP)
             self.assertEqual(expected_state, instance.task_state)
 
