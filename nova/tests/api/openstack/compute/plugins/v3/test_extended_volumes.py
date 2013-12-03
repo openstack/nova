@@ -181,6 +181,13 @@ class ExtendedVolumesTest(test.TestCase):
         res = self._make_request(url, {"detach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 202)
 
+    def test_detach_volume_from_locked_server(self):
+        url = "/v3/servers/%s/action" % UUID1
+        self.stubs.Set(compute.api.API, 'detach_volume',
+                       fakes.fake_actions_to_locked_server)
+        res = self._make_request(url, {"detach": {"volume_id": UUID1}})
+        self.assertEqual(res.status_int, 409)
+
     def test_detach_with_non_existed_vol(self):
         url = "/v3/servers/%s/action" % UUID1
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get_not_found)
@@ -219,6 +226,13 @@ class ExtendedVolumesTest(test.TestCase):
         url = "/v3/servers/%s/action" % UUID1
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 202)
+
+    def test_attach_volume_to_locked_server(self):
+        url = "/v3/servers/%s/action" % UUID1
+        self.stubs.Set(compute.api.API, 'attach_volume',
+                       fakes.fake_actions_to_locked_server)
+        res = self._make_request(url, {"attach": {"volume_id": UUID1}})
+        self.assertEqual(res.status_int, 409)
 
     def test_attach_volume_with_bad_id(self):
         url = "/v3/servers/%s/action" % UUID1
@@ -291,6 +305,19 @@ class ExtendedVolumesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
         result = self._test_swap()
         self.assertEqual('202 Accepted', result.status)
+
+    def test_swap_volume_for_locked_server(self):
+        def fake_swap_volume_for_locked_server(self, context, instance,
+                                                old_volume, new_volume):
+            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+        self.stubs.Set(compute.api.API, 'swap_volume',
+                       fake_swap_volume_for_locked_server)
+        self.assertRaises(webob.exc.HTTPConflict, self._test_swap)
+
+    def test_swap_volume_for_locked_server_new(self):
+        self.stubs.Set(compute.api.API, 'swap_volume',
+                       fakes.fake_actions_to_locked_server)
+        self.assertRaises(webob.exc.HTTPConflict, self._test_swap)
 
     def test_swap_volume_instance_not_found(self):
         self.stubs.Set(compute.api.API, 'get', fake_compute_get_not_found)

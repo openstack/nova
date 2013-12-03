@@ -1396,6 +1396,16 @@ class ServersControllerDeleteTest(ControllerTest):
                           self._delete_server_instance,
                           uuid='non-existent-uuid')
 
+    def test_delete_locked_server(self):
+        req = self._create_delete_request(FAKE_UUID)
+        self.stubs.Set(compute_api.API, 'soft_delete',
+                       fakes.fake_actions_to_locked_server)
+        self.stubs.Set(compute_api.API, 'delete',
+                       fakes.fake_actions_to_locked_server)
+
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.delete,
+                          req, FAKE_UUID)
+
     def test_delete_server_instance_while_building(self):
         fakes.stub_out_instance_quota(self.stubs, 0, 10)
         request = self._create_delete_request(FAKE_UUID)

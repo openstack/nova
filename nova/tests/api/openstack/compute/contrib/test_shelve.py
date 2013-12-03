@@ -13,14 +13,26 @@
 #    under the License.
 
 import uuid
+import webob
 
 from nova.api.openstack.compute.contrib import shelve
+from nova.compute import api as compute_api
 from nova import db
 from nova import exception
 from nova.openstack.common import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
+
+
+def fake_instance_get_by_uuid(context, instance_id,
+                              columns_to_join=None, use_slave=False):
+    return fake_instance.fake_db_instance(
+        **{'name': 'fake', 'project_id': '%s_unequal' % context.project_id})
+
+
+def fake_auth_context(context):
+    return True
 
 
 class ShelvePolicyTest(test.NoDBTestCase):
@@ -43,16 +55,19 @@ class ShelvePolicyTest(test.NoDBTestCase):
                               policy.parse_rule('')})
         policy.set_rules(rules)
 
-        def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None, use_slave=False):
-            return fake_instance.fake_db_instance(
-                **{'name': 'fake', 'project_id': '%s_unequal' %
-                       context.project_id})
-
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
+
+    def test_shelve_locked_server(self):
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stubs.Set(shelve, 'auth_shelve', fake_auth_context)
+        self.stubs.Set(compute_api.API, 'shelve',
+                       fakes.fake_actions_to_locked_server)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
+                          req, str(uuid.uuid4()), {})
 
     def test_unshelve_restricted_by_role(self):
         rules = policy.Rules({'compute_extension:unshelve':
@@ -69,16 +84,19 @@ class ShelvePolicyTest(test.NoDBTestCase):
                               policy.parse_rule('')})
         policy.set_rules(rules)
 
-        def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None, use_slave=False):
-            return fake_instance.fake_db_instance(
-                **{'name': 'fake', 'project_id': '%s_unequal' %
-                       context.project_id})
-
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
+
+    def test_unshelve_locked_server(self):
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stubs.Set(shelve, 'auth_unshelve', fake_auth_context)
+        self.stubs.Set(compute_api.API, 'unshelve',
+                       fakes.fake_actions_to_locked_server)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
+                          req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_restricted_by_role(self):
         rules = policy.Rules({'compute_extension:shelveOffload':
@@ -95,13 +113,17 @@ class ShelvePolicyTest(test.NoDBTestCase):
                               policy.parse_rule('')})
         policy.set_rules(rules)
 
-        def fake_instance_get_by_uuid(context, instance_id,
-                                      columns_to_join=None, use_slave=False):
-            return fake_instance.fake_db_instance(
-                **{'name': 'fake', 'project_id': '%s_unequal' %
-                       context.project_id})
-
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
+
+    def test_shelve_offload_locked_server(self):
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
+        self.stubs.Set(shelve, 'auth_shelve_offload', fake_auth_context)
+        self.stubs.Set(compute_api.API, 'shelve_offload',
+                       fakes.fake_actions_to_locked_server)
+        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self.controller._shelve_offload,
+                          req, str(uuid.uuid4()), {})

@@ -52,6 +52,8 @@ class ShelveController(wsgi.Controller):
         instance = self._get_instance(context, id)
         try:
             self.compute_api.shelve(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'shelve')
@@ -67,6 +69,8 @@ class ShelveController(wsgi.Controller):
         instance = self._get_instance(context, id)
         try:
             self.compute_api.shelve_offload(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                               'shelveOffload')
@@ -81,6 +85,8 @@ class ShelveController(wsgi.Controller):
         instance = self._get_instance(context, id)
         try:
             self.compute_api.unshelve(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unshelve')

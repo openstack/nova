@@ -24,11 +24,14 @@ from nova.api.openstack.compute.plugins.v3 import servers
 from nova.compute import api as compute_api
 from nova.compute import task_states
 from nova.compute import vm_states
+from nova import context
 from nova import db
 from nova import exception
 from nova.image import glance
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
+from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
@@ -71,6 +74,8 @@ class MockSetAdminPassword(object):
 
 
 class ServerActionsControllerTest(test.TestCase):
+    image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+    image_href = 'http://localhost/v3/images/%s' % image_uuid
 
     def setUp(self):
         super(ServerActionsControllerTest, self).setUp()
@@ -84,7 +89,6 @@ class ServerActionsControllerTest(test.TestCase):
 
         fakes.stub_out_glance(self.stubs)
         fakes.stub_out_nw_api(self.stubs)
-        fakes.stub_out_rate_limiting(self.stubs)
         fakes.stub_out_compute_api_snapshot(self.stubs)
         fake.stub_out_image_service(self.stubs)
         service_class = 'nova.image.glance.GlanceImageService'
@@ -99,6 +103,76 @@ class ServerActionsControllerTest(test.TestCase):
 
         ext_info = plugins.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
+        self.compute_api = self.controller.compute_api
+        self.context = context.RequestContext('fake', 'fake')
+        self.app = fakes.wsgi_app_v3(init_only=('servers',),
+                                     fake_auth_context=self.context)
+
+    def _make_request(self, url, body):
+        req = webob.Request.blank('/v3' + url)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.content_type = 'application/json'
+        return req.get_response(self.app)
+
+    def _stub_instance_get(self, uuid=None):
+        self.mox.StubOutWithMock(compute_api.API, 'get')
+        if uuid is None:
+            uuid = uuidutils.generate_uuid()
+        instance = fake_instance.fake_db_instance(
+            id=1, uuid=uuid, vm_state=vm_states.ACTIVE, task_state=None)
+        instance = instance_obj.Instance._from_db_object(
+            self.context, instance_obj.Instance(), instance)
+
+        self.compute_api.get(self.context, uuid,
+                             want_objects=True).AndReturn(instance)
+        return instance
+
+    def _test_locked_instance(self, action, method=None, body_map=None,
+                              compute_api_args_map=None):
+        if method is None:
+            method = action
+        if body_map is None:
+            body_map = {}
+        if compute_api_args_map is None:
+            compute_api_args_map = {}
+
+        instance = self._stub_instance_get()
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+
+        getattr(compute_api.API, method)(self.context, instance,
+                                         *args, **kwargs).AndRaise(
+            exception.InstanceIsLocked(instance_uuid=instance['uuid']))
+
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance['uuid'],
+                                 {action: body_map.get(action)})
+        self.assertEqual(409, res.status_int)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
+    def test_actions_with_locked_instance(self):
+        actions = ['resize', 'confirm_resize', 'revert_resize', 'reboot',
+                   'rebuild']
+
+        body_map = {'resize': {'flavor_ref': '2'},
+                    'reboot': {'type': 'HARD'},
+                    'rebuild': {'image_ref': self.image_uuid,
+                                'admin_password': 'TNc53Dr8s7vw'}}
+
+        args_map = {'resize': (('2'), {}),
+                    'confirm_resize': ((), {}),
+                    'reboot': (('HARD',), {}),
+                    'rebuild': ((self.image_uuid, 'TNc53Dr8s7vw'), {})}
+
+        for action in actions:
+            self.mox.StubOutWithMock(compute_api.API, action)
+            self._test_locked_instance(action, method=None,
+                                       body_map=body_map,
+                                       compute_api_args_map=args_map)
 
     def test_reboot_hard(self):
         body = dict(reboot=dict(type="HARD"))
@@ -217,17 +291,15 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
         body = {
             'rebuild': {
-                'image_ref': image_uuid,
+                'image_ref': self.image_uuid,
             },
         }
 
         req = fakes.HTTPRequestV3.blank('/v3/servers/a/action')
         self.controller._action_rebuild(req, FAKE_UUID, body)
-        self.assertEqual(info['image_href_in_call'], image_uuid)
+        self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_instance_with_image_href_uses_uuid(self):
         info = dict(image_href_in_call=None)
@@ -240,17 +312,15 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'rebuild', rebuild)
 
         # proper local hrefs must start with 'http://localhost/v3/'
-        image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
-        image_href = 'http://localhost/v3/images/%s' % image_uuid
         body = {
             'rebuild': {
-                'image_ref': image_href,
+                'image_ref': self.image_href,
             },
         }
 
         req = fakes.HTTPRequestV3.blank('/v3/servers/a/action')
         self.controller._action_rebuild(req, FAKE_UUID, body)
-        self.assertEqual(info['image_href_in_call'], image_uuid)
+        self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_accepted_minimum_pass_disabled(self):
         # run with enable_instance_password disabled to verify admin_password
@@ -955,19 +1025,6 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_create_image,
-                          req, FAKE_UUID, body)
-
-    def test_locked(self):
-        def fake_locked(context, instance_uuid,
-                        columns_to_join=None, use_slave=False):
-            return fake_instance.fake_db_instance(name="foo",
-                                                  uuid=FAKE_UUID,
-                                                  locked=True)
-        self.stubs.Set(db, 'instance_get_by_uuid', fake_locked)
-        body = dict(reboot=dict(type="HARD"))
-        req = fakes.HTTPRequestV3.blank(self.url)
-        self.assertRaises(webob.exc.HTTPConflict,
-                          self.controller._action_reboot,
                           req, FAKE_UUID, body)
 
 

@@ -111,6 +111,15 @@ def fake_get_instance_bdms(self, context, instance):
              'volume_size': 1}]
 
 
+def fake_volume_actions_to_locked_server(self, context, instance, volume):
+    raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+
+def fake_volume_actions_to_locked_server(self, context, instance, volume_id,
+                                         device=None):
+    raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+
 class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):
@@ -362,6 +371,22 @@ class VolumeAttachTests(test.TestCase):
                           FAKE_UUID,
                           FAKE_UUID_C)
 
+    def test_detach_volume_from_locked_server(self):
+        def fake_detach_volume_from_locked_server(self, context,
+                                                  instance, volume):
+            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+        self.stubs.Set(compute_api.API,
+                       'detach_volume',
+                       fake_detach_volume_from_locked_server)
+        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req.method = 'DELETE'
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(webob.exc.HTTPConflict, self.attachments.delete,
+                          req, FAKE_UUID, FAKE_UUID_A)
+
     def test_attach_volume(self):
         self.stubs.Set(compute_api.API,
                        'attach_volume',
@@ -376,6 +401,25 @@ class VolumeAttachTests(test.TestCase):
         result = self.attachments.create(req, FAKE_UUID, body)
         self.assertEqual(result['volumeAttachment']['id'],
             '00000000-aaaa-aaaa-aaaa-000000000000')
+
+    def test_attach_volume_to_locked_server(self):
+        def fake_attach_volume_to_locked_server(self, context, instance,
+                                                volume_id, device=None):
+            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+        self.stubs.Set(compute_api.API,
+                       'attach_volume',
+                       fake_attach_volume_to_locked_server)
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
+                                    'device': '/dev/fake'}}
+        req = webob.Request.blank('/v2/servers/id/os-volume_attachments')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
+                          req, FAKE_UUID, body)
 
     def test_attach_volume_bad_id(self):
         self.stubs.Set(compute_api.API,
@@ -398,10 +442,11 @@ class VolumeAttachTests(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.attachments.create,
                           req, FAKE_UUID, body)
 
-    def _test_swap(self, uuid=FAKE_UUID_A):
+    def _test_swap(self, uuid=FAKE_UUID_A, fake_func=None):
+        fake_func = fake_func or fake_swap_volume
         self.stubs.Set(compute_api.API,
                        'swap_volume',
-                       fake_swap_volume)
+                       fake_func)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_B,
                                     'device': '/dev/fake'}}
         req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
@@ -410,6 +455,17 @@ class VolumeAttachTests(test.TestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
         return self.attachments.update(req, FAKE_UUID, uuid, body)
+
+    def test_swap_volume_for_locked_server(self):
+        self.ext_mgr.extensions['os-volume-attachment-update'] = True
+
+        def fake_swap_volume_for_locked_server(self, context, instance,
+                                                old_volume, new_volume):
+            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+        self.ext_mgr.extensions['os-volume-attachment-update'] = True
+        self.assertRaises(webob.exc.HTTPConflict, self._test_swap,
+                          fake_func=fake_swap_volume_for_locked_server)
 
     def test_swap_volume_no_extension(self):
         self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap)
