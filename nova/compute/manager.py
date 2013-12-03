@@ -2128,6 +2128,30 @@ class ComputeManager(manager.Manager):
                 task_state=None)
         self._notify_about_instance_usage(context, instance, "restore.end")
 
+    def _rebuild_default_impl(self, context, instance, image_meta,
+                              injected_files, admin_password, bdms,
+                              detach_block_devices, attach_block_devices,
+                              network_info=None,
+                              recreate=False, block_device_info=None):
+        detach_block_devices(context, bdms)
+
+        if not recreate:
+            self.driver.destroy(context, instance, network_info,
+                                block_device_info=block_device_info)
+
+        instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
+        instance.save(expected_task_state=[task_states.REBUILDING])
+
+        new_block_device_info = attach_block_devices(context, instance, bdms)
+
+        instance.task_state = task_states.REBUILD_SPAWNING
+        instance.save(
+            expected_task_state=[task_states.REBUILD_BLOCK_DEVICE_MAPPING])
+
+        self.driver.spawn(context, instance, image_meta, injected_files,
+                          admin_password, network_info=network_info,
+                          block_device_info=new_block_device_info)
+
     @object_compat
     @wrap_exception()
     @reverts_task_state
@@ -2232,36 +2256,32 @@ class ComputeManager(manager.Manager):
                         block_device_mapping_get_all_by_instance(
                                 context, obj_base.obj_to_primitive(instance))
 
-            # NOTE(sirp): this detach is necessary b/c we will reattach the
-            # volumes in _prep_block_devices below.
-            for bdm in self._get_volume_bdms(bdms):
-                self.volume_api.detach(context, bdm['volume_id'])
+            block_device_info = \
+                self._get_instance_volume_block_device_info(context, instance)
 
-            if not recreate:
-                block_device_info = \
-                        self._get_instance_volume_block_device_info(
-                                context, instance)
-                self.driver.destroy(context, instance,
-                                    network_info,
-                                    block_device_info=block_device_info)
-
-            instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
-            instance.save(expected_task_state=[task_states.REBUILDING])
-
-            block_device_info = self._prep_block_device(
-                    context, instance, bdms)
+            def detach_block_devices(context, bdms):
+                for bdm in self._get_volume_bdms(bdms):
+                    self.volume_api.detach(context, bdm['volume_id'])
 
             files = self._decode_files(injected_files)
 
-            instance.task_state = task_states.REBUILD_SPAWNING
-            instance.save(expected_task_state=[
-                    task_states.REBUILD_BLOCK_DEVICE_MAPPING])
-
-            self.driver.spawn(context, instance, image_meta,
-                              files, new_pass,
-                              network_info=network_info,
-                              block_device_info=block_device_info)
-
+            kwargs = dict(
+                context=context,
+                instance=instance,
+                image_meta=image_meta,
+                injected_files=files,
+                admin_password=new_pass,
+                bdms=bdms,
+                detach_block_devices=detach_block_devices,
+                attach_block_devices=self._prep_block_device,
+                block_device_info=block_device_info,
+                network_info=network_info)
+            try:
+                self.driver.rebuild(**kwargs)
+            except NotImplementedError:
+                # NOTE(rpodolyaka): driver doesn't provide specialized version
+                # of rebuild, fall back to the default implementation
+                self._rebuild_default_impl(**kwargs)
             instance.power_state = self._get_power_state(context, instance)
             instance.vm_state = vm_states.ACTIVE
             instance.task_state = None

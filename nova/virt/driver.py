@@ -214,6 +214,45 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def rebuild(self, context, instance, image_meta, injected_files,
+                admin_password, bdms, detach_block_devices,
+                attach_block_devices, network_info=None,
+                recreate=False, block_device_info=None):
+        """Destroy and re-make this instance.
+
+        A 'rebuild' effectively purges all existing data from the system and
+        remakes the VM with given 'metadata' and 'personalities'.
+
+        This base class method shuts down the VM, detaches all block devices,
+        then spins up the new VM afterwards. It may be overridden by
+        hypervisors that need to - e.g. for optimisations, or when the 'VM'
+        is actually proxied and needs to be held across the shutdown + spin
+        up steps.
+
+        :param context: security context
+        :param instance: Instance object as returned by DB layer.
+                         This function should use the data there to guide
+                         the creation of the new instance.
+        :param image_meta: image object returned by nova.image.glance that
+                           defines the image from which to boot this instance
+        :param injected_files: User files to inject into instance.
+        :param admin_password: Administrator password to set in instance.
+        :param bdms: block-device-mappings to use for rebuild
+        :param detach_block_devices: function to detach block devices. See
+            nova.compute.manager.ComputeManager:_rebuild_default_impl for
+            usage.
+        :param attach_block_devices: function to attach block devices. See
+            nova.compute.manager.ComputeManager:_rebuild_default_impl for
+            usage.
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param recreate: True if the instance is being recreated on a new
+            hypervisor - all the cleanup of old state is skipped.
+        :param block_device_info: Information about block devices to be
+                                  attached to the instance.
+        """
+        raise NotImplementedError()
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
         """
