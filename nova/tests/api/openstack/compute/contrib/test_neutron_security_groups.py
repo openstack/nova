@@ -81,7 +81,7 @@ class TestNeutronSecurityGroups(
         return neutron.create_port(body)
 
     def test_create_security_group_with_no_description(self):
-        # Neutron's security group descirption field is optional.
+        # Neutron's security group description field is optional.
         pass
 
     def test_create_security_group_with_blank_name(self):
@@ -93,7 +93,7 @@ class TestNeutronSecurityGroups(
         pass
 
     def test_create_security_group_with_blank_description(self):
-        # Neutron's security group descirption field is optional.
+        # Neutron's security group description field is optional.
         pass
 
     def test_create_security_group_with_whitespace_description(self):
