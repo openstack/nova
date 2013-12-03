@@ -1273,7 +1273,7 @@ class ComputeManager(manager.Manager):
         network_info = self._allocate_network(context, instance,
                 requested_networks, macs, security_groups, dhcp_options)
 
-        if not instance['access_ip_v4'] and not instance['access_ip_v6']:
+        if not instance.access_ip_v4 and not instance.access_ip_v6:
             # If CONF.default_access_ip_network_name is set, grab the
             # corresponding network and set the access ip values accordingly.
             # Note that when there are multiple ips to choose from, an
@@ -1282,16 +1282,14 @@ class ComputeManager(manager.Manager):
             if not network_name:
                 return network_info
 
-            access_ips = {}
             for vif in network_info:
                 if vif['network']['label'] == network_name:
                     for ip in vif.fixed_ips():
                         if ip['version'] == 4:
-                            access_ips['access_ip_v4'] = ip['address']
+                            instance.access_ip_v4 = ip['address']
                         if ip['version'] == 6:
-                            access_ips['access_ip_v6'] = ip['address']
-                    self._instance_update(context, instance['uuid'],
-                            **access_ips)
+                            instance.access_ip_v6 = ip['address']
+                    instance.save()
                     break
 
         return network_info
@@ -1576,7 +1574,7 @@ class ComputeManager(manager.Manager):
                      security_groups=None, block_device_mapping=None,
                      node=None, limits=None):
 
-        @utils.synchronized(instance['uuid'])
+        @utils.synchronized(instance.uuid)
         def do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
                 requested_networks, security_groups, block_device_mapping,
@@ -1585,9 +1583,10 @@ class ComputeManager(manager.Manager):
             try:
                 LOG.audit(_('Starting instance...'), context=context,
                       instance=instance)
-                self._instance_update(context, instance['uuid'],
-                        vm_state=vm_states.BUILDING, task_state=None,
-                        expected_task_state=(task_states.SCHEDULING, None))
+                instance.vm_state = vm_states.BUILDING
+                instance.task_state = None
+                instance.save(expected_task_state=
+                        (task_states.SCHEDULING, None))
             except exception.InstanceNotFound:
                 msg = _('Instance disappeared before build.')
                 LOG.debug(msg, instance=instance)
@@ -1618,8 +1617,8 @@ class ComputeManager(manager.Manager):
                     self._cleanup_allocated_networks(context, instance,
                             requested_networks)
 
-                self._instance_update(context, instance['uuid'],
-                        task_state=task_states.SCHEDULING)
+                instance.task_state = task_states.SCHEDULING
+                instance.save()
 
                 self.compute_task_api.build_instances(context, [instance],
                         image, filter_properties, admin_password,
@@ -1632,7 +1631,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance.uuid)
             except exception.UnexpectedTaskStateError as e:
                 LOG.debug(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
@@ -1643,7 +1642,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception(msg, instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
-                self._set_instance_error_state(context, instance['uuid'])
+                self._set_instance_error_state(context, instance.uuid)
 
         do_build_and_run_instance(context, instance, image, request_spec,
                 filter_properties, admin_password, injected_files,
@@ -1663,10 +1662,9 @@ class ComputeManager(manager.Manager):
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image,
                         block_device_mapping) as resources:
-                    instance = self._instance_update(context, instance['uuid'],
-                            vm_state=vm_states.BUILDING,
-                            task_state=task_states.SPAWNING,
-                            expected_task_state=
+                    instance.vm_state = vm_states.BUILDING
+                    instance.task_state = task_states.SPAWNING
+                    instance.save(expected_task_state=
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
@@ -1694,7 +1692,7 @@ class ComputeManager(manager.Manager):
                     'create.error',
                     extra_usage_info={'message': e.format_message()})
             raise exception.RescheduledException(
-                    instance_uuid=instance['uuid'], reason=e.format_message())
+                    instance_uuid=instance.uuid, reason=e.format_message())
         except exception.BuildAbortException as e:
             with excutils.save_and_reraise_exception():
                 LOG.debug(e.format_message, instance=instance)
@@ -1711,20 +1709,20 @@ class ComputeManager(manager.Manager):
                     'create.error', extra_usage_info={'message':
                         e.format_message()})
             msg = _('Failed to allocate the network(s), not rescheduling.')
-            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
         except Exception as e:
             self._notify_about_instance_usage(context, instance,
                     'create.error',
                     extra_usage_info={'message': str(e)})
             raise exception.RescheduledException(
-                    instance_uuid=instance['uuid'], reason=str(e))
+                    instance_uuid=instance.uuid, reason=str(e))
 
-        current_power_state = self._get_power_state(context, instance)
-        self._instance_update(context, instance['uuid'],
-                power_state=current_power_state, vm_state=vm_states.ACTIVE,
-                task_state=None, expected_task_state=task_states.SPAWNING,
-                launched_at=timeutils.utcnow())
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.launched_at = timeutils.utcnow()
+        instance.save(expected_task_state=task_states.SPAWNING)
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
@@ -1745,13 +1743,12 @@ class ComputeManager(manager.Manager):
             # when the driver accesses network_info during spawn().
             LOG.exception('Failed to allocate network(s)', instance=instance)
             msg = _('Failed to allocate the network(s), not rescheduling.')
-            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
 
-        self._instance_update(
-                context, instance['uuid'],
-                vm_state=vm_states.BUILDING,
-                task_state=task_states.BLOCK_DEVICE_MAPPING)
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+        instance.save()
 
         try:
             block_device_info = self._prep_block_device(context, instance,
@@ -1761,7 +1758,7 @@ class ComputeManager(manager.Manager):
             LOG.exception(_('Failure prepping block device'),
                     instance=instance)
             msg = _('Failure prepping block device.')
-            raise exception.BuildAbortException(instance_uuid=instance['uuid'],
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
 
         try:
@@ -1780,7 +1777,7 @@ class ComputeManager(manager.Manager):
                     msg = _('Could not clean up failed build,'
                             ' not rescheduling')
                     raise exception.BuildAbortException(
-                            instance_uuid=instance['uuid'], reason=msg)
+                            instance_uuid=instance.uuid, reason=msg)
 
     def _cleanup_allocated_networks(self, context, instance,
             requested_networks):
@@ -1794,7 +1791,7 @@ class ComputeManager(manager.Manager):
             block_device_mapping):
         # Don't clean up networks here in case we reschedule
         try:
-            self._cleanup_volumes(context, instance['uuid'],
+            self._cleanup_volumes(context, instance.uuid,
                     block_device_mapping)
         except Exception:
             with excutils.save_and_reraise_exception():
