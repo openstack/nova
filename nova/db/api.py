@@ -27,6 +27,7 @@ these objects be simple dictionaries.
 
 """
 
+from eventlet import tpool
 from oslo.config import cfg
 
 from nova.cells import rpcapi as cells_rpcapi
@@ -45,18 +46,54 @@ db_opts = [
     cfg.StrOpt('snapshot_name_template',
                default='snapshot-%s',
                help='Template string to be used to generate snapshot names'),
-    ]
+]
+
+tpool_opts = [
+    cfg.BoolOpt('use_tpool',
+                default=False,
+                deprecated_name='dbapi_use_tpool',
+                deprecated_group='DEFAULT',
+                help='Enable the experimental use of thread pooling for '
+                     'all DB API calls'),
+]
 
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
+CONF.register_opts(tpool_opts, 'database')
 CONF.import_opt('backend', 'nova.openstack.common.db.options',
                 group='database')
 
 _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 
 
-IMPL = db_api.DBAPI(CONF.database.backend, backend_mapping=_BACKEND_MAPPING,
-                    lazy=True)
+class NovaDBAPI(object):
+    """Nova's DB API wrapper class.
+
+    This wraps the oslo DB API with an option to be able to use eventlet's
+    thread pooling. Since the CONF variable may not be loaded at the time
+    this class is instantiated, we must look at it on the first DB API call.
+    """
+
+    def __init__(self):
+        self.__db_api = None
+
+    @property
+    def _db_api(self):
+        if not self.__db_api:
+            nova_db_api = db_api.DBAPI(CONF.database.backend,
+                                       backend_mapping=_BACKEND_MAPPING)
+            if CONF.database.use_tpool:
+                self.__db_api = tpool.Proxy(nova_db_api)
+            else:
+                self.__db_api = nova_db_api
+        return self.__db_api
+
+    def __getattr__(self, key):
+        return getattr(self._db_api, key)
+
+
+IMPL = NovaDBAPI()
+
 LOG = logging.getLogger(__name__)
 
 # The maximum value a signed INT type may have
