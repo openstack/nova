@@ -2598,7 +2598,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # In managed mode, the configured device will be automatically
         # detached from the host OS drivers when the guest is started,
         # and then re-attached when the guest shuts down.
-        if CONF.libvirt.virt_type not in ('xen'):
+        if CONF.libvirt.virt_type != 'xen':
             # we do manual detach only for xen
             return
         try:
@@ -2951,7 +2951,7 @@ class LibvirtDriver(driver.ComputeDriver):
         dev.domain, dev.bus, dev.slot, dev.function = dbsf
 
         # only kvm support managed mode
-        if CONF.libvirt.virt_type in ('xen'):
+        if CONF.libvirt.virt_type in ('xen',):
             dev.managed = 'no'
         if CONF.libvirt.virt_type in ('kvm', 'qemu'):
             dev.managed = 'yes'
