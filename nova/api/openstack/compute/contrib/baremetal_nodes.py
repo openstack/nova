@@ -15,6 +15,7 @@
 
 """The bare-metal admin extension."""
 
+import netaddr
 import webob
 
 from nova.api.openstack import extensions
@@ -53,6 +54,20 @@ def _make_node_elem(elem):
 def _make_interface_elem(elem):
     for f in interface_fields:
         elem.set(f)
+
+
+def is_valid_mac(address):
+    """Verify the format of a MAC addres."""
+
+    class mac_dialect(netaddr.mac_eui48):
+        word_fmt = '%.02x'
+        word_sep = ':'
+
+    try:
+        na = netaddr.EUI(address, dialect=mac_dialect)
+    except Exception:
+        return False
+    return str(na) == address.lower()
 
 
 class NodeTemplate(xmlutil.TemplateBuilder):
@@ -142,6 +157,11 @@ class BareMetalNodeController(wsgi.Controller):
         authorize(context)
         values = body['node'].copy()
         prov_mac_address = values.pop('prov_mac_address', None)
+        if (prov_mac_address is not None
+                and not is_valid_mac(prov_mac_address)):
+            raise webob.exc.HTTPBadRequest(
+                    explanation=_("Must specify address "
+                                  "in the form of xx:xx:xx:xx:xx:xx"))
         node = db.bm_node_create(context, values)
         node = self._node_dict(node)
         if prov_mac_address:
@@ -181,6 +201,10 @@ class BareMetalNodeController(wsgi.Controller):
         address = body['address']
         datapath_id = body.get('datapath_id')
         port_no = body.get('port_no')
+        if not is_valid_mac(address):
+            raise webob.exc.HTTPBadRequest(
+                    explanation=_("Must specify address "
+                                  "in the form of xx:xx:xx:xx:xx:xx"))
         if_id = db.bm_interface_create(context,
                                        bm_node_id=id,
                                        address=address,
