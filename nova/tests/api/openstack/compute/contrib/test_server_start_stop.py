@@ -89,7 +89,7 @@ class ServerStartStopTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        body = dict(start="")
+        body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, 'test_inst', body)
 
@@ -97,7 +97,7 @@ class ServerStartStopTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_locked_server)
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        body = dict(start="")
+        body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, 'test_inst', body)
 
@@ -109,6 +109,6 @@ class ServerStartStopTest(test.TestCase):
 
     def test_stop_with_bogus_id(self):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
-        body = dict(start="")
+        body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, req, 'test_inst', body)

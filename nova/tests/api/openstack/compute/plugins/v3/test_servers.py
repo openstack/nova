@@ -1447,14 +1447,14 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
     def test_stop_not_ready(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
-        body = dict(start="")
+        body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
     def test_stop_locked_server(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_locked_server)
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
-        body = dict(start="")
+        body = dict(stop="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
@@ -1470,7 +1470,7 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.stubs.Set(db, 'instance_get_by_uuid',
                        fake_instance_get_by_uuid_not_found)
         req = fakes.HTTPRequestV3.blank('/servers/test_inst/action')
-        body = dict(start="")
+        body = dict(stop="")
         self.assertRaises(webob.exc.HTTPNotFound,
             self.controller._stop_server, req, 'test_inst', body)
 
