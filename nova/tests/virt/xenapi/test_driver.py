@@ -21,6 +21,7 @@ from nova.tests.virt.xenapi import stubs
 from nova import unit
 from nova.virt import fake
 from nova.virt import xenapi
+from nova.virt.xenapi import driver as xenapi_driver
 
 
 class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
@@ -62,11 +63,14 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                    connection_password='test_pass', group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         driver = xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
-        instance = {'memory_mb': 30720}
+        instance = {'memory_mb': 30720, 'vcpus': 4}
 
         # expected memory overhead per:
         # https://wiki.openstack.org/wiki/XenServer/Overhead
-        expected = math.ceil(251.832)
+        expected = ((instance['memory_mb'] * xenapi_driver.OVERHEAD_PER_MB) +
+                    (instance['vcpus'] * xenapi_driver.OVERHEAD_PER_VCPU) +
+                    xenapi_driver.OVERHEAD_BASE)
+        expected = math.ceil(expected)
         overhead = driver.estimate_instance_overhead(instance)
         self.assertEqual(expected, overhead['memory_mb'])
 
