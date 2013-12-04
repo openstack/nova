@@ -46,6 +46,7 @@ from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.vmwareapi import vif as vmwarevif
+from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
@@ -1294,10 +1295,36 @@ class VMwareVMOps(object):
                 'num_cpu': int(query['summary.config.numCpu']),
                 'cpu_time': 0}
 
+    def _get_diagnostic_from_object_properties(self, props, wanted_props):
+        diagnostics = {}
+        while props:
+            for elem in props.objects:
+                for prop in elem.propSet:
+                    if prop.name in wanted_props:
+                        prop_dict = vim.object_to_dict(prop.val, list_depth=1)
+                        diagnostics.update(prop_dict)
+            token = vm_util._get_token(props)
+            if not token:
+                break
+
+            props = self._session._call_method(vim_util,
+                                               "continue_to_get_objects",
+                                               token)
+        return diagnostics
+
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
-        msg = _("get_diagnostics not implemented for vmwareapi")
-        raise NotImplementedError(msg)
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        lst_properties = ["summary.config",
+                          "summary.quickStats",
+                          "summary.runtime"]
+        vm_props = self._session._call_method(vim_util,
+                    "get_object_properties", None, vm_ref, "VirtualMachine",
+                    lst_properties)
+        data = self._get_diagnostic_from_object_properties(vm_props,
+                                                           set(lst_properties))
+        # Add a namespace to all of the diagnostsics
+        return dict([('vmware:' + k, v) for k, v in data.items()])
 
     def get_console_output(self, instance):
         """Return snapshot of console."""

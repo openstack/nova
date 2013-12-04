@@ -653,9 +653,23 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           instance=None)
 
     def test_get_diagnostics(self):
-        # Simply tests that the VMwareESXDriver doesn't implement the
-        # get_diagnostics API.
-        self.assertRaises(NotImplementedError, self.conn.get_diagnostics, None)
+        self._create_vm()
+        expected = {'memoryReservation': 0, 'suspendInterval': 0,
+                    'maxCpuUsage': 2000, 'toolsInstallerMounted': False,
+                    'consumedOverheadMemory': 20, 'numEthernetCards': 1,
+                    'numCpu': 1, 'featureRequirement': [{'key': 'cpuid.AES'}],
+                    'memoryOverhead': 21417984,
+                    'guestMemoryUsage': 0, 'connectionState': 'connected',
+                    'memorySizeMB': 512, 'balloonedMemory': 0,
+                    'vmPathName': 'fake_path', 'template': False,
+                    'overallCpuUsage': 0, 'powerState': 'poweredOn',
+                    'cpuReservation': 0, 'overallCpuDemand': 0,
+                    'numVirtualDisks': 1, 'hostMemoryUsage': 141}
+        expected = dict([('vmware:' + k, v) for k, v in expected.items()])
+        self.assertThat(
+                self.conn.get_diagnostics({'name': 1, 'uuid': self.uuid,
+                                           'node': self.instance_node}),
+                matchers.DictMatches(expected))
 
     def test_get_console_output(self):
         self._create_instance_in_the_db()
@@ -1214,13 +1228,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertRaises(NotImplementedError,
                           self.conn.unplug_vifs,
                           instance=self.instance, network_info=None)
-
-    def test_get_diagnostics(self):
-        # Tests that the VMwareVCDriver doesn't implement get_diagnostics.
-        self._create_instance_in_the_db()
-        self.assertRaises(NotImplementedError,
-                          self.conn.get_diagnostics,
-                          self.instance)
 
     def test_migrate_disk_and_power_off(self):
         def fake_update_instance_progress(context, instance, step,
