@@ -204,6 +204,8 @@ class BaseMigrationTestCase(test.NoDBTestCase):
     PASSWD = None
     DATABASE = None
 
+    TIMEOUT_SCALING_FACTOR = 2
+
     def __init__(self, *args, **kwargs):
         super(BaseMigrationTestCase, self).__init__(*args, **kwargs)
 
