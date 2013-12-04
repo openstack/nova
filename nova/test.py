@@ -200,6 +200,11 @@ class TestCase(testtools.TestCase):
     """
     USES_DB = True
 
+    # NOTE(rpodolyaka): this attribute can be overridden in subclasses in order
+    #                   to scale the global test timeout value set for each
+    #                   test case separately. Use 0 value to disable timeout.
+    TIMEOUT_SCALING_FACTOR = 1
+
     def setUp(self):
         """Run before each test method to initialize test environment."""
         super(TestCase, self).setUp()
@@ -209,6 +214,12 @@ class TestCase(testtools.TestCase):
         except ValueError:
             # If timeout value is invalid do not set a timeout.
             test_timeout = 0
+
+        if self.TIMEOUT_SCALING_FACTOR >= 0:
+            test_timeout *= self.TIMEOUT_SCALING_FACTOR
+        else:
+            raise ValueError('TIMEOUT_SCALING_FACTOR value must be >= 0')
+
         if test_timeout > 0:
             self.useFixture(fixtures.Timeout(test_timeout, gentle=True))
         self.useFixture(fixtures.NestedTempfile())
