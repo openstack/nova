@@ -8549,10 +8549,13 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
         metadata = {'foo_key1': 'foo_value1',
-                    'foo_key2': 'foo_value2', }
+                    'foo_key2': 'foo_value2',
+                    'availability_zone': 'fake_zone'}
         fake_notifier.NOTIFICATIONS = []
+        availability_zones._get_cache().add('fake_key', 'fake_value')
         aggr = self.api.update_aggregate_metadata(self.context, aggr['id'],
                                                   metadata)
+        self.assertIsNone(availability_zones._get_cache().get('fake_key'))
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -8617,6 +8620,12 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         self.stubs.Set(self.api.compute_rpcapi, 'add_aggregate_host',
                        fake_add_aggregate_host)
+
+        self.mox.StubOutWithMock(availability_zones,
+                                 'update_host_availability_zone_cache')
+        availability_zones.update_host_availability_zone_cache(self.context,
+                                                               fake_host)
+        self.mox.ReplayAll()
 
         fake_notifier.NOTIFICATIONS = []
         aggr = self.api.add_host_to_aggregate(self.context,
@@ -8723,6 +8732,12 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         self.stubs.Set(self.api.compute_rpcapi, 'remove_aggregate_host',
                        fake_remove_aggregate_host)
+
+        self.mox.StubOutWithMock(availability_zones,
+                                 'update_host_availability_zone_cache')
+        availability_zones.update_host_availability_zone_cache(self.context,
+                                                               host_to_remove)
+        self.mox.ReplayAll()
 
         fake_notifier.NOTIFICATIONS = []
         expected = self.api.remove_host_from_aggregate(self.context,

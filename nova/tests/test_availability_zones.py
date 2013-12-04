@@ -87,6 +87,20 @@ class AvailabilityZoneTestCases(test.TestCase):
         az.reset_cache()
         self.assertIsNone(az._get_cache().get('cache'))
 
+    def test_update_host_availability_zone_cache(self):
+        """Test availability zone cache could be update."""
+        service = self._create_service_with_topic('compute', self.host)
+
+        # Create a new aggregate with an AZ and add the host to the AZ
+        az_name = 'az1'
+        cache_key = az._make_cache_key(self.host)
+        agg_az1 = self._create_az('agg-az1', az_name)
+        self._add_to_aggregate(service, agg_az1)
+        az.update_host_availability_zone_cache(self.context, self.host)
+        self.assertEqual(az._get_cache().get(cache_key), 'az1')
+        az.update_host_availability_zone_cache(self.context, self.host, 'az2')
+        self.assertEqual(az._get_cache().get(cache_key), 'az2')
+
     def test_set_availability_zone_compute_service(self):
         """Test for compute service get right availability zone."""
         service = self._create_service_with_topic('compute', self.host)
