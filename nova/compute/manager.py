@@ -4445,8 +4445,8 @@ class ComputeManager(manager.Manager):
             self._get_instance_nw_info(context, instance)
             LOG.debug(_('Updated the info_cache for instance'),
                       instance=instance)
-        except Exception as e:
-            LOG.debug(_("An error occurred: %s"), e)
+        except Exception:
+            LOG.debug(_("An error occurred"), exc_info=True)
 
     @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):
