@@ -97,7 +97,7 @@ def get_host_availability_zone(context, host, conductor_api=None):
 
 
 def get_availability_zones(context, get_only_available=False):
-    """Return available and unavailable zones on demands.
+    """Return available and unavailable zones on demand.
 
        :param get_only_available: flag to determine whether to return
            available zones only, default False indicates return both

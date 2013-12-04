@@ -596,7 +596,7 @@ class NoMoreNetworks(NovaException):
 
 
 class NetworkNotFoundForProject(NotFound):
-    msg_fmt = _("Either Network uuid %(network_uuid)s is not present or "
+    msg_fmt = _("Either network uuid %(network_uuid)s is not present or "
                 "is not assigned to the project %(project_id)s.")
 
 
@@ -1248,7 +1248,7 @@ class InstanceUserDataMalformed(NovaException):
 
 
 class UnexpectedTaskStateError(NovaException):
-    msg_fmt = _("unexpected task state: expecting %(expected)s but "
+    msg_fmt = _("Unexpected task state: expecting %(expected)s but "
                 "the actual state is %(actual)s")
 
 
@@ -1266,7 +1266,7 @@ class InstanceActionEventNotFound(NovaException):
 
 
 class UnexpectedVMStateError(NovaException):
-    msg_fmt = _("unexpected VM state: expecting %(expected)s but "
+    msg_fmt = _("Unexpected VM state: expecting %(expected)s but "
                 "the actual state is %(actual)s")
 
 
@@ -1421,24 +1421,24 @@ class PciDeviceNotFound(NovaException):
 
 class PciDeviceInvalidStatus(NovaException):
     msg_fmt = _(
-        "PCI Device %(compute_node_id)s:%(address)s is %(status)s "
+        "PCI device %(compute_node_id)s:%(address)s is %(status)s "
         "instead of %(hopestatus)s")
 
 
 class PciDeviceInvalidOwner(NovaException):
     msg_fmt = _(
-        "PCI Device %(compute_node_id)s:%(address)s is owned by %(owner)s "
+        "PCI device %(compute_node_id)s:%(address)s is owned by %(owner)s "
         "instead of %(hopeowner)s")
 
 
 class PciDeviceRequestFailed(NovaException):
     msg_fmt = _(
-        "PCI Device request (%requests)s failed")
+        "PCI device request (%requests)s failed")
 
 
 class PciDevicePoolEmpty(NovaException):
     msg_fmt = _(
-        "Attempt to consume PCI Device %(compute_node_id)s:%(address)s "
+        "Attempt to consume PCI device %(compute_node_id)s:%(address)s "
         "from empty pool")
 
 
@@ -1484,4 +1484,4 @@ class PciDeviceUnsupportedHypervisor(NovaException):
 
 
 class KeyManagerError(NovaException):
-    msg_fmt = _("key manager error: %(reason)s")
+    msg_fmt = _("Key manager error: %(reason)s")
