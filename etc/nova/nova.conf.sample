@@ -669,11 +669,6 @@
 # where instances are stored on disk (string value)
 #instances_path=$state_path/instances
 
-# Where cached images are stored under $instances_path.This is
-# NOT the full path - just a folder name.For per-compute-host
-# cached images, set to _base_$my_ip (string value)
-#image_cache_subdirectory_name=_base
-
 # Generate periodic compute.instance.exists notifications
 # (boolean value)
 #instance_usage_audit=false
@@ -705,9 +700,9 @@
 # updates (integer value)
 #heal_instance_info_cache_interval=60
 
-# Number of seconds to wait between runs of the image cache
-# manager (integer value)
-#image_cache_manager_interval=2400
+# Interval in seconds for querying the host status (integer
+# value)
+#host_state_interval=120
 
 # Interval in seconds for reclaiming deleted instances
 # (integer value)
@@ -1947,6 +1942,27 @@
 
 
 #
+# Options defined in nova.virt.imagecache
+#
+
+# Number of seconds to wait between runs of the image cache
+# manager (integer value)
+#image_cache_manager_interval=2400
+
+# Where cached images are stored under $instances_path. This
+# is NOT the full path - just a folder name. For per-compute-
+# host cached images, set to _base_$my_ip (string value)
+#image_cache_subdirectory_name=_base
+
+# Should unused base images be removed? (boolean value)
+#remove_unused_base_images=true
+
+# Unused unresized base images younger than this will not be
+# removed (integer value)
+#remove_unused_original_minimum_age_seconds=86400
+
+
+#
 # Options defined in nova.virt.images
 #
 
@@ -2600,9 +2616,6 @@
 # locations (string value)
 #image_info_filename_pattern=$instances_path/$image_cache_subdirectory_name/%(image)s.info
 
-# Should unused base images be removed? (boolean value)
-#remove_unused_base_images=true
-
 # Should unused kernel images be removed? This is only safe to
 # enable if all compute nodes have been updated to support
 # this option. This will be enabled by default in future.
@@ -2612,10 +2625,6 @@
 # Unused resized base images younger than this will not be
 # removed (integer value)
 #remove_unused_resized_minimum_age_seconds=3600
-
-# Unused unresized base images younger than this will not be
-# removed (integer value)
-#remove_unused_original_minimum_age_seconds=86400
 
 # Write a checksum for files in _base to disk (boolean value)
 #checksum_base_images=false

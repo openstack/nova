@@ -83,7 +83,7 @@ __imagebackend_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts, 'libvirt')
-CONF.import_opt('image_cache_subdirectory_name', 'nova.compute.manager')
+CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('preallocate_images', 'nova.virt.driver')
 
 LOG = logging.getLogger(__name__)

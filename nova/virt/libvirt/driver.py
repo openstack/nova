@@ -4605,7 +4605,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""
-        self.image_cache_manager.verify_base_images(context, all_instances)
+        self.image_cache_manager.update(context, all_instances)
 
     def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize,
                                   shared_storage=False):
