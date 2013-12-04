@@ -86,10 +86,7 @@ neutron_opts = [
     cfg.StrOpt('neutron_ca_certificates_file',
                 help='Location of ca certificates file to use for '
                      'neutron client requests.'),
-    cfg.BoolOpt('dhcp_options_enabled',
-                default=False,
-                help='Use per-port DHCP options with Neutron'),
-    ]
+   ]
 
 CONF = cfg.CONF
 CONF.register_opts(neutron_opts)
@@ -227,10 +224,7 @@ class API(base.Base):
             raise exception.InvalidInput(
                 reason=msg % instance['display_name'])
         requested_networks = kwargs.get('requested_networks')
-        # Note: (dkehn) this option check should be removed as soon as support
-        # in neutron released, see https://bugs.launchpad.net/nova/+bug/1214162
-        if CONF.dhcp_options_enabled:
-            dhcp_opts = kwargs.get('dhcp_options', None)
+        dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
         fixed_ips = {}
         net_ids = []
