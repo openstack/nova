@@ -74,6 +74,8 @@ class NeutronNovaIPAMLib(object):
         """
         # TODO(tr3buchet): link fixed_ips to vif by uuid so only 1 db call
         vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
+        if not vif_rec or not vif_rec['id']:
+            return []
         fixed_ips = db.fixed_ips_by_virtual_interface(context,
                                                       vif_rec['id'])
         return [fixed_ip['address'] for fixed_ip in fixed_ips]
@@ -85,7 +87,7 @@ class NeutronNovaIPAMLib(object):
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, net_id)
         vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
-        if network['cidr_v6']:
+        if network['cidr_v6'] and vif_rec and vif_rec['address']:
             ip = ipv6.to_global(network['cidr_v6'],
                                 vif_rec['address'],
                                 project_id)
