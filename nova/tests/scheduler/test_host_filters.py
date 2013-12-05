@@ -635,14 +635,23 @@ class HostFiltersTestCase(test.NoDBTestCase):
                  'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
 
-    def test_compute_filter_fails_on_service_disabled(self):
+    def _test_compute_filter_fails_on_service_disabled(self,
+                                                       reason=None):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['ComputeFilter']()
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         service = {'disabled': True}
+        if reason:
+            service['disabled_reason'] = reason
         host = fakes.FakeHostState('host1', 'node1',
                 {'free_ram_mb': 1024, 'service': service})
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_compute_filter_fails_on_service_disabled_no_reason(self):
+        self._test_compute_filter_fails_on_service_disabled()
+
+    def test_compute_filter_fails_on_service_disabled(self):
+        self._test_compute_filter_fails_on_service_disabled(reason='Test')
 
     def test_compute_filter_fails_on_service_down(self):
         self._stub_service_is_up(False)
