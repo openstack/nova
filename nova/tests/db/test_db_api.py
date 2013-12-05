@@ -5298,7 +5298,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  host_ip='127.0.0.1',
                                  supported_instances='',
                                  pci_stats='',
-                                 metrics='')
+                                 metrics='',
+                                 extra_resources='')
         # add some random stats
         self.stats = dict(num_instances=3, num_proj_12345=2,
                      num_proj_23456=2, num_vm_building=3)

@@ -42,6 +42,7 @@ fake_compute_node = {
     'cpu_info': 'Schmintel i786',
     'disk_available_least': 256,
     'metrics': '',
+    'extra_resources': '',
 }
 
 

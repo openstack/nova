@@ -3293,6 +3293,16 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_228(self, engine):
         self.assertColumnNotExists(engine, 'compute_nodes', 'metrics')
 
+    def _check_229(self, engine, data):
+        self.assertColumnExists(engine, 'compute_nodes', 'extra_resources')
+
+        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        self.assertTrue(isinstance(compute_nodes.c.extra_resources.type,
+                            sqlalchemy.types.Text))
+
+    def _post_downgrade_229(self, engine):
+        self.assertColumnNotExists(engine, 'compute_nodes', 'extra_resources')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
