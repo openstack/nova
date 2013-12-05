@@ -171,8 +171,12 @@ def stub_out_instance_quota(stubs, allowed, quota, resource='instances'):
             usages[resource]['in_use'] = (quotas[resource] * 0.9 -
                                           allowed)
             usages[resource]['reserved'] = quotas[resource] * 0.1
+            headroom = dict(
+              (res, value - (usages[res]['in_use'] + usages[res]['reserved']))
+                           for res, value in quotas.iteritems()
+            )
             raise exc.OverQuota(overs=[resource], quotas=quotas,
-                                usages=usages)
+                                usages=usages, headroom=headroom)
     stubs.Set(QUOTAS, 'reserve', fake_reserve)
 
 

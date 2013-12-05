@@ -330,10 +330,7 @@ class API(base.Base):
             quotas = exc.kwargs['quotas']
             usages = exc.kwargs['usages']
             overs = exc.kwargs['overs']
-
-            headroom = dict((res, quotas[res] -
-                             (usages[res]['in_use'] + usages[res]['reserved']))
-                            for res in quotas.keys())
+            headroom = exc.kwargs['headroom']
 
             allowed = headroom['instances']
             # Reduce 'allowed' instances in line with the cores & ram headroom
@@ -2306,10 +2303,7 @@ class API(base.Base):
             quotas = exc.kwargs['quotas']
             usages = exc.kwargs['usages']
             overs = exc.kwargs['overs']
-
-            headroom = dict((res, quotas[res] -
-                             (usages[res]['in_use'] + usages[res]['reserved']))
-                            for res in quotas.keys())
+            headroom = exc.kwargs['headroom']
 
             resource = overs[0]
             used = quotas[resource] - headroom[resource]
