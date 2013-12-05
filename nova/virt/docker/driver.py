@@ -26,6 +26,7 @@ import time
 
 from oslo.config import cfg
 
+from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
@@ -282,7 +283,8 @@ class DockerDriver(driver.ComputeDriver):
         args = {
             'Hostname': instance['name'],
             'Image': image_name,
-            'Memory': self._get_memory_limit_bytes(instance)
+            'Memory': self._get_memory_limit_bytes(instance),
+            'CpuShares': self._get_cpu_shares(instance)
         }
         default_cmd = self._get_default_cmd(image_name)
         if default_cmd:
@@ -386,3 +388,21 @@ class DockerDriver(driver.ComputeDriver):
                           expected_state=task_states.IMAGE_PENDING_UPLOAD)
         headers = {'X-Meta-Glance-Image-Id': image_href}
         self.docker.push_repository(name, headers=headers)
+
+    def _get_cpu_shares(self, instance):
+        """Get allocated CPUs from configured flavor.
+
+        Docker/lxc supports relative CPU allocation.
+
+        cgroups specifies following:
+         /sys/fs/cgroup/lxc/cpu.shares = 1024
+         /sys/fs/cgroup/cpu.shares = 1024
+
+        For that reason we use 1024 as multiplier.
+        This multiplier allows to divide the CPU
+        resources fair with containers started by
+        the user (e.g. docker registry) which has
+        the default CpuShares value of zero.
+        """
+        flavor = flavors.extract_flavor(instance)
+        return int(flavor['vcpus']) * 1024
