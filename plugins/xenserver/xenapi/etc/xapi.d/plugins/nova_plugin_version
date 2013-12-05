@@ -23,7 +23,8 @@ import utils
 # MINOR VERSION: Compatible changes, new plugins, etc
 
 # 1.0 - Initial version.
-PLUGIN_VERSION = "1.0"
+# 1.1 - New call to check GC status
+PLUGIN_VERSION = "1.1"
 
 def get_version(session):
     return PLUGIN_VERSION
