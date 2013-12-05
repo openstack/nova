@@ -763,6 +763,19 @@
 
 
 #
+# Options defined in nova.compute.monitors
+#
+
+# Monitor classes available to the compute which may be
+# specified more than once. (multi valued)
+#compute_available_monitors=nova.compute.monitors.all_monitors
+
+# A list of monitors that can be used for getting compute
+# metrics. (list value)
+#compute_monitors=
+
+
+#
 # Options defined in nova.compute.resource_tracker
 #
 

@@ -33,6 +33,54 @@ class FakeResourceMonitor(monitors.ResourceMonitorBase):
         return data
 
 
+class FakeMonitorClass1(monitors.ResourceMonitorBase):
+    def get_metrics(self, **kwargs):
+        data = [{'timestamp': 1232,
+                 'name': 'key1',
+                 'value': 2600,
+                 'source': 'libvirt'}]
+        return data
+
+    def get_metric_names(self):
+        return ['key1']
+
+
+class FakeMonitorClass2(monitors.ResourceMonitorBase):
+    def get_metrics(self, **kwargs):
+        data = [{'timestamp': 123,
+                 'name': 'key2',
+                 'value': 1600,
+                 'source': 'libvirt'}]
+        return data
+
+    def get_metric_names(self):
+        return ['key2']
+
+
+class FakeMonitorClass3(monitors.ResourceMonitorBase):
+    def get_metrics(self, **kwargs):
+        data = [{'timestamp': 1234,
+                 'name': 'key1',
+                 'value': 1200,
+                 'source': 'libvirt'}]
+        return data
+
+    def get_metric_names(self):
+        return ['key1']
+
+
+class FakeMonitorClass4(monitors.ResourceMonitorBase):
+    def get_metrics(self, **kwargs):
+        data = [{'timestamp': 123,
+                 'name': 'key4',
+                 'value': 1600,
+                 'source': 'libvirt'}]
+        raise test.TestingException()
+
+    def get_metric_names(self):
+        raise test.TestingException()
+
+
 class ResourceMonitorBaseTestCase(test.TestCase):
     def setUp(self):
         super(ResourceMonitorBaseTestCase, self).setUp()
@@ -61,12 +109,37 @@ class ResourceMonitorsTestCase(test.TestCase):
 
     def setUp(self):
         super(ResourceMonitorsTestCase, self).setUp()
-        monitor_handler = monitors.ResourceMonitorHandler()
-        classes = monitor_handler.get_matching_classes(
+        self.monitor_handler = monitors.ResourceMonitorHandler()
+        fake_monitors = [
+            'nova.tests.compute.monitors.test_monitors.FakeMonitorClass1',
+            'nova.tests.compute.monitors.test_monitors.FakeMonitorClass2']
+        self.flags(compute_available_monitors=fake_monitors)
+
+        classes = self.monitor_handler.get_matching_classes(
             ['nova.compute.monitors.all_monitors'])
         self.class_map = {}
         for cls in classes:
             self.class_map[cls.__name__] = cls
+
+    def test_choose_monitors_not_found(self):
+        self.flags(compute_monitors=['FakeMonitorClass5', 'FakeMonitorClass4'])
+        monitor_classes = self.monitor_handler.choose_monitors(self)
+        self.assertEqual(len(monitor_classes), 0)
+
+    def test_choose_monitors_bad(self):
+        self.flags(compute_monitors=['FakeMonitorClass1', 'FakePluginClass3'])
+        monitor_classes = self.monitor_handler.choose_monitors(self)
+        self.assertEqual(len(monitor_classes), 1)
+
+    def test_choose_monitors(self):
+        self.flags(compute_monitors=['FakeMonitorClass1', 'FakeMonitorClass2'])
+        monitor_classes = self.monitor_handler.choose_monitors(self)
+        self.assertEqual(len(monitor_classes), 2)
+
+    def test_choose_monitors_none(self):
+        self.flags(compute_monitors=[])
+        monitor_classes = self.monitor_handler.choose_monitors(self)
+        self.assertEqual(len(monitor_classes), 0)
 
     def test_all_monitors(self):
         # Double check at least a couple of known monitors exist
