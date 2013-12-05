@@ -19,3 +19,11 @@ If new tests are added or the .tpl files are changed due to bug fixes, the
 samples must be regenerated so they are in sync with the templates, as
 there is an additional test which reloads the documentation and
 ensures that it's in sync.
+
+Debugging sample generation
+---------------------------
+
+If a .tpl is changed, its matching .xml and .json must be removed
+else the samples won't be generated. If an entirely new extension is
+added, a directory for it must be created before its samples will
+be generated.
