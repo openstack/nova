@@ -2486,6 +2486,44 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(len(interfaces), 2)
         self.assertEqual(interfaces[0].get('type'), 'bridge')
 
+    def _behave_supports_direct_io(self, raise_open=False, raise_write=False,
+                                   exc=ValueError()):
+        open_behavior = os.open(os.path.join('.', '.directio.test'),
+                                os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
+        if raise_open:
+            open_behavior.AndRaise(exc)
+        else:
+            open_behavior.AndReturn(3)
+            write_bahavior = os.write(3, mox.IgnoreArg())
+            if raise_write:
+                write_bahavior.AndRaise(exc)
+            else:
+                os.close(3)
+        os.unlink(3)
+
+    def test_supports_direct_io(self):
+        einval = OSError()
+        einval.errno = errno.EINVAL
+        self.mox.StubOutWithMock(os, 'open')
+        self.mox.StubOutWithMock(os, 'write')
+        self.mox.StubOutWithMock(os, 'close')
+        self.mox.StubOutWithMock(os, 'unlink')
+        _supports_direct_io = libvirt_driver.LibvirtDriver._supports_direct_io
+
+        self._behave_supports_direct_io()
+        self._behave_supports_direct_io(raise_write=True)
+        self._behave_supports_direct_io(raise_open=True)
+        self._behave_supports_direct_io(raise_write=True, exc=einval)
+        self._behave_supports_direct_io(raise_open=True, exc=einval)
+
+        self.mox.ReplayAll()
+        self.assertTrue(_supports_direct_io('.'))
+        self.assertRaises(ValueError, _supports_direct_io, '.')
+        self.assertRaises(ValueError, _supports_direct_io, '.')
+        self.assertFalse(_supports_direct_io('.'))
+        self.assertFalse(_supports_direct_io('.'))
+        self.mox.VerifyAll()
+
     def _check_xml_and_container(self, instance):
         user_context = context.RequestContext(self.user_id,
                                               self.project_id)
