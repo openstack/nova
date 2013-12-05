@@ -5554,7 +5554,7 @@ class ComputeTestCase(BaseTestCase):
         for x in xrange(4):
             instance = {'uuid': str(uuid.uuid4()), 'created_at': created_at}
             instance.update(filters)
-            old_instances.append(instance)
+            old_instances.append(fake_instance.fake_db_instance(**instance))
 
         #not expired
         instances = list(old_instances)  # copy the contents of old_instances
@@ -5562,8 +5562,10 @@ class ComputeTestCase(BaseTestCase):
             'uuid': str(uuid.uuid4()),
             'created_at': timeutils.utcnow(),
         }
+        sort_key = 'created_at'
+        sort_dir = 'desc'
         new_instance.update(filters)
-        instances.append(new_instance)
+        instances.append(fake_instance.fake_db_instance(**new_instance))
 
         # need something to return from conductor_api.instance_update
         # that is defined outside the for loop and can be used in the mock
@@ -5572,7 +5574,7 @@ class ComputeTestCase(BaseTestCase):
 
         # creating mocks
         with contextlib.nested(
-            mock.patch.object(self.compute.conductor_api,
+            mock.patch.object(self.compute.db.sqlalchemy.api,
                               'instance_get_all_by_filters',
                               return_value=instances),
             mock.patch.object(self.compute.conductor_api, 'instance_update',
@@ -5588,7 +5590,13 @@ class ComputeTestCase(BaseTestCase):
             self.compute._check_instance_build_time(ctxt)
             # check our assertions
             instance_get_all_by_filters.assert_called_once_with(
-                                            ctxt, filters, columns_to_join=[])
+                                            ctxt, filters,
+                                            sort_key,
+                                            sort_dir,
+                                            marker=None,
+                                            columns_to_join=[],
+                                            use_slave=True,
+                                            limit=None)
             self.assertThat(conductor_instance_update.mock_calls,
                             testtools_matchers.HasLength(len(old_instances)))
             self.assertThat(node_is_available.mock_calls,

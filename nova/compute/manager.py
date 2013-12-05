@@ -1190,8 +1190,9 @@ class ComputeManager(manager.Manager):
 
         filters = {'vm_state': vm_states.BUILDING,
                    'host': self.host}
-        building_insts = self.conductor_api.instance_get_all_by_filters(
-            context, filters, columns_to_join=[])
+
+        building_insts = instance_obj.InstanceList.get_by_filters(context,
+                           filters, expected_attrs=[], use_slave=True)
 
         for instance in building_insts:
             if timeutils.is_older_than(instance['created_at'], timeout):
