@@ -217,7 +217,8 @@ class ComputeDriver(object):
     def rebuild(self, context, instance, image_meta, injected_files,
                 admin_password, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
-                recreate=False, block_device_info=None):
+                recreate=False, block_device_info=None,
+                preserve_ephemeral=False):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -250,6 +251,8 @@ class ComputeDriver(object):
             hypervisor - all the cleanup of old state is skipped.
         :param block_device_info: Information about block devices to be
                                   attached to the instance.
+        :param preserve_ephemeral: True if the default ephemeral storage
+                                   partition must be preserved on rebuild
         """
         raise NotImplementedError()
 

@@ -2060,6 +2060,7 @@ class API(base.Base):
         orig_image_ref = instance.image_ref or ''
         files_to_inject = files_to_inject or []
         metadata = kwargs.get('metadata', {})
+        preserve_ephemeral = kwargs.get('preserve_ephemeral', False)
 
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image, **kwargs)
@@ -2122,7 +2123,7 @@ class API(base.Base):
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
-                kwargs=kwargs)
+                preserve_ephemeral=preserve_ephemeral, kwargs=kwargs)
 
     @wrap_check_policy
     @check_instance_lock

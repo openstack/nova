@@ -1,0 +1,16 @@
+{
+    "server": {
+        "adminPass": "8SV3AwzrE9Yn",
+        "id": "5b39f651-2c68-48a1-ad26-dab135c4f543",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/5b39f651-2c68-48a1-ad26-dab135c4f543",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/5b39f651-2c68-48a1-ad26-dab135c4f543",
+                "rel": "bookmark"
+            }
+        ]
+    }
+}

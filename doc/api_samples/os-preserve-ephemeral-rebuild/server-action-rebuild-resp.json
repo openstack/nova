@@ -1,0 +1,55 @@
+{
+    "server": {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "fe80::100",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "adminPass": "seekr3t",
+        "created": "2013-12-30T12:28:14Z",
+        "flavor": {
+            "id": "1",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/flavors/1",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "hostId": "ee8ea077f8548ce25c59c2d5020d0f82810c815c210fd68194a5c0f8",
+        "id": "810e78d5-47fe-48bf-9559-bfe5dc918685",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/openstack/servers/810e78d5-47fe-48bf-9559-bfe5dc918685",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/openstack/servers/810e78d5-47fe-48bf-9559-bfe5dc918685",
+                "rel": "bookmark"
+            }
+        ],
+        "metadata": {
+            "meta var": "meta val"
+        },
+        "name": "foobar",
+        "progress": 0,
+        "status": "ACTIVE",
+        "tenant_id": "openstack",
+        "updated": "2013-12-30T12:28:15Z",
+        "user_id": "fake"
+    }
+}

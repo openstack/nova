@@ -3982,3 +3982,61 @@ class MigrationsSamplesJsonTest(ApiSampleTestBaseV2):
 
 class MigrationsSamplesXmlTest(MigrationsSamplesJsonTest):
     ctype = 'xml'
+
+
+class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
+    extension_name = ('nova.api.openstack.compute.contrib.'
+                      'preserve_ephemeral_rebuild.'
+                      'Preserve_ephemeral_rebuild')
+
+    def _test_server_action(self, uuid, action,
+                            subs={}, resp_tpl=None, code=202):
+        subs.update({'action': action})
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-%s' % action.lower(),
+                                 subs)
+        if resp_tpl:
+            subs.update(self._get_regexes())
+            self._verify_response(resp_tpl, subs, response, code)
+        else:
+            self.assertEqual(response.status, code)
+            self.assertEqual(response.read(), "")
+
+    def test_rebuild_server_preserve_ephemeral_false(self):
+        uuid = self._post_server()
+        image = self.api.get_images()[0]['id']
+        subs = {'host': self._get_host(),
+                'uuid': image,
+                'name': 'foobar',
+                'pass': 'seekr3t',
+                'ip': '1.2.3.4',
+                'ip6': 'fe80::100',
+                'hostid': '[a-f0-9]+',
+                'preserve_ephemeral': 'false'}
+        self._test_server_action(uuid, 'rebuild', subs,
+                                 'server-action-rebuild-resp')
+
+    def test_rebuild_server_preserve_ephemeral_true(self):
+        image = self.api.get_images()[0]['id']
+        subs = {'host': self._get_host(),
+                'uuid': image,
+                'name': 'new-server-test',
+                'pass': 'seekr3t',
+                'ip': '1.2.3.4',
+                'ip6': 'fe80::100',
+                'hostid': '[a-f0-9]+',
+                'preserve_ephemeral': 'true'}
+
+        def fake_rebuild(self_, context, instance, image_href, admin_password,
+                         **kwargs):
+            self.assertTrue(kwargs['preserve_ephemeral'])
+        self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
+
+        instance_uuid = self._post_server()
+        response = self._do_post('servers/%s/action' % instance_uuid,
+                                 'server-action-rebuild', subs)
+        self.assertEqual(response.status, 202)
+
+
+class PreserveEphemeralOnRebuildXmlTest(PreserveEphemeralOnRebuildJsonTest):
+    ctype = 'xml'

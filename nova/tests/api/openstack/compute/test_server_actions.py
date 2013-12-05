@@ -100,7 +100,11 @@ class ServerActionsControllerTest(test.TestCase):
         self.url = '/v2/fake/servers/%s/action' % self.uuid
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
 
-        self.controller = servers.Controller()
+        class FakeExtManager(object):
+            def is_loaded(self, ext):
+                return False
+
+        self.controller = servers.Controller(ext_mgr=FakeExtManager())
         self.compute_api = self.controller.compute_api
         self.context = context.RequestContext('fake', 'fake')
         self.app = fakes.wsgi_app(init_only=('servers',),
@@ -319,6 +323,71 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_reboot,
                           req, FAKE_UUID, body)
+
+    def test_rebuild_preserve_ephemeral_is_ignored_when_ext_not_loaded(self):
+        return_server = fakes.fake_instance_get(image_ref='2',
+                                                vm_state=vm_states.ACTIVE,
+                                                host='fake_host')
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+                "preserve_ephemeral": False,
+            },
+        }
+        req = fakes.HTTPRequest.blank(self.url)
+        context = req.environ['nova.context']
+
+        self.mox.StubOutWithMock(compute_api.API, 'rebuild')
+        compute_api.API.rebuild(context, mox.IgnoreArg(), self._image_href,
+                                mox.IgnoreArg(), files_to_inject=None)
+        self.mox.ReplayAll()
+
+        self.controller._action_rebuild(req, FAKE_UUID, body)
+
+    def _test_rebuild_preserve_ephemeral(self, value=None):
+        def fake_is_loaded(ext):
+            return ext == 'os-preserve-ephemeral-rebuild'
+        self.stubs.Set(self.controller.ext_mgr, 'is_loaded', fake_is_loaded)
+
+        return_server = fakes.fake_instance_get(image_ref='2',
+                                                vm_state=vm_states.ACTIVE,
+                                                host='fake_host')
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+
+        body = {
+            "rebuild": {
+                "imageRef": self._image_href,
+            },
+        }
+        if value is not None:
+            body['rebuild']['preserve_ephemeral'] = value
+
+        req = fakes.HTTPRequest.blank(self.url)
+        context = req.environ['nova.context']
+
+        self.mox.StubOutWithMock(compute_api.API, 'rebuild')
+
+        if value is not None:
+            compute_api.API.rebuild(context, mox.IgnoreArg(), self._image_href,
+                                    mox.IgnoreArg(), preserve_ephemeral=value,
+                                    files_to_inject=None)
+        else:
+            compute_api.API.rebuild(context, mox.IgnoreArg(), self._image_href,
+                                    mox.IgnoreArg(), files_to_inject=None)
+        self.mox.ReplayAll()
+
+        self.controller._action_rebuild(req, FAKE_UUID, body)
+
+    def test_rebuild_preserve_ephemeral_true(self):
+        self._test_rebuild_preserve_ephemeral(True)
+
+    def test_rebuild_preserve_ephemeral_false(self):
+        self._test_rebuild_preserve_ephemeral(False)
+
+    def test_rebuild_preserve_ephemeral_default(self):
+        self._test_rebuild_preserve_ephemeral()
 
     def test_rebuild_accepted_minimum(self):
         return_server = fakes.fake_instance_get(image_ref='2',
@@ -1360,6 +1429,21 @@ class TestServerActionXMLDeserializer(test.TestCase):
                           self.deserializer.deserialize,
                           serial_request,
                           'action')
+
+    def test_rebuild_preserve_ephemeral_passed(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    imageRef="http://localhost/images/1"
+                    preserve_ephemeral="true"/>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "imageRef": "http://localhost/images/1",
+                "preserve_ephemeral": True,
+            },
+        }
+        self.assertThat(request['body'], matchers.DictMatches(expected))
 
     def test_corrupt_xml(self):
         """Should throw a 400 error on corrupt xml."""

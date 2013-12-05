@@ -4430,6 +4430,24 @@ class TestServerRebuildXMLDeserializer(test.NoDBTestCase):
         }
         self.assertThat(request['body'], matchers.DictMatches(expected))
 
+    def test_rebuild_preserve_ephemeral_passed(self):
+        serial_request = """<?xml version="1.0" encoding="UTF-8"?>
+                <rebuild
+                    xmlns="http://docs.openstack.org/compute/api/v1.1"
+                    name="new-server-test"
+                    image_ref="http://localhost/images/1"
+                    preserve_ephemeral="true">
+                </rebuild>"""
+        request = self.deserializer.deserialize(serial_request, 'action')
+        expected = {
+            "rebuild": {
+                "name": "new-server-test",
+                "image_ref": "http://localhost/images/1",
+                "preserve_ephemeral": True,
+            },
+        }
+        self.assertThat(request['body'], matchers.DictMatches(expected))
+
 
 class FakeExt(extensions.V3APIExtensionBase):
     name = "AccessIPs"

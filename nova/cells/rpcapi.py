@@ -577,7 +577,7 @@ class CellsAPI(rpcclient.RpcProxy):
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
                          image_ref, orig_image_ref, orig_sys_metadata, bdms,
                          recreate=False, on_shared_storage=False, host=None,
-                         kwargs=None):
+                         preserve_ephemeral=False, kwargs=None):
         if not CONF.cells.enable:
             return
 
@@ -585,4 +585,4 @@ class CellsAPI(rpcclient.RpcProxy):
         cctxt.cast(ctxt, 'rebuild_instance',
                    instance=instance, image_href=image_ref,
                    admin_password=new_pass, files_to_inject=injected_files,
-                   kwargs=kwargs)
+                   preserve_ephemeral=preserve_ephemeral, kwargs=kwargs)

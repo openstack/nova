@@ -615,6 +615,14 @@
             "name": "BareMetalExtStatus",
             "namespace": "http://docs.openstack.org/compute/ext/baremetal_ext_status/api/v2",
             "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-preserve-ephemeral-rebuild",
+            "description": "%(text)s",
+            "links": [],
+            "name": "PreserveEphemeralOnRebuild",
+            "namespace": "http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2",
+            "updated": "%(timestamp)s"
         }
     ]
 }
