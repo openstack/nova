@@ -240,12 +240,14 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             instance['pci_devices'] = pci_devices
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
-                info_cache = None
-            else:
-                info_cache = instance_info_cache.InstanceInfoCache()
+                instance.info_cache = None
+            elif not instance.obj_attr_is_set('info_cache'):
+                # TODO(danms): If this ever happens on a backlevel instance
+                # passed to us by a backlevel service, things will break
+                instance.info_cache = instance_info_cache.InstanceInfoCache()
+            if instance.info_cache is not None:
                 instance_info_cache.InstanceInfoCache._from_db_object(
-                        context, info_cache, db_inst['info_cache'])
-            instance['info_cache'] = info_cache
+                    context, instance.info_cache, db_inst['info_cache'])
         if 'security_groups' in expected_attrs:
             sec_groups = security_group._make_secgroup_list(
                     context, security_group.SecurityGroupList(),

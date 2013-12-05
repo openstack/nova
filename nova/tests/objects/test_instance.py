@@ -693,6 +693,17 @@ class _TestInstanceObject(object):
         self.assertEqual('foo-%s' % db_inst['uuid'], inst.name)
         self.assertFalse(inst.obj_attr_is_set('fault'))
 
+    def test_from_db_object_not_overwrite_info_cache(self):
+        info_cache = instance_info_cache.InstanceInfoCache()
+        inst = instance.Instance(context=self.context,
+                                 info_cache=info_cache)
+        db_inst = fake_instance.fake_db_instance()
+        db_inst['info_cache'] = dict(
+            test_instance_info_cache.fake_info_cache)
+        inst._from_db_object(self.context, inst, db_inst,
+                             expected_attrs=['info_cache'])
+        self.assertIs(info_cache, inst.info_cache)
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
