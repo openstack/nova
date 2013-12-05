@@ -431,3 +431,10 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('volume_snapshot_delete', 'cast',
                 instance=self.fake_instance, volume_id='fake_id',
                 snapshot_id='fake_id2', delete_info={}, version='2.44')
+
+    def test_get_version(self):
+        self.assertEqual(compute_rpcapi._get_version('2.0'), '2.0')
+        self.flags(compute='grizzly', group='upgrade_levels')
+        self.assertEqual(compute_rpcapi._get_version('2.0'), '2.0')
+        self.flags(compute='icehouse-compat', group='upgrade_levels')
+        self.assertEqual(compute_rpcapi._get_version('2.0'), '3.0')
