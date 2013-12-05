@@ -160,8 +160,8 @@ class LiveMigrationTask(object):
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
             filter_properties = {'ignore_hosts': attempted_hosts}
-            host = self.scheduler_rpcapi.select_hosts(self.context,
-                            request_spec, filter_properties)[0]
+            host = self.scheduler_rpcapi.select_destinations(self.context,
+                            request_spec, filter_properties)[0]['host']
             try:
                 self._check_compatible_with_source_hypervisor(host)
                 self._call_livem_checks_on_host(host)
