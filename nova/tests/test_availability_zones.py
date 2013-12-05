@@ -84,6 +84,7 @@ class AvailabilityZoneTestCases(test.TestCase):
                                         aggregate['id'], service['host'])
 
     def test_rest_availability_zone_reset_cache(self):
+        az._get_cache().add('cache', 'fake_value')
         az.reset_cache()
         self.assertIsNone(az._get_cache().get('cache'))
 
