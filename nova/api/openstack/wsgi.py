@@ -18,7 +18,6 @@
 
 import inspect
 import math
-import re
 import time
 from xml.dom import minidom
 
@@ -72,18 +71,6 @@ _ROUTES_METHODS = [
     'delete',
     'show',
     'update',
-]
-
-_SANITIZE_KEYS = ['adminPass', 'admin_password']
-
-_SANITIZE_PATTERNS = [
-    re.compile(r'(adminPass\s*[=]\s*[\"\']).*?([\"\'])', re.DOTALL),
-    re.compile(r'(admin_password\s*[=]\s*[\"\']).*?([\"\'])', re.DOTALL),
-    re.compile(r'(<adminPass>).*?(</adminPass>)', re.DOTALL),
-    re.compile(r'(<admin_password>).*?(</admin_password>)', re.DOTALL),
-    re.compile(r'([\"\']adminPass[\"\']\s*:\s*[\"\']).*?([\"\'])', re.DOTALL),
-    re.compile(r'([\"\']admin_password[\"\']\s*:\s*[\"\']).*?([\"\'])',
-               re.DOTALL)
 ]
 
 
@@ -726,15 +713,6 @@ class ResourceExceptionHandler(object):
         return False
 
 
-def sanitize(msg):
-    if not (key in msg for key in _SANITIZE_KEYS):
-        return msg
-
-    for pattern in _SANITIZE_PATTERNS:
-        msg = re.sub(pattern, r'\1****\2', msg)
-    return msg
-
-
 class Resource(wsgi.Application):
     """WSGI app that handles (de)serialization and controller dispatch.
 
@@ -972,7 +950,7 @@ class Resource(wsgi.Application):
             msg = _("Action: '%(action)s', body: "
                     "%(body)s") % {'action': action,
                                    'body': unicode(body, 'utf-8')}
-            LOG.debug(sanitize(msg))
+            LOG.debug(logging.mask_password(msg))
         LOG.debug(_("Calling method %s") % str(meth))
 
         # Now, deserialize the request body...
