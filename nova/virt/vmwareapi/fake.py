@@ -333,6 +333,7 @@ class VirtualMachine(ManagedObject):
         self.set("config.files.vmPathName", kwargs.get("vmPathName"))
         self.set("summary.config.numCpu", kwargs.get("numCpu", 1))
         self.set("summary.config.memorySizeMB", kwargs.get("mem", 1))
+        self.set("summary.config.instanceUuid", kwargs.get("instanceUuid"))
         self.set("config.hardware.device", kwargs.get("virtual_device", None))
         self.set("config.extraConfig", kwargs.get("extra_config", None))
         self.set('runtime.host', kwargs.get("runtime_host", None))
@@ -906,6 +907,7 @@ class FakeVim(object):
         service_content.fileManager = "FileManager"
         service_content.rootFolder = "RootFolder"
         service_content.sessionManager = "SessionManager"
+        service_content.searchIndex = "SearchIndex"
 
         about_info = DataObject()
         about_info.name = "VMware vCenter Server"
@@ -978,7 +980,8 @@ class FakeVim(object):
                   "numCpu": config_spec.numCPUs,
                   "mem": config_spec.memoryMB,
                   "extra_config": config_spec.extraConfig,
-                  "virtual_device": config_spec.deviceChange}
+                  "virtual_device": config_spec.deviceChange,
+                  "instanceUuid": config_spec.instanceUuid}
         virtual_machine = VirtualMachine(**vm_dict)
         _create_object("VirtualMachine", virtual_machine)
         task_mdo = create_task(method, "success")
@@ -1010,6 +1013,16 @@ class FakeVim(object):
         """Snapshots a VM. Here we do nothing for faking sake."""
         task_mdo = create_task(method, "success")
         return task_mdo.obj
+
+    def _find_all_by_uuid(self, *args, **kwargs):
+        uuid = kwargs.get('uuid')
+        vm_refs = []
+        for vm_ref in _db_content.get("VirtualMachine"):
+            vm = _get_object(vm_ref)
+            vm_uuid = vm.get("summary.config.instanceUuid")
+            if vm_uuid == uuid:
+                vm_refs.append(vm_ref)
+        return vm_refs
 
     def _delete_disk(self, method, *args, **kwargs):
         """Deletes .vmdk and -flat.vmdk files corresponding to the VM."""
@@ -1198,6 +1211,9 @@ class FakeVim(object):
                                                 *args, **kwargs)
         elif attr_name == "CloneVM_Task":
             return lambda *args, **kwargs: self._clone_vm(attr_name,
+                                                *args, **kwargs)
+        elif attr_name == "FindAllByUuid":
+            return lambda *args, **kwargs: self._find_all_by_uuid(attr_name,
                                                 *args, **kwargs)
         elif attr_name == "Rename_Task":
             return lambda *args, **kwargs: self._just_return_task(attr_name)

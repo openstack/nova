@@ -303,7 +303,15 @@ class VMwareVMOps(object):
             LOG.debug(_("Created VM on the ESX host"), instance=instance)
 
         _execute_create_vm()
-        vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
+
+        # In the case of a rescue disk the instance_name is not the same as
+        # instance UUID. In this case the VM reference is accessed via the
+        # instance name.
+        if instance_name != instance['uuid']:
+            vm_ref = vm_util.get_vm_ref_from_name(self._session,
+                                                  instance_name)
+        else:
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
@@ -1026,6 +1034,8 @@ class VMwareVMOps(object):
                                  % str(excep))
         except Exception as exc:
             LOG.exception(exc, instance=instance)
+        finally:
+            vm_util.vm_ref_cache_delete(instance_name)
 
     def pause(self, instance):
         msg = _("pause not supported for vmwareapi")

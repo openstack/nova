@@ -46,6 +46,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareVMUtilTestCase, self).setUp()
         fake.reset()
+        vm_util.vm_refs_cache_reset()
 
     def tearDown(self):
         super(VMwareVMUtilTestCase, self).tearDown()
@@ -198,7 +199,9 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                           vm_util.get_datastore_ref_and_name,
                           fake_session(""), 'fake_cluster')
 
-    def test_get_host_name_for_vm(self):
+    @mock.patch.object(vm_util, '_get_vm_ref_from_vm_uuid',
+                       return_value=None)
+    def test_get_host_name_for_vm(self, _get_ref_from_uuid):
         fake_host = fake.HostSystem()
         fake_host_id = fake_host.obj.value
         fake_vm = fake.VirtualMachine(name='vm-123',
@@ -489,13 +492,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                          'uuid': instance_uuid,
                          'vcpus': 2, 'memory_mb': 2048}
         result = vm_util.get_vm_create_spec(fake.FakeFactory(),
-                                            fake_instance, 'fake-name',
+                                            fake_instance, instance_uuid,
                                             'fake-datastore', [])
         expected = """{
             'files': {'vmPathName': '[fake-datastore]',
             'obj_name': 'ns0:VirtualMachineFileInfo'},
-            'name': 'fake-name', 'deviceChange': [],
-            'extraConfig': [{'value': '%s',
+            'instanceUuid': '%(instance_uuid)s',
+            'name': '%(instance_uuid)s', 'deviceChange': [],
+            'extraConfig': [{'value': '%(instance_uuid)s',
                              'key': 'nvp.vm-uuid',
                              'obj_name': 'ns0:OptionValue'}],
             'memoryMB': 2048,
@@ -507,7 +511,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                       'afterResume': True,
                       'afterPowerOn': True,
             'obj_name': 'ns0:ToolsConfigInfo'},
-            'numCPUs': 2}""" % instance_uuid
+            'numCPUs': 2}""" % {'instance_uuid': instance_uuid}
         expected = re.sub(r'\s+', '', expected)
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
