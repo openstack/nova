@@ -132,6 +132,10 @@ CONF = cfg.CONF
 CONF.register_opts(xenapi_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 
+OVERHEAD_BASE = 3
+OVERHEAD_PER_MB = 0.00781
+OVERHEAD_PER_VCPU = 1.5
+
 
 class XenAPIDriver(driver.ComputeDriver):
     """A connection to XenServer or Xen Cloud Platform."""
@@ -200,11 +204,11 @@ class XenAPIDriver(driver.ComputeDriver):
         # interpolated formula to predict overhead required per vm.
         # based on data from:
         # https://wiki.openstack.org/wiki/XenServer/Overhead
-        base = 3  # MB
-        per_mb = 0.0081  # MB
-
+        # Some padding is done to each value to fit all available VM data
         memory_mb = instance_info['memory_mb']
-        overhead = memory_mb * per_mb + base
+        vcpus = instance_info.get('vcpus', 1)
+        overhead = ((memory_mb * OVERHEAD_PER_MB) + (vcpus * OVERHEAD_PER_VCPU)
+                        + OVERHEAD_BASE)
         overhead = math.ceil(overhead)
         return {'memory_mb': overhead}
 
