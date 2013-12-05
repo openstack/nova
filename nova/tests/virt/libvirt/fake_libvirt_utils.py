@@ -17,13 +17,7 @@
 import os
 import StringIO
 
-from oslo.config import cfg
-
 from nova.virt.libvirt import utils as libvirt_utils
-
-
-CONF = cfg.CONF
-CONF.import_opt('instances_path', 'nova.compute.manager')
 
 
 files = {'console.log': True}
