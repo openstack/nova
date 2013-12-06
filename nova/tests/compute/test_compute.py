@@ -33,6 +33,7 @@ import uuid
 import mock
 import mox
 from oslo.config import cfg
+from testtools import matchers as testtools_matchers
 
 import nova
 from nova import availability_zones
@@ -5385,113 +5386,89 @@ class ComputeTestCase(BaseTestCase):
             self.assertEqual(status, fetch_instance_migration_status(uuid))
 
     def test_instance_build_timeout_disabled(self):
+        # Tests that no instances are set to error state when there is no
+        # instance_build_timeout configured.
         self.flags(instance_build_timeout=0)
         ctxt = context.get_admin_context()
-        called = {'get_all': False, 'set_error_state': 0}
         created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
-        def fake_instance_get_all_by_filters(context, filters, *args, **kw):
-            called['get_all'] = True
-            self.assertIn('host', filters)
-            self.assertEqual(kw['columns_to_join'], [])
-            return instances[:]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                fake_instance_get_all_by_filters)
-
-        def fake_set_instance_error_state(_ctxt, instance_uuid, **kwargs):
-            called['set_error_state'] += 1
-
-        self.stubs.Set(self.compute, '_set_instance_error_state',
-                fake_set_instance_error_state)
-
-        instance_map = {}
+        filters = {'vm_state': vm_states.BUILDING, 'host': CONF.host}
         instances = []
         for x in xrange(5):
-            uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host,
-                    'vm_state': vm_states.BUILDING,
-                    'created_at': created_at}
-            instances.append(instance_map[uuid])
+            instance = {'uuid': str(uuid.uuid4()), 'created_at': created_at}
+            instance.update(filters)
+            instances.append(instance)
 
-        self.compute._check_instance_build_time(ctxt)
-        self.assertFalse(called['get_all'])
-        self.assertEqual(called['set_error_state'], 0)
-
-    def test_instance_build_timeout(self):
-        self.flags(instance_build_timeout=30)
-        ctxt = context.get_admin_context()
-        called = {'get_all': False, 'set_error_state': 0}
-        created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
-
-        def fake_instance_get_all_by_filters(*args, **kwargs):
-            called['get_all'] = True
-            return instances[:]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                fake_instance_get_all_by_filters)
-
-        def fake_set_instance_error_state(_ctxt, instance_uuid, **kwargs):
-            called['set_error_state'] += 1
-
-        self.stubs.Set(self.compute, '_set_instance_error_state',
-                fake_set_instance_error_state)
-
-        instance_map = {}
-        instances = []
-        for x in xrange(5):
-            uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host,
-                    'vm_state': vm_states.BUILDING,
-                    'created_at': created_at}
-            instances.append(instance_map[uuid])
-
-        self.compute._check_instance_build_time(ctxt)
-        self.assertTrue(called['get_all'])
-        self.assertEqual(called['set_error_state'], 5)
+        # creating mocks
+        with mock.patch.object(self.compute.conductor_api,
+                               'instance_get_all_by_filters',
+                               return_value=instances) as (
+            instance_get_all_by_filters
+        ):
+            # run the code
+            self.compute._check_instance_build_time(ctxt)
+            # check our assertions
+            self.assertThat(instance_get_all_by_filters.mock_calls,
+                            testtools_matchers.HasLength(0))
 
     def test_instance_build_timeout_mixed_instances(self):
+        # Tests that instances which failed to build within the configured
+        # instance_build_timeout value are set to error state.
         self.flags(instance_build_timeout=30)
         ctxt = context.get_admin_context()
-        called = {'get_all': False, 'set_error_state': 0}
         created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
 
-        def fake_instance_get_all_by_filters(*args, **kwargs):
-            called['get_all'] = True
-            return instances[:]
-
-        self.stubs.Set(db, 'instance_get_all_by_filters',
-                fake_instance_get_all_by_filters)
-
-        def fake_set_instance_error_state(_ctxt, instance_uuid, **kwargs):
-            called['set_error_state'] += 1
-
-        self.stubs.Set(self.compute, '_set_instance_error_state',
-                fake_set_instance_error_state)
-
-        instance_map = {}
-        instances = []
-        #expired instances
+        filters = {'vm_state': vm_states.BUILDING, 'host': CONF.host}
+        # these are the ones that are expired
+        old_instances = []
         for x in xrange(4):
-            uuid = 'fake-uuid-%s' % x
-            instance_map[uuid] = {'uuid': uuid, 'host': CONF.host,
-                    'vm_state': vm_states.BUILDING,
-                    'created_at': created_at}
-            instances.append(instance_map[uuid])
+            instance = {'uuid': str(uuid.uuid4()), 'created_at': created_at}
+            instance.update(filters)
+            old_instances.append(instance)
 
         #not expired
-        uuid = 'fake-uuid-5'
-        instance_map[uuid] = {
-            'uuid': uuid,
-            'host': CONF.host,
-            'vm_state': vm_states.BUILDING,
+        instances = list(old_instances)  # copy the contents of old_instances
+        new_instance = {
+            'uuid': str(uuid.uuid4()),
             'created_at': timeutils.utcnow(),
         }
-        instances.append(instance_map[uuid])
+        new_instance.update(filters)
+        instances.append(new_instance)
 
-        self.compute._check_instance_build_time(ctxt)
-        self.assertTrue(called['get_all'])
-        self.assertEqual(called['set_error_state'], 4)
+        # need something to return from conductor_api.instance_update
+        # that is defined outside the for loop and can be used in the mock
+        # context
+        fake_instance_ref = {'host': CONF.host, 'node': 'fake'}
+
+        # creating mocks
+        with contextlib.nested(
+            mock.patch.object(self.compute.conductor_api,
+                              'instance_get_all_by_filters',
+                              return_value=instances),
+            mock.patch.object(self.compute.conductor_api, 'instance_update',
+                              return_value=fake_instance_ref),
+            mock.patch.object(self.compute.driver, 'node_is_available',
+                              return_value=False)
+        ) as (
+            instance_get_all_by_filters,
+            conductor_instance_update,
+            node_is_available
+        ):
+            # run the code
+            self.compute._check_instance_build_time(ctxt)
+            # check our assertions
+            instance_get_all_by_filters.assert_called_once_with(
+                                            ctxt, filters, columns_to_join=[])
+            self.assertThat(conductor_instance_update.mock_calls,
+                            testtools_matchers.HasLength(len(old_instances)))
+            self.assertThat(node_is_available.mock_calls,
+                            testtools_matchers.HasLength(len(old_instances)))
+            for inst in old_instances:
+                conductor_instance_update.assert_has_calls([
+                    mock.call(ctxt, inst['uuid'],
+                              vm_state=vm_states.ERROR)])
+                node_is_available.assert_has_calls([
+                    mock.call(fake_instance_ref['node'])])
 
     def test_get_resource_tracker_fail(self):
         self.assertRaises(exception.NovaException,
