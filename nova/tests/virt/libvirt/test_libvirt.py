@@ -4030,6 +4030,19 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(not service_mock.disabled and
                         not service_mock.disabled_reason)
 
+    def test_broken_connection_no_wrapped_conn(self):
+        # Tests that calling _close_callback when _wrapped_conn is None
+        # is a no-op, i.e. set_host_enabled won't be called.
+        self.mox.UnsetStubs()
+        # conn._wrapped_conn will be None since we never call libvirt.openAuth
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        # create our mock connection that libvirt will send to the callback
+        mock_failed_conn = mock.MagicMock()
+        mock_failed_conn.__getitem__.return_value = True
+        # nothing should happen when calling _close_callback since
+        # _wrapped_conn is None in the driver
+        conn._close_callback(mock_failed_conn, reason=None, opaque=None)
+
     def test_immediate_delete(self):
         def fake_lookup_by_name(instance_name):
             raise exception.InstanceNotFound(instance_id=instance_name)

@@ -680,10 +680,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 _error = _("Connection to libvirt lost: %s") % reason
                 LOG.warn(_error)
                 self._wrapped_conn = None
-
-        # Disable compute service to avoid
-        # new instances of being scheduled on this host.
-        self.set_host_enabled(CONF.host, _error)
+                # Disable compute service to avoid
+                # new instances of being scheduled on this host.
+                self.set_host_enabled(CONF.host, _error)
 
     @staticmethod
     def _test_connection(conn):
