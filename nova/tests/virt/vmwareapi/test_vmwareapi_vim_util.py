@@ -21,14 +21,6 @@ from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import vim_util
 
 
-class MissingObject(object):
-
-    def __init__(self, path='fake-path', message='fake_message'):
-        self.path = path
-        self.fault = fake.DataObject()
-        self.fault.localizedMessage = message
-
-
 def _fake_get_object_properties(vim, collector, mobj,
                                 type, properties):
     fake_objects = fake.FakeRetrieveResult()
@@ -39,7 +31,7 @@ def _fake_get_object_properties(vim, collector, mobj,
 def _fake_get_object_properties_missing(vim, collector, mobj,
                                 type, properties):
     fake_objects = fake.FakeRetrieveResult()
-    ml = [MissingObject()]
+    ml = [fake.MissingProperty()]
     fake_objects.add_object(fake.ObjectContent(None, missing_list=ml))
     return fake_objects
 
