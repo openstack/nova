@@ -18,7 +18,6 @@
 import functools
 import itertools
 import time
-import uuid
 
 import eventlet
 import greenlet
@@ -124,7 +123,6 @@ class ConsumerBase(object):
                     },
                 },
                 "link": {
-                    "name": link_name,
                     "durable": True,
                     "x-declare": {
                         "durable": False,
@@ -139,6 +137,7 @@ class ConsumerBase(object):
                 "link": {
                     "x-declare": {
                         "auto-delete": True,
+                        "exclusive": False,
                     },
                 },
             }
@@ -146,6 +145,8 @@ class ConsumerBase(object):
             raise_invalid_topology_version()
 
         addr_opts["link"]["x-declare"].update(link_opts)
+        if link_name:
+            addr_opts["link"]["name"] = link_name
 
         self.address = "%s ; %s" % (node_name, jsonutils.dumps(addr_opts))
 
@@ -220,14 +221,16 @@ class DirectConsumer(ConsumerBase):
         if conf.qpid_topology_version == 1:
             node_name = "%s/%s" % (msg_id, msg_id)
             node_opts = {"type": "direct"}
+            link_name = msg_id
         elif conf.qpid_topology_version == 2:
             node_name = "amq.direct/%s" % msg_id
             node_opts = {}
+            link_name = None
         else:
             raise_invalid_topology_version()
 
         super(DirectConsumer, self).__init__(conf, session, callback,
-                                             node_name, node_opts, msg_id,
+                                             node_name, node_opts, link_name,
                                              link_opts)
 
 
@@ -279,29 +282,15 @@ class FanoutConsumer(ConsumerBase):
         if conf.qpid_topology_version == 1:
             node_name = "%s_fanout" % topic
             node_opts = {"durable": False, "type": "fanout"}
-            link_name = "%s_fanout_%s" % (topic, uuid.uuid4().hex)
         elif conf.qpid_topology_version == 2:
             node_name = "amq.topic/fanout/%s" % topic
             node_opts = {}
-            link_name = ""
         else:
             raise_invalid_topology_version()
 
         super(FanoutConsumer, self).__init__(conf, session, callback,
-                                             node_name, node_opts, link_name,
+                                             node_name, node_opts, None,
                                              link_opts)
-
-    def reconnect(self, session):
-        topic = self.get_node_name().rpartition('_fanout')[0]
-        params = {
-            'session': session,
-            'topic': topic,
-            'callback': self.callback,
-        }
-
-        self.__init__(conf=self.conf, **params)
-
-        super(FanoutConsumer, self).reconnect(session)
 
 
 class Publisher(object):
