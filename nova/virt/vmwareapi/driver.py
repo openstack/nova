@@ -446,26 +446,30 @@ class VMwareVCDriver(VMwareESXDriver):
         Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
-        return self._vmops.migrate_disk_and_power_off(context, instance,
-                                                      dest, instance_type)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.migrate_disk_and_power_off(context, instance,
+                                                 dest, instance_type)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
-        self._vmops.confirm_migration(migration, instance, network_info)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.confirm_migration(migration, instance, network_info)
 
     def finish_revert_migration(self, instance, network_info,
                                 block_device_info=None, power_on=True):
         """Finish reverting a resize, powering back on the instance."""
-        self._vmops.finish_revert_migration(instance, network_info,
-                                            block_device_info, power_on)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.finish_revert_migration(instance, network_info,
+                                       block_device_info, power_on)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
-        self._vmops.finish_migration(context, migration, instance, disk_info,
-                                     network_info, image_meta, resize_instance,
-                                     block_device_info, power_on)
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        _vmops.finish_migration(context, migration, instance, disk_info,
+                                network_info, image_meta, resize_instance,
+                                block_device_info, power_on)
 
     def live_migration(self, context, instance_ref, dest,
                        post_method, recover_method, block_migration=False,

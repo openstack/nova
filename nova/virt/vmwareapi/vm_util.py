@@ -106,6 +106,14 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     return config_spec
 
 
+def get_vm_resize_spec(client_factory, instance):
+    """Provides updates for a VM spec."""
+    resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    resize_spec.numCPUs = int(instance['vcpus'])
+    resize_spec.memoryMB = int(instance['memory_mb'])
+    return resize_spec
+
+
 def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
     """
     Builds a Config Spec for the LSI or Bus Logic Controller's addition
@@ -483,7 +491,8 @@ def clone_vm_spec(client_factory, location,
     clone_spec = client_factory.create('ns0:VirtualMachineCloneSpec')
     clone_spec.location = location
     clone_spec.powerOn = power_on
-    clone_spec.snapshot = snapshot
+    if snapshot:
+        clone_spec.snapshot = snapshot
     clone_spec.template = template
     return clone_spec
 
@@ -494,7 +503,8 @@ def relocate_vm_spec(client_factory, datastore=None, host=None,
     rel_spec = client_factory.create('ns0:VirtualMachineRelocateSpec')
     rel_spec.datastore = datastore
     rel_spec.diskMoveType = disk_move_type
-    rel_spec.host = host
+    if host:
+        rel_spec.host = host
     return rel_spec
 
 
