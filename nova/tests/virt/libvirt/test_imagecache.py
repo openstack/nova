@@ -31,6 +31,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import test
+from nova.tests import fake_instance
 from nova import utils
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
@@ -759,18 +760,15 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         def fake_get_all_by_filters(context, *args, **kwargs):
             was['called'] = True
-            return [{'image_ref': '1',
-                     'host': CONF.host,
-                     'name': 'instance-1',
-                     'uuid': '123',
-                     'vm_state': '',
-                     'task_state': ''},
-                    {'image_ref': '1',
-                     'host': CONF.host,
-                     'name': 'instance-2',
-                     'uuid': '456',
-                     'vm_state': '',
-                     'task_state': ''}]
+            instances = []
+            for x in xrange(2):
+                instances.append(fake_instance.fake_db_instance(
+                                                        image_ref='1',
+                                                        uuid=x,
+                                                        name=x,
+                                                        vm_state='',
+                                                        task_state=''))
+            return instances
 
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
