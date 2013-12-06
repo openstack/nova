@@ -4207,7 +4207,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
-        self.assertEqual(422, res.status_int)
+        self.assertEqual(400, res.status_int)
 
     def test_update_missing_server(self):
         # Test create with malformed body.
@@ -4224,54 +4224,54 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
         req.body = jsonutils.dumps(body)
         res = req.get_response(self.app)
-        self.assertEqual(422, res.status_int)
+        self.assertEqual(400, res.status_int)
 
 
-class ServersUnprocessableEntityTestCase(test.TestCase):
+class ServersInvalidRequestTestCase(test.TestCase):
     """
-    Tests of places we throw 422 Unprocessable Entity from
+    Tests of places we throw 400 Bad Request from
     """
 
     def setUp(self):
-        super(ServersUnprocessableEntityTestCase, self).setUp()
+        super(ServersInvalidRequestTestCase, self).setUp()
         ext_info = plugins.LoadedExtensionInfo()
         self.controller = servers.ServersController(extension_info=ext_info)
 
-    def _unprocessable_server_create(self, body):
+    def _invalid_server_create(self, body):
         req = fakes.HTTPRequestV3.blank('/servers')
         req.method = 'POST'
 
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
 
     def test_create_server_no_body(self):
-        self._unprocessable_server_create(body=None)
+        self._invalid_server_create(body=None)
 
     def test_create_server_missing_server(self):
         body = {'foo': {'a': 'b'}}
-        self._unprocessable_server_create(body=body)
+        self._invalid_server_create(body=body)
 
     def test_create_server_malformed_entity(self):
         body = {'server': 'string'}
-        self._unprocessable_server_create(body=body)
+        self._invalid_server_create(body=body)
 
     def _unprocessable_server_update(self, body):
         req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
         req.method = 'PUT'
 
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.update, req, FAKE_UUID, body)
 
     def test_update_server_no_body(self):
-        self._unprocessable_server_update(body=None)
+        self._invalid_server_create(body=None)
 
     def test_update_server_missing_server(self):
         body = {'foo': {'a': 'b'}}
-        self._unprocessable_server_update(body=body)
+        self._invalid_server_create(body=body)
 
     def test_create_update_malformed_entity(self):
         body = {'server': 'string'}
-        self._unprocessable_server_update(body=body)
+        self._invalid_server_create(body=body)
 
 
 class TestServerRebuildXMLDeserializer(test.NoDBTestCase):

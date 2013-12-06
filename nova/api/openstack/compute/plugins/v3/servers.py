@@ -729,7 +729,7 @@ class ServersController(wsgi.Controller):
     def create(self, req, body):
         """Creates a new server for a given user."""
         if not self.is_valid_body(body, 'server'):
-            raise exc.HTTPUnprocessableEntity()
+            raise exc.HTTPBadRequest(_("The request body is invalid"))
 
         context = req.environ['nova.context']
         server_dict = body['server']
@@ -899,7 +899,7 @@ class ServersController(wsgi.Controller):
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
         if not self.is_valid_body(body, 'server'):
-            raise exc.HTTPUnprocessableEntity()
+            raise exc.HTTPBadRequest(_("The request body is invalid"))
 
         ctxt = req.environ['nova.context']
         update_dict = {}
