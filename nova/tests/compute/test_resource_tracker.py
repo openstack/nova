@@ -963,9 +963,14 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
                 task_state=task_states.SUSPENDING)
         self.assertTrue(self.tracker._instance_in_resize_state(instance))
 
-        instance = self._fake_instance(vm_state=vm_states.ACTIVE,
-                task_state=task_states.RESIZE_MIGRATING)
-        self.assertTrue(self.tracker._instance_in_resize_state(instance))
+        states = [task_states.RESIZE_PREP, task_states.RESIZE_MIGRATING,
+                  task_states.RESIZE_MIGRATED, task_states.RESIZE_FINISH]
+        for vm_state in [vm_states.ACTIVE, vm_states.STOPPED]:
+            for task_state in states:
+                instance = self._fake_instance(vm_state=vm_state,
+                                               task_state=task_state)
+                result = self.tracker._instance_in_resize_state(instance)
+                self.assertTrue(result)
 
     def test_dupe_filter(self):
         self._fake_flavor_create(id=2, memory_mb=1, root_gb=1,
