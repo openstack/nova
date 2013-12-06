@@ -71,6 +71,7 @@ CONF.set_override('use_stderr', False)
 logging.setup('nova')
 
 _DB_CACHE = None
+_TRUE_VALUES = ('True', 'true', '1', 'yes')
 
 
 class Database(fixtures.Fixture):
@@ -214,12 +215,10 @@ class TestCase(testtools.TestCase):
         self.useFixture(fixtures.TempHomeDir())
         self.useFixture(TranslationFixture())
 
-        if (os.environ.get('OS_STDOUT_CAPTURE') == 'True' or
-                os.environ.get('OS_STDOUT_CAPTURE') == '1'):
+        if os.environ.get('OS_STDOUT_CAPTURE') in _TRUE_VALUES:
             stdout = self.useFixture(fixtures.StringStream('stdout')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stdout', stdout))
-        if (os.environ.get('OS_STDERR_CAPTURE') == 'True' or
-                os.environ.get('OS_STDERR_CAPTURE') == '1'):
+        if os.environ.get('OS_STDERR_CAPTURE') in _TRUE_VALUES:
             stderr = self.useFixture(fixtures.StringStream('stderr')).stream
             self.useFixture(fixtures.MonkeyPatch('sys.stderr', stderr))
 
