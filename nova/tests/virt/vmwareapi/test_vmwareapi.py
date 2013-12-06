@@ -21,6 +21,7 @@
 Test suite for VMwareAPI.
 """
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -421,6 +422,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         network_info=self.network_info,
                         block_device_info=block_device_info)
 
+    def mock_upload_image(self, context, image, instance, **kwargs):
+        self.assertEqual(image, 'Test-Snapshot')
+        self.assertEqual(instance, self.instance)
+        self.assertEqual(kwargs['disk_type'], 'preallocated')
+
     def _test_snapshot(self):
         expected_calls = [
             {'args': (),
@@ -434,8 +440,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
-                           func_call_matcher.call)
+        with mock.patch.object(vmware_images, 'upload_image',
+                               self.mock_upload_image):
+            self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
+                               func_call_matcher.call)
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
