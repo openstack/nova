@@ -4173,7 +4173,7 @@ def console_get(context, console_id, instance_uuid=None):
 
 
 @require_admin_context
-def flavor_create(context, values):
+def flavor_create(context, values, projects=None):
     """Create a new instance type. In order to pass in extra specs,
     the values dict should contain a 'extra_specs' key/value pair:
 
@@ -4193,14 +4193,24 @@ def flavor_create(context, values):
     instance_type_ref = models.InstanceTypes()
     instance_type_ref.update(values)
 
-    try:
-        instance_type_ref.save()
-    except db_exc.DBDuplicateEntry as e:
-        if 'flavorid' in e.columns:
-            raise exception.FlavorIdExists(flavor_id=values['flavorid'])
-        raise exception.FlavorExists(name=values['name'])
-    except Exception as e:
-        raise db_exc.DBError(e)
+    if projects is None:
+        projects = []
+
+    session = get_session()
+    with session.begin():
+        try:
+            instance_type_ref.save()
+        except db_exc.DBDuplicateEntry as e:
+            if 'flavorid' in e.columns:
+                raise exception.FlavorIdExists(flavor_id=values['flavorid'])
+            raise exception.FlavorExists(name=values['name'])
+        except Exception as e:
+            raise db_exc.DBError(e)
+        for project in set(projects):
+            access_ref = models.InstanceTypeProjects()
+            access_ref.update({"instance_type_id": instance_type_ref.id,
+                               "project_id": project})
+            access_ref.save()
 
     return _dict_with_extra_specs(instance_type_ref)
 

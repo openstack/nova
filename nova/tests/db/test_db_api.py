@@ -2163,10 +2163,10 @@ class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'is_public': True
         }
 
-    def _create_flavor(self, values):
+    def _create_flavor(self, values, projects=None):
         v = self._get_base_values()
         v.update(values)
-        return db.flavor_create(self.ctxt, v)
+        return db.flavor_create(self.ctxt, v, projects)
 
 
 class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -2515,6 +2515,13 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self.assertIsNotNone(flavor['id'])
         self._assertEqualObjects(flavor, self._get_base_values(),
                                  ignored_keys)
+
+    def test_flavor_create_with_projects(self):
+        projects = ['fake-project1', 'fake-project2']
+        flavor = self._create_flavor({}, projects + ['fake-project2'])
+        access = db.flavor_access_get_by_flavor_id(self.ctxt,
+                                                   flavor['flavorid'])
+        self.assertEqual(projects, [x.project_id for x in access])
 
     def test_flavor_destroy(self):
         specs1 = {'a': '1', 'b': '2'}

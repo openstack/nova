@@ -1410,9 +1410,9 @@ def console_get(context, console_id, instance_uuid=None):
 
     ##################
 
-def flavor_create(context, values):
+def flavor_create(context, values, projects=None):
     """Create a new instance type."""
-    return IMPL.flavor_create(context, values)
+    return IMPL.flavor_create(context, values, projects=projects)
 
 
 def flavor_get_all(context, inactive=False, filters=None, sort_key='flavorid',
