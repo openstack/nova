@@ -43,7 +43,7 @@ def fake_compute_api_get(self, context, instance_id):
 
 
 def fake_service_get_by_compute_host(self, context, host):
-    if host == 'bad_host':
+    if host == 'bad-host':
         raise exception.ComputeHostNotFound(host=host)
     else:
         return {
@@ -90,13 +90,13 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_without_on_shared_storage(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_bad_host(self):
-        req, app = self._gen_request_with_app({'host': 'bad_host',
+        req, app = self._gen_request_with_app({'host': 'bad-host',
                                                'on_shared_storage': 'False',
                                                'admin_password': 'MyNewPass'})
 
@@ -104,7 +104,22 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_evacuate_instance_with_target(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
+                                               'on_shared_storage': 'False',
+                                               'admin_password': 'MyNewPass'})
+
+        self.stubs.Set(compute_api.API, 'update', self._fake_update)
+
+        resp = req.get_response(app)
+        self.assertEqual(resp.status_int, 200)
+        resp_json = jsonutils.loads(resp.body)
+        self.assertEqual("MyNewPass", resp_json['admin_password'])
+
+    def test_evacuate_instance_with_underscore_in_hostname(self):
+        # NOTE: The hostname grammar in RFC952 does not allow for
+        # underscores in hostnames. However, we should test that it
+        # is supported because it sometimes occurs in real systems.
+        req, app = self._gen_request_with_app({'host': 'underscore_hostname',
                                                'on_shared_storage': 'False',
                                                'admin_password': 'MyNewPass'})
 
@@ -116,7 +131,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual("MyNewPass", resp_json['admin_password'])
 
     def test_evacuate_shared_and_pass(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
                                                'on_shared_storage': 'True',
                                                'admin_password': 'MyNewPass'})
         self.stubs.Set(compute_api.API, 'update', self._fake_update)
@@ -125,7 +140,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_not_shared_pass_generated(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
                                                'on_shared_storage': 'False'})
 
         self.stubs.Set(compute_api.API, 'update', self._fake_update)
@@ -137,7 +152,7 @@ class EvacuateTest(test.NoDBTestCase):
                          len(resp_json['admin_password']))
 
     def test_evacuate_shared(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
                                                'on_shared_storage': 'True'})
         self.stubs.Set(compute_api.API, 'update', self._fake_update)
 
@@ -147,7 +162,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertIsNone(resp_json['admin_password'])
 
     def test_evacuate_with_active_service(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
                                                'on_shared_storage': 'false',
                                                'admin_password': 'MyNewPass'})
 
@@ -160,7 +175,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_not_admin(self):
-        req, app = self._gen_request_with_app({'host': 'my_host',
+        req, app = self._gen_request_with_app({'host': 'my-host',
                                                'on_shared_storage': 'True'},
                                                is_admin=False)
 

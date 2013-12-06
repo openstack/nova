@@ -47,7 +47,7 @@ def fake_compute_api_get(self, context, instance_id):
 
 
 def fake_service_get_by_compute_host(self, context, host):
-    if host == 'bad_host':
+    if host == 'bad-host':
         raise exception.ComputeHostNotFound(host=host)
     else:
         return {
@@ -80,7 +80,29 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
+                'onSharedStorage': 'false',
+                'adminPass': 'MyNewPass'
+                }
+            })
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 200)
+
+    def test_evacuate_with_underscore_in_hostname(self):
+        ctxt = context.get_admin_context()
+        ctxt.user_id = 'fake'
+        ctxt.project_id = 'fake'
+        ctxt.is_admin = True
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                # NOTE: The hostname grammar in RFC952 does not allow for
+                # underscores in hostnames. However, we should test that it
+                # is supported because it sometimes occurs in real systems.
+                'host': 'underscore_hostname',
                 'onSharedStorage': 'false',
                 'adminPass': 'MyNewPass'
                 }
@@ -99,7 +121,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'false',
                 'adminPass': 'MyNewPass'
                 }
@@ -119,7 +141,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.content_type = 'application/json'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'false',
                 'adminPass': 'MyNewPass'
                 }
@@ -161,7 +183,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'adminPass': 'MyNewPass'
             }
         })
@@ -179,7 +201,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'bad_host',
+                'host': 'bad-host',
                 'onSharedStorage': 'false',
                 'adminPass': 'MyNewPass'
                 }
@@ -199,7 +221,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'false',
                 'adminPass': 'MyNewPass'
             }
@@ -228,7 +250,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'True',
                 'adminPass': 'MyNewPass'
             }
@@ -255,7 +277,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'False',
             }
         })
@@ -284,7 +306,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'True',
             }
         })
@@ -307,7 +329,7 @@ class EvacuateTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps({
             'evacuate': {
-                'host': 'my_host',
+                'host': 'my-host',
                 'onSharedStorage': 'True',
             }
         })
