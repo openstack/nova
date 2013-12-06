@@ -62,8 +62,8 @@ def get_vm_xml(name="testname", uuid=None, source_type='file',
 
 
 class FakeLibvirtTests(test.NoDBTestCase):
-    def setUp(self):
-        super(FakeLibvirtTests, self).setUp()
+    def tearDown(self):
+        super(FakeLibvirtTests, self).tearDown()
         libvirt._reset()
 
     def get_openAuth_curry_func(self, readOnly=False):
