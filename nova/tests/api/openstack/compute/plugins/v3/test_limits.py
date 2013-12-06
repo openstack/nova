@@ -30,7 +30,6 @@ from nova.api.openstack import xmlutil
 import nova.context
 from nova.openstack.common import jsonutils
 from nova import test
-from nova.tests.api.openstack import fakes
 from nova.tests import matchers
 from nova import utils
 
@@ -58,14 +57,6 @@ class BaseLimitTestSuite(test.NoDBTestCase):
         super(BaseLimitTestSuite, self).setUp()
         self.time = 0.0
         self.stubs.Set(limits.Limit, "_get_time", self._get_time)
-        self.absolute_limits = {}
-
-        def stub_get_project_quotas(context, project_id, usages=True):
-            return dict((k, dict(limit=v))
-                        for k, v in self.absolute_limits.items())
-
-        self.stubs.Set(nova.quota.QUOTAS, "get_project_quotas",
-                       stub_get_project_quotas)
 
     def _get_time(self):
         """Return the "time" according to this test suite."""
@@ -111,8 +102,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
         body = self.controller.index(request)
         expected = {
             "limits": {
-                "rate": [],
-                "absolute": {},
+                "rate": []
             },
         }
         self.assertEqual(expected, body)
@@ -121,15 +111,6 @@ class LimitsControllerTest(BaseLimitTestSuite):
         # Test getting limit details in JSON.
         request = self._get_index_request()
         request = self._populate_limits(request)
-        self.absolute_limits = {
-            'ram': 512,
-            'instances': 5,
-            'cores': 21,
-            'key_pairs': 10,
-            'floating_ips': 10,
-            'security_groups': 10,
-            'security_group_rules': 20,
-        }
         body = self.controller.index(request)
         expected = {
             "limits": {
@@ -168,16 +149,7 @@ class LimitsControllerTest(BaseLimitTestSuite):
                         ],
                     },
 
-                ],
-                "absolute": {
-                    "maxTotalRAMSize": 512,
-                    "maxTotalInstances": 5,
-                    "maxTotalCores": 21,
-                    "maxTotalKeypairs": 10,
-                    "maxTotalFloatingIps": 10,
-                    "maxSecurityGroups": 10,
-                    "maxSecurityGroupRules": 20,
-                    },
+                ]
             },
         }
         self.assertEqual(expected, body)
@@ -226,89 +198,10 @@ class LimitsControllerTest(BaseLimitTestSuite):
                         ],
                     },
 
-                ],
-                "absolute": {},
+                ]
             },
         }
         self.assertEqual(expected, body)
-
-    def _test_index_absolute_limits_json(self, expected):
-        request = self._get_index_request()
-        body = self.controller.index(request)
-        self.assertEqual(expected, body['limits']['absolute'])
-
-    def test_index_ignores_extra_absolute_limits_json(self):
-        self.absolute_limits = {'unknown_limit': 9001}
-        self._test_index_absolute_limits_json({})
-
-    def test_index_absolute_ram_json(self):
-        self.absolute_limits = {'ram': 1024}
-        self._test_index_absolute_limits_json({'maxTotalRAMSize': 1024})
-
-    def test_index_absolute_cores_json(self):
-        self.absolute_limits = {'cores': 17}
-        self._test_index_absolute_limits_json({'maxTotalCores': 17})
-
-    def test_index_absolute_instances_json(self):
-        self.absolute_limits = {'instances': 19}
-        self._test_index_absolute_limits_json({'maxTotalInstances': 19})
-
-    def test_index_absolute_metadata_json(self):
-        # NOTE: both server metadata and image metadata are overloaded
-        # into metadata_items
-        self.absolute_limits = {'metadata_items': 23}
-        expected = {
-            'maxServerMeta': 23,
-            'maxImageMeta': 23,
-        }
-        self._test_index_absolute_limits_json(expected)
-
-    def test_index_absolute_injected_files(self):
-        self.absolute_limits = {
-            'injected_files': 17,
-            'injected_file_content_bytes': 86753,
-        }
-        expected = {
-            'maxPersonality': 17,
-            'maxPersonalitySize': 86753,
-        }
-        self._test_index_absolute_limits_json(expected)
-
-    def test_index_absolute_security_groups(self):
-        self.absolute_limits = {
-            'security_groups': 8,
-            'security_group_rules': 16,
-        }
-        expected = {
-            'maxSecurityGroups': 8,
-            'maxSecurityGroupRules': 16,
-        }
-        self._test_index_absolute_limits_json(expected)
-
-    def test_limit_create(self):
-        req = fakes.HTTPRequestV3.blank('/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.create,
-                          req, {})
-
-    def test_limit_delete(self):
-        req = fakes.HTTPRequestV3.blank('/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.delete,
-                          req, 1)
-
-    def test_limit_detail(self):
-        req = fakes.HTTPRequestV3.blank('/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.detail,
-                          req)
-
-    def test_limit_show(self):
-        req = fakes.HTTPRequestV3.blank('/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.show,
-                          req, 1)
-
-    def test_limit_update(self):
-        req = fakes.HTTPRequestV3.blank('/limits')
-        self.assertRaises(webob.exc.HTTPNotImplemented, self.controller.update,
-                          req, 1, {})
 
 
 class MockLimiter(limits.Limiter):
@@ -862,7 +755,7 @@ class WsgiLimiterProxyTest(BaseLimitTestSuite):
 class LimitsViewBuilderTest(test.NoDBTestCase):
     def setUp(self):
         super(LimitsViewBuilderTest, self).setUp()
-        self.view_builder = views.limits.ViewBuilder()
+        self.view_builder = views.limits.ViewBuilderV3()
         self.rate_limits = [{"URI": "*",
                              "regex": ".*",
                              "value": 10,
@@ -877,9 +770,6 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
                              "remaining": 10,
                              "unit": "DAY",
                              "resetTime": 1311272226}]
-        self.absolute_limits = {"metadata_items": 1,
-                                "injected_files": 5,
-                                "injected_file_content_bytes": 5}
 
     def test_build_limits(self):
         expected_limits = {"limits": {
@@ -897,23 +787,17 @@ class LimitsViewBuilderTest(test.NoDBTestCase):
                                "verb": "POST",
                                "remaining": 10,
                                "unit": "DAY",
-                               "next-available": "2011-07-21T18:17:06Z"}]}],
-                "absolute": {"maxServerMeta": 1,
-                             "maxImageMeta": 1,
-                             "maxPersonality": 5,
-                             "maxPersonalitySize": 5}}}
+                               "next-available": "2011-07-21T18:17:06Z"}]}]}}
 
-        output = self.view_builder.build(self.rate_limits,
-                                         self.absolute_limits)
+        output = self.view_builder.build(self.rate_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
     def test_build_limits_empty_limits(self):
-        expected_limits = {"limits": {"rate": [],
-                           "absolute": {}}}
+        expected_limits = {"limits": {"rate": []}}
 
         abs_limits = {}
         rate_limits = []
-        output = self.view_builder.build(rate_limits, abs_limits)
+        output = self.view_builder.build(rate_limits)
         self.assertThat(output, matchers.DictMatches(expected_limits))
 
 
@@ -922,8 +806,7 @@ class LimitsXMLSerializationTest(test.NoDBTestCase):
         serializer = limits.LimitsTemplate()
 
         fixture = {"limits": {
-                   "rate": [],
-                   "absolute": {}}}
+                   "rate": []}}
 
         output = serializer.serialize(fixture)
         has_dec = output.startswith("<?xml version='1.0' encoding='UTF-8'?>")
@@ -949,23 +832,11 @@ class LimitsXMLSerializationTest(test.NoDBTestCase):
                               "verb": "POST",
                               "remaining": 10,
                               "unit": "DAY",
-                              "next-available": "2011-12-15T22:42:45Z"}]}],
-                    "absolute": {"maxServerMeta": 1,
-                                 "maxImageMeta": 1,
-                                 "maxPersonality": 5,
-                                 "maxPersonalitySize": 10240}}}
+                              "next-available": "2011-12-15T22:42:45Z"}]}]}}
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'limits')
-
-        #verify absolute limits
-        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
-        self.assertEqual(len(absolutes), 4)
-        for limit in absolutes:
-            name = limit.get('name')
-            value = limit.get('value')
-            self.assertEqual(value, str(fixture['limits']['absolute'][name]))
+        xmlutil.validate_schema(root, 'limits', version='v3')
 
         #verify rate limits
         rates = root.xpath('ns:rates/ns:rate', namespaces=NS)
@@ -985,17 +856,11 @@ class LimitsXMLSerializationTest(test.NoDBTestCase):
     def test_index_no_limits(self):
         serializer = limits.LimitsTemplate()
 
-        fixture = {"limits": {
-                   "rate": [],
-                   "absolute": {}}}
+        fixture = {"limits": {"rate": []}}
 
         output = serializer.serialize(fixture)
         root = etree.XML(output)
-        xmlutil.validate_schema(root, 'limits')
-
-        #verify absolute limits
-        absolutes = root.xpath('ns:absolute/ns:limit', namespaces=NS)
-        self.assertEqual(len(absolutes), 0)
+        xmlutil.validate_schema(root, 'limits', version='v3')
 
         #verify rate limits
         rates = root.xpath('ns:rates/ns:rate', namespaces=NS)

@@ -61,53 +61,21 @@ class LimitsTemplate(xmlutil.TemplateBuilder):
         limit.set('unit', 'unit')
         limit.set('next-available', 'next-available')
 
-        absolute = xmlutil.SubTemplateElement(root, 'absolute',
-                                              selector='absolute')
-        limit = xmlutil.SubTemplateElement(absolute, 'limit',
-                                           selector=xmlutil.get_items)
-        limit.set('name', 0)
-        limit.set('value', 1)
-
         return xmlutil.MasterTemplate(root, 1, nsmap=limits_nsmap)
 
 
 class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
+    @extensions.expected_errors(())
     @wsgi.serializers(xml=LimitsTemplate)
     def index(self, req):
         """Return all global and rate limit information."""
         context = req.environ['nova.context']
-        quotas = QUOTAS.get_project_quotas(context, context.project_id,
-                                           usages=False)
-        abs_limits = dict((k, v['limit']) for k, v in quotas.items())
         rate_limits = req.environ.get("nova.limits", [])
 
-        builder = self._get_view_builder(req)
-        return builder.build(rate_limits, abs_limits)
-
-    def create(self, req, body):
-        """Create a new limit."""
-        raise webob.exc.HTTPNotImplemented()
-
-    def delete(self, req, id):
-        """Delete the limit."""
-        raise webob.exc.HTTPNotImplemented()
-
-    def detail(self, req):
-        """Return limit details."""
-        raise webob.exc.HTTPNotImplemented()
-
-    def show(self, req, id):
-        """Show limit information."""
-        raise webob.exc.HTTPNotImplemented()
-
-    def update(self, req, id, body):
-        """Update existing limit."""
-        raise webob.exc.HTTPNotImplemented()
-
-    def _get_view_builder(self, req):
-        return limits_views.ViewBuilder()
+        builder = limits_views.ViewBuilderV3()
+        return builder.build(rate_limits)
 
 
 class Limit(object):
