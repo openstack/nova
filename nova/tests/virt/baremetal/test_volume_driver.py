@@ -163,6 +163,11 @@ class BareMetalVolumeTestCase(test.NoDBTestCase):
         self.assertEqual('iqn.2012-12.a.b:instname-dev-vdx', iqn)
 
 
+class FakeConf(object):
+    def __init__(self, source_path):
+        self.source_path = source_path
+
+
 class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
 
     def setUp(self):
@@ -178,6 +183,14 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
             'type': 'baremetal',
             }
         self.connection_info = {'driver_volume_type': 'fake'}
+        self.mount_point = '/dev/vdc'
+        self.source_path = '/dev/sdx'
+        self.instance = {'name': 'instance-00000001'}
+        self.fixed_ips = [{'address': '10.2.3.4'},
+                          {'address': '172.16.17.18'},
+                         ]
+        self.iqn = 'iqn.fake:instance-00000001-dev-vdc'
+        self.tid = 100
 
     def test_init_loads_volume_drivers(self):
         self.assertEqual(type(self.driver.volume_drivers['fake']),
@@ -191,3 +204,30 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
         self.driver._volume_driver_method('connect_volume',
                                           self.connection_info,
                                           self.disk_info)
+
+    def test_attach_volume(self):
+        self.mox.StubOutWithMock(volume_driver, '_get_fixed_ips')
+        self.mox.StubOutWithMock(self.driver, '_volume_driver_method')
+        self.mox.StubOutWithMock(volume_driver, '_get_iqn')
+        self.mox.StubOutWithMock(volume_driver, '_get_next_tid')
+        self.mox.StubOutWithMock(volume_driver, '_create_iscsi_export_tgtadm')
+        self.mox.StubOutWithMock(volume_driver, '_allow_iscsi_tgtadm')
+        volume_driver._get_fixed_ips(self.instance).AndReturn(self.fixed_ips)
+        self.driver._volume_driver_method('connect_volume',
+                                          self.connection_info,
+                                          self.disk_info).\
+                AndReturn(FakeConf(self.source_path))
+        volume_driver._get_iqn(self.instance['name'], self.mount_point).\
+                AndReturn(self.iqn)
+        volume_driver._get_next_tid().AndReturn(self.tid)
+        volume_driver._create_iscsi_export_tgtadm(self.source_path,
+                                                  self.tid,
+                                                  self.iqn)
+        volume_driver._allow_iscsi_tgtadm(self.tid,
+                                          self.fixed_ips[0]['address'])
+        volume_driver._allow_iscsi_tgtadm(self.tid,
+                                          self.fixed_ips[1]['address'])
+        self.mox.ReplayAll()
+        self.driver.attach_volume(self.connection_info,
+                                  self.instance,
+                                  self.mount_point)
