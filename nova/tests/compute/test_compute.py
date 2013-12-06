@@ -520,6 +520,43 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_boot_image_no_metadata(self):
         self.test_boot_image_metadata(metadata=False)
 
+    def test_poll_bandwidth_usage_disabled(self):
+        ctxt = 'MockContext'
+        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+        # None of the mocks should be called.
+        self.mox.ReplayAll()
+
+        CONF.bandwidth_poll_interval = 0
+        self.compute._poll_bandwidth_usage(ctxt)
+        self.mox.UnsetStubs()
+
+    def test_poll_bandwidth_usage_not_implemented(self):
+        ctxt = 'MockContext'
+
+        self.mox.StubOutWithMock(self.compute.driver, 'get_all_bw_counters')
+        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
+        self.mox.StubOutWithMock(time, 'time')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'instance_get_all_by_host')
+        # Following methods will be called
+        utils.last_completed_audit_period().AndReturn((0, 0))
+        time.time().AndReturn(10)
+        # Note - time called two more times from Log
+        time.time().AndReturn(20)
+        time.time().AndReturn(21)
+        self.compute.conductor_api.instance_get_all_by_host(ctxt,
+                           'fake-mini', columns_to_join=[]).AndReturn([])
+        self.compute.driver.get_all_bw_counters([]).AndRaise(
+            NotImplementedError)
+        self.mox.ReplayAll()
+
+        CONF.bandwidth_poll_interval = 1
+        self.compute._poll_bandwidth_usage(ctxt)
+        # A second call won't call the stubs again as the bandwidth
+        # poll is now disabled
+        self.compute._poll_bandwidth_usage(ctxt)
+        self.mox.UnsetStubs()
+
     def test_poll_volume_usage_disabled(self):
         ctxt = 'MockContext'
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')

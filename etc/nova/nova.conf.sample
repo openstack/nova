@@ -888,7 +888,8 @@
 # (integer value)
 #maximum_instance_delete_attempts=5
 
-# Interval to pull bandwidth usage info (integer value)
+# Interval to pull network bandwidth usage info. Not supported
+# on all hypervisors. Set to 0 to disable. (integer value)
 #bandwidth_poll_interval=600
 
 # Interval to sync power states between the database and the
