@@ -577,7 +577,7 @@ class ServerActionsControllerTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'resize', fake_resize)
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        self.assertRaises(exception.TooManyInstances,
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller._action_resize,
                           req, FAKE_UUID, body)
 
