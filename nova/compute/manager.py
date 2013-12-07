@@ -235,12 +235,12 @@ def reverts_task_state(function):
     def decorated_function(self, context, *args, **kwargs):
         try:
             return function(self, context, *args, **kwargs)
-        except exception.UnexpectedTaskStateError:
+        except exception.UnexpectedTaskStateError as e:
             # Note(maoy): unexpected task state means the current
             # task is preempted. Do not clear task state in this
             # case.
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Possibly task preempted."))
+                LOG.info(_("Task possibly preempted: %s") % e.format_message())
         except Exception:
             with excutils.save_and_reraise_exception():
                 try:
