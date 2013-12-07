@@ -95,6 +95,7 @@ xenapi_agent_opts = [
 ]
 
 CONF = cfg.CONF
+# xenapi_agent options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_agent_opts, 'xenserver')
 
 

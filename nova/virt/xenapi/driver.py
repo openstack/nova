@@ -129,6 +129,7 @@ xenapi_opts = [
     ]
 
 CONF = cfg.CONF
+# xenapi options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 

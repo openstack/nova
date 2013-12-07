@@ -72,6 +72,7 @@ xenapi_torrent_opts = [
     ]
 
 CONF = cfg.CONF
+# xenapi_torrent options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_torrent_opts, 'xenserver')
 
 

@@ -79,6 +79,7 @@ xenapi_vmops_opts = [
     ]
 
 CONF = cfg.CONF
+# xenapi_vmops options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_vmops_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')

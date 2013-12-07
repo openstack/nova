@@ -138,6 +138,7 @@ xenapi_vm_utils_opts = [
     ]
 
 CONF = cfg.CONF
+# xenapi_vm_utils options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_vm_utils_opts, 'xenserver')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
