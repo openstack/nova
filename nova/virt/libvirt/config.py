@@ -906,6 +906,33 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestVideo, self).__init__(root_name="video",
+                                                      **kwargs)
+
+        self.type = 'cirrus'
+        self.vram = None
+        self.heads = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestVideo, self).format_dom()
+
+        model = etree.Element("model")
+        model.set("type", self.type)
+
+        if self.vram:
+            model.set("vram", str(self.vram))
+
+        if self.heads:
+            model.set("heads", str(self.heads))
+
+        dev.append(model)
+
+        return dev
+
+
 class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestHostdev, self).\
