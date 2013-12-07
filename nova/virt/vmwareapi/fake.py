@@ -23,12 +23,12 @@ A fake VMware VI API implementation.
 
 import collections
 import pprint
-import uuid
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import uuidutils
 from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
@@ -866,7 +866,7 @@ class FakeVim(object):
 
     def _login(self):
         """Logs in and sets the session object in the db."""
-        self._session = str(uuid.uuid4())
+        self._session = uuidutils.generate_uuid()
         session = DataObject()
         session.key = self._session
         _db_content['session'][self._session] = session
@@ -1103,9 +1103,6 @@ class FakeVim(object):
         elif attr_name == "ExtendVirtualDisk_Task":
             return lambda *args, **kwargs: self._extend_disk(attr_name,
                                                 kwargs.get("size"))
-        elif attr_name == "DeleteVirtualDisk_Task":
-            return lambda *args, **kwargs: self._delete_disk(attr_name,
-                                                *args, **kwargs)
         elif attr_name == "Destroy_Task":
             return lambda *args, **kwargs: self._unregister_vm(attr_name,
                                                                *args, **kwargs)
