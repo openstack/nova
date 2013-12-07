@@ -266,9 +266,24 @@ Weights
 Filter Scheduler uses so-called **weights** during its work.
 
 The Filter Scheduler weights hosts based on the config option
-``scheduler_weight_classes``, this defaults to
-``nova.scheduler.weights.all_weighers``, which selects the only weigher available
--- the RamWeigher. Hosts are then weighted and sorted with the largest weight winning.
+`scheduler_weight_classes`, this defaults to
+`nova.scheduler.weights.all_weighers`, which selects all the available weighers
+in the package nova.scheduler.weights. Hosts are then weighted and sorted with
+the largest weight winning. For each host, the final weight is calculated by
+summing up all weigher's weight value multiplying its own weight_mutiplier:
+
+::
+
+    final_weight = 0
+    for each weigher:
+        final_weight += weigher's weight_mutiplier * weigher's calculated weight value
+
+The weigher's weight_mutiplier can be set in the configuration file, e.g.
+
+::
+
+    [metrics]
+    weight_multiplier=1.0
 
 Filter Scheduler finds local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,

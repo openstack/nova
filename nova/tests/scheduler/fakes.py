@@ -20,6 +20,7 @@ import mox
 
 from nova.compute import vm_states
 from nova import db
+from nova.openstack.common import jsonutils
 from nova.scheduler import filter_scheduler
 from nova.scheduler import host_manager
 
@@ -51,6 +52,77 @@ COMPUTE_NODES = [
              hypervisor_version=0),
         # Broken entry
         dict(id=5, local_gb=1024, memory_mb=1024, vcpus=1, service=None),
+]
+
+COMPUTE_NODES_METRICS = [
+        dict(id=1, local_gb=1024, memory_mb=1024, vcpus=1,
+             disk_available_least=512, free_ram_mb=512, vcpus_used=1,
+             free_disk_mb=512, local_gb_used=0, updated_at=None,
+             service=dict(host='host1', disabled=False),
+             hypervisor_hostname='node1', host_ip='127.0.0.1',
+             hypervisor_version=0,
+             metrics=jsonutils.dumps([{'name': 'foo',
+                                       'value': 512,
+                                       'timestamp': None,
+                                       'source': 'host1'
+                                      },
+                                      {'name': 'bar',
+                                       'value': 1.0,
+                                       'timestamp': None,
+                                       'source': 'host1'
+                                      },
+                                     ])),
+        dict(id=2, local_gb=2048, memory_mb=2048, vcpus=2,
+             disk_available_least=1024, free_ram_mb=1024, vcpus_used=2,
+             free_disk_mb=1024, local_gb_used=0, updated_at=None,
+             service=dict(host='host2', disabled=True),
+             hypervisor_hostname='node2', host_ip='127.0.0.1',
+             hypervisor_version=0,
+             metrics=jsonutils.dumps([{'name': 'foo',
+                                       'value': 1024,
+                                       'timestamp': None,
+                                       'source': 'host2'
+                                      },
+                                      {'name': 'bar',
+                                       'value': 2.0,
+                                       'timestamp': None,
+                                       'source': 'host2'
+                                      },
+                                     ])),
+        dict(id=3, local_gb=4096, memory_mb=4096, vcpus=4,
+             disk_available_least=3072, free_ram_mb=3072, vcpus_used=1,
+             free_disk_mb=3072, local_gb_used=0, updated_at=None,
+             service=dict(host='host3', disabled=False),
+             hypervisor_hostname='node3', host_ip='127.0.0.1',
+             hypervisor_version=0,
+             metrics=jsonutils.dumps([{'name': 'foo',
+                                       'value': 3072,
+                                       'timestamp': None,
+                                       'source': 'host3'
+                                      },
+                                      {'name': 'bar',
+                                       'value': 1.0,
+                                       'timestamp': None,
+                                       'source': 'host3'
+                                      },
+                                     ])),
+        dict(id=4, local_gb=8192, memory_mb=8192, vcpus=8,
+             disk_available_least=8192, free_ram_mb=8192, vcpus_used=0,
+             free_disk_mb=8192, local_gb_used=0, updated_at=None,
+             service=dict(host='host4', disabled=False),
+             hypervisor_hostname='node4', host_ip='127.0.0.1',
+             hypervisor_version=0,
+             metrics=jsonutils.dumps([{'name': 'foo',
+                                       'value': 8192,
+                                       'timestamp': None,
+                                       'source': 'host4'
+                                      },
+                                      {'name': 'bar',
+                                       'value': 0,
+                                       'timestamp': None,
+                                       'source': 'host4'
+                                      },
+                                     ])),
 ]
 
 INSTANCES = [
