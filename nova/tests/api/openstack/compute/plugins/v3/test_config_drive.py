@@ -225,7 +225,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
                 config_drive.ATTRIBUTE_NAME: "true",
             },
         }
@@ -251,7 +250,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
                 config_drive.ATTRIBUTE_NAME: image_href,
             },
         }
@@ -276,7 +274,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
             },
         }
 

@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import base64
 import uuid
 
 import mox
@@ -347,22 +346,6 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           req, FAKE_UUID, body)
-
-    def test_rebuild_personality(self):
-        body = {
-            "rebuild": {
-                "image_ref": self._image_href,
-                "personality": [{
-                    "path": "/path/to/file",
-                    "contents": base64.b64encode("Test String"),
-                }]
-            },
-        }
-
-        req = fakes.HTTPRequestV3.blank(self.url)
-        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
-
-        self.assertNotIn('personality', body['server'])
 
     def test_rebuild_admin_password(self):
         return_server = fakes.fake_instance_get(image_ref='2',
@@ -1081,9 +1064,6 @@ class TestServerActionXMLDeserializer(test.TestCase):
                     <metadata>
                         <meta key="My Server Name">Apache1</meta>
                     </metadata>
-                    <personality>
-                        <file path="/etc/banner.txt">Mg==</file>
-                    </personality>
                 </rebuild>"""
         request = self.deserializer.deserialize(serial_request, 'action')
         expected = {
@@ -1093,9 +1073,6 @@ class TestServerActionXMLDeserializer(test.TestCase):
                 "metadata": {
                     "My Server Name": "Apache1",
                 },
-                "personality": [
-                    {"path": "/etc/banner.txt", "contents": "Mg=="},
-                ],
             },
         }
         self.assertThat(request['body'], matchers.DictMatches(expected))
@@ -1121,9 +1098,6 @@ class TestServerActionXMLDeserializer(test.TestCase):
                     <metadata>
                         <meta key="My Server Name">Apache1</meta>
                     </metadata>
-                    <personality>
-                        <file path="/etc/banner.txt">Mg==</file>
-                    </personality>
                 </rebuild>"""
         self.assertRaises(AttributeError,
                           self.deserializer.deserialize,

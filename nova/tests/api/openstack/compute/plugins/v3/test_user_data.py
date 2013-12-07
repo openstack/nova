@@ -197,7 +197,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
                 user_data.ATTRIBUTE_NAME: base64.b64encode(value),
             },
         }
@@ -224,7 +223,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
                 user_data.ATTRIBUTE_NAME: value,
             },
         }

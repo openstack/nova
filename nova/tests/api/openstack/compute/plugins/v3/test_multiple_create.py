@@ -316,7 +316,6 @@ class ServersControllerCreateTest(test.TestCase):
                 'flavor_ref': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                'personality': []
             }
         }
 
@@ -344,7 +343,6 @@ class ServersControllerCreateTest(test.TestCase):
                 'flavor_ref': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                'personality': []
             }
         }
 
@@ -380,7 +378,6 @@ class ServersControllerCreateTest(test.TestCase):
                 'flavor_ref': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                'personality': [],
                 multiple_create.RRID_ATTRIBUTE_NAME: True
             }
         }
@@ -453,7 +450,6 @@ class ServersControllerCreateTest(test.TestCase):
                 'flavor_ref': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                'personality': []
             }
         }
 
@@ -475,7 +471,6 @@ class ServersControllerCreateTest(test.TestCase):
                 'flavor_ref': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                'personality': []
             }
         }
 

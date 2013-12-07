@@ -449,7 +449,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
                 'availability_zone': "nova",
             },
         }
@@ -482,7 +481,6 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'personality': {},
             },
         }
 
