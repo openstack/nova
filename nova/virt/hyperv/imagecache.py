@@ -54,9 +54,9 @@ class ImageCache(object):
     def _get_root_vhd_size_gb(self, instance):
         try:
             # In case of resizes we need the old root disk size
-            old_instance_type = flavors.extract_flavor(
+            old_flavor = flavors.extract_flavor(
                 instance, prefix='old_')
-            return old_instance_type['root_gb']
+            return old_flavor['root_gb']
         except KeyError:
             return instance['root_gb']
 
