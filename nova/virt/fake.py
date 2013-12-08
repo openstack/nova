@@ -34,6 +34,7 @@ from nova import db
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt import driver
 from nova.virt import virtapi
 
@@ -98,7 +99,7 @@ class FakeDriver(driver.ComputeDriver):
           'memory_mb_used': 0,
           'local_gb_used': 100000000000,
           'hypervisor_type': 'fake',
-          'hypervisor_version': '1.0',
+          'hypervisor_version': utils.convert_version_to_int('1.0'),
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
           'disk_available_least': 500000000000,
