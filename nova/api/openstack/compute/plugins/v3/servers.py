@@ -835,11 +835,11 @@ class ServersController(wsgi.Controller):
                 exception.InvalidMetadata,
                 exception.InvalidRequest,
                 exception.MultiplePortsNotApplicable,
+                exception.InstanceUserDataMalformed,
+                exception.PortNotFound,
                 exception.SecurityGroupNotFound,
-                exception.InstanceUserDataMalformed) as error:
+                exception.NetworkNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
-        except exception.PortNotFound as error:
-            raise exc.HTTPNotFound(explanation=error.format_message())
         except exception.PortInUse as error:
             raise exc.HTTPConflict(explanation=error.format_message())
 
