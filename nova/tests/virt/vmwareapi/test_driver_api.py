@@ -300,7 +300,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'kernel_id': "fake_kernel_uuid",
                   'ramdisk_id': "fake_ramdisk_uuid",
                   'mac_address': "de:ad:be:ef:be:ef",
-                  'instance_type': 'm1.large',
+                  'flavor': 'm1.large',
                   'node': node,
                   'root_gb': 80,
                   }

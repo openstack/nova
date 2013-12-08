@@ -29,7 +29,7 @@ from nova import utils
 def stub_out_db_instance_api(stubs):
     """Stubs out the db API for creating Instances."""
 
-    INSTANCE_TYPES = {
+    FLAVORS = {
         'm1.tiny': dict(memory_mb=512, vcpus=1, root_gb=0, flavorid=1),
         'm1.small': dict(memory_mb=2048, vcpus=1, root_gb=20, flavorid=2),
         'm1.medium':
@@ -62,7 +62,7 @@ def stub_out_db_instance_api(stubs):
     def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
 
-        type_data = INSTANCE_TYPES[values['instance_type']]
+        type_data = FLAVORS[values['flavor']]
 
         base_options = {
             'name': values['name'],
@@ -76,7 +76,7 @@ def stub_out_db_instance_api(stubs):
             'task_state': task_states.SCHEDULING,
             'user_id': values['user_id'],
             'project_id': values['project_id'],
-            'instance_type': values['instance_type'],
+            'flavor': values['flavor'],
             'memory_mb': type_data['memory_mb'],
             'vcpus': type_data['vcpus'],
             'mac_addresses': [{'address': values['mac_address']}],
@@ -88,10 +88,10 @@ def stub_out_db_instance_api(stubs):
         return base_options
 
     def fake_flavor_get_all(context, inactive=0, filters=None):
-        return INSTANCE_TYPES.values()
+        return FLAVORS.values()
 
     def fake_flavor_get_by_name(context, name):
-        return INSTANCE_TYPES[name]
+        return FLAVORS[name]
 
     stubs.Set(db, 'instance_create', fake_instance_create)
     stubs.Set(db, 'flavor_get_all', fake_flavor_get_all)

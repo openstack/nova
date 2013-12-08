@@ -65,7 +65,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                                   {'address': 'de:ad:be:ef:be:ef'}
                               ],
                               'memory_mb': 8192,
-                              'instance_type': 'm1.large',
+                              'flavor': 'm1.large',
                               'vcpus': 4,
                               'root_gb': 80,
                               'image_ref': '1',
