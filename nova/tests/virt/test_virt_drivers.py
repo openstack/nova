@@ -729,7 +729,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
         self.stubs.Set(self.connection,
-                       'set_host_enabled', mock.MagicMock())
+                       '_set_host_enabled', mock.MagicMock())
         self.useFixture(fixtures.MonkeyPatch(
             'nova.context.get_admin_context',
             self._fake_admin_context))
@@ -746,23 +746,19 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.skipTest("Test nothing, but this method"
                       " needed to override superclass.")
 
-    def test_set_host_enabled(self):
+    def test_internal_set_host_enabled(self):
         self.mox.UnsetStubs()
         service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: False
-        # service_mock.__getitem__.return_value = False
         service_mock.configure_mock(disabled_reason='None',
                                     disabled=False)
         from nova.objects import service as service_obj
-        self.mox.StubOutWithMock(service_obj.Service,
-                                 'get_by_compute_host')
-        service_obj.Service.get_by_compute_host(self.ctxt,
-                                    'fake-mini').AndReturn(service_mock)
-        self.mox.ReplayAll()
-        self.connection.set_host_enabled('my_test_host', 'ERROR!')
-        self.assertTrue(service_mock.disabled)
-        self.assertEqual(service_mock.disabled_reason, 'AUTO: ERROR!')
+        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+                               return_value=service_mock):
+            self.connection._set_host_enabled(False, 'ERROR!')
+            self.assertTrue(service_mock.disabled)
+            self.assertEqual(service_mock.disabled_reason, 'AUTO: ERROR!')
 
     def test_set_host_enabled_when_auto_disabled(self):
         self.mox.UnsetStubs()
@@ -772,14 +768,11 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         service_mock.configure_mock(disabled_reason='AUTO: ERROR',
                                     disabled=True)
         from nova.objects import service as service_obj
-        self.mox.StubOutWithMock(service_obj.Service,
-                                 'get_by_compute_host')
-        service_obj.Service.get_by_compute_host(self.ctxt,
-                                    'fake-mini').AndReturn(service_mock)
-        self.mox.ReplayAll()
-        self.connection.set_host_enabled('my_test_host', True)
-        self.assertFalse(service_mock.disabled)
-        self.assertEqual(service_mock.disabled_reason, 'None')
+        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+                               return_value=service_mock):
+            self.connection._set_host_enabled(True)
+            self.assertFalse(service_mock.disabled)
+            self.assertEqual(service_mock.disabled_reason, 'None')
 
     def test_set_host_enabled_when_manually_disabled(self):
         self.mox.UnsetStubs()
@@ -789,14 +782,11 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         service_mock.configure_mock(disabled_reason='Manually disabled',
                                     disabled=True)
         from nova.objects import service as service_obj
-        self.mox.StubOutWithMock(service_obj.Service,
-                                 'get_by_compute_host')
-        service_obj.Service.get_by_compute_host(self.ctxt,
-                                    'fake-mini').AndReturn(service_mock)
-        self.mox.ReplayAll()
-        self.connection.set_host_enabled('my_test_host', True)
-        self.assertTrue(service_mock.disabled)
-        self.assertEqual(service_mock.disabled_reason, 'Manually disabled')
+        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+                               return_value=service_mock):
+            self.connection._set_host_enabled(True)
+            self.assertTrue(service_mock.disabled)
+            self.assertEqual(service_mock.disabled_reason, 'Manually disabled')
 
     def test_set_host_enabled_dont_override_manually_disabled(self):
         self.mox.UnsetStubs()
@@ -806,11 +796,8 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         service_mock.configure_mock(disabled_reason='Manually disabled',
                                     disabled=True)
         from nova.objects import service as service_obj
-        self.mox.StubOutWithMock(service_obj.Service,
-                                 'get_by_compute_host')
-        service_obj.Service.get_by_compute_host(self.ctxt,
-                                    'fake-mini').AndReturn(service_mock)
-        self.mox.ReplayAll()
-        self.connection.set_host_enabled('my_test_host', 'ERROR!')
-        self.assertTrue(service_mock.disabled)
-        self.assertEqual(service_mock.disabled_reason, 'Manually disabled')
+        with mock.patch.object(service_obj.Service, "get_by_compute_host",
+                               return_value=service_mock):
+            self.connection._set_host_enabled(False, 'ERROR!')
+            self.assertTrue(service_mock.disabled)
+            self.assertEqual(service_mock.disabled_reason, 'Manually disabled')
