@@ -2711,6 +2711,10 @@ class LibvirtConnTestCase(test.TestCase):
         network_ref = db.project_get_networks(context.get_admin_context(),
                                              self.project_id)[0]
 
+        xen_vm_mode = vm_mode.XEN
+        if expect_xen_hvm:
+            xen_vm_mode = vm_mode.HVM
+
         type_uri_map = {'qemu': ('qemu:///system',
                              [(lambda t: t.find('.').get('type'), 'qemu'),
                               (lambda t: t.find('./os/type').text,
@@ -2728,20 +2732,12 @@ class LibvirtConnTestCase(test.TestCase):
                         'xen': ('xen:///',
                              [(lambda t: t.find('.').get('type'), 'xen'),
                               (lambda t: t.find('./os/type').text,
-                               vm_mode.XEN)])}
+                               xen_vm_mode)])}
 
         if expect_xen_hvm or xen_only:
             hypervisors_to_check = ['xen']
         else:
             hypervisors_to_check = ['qemu', 'kvm', 'xen']
-
-        if expect_xen_hvm:
-            type_uri_map = {}
-            type_uri_map['xen'] = ('xen:///',
-                                   [(lambda t: t.find('.').get('type'),
-                                       'xen'),
-                                    (lambda t: t.find('./os/type').text,
-                                        vm_mode.HVM)])
 
         for hypervisor_type in hypervisors_to_check:
             check_list = type_uri_map[hypervisor_type][1]
@@ -2845,7 +2841,9 @@ class LibvirtConnTestCase(test.TestCase):
                 './devices/disk/source')[1].get('file')).split('/')[1],
                                'disk.local')]
 
-        for (virt_type, (expected_uri, checks)) in type_uri_map.iteritems():
+        for virt_type in hypervisors_to_check:
+            expected_uri = type_uri_map[virt_type][0]
+            checks = type_uri_map[virt_type][1]
             self.flags(virt_type=virt_type, group='libvirt')
             conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
