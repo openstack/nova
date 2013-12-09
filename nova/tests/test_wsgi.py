@@ -44,7 +44,15 @@ class TestLoaderNothingExists(test.NoDBTestCase):
         super(TestLoaderNothingExists, self).setUp()
         self.stubs.Set(os.path, 'exists', lambda _: False)
 
-    def test_config_not_found(self):
+    def test_relpath_config_not_found(self):
+        self.flags(api_paste_config='api-paste.ini')
+        self.assertRaises(
+            nova.exception.ConfigNotFound,
+            nova.wsgi.Loader,
+        )
+
+    def test_asbpath_config_not_found(self):
+        self.flags(api_paste_config='/etc/nova/api-paste.ini')
         self.assertRaises(
             nova.exception.ConfigNotFound,
             nova.wsgi.Loader,

@@ -464,11 +464,14 @@ class Loader(object):
         :returns: None
 
         """
+        self.config_path = None
+
         config_path = config_path or CONF.api_paste_config
-        if os.path.exists(config_path):
-            self.config_path = config_path
-        else:
+        if not os.path.isabs(config_path):
             self.config_path = CONF.find_file(config_path)
+        elif os.path.exists(config_path):
+            self.config_path = config_path
+
         if not self.config_path:
             raise exception.ConfigNotFound(path=config_path)
 
