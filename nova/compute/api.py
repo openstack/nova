@@ -345,7 +345,6 @@ class API(base.Base):
         except exception.OverQuota as exc:
             # OK, we exceeded quota; let's figure out why...
             quotas = exc.kwargs['quotas']
-            usages = exc.kwargs['usages']
             overs = exc.kwargs['overs']
             headroom = exc.kwargs['headroom']
 
@@ -2014,7 +2013,6 @@ class API(base.Base):
                  'HARD': task_states.REBOOTING_HARD}[reboot_type]
         instance.task_state = state
         instance.save(expected_task_state=[None, task_states.REBOOTING])
-        elevated = context.elevated()
 
         self._record_action_start(context, instance, instance_actions.REBOOT)
 
@@ -2316,7 +2314,6 @@ class API(base.Base):
                                                          'project_id'])
         except exception.OverQuota as exc:
             quotas = exc.kwargs['quotas']
-            usages = exc.kwargs['usages']
             overs = exc.kwargs['overs']
             headroom = exc.kwargs['headroom']
 
