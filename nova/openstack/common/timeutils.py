@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation.
 # All Rights Reserved.
 #
@@ -178,6 +176,15 @@ def delta_seconds(before, after):
     datetime objects (as a float, to microsecond resolution).
     """
     delta = after - before
+    return total_seconds(delta)
+
+
+def total_seconds(delta):
+    """Return the total seconds of datetime.timedelta object.
+
+    Compute total seconds of datetime.timedelta, datetime.timedelta
+    doesn't have method total_seconds in Python2.6, calculate it manually.
+    """
     try:
         return delta.total_seconds()
     except AttributeError:

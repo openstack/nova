@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation.
 # Copyright 2012, Red Hat, Inc.
 #
@@ -24,7 +22,9 @@ import sys
 import time
 import traceback
 
-from nova.openstack.common.gettextutils import _
+import six
+
+from nova.openstack.common.gettextutils import _  # noqa
 
 
 class save_and_reraise_exception(object):
@@ -65,7 +65,7 @@ class save_and_reraise_exception(object):
                                                      self.tb))
             return False
         if self.reraise:
-            raise self.type_, self.value, self.tb
+            six.reraise(self.type_, self.value, self.tb)
 
 
 def forever_retry_uncaught_exceptions(infunc):
@@ -77,7 +77,8 @@ def forever_retry_uncaught_exceptions(infunc):
             try:
                 return infunc(*args, **kwargs)
             except Exception as exc:
-                if exc.message == last_exc_message:
+                this_exc_message = six.u(str(exc))
+                if this_exc_message == last_exc_message:
                     exc_count += 1
                 else:
                     exc_count = 1
@@ -85,12 +86,12 @@ def forever_retry_uncaught_exceptions(infunc):
                 # the exception message changes
                 cur_time = int(time.time())
                 if (cur_time - last_log_time > 60 or
-                        exc.message != last_exc_message):
+                        this_exc_message != last_exc_message):
                     logging.exception(
                         _('Unexpected exception occurred %d time(s)... '
                           'retrying.') % exc_count)
                     last_log_time = cur_time
-                    last_exc_message = exc.message
+                    last_exc_message = this_exc_message
                     exc_count = 0
                 # This should be a very rare event. In case it isn't, do
                 # a sleep.
