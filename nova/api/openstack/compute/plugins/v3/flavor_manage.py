@@ -51,6 +51,7 @@ class FlavorManageController(wsgi.Controller):
 
         return webob.Response(status_int=204)
 
+    @wsgi.response(201)
     @wsgi.action("create")
     @extensions.expected_errors((400, 409))
     @wsgi.serializers(xml=flavors_api.FlavorTemplate)

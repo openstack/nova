@@ -44,7 +44,7 @@ class FlavorRxtxJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                  'flavor-rxtx-post-req',
                                  subs)
         subs.update(self._get_regexes())
-        self._verify_response('flavor-rxtx-post-resp', subs, response, 200)
+        self._verify_response('flavor-rxtx-post-resp', subs, response, 201)
 
 
 class FlavorRxtxXmlTest(FlavorRxtxJsonTest):

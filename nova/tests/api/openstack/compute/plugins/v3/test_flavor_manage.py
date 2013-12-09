@@ -256,7 +256,7 @@ class FlavorManageTest(test.NoDBTestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(request_dict)
         res = req.get_response(self.app)
-        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.status_code, 201)
         body = jsonutils.loads(res.body)
         self.assertEqual("test", body["flavor"]["name"])
 
