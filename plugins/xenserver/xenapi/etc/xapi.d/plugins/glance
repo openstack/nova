@@ -22,6 +22,7 @@
 
 import httplib
 import md5
+import socket
 import urllib2
 
 import utils
@@ -33,12 +34,19 @@ pluginlib_nova.configure_logging('glance')
 logging = pluginlib_nova.logging
 PluginError = pluginlib_nova.PluginError
 
+DEFAULT_SOCKET_TIMEOUT_SECONDS = 60
+
 
 class RetryableError(Exception):
     pass
 
 
 def _download_tarball_and_verify(request, staging_path):
+    # NOTE(johngarbutt) to ensure the script does not hang
+    # if we lose connection to glance we add a default socket
+    # The default is to never timeout.
+    socket.setdefaulttimeout(DEFAULT_SOCKET_TIMEOUT_SECONDS)
+
     try:
         response = urllib2.urlopen(request)
     except urllib2.HTTPError, error:
