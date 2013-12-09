@@ -6070,8 +6070,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.StubOutWithMock(blockinfo, 'default_device_names')
 
-        blockinfo.default_device_names('fake_libvirt_type', instance,
-                                       root_device_name, mox.IgnoreArg(),
+        blockinfo.default_device_names('fake_libvirt_type', mox.IgnoreArg(),
+                                       instance, root_device_name,
                                        ephemerals, swap, block_device_mapping)
         self.mox.ReplayAll()
 

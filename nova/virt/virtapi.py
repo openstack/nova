@@ -57,10 +57,3 @@ class VirtAPI(object):
         :param legacy: get bdm info in legacy format (or not)
         """
         raise NotImplementedError()
-
-    def block_device_mapping_update(self, context, bdm_id, bdm_values):
-        """Update the database for the passed block device mapping
-        :param context: security context
-        :param bdm: the block device mapping dict
-        """
-        raise NotImplementedError()

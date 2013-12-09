@@ -18,6 +18,7 @@ import functools
 import operator
 
 from nova import block_device
+from nova.objects import block_device as block_device_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -37,22 +38,79 @@ class _NoLegacy(Exception):
     pass
 
 
+def update_db(method):
+    @functools.wraps(method)
+    def wrapped(obj, context, *args, **kwargs):
+        ret_val = method(obj, context, *args, **kwargs)
+        obj.save(context)
+        return ret_val
+    return wrapped
+
+
 class DriverBlockDevice(dict):
+    """A dict subclass that represents block devices used by the virt layer.
+
+    Uses block device objects internally to do the database access.
+
+    _fields and _legacy_fields class attributes present a set of fields that
+    are expected on a certain DriverBlockDevice type. We may have more legacy
+    versions in the future.
+
+    If an attribute access is attempted for a name that is found in the
+    _proxy_as_attr set, it will be proxied to the underlying object. This
+    allows us to access stuff that is not part of the data model that all
+    drivers understand.
+
+    The save() method allows us to update the database using the underlying
+    object. _update_on_save class attribute dictionary keeps the following
+    mapping:
+
+        {'object field name': 'driver dict field name (or None if same)'}
+
+    These fields will be updated on the internal object, from the values in the
+    dict, before the actual database update is done.
+    """
+
     _fields = set()
     _legacy_fields = set()
 
+    _proxy_as_attr = set()
+    _update_on_save = {'disk_bus': None,
+                       'device_name': None,
+                       'device_type': None}
+
     def __init__(self, bdm):
-        if bdm.get('no_device'):
+        # TODO(ndipanov): Remove this check when we have all the rpc methods
+        # use objects for block devices.
+        if isinstance(bdm, block_device_obj.BlockDeviceMapping):
+            self.__dict__['_bdm_obj'] = bdm
+        else:
+            self.__dict__['_bdm_obj'] = block_device_obj.BlockDeviceMapping()
+            self._bdm_obj.update(block_device.BlockDeviceDict(bdm))
+            self._bdm_obj.obj_reset_changes()
+
+        if self._bdm_obj.no_device:
             raise _NotTransformable()
 
-        # NOTE (ndipanov): Always save the id of the bdm
-        #                  so we can use it for db updates.
-        self.id = bdm.get('id')
         self.update(dict((field, None)
                     for field in self._fields))
-        self._transform(bdm)
+        self._transform()
 
-    def _transform(self, bdm):
+    def __getattr__(self, name):
+        if name in self._proxy_as_attr:
+            return getattr(self._bdm_obj, name)
+        else:
+            raise AttributeError("Cannot access %s on DriverBlockDevice "
+                                  "class" % name)
+
+    def __setattr__(self, name, value):
+        if name in self._proxy_as_attr:
+            return setattr(self._bdm_obj, name, value)
+        else:
+            raise AttributeError("Cannot access %s on DriverBlockDevice "
+                                  "class" % name)
+
+    def _transform(self):
         """Transform bdm to the format that is passed to drivers."""
         raise NotImplementedError()
 
@@ -73,18 +131,26 @@ class DriverBlockDevice(dict):
         """
         raise NotImplementedError()
 
+    def save(self, context):
+        for attr_name, key_name in self._update_on_save.iteritems():
+            setattr(self._bdm_obj, attr_name, self[key_name or attr_name])
+        self._bdm_obj.save(context)
+
 
 class DriverSwapBlockDevice(DriverBlockDevice):
     _fields = set(['device_name', 'swap_size', 'disk_bus'])
     _legacy_fields = _fields - set(['disk_bus'])
 
-    def _transform(self, bdm):
-        if not block_device.new_format_is_swap(bdm):
+    _update_on_save = {'disk_bus': None,
+                       'device_name': None}
+
+    def _transform(self):
+        if not block_device.new_format_is_swap(self._bdm_obj):
             raise _InvalidType
         self.update({
-            'device_name': bdm.get('device_name'),
-            'swap_size': bdm.get('volume_size') or 0,
-            'disk_bus': bdm.get('disk_bus')
+            'device_name': self._bdm_obj.device_name,
+            'swap_size': self._bdm_obj.volume_size or 0,
+            'disk_bus': self._bdm_obj.disk_bus
         })
 
 
@@ -94,15 +160,15 @@ class DriverEphemeralBlockDevice(DriverBlockDevice):
     _legacy_fields = (_fields - _new_only_fields |
                       set(['num', 'virtual_name']))
 
-    def _transform(self, bdm):
-        if not block_device.new_format_is_ephemeral(bdm):
+    def _transform(self):
+        if not block_device.new_format_is_ephemeral(self._bdm_obj):
             raise _InvalidType
         self.update({
-            'device_name': bdm.get('device_name'),
-            'size': bdm.get('volume_size') or 0,
-            'disk_bus': bdm.get('disk_bus'),
-            'device_type': bdm.get('device_type'),
-            'guest_format': bdm.get('guest_format')
+            'device_name': self._bdm_obj.device_name,
+            'size': self._bdm_obj.volume_size or 0,
+            'disk_bus': self._bdm_obj.disk_bus,
+            'device_type': self._bdm_obj.device_type,
+            'guest_format': self._bdm_obj.guest_format
         })
 
     def legacy(self, num=0):
@@ -122,36 +188,30 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     _valid_source = 'volume'
     _valid_destination = 'volume'
 
-    # Override in subclasses if volume should be created from
-    # another source.
-    _source_id_field = None
+    _proxy_as_attr = set(['volume_size', 'volume_id'])
+    _update_on_save = {'disk_bus': None,
+                       'device_name': 'mount_device',
+                       'device_type': None}
 
-    def _transform(self, bdm):
-        if not bdm.get('source_type') == self._valid_source\
-                or not bdm.get('destination_type') == \
-                self._valid_destination:
+    def _transform(self):
+        if (not self._bdm_obj.source_type == self._valid_source
+                or not self._bdm_obj.destination_type ==
+                self._valid_destination):
             raise _InvalidType
 
-        # NOTE (ndipanov): Save it as an attribute as we will
-        #                  need it for attach()
-        self.volume_size = bdm.get('volume_size')
-        self.volume_id = bdm.get('volume_id')
-
-        if self._source_id_field:
-            setattr(self, self._source_id_field,
-                    bdm.get(self._source_id_field, None))
         self.update(
-            dict((k, v) for k, v in bdm.iteritems()
+            dict((k, v) for k, v in self._bdm_obj.iteritems()
                  if k in self._new_fields | set(['delete_on_termination']))
         )
-        self['mount_device'] = bdm.get('device_name')
+        self['mount_device'] = self._bdm_obj.device_name
         try:
             self['connection_info'] = jsonutils.loads(
-                bdm.get('connection_info'))
+                self._bdm_obj.connection_info)
         except TypeError:
             self['connection_info'] = None
 
-    def attach(self, context, instance, volume_api, virt_driver, db_api=None):
+    @update_db
+    def attach(self, context, instance, volume_api, virt_driver):
         volume = volume_api.get(context, self.volume_id)
         volume_api.check_attach(context, volume, instance=instance)
 
@@ -177,13 +237,10 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
         self['connection_info'] = connection_info
-        if db_api:
-            db_api.block_device_mapping_update(
-                context, self.id,
-                {'connection_info': jsonutils.dumps(connection_info)})
 
-    def refresh_connection_info(self, context, instance, volume_api,
-                                virt_driver, db_api=None):
+    @update_db
+    def refresh_connection_info(self, context, instance,
+                                volume_api, virt_driver):
         # NOTE (ndipanov): A no-op if there is no connection info already
         if not self['connection_info']:
             return
@@ -196,18 +253,24 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             connection_info['serial'] = self.volume_id
         self['connection_info'] = connection_info
 
-        if db_api:
-            db_api.block_device_mapping_update(context, self.id,
-            {'connection_info': jsonutils.dumps(connection_info)})
+    def save(self, context):
+        # NOTE(ndipanov): we might want to generalize this by adding it to the
+        # _update_on_save and adding a transformation function.
+        try:
+            self._bdm_obj.connection_info = jsonutils.dumps(
+                    self.get('connection_info'))
+        except TypeError:
+            pass
+        super(DriverVolumeBlockDevice, self).save(context)
 
 
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'snapshot'
-    _source_id_field = 'snapshot_id'
+    _proxy_as_attr = set(['volume_size', 'volume_id', 'snapshot_id'])
 
-    def attach(self, context, instance, volume_api, virt_driver,
-               db_api=None, wait_func=None):
+    def attach(self, context, instance, volume_api,
+               virt_driver, wait_func=None):
 
         if not self.volume_id:
             snapshot = volume_api.get_snapshot(context,
@@ -216,37 +279,31 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
                                     '', '', snapshot)
             if wait_func:
                 wait_func(context, vol['id'])
-            if db_api:
-                db_api.block_device_mapping_update(context, self.id,
-                                                   {'volume_id': vol['id']})
+
             self.volume_id = vol['id']
 
         # Call the volume attach now
         super(DriverSnapshotBlockDevice, self).attach(context, instance,
-                                                      volume_api, virt_driver,
-                                                      db_api)
+                                                      volume_api, virt_driver)
 
 
 class DriverImageBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'image'
-    _source_id_field = 'image_id'
+    _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
 
-    def attach(self, context, instance, volume_api, virt_driver,
-               db_api=None, wait_func=None):
+    def attach(self, context, instance, volume_api,
+               virt_driver, wait_func=None):
         if not self.volume_id:
             vol = volume_api.create(context, self.volume_size,
                                     '', '', image_id=self.image_id)
             if wait_func:
                 wait_func(context, vol['id'])
-            if db_api:
-                db_api.block_device_mapping_update(context, self.id,
-                                                   {'volume_id': vol['id']})
+
             self.volume_id = vol['id']
 
         super(DriverImageBlockDevice, self).attach(context, instance,
-                                                   volume_api, virt_driver,
-                                                   db_api)
+                                                   volume_api, virt_driver)
 
 
 def _convert_block_devices(device_type, block_device_mapping):

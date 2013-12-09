@@ -2397,6 +2397,7 @@ class CloudTestCase(test.TestCase):
                     {'volume_id': None,
                      'snapshot_id': None,
                      'no_device': True,
+                     'source_type': 'blank',
                      'delete_on_termination': None,
                      'device_name': None},
                     {'volume_id': None,

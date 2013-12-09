@@ -425,20 +425,26 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(attempts, 3)
 
     def test_boot_volume_serial(self):
-        block_device_mapping = [
-        block_device.BlockDeviceDict({
-            'id': 1,
-            'no_device': None,
-            'source_type': 'volume',
-            'destination_type': 'volume',
-            'snapshot_id': None,
-            'volume_id': self.volume_id,
-            'device_name': '/dev/vdb',
-            'delete_on_termination': False,
-        })]
-        self.compute._prep_block_device(self.context, self.instance,
-                                        block_device_mapping)
-        self.assertEqual(self.cinfo.get('serial'), self.volume_id)
+        with (
+            mock.patch.object(block_device_obj.BlockDeviceMapping, 'save')
+        ) as mock_save:
+            block_device_mapping = [
+            block_device.BlockDeviceDict({
+                'id': 1,
+                'no_device': None,
+                'source_type': 'volume',
+                'destination_type': 'volume',
+                'snapshot_id': None,
+                'volume_id': self.volume_id,
+                'device_name': '/dev/vdb',
+                'delete_on_termination': False,
+            })]
+            prepped_bdm = self.compute._prep_block_device(
+                    self.context, self.instance, block_device_mapping)
+            mock_save.assert_called_once_with(self.context)
+            volume_driver_bdm = prepped_bdm['block_device_mapping'][0]
+            self.assertEqual(volume_driver_bdm['connection_info']['serial'],
+                             self.volume_id)
 
     def test_boot_volume_metadata(self, metadata=True):
         def volume_api_get(*args, **kwargs):
@@ -2366,7 +2372,7 @@ class ComputeTestCase(BaseTestCase):
                         'driver_volume_type': 'rbd'
                     },
                     'mount_device': '/dev/vda',
-                    'delete_on_termination': None
+                    'delete_on_termination': False
                 }]
             }
             self.assertEqual(block_device_info, expected)

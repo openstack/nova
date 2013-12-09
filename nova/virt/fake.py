@@ -482,6 +482,3 @@ class FakeVirtAPI(virtapi.VirtAPI):
         if legacy:
             bdms = block_device.legacy_mapping(bdms)
         return bdms
-
-    def block_device_mapping_update(self, context, bdm_id, values):
-        return db.block_device_mapping_update(context, bdm_id, values)
