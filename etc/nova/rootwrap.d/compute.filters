@@ -218,3 +218,7 @@ rbd: CommandFilter, rbd, root
 
 # nova/virt/libvirt/volume.py: 'cp', '/dev/stdin', delete_control..
 cp: CommandFilter, cp, root
+
+# nova/virt/xenapi/vm_utils.py:
+sync: CommandFilter, sync, root
+

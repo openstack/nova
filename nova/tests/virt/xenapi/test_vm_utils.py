@@ -186,7 +186,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
                       '-J', '-r', '-V', 'config-2', mox.IgnoreArg(),
                       attempts=1, run_as_root=False).AndReturn(None)
         utils.execute('dd', mox.IgnoreArg(), mox.IgnoreArg(),
-                      run_as_root=True).AndReturn(None)
+                      mox.IgnoreArg(), run_as_root=True).AndReturn(None)
 
         self.mox.StubOutWithMock(vm_utils, 'create_vbd')
         vm_utils.create_vbd('session', 'vm_ref', 'vdi_ref', mox.IgnoreArg(),
@@ -1649,6 +1649,25 @@ class GetAllVdisTestCase(VMUtilsTestBase):
         self.assertEqual(actual, [('2', 'vdi_rec_2')])
 
         session.call_xenapi.assert_called_once_with("SR.get_VDIs", sr_ref)
+
+
+class VDIAttachedHere(VMUtilsTestBase):
+    @mock.patch.object(vm_utils, 'destroy_vbd')
+    @mock.patch.object(vm_utils, '_get_this_vm_ref')
+    @mock.patch.object(vm_utils, 'create_vbd')
+    @mock.patch.object(volume_utils, 'vbd_plug')
+    @mock.patch.object(vm_utils, '_remap_vbd_dev')
+    @mock.patch.object(vm_utils, '_wait_for_device')
+    @mock.patch.object(utils, 'execute')
+    @mock.patch.object(vm_utils, 'unplug_vbd')
+    def test_sync_called(self, mock_unplug_vbd, mock_execute,
+                         mock_wait_for_device, mock_remap_vbd_dev,
+                         mock_vbd_plug, mock_create_vbd,
+                         mock_get_this_vm_ref, mock_destroy_vbd):
+        session = mock.Mock()
+        with vm_utils.vdi_attached_here(session, 'vdi_ref'):
+            pass
+        mock_execute.assert_called_with('sync', run_as_root=True)
 
 
 class SnapshotAttachedHereTestCase(VMUtilsTestBase):
