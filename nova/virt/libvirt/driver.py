@@ -3027,19 +3027,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
         if CONF.libvirt.virt_type == "lxc":
-            guest.os_type = vm_mode.EXE
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE
         elif CONF.libvirt.virt_type == "uml":
-            guest.os_type = vm_mode.UML
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name
         else:
             if ((CONF.libvirt.virt_type == "xen" and
                  guest.os_type == vm_mode.XEN)):
                 guest.os_root = root_device_name
-            else:
-                guest.os_type = vm_mode.HVM
 
             if rescue:
                 if rescue.get('kernel_id'):
