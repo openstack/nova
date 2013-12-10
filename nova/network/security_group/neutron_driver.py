@@ -22,6 +22,7 @@ import sys
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from oslo.config import cfg
+import six
 from webob import exc
 
 from nova.compute import api as compute_api
@@ -132,6 +133,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 id = neutronv20.find_resourceid_by_name_or_id(
                     neutron, 'security_group', name)
             group = neutron.show_security_group(id).get('security_group')
+        except n_exc.NeutronClientNoUniqueMatch as e:
+            raise exception.NoUniqueMatch(six.text_type(e))
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
@@ -398,6 +401,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         try:
             security_group_id = neutronv20.find_resourceid_by_name_or_id(
                 neutron, 'security_group', security_group_name)
+        except n_exc.NeutronClientNoUniqueMatch as e:
+            raise exception.NoUniqueMatch(six.text_type(e))
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:

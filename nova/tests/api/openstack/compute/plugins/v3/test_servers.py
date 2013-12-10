@@ -2002,6 +2002,19 @@ class ServersControllerCreateTest(test.TestCase):
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self._test_create_extra(params)
 
+    def test_create_instance_with_non_unique_secgroup_name(self):
+        network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'uuid': network}]
+        params = {'networks': requested_networks,
+                  'security_groups': [{'name': 'dup'}, {'name': 'dup'}]}
+
+        def fake_create(*args, **kwargs):
+            raise exception.NoUniqueMatch("No Unique match found for ...")
+
+        self.stubs.Set(compute_api.API, 'create', fake_create)
+        self.assertRaises(webob.exc.HTTPConflict,
+                          self._test_create_extra, params)
+
     def test_create_instance_with_networks_disabled_neutronv2(self):
         nova_utils.reset_is_neutron()
         self.flags(network_api_class='nova.network.neutronv2.api.API')
