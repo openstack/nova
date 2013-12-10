@@ -1063,6 +1063,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                         instance_uuid=instance['uuid'], reason=msg)
             else:
                 raise exc_info[0], exc_info[1], exc_info[2]
+        except exception.InvalidBDM:
+            with excutils.save_and_reraise_exception():
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
+                try:
+                    self._deallocate_network(context, instance)
+                except Exception:
+                    msg = _('Failed to dealloc network '
+                            'for failed instance')
+                    LOG.exception(msg, instance=instance)
         except Exception:
             exc_info = sys.exc_info()
             # try to re-schedule instance:
@@ -1388,9 +1398,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             return block_device_info
 
         except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_('Instance failed block device setup'),
-                              instance=instance)
+            LOG.exception(_('Instance failed block device setup'),
+                          instance=instance)
+            raise exception.InvalidBDM()
 
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password,
