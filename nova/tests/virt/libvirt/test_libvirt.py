@@ -3361,6 +3361,48 @@ class LibvirtConnTestCase(test.TestCase):
     def test_create_images_and_backing_raw(self):
         self._do_test_create_images_and_backing('raw')
 
+    def test_create_images_and_backing_ephemeral_gets_created(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info_json = jsonutils.dumps(
+            [{u'backing_file': u'fake_image_backing_file',
+              u'disk_size': 10747904,
+              u'path': u'disk_path',
+              u'type': u'qcow2',
+              u'virt_disk_size': 25165824},
+             {u'backing_file': u'ephemeral_1_default',
+              u'disk_size': 393216,
+              u'over_committed_disk_size': 1073348608,
+              u'path': u'disk_eph_path',
+              u'type': u'qcow2',
+              u'virt_disk_size': 1073741824}])
+
+        base_dir = os.path.join(CONF.instances_path,
+                                CONF.image_cache_subdirectory_name)
+        self.test_instance.update({'name': 'fake_instance',
+                                   'user_id': 'fake-user',
+                                   'os_type': None,
+                                   'project_id': 'fake-project'})
+
+        with contextlib.nested(
+            mock.patch.object(conn, '_fetch_instance_kernel_ramdisk'),
+            mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image'),
+            mock.patch.object(conn, '_create_ephemeral')
+        ) as (fetch_kernel_ramdisk_mock, fetch_image_mock,
+                create_ephemeral_mock):
+            conn._create_images_and_backing(self.context, self.test_instance,
+                                            "/fake/instance/dir",
+                                            disk_info_json)
+            self.assertEqual(len(create_ephemeral_mock.call_args_list), 1)
+            m_args, m_kwargs = create_ephemeral_mock.call_args_list[0]
+            self.assertEqual(
+                    os.path.join(base_dir, 'ephemeral_1_default'),
+                    m_kwargs['target'])
+            self.assertEqual(len(fetch_image_mock.call_args_list), 1)
+            m_args, m_kwargs = fetch_image_mock.call_args_list[0]
+            self.assertEqual(
+                    os.path.join(base_dir, 'fake_image_backing_file'),
+                    m_kwargs['target'])
+
     def test_create_images_and_backing_disk_info_none(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
