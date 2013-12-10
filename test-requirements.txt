@@ -1,4 +1,4 @@
-hacking>=0.5.6,<0.8
+hacking>=0.8.0,<0.9
 coverage>=3.6
 discover
 feedparser
@@ -9,7 +9,7 @@ MySQL-python
 psycopg2
 pylint==0.25.2
 python-subunit
-sphinx>=1.1.2
+sphinx>=1.1.2,<1.2
 oslo.sphinx
 testrepository>=0.0.17
 testtools>=0.9.32
