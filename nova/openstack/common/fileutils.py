@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation.
 # All Rights Reserved.
 #
@@ -19,6 +17,7 @@
 import contextlib
 import errno
 import os
+import tempfile
 
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _  # noqa
@@ -109,3 +108,30 @@ def file_open(*args, **kwargs):
     state at all (for unit tests)
     """
     return file(*args, **kwargs)
+
+
+def write_to_tempfile(content, path=None, suffix='', prefix='tmp'):
+    """Create temporary file or use existing file.
+
+    This util is needed for creating temporary file with
+    specified content, suffix and prefix. If path is not None,
+    it will be used for writing content. If the path doesn't
+    exist it'll be created.
+
+    :param content: content for temporary file.
+    :param path: same as parameter 'dir' for mkstemp
+    :param suffix: same as parameter 'suffix' for mkstemp
+    :param prefix: same as parameter 'prefix' for mkstemp
+
+    For example: it can be used in database tests for creating
+    configuration files.
+    """
+    if path:
+        ensure_tree(path)
+
+    (fd, path) = tempfile.mkstemp(suffix=suffix, dir=path, prefix=prefix)
+    try:
+        os.write(fd, content)
+    finally:
+        os.close(fd)
+    return path
