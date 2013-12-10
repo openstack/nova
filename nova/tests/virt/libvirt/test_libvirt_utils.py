@@ -40,3 +40,16 @@ blah BLAH: bb
         self.mox.ReplayAll()
         disk_type = libvirt_utils.get_disk_type(path)
         self.assertEqual(disk_type, 'raw')
+
+    def test_logical_volume_size(self):
+        executes = []
+
+        def fake_execute(*cmd, **kwargs):
+            executes.append(cmd)
+            return 123456789, None
+
+        expected_commands = [('blockdev', '--getsize64', '/dev/foo')]
+        self.stubs.Set(utils, 'execute', fake_execute)
+        size = libvirt_utils.logical_volume_size('/dev/foo')
+        self.assertEqual(expected_commands, executes)
+        self.assertEqual(size, 123456789)

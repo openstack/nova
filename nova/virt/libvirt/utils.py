@@ -342,10 +342,7 @@ def logical_volume_size(path):
 
     :param path: logical volume path
     """
-    # TODO(p-draigbrady) Possibly replace with the more general
-    # use of blockdev --getsize64 in future
-    out, _err = execute('lvs', '-o', 'lv_size', '--noheadings', '--units',
-                        'b', '--nosuffix', path, run_as_root=True)
+    out, _err = execute('blockdev', '--getsize64', path, run_as_root=True)
 
     return int(out)
 

@@ -31,6 +31,9 @@ qemu-nbd: CommandFilter, qemu-nbd, root
 # nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
 losetup: CommandFilter, losetup, root
 
+# nova/virt/libvirt/utils.py: 'blockdev', '--getsize64', path
+blockdev: RegExpFilter, blockdev, root, blockdev, --getsize64, /dev/.*
+
 # nova/virt/disk/vfs/localfs.py: 'tee', canonpath
 tee: CommandFilter, tee, root
 
