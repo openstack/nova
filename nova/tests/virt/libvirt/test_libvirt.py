@@ -427,8 +427,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
                        lambda *a, **k: self.conn)
 
-        instance_type = db.flavor_get(self.context, 5)
-        sys_meta = flavors.save_flavor_info({}, instance_type)
+        flavor = db.flavor_get(self.context, 5)
+        sys_meta = flavors.save_flavor_info({}, flavor)
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
@@ -3689,9 +3689,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
-        instance_type = db.flavor_get(self.context,
-                                             instance_ref['instance_type_id'])
-        sys_meta = flavors.save_flavor_info({}, instance_type)
+        flavor = db.flavor_get(self.context, instance_ref['instance_type_id'])
+        sys_meta = flavors.save_flavor_info({}, flavor)
         instance_ref['system_metadata'] = sys_meta
         instance = db.instance_create(self.context, instance_ref)
 
@@ -6572,24 +6571,6 @@ class NWFilterTestCase(test.TestCase):
                                   {'user_id': 'fake',
                                    'project_id': 'fake',
                                    'instance_type_id': 1})
-
-    def _create_instance_type(self, params=None):
-        """Create a test instance."""
-        if not params:
-            params = {}
-
-        context = self.context.elevated()
-        inst = {}
-        inst['name'] = 'm1.small'
-        inst['memory_mb'] = '1024'
-        inst['vcpus'] = '1'
-        inst['root_gb'] = '10'
-        inst['ephemeral_gb'] = '20'
-        inst['flavorid'] = '1'
-        inst['swap'] = '2048'
-        inst['rxtx_factor'] = 1
-        inst.update(params)
-        return db.flavor_create(context, inst)['id']
 
     def test_creates_base_rule_first(self):
         # These come pre-defined by libvirt

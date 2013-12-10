@@ -38,8 +38,8 @@ class LibvirtBlockInfoTest(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.get_admin_context()
-        instance_type = db.flavor_get(self.context, 2)
-        sys_meta = flavors.save_flavor_info({}, instance_type)
+        flavor = db.flavor_get(self.context, 2)
+        sys_meta = flavors.save_flavor_info({}, flavor)
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.test_instance = {
                 'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
@@ -787,9 +787,9 @@ class DefaultDeviceNamesTestCase(test.TestCase):
                 'instance_type_id': 2}
         self.root_device_name = '/dev/vda'
         self.virt_type = 'kvm'
-        self.instance_type = {'swap': 4}
+        self.flavor = {'swap': 4}
         self.patcher = mock.patch('nova.compute.flavors.extract_flavor',
-                                  return_value=self.instance_type)
+                                  return_value=self.flavor)
         self.patcher.start()
 
         self.ephemerals = [
