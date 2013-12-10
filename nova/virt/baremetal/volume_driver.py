@@ -192,8 +192,8 @@ class VolumeDriver(object):
         if not self._initiator:
             self._initiator = libvirt_utils.get_iscsi_initiator()
             if not self._initiator:
-                LOG.warn(_('Could not determine iscsi initiator name '
-                           'for instance %s') % instance)
+                LOG.warn(_('Could not determine iscsi initiator name'),
+                         instance=instance)
         return {
             'ip': CONF.my_ip,
             'initiator': self._initiator,
@@ -240,10 +240,16 @@ class LibvirtVolumeDriver(VolumeDriver):
             'bus': 'baremetal',
             'type': 'baremetal',
             }
-        conf = self._volume_driver_method('connect_volume',
+        conf = self._connect_volume(connection_info, disk_info)
+        self._publish_iscsi(instance, mountpoint, fixed_ips,
+                            conf.source_path)
+
+    def _connect_volume(self, connection_info, disk_info):
+        return self._volume_driver_method('connect_volume',
                                           connection_info,
                                           disk_info)
-        device_path = conf.source_path
+
+    def _publish_iscsi(self, instance, mountpoint, fixed_ips, device_path):
         iqn = _get_iqn(instance['name'], mountpoint)
         tid = _get_next_tid()
         _create_iscsi_export_tgtadm(device_path, tid, iqn)
@@ -264,16 +270,23 @@ class LibvirtVolumeDriver(VolumeDriver):
     def detach_volume(self, connection_info, instance, mountpoint):
         mount_device = mountpoint.rpartition("/")[2]
         try:
-            iqn = _get_iqn(instance['name'], mountpoint)
-            tid = _find_tid(iqn)
-            if tid is not None:
-                _delete_iscsi_export_tgtadm(tid)
-            else:
-                LOG.warn(_('detach volume could not find tid for %s') % iqn)
+            self._depublish_iscsi(instance, mountpoint)
         finally:
-            self._volume_driver_method('disconnect_volume',
-                                       connection_info,
-                                       mount_device)
+            self._disconnect_volume(connection_info, mount_device)
+
+    def _disconnect_volume(self, connection_info, disk_dev):
+        return self._volume_driver_method('disconnect_volume',
+                                          connection_info,
+                                          disk_dev)
+
+    def _depublish_iscsi(self, instance, mountpoint):
+        iqn = _get_iqn(instance['name'], mountpoint)
+        tid = _find_tid(iqn)
+        if tid is not None:
+            _delete_iscsi_export_tgtadm(tid)
+        else:
+            LOG.warn(_('detach volume could not find tid for %s'), iqn,
+                     instance=instance)
 
     def get_all_block_devices(self):
         """
