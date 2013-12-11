@@ -4442,11 +4442,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def get_instance_disk_info(self, instance_name, xml=None,
                                block_device_info=None):
-        """Preparation block migration.
+        """Retrieve information about actual disk sizes of an instance.
 
-        :params instance:
-            nova.db.sqlalchemy.models.Instance object
-            instance object that is migrated.
+        :param instance_name:
+            name of a nova instance as returned by list_instances()
+        :param xml:
+            Optional; Domain XML of given libvirt instance.
+            If omitted, this method attempts to extract it from the
+            pre-existing definition.
+        :param block_device_info:
+            Optional; Can be used to filter out devices which are
+            actually volumes.
         :return:
             json strings with below format::
 
@@ -4456,9 +4462,6 @@ class LibvirtDriver(driver.ComputeDriver):
                   'disk_size':'83886080'},...]"
 
         """
-        # NOTE (rmk): Passing the domain XML into this function is optional.
-        #             When it is not passed, we attempt to extract it from
-        #             the pre-existing definition.
         if xml is None:
             try:
                 virt_dom = self._lookup_by_name(instance_name)
@@ -4474,8 +4477,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.warn(msg)
                 raise exception.InstanceNotFound(instance_id=instance_name)
 
-        # NOTE (rmk): When block_device_info is provided, we will use it to
-        #             filter out devices which are actually volumes.
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)
 
