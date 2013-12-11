@@ -17,6 +17,7 @@
 Claim objects for use with resource tracking.
 """
 
+from nova import exception
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -71,7 +72,8 @@ class Claim(NopClaim):
     correct decisions with respect to host selection.
     """
 
-    def __init__(self, instance, tracker, overhead=None):
+    def __init__(self, instance, tracker, resources, overhead=None,
+                 limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
         if isinstance(instance, instance_obj.Instance):
@@ -87,6 +89,10 @@ class Claim(NopClaim):
             overhead = {'memory_mb': 0}
 
         self.overhead = overhead
+
+        # Check claim at constuctor to avoid mess code
+        # Raise exception ComputeResourcesUnavailable if claim failed
+        self._claim_test(resources, limits)
 
     @property
     def disk_gb(self):
@@ -107,7 +113,7 @@ class Claim(NopClaim):
         LOG.debug(_("Aborting claim: %s") % self, instance=self.instance)
         self.tracker.abort_instance_claim(self.instance)
 
-    def test(self, resources, limits=None):
+    def _claim_test(self, resources, limits=None):
         """Test if this claim can be satisfied given available resources and
         optional oversubscription limits
 
@@ -132,21 +138,19 @@ class Claim(NopClaim):
                   'vcpus': self.vcpus}
         LOG.audit(msg % params, instance=self.instance)
 
-        # Test for resources:
-        can_claim = (self._test_memory(resources, memory_mb_limit) and
-                     self._test_disk(resources, disk_gb_limit) and
-                     self._test_cpu(resources, vcpu_limit) and
-                     self._test_pci())
+        reasons = [self._test_memory(resources, memory_mb_limit),
+                   self._test_disk(resources, disk_gb_limit),
+                   self._test_cpu(resources, vcpu_limit),
+                   self._test_pci()]
+        reasons = [r for r in reasons if r is not None]
+        if len(reasons) > 0:
+            raise exception.ComputeResourcesUnavailable(reason=
+                    "; ".join(reasons))
 
-        if can_claim:
-            LOG.audit(_("Claim successful"), instance=self.instance)
-        else:
-            LOG.audit(_("Claim failed"), instance=self.instance)
-
-        return can_claim
+        LOG.audit(_('Claim successful'), instance=self.instance)
 
     def _test_memory(self, resources, limit):
-        type_ = _("Memory")
+        type_ = _("memory")
         unit = "MB"
         total = resources['memory_mb']
         used = resources['memory_mb_used']
@@ -155,7 +159,7 @@ class Claim(NopClaim):
         return self._test(type_, unit, total, used, requested, limit)
 
     def _test_disk(self, resources, limit):
-        type_ = _("Disk")
+        type_ = _("disk")
         unit = "GB"
         total = resources['local_gb']
         used = resources['local_gb_used']
@@ -165,12 +169,15 @@ class Claim(NopClaim):
 
     def _test_pci(self):
         pci_requests = pci_request.get_instance_pci_requests(self.instance)
-        if not pci_requests:
-            return True
-        return self.tracker.pci_tracker.stats.support_requests(pci_requests)
+
+        if pci_requests:
+            can_claim = self.tracker.pci_tracker.stats.support_requests(
+                pci_requests)
+            if not can_claim:
+                return _('Claim pci failed.')
 
     def _test_cpu(self, resources, limit):
-        type_ = _("CPU")
+        type_ = _("CPUs")
         unit = "VCPUs"
         total = resources['vcpus']
         used = resources['vcpus_used']
@@ -191,7 +198,7 @@ class Claim(NopClaim):
             # treat resource as unlimited:
             LOG.audit(_('%(type)s limit not specified, defaulting to '
                         'unlimited'), {'type': type_}, instance=self.instance)
-            return True
+            return
 
         free = limit - used
 
@@ -201,25 +208,22 @@ class Claim(NopClaim):
                   {'type': type_, 'limit': limit, 'free': free, 'unit': unit},
                   instance=self.instance)
 
-        can_claim = requested <= free
-
-        if not can_claim:
-            LOG.info(_('Unable to claim resources.  Free %(type)s %(free).02f '
-                       '%(unit)s < requested %(requested)d %(unit)s'),
-                     {'type': type_, 'free': free, 'unit': unit,
-                      'requested': requested},
-                     instance=self.instance)
-
-        return can_claim
+        if requested > free:
+            return (_('Free %(type)s %(free).02f '
+                      '%(unit)s < requested %(requested)d %(unit)s') %
+                      {'type': type_, 'free': free, 'unit': unit,
+                       'requested': requested})
 
 
 class ResizeClaim(Claim):
     """Claim used for holding resources for an incoming resize/migration
     operation.
     """
-    def __init__(self, instance, instance_type, tracker, overhead=None):
-        super(ResizeClaim, self).__init__(instance, tracker, overhead=overhead)
+    def __init__(self, instance, instance_type, tracker, resources,
+                 overhead=None, limits=None):
         self.instance_type = instance_type
+        super(ResizeClaim, self).__init__(instance, tracker, resources,
+                                          overhead=overhead, limits=limits)
         self.migration = None
 
     @property
@@ -238,10 +242,11 @@ class ResizeClaim(Claim):
     def _test_pci(self):
         pci_requests = pci_request.get_instance_pci_requests(
             self.instance, 'new_')
-        if not pci_requests:
-            return True
-
-        return self.tracker.pci_tracker.stats.support_requests(pci_requests)
+        if pci_requests:
+            claim = self.tracker.pci_tracker.stats.support_requests(
+                pci_requests)
+            if not claim:
+                return _('Claim pci failed.')
 
     def abort(self):
         """Compute operation requiring claimed resources has failed or

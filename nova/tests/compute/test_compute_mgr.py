@@ -1223,7 +1223,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.instance['uuid'], mock.ANY, 'conductor'))
 
     def test_reschedule_on_resources_unavailable(self):
-        exc = exception.ComputeResourcesUnavailable()
+        reason = 'resource unavailable'
+        exc = exception.ComputeResourcesUnavailable(reason=reason)
 
         class FakeResourceTracker(object):
             def instance_claim(self, context, instance, limits):
