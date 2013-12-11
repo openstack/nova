@@ -230,6 +230,7 @@ class NovaObject(object):
         objclass = cls.obj_class_from_name(objname, objver)
         self = objclass()
         self._context = context
+        self.VERSION = objver
         for name, field in self.fields.items():
             if name in objdata:
                 setattr(self, name, field.from_primitive(self, name,

@@ -410,6 +410,15 @@ class _TestObject(object):
         obj = MyObj.obj_from_primitive(primitive)
         self.assertEqual(obj.foo, 1)
 
+    def test_hydration_version_different(self):
+        primitive = {'nova_object.name': 'MyObj',
+                     'nova_object.namespace': 'nova',
+                     'nova_object.version': '1.2',
+                     'nova_object.data': {'foo': 1}}
+        obj = MyObj.obj_from_primitive(primitive)
+        self.assertEqual(obj.foo, 1)
+        self.assertEqual('1.2', obj.VERSION)
+
     def test_hydration_bad_ns(self):
         primitive = {'nova_object.name': 'MyObj',
                      'nova_object.namespace': 'foo',
