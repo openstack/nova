@@ -344,7 +344,7 @@ class ResourceTracker(object):
             self.pci_tracker.clean_usage(instances, migrations, orphans)
             resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
         else:
-            resources['pci_stats'] = jsonutils.dumps({})
+            resources['pci_stats'] = jsonutils.dumps([])
 
         self._report_final_resource_view(resources)
 
@@ -526,7 +526,7 @@ class ResourceTracker(object):
                 resources['pci_stats'] = jsonutils.dumps(
                         self.pci_tracker.stats)
             else:
-                resources['pci_stats'] = jsonutils.dumps({})
+                resources['pci_stats'] = jsonutils.dumps([])
             self.tracked_migrations[uuid] = (migration, itype)
 
     def _update_usage_from_migrations(self, context, resources, migrations):
@@ -598,7 +598,7 @@ class ResourceTracker(object):
         if self.pci_tracker:
             resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
         else:
-            resources['pci_stats'] = jsonutils.dumps({})
+            resources['pci_stats'] = jsonutils.dumps([])
 
     def _update_usage_from_instances(self, resources, instances):
         """Calculate resource usage based on instance utilization.  This is
