@@ -1384,7 +1384,8 @@ class CommonNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(manager.db,
                                  'virtual_interface_get_by_instance')
         manager.db.virtual_interface_get_by_instance(
-                self.context, FAKEUUID).AndRaise(exception.InstanceNotFound(
+                self.context, FAKEUUID,
+                use_slave=False).AndRaise(exception.InstanceNotFound(
                                                  instance_id=FAKEUUID))
         self.mox.ReplayAll()
         self.assertRaises(rpc_common.ClientException,

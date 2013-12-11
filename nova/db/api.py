@@ -584,9 +584,10 @@ def virtual_interface_get_by_uuid(context, vif_uuid):
     return IMPL.virtual_interface_get_by_uuid(context, vif_uuid)
 
 
-def virtual_interface_get_by_instance(context, instance_id):
+def virtual_interface_get_by_instance(context, instance_id, use_slave=False):
     """Gets all virtual_interfaces for instance."""
-    return IMPL.virtual_interface_get_by_instance(context, instance_id)
+    return IMPL.virtual_interface_get_by_instance(context, instance_id,
+                                                  use_slave=use_slave)
 
 
 def virtual_interface_get_by_instance_and_network(context, instance_id,

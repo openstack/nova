@@ -5209,7 +5209,7 @@ class ComputeTestCase(BaseTestCase):
             return instance_map[instance_uuid]
 
         # NOTE(comstud): Override the stub in setUp()
-        def fake_get_instance_nw_info(context, instance):
+        def fake_get_instance_nw_info(context, instance, use_slave=False):
             # Note that this exception gets caught in compute/manager
             # and is ignored.  However, the below increment of
             # 'get_nw_info' won't happen, and you'll get an assert
