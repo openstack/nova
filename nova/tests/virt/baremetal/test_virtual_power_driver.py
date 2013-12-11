@@ -40,7 +40,7 @@ COMMON_FLAGS = dict(
 
 BAREMETAL_FLAGS = dict(
     driver='nova.virt.baremetal.pxe.PXE',
-    instance_type_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
+    flavor_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
     power_manager=
         'nova.virt.baremetal.virtual_power_driver.VirtualPowerManager',
     vif_driver='nova.virt.baremetal.fake.FakeVifDriver',

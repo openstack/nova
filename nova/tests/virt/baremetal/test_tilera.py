@@ -45,7 +45,7 @@ COMMON_FLAGS = dict(
 
 BAREMETAL_FLAGS = dict(
     driver='nova.virt.baremetal.tilera.Tilera',
-    instance_type_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
+    flavor_extra_specs=['cpu_arch:test', 'test_spec:test_value'],
     power_manager='nova.virt.baremetal.fake.FakePowerManager',
     vif_driver='nova.virt.baremetal.fake.FakeVifDriver',
     volume_driver='nova.virt.baremetal.fake.FakeVolumeDriver',
@@ -167,9 +167,9 @@ class TileraClassMethodsTestCase(BareMetalTileraTestCase):
 
     def test_swap_not_zero(self):
         # override swap to 0
-        instance_type = utils.get_test_instance_type(self.context)
-        instance_type['swap'] = 0
-        self.instance = utils.get_test_instance(self.context, instance_type)
+        flavor = utils.get_test_instance_type(self.context)
+        flavor['swap'] = 0
+        self.instance = utils.get_test_instance(self.context, flavor)
 
         sizes = tilera.get_partition_sizes(self.instance)
         self.assertEqual(sizes[0], 40960)

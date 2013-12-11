@@ -72,9 +72,9 @@ def get_tilera_nfs_path(node_id):
 
 
 def get_partition_sizes(instance):
-    instance_type = flavors.extract_flavor(instance)
-    root_mb = instance_type['root_gb'] * 1024
-    swap_mb = instance_type['swap']
+    flavor = flavors.extract_flavor(instance)
+    root_mb = flavor['root_gb'] * 1024
+    swap_mb = flavor['swap']
 
     if swap_mb < 1:
         swap_mb = 1
