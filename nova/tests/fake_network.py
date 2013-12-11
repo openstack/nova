@@ -29,8 +29,10 @@ from nova.network import nova_ipam_lib
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import base as obj_base
 from nova.objects import instance_info_cache
+from nova.objects import pci_device
 from nova.openstack.common import jsonutils
 from nova.tests.objects import test_instance_info_cache
+from nova.tests.objects import test_pci_device
 from nova.virt.libvirt import config as libvirt_config
 
 
@@ -435,6 +437,10 @@ def stub_compute_with_ips(stubs):
     def fake_create(*args, **kwargs):
         return _create_instances_with_cached_ips(orig_create, *args, **kwargs)
 
+    def fake_pci_device_get_by_addr(context, node_id, dev_addr):
+        return test_pci_device.fake_db_dev
+
+    stubs.Set(db, 'pci_device_get_by_addr', fake_pci_device_get_by_addr)
     stubs.Set(compute_api.API, 'get', fake_get)
     stubs.Set(compute_api.API, 'get_all', fake_get_all)
     stubs.Set(compute_api.API, 'create', fake_create)
@@ -469,6 +475,7 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     """
     instances = orig_func(*args, **kwargs)
     context = args[0]
+    fake_device = pci_device.PciDevice.get_by_dev_addr(context, 1, 'a')
 
     def _info_cache_for(instance):
         info_cache = dict(test_instance_info_cache.fake_info_cache,
@@ -485,8 +492,12 @@ def _get_instances_with_cached_ips(orig_func, *args, **kwargs):
     if isinstance(instances, (list, obj_base.ObjectListBase)):
         for instance in instances:
             _info_cache_for(instance)
+            fake_device.claim(instance)
+            fake_device.allocate(instance)
     else:
         _info_cache_for(instances)
+        fake_device.claim(instances)
+        fake_device.allocate(instances)
     return instances
 
 

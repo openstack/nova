@@ -234,6 +234,7 @@ policy_data = """
     "compute_extension:networks:view": "",
     "compute_extension:networks_associate": "",
     "compute_extension:os-tenant-networks": "",
+    "compute_extension:v3:os-pci:pci_servers": "",
     "compute_extension:quotas:show": "",
     "compute_extension:quotas:update": "",
     "compute_extension:quotas:delete": "",

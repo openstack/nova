@@ -11,7 +11,7 @@
                     }
                 ]
             },
-            "created": "2013-09-23T13:53:12Z",
+            "created": "2013-11-25T03:45:54Z",
             "flavor": {
                 "id": "1",
                 "links": [
@@ -21,8 +21,8 @@
                     }
                 ]
             },
-            "host_id": "f1e160ad2bf07084f3d3e0dfdd0795d80da18a60825322c15775c0dd",
-            "id": "9cbefc35-d372-40c5-88e2-9fda1b6ea12c",
+            "host_id": "416f83c758ea0f9271018b278a9dcedb91b1190deaa598704b87219b",
+            "id": "ef440f98-04e8-46ea-ae74-e24d437040ea",
             "image": {
                 "id": "70a599e0-31e7-49b7-b260-868f441e862b",
                 "links": [
@@ -35,11 +35,11 @@
             "key_name": null,
             "links": [
                 {
-                    "href": "http://openstack.example.com/v3/servers/9cbefc35-d372-40c5-88e2-9fda1b6ea12c",
+                    "href": "http://openstack.example.com/v3/servers/ef440f98-04e8-46ea-ae74-e24d437040ea",
                     "rel": "self"
                 },
                 {
-                    "href": "http://openstack.example.com/servers/9cbefc35-d372-40c5-88e2-9fda1b6ea12c",
+                    "href": "http://openstack.example.com/servers/ef440f98-04e8-46ea-ae74-e24d437040ea",
                     "rel": "bookmark"
                 }
             ],
@@ -47,35 +47,15 @@
                 "My Server Name": "Apache1"
             },
             "name": "new-server-test",
-            "os-access-ips:access_ip_v4": "",
-            "os-access-ips:access_ip_v6": "",
-            "os-config-drive:config_drive": "",
-            "os-disk-config:disk_config": "AUTO",
-            "os-extended-availability-zone:availability_zone": "nova",
-            "os-extended-server-attributes:host": "c3f14e9812ad496baf92ccfb3c61e15f",
-            "os-extended-server-attributes:hypervisor_hostname": "fake-mini",
-            "os-extended-server-attributes:instance_name": "instance-00000001",
-            "os-extended-status:locked_by": null,
-            "os-extended-status:power_state": 1,
-            "os-extended-status:task_state": null,
-            "os-extended-status:vm_state": "active",
-            "os-extended-volumes:volumes_attached": [],
             "os-pci:pci_devices": [
                 {
                     "id": 1
                 }
             ],
-            "os-server-usage:launched_at": "2013-09-23T13:53:12.774549",
-            "os-server-usage:terminated_at": null,
             "progress": 0,
-            "security_groups": [
-                {
-                    "name": "default"
-                }
-            ],
             "status": "ACTIVE",
             "tenant_id": "openstack",
-            "updated": "2013-10-31T06:32:32Z",
+            "updated": "2013-11-25T03:45:54Z",
             "user_id": "fake"
         }
     ]
