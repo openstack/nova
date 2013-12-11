@@ -530,19 +530,19 @@ class XenAPIDriver(driver.ComputeDriver):
                        migrate_data=None):
         """Performs the live migration of the specified instance.
 
-        :params ctxt: security context
-        :params instance_ref:
+        :param ctxt: security context
+        :param instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params dest: destination host
-        :params post_method:
+        :param dest: destination host
+        :param post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
-        :params recover_method:
+        :param recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
-        :params block_migration: if true, migrate VM disk.
-        :params migrate_data: implementation specific params
+        :param block_migration: if true, migrate VM disk.
+        :param migrate_data: implementation specific params
         """
         self._vmops.live_migrate(ctxt, instance_ref, dest, post_method,
                                  recover_method, block_migration, migrate_data)
@@ -551,7 +551,7 @@ class XenAPIDriver(driver.ComputeDriver):
                            network_info, data, migrate_data=None):
         """Preparation live migration.
 
-        :params block_device_info:
+        :param block_device_info:
             It must be the result of _get_instance_volume_bdms()
             at compute manager.
         """
@@ -577,12 +577,12 @@ class XenAPIDriver(driver.ComputeDriver):
                                            block_device_info=None):
         """Post operation of live migration at destination host.
 
-        :params ctxt: security context
-        :params instance_ref:
+        :param ctxt: security context
+        :param instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params network_info: instance network information
-        :params : block_migration: if true, post operation of block_migration.
+        :param network_info: instance network information
+        :param : block_migration: if true, post operation of block_migration.
         """
         self._vmops.post_live_migration_at_destination(ctxt, instance_ref,
                 network_info, block_device_info, block_device_info)

@@ -753,7 +753,7 @@ def read_file_as_root(file_path):
 def temporary_chown(path, owner_uid=None):
     """Temporarily chown a path.
 
-    :params owner_uid: UID of temporary owner (defaults to current user)
+    :param owner_uid: UID of temporary owner (defaults to current user)
     """
     if owner_uid is None:
         owner_uid = os.getuid()
