@@ -26,7 +26,8 @@ from nova import quota
 
 
 QUOTAS = quota.QUOTAS
-
+FILTERED_QUOTAS = ['injected_files', 'injected_file_content_bytes',
+                   'injected_file_path_bytes']
 ALIAS = "os-quota-class-sets"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
@@ -38,8 +39,9 @@ class QuotaClassTemplate(xmlutil.TemplateBuilder):
         root.set('id')
 
         for resource in QUOTAS.resources:
-            elem = xmlutil.SubTemplateElement(root, resource)
-            elem.text = resource
+            if resource not in FILTERED_QUOTAS:
+                elem = xmlutil.SubTemplateElement(root, resource)
+                elem.text = resource
 
         return xmlutil.MasterTemplate(root, 1)
 
@@ -52,7 +54,8 @@ class QuotaClassSetsController(wsgi.Controller):
         result = dict(id=str(quota_class))
 
         for resource in QUOTAS.resources:
-            result[resource] = quota_set[resource]
+            if resource not in FILTERED_QUOTAS:
+                result[resource] = quota_set[resource]
 
         return dict(quota_class_set=result)
 
@@ -78,7 +81,7 @@ class QuotaClassSetsController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest("The request body invalid")
         quota_class_set = body['quota_class_set']
         for key in quota_class_set.keys():
-            if key in QUOTAS:
+            if key in QUOTAS and key not in FILTERED_QUOTAS:
                 try:
                     value = int(quota_class_set[key])
                 except ValueError:

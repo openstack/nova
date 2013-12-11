@@ -40,13 +40,10 @@ class QuotaSetsTest(test.TestCase):
                           'floating_ips': 10,
                           'fixed_ips': -1,
                           'instances': 10,
-                          'injected_files': 5,
                           'cores': 20,
-                          'injected_file_content_bytes': 10240,
                           'security_groups': 10,
                           'security_group_rules': 20,
-                          'key_pairs': 100,
-                          'injected_file_path_bytes': 255}
+                          'key_pairs': 100}
         }
         quota_set['quota_set'].update(kwargs)
         return quota_set
@@ -57,16 +54,11 @@ class QuotaSetsTest(test.TestCase):
             {'cores': {'in_use': 0, 'limit': 20, 'reserved': 0},
              'fixed_ips': {'in_use': 0, 'limit': -1, 'reserved': 0},
              'floating_ips': {'in_use': 0, 'limit': 10, 'reserved': 0},
-             'injected_files': {'in_use': 0, 'limit': 5, 'reserved': 0},
              'instances': {'in_use': 0, 'limit': 10, 'reserved': 0},
              'key_pairs': {'in_use': 0, 'limit': 100, 'reserved': 0},
              'metadata_items': {'in_use': 0, 'limit': 128, 'reserved': 0},
              'ram': {'in_use': 0, 'limit': 51200, 'reserved': 0},
              'security_groups': {'in_use': 0, 'limit': 10, 'reserved': 0},
-             'injected_file_content_bytes':
-             {'in_use': 0, 'limit': 10240, 'reserved': 0},
-             'injected_file_path_bytes':
-             {'in_use': 0, 'limit': 255, 'reserved': 0},
              'security_group_rules':
              {'in_use': 0, 'limit': 20, 'reserved': 0}}
         }
@@ -85,9 +77,6 @@ class QuotaSetsTest(test.TestCase):
         self.assertEqual(qs['floating_ips'], 10)
         self.assertEqual(qs['fixed_ips'], -1)
         self.assertEqual(qs['metadata_items'], 128)
-        self.assertEqual(qs['injected_files'], 5)
-        self.assertEqual(qs['injected_file_path_bytes'], 255)
-        self.assertEqual(qs['injected_file_content_bytes'], 10240)
         self.assertEqual(qs['security_groups'], 10)
         self.assertEqual(qs['security_group_rules'], 20)
         self.assertEqual(qs['key_pairs'], 100)
@@ -140,9 +129,6 @@ class QuotaSetsTest(test.TestCase):
         body = {'quota_set': {'instances': 0, 'cores': 0,
                               'ram': 0, 'floating_ips': 0,
                               'fixed_ips': 0, 'metadata_items': 0,
-                              'injected_files': 0,
-                              'injected_file_content_bytes': 0,
-                              'injected_file_path_bytes': 0,
                               'security_groups': 0,
                               'security_group_rules': 0,
                               'key_pairs': 100, 'fixed_ips': -1}}
@@ -164,6 +150,16 @@ class QuotaSetsTest(test.TestCase):
         body = self._generate_quota_set()
         body['quota_set'].pop('instances')
         body['quota_set']['instances2'] = 10
+
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'update_me', body)
+
+    def test_quotas_update_filtered_key(self):
+        body = self._generate_quota_set()
+        body['quota_set'].pop('instances')
+        body['quota_set']['injected_files'] = 10
 
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
@@ -343,13 +339,10 @@ class QuotaXMLSerializerTest(test.TestCase):
         exemplar = dict(quota_set=dict(
                 id='project_id',
                 metadata_items=10,
-                injected_file_path_bytes=255,
-                injected_file_content_bytes=20,
                 ram=50,
                 floating_ips=60,
                 fixed_ips=-1,
                 instances=70,
-                injected_files=80,
                 security_groups=10,
                 security_group_rules=20,
                 key_pairs=100,
@@ -369,13 +362,10 @@ class QuotaXMLSerializerTest(test.TestCase):
         exemplar = dict(quota_set=dict(
             id='project_id',
             metadata_items=dict(limit=10, in_use=1, reserved=2),
-            injected_file_path_bytes=dict(limit=255, in_use=25, reserved=1),
-            injected_file_content_bytes=dict(limit=20, in_use=10, reserved=2),
             ram=dict(limit=30, in_use=10, reserved=3),
             floating_ips=dict(limit=60, in_use=20, reserved=20),
             fixed_ips=dict(limit=-1, in_use=20, reserved=0),
             instances=dict(limit=10, in_use=2, reserved=2),
-            injected_files=dict(limit=80, in_use=20, reserved=30),
             security_groups=dict(limit=10, in_use=4, reserved=6),
             security_group_rules=dict(limit=20, in_use=10, reserved=8),
             key_pairs=dict(limit=20, in_use=10, reserved=11),
@@ -397,12 +387,10 @@ class QuotaXMLSerializerTest(test.TestCase):
     def test_deserializer(self):
         exemplar = dict(quota_set=dict(
                 metadata_items='10',
-                injected_file_content_bytes='20',
                 ram='50',
                 floating_ips='60',
                 fixed_ips='-1',
                 instances='70',
-                injected_files='80',
                 security_groups='10',
                 security_group_rules='20',
                 key_pairs='100',
@@ -410,13 +398,10 @@ class QuotaXMLSerializerTest(test.TestCase):
         intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
                   '<quota_set>'
                   '<metadata_items>10</metadata_items>'
-                  '<injected_file_content_bytes>20'
-                  '</injected_file_content_bytes>'
                   '<ram>50</ram>'
                   '<floating_ips>60</floating_ips>'
                   '<fixed_ips>-1</fixed_ips>'
                   '<instances>70</instances>'
-                  '<injected_files>80</injected_files>'
                   '<security_groups>10</security_groups>'
                   '<security_group_rules>20</security_group_rules>'
                   '<key_pairs>100</key_pairs>'
