@@ -2028,13 +2028,15 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_lock
+    @check_instance_cell
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR],
                           task_state=[None])
-    def rebuild(self, context, instance, image_href, admin_password, **kwargs):
+    def rebuild(self, context, instance, image_href, admin_password,
+                files_to_inject=None, **kwargs):
         """Rebuild the given instance with the provided attributes."""
-        orig_image_ref = instance['image_ref'] or ''
-        files_to_inject = kwargs.pop('files_to_inject', [])
+        orig_image_ref = instance.image_ref or ''
+        files_to_inject = files_to_inject or []
         metadata = kwargs.get('metadata', {})
 
         image_id, image = self._get_image(context, image_href)
@@ -2073,18 +2075,17 @@ class API(base.Base):
                 image, flavor)
 
             sys_metadata.update(new_sys_metadata)
-            self.db.instance_system_metadata_update(context,
-                    instance['uuid'], sys_metadata, True)
+            instance.system_metadata = sys_metadata
+            instance.save()
             return orig_sys_metadata
 
-        instance = self.update(context, instance,
-                               task_state=task_states.REBUILDING,
-                               expected_task_state=[None],
-                               # Unfortunately we need to set image_ref early,
-                               # so API users can see it.
-                               image_ref=image_href, kernel_id=kernel_id or "",
-                               ramdisk_id=ramdisk_id or "",
-                               progress=0, **kwargs)
+        instance.task_state = task_states.REBUILDING
+        instance.image_ref = image_href
+        instance.kernel_id = kernel_id or ""
+        instance.ramdisk_id = ramdisk_id or ""
+        instance.progress = 0
+        instance.update(kwargs)
+        instance.save(expected_task_state=[None])
 
         # On a rebuild, since we're potentially changing images, we need to
         # wipe out the old image properties that we're storing as instance
@@ -2094,14 +2095,15 @@ class API(base.Base):
         bdms = block_device.legacy_mapping(
             self.db.block_device_mapping_get_all_by_instance(
                 context,
-                instance['uuid']))
+                instance.uuid))
 
         self._record_action_start(context, instance, instance_actions.REBUILD)
 
         self.compute_rpcapi.rebuild_instance(context, instance=instance,
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
-                orig_sys_metadata=orig_sys_metadata, bdms=bdms)
+                orig_sys_metadata=orig_sys_metadata, bdms=bdms,
+                kwargs=kwargs)
 
     @wrap_check_policy
     @check_instance_lock
@@ -2929,8 +2931,13 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
+        # NODE(danms): Transitional until evacuate supports objects
+        inst_obj = instance_obj.Instance._from_db_object(
+            context, instance_obj.Instance(), instance,
+            expected_attrs=['metadata', 'system_metadata'])
+
         return self.compute_rpcapi.rebuild_instance(context,
-                                        instance=instance,
+                                        instance=inst_obj,
                                         new_pass=admin_password,
                                         injected_files=None,
                                         image_ref=None,

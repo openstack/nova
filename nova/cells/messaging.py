@@ -927,6 +927,12 @@ class _TargetedMessageMethods(_BaseMessageMethods):
                                             backup_type,
                                             rotation)
 
+    def rebuild_instance(self, message, instance, image_href, admin_password,
+                         files_to_inject, kwargs):
+        self._call_compute_api_with_obj(message.ctxt, instance, 'rebuild',
+                                        image_href, admin_password,
+                                        files_to_inject, **kwargs)
+
 
 class _BroadcastMessageMethods(_BaseMessageMethods):
     """These are the methods that can be called as a part of a broadcast
@@ -1769,6 +1775,15 @@ class MessageRunner(object):
         extra_kwargs = dict(image_id=image_id, backup_type=backup_type,
                             rotation=rotation)
         self._instance_action(ctxt, instance, 'backup_instance',
+                              extra_kwargs=extra_kwargs)
+
+    def rebuild_instance(self, ctxt, instance, image_href, admin_password,
+                         files_to_inject, kwargs):
+        extra_kwargs = dict(image_href=image_href,
+                            admin_password=admin_password,
+                            files_to_inject=files_to_inject,
+                            kwargs=kwargs)
+        self._instance_action(ctxt, instance, 'rebuild_instance',
                               extra_kwargs=extra_kwargs)
 
     @staticmethod

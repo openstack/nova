@@ -6489,14 +6489,14 @@ class ComputeAPITestCase(BaseTestCase):
         # Make sure Compute API updates the image_ref before casting to
         # compute manager.
         orig_update = self.compute_api.update
-        info = {'image_ref': None}
+        info = {'image_ref': None, 'clean': False}
 
-        def update_wrapper(*args, **kwargs):
-            if 'image_ref' in kwargs:
-                info['image_ref'] = kwargs['image_ref']
-            return orig_update(*args, **kwargs)
+        def fake_rpc_rebuild(context, **kwargs):
+            info['image_ref'] = kwargs['instance'].image_ref
+            info['clean'] = kwargs['instance'].obj_what_changed() == set()
 
-        self.stubs.Set(self.compute_api, 'update', update_wrapper)
+        self.stubs.Set(self.compute_api.compute_rpcapi, 'rebuild_instance',
+                       fake_rpc_rebuild)
 
         image_ref = instance["image_ref"] + '-new_image_ref'
         password = "new_password"
@@ -6506,6 +6506,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         self.compute_api.rebuild(self.context, instance, image_ref, password)
         self.assertEqual(info['image_ref'], image_ref)
+        self.assertTrue(info['clean'])
 
         instance.refresh()
         self.assertEqual(instance.task_state, task_states.REBUILDING)
@@ -9556,7 +9557,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
         self.compute._prep_block_device(mox.IsA(self.context),
-                                        mox.IsA(self.inst_ref),
+                                        mox.IsA(instance_obj.Instance),
                                         mox.IgnoreArg())
 
         self.stubs.Set(self.compute.driver, 'instance_on_disk', lambda x: True)
@@ -9573,7 +9574,7 @@ class EvacuateHostTestCase(BaseTestCase):
         """Confirm evacuate scenario on shared storage."""
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(self.inst_ref), {}, mox.IgnoreArg(), 'newpass',
+                mox.IsA(instance_obj.Instance), {}, mox.IgnoreArg(), 'newpass',
                 network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
@@ -9593,8 +9594,9 @@ class EvacuateHostTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(self.compute.driver, 'spawn')
         self.compute.driver.spawn(mox.IsA(self.context),
-                mox.IsA(self.inst_ref), mox.IsA(fake_image), mox.IgnoreArg(),
-                mox.IsA('newpass'), network_info=mox.IgnoreArg(),
+                mox.IsA(instance_obj.Instance), mox.IsA(fake_image),
+                mox.IgnoreArg(), mox.IsA('newpass'),
+                network_info=mox.IgnoreArg(),
                 block_device_info=mox.IgnoreArg())
 
         self.stubs.Set(self.compute.driver, 'instance_on_disk',

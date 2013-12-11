@@ -215,6 +215,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         3.1 - Update get_spice_console() to take an instance object
         3.2 - Update get_vnc_console() to take an instance object
         3.3 - Update validate_console_port() to take an instance object
+        3.4 - Update rebuild_instance() to take an instance object
     '''
 
     #
@@ -559,15 +560,21 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
-            recreate=False, on_shared_storage=False, host=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.22')
-        instance_p = jsonutils.to_primitive(instance)
+            recreate=False, on_shared_storage=False, host=None,
+            kwargs=None):
+        # NOTE(danms): kwargs is only here for cells compatibility, don't
+        # actually send it to compute
+        if self.can_send_version('3.4'):
+            version = '3.4'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.22')
+            instance = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
-                   instance=instance_p, new_pass=new_pass,
+                   instance=instance, new_pass=new_pass,
                    injected_files=injected_files, image_ref=image_ref,
                    orig_image_ref=orig_image_ref,
                    orig_sys_metadata=orig_sys_metadata, bdms=bdms_p,

@@ -1574,11 +1574,13 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.volume_snapshot_delete(self.context, volume_id,
                 snapshot_id, {})
 
-    def _create_instance_with_disabled_disk_config(self):
+    def _create_instance_with_disabled_disk_config(self, object=False):
         sys_meta = {"image_auto_disk_config": "Disabled"}
         params = {"system_metadata": sys_meta}
-        return obj_base.obj_to_primitive(self._create_instance_obj(
-                                                            params=params))
+        instance = self._create_instance_obj(params=params)
+        if object:
+            return instance
+        return obj_base.obj_to_primitive(instance)
 
     def _setup_fake_image_with_disabled_disk_config(self):
         self.fake_image = {
@@ -1610,7 +1612,8 @@ class _ComputeAPIUnitTestMixIn(object):
             "fake_flavor", image_id, auto_disk_config=True)
 
     def test_rebuild_with_disabled_auto_disk_config_fails(self):
-        fake_inst = self._create_instance_with_disabled_disk_config()
+        fake_inst = self._create_instance_with_disabled_disk_config(
+            object=True)
         image_id = self._setup_fake_image_with_disabled_disk_config()
         self.assertRaises(exception.AutoDiskConfigDisabledByImage,
                           self.compute_api.rebuild,
