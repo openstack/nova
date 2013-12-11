@@ -47,6 +47,10 @@ from nova.tests.objects import test_service
 
 FAKE_IMAGE_REF = 'fake-image-ref'
 NODENAME = 'fakenode1'
+SHELVED_IMAGE = 'fake-shelved-image'
+SHELVED_IMAGE_NOT_FOUND = 'fake-shelved-image-notfound'
+SHELVED_IMAGE_NOT_AUTHORIZED = 'fake-shelved-image-not-authorized'
+SHELVED_IMAGE_EXCEPTION = 'fake-shelved-image-exception'
 
 
 class _ComputeAPIUnitTestMixIn(object):
@@ -419,6 +423,23 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst, migration,
             migration['source_compute'], 'rsvs', cast=False)
 
+    def _test_delete_shelved_part(self, inst):
+        image_service = self.compute_api.image_service
+        self.mox.StubOutWithMock(image_service, 'delete')
+
+        snapshot_id = inst.system_metadata.get('shelved_image_id')
+        if snapshot_id == SHELVED_IMAGE:
+            image_service.delete(self.context, snapshot_id).AndReturn(True)
+        elif snapshot_id == SHELVED_IMAGE_NOT_FOUND:
+            image_service.delete(self.context, snapshot_id).AndRaise(
+                exception.ImageNotFound(image_id=snapshot_id))
+        elif snapshot_id == SHELVED_IMAGE_NOT_AUTHORIZED:
+            image_service.delete(self.context, snapshot_id).AndRaise(
+                exception.ImageNotAuthorized(image_id=snapshot_id))
+        elif snapshot_id == SHELVED_IMAGE_EXCEPTION:
+            image_service.delete(self.context, snapshot_id).AndRaise(
+                test.TestingException("Unexpected error"))
+
     def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
         inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
@@ -480,6 +501,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
+
+        if (inst.vm_state in
+            (vm_states.SHELVED, vm_states.SHELVED_OFFLOADED)):
+            self._test_delete_shelved_part(inst)
+
         if self.cell_type == 'api':
             rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
@@ -567,6 +593,36 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_delete_in_resized(self):
         self._test_delete('delete', vm_state=vm_states.RESIZED)
+
+    def test_delete_shelved(self):
+        fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
+        self._test_delete('delete',
+                          vm_state=vm_states.SHELVED,
+                          system_metadata=fake_sys_meta)
+
+    def test_delete_shelved_offloaded(self):
+        fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE}
+        self._test_delete('delete',
+                          vm_state=vm_states.SHELVED_OFFLOADED,
+                          system_metadata=fake_sys_meta)
+
+    def test_delete_shelved_image_not_found(self):
+        fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE_NOT_FOUND}
+        self._test_delete('delete',
+                          vm_state=vm_states.SHELVED_OFFLOADED,
+                          system_metadata=fake_sys_meta)
+
+    def test_delete_shelved_image_not_authorized(self):
+        fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE_NOT_AUTHORIZED}
+        self._test_delete('delete',
+                          vm_state=vm_states.SHELVED_OFFLOADED,
+                          system_metadata=fake_sys_meta)
+
+    def test_delete_shelved_exception(self):
+        fake_sys_meta = {'shelved_image_id': SHELVED_IMAGE_EXCEPTION}
+        self._test_delete('delete',
+                          vm_state=vm_states.SHELVED,
+                          system_metadata=fake_sys_meta)
 
     def test_delete_with_down_host(self):
         self._test_delete('delete', host='down-host')
