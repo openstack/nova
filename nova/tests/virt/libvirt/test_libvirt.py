@@ -1137,6 +1137,51 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.devices[6].type, "vnc")
         self.assertEqual(cfg.devices[7].type, "spice")
 
+    def test_unsupported_video_driver_through_image_meta(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_video_model": "something"}}
+        self.assertRaises(exception.InvalidVideoMode,
+                          conn.get_guest_config,
+                          instance_ref,
+                          [],
+                          image_meta,
+                          disk_info)
+
+    def test_get_guest_config_with_video_driver_through_image_meta(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_video_model": "vmvga"}}
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 7)
+        self.assertEqual(type(cfg.devices[0]),
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(type(cfg.devices[1]),
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(type(cfg.devices[2]),
+                         vconfig.LibvirtConfigGuestSerial)
+        self.assertEqual(type(cfg.devices[3]),
+                         vconfig.LibvirtConfigGuestSerial)
+        self.assertEqual(type(cfg.devices[4]),
+                         vconfig.LibvirtConfigGuestInput)
+        self.assertEqual(type(cfg.devices[5]),
+                         vconfig.LibvirtConfigGuestGraphics)
+        self.assertEqual(type(cfg.devices[6]),
+                         vconfig.LibvirtConfigGuestVideo)
+
+        self.assertEqual(cfg.devices[5].type, "vnc")
+        self.assertEqual(cfg.devices[6].type, "vmvga")
+
     def test_get_guest_config_with_qga_through_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
 
