@@ -2288,7 +2288,9 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'event': event,
             'instance_uuid': uuid,
             'request_id': ctxt.request_id,
-            'start_time': timeutils.utcnow()
+            'start_time': timeutils.utcnow(),
+            'host': 'fake-host',
+            'details': 'fake-details',
         }
         if extra is not None:
             values.update(extra)
