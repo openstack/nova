@@ -743,18 +743,28 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_cpu_features_bug_1217630(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = db.instance_create(self.context, self.test_instance)
 
         # Test old version of libvirt, it shouldn't see the `aes' feature
         caps = conn.get_host_capabilities()
         self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
         # Test new verion of libvirt, should find the `aes' feature
+        # Cleanup the capabilities cache firstly
+        conn._caps = None
         setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         caps = conn.get_host_capabilities()
         delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
         self.assertIn('aes', [x.name for x in caps.host.cpu.features])
+
+    def test_lxc_get_host_capabilities_failed(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        with mock.patch.object(conn._conn, 'baselineCPU', return_value=-1):
+            setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
+            caps = conn.get_host_capabilities()
+            delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
+            self.assertEqual(vconfig.LibvirtConfigCaps, type(caps))
+            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
     def test_get_guest_config(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

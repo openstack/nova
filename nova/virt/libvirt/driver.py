@@ -2750,7 +2750,11 @@ class LibvirtDriver(driver.ComputeDriver):
                     features = self._conn.baselineCPU(
                         [self._caps.host.cpu.to_xml()],
                         libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES)
-                    if features:
+                    # FIXME(wangpan): the return value of baselineCPU should be
+                    #                 None or xml string, but libvirt has a bug
+                    #                 of it from 1.1.2 which is fixed in 1.2.0,
+                    #                 this -1 checking should be removed later.
+                    if features and features != -1:
                         self._caps.host.cpu = vconfig.LibvirtConfigCPU()
                         self._caps.host.cpu.parse_str(features)
                 except libvirt.VIR_ERR_NO_SUPPORT:

@@ -122,6 +122,7 @@ VIR_FROM_DOMAIN = 200
 VIR_FROM_NWFILTER = 330
 VIR_FROM_REMOTE = 340
 VIR_FROM_RPC = 345
+VIR_ERR_NO_SUPPORT = 3
 VIR_ERR_XML_DETAIL = 350
 VIR_ERR_NO_DOMAIN = 420
 VIR_ERR_OPERATION_INVALID = 55
@@ -132,6 +133,9 @@ VIR_ERR_INTERNAL_ERROR = 950
 
 # Readonly
 VIR_CONNECT_RO = 1
+
+# virConnectBaselineCPU flags
+VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES = 1
 
 # snapshotCreateXML flags
 VIR_DOMAIN_SNAPSHOT_CREATE_NO_METADATA = 4
@@ -912,6 +916,14 @@ class Connection(object):
 
     def listDevices(self, cap, flags):
         return []
+
+    def baselineCPU(self, cpu, flag):
+        """Add new libvirt API."""
+        return """<cpu mode='custom' match='exact'>
+                    <model fallback='allow'>Westmere</model>
+                    <vendor>Intel</vendor>
+                    <feature policy='require' name='aes'/>
+                  </cpu>"""
 
 
 def openAuth(uri, auth, flags):
