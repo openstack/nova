@@ -517,6 +517,17 @@ class LibvirtConnTestCase(test.TestCase):
         self._create_service(disabled=True, host='fake-mini')
         self.assertEqual('disabled', conn.set_host_enabled('fake-mini', False))
 
+    def test_set_host_enabled_swallows_exceptions(self):
+        # Tests that set_host_enabled will swallow exceptions coming from the
+        # db_api code so they don't break anything calling it, e.g. the
+        # _get_new_connection method.
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        with mock.patch.object(db, 'service_get_by_compute_host') as db_mock:
+            # Make db.service_get_by_compute_host raise NovaException; this
+            # is more robust than just raising ComputeHostNotFound.
+            db_mock.side_effect = exception.NovaException
+            self.assertIsNone(conn.set_host_enabled('fake-mini', False))
+
     def create_instance_obj(self, context, **params):
         default_params = self.test_instance
         default_params['pci_devices'] = pci_device_obj.PciDeviceList()
