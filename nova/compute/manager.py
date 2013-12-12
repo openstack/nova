@@ -135,9 +135,6 @@ interval_opts = [
                default=60,
                help="Number of seconds between instance info_cache self "
                         "healing updates"),
-    cfg.IntOpt('host_state_interval',
-               default=120,
-               help='Interval in seconds for querying the host status'),
     cfg.IntOpt("image_cache_manager_interval",
                default=2400,
                help='Number of seconds to wait between runs of the image '
