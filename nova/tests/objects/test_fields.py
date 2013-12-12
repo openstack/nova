@@ -208,6 +208,16 @@ class TestList(TestField):
         self.from_primitive_values = [(['!foo!'], ['foo'])]
 
 
+class TestListOfStrings(TestField):
+    def setUp(self):
+        super(TestListOfStrings, self).setUp()
+        self.field = fields.ListOfStringsField()
+        self.coerce_good_values = [(['foo', 'bar'], ['foo', 'bar'])]
+        self.coerce_bad_values = ['foo']
+        self.to_primitive_values = [(['foo'], ['foo'])]
+        self.from_primitive_values = [(['foo'], ['foo'])]
+
+
 class TestObject(TestField):
     def setUp(self):
         class TestableObject(obj_base.NovaObject):
