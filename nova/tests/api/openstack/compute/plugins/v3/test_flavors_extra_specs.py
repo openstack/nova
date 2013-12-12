@@ -132,20 +132,6 @@ class FlavorsExtraSpecsTest(test.TestCase):
         self.assertEqual('value1', res_dict['extra_specs']['key1'])
         self.assertEqual(self.controller.create.wsgi_code, 201)
 
-    def test_create(self):
-        def fake_return_create_flavor_extra_specs(*args, **kwargs):
-            raise exception.FlavorNotFound(flavor_id='')
-        self.stubs.Set(nova.db,
-                       'flavor_extra_specs_update_or_create',
-                       return_create_flavor_extra_specs)
-        body = {"extra_specs": {"key1": "value1"}}
-
-        req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs',
-                                       use_admin_context=True)
-        res_dict = self.controller.create(req, 1, body)
-
-        self.assertEqual('value1', res_dict['extra_specs']['key1'])
-
     def test_create_no_admin(self):
         self.stubs.Set(nova.db,
                        'flavor_extra_specs_update_or_create',
