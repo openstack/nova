@@ -491,6 +491,11 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.get_diagnostics(instance_ref)
 
     @catch_notimplementederror
+    def test_get_instance_diagnostics(self):
+        instance_ref, network_info = self._get_running_instance(obj=True)
+        self.connection.get_instance_diagnostics(instance_ref)
+
+    @catch_notimplementederror
     def test_block_stats(self):
         instance_ref, network_info = self._get_running_instance()
         stats = self.connection.block_stats(instance_ref['name'], 'someid')

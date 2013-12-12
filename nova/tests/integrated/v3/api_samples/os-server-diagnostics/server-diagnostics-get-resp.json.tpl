@@ -1,17 +1,40 @@
 {
-    "cpu0_time": 17300000000,
-    "memory": 524288,
-    "vda_errors": -1,
-    "vda_read": 262144,
-    "vda_read_req": 112,
-    "vda_write": 5778432,
-    "vda_write_req": 488,
-    "vnet1_rx": 2070139,
-    "vnet1_rx_drop": 0,
-    "vnet1_rx_errors": 0,
-    "vnet1_rx_packets": 26701,
-    "vnet1_tx": 140208,
-    "vnet1_tx_drop": 0,
-    "vnet1_tx_errors": 0,
-    "vnet1_tx_packets": 662
+    "config_drive": 1,
+    "cpu_details": [
+        {
+            "time": 17300000000
+        }
+    ],
+    "disk_details": [
+        {
+            "errors_count": 0,
+            "id": "fake-disk-id",
+            "read_requests": 112,
+            "read_bytes": 262144,
+            "write_requests": 488,
+            "write_bytes": 5778432
+        }
+    ],
+    "driver": "fake",
+    "hypervisor_os": "fake-os",
+    "memory_details": {
+        "maximum": 524288,
+        "used": 0
+    },
+    "nic_details": [
+        {
+            "mac_address": "01:23:45:67:89:ab",
+            "rx_drop": 0,
+            "rx_errors": 0,
+            "rx_octets": 2070139,
+            "rx_packets": 26701,
+            "tx_drop": 0,
+            "tx_errors": 0,
+            "tx_octets": 140208,
+            "tx_packets": 662
+        }
+    ],
+    "state": "running",
+    "uptime": 46664,
+    "version": "1.0"
 }

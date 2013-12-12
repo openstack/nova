@@ -35,6 +35,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
+from nova.virt import diagnostics
 from nova.virt import driver
 from nova.virt import virtapi
 
@@ -286,6 +287,23 @@ class FakeDriver(driver.ComputeDriver):
                 'vnet1_tx_errors': 0,
                 'vnet1_tx_packets': 662,
         }
+
+    def get_instance_diagnostics(self, instance_name):
+        diags = diagnostics.Diagnostics(state='running', driver='fake',
+                hypervisor_os='fake-os', uptime=46664, config_drive=True)
+        diags.add_cpu(time=17300000000)
+        diags.add_nic(mac_address='01:23:45:67:89:ab',
+                      rx_packets=26701,
+                      rx_octets=2070139,
+                      tx_octets=140208,
+                      tx_packets = 662)
+        diags.add_disk(id='fake-disk-id',
+                       read_bytes=262144,
+                       read_requests=112,
+                       write_bytes=5778432,
+                       write_requests=488)
+        diags.memory_details.maximum = 524288
+        return diags
 
     def get_all_bw_counters(self, instances):
         """Return bandwidth usage counters for each interface on each

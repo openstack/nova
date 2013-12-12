@@ -552,7 +552,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.30')
+    target = messaging.Target(version='3.31')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3783,6 +3783,24 @@ class ComputeManager(manager.Manager):
             LOG.audit(_("Retrieving diagnostics"), context=context,
                       instance=instance)
             return self.driver.get_diagnostics(instance)
+        else:
+            raise exception.InstanceInvalidState(
+                attr='power_state',
+                instance_uuid=instance.uuid,
+                state=instance.power_state,
+                method='get_diagnostics')
+
+    @object_compat
+    @wrap_exception()
+    @wrap_instance_fault
+    def get_instance_diagnostics(self, context, instance):
+        """Retrieve diagnostics for an instance on this host."""
+        current_power_state = self._get_power_state(context, instance)
+        if current_power_state == power_state.RUNNING:
+            LOG.audit(_("Retrieving diagnostics"), context=context,
+                      instance=instance)
+            diags = self.driver.get_instance_diagnostics(instance)
+            return diags.serialize()
         else:
             raise exception.InstanceInvalidState(
                 attr='power_state',

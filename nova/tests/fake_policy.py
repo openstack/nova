@@ -38,6 +38,7 @@ policy_data = """
 
     "compute:get_instance_faults": "",
     "compute:get_diagnostics": "",
+    "compute:get_instance_diagnostics": "",
 
     "compute:get_lock": "",
     "compute:lock": "",

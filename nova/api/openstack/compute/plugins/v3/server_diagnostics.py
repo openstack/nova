@@ -37,7 +37,7 @@ class ServerDiagnosticsController(object):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         try:
-            return compute_api.get_diagnostics(context, instance)
+            return compute_api.get_instance_diagnostics(context, instance)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'get_diagnostics')
