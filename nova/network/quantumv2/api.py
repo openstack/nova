@@ -994,6 +994,22 @@ class API(base.Base):
         """Create a private DNS domain with optional nova project."""
         raise NotImplementedError()
 
+    def _format_agents_status(self, context, agent):
+        result = {'agent_type': agent['agent_type'],
+                  'alive': agent['alive']}
+        return result
+    
+    def get_agents_status(self, context):
+        agents = quantumv2.get_client(context).list_agents()
+        agents = agents['agents']
+
+        result = {}
+        for agent in agents:
+            if not result.get(agent['host']):
+                result[agent['host']] = []
+            status = self._format_agents_status(context, agent)
+            result[agent['host']].append(status)
+        return result
 
 def _ensure_requested_network_ordering(accessor, unordered, preferred):
     """Sort a list with respect to the preferred network ordering."""

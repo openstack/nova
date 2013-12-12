@@ -29,6 +29,8 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.scheduler import filters
 from nova.scheduler import weights
+import nova.network.quantumv2.api as quantum_api
+import nova.context
 
 host_manager_opts = [
     cfg.MultiStrOpt('scheduler_available_filters',
@@ -128,6 +130,7 @@ class HostState(object):
         self.limits = {}
 
         self.updated = None
+        self.quantum_agents_status = []
 
     def update_capabilities(self, capabilities=None, service=None):
         # Read-only capability dicts
@@ -138,6 +141,13 @@ class HostState(object):
         if service is None:
             service = {}
         self.service = ReadOnlyDict(service)
+
+    def update_quantum_agents_status(self, status):
+        if status:
+            self.quantum_agents_status = status
+        else:
+            LOG.warn(_("No Quantum agents alive on %s") % self.host)
+            self.quantum_agents_status = []
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
@@ -266,6 +276,7 @@ class HostManager(object):
         self.weight_handler = weights.HostWeightHandler()
         self.weight_classes = self.weight_handler.get_matching_classes(
                 CONF.scheduler_weight_classes)
+        self.quantum_api = quantum_api.API()
 
     def _choose_host_filters(self, filter_cls_names):
         """Since the caller may specify which filters to use we need
@@ -370,6 +381,9 @@ class HostManager(object):
 
         # Get resource usage across the available compute nodes:
         compute_nodes = db.compute_node_get_all(context)
+        admin_context = nova.context.get_admin_context()
+        quantum_agents_status = self.quantum_api.get_agents_status(
+                                                             admin_context)
         seen_nodes = set()
         for compute in compute_nodes:
             service = compute['service']
@@ -380,6 +394,7 @@ class HostManager(object):
             node = compute.get('hypervisor_hostname')
             state_key = (host, node)
             capabilities = self.service_states.get(state_key, None)
+            status = quantum_agents_status.get(host)
             host_state = self.host_state_map.get(state_key)
             if host_state:
                 host_state.update_capabilities(capabilities,
@@ -390,6 +405,7 @@ class HostManager(object):
                         service=dict(service.iteritems()))
                 self.host_state_map[state_key] = host_state
             host_state.update_from_compute_node(compute)
+            host_state.update_quantum_agents_status(status)
             seen_nodes.add(state_key)
 
         # remove compute nodes from host_state_map if they are not active

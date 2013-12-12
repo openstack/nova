@@ -18,3 +18,4 @@
 
 NET_EXTERNAL = 'router:external'
 PORTBINDING_EXT = 'Port Binding'
+NUM_ACTIVE_AGENTS = 3
