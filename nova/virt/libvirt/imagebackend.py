@@ -173,12 +173,8 @@ class Image(object):
         :size: Size of created image in bytes (optional)
         """
         @utils.synchronized(filename, external=True, lock_path=self.lock_path)
-        def call_if_not_exists(target, *args, **kwargs):
-            if not os.path.exists(target):
-                fetch_func(target=target, *args, **kwargs)
-            elif CONF.libvirt.images_type == "lvm" and \
-                    'ephemeral_size' in kwargs:
-                fetch_func(target=target, *args, **kwargs)
+        def fetch_func_sync(target, *args, **kwargs):
+            fetch_func(target=target, *args, **kwargs)
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
@@ -187,7 +183,7 @@ class Image(object):
         base = os.path.join(base_dir, filename)
 
         if not self.check_image_exists() or not os.path.exists(base):
-            self.create_image(call_if_not_exists, base, size,
+            self.create_image(fetch_func_sync, base, size,
                               *args, **kwargs)
 
         if (size and self.preallocate and self._can_fallocate() and
@@ -271,10 +267,12 @@ class Raw(Image):
 
         generating = 'image_id' not in kwargs
         if generating:
-            #Generating image in place
-            prepare_template(target=self.path, *args, **kwargs)
+            if not self.check_image_exists():
+                #Generating image in place
+                prepare_template(target=self.path, *args, **kwargs)
         else:
-            prepare_template(target=base, max_size=size, *args, **kwargs)
+            if not os.path.exists(base):
+                prepare_template(target=base, max_size=size, *args, **kwargs)
             self.verify_base_size(base, size)
             if not os.path.exists(self.path):
                 with fileutils.remove_path_on_error(self.path):
@@ -397,7 +395,8 @@ class Lvm(Image):
             with self.remove_volume_on_error(self.path):
                 prepare_template(target=self.path, *args, **kwargs)
         else:
-            prepare_template(target=base, max_size=size, *args, **kwargs)
+            if not os.path.exists(base):
+                prepare_template(target=base, max_size=size, *args, **kwargs)
             with self.remove_volume_on_error(self.path):
                 create_lvm_image(base, size)
 
