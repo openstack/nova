@@ -424,7 +424,7 @@ class API(base.Base):
         """
         try:
             neutronv2.get_client(context).delete_port(port_id)
-        except Exception as ex:
+        except Exception:
             LOG.exception(_("Failed to delete neutron port %s") %
                           port_id)
 
@@ -897,7 +897,7 @@ class API(base.Base):
                                       migration['dest_compute']}}
             try:
                 neutron.update_port(p['id'], port_req_body)
-            except Exception as ex:
+            except Exception:
                 with excutils.save_and_reraise_exception():
                     msg = _("Unable to update host of port %s")
                     LOG.exception(msg, p['id'])
