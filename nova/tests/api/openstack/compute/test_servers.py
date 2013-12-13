@@ -2210,6 +2210,24 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, self.body)
 
+    def test_create_instance_metadata_key_not_string(self):
+        self.flags(quota_metadata_items=1)
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['metadata'] = {1: 'test'}
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, self.body)
+
+    def test_create_instance_metadata_value_not_string(self):
+        self.flags(quota_metadata_items=1)
+        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
+        self.body['server']['imageRef'] = image_href
+        self.body['server']['metadata'] = {'test': ['a', 'list']}
+        self.req.body = jsonutils.dumps(self.body)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, self.req, self.body)
+
     def test_create_instance_invalid_key_name(self):
         image_href = 'http://localhost/v2/images/2'
         self.body['server']['imageRef'] = image_href
