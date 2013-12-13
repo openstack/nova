@@ -727,8 +727,8 @@
 #instance_delete_interval=300
 
 # Action to take if a running deleted instance is
-# detected.Valid options are 'noop', 'log' and 'reap'. Set to
-# 'noop' to disable. (string value)
+# detected.Valid options are 'noop', 'log', 'shutdown', or
+# 'reap'. Set to 'noop' to take no action. (string value)
 #running_deleted_instance_action=reap
 
 # Number of seconds to wait between runs of the cleanup task.

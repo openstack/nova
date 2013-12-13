@@ -185,8 +185,8 @@ running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
                default="reap",
                help="Action to take if a running deleted instance is detected."
-                    "Valid options are 'noop', 'log' and 'reap'. "
-                    "Set to 'noop' to disable."),
+                    "Valid options are 'noop', 'log', 'shutdown', or 'reap'. "
+                    "Set to 'noop' to take no action."),
     cfg.IntOpt("running_deleted_instance_poll_interval",
                default=1800,
                help="Number of seconds to wait between runs of the cleanup "
@@ -5005,6 +5005,8 @@ class ComputeManager(manager.Manager):
             1. noop - do nothing
             2. log - log which instances are erroneously running
             3. reap - shutdown and cleanup any erroneously running instances
+            4. shutdown - power off *and disable* any erroneously running
+                          instances
 
         The use-case for this cleanup task is: for various reasons, it may be
         possible for the database to show an instance as deleted but for that
@@ -5033,6 +5035,24 @@ class ComputeManager(manager.Manager):
                                   "'%s' which is marked as "
                                   "DELETED but still present on host."),
                                 instance['name'], instance=instance)
+
+                elif action == 'shutdown':
+                    LOG.info(_("Powering off instance with name label "
+                               "'%s' which is marked as "
+                               "DELETED but still present on host."),
+                               instance['name'], instance=instance)
+                    try:
+                        try:
+                            # disable starting the instance
+                            self.driver.set_bootable(instance, False)
+                        except NotImplementedError:
+                            LOG.warn(_("set_bootable is not implemented for "
+                                       "the current driver"))
+                        # and power it off
+                        self.driver.power_off(instance)
+                    except Exception:
+                        msg = _("Failed to power off instance")
+                        LOG.warn(msg, instance=instance, exc_info=True)
 
                 elif action == 'reap':
                     LOG.info(_("Destroying instance with name label "
