@@ -186,18 +186,25 @@ class LibvirtVifTestCase(test.TestCase):
                                     type=network_model.VIF_TYPE_MIDONET,
                                     devname='tap-xxx-yyy-zzz')
 
+    vif_iovisor = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                   address='ca:fe:de:ad:be:ef',
+                                   network=network_bridge,
+                                   type=network_model.VIF_TYPE_IOVISOR,
+                                   devname='tap-xxx-yyy-zzz',
+                                   ovs_interfaceid=None)
+
     instance = {
         'name': 'instance-name',
         'uuid': 'instance-uuid'
     }
 
     bandwidth = {
-        'quota:vif_inbound_peak': '102400',
-        'quota:vif_outbound_peak': '102400',
-        'quota:vif_inbound_average': '102400',
-        'quota:vif_outbound_average': '102400',
-        'quota:vif_inbound_burst': '102400',
-        'quota:vif_inbound_burst': '102400'
+        'quota:vif_inbound_peak': '200',
+        'quota:vif_outbound_peak': '20',
+        'quota:vif_inbound_average': '100',
+        'quota:vif_outbound_average': '10',
+        'quota:vif_inbound_burst': '300',
+        'quota:vif_outbound_burst': '30'
     }
 
     def setUp(self):
@@ -360,20 +367,65 @@ class LibvirtVifTestCase(test.TestCase):
                           self.vif_bridge,
                           image_meta)
 
-    def test_model_qemu(self):
+    def _test_model_qemu(self, *vif_objs, **kw):
+        libvirt_version = kw.get('libvirt_version')
         self.flags(use_virtio_for_bridges=True,
                    virt_type='qemu',
                    group='libvirt')
 
-        d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        xml = self._get_instance_xml(d, self.vif_bridge)
+        for vif_obj in vif_objs:
+            d = vif.LibvirtGenericVIFDriver(self._get_conn())
+            if libvirt_version is not None:
+                d.libvirt_version = libvirt_version
 
-        doc = etree.fromstring(xml)
+            xml = self._get_instance_xml(d, vif_obj)
 
-        ret = doc.findall('./devices/interface/bandwidth')
-        self.assertEqual(len(ret), 1)
+            doc = etree.fromstring(xml)
 
-        self._assertModel(xml, "virtio", "qemu")
+            bandwidth = doc.find('./devices/interface/bandwidth')
+            self.assertNotEqual(bandwidth, None)
+
+            inbound = bandwidth.find('inbound')
+            self.assertEqual(inbound.get("average"),
+                             self.bandwidth['quota:vif_inbound_average'])
+            self.assertEqual(inbound.get("peak"),
+                             self.bandwidth['quota:vif_inbound_peak'])
+            self.assertEqual(inbound.get("burst"),
+                             self.bandwidth['quota:vif_inbound_burst'])
+
+            outbound = bandwidth.find('outbound')
+            self.assertEqual(outbound.get("average"),
+                             self.bandwidth['quota:vif_outbound_average'])
+            self.assertEqual(outbound.get("peak"),
+                             self.bandwidth['quota:vif_outbound_peak'])
+            self.assertEqual(outbound.get("burst"),
+                             self.bandwidth['quota:vif_outbound_burst'])
+
+            self._assertModel(xml, "virtio", "qemu")
+
+    def test_model_qemu_no_firewall(self):
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        self._test_model_qemu(
+            self.vif_bridge,
+            self.vif_8021qbh,
+            self.vif_8021qbg,
+            self.vif_iovisor,
+            self.vif_mlnx,
+        )
+        self._test_model_qemu(self.vif_ovs,
+                              libvirt_version=vif.LIBVIRT_OVS_VPORT_VERSION)
+
+    def test_model_qemu_iptables(self):
+        self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")
+        self._test_model_qemu(
+            self.vif_bridge,
+            self.vif_ovs,
+            self.vif_ivs,
+            self.vif_8021qbh,
+            self.vif_8021qbg,
+            self.vif_iovisor,
+            self.vif_mlnx,
+        )
 
     def test_model_xen(self):
         self.flags(use_virtio_for_bridges=True,

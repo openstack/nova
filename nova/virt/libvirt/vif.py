@@ -203,6 +203,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             self.get_ovs_interfaceid(vif),
             self.get_vif_devname(vif))
 
+        designer.set_vif_bandwidth_config(conf, inst_type)
+
         return conf
 
     def get_config_ovs_hybrid(self, instance, vif, image_meta,
@@ -272,6 +274,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             params['typeidversion'],
             params['instanceid'])
 
+        designer.set_vif_bandwidth_config(conf, inst_type)
+
         return conf
 
     def get_config_802qbh(self, instance, vif, image_meta,
@@ -285,6 +289,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             conf, vif['network'].get_meta('interface'),
             params['profileid'])
 
+        designer.set_vif_bandwidth_config(conf, inst_type)
+
         return conf
 
     def get_config_iovisor(self, instance, vif, image_meta,
@@ -295,6 +301,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev)
+
+        designer.set_vif_bandwidth_config(conf, inst_type)
 
         return conf
 
@@ -317,6 +325,8 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         devname = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
         designer.set_vif_host_backend_direct_config(conf, devname)
+
+        designer.set_vif_bandwidth_config(conf, inst_type)
 
         return conf
 
