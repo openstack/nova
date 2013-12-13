@@ -339,17 +339,14 @@ class HostManager(object):
             filter_cls_names = CONF.scheduler_default_filters
         if not isinstance(filter_cls_names, (list, tuple)):
             filter_cls_names = [filter_cls_names]
+        cls_map = dict((cls.__name__, cls) for cls in self.filter_classes)
         good_filters = []
         bad_filters = []
         for filter_name in filter_cls_names:
-            found_class = False
-            for cls in self.filter_classes:
-                if cls.__name__ == filter_name:
-                    good_filters.append(cls)
-                    found_class = True
-                    break
-            if not found_class:
+            if filter_name not in cls_map:
                 bad_filters.append(filter_name)
+                continue
+            good_filters.append(cls_map[filter_name])
         if bad_filters:
             msg = ", ".join(bad_filters)
             raise exception.SchedulerHostFilterNotFound(filter_name=msg)
