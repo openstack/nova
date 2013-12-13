@@ -70,7 +70,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.8: 'security_groups' and 'pci_devices' cannot be None
     # Version 1.9: Make uuid a non-None real string
     # Version 1.10: Added use_slave to refresh and get_by_uuid
-    VERSION = '1.10'
+    # Version 1.11: Update instance from database during destroy
+    VERSION = '1.11'
 
     fields = {
         'id': fields.IntegerField(),
@@ -313,7 +314,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             constraint = None
 
         try:
-            db.instance_destroy(context, self.uuid, constraint=constraint)
+            db_inst = db.instance_destroy(context, self.uuid,
+                                          constraint=constraint)
+            Instance._from_db_object(context, self, db_inst)
         except exception.ConstraintNotMet:
             raise exception.ObjectActionError(action='destroy',
                                               reason='host changed')
