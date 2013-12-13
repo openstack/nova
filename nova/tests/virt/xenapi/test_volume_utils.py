@@ -32,7 +32,18 @@ class CallXenAPIHelpersTestCase(stubs.XenAPITestBaseNoDB):
     def test_vbd_plug_check_synchronized(self, mock_synchronized):
         session = mock.Mock()
         volume_utils.vbd_plug(session, "vbd_ref", "vm_ref:123")
-        mock_synchronized.assert_called_once_with("xenapi-vbd-plug-vm_ref:123")
+        mock_synchronized.assert_called_once_with("xenapi-events-vm_ref:123")
+
+    def test_vbd_unplug(self):
+        session = mock.Mock()
+        volume_utils.vbd_unplug(session, "vbd_ref", "vm_ref:123")
+        session.call_xenapi.assert_called_once_with("VBD.unplug", "vbd_ref")
+
+    @mock.patch.object(utils, 'synchronized')
+    def test_vbd_unplug_check_synchronized(self, mock_synchronized):
+        session = mock.Mock()
+        volume_utils.vbd_unplug(session, "vbd_ref", "vm_ref:123")
+        mock_synchronized.assert_called_once_with("xenapi-events-vm_ref:123")
 
 
 class ISCSIParametersTestCase(stubs.XenAPITestBaseNoDB):

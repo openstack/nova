@@ -315,11 +315,20 @@ def _get_target_port(iscsi_string):
 
 
 def vbd_plug(session, vbd_ref, vm_ref):
-    @utils.synchronized('xenapi-vbd-plug-' + vm_ref)
+    @utils.synchronized('xenapi-events-' + vm_ref)
     def synchronized_plug():
         session.call_xenapi("VBD.plug", vbd_ref)
 
     # NOTE(johngarbutt) we need to ensure there is only ever one VBD.plug
-    # happening at once per VM due to a bug in XenServer 6.1 and greater
-    # where there is a race condition in VBD.plug that causes tapdisk to hang
+    # happening at once per VM due to a bug in XenServer 6.1 and 6.2
     synchronized_plug()
+
+
+def vbd_unplug(session, vbd_ref, vm_ref):
+    @utils.synchronized('xenapi-events-' + vm_ref)
+    def synchronized_unplug():
+        session.call_xenapi("VBD.unplug", vbd_ref)
+
+    # NOTE(johngarbutt) we need to ensure there is only ever one VBD.unplug
+    # happening at once per VM due to a bug in XenServer 6.1 and 6.2
+    synchronized_unplug()

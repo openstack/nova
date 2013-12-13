@@ -413,14 +413,14 @@ def _should_retry_unplug_vbd(err):
             err == 'INTERNAL_ERROR')
 
 
-def unplug_vbd(session, vbd_ref):
+def unplug_vbd(session, vbd_ref, this_vm_ref):
     max_attempts = CONF.xenserver.num_vbd_unplug_retries + 1
     for num_attempt in xrange(1, max_attempts + 1):
         try:
             if num_attempt > 1:
                 greenthread.sleep(1)
 
-            session.call_xenapi('VBD.unplug', vbd_ref)
+            volume_utils.vbd_unplug(session, vbd_ref, this_vm_ref)
             return
         except session.XenAPI.Failure as exc:
             err = len(exc.details) > 0 and exc.details[0]
@@ -2082,7 +2082,7 @@ def cleanup_attached_vdis(session):
             # unclean restart
             LOG.info(_('Disconnecting stale VDI %s from compute domU'),
                      vdi_rec['uuid'])
-            unplug_vbd(session, vbd_ref)
+            unplug_vbd(session, vbd_ref, this_vm_ref)
             destroy_vbd(session, vbd_ref)
 
 
@@ -2109,7 +2109,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
             yield dev
         finally:
             LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
-            unplug_vbd(session, vbd_ref)
+            unplug_vbd(session, vbd_ref, this_vm_ref)
     finally:
         try:
             destroy_vbd(session, vbd_ref)
