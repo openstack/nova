@@ -33,6 +33,7 @@ from nova.compute import task_states
 from nova import db
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import driver
@@ -103,6 +104,7 @@ class FakeDriver(driver.ComputeDriver):
           'hypervisor_hostname': CONF.host,
           'cpu_info': {},
           'disk_available_least': 500000000000,
+          'supported_instances': [(None, 'fake', None)],
           }
         self._mounts = {}
         self._interfaces = {}
@@ -360,7 +362,9 @@ class FakeDriver(driver.ComputeDriver):
                'hypervisor_version': '1.0',
                'hypervisor_hostname': nodename,
                'disk_available_least': 0,
-               'cpu_info': '?'}
+               'cpu_info': '?',
+               'supported_instances': jsonutils.dumps([(None, 'fake', None)])
+              }
         return dic
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
