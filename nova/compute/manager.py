@@ -1394,8 +1394,8 @@ class ComputeManager(manager.Manager):
 
         def _update_bdm(bdm_for_update):
             self.conductor_api.block_device_mapping_update(
-                context, instance['uuid'], bdm_for_update['id'],
-                bdm_for_update['device_name'])
+                context, bdm_for_update['id'],
+                {'device_name': bdm_for_update['device_name']})
 
         self._default_device_names_for_instance(instance,
                                                 root_device_name,
