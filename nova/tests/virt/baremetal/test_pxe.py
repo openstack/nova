@@ -221,27 +221,27 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
 
     def test_image_dir_path(self):
         self.assertEqual(
-                pxe.get_image_dir_path(self.instance),
-                os.path.join(CONF.instances_path, 'instance-00000001'))
+                os.path.join(CONF.instances_path, 'instance-00000001'),
+                pxe.get_image_dir_path(self.instance))
 
     def test_image_file_path(self):
         self.assertEqual(
-                pxe.get_image_file_path(self.instance),
                 os.path.join(
-                    CONF.instances_path, 'instance-00000001', 'disk'))
+                    CONF.instances_path, 'instance-00000001', 'disk'),
+                pxe.get_image_file_path(self.instance))
 
     def test_pxe_config_file_path(self):
         self.instance['uuid'] = 'aaaa-bbbb-cccc'
         self.assertEqual(
-                pxe.get_pxe_config_file_path(self.instance),
                 os.path.join(CONF.baremetal.tftp_root,
-                    'aaaa-bbbb-cccc', 'config'))
+                    'aaaa-bbbb-cccc', 'config'),
+                pxe.get_pxe_config_file_path(self.instance))
 
     def test_pxe_mac_path(self):
         self.assertEqual(
-                pxe.get_pxe_mac_path('23:45:67:89:AB'),
                 os.path.join(CONF.baremetal.tftp_root,
-                    'pxelinux.cfg', '01-23-45-67-89-ab'))
+                    'pxelinux.cfg', '01-23-45-67-89-ab'),
+                pxe.get_pxe_mac_path('23:45:67:89:AB'))
 
     def test_get_instance_deploy_ids(self):
         self.instance['extra_specs'] = {
@@ -251,26 +251,22 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         self.flags(deploy_kernel="fail", group='baremetal')
         self.flags(deploy_ramdisk="fail", group='baremetal')
 
-        self.assertEqual(
-                pxe.get_deploy_aki_id(self.instance), 'aaaa')
-        self.assertEqual(
-                pxe.get_deploy_ari_id(self.instance), 'bbbb')
+        self.assertEqual('aaaa', pxe.get_deploy_aki_id(self.instance))
+        self.assertEqual('bbbb', pxe.get_deploy_ari_id(self.instance))
 
     def test_get_default_deploy_ids(self):
         self.instance['extra_specs'] = {}
         self.flags(deploy_kernel="aaaa", group='baremetal')
         self.flags(deploy_ramdisk="bbbb", group='baremetal')
 
-        self.assertEqual(
-                pxe.get_deploy_aki_id(self.instance), 'aaaa')
-        self.assertEqual(
-                pxe.get_deploy_ari_id(self.instance), 'bbbb')
+        self.assertEqual('aaaa', pxe.get_deploy_aki_id(self.instance))
+        self.assertEqual('bbbb', pxe.get_deploy_ari_id(self.instance))
 
     def test_get_partition_sizes(self):
         # default "kinda.big" instance
         sizes = pxe.get_partition_sizes(self.instance)
-        self.assertEqual(sizes[0], 40960)
-        self.assertEqual(sizes[1], 1024)
+        self.assertEqual(40960, sizes[0])
+        self.assertEqual(1024, sizes[1])
 
     def test_swap_not_zero(self):
         # override swap to 0
@@ -279,8 +275,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         self.instance = utils.get_test_instance(self.context, flavor)
 
         sizes = pxe.get_partition_sizes(self.instance)
-        self.assertEqual(sizes[0], 40960)
-        self.assertEqual(sizes[1], 1)
+        self.assertEqual(40960, sizes[0])
+        self.assertEqual(1, sizes[1])
 
     def test_get_tftp_image_info(self):
         flavor = utils.get_test_instance_type()
@@ -325,7 +321,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
                 'deploy_ramdisk': ['dddd',
                                     os.path.join(base, 'deploy_ramdisk')],
                 }
-        self.assertEqual(res, expected)
+        self.assertEqual(expected, res)
 
         # If deploy_kernel_id and deploy_ramdisk_id are specified on
         # image extra_specs, this should override any default configuration.
@@ -337,8 +333,8 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
             }
         flavor['extra_specs'] = extra_specs
         res = pxe.get_tftp_image_info(self.instance, flavor)
-        self.assertEqual(res['deploy_kernel'][0], 'eeee')
-        self.assertEqual(res['deploy_ramdisk'][0], 'ffff')
+        self.assertEqual('eeee', res['deploy_kernel'][0])
+        self.assertEqual('ffff', res['deploy_ramdisk'][0])
 
         # However, if invalid values are passed on the image extra_specs,
         # this should still raise an exception.
@@ -359,7 +355,7 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
         address_list = [nic['address'] for nic in self.nic_info]
         address_list.sort()
         macs = self.driver._collect_mac_addresses(self.context, self.node)
-        self.assertEqual(macs, address_list)
+        self.assertEqual(address_list, macs)
 
     def test_cache_tftp_images(self):
         self.instance['kernel_id'] = 'aaaa'
