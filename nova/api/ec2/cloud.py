@@ -1156,6 +1156,10 @@ class CloudController(object):
             for k, v in utils.instance_meta(instance).iteritems():
                 i['tagSet'].append({'key': k, 'value': v})
 
+            client_token = self._get_client_token(context, instance_uuid)
+            if client_token:
+                i['clientToken'] = client_token
+
             if context.is_admin:
                 i['keyName'] = '%s (%s, %s)' % (i['keyName'],
                     instance['project_id'],
@@ -1320,6 +1324,11 @@ class CloudController(object):
                 db.instance_system_metadata_update(
                     context, instance_uuid, {'EC2_client_token': client_token},
                     delete=False)
+
+    def _get_client_token(self, context, instance_uuid):
+        """Get client token for a given instance."""
+        sys_meta = db.instance_system_metadata_get(context, instance_uuid)
+        return sys_meta.get('EC2_client_token')
 
     def _remove_client_token(self, context, instance_ids):
         """Remove client token to reservation ID mapping."""
