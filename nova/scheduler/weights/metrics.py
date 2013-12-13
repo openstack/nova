@@ -28,8 +28,7 @@ in the configuration file as the followings:
 from oslo.config import cfg
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
+from nova.scheduler import utils
 from nova.scheduler import weights
 
 metrics_weight_opts = [
@@ -50,31 +49,16 @@ metrics_weight_opts = [
 CONF = cfg.CONF
 CONF.register_opts(metrics_weight_opts, group='metrics')
 
-LOG = logging.getLogger(__name__)
-
 
 class MetricsWeigher(weights.BaseHostWeigher):
     def __init__(self):
         self._parse_setting()
 
     def _parse_setting(self):
-        self.setting = []
-        bad = []
-        for item in CONF.metrics.weight_setting:
-            try:
-                (name, ratio) = item.split('=')
-                ratio = float(ratio)
-            except ValueError:
-                name = None
-                ratio = None
-            if name and ratio is not None:
-                self.setting.append((name, ratio))
-            else:
-                bad.append(item)
-        if bad:
-            LOG.error(_("Ignoring the invalid elements of"
-                        " metrics_weight_setting: %s"),
-                      ",".join(bad))
+        self.setting = utils.parse_options(CONF.metrics.weight_setting,
+                                           sep='=',
+                                           converter=float,
+                                           name="metrics.weight_setting")
 
     def weight_multiplier(self):
         """Override the weight multiplier."""
