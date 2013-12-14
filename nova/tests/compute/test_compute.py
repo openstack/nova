@@ -2633,7 +2633,7 @@ class ComputeTestCase(BaseTestCase):
     def test_validate_console_port_vnc(self):
         self.flags(vnc_enabled=True)
         self.flags(enabled=True, group='spice')
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
             return {'host': "fake_host", 'port': "5900",
@@ -2641,15 +2641,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, "get_vnc_console",
                        fake_driver_get_console)
 
-        self.assertTrue(self.compute.validate_console_port(self.context,
-                                                            instance,
-                                                            "5900",
-                                                            "novnc"))
+        self.assertTrue(self.compute.validate_console_port(
+            context=self.context, instance=instance, port="5900",
+            console_type="novnc"))
 
     def test_validate_console_port_spice(self):
         self.flags(vnc_enabled=True)
         self.flags(enabled=True, group='spice')
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
             return {'host': "fake_host", 'port': "5900",
@@ -2657,15 +2656,14 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, "get_spice_console",
                        fake_driver_get_console)
 
-        self.assertTrue(self.compute.validate_console_port(self.context,
-                                                            instance,
-                                                            "5900",
-                                                            "spice-html5"))
+        self.assertTrue(self.compute.validate_console_port(
+            context=self.context, instance=instance, port="5900",
+            console_type="spice-html5"))
 
     def test_validate_console_port_wrong_port(self):
         self.flags(vnc_enabled=True)
         self.flags(enabled=True, group='spice')
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = self._create_fake_instance_obj()
 
         def fake_driver_get_console(*args, **kwargs):
             return {'host': "fake_host", 'port': "5900",
@@ -2673,10 +2671,9 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, "get_vnc_console",
                        fake_driver_get_console)
 
-        self.assertFalse(self.compute.validate_console_port(self.context,
-                                                            instance,
-                                                            "wrongport",
-                                                            "spice-html5"))
+        self.assertFalse(self.compute.validate_console_port(
+            context=self.context, instance=instance, port="wrongport",
+            console_type="spice-html5"))
 
     def test_xvpvnc_vnc_console(self):
         # Make sure we can a vnc console for an instance.

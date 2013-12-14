@@ -420,7 +420,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.2'
+    RPC_API_VERSION = '3.3'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3694,10 +3694,8 @@ class ComputeManager(manager.Manager):
             exception.InstanceNotReady, exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
+    @object_compat
     def validate_console_port(self, ctxt, instance, port, console_type):
-        instance = instance_obj.Instance._from_db_object(
-            ctxt, instance_obj.Instance(), instance)
-
         if console_type == "spice-html5":
             console_info = self.driver.get_spice_console(ctxt, instance)
         else:
