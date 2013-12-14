@@ -26,6 +26,7 @@ from nova.network import model as network_model
 from nova import notifications
 from nova.objects import instance
 from nova.objects import instance_info_cache
+from nova.objects import pci_device
 from nova.objects import security_group
 from nova.openstack.common import timeutils
 from nova import test
@@ -710,6 +711,40 @@ class _TestInstanceObject(object):
         inst._from_db_object(self.context, inst, db_inst,
                              expected_attrs=['info_cache'])
         self.assertIs(info_cache, inst.info_cache)
+
+    def test_compat_strings(self):
+        unicode_attributes = ['user_id', 'project_id', 'image_ref',
+                              'kernel_id', 'ramdisk_id', 'hostname',
+                              'key_name', 'key_data', 'host', 'node',
+                              'user_data', 'availability_zone',
+                              'display_name', 'display_description',
+                              'launched_on', 'locked_by', 'os_type',
+                              'architecture', 'vm_mode', 'root_device_name',
+                              'default_ephemeral_device',
+                              'default_swap_device', 'config_drive',
+                              'cell_name']
+        inst = instance.Instance()
+        expected = {}
+        for key in unicode_attributes:
+            inst[key] = u'\u2603'
+            expected[key] = '?'
+        primitive = inst.obj_to_primitive(target_version='1.6')
+        self.assertEqual(expected, primitive['nova_object.data'])
+        self.assertEqual('1.6', primitive['nova_object.version'])
+
+    def test_compat_pci_devices(self):
+        inst = instance.Instance()
+        inst.pci_devices = pci_device.PciDeviceList()
+        primitive = inst.obj_to_primitive(target_version='1.5')
+        self.assertNotIn('pci_devices', primitive)
+
+    def test_compat_info_cache(self):
+        inst = instance.Instance()
+        inst.info_cache = instance_info_cache.InstanceInfoCache()
+        primitive = inst.obj_to_primitive(target_version='1.9')
+        self.assertEqual(
+            '1.4',
+            primitive['nova_object.data']['info_cache']['nova_object.version'])
 
 
 class TestInstanceObject(test_objects._LocalTest,
