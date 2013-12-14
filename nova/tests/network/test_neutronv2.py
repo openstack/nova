@@ -15,12 +15,14 @@
 #
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
+import copy
 import uuid
 
 import mox
 from neutronclient.common import exceptions
 from neutronclient.v2_0 import client
 from oslo.config import cfg
+import six
 
 from nova.compute import flavors
 from nova.conductor import api as conductor_api
@@ -413,17 +415,15 @@ class TestNeutronv2Base(test.TestCase):
                                           self.instance['uuid'],
                                           mox.IgnoreArg())
         port_data = number == 1 and self.port_data1 or self.port_data2
-        self.mox.StubOutWithMock(conductor_api.API,
-                                 'instance_get_by_uuid')
 
         net_info_cache = []
         for port in port_data:
             net_info_cache.append({"network": {"id": port['network_id']}})
-        info_cache = {'info_cache': {'network_info':
-                                     jsonutils.dumps(net_info_cache)}}
+        instance = copy.copy(self.instance)
+        # This line here does not wrap net_info_cache in jsonutils.dumps()
+        # intentionally to test the other code path when it's not unicode.
+        instance['info_cache'] = {'network_info': net_info_cache}
 
-        api.conductor_api.instance_get_by_uuid(
-            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(info_cache)
         self.moxed_client.list_ports(
             tenant_id=self.instance['project_id'],
             device_id=self.instance['uuid']).AndReturn(
@@ -452,7 +452,7 @@ class TestNeutronv2Base(test.TestCase):
                 device_owner='network:dhcp').AndReturn(
                     {'ports': []})
         self.mox.ReplayAll()
-        nw_inf = api.get_instance_nw_info(self.context, self.instance)
+        nw_inf = api.get_instance_nw_info(self.context, instance)
         for i in xrange(0, number):
             self._verify_nw_info(nw_inf, i)
 
@@ -595,16 +595,15 @@ class TestNeutronv2(TestNeutronv2Base):
         net_info_cache = []
         for port in self.port_data3:
             net_info_cache.append({"network": {"id": port['network_id']}})
-        info_cache = {'info_cache': {'network_info':
-                                     jsonutils.dumps(net_info_cache)}}
-
-        api.conductor_api.instance_get_by_uuid(
-            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(info_cache)
+        instance = copy.copy(self.instance)
+        instance['info_cache'] = {'network_info':
+                                  six.text_type(
+                                    jsonutils.dumps(net_info_cache))}
 
         self.mox.ReplayAll()
 
         nw_inf = api.get_instance_nw_info(self.context,
-                                          self.instance)
+                                          instance)
 
         id_suffix = 3
         self.assertEqual(0, len(nw_inf.fixed_ips()))
@@ -904,17 +903,15 @@ class TestNeutronv2(TestNeutronv2Base):
     def _test_deallocate_port_for_instance(self, number):
         port_data = number == 1 and self.port_data1 or self.port_data2
         self.moxed_client.delete_port(port_data[0]['id'])
-        self.mox.StubOutWithMock(conductor_api.API,
-                                 'instance_get_by_uuid')
 
         net_info_cache = []
         for port in port_data:
             net_info_cache.append({"network": {"id": port['network_id']}})
-        info_cache = {'info_cache': {'network_info':
-                                     jsonutils.dumps(net_info_cache)}}
+        instance = copy.copy(self.instance)
+        instance['info_cache'] = {'network_info':
+                                  six.text_type(
+                                    jsonutils.dumps(net_info_cache))}
         api = neutronapi.API()
-        api.conductor_api.instance_get_by_uuid(
-            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(info_cache)
         neutronv2.get_client(mox.IgnoreArg(), admin=True).AndReturn(
             self.moxed_client)
         self.moxed_client.list_ports(
@@ -941,7 +938,7 @@ class TestNeutronv2(TestNeutronv2Base):
 
         self.mox.ReplayAll()
 
-        nwinfo = api.deallocate_port_for_instance(self.context, self.instance,
+        nwinfo = api.deallocate_port_for_instance(self.context, instance,
                                                   port_data[0]['id'])
         self.assertEqual(len(nwinfo), len(port_data[1:]))
         if len(port_data) > 1:
