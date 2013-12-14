@@ -281,7 +281,13 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_vnc_console(self):
         self._test_compute_api('get_vnc_console', 'call',
-                instance=self.fake_instance, console_type='type')
+                instance=self.fake_instance, console_type='type',
+                version='3.2')
+
+        self.flags(compute='3.0', group='upgrade_levels')
+        self._test_compute_api('get_vnc_console', 'call',
+                instance=self.fake_instance, console_type='type',
+                version='3.0')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

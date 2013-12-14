@@ -213,6 +213,7 @@ class ComputeAPI(rpcclient.RpcProxy):
 
         3.0 - Remove 2.x compatibility
         3.1 - Update get_spice_console() to take an instance object
+        3.2 - Update get_vnc_console() to take an instance object
     '''
 
     #
@@ -416,13 +417,16 @@ class ComputeAPI(rpcclient.RpcProxy):
                           instance=instance_p)
 
     def get_vnc_console(self, ctxt, instance, console_type):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.can_send_version('3.2'):
+            version = '3.2'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_vnc_console',
-                          instance=instance_p, console_type=console_type)
+                          instance=instance, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
         if self.can_send_version('3.1'):

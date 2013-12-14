@@ -42,7 +42,7 @@ class RemoteConsolesController(wsgi.Controller):
         console_type = body['get_vnc_console'].get('type')
 
         try:
-            instance = self.compute_api.get(context, id)
+            instance = self.compute_api.get(context, id, want_objects=True)
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
