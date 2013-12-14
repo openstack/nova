@@ -312,9 +312,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_migrate_disk_and_power_off(self):
         instance_ref, network_info = self._get_running_instance()
-        instance_type_ref = test_utils.get_test_instance_type()
+        flavor_ref = test_utils.get_test_flavor()
         self.connection.migrate_disk_and_power_off(
-            self.ctxt, instance_ref, 'dest_host', instance_type_ref,
+            self.ctxt, instance_ref, 'dest_host', flavor_ref,
             network_info)
 
     @catch_notimplementederror

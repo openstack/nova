@@ -782,13 +782,13 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
 
         return image_meta
 
-    def get_instance_type(self):
-        instance_type = {
+    def get_flavor(self):
+        flavor = {
             "id": "fake.flavor",
             "root_gb": 10,
         }
 
-        return instance_type
+        return flavor
 
     def test_base_image_properties(self):
         image = self.get_image()
@@ -815,16 +815,16 @@ class GetSystemMetadataFromImageTestCase(test.NoDBTestCase):
 
     def test_vhd_min_disk_image(self):
         image = self.get_image()
-        instance_type = self.get_instance_type()
+        flavor = self.get_flavor()
 
         image["disk_format"] = "vhd"
 
-        sys_meta = utils.get_system_metadata_from_image(image, instance_type)
+        sys_meta = utils.get_system_metadata_from_image(image, flavor)
 
         # Verify that the min_disk property is taken from
-        # instance_type's root_gb when using vhd disk format
+        # flavor's root_gb when using vhd disk format
         sys_key = "%s%s" % (utils.SM_IMAGE_PROP_PREFIX, "min_disk")
-        self.assertEqual(sys_meta[sys_key], instance_type["root_gb"])
+        self.assertEqual(sys_meta[sys_key], flavor["root_gb"])
 
     def test_dont_inherit_empty_values(self):
         image = self.get_image()

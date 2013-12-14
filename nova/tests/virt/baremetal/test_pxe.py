@@ -274,7 +274,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
 
     def test_swap_not_zero(self):
         # override swap to 0
-        flavor = utils.get_test_instance_type(self.context)
+        flavor = utils.get_test_flavor(self.context)
         flavor['swap'] = 0
         self.instance = utils.get_test_instance(self.context, flavor)
 
@@ -283,7 +283,7 @@ class PXEClassMethodsTestCase(BareMetalPXETestCase):
         self.assertEqual(sizes[1], 1)
 
     def test_get_tftp_image_info(self):
-        flavor = utils.get_test_instance_type()
+        flavor = utils.get_test_flavor()
         # Raises an exception when options are neither specified
         # on the instance nor in configuration file
         CONF.baremetal.deploy_kernel = None
@@ -364,7 +364,7 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
     def test_cache_tftp_images(self):
         self.instance['kernel_id'] = 'aaaa'
         self.instance['ramdisk_id'] = 'bbbb'
-        flavor = utils.get_test_instance_type()
+        flavor = utils.get_test_flavor()
         extra_specs = {
                 'baremetal:deploy_kernel_id': 'cccc',
                 'baremetal:deploy_ramdisk_id': 'dddd',
