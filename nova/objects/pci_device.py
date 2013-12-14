@@ -251,8 +251,16 @@ def _make_pci_list(context, pci_list, db_list):
 
 
 class PciDeviceList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              PciDevice <= 1.1
+    VERSION = '1.0'
+
     fields = {
         'objects': fields.ListOfObjectsField('PciDevice'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        # NOTE(danms): PciDevice was at 1.1 before we added this
         }
 
     def __init__(self):

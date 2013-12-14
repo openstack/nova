@@ -64,6 +64,9 @@ class SecurityGroupRuleList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('SecurityGroupRule'),
         }
+    child_versions = {
+        '1.0': '1.0',
+        }
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, secgroup_id):

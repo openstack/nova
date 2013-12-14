@@ -77,8 +77,15 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
 
 
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              InstanceAction <= version 1.1
+    VERSION = '1.0'
     fields = {
         'objects': fields.ListOfObjectsField('InstanceAction'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        # NOTE(danms): InstanceAction was at 1.1 before we added this
         }
 
     @base.remotable_classmethod
@@ -156,6 +163,9 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject):
 class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
+        }
+    child_versions = {
+        '1.0': '1.0',
         }
 
     @base.remotable_classmethod

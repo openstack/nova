@@ -91,8 +91,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
 
 class ComputeNodeList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              ComputeNode <= version 1.2
+    VERSION = '1.0'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
+        }
+    child_versions = {
+        '1.0': '1.2',
+        # NOTE(danms): ComputeNode was at 1.2 before we added this
         }
 
     @base.remotable_classmethod

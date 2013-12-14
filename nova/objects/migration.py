@@ -87,11 +87,17 @@ def _make_list(context, list_obj, item_cls, db_list):
 
 class MigrationList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
+    #              Migration <= 1.1
     # Version 1.1: Added use_slave to get_unconfirmed_by_dest_compute
     VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Migration'),
+        }
+    child_versions = {
+        '1.0': '1.1',
+        # NOTE(danms): Migration was at 1.1 before we added this
+        '1.1': '1.1',
         }
 
     @base.remotable_classmethod

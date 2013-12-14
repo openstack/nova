@@ -123,8 +123,16 @@ def _make_instance_group_list(context, inst_list, db_list):
 
 
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    #              InstanceGroup <= version 1.3
+    VERSION = '1.0'
+
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
+        }
+    child_versions = {
+        '1.0': '1.3',
+        # NOTE(danms): InstanceGroup was at 1.3 before we added this
         }
 
     @base.remotable_classmethod
