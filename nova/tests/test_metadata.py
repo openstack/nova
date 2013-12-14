@@ -601,6 +601,7 @@ class MetadataHandlerTestCase(test.TestCase):
             relpath="/2009-04-04/user-data",
             address="192.192.192.2",
             headers={'X-Instance-ID': 'a-b-c-d',
+                     'X-Tenant-ID': 'test',
                      'X-Instance-ID-Signature': signed})
         self.assertEqual(response.status_int, 200)
 
@@ -613,6 +614,7 @@ class MetadataHandlerTestCase(test.TestCase):
             fake_get_metadata_by_instance_id=fake_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
+                     'X-Tenant-ID': 'test',
                      'X-Instance-ID-Signature': signed})
 
         self.assertEqual(response.status_int, 200)
@@ -627,9 +629,35 @@ class MetadataHandlerTestCase(test.TestCase):
             fake_get_metadata_by_instance_id=fake_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'a-b-c-d',
+                     'X-Tenant-ID': 'test',
                      'X-Instance-ID-Signature': ''})
 
         self.assertEqual(response.status_int, 403)
+
+        # missing X-Tenant-ID from request
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Instance-ID': 'a-b-c-d',
+                     'X-Instance-ID-Signature': signed})
+
+        self.assertEqual(response.status_int, 400)
+
+        # mismatched X-Tenant-ID
+        response = fake_request(
+            self.stubs, self.mdinst,
+            relpath="/2009-04-04/user-data",
+            address="192.192.192.2",
+            fake_get_metadata_by_instance_id=fake_get_metadata,
+            headers={'X-Forwarded-For': '192.192.192.2',
+                     'X-Instance-ID': 'a-b-c-d',
+                     'X-Tenant-ID': 'FAKE',
+                     'X-Instance-ID-Signature': signed})
+
+        self.assertEqual(response.status_int, 404)
 
         # without X-Forwarded-For
         response = fake_request(
@@ -638,6 +666,7 @@ class MetadataHandlerTestCase(test.TestCase):
             address="192.192.192.2",
             fake_get_metadata_by_instance_id=fake_get_metadata,
             headers={'X-Instance-ID': 'a-b-c-d',
+                     'X-Tenant-ID': 'test',
                      'X-Instance-ID-Signature': signed})
 
         self.assertEqual(response.status_int, 500)
@@ -655,6 +684,7 @@ class MetadataHandlerTestCase(test.TestCase):
             fake_get_metadata_by_instance_id=fake_get_metadata,
             headers={'X-Forwarded-For': '192.192.192.2',
                      'X-Instance-ID': 'z-z-z-z',
+                     'X-Tenant-ID': 'test',
                      'X-Instance-ID-Signature': signed})
         self.assertEqual(response.status_int, 500)
 
