@@ -1973,9 +1973,25 @@ class LibvirtDriver(driver.ComputeDriver):
         """
 
         self._destroy(instance)
+
+        # Get the system metadata from the instance
+        system_meta = utils.instance_sys_meta(instance)
+
+        # Convert the system metadata to image metadata
+        image_meta = utils.get_image_from_system_metadata(system_meta)
+        if not image_meta:
+            image_ref = instance.get('image_ref')
+            service, image_id = glance.get_remote_image_service(context,
+                                                                image_ref)
+            image_meta = compute_utils.get_image_metadata(context,
+                                                          service,
+                                                          image_id,
+                                                          instance)
+
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance,
-                                            block_device_info)
+                                            block_device_info,
+                                            image_meta)
         # NOTE(vish): This could generate the wrong device_format if we are
         #             using the raw backend and the images don't exist yet.
         #             The create_images_and_backing below doesn't properly

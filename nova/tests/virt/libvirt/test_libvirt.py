@@ -4540,6 +4540,74 @@ class LibvirtConnTestCase(test.TestCase):
         conn._hard_reboot(self.context, instance, network_info,
                           block_device_info)
 
+    def test_power_on(self):
+
+        def _check_xml_bus(name, xml, block_info):
+            tree = etree.fromstring(xml)
+            got_disks = tree.findall('./devices/disk')
+            got_disk_targets = tree.findall('./devices/disk/target')
+            system_meta = utils.instance_sys_meta(instance)
+            image_meta = utils.get_image_from_system_metadata(system_meta)
+            want_device_bus = image_meta.get('hw_disk_bus')
+            if not want_device_bus:
+                want_device_bus = self.fake_img['properties']['hw_disk_bus']
+            got_device_bus = got_disk_targets[0].get('bus')
+            self.assertEqual(got_device_bus, want_device_bus)
+
+        def fake_get_info(instance_name):
+            called['count'] += 1
+            if called['count'] == 1:
+                state = power_state.SHUTDOWN
+            else:
+                state = power_state.RUNNING
+            return dict(state=state)
+
+        def _get_inst(with_meta=True):
+            inst_ref = self.test_instance
+            inst_ref['uuid'] = uuidutils.generate_uuid()
+            if with_meta:
+                inst_ref['system_metadata']['image_hw_disk_bus'] = 'ide'
+            instance = db.instance_create(self.context, inst_ref)
+            instance['image_ref'] = '70a599e0-31e7-49b7-b260-868f221a761e'
+            return instance
+
+        called = {'count': 0}
+        self.fake_img = {'id': '70a599e0-31e7-49b7-b260-868f221a761e',
+                         'name': 'myfakeimage',
+                         'created_at': '',
+                         'updated_at': '',
+                         'deleted_at': None,
+                         'deleted': False,
+                         'status': 'active',
+                         'is_public': False,
+                         'container_format': 'bare',
+                         'disk_format': 'qcow2',
+                         'size': '74185822',
+                         'properties': {'hw_disk_bus': 'ide'}}
+
+        instance = _get_inst()
+        network_info = _fake_network_info(self.stubs, 1)
+        block_device_info = None
+        image_service_mock = mock.Mock()
+        image_service_mock.show.return_value = self.fake_img
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with contextlib.nested(
+            mock.patch.object(conn, '_destroy', return_value=None),
+            mock.patch.object(conn, '_create_images_and_backing'),
+            mock.patch.object(conn, '_create_domain_and_network'),
+            mock.patch('nova.image.glance.get_remote_image_service',
+                       return_value=(image_service_mock,
+                       instance['image_ref']))):
+            conn.get_info = fake_get_info
+            conn.get_instance_disk_info = _check_xml_bus
+            conn._hard_reboot(self.context, instance, network_info,
+                              block_device_info)
+
+            instance = _get_inst(with_meta=False)
+            conn._hard_reboot(self.context, instance, network_info,
+                              block_device_info)
+
     def test_resume(self):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"
