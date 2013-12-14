@@ -71,3 +71,15 @@ def get_memory_usage():
         'free': free,
         'used': total - free
     }
+
+
+def get_mounts():
+    with open('/proc/mounts') as f:
+        return f.readlines()
+
+
+def get_cgroup_devices_path():
+    for ln in get_mounts():
+        fields = ln.split(' ')
+        if fields[2] == 'cgroup' and 'devices' in fields[3].split(','):
+            return fields[1]
