@@ -262,11 +262,11 @@ class DateTime(FieldType):
         return timeutils.isotime(value)
 
 
-class IPV4Address(FieldType):
+class IPAddress(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
         try:
-            return netaddr.IPAddress(value, version=4)
+            return netaddr.IPAddress(value)
         except netaddr.AddrFormatError as e:
             raise ValueError(str(e))
 
@@ -278,20 +278,22 @@ class IPV4Address(FieldType):
         return str(value)
 
 
-class IPV6Address(FieldType):
+class IPV4Address(IPAddress):
     @staticmethod
     def coerce(obj, attr, value):
-        try:
-            return netaddr.IPAddress(value, version=6)
-        except netaddr.AddrFormatError as e:
-            raise ValueError(str(e))
+        result = IPAddress.coerce(obj, attr, value)
+        if result.version != 4:
+            raise ValueError(_('Network "%s" is not valid') % value)
+        return result
 
-    def from_primitive(self, obj, attr, value):
-        return self.coerce(obj, attr, value)
 
+class IPV6Address(IPAddress):
     @staticmethod
-    def to_primitive(obj, attr, value):
-        return str(value)
+    def coerce(obj, attr, value):
+        result = IPAddress.coerce(obj, attr, value)
+        if result.version != 6:
+            raise ValueError(_('Network "%s" is not valid') % value)
+        return result
 
 
 class CompoundFieldType(FieldType):
@@ -448,6 +450,10 @@ class BooleanField(AutoTypedField):
 
 class DateTimeField(AutoTypedField):
     AUTO_TYPE = DateTime()
+
+
+class IPAddressField(AutoTypedField):
+    AUTO_TYPE = IPAddress()
 
 
 class IPV4AddressField(AutoTypedField):
