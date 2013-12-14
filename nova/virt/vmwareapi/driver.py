@@ -268,7 +268,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         return _("Currently there is no log available for "
                  "instance %s") % instance['uuid']
 
-    def get_vnc_console(self, instance):
+    def get_vnc_console(self, context, instance):
         """Return link to instance's VNC console."""
         return self._vmops.get_vnc_console(instance)
 
@@ -471,7 +471,7 @@ class VMwareVCDriver(VMwareESXDriver):
                                    post_method, recover_method,
                                    block_migration)
 
-    def get_vnc_console(self, instance):
+    def get_vnc_console(self, context, instance):
         """Return link to instance's VNC console using vCenter logic."""
         # In this situation, ESXi and vCenter require different
         # API logic to create a valid VNC console connection object.

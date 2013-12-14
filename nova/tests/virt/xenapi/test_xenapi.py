@@ -39,6 +39,7 @@ from nova import crypto
 from nova import db
 from nova import exception
 from nova.objects import aggregate as aggregate_obj
+from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -421,12 +422,12 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertThat(fake_diagnostics, matchers.DictMatches(expected))
 
     def test_get_vnc_console(self):
-        instance = self._create_instance()
+        instance = self._create_instance(obj=True)
         session = get_session()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm_ref = vm_utils.lookup(session, instance['name'])
 
-        console = conn.get_vnc_console(instance)
+        console = conn.get_vnc_console(self.context, instance)
 
         # Note(sulo): We dont care about session id in test
         # they will always differ so strip that out
@@ -436,7 +437,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(expected_path, actual_path)
 
     def test_get_vnc_console_for_rescue(self):
-        instance = self._create_instance()
+        instance = self._create_instance(obj=True)
         session = get_session()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         rescue_vm = xenapi_fake.create_vm(instance['name'] + '-rescue',
@@ -444,7 +445,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # Set instance state to rescued
         instance['vm_state'] = 'rescued'
 
-        console = conn.get_vnc_console(instance)
+        console = conn.get_vnc_console(self.context, instance)
 
         # Note(sulo): We dont care about session id in test
         # they will always differ so strip that out
@@ -454,25 +455,20 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.assertEqual(expected_path, actual_path)
 
     def test_get_vnc_console_instance_not_ready(self):
-        instance = {}
-        # set instance name and state
-        instance['name'] = 'fake-instance'
-        instance['uuid'] = '00000000-0000-0000-0000-000000000000'
-        instance['vm_state'] = 'building'
+        instance = self._create_instance(obj=True, spawn=False)
+        instance.vm_state = 'building'
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.InstanceNotFound,
-                          conn.get_vnc_console, instance)
+                          conn.get_vnc_console, self.context, instance)
 
     def test_get_vnc_console_rescue_not_ready(self):
-        instance = {}
-        instance['name'] = 'fake-rescue'
-        instance['uuid'] = '00000000-0000-0000-0000-000000000001'
-        instance['vm_state'] = 'rescued'
+        instance = self._create_instance(obj=True, spawn=False)
+        instance.vm_state = 'rescued'
 
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.InstanceNotReady,
-                          conn.get_vnc_console, instance)
+                          conn.get_vnc_console, self.context, instance)
 
     def test_instance_snapshot_fails_with_no_primary_vdi(self):
 
@@ -1482,7 +1478,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         actual = self.conn.get_per_instance_usage()
         self.assertEqual({}, actual)
 
-    def _create_instance(self, instance_id=1, spawn=True):
+    def _create_instance(self, instance_id=1, spawn=True, obj=False, **attrs):
         """Creates and spawns a test instance."""
         instance_values = {
             'id': instance_id,
@@ -1499,6 +1495,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
             'os_type': 'linux',
             'vm_mode': 'hvm',
             'architecture': 'x86-64'}
+        instance_values.update(attrs)
 
         instance = create_instance_with_system_metadata(self.context,
                                                         instance_values)
@@ -1508,6 +1505,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         if spawn:
             self.conn.spawn(self.context, instance, image_meta, [], 'herp',
                             network_info)
+        if obj:
+            instance = instance_obj.Instance._from_db_object(
+                self.context, instance_obj.Instance(), instance,
+                expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         return instance
 
     def test_destroy_clean_up_kernel_and_ramdisk(self):

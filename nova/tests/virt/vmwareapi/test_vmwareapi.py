@@ -831,13 +831,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound,
                           self.conn.get_vnc_console,
+                          self.context,
                           self.instance)
 
     def _test_get_vnc_console(self):
         self._create_vm()
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
         fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
-        vnc_dict = self.conn.get_vnc_console(self.instance)
+        vnc_dict = self.conn.get_vnc_console(self.context, self.instance)
         self.assertEqual(vnc_dict['host'], self.vnc_host)
         self.assertEqual(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)

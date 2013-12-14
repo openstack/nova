@@ -2252,7 +2252,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_host_ip_addr():
         return CONF.my_ip
 
-    def get_vnc_console(self, instance):
+    def get_vnc_console(self, context, instance):
         def get_vnc_port_for_instance(instance_name):
             virt_dom = self._lookup_by_name(instance_name)
             xml = virt_dom.XMLDesc(0)
@@ -2265,7 +2265,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # question is not actually listening for connections.
             raise exception.ConsoleTypeUnavailable(console_type='vnc')
 
-        port = get_vnc_port_for_instance(instance['name'])
+        port = get_vnc_port_for_instance(instance.name)
         host = CONF.vncserver_proxyclient_address
 
         return {'host': host, 'port': port, 'internal_access_path': None}

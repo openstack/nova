@@ -206,8 +206,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = fake_image.FakeImageService()
 
-    def _get_running_instance(self):
-        instance_ref = test_utils.get_test_instance()
+    def _get_running_instance(self, obj=False):
+        instance_ref = test_utils.get_test_instance(obj=obj)
         network_info = test_utils.get_test_network_info()
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
             '1.1.1.1'
@@ -502,8 +502,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_vnc_console(self):
-        instance_ref, network_info = self._get_running_instance()
-        vnc_console = self.connection.get_vnc_console(instance_ref)
+        instance, network_info = self._get_running_instance(obj=True)
+        vnc_console = self.connection.get_vnc_console(self.ctxt, instance)
         self.assertIn('internal_access_path', vnc_console)
         self.assertIn('host', vnc_console)
         self.assertIn('port', vnc_console)

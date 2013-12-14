@@ -22,6 +22,7 @@ import mock
 
 from nova import context
 from nova import exception
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests import utils
 import nova.tests.virt.docker.mock_client
@@ -59,16 +60,16 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
 
     #NOTE(bcwaldon): This exists only because _get_running_instance on the
     # base class will not let us set a custom disk/container_format.
-    def _get_running_instance(self):
-        instance_ref = utils.get_test_instance()
+    def _get_running_instance(self, obj=False):
+        instance_ref = utils.get_test_instance(obj=obj)
         network_info = utils.get_test_network_info()
         network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
             '1.1.1.1'
         image_info = utils.get_test_image_info(None, instance_ref)
         image_info['disk_format'] = 'raw'
         image_info['container_format'] = 'docker'
-        self.connection.spawn(self.ctxt, instance_ref, image_info,
-                              [], 'herp', network_info=network_info)
+        self.connection.spawn(self.ctxt, jsonutils.to_primitive(instance_ref),
+                image_info, [], 'herp', network_info=network_info)
         return instance_ref, network_info
 
     def test_get_host_stats(self):
