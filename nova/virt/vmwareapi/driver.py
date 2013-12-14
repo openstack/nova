@@ -260,7 +260,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Return data about VM diagnostics."""
         return self._vmops.get_diagnostics(instance)
 
-    def get_console_output(self, instance):
+    def get_console_output(self, context, instance):
         """Return snapshot of console."""
         # The method self._vmops.get_console_output(instance) returns
         # a PNG format. The vCenter and ESX do not provide a way

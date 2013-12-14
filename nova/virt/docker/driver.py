@@ -346,8 +346,8 @@ class DockerDriver(driver.ComputeDriver):
             return
         self.docker.stop_container(container_id)
 
-    def get_console_output(self, instance):
-        container_id = self.find_container_by_name(instance['name']).get('id')
+    def get_console_output(self, context, instance):
+        container_id = self.find_container_by_name(instance.name).get('id')
         if not container_id:
             return
         return self.docker.get_container_logs(container_id)

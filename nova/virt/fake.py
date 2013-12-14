@@ -306,7 +306,7 @@ class FakeDriver(driver.ComputeDriver):
     def interface_stats(self, instance_name, iface_id):
         return [0L, 0L, 0L, 0L, 0L, 0L, 0L, 0L]
 
-    def get_console_output(self, instance):
+    def get_console_output(self, context, instance):
         return 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE'
 
     def get_vnc_console(self, context, instance):
