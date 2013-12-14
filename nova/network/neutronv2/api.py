@@ -386,8 +386,8 @@ class API(base.Base):
         """
         self._refresh_neutron_extensions_cache()
         if 'nvp-qos' in self.extensions:
-            instance_type = flavors.extract_flavor(instance)
-            rxtx_factor = instance_type.get('rxtx_factor')
+            flavor = flavors.extract_flavor(instance)
+            rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
         if self._has_port_binding_extension():
             port_req_body['port']['binding:host_id'] = instance.get('host')
