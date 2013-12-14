@@ -29,6 +29,7 @@ import nova.tests.virt.docker.mock_client
 from nova.tests.virt.test_virt_drivers import _VirtDriverTestCase
 from nova import unit
 from nova.virt.docker import hostinfo
+from nova.virt.docker import network
 
 
 class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
@@ -56,6 +57,12 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
                        '_get_registry_port',
                        fake_get_registry_port)
 
+        # Note: using mock.object.path on class throws
+        # errors in test_virt_drivers
+        def fake_teardown_network(container_id):
+            return
+
+        self.stubs.Set(network, 'teardown_network', fake_teardown_network)
         self.context = context.RequestContext('fake_user', 'fake_project')
 
     def test_driver_capabilities(self):
@@ -183,15 +190,14 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
                           self.test_create_container,
                           image_info)
 
-    def test_destroy_container(self):
-        def fake_find_container_by_name(container_name):
-            return {'id': 'fake_id'}
-
-        self.stubs.Set(self.connection, 'find_container_by_name',
-            fake_find_container_by_name)
-        instance_href = utils.get_test_instance()
-        self.connection.destroy(self.context, instance_href,
-                'fake_networkinfo')
+    @mock.patch.object(network, 'teardown_network')
+    @mock.patch.object(nova.virt.docker.driver.DockerDriver,
+                'find_container_by_name', return_value={'id': 'fake_id'})
+    def test_destroy_container(self, byname_mock, teardown_mock):
+        instance = utils.get_test_instance()
+        self.connection.destroy(self.context, instance, 'fake_networkinfo')
+        byname_mock.assert_called_once_with(instance['name'])
+        teardown_mock.assert_called_with('fake_id')
 
     def test_get_memory_limit_from_sys_meta_in_object(self):
         instance = utils.get_test_instance(obj=True)

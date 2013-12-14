@@ -38,6 +38,7 @@ from nova import unit
 from nova import utils
 import nova.virt.docker.client
 from nova.virt.docker import hostinfo
+from nova.virt.docker import network
 from nova.virt import driver
 
 
@@ -313,6 +314,7 @@ class DockerDriver(driver.ComputeDriver):
             return
         self.docker.stop_container(container_id)
         self.docker.destroy_container(container_id)
+        network.teardown_network(container_id)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
