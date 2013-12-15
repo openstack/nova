@@ -961,3 +961,82 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             driver.ensure_bridge('bridge', 'eth0')
             device_exists.assert_has_calls(calls['device_exists'])
             _execute.assert_has_calls(calls['_execute'])
+
+    def _ovs_vif_port(self, calls):
+        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
+            linux_net.create_ovs_vif_port('fake-bridge', 'fake-dev',
+                                          'fake-iface-id', 'fake-mac',
+                                          'fake-instance-uuid')
+            ex.assert_has_calls(calls)
+
+    def test_ovs_vif_port(self):
+        calls = [
+                mock.call('ovs-vsctl', '--', '--may-exist',
+                          'add-port', 'fake-bridge', 'fake-dev',
+                          '--', 'set', 'Interface', 'fake-dev',
+                          'external-ids:iface-id=fake-iface-id',
+                          'external-ids:iface-status=active',
+                          'external-ids:attached-mac=fake-mac',
+                          'external-ids:vm-uuid=fake-instance-uuid',
+                          run_as_root=True)
+                ]
+        self._ovs_vif_port(calls)
+
+    def test_ovs_vif_port_with_mtu(self):
+        self.flags(network_device_mtu=10000)
+        calls = [
+                mock.call('ovs-vsctl', '--', '--may-exist',
+                          'add-port', 'fake-bridge', 'fake-dev',
+                          '--', 'set', 'Interface', 'fake-dev',
+                          'external-ids:iface-id=fake-iface-id',
+                          'external-ids:iface-status=active',
+                          'external-ids:attached-mac=fake-mac',
+                          'external-ids:vm-uuid=fake-instance-uuid',
+                          run_as_root=True),
+                mock.call('ip', 'link', 'set', 'fake-dev', 'mtu',
+                          10000, run_as_root=True,
+                          check_exit_code=[0, 2, 254])
+                ]
+        self._ovs_vif_port(calls)
+
+    def _create_veth_pair(self, calls):
+        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
+            linux_net._create_veth_pair('fake-dev1', 'fake-dev2')
+            ex.assert_has_calls(calls)
+
+    def test_create_veth_pair(self):
+        calls = [
+            mock.call('ip', 'link', 'add', 'fake-dev1', 'type', 'veth',
+                      'peer', 'name', 'fake-dev2', run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev1', 'up',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev1', 'promisc', 'on',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev2', 'up',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev2', 'promisc', 'on',
+                      run_as_root=True)
+        ]
+        self._create_veth_pair(calls)
+
+    def test_create_veth_pair_with_mtu(self):
+        self.flags(network_device_mtu=10000)
+        calls = [
+            mock.call('ip', 'link', 'add', 'fake-dev1', 'type', 'veth',
+                      'peer', 'name', 'fake-dev2', run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev1', 'up',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev1', 'promisc', 'on',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev1', 'mtu',
+                      10000, run_as_root=True,
+                      check_exit_code=[0, 2, 254]),
+            mock.call('ip', 'link', 'set', 'fake-dev2', 'up',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev2', 'promisc', 'on',
+                      run_as_root=True),
+            mock.call('ip', 'link', 'set', 'fake-dev2', 'mtu',
+                      10000, run_as_root=True,
+                      check_exit_code=[0, 2, 254])
+        ]
+        self._create_veth_pair(calls)
