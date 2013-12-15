@@ -379,7 +379,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'cast',
                 instance=self.fake_instance, block_migration='block_migration',
-                host='host')
+                host='host', version='3.14')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

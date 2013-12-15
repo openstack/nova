@@ -227,6 +227,7 @@ class ComputeAPI(object):
         3.11 - Update unrescue_instance() to take an object
         3.12 - Update add_fixed_ip_to_instance() to take an object
         3.13 - Update remove_fixed_ip_from_instance() to take an object
+        3.14 - Update post_live_migration_at_destination() to take an object
     '''
 
     VERSION_ALIASES = {
@@ -534,12 +535,15 @@ class ComputeAPI(object):
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.14'):
+            version = '3.14'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'post_live_migration_at_destination',
-            instance=instance_p, block_migration=block_migration)
+            instance=instance, block_migration=block_migration)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
