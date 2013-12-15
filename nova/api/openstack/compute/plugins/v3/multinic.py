@@ -45,7 +45,8 @@ class MultinicController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         network_id = body['add_fixed_ip']['network_id']
         self.compute_api.add_fixed_ip(context, instance, network_id)
         return webob.Response(status_int=202)
