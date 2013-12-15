@@ -72,6 +72,10 @@ class BareMetalDriverNoDBTestCase(test.NoDBTestCase):
         self.assertIsInstance(self.driver.firewall_driver,
                               fake.FakeFirewallDriver)
 
+    def test_driver_capabilities(self):
+        self.assertTrue(self.driver.capabilities['has_imagecache'])
+        self.assertFalse(self.driver.capabilities['supports_recreate'])
+
 
 class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
