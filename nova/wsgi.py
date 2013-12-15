@@ -64,7 +64,10 @@ wsgi_opts = [
     cfg.IntOpt('tcp_keepidle',
                default=600,
                help="Sets the value of TCP_KEEPIDLE in seconds for each "
-                    "server socket. Not supported on OS X.")
+                    "server socket. Not supported on OS X."),
+    cfg.IntOpt('wsgi_default_pool_size',
+               default=1000,
+               help="Size of the pool of greenthreads used by wsgi"),
     ]
 CONF = cfg.CONF
 CONF.register_opts(wsgi_opts)
@@ -75,7 +78,7 @@ LOG = logging.getLogger(__name__)
 class Server(object):
     """Server class to manage a WSGI server, serving a WSGI application."""
 
-    default_pool_size = 1000
+    default_pool_size = CONF.wsgi_default_pool_size
 
     def __init__(self, name, app, host='0.0.0.0', port=0, pool_size=None,
                        protocol=eventlet.wsgi.HttpProtocol, backlog=128,
