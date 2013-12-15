@@ -118,6 +118,10 @@ class ComputeNode(BASE, NovaBase):
     # '{"vendor_id":"8086", "product_id":"1234", "count":3 }'
     pci_stats = Column(Text)
 
+    # extra_resources is a json string containing arbitrary
+    # data about additional resources.
+    extra_resources = Column(Text)
+
 
 class ComputeNodeStat(BASE, NovaBase):
     """Stats related to the current workload of a compute host that are
