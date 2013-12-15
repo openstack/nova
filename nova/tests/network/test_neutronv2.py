@@ -1451,7 +1451,6 @@ class TestNeutronv2(TestNeutronv2Base):
     def test_reassociate_floating_ip(self):
         api = neutronapi.API()
         address = self.fip_associated['floating_ip_address']
-        old_fixed_address = self.fip_associated['fixed_ip_address']
         new_fixed_address = self.port_address
         fip_id = self.fip_associated['id']
 
