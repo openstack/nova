@@ -50,7 +50,6 @@
             "os-access-ips:access_ip_v4": "",
             "os-access-ips:access_ip_v6": "",
             "os-config-drive:config_drive": "",
-            "os-disk-config:disk_config": "AUTO",
             "os-extended-availability-zone:availability_zone": "nova",
             "os-extended-server-attributes:host": "c3f14e9812ad496baf92ccfb3c61e15f",
             "os-extended-server-attributes:hypervisor_hostname": "fake-mini",

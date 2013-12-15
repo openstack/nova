@@ -262,8 +262,6 @@ class ActionDeserializer(CommonDeserializer):
         else:
             raise AttributeError("No flavor_ref was specified in request")
 
-        if self.controller:
-            self.controller.server_resize_xml_deserialize(node, resize)
         return resize
 
     def _action_confirm_resize(self, node):
@@ -310,10 +308,6 @@ class ServersController(wsgi.Controller):
     EXTENSION_REBUILD_NAMESPACE = 'nova.api.v3.extensions.server.rebuild'
     EXTENSION_DESERIALIZE_EXTRACT_REBUILD_NAMESPACE = (
         'nova.api.v3.extensions.server.rebuild.deserialize')
-
-    EXTENSION_RESIZE_NAMESPACE = 'nova.api.v3.extensions.server.resize'
-    EXTENSION_DESERIALIZE_EXTRACT_RESIZE_NAMESPACE = (
-        'nova.api.v3.extensions.server.resize.deserialize')
 
     EXTENSION_UPDATE_NAMESPACE = 'nova.api.v3.extensions.server.update'
 
@@ -431,31 +425,6 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if not list(self.rebuild_xml_deserialize_manager):
             LOG.debug(_("Did not find any server rebuild xml deserializer"
-                        " extensions"))
-
-        # Look for implementation of extension point of server resize
-        self.resize_extension_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_RESIZE_NAMESPACE,
-                check_func=_check_load_extension('server_resize'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.resize_extension_manager):
-            LOG.debug(_("Did not find any server resize extensions"))
-
-        # Look for implementation of extension point of server resize
-        # XML deserialization
-        self.resize_xml_deserialize_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_DESERIALIZE_EXTRACT_RESIZE_NAMESPACE,
-                check_func=_check_load_extension(
-                    'server_xml_extract_resize_deserialize'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.resize_xml_deserialize_manager):
-            LOG.debug(_("Did not find any server resize xml deserializer"
                         " extensions"))
 
         # Look for implementation of extension point of server update
@@ -1097,10 +1066,6 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
         resize_kwargs = {}
-
-        if list(self.resize_extension_manager):
-            self.resize_extension_manager.map(self._resize_extension_point,
-                                              resize_dict, resize_kwargs)
 
         return self._resize(req, id, flavor_ref, **resize_kwargs)
 

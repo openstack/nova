@@ -30,8 +30,8 @@ import webob
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute import plugins
+from nova.api.openstack.compute.plugins.v3 import access_ips
 from nova.api.openstack.compute.plugins.v3 import availability_zone
-from nova.api.openstack.compute.plugins.v3 import disk_config
 from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.plugins.v3 import keypairs
 from nova.api.openstack.compute.plugins.v3 import servers
@@ -4211,14 +4211,15 @@ class ServersAllExtensionsTestCase(test.TestCase):
     an exception because of a malformed request before the core API
     gets a chance to validate the request and return a 422 response.
 
-    For example, ServerDiskConfigController extends servers.Controller:
+    For example, AccessIPsController extends servers.Controller:
 
-      @wsgi.extends
-      def create(self, req, body):
-          if 'server' in body:
-                self._set_disk_config(body['server'])
-          resp_obj = (yield)
-          self._show(req, resp_obj)
+        @wsgi.extends
+        def create(self, req, resp_obj, body):
+            context = req.environ['nova.context']
+            if authorize(context) and 'server' in resp_obj.obj:
+                resp_obj.attach(xml=AccessIPTemplate())
+                server = resp_obj.obj['server']
+                self._extend_server(req, server)
 
     we want to ensure that the extension isn't barfing on an invalid
     body.
@@ -4333,10 +4334,10 @@ class TestServerRebuildXMLDeserializer(test.NoDBTestCase):
         self.assertThat(request['body'], matchers.DictMatches(expected))
 
 
-class FakeDiskConfigExt(extensions.V3APIExtensionBase):
-    name = "DiskConfig"
-    alias = 'os-disk-config'
-    namespace = "http://docs.openstack.org/compute/ext/disk_config/api/v3"
+class FakeExt(extensions.V3APIExtensionBase):
+    name = "AccessIPs"
+    alias = 'os-access-ips'
+    namespace = "http://docs.openstack.org/compute/ext/os-access-ips/api/v3"
     version = 1
 
     def fake_extension_point(self, *args, **kwargs):
@@ -4352,23 +4353,20 @@ class FakeDiskConfigExt(extensions.V3APIExtensionBase):
 class TestServersExtensionPoint(test.NoDBTestCase):
     def setUp(self):
         super(TestServersExtensionPoint, self).setUp()
-        CONF.set_override('extensions_whitelist', ['os-disk-config'],
+        CONF.set_override('extensions_whitelist', ['os-access-ips'],
                           'osapi_v3')
-        self.stubs.Set(disk_config, 'DiskConfig', FakeDiskConfigExt)
+        self.stubs.Set(access_ips, 'AccessIPs', FakeExt)
 
     def _test_load_extension_point(self, name):
-        setattr(FakeDiskConfigExt, 'server_%s' % name,
-                FakeDiskConfigExt.fake_extension_point)
+        setattr(FakeExt, 'server_%s' % name,
+                FakeExt.fake_extension_point)
         ext_info = plugins.LoadedExtensionInfo()
         controller = servers.ServersController(extension_info=ext_info)
         self.assertEqual(
-            'os-disk-config',
+            'os-access-ips',
             list(getattr(controller,
                          '%s_extension_manager' % name))[0].obj.alias)
-        delattr(FakeDiskConfigExt, 'server_%s' % name)
-
-    def test_load_resize_extension_point(self):
-        self._test_load_extension_point('resize')
+        delattr(FakeExt, 'server_%s' % name)
 
     def test_load_update_extension_point(self):
         self._test_load_extension_point('update')
@@ -4377,27 +4375,24 @@ class TestServersExtensionPoint(test.NoDBTestCase):
         self._test_load_extension_point('rebuild')
 
     def test_load_create_extension_point(self):
-        self._test_load_extension_point('rebuild')
+        self._test_load_extension_point('create')
 
     def _test_load_deserialize_extension_point(self, name):
         extension_point_func = 'server_xml_extract_%s_deserialize' % name
         if name == 'create':
             extension_point_func = 'server_xml_extract_server_deserialize'
-        setattr(FakeDiskConfigExt, extension_point_func,
-                FakeDiskConfigExt.fake_extension_point)
+        setattr(FakeExt, extension_point_func,
+                FakeExt.fake_extension_point)
         ext_info = plugins.LoadedExtensionInfo()
         controller = servers.ServersController(extension_info=ext_info)
         self.assertEqual(
-            'os-disk-config',
+            'os-access-ips',
             list(getattr(controller,
                          '%s_xml_deserialize_manager' % name))[0].obj.alias)
-        delattr(FakeDiskConfigExt, extension_point_func)
+        delattr(FakeExt, extension_point_func)
 
     def test_load_create_xml_deserialize_extension_point(self):
         self._test_load_deserialize_extension_point('create')
-
-    def test_load_resize_xml_deserialize_extension_point(self):
-        self._test_load_deserialize_extension_point('resize')
 
     def test_load_rebuild_xml_deserialize_extension_point(self):
         self._test_load_deserialize_extension_point('rebuild')
