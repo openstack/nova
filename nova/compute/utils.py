@@ -203,11 +203,11 @@ def get_next_device_name(instance, device_name_list,
     # NOTE(vish): remove this when xenapi is properly setting
     #             default_ephemeral_device and default_swap_device
     if driver.compute_driver_matches('xenapi.XenAPIDriver'):
-        instance_type = flavors.extract_flavor(instance)
-        if instance_type['ephemeral_gb']:
+        flavor = flavors.extract_flavor(instance)
+        if flavor['ephemeral_gb']:
             used_letters.add('b')
 
-        if instance_type['swap']:
+        if flavor['swap']:
             used_letters.add('c')
 
     if not req_letter:
@@ -238,9 +238,8 @@ def get_image_metadata(context, image_service, image_id, instance):
                     {"image_id": image_id, "error": e}, instance=instance)
         image_system_meta = {}
     else:
-        instance_type = flavors.extract_flavor(instance)
-        image_system_meta = utils.get_system_metadata_from_image(
-                image, instance_type)
+        flavor = flavors.extract_flavor(instance)
+        image_system_meta = utils.get_system_metadata_from_image(image, flavor)
 
     # Get the system metadata from the instance
     system_meta = utils.instance_sys_meta(instance)
