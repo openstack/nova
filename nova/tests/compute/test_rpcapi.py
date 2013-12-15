@@ -642,7 +642,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_set_admin_password(self):
         self._test_compute_api('set_admin_password', 'call',
-                instance=self.fake_instance, new_pass='pw')
+                instance=self.fake_instance, new_pass='pw',
+                version='3.8')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

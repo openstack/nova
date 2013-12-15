@@ -409,7 +409,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.7')
+    target = messaging.Target(version='3.8')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2582,6 +2582,7 @@ class ComputeManager(manager.Manager):
                           instance=instance)
                 image_service.delete(context, image_id)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2602,10 +2603,8 @@ class ComputeManager(manager.Manager):
         expected_state = power_state.RUNNING
 
         if current_power_state != expected_state:
-            self._instance_update(context, instance['uuid'],
-                                  task_state=None,
-                                  expected_task_state=task_states.
-                                  UPDATING_PASSWORD)
+            instance.task_state = None
+            instance.save(expected_task_state=task_states.UPDATING_PASSWORD)
             _msg = _('Failed to set admin password. Instance %s is not'
                      ' running') % instance["uuid"]
             raise exception.InstancePasswordSetFailed(
@@ -2614,20 +2613,16 @@ class ComputeManager(manager.Manager):
             try:
                 self.driver.set_admin_password(instance, new_pass)
                 LOG.audit(_("Root password set"), instance=instance)
-                self._instance_update(context,
-                                      instance['uuid'],
-                                      task_state=None,
-                                      expected_task_state=task_states.
-                                      UPDATING_PASSWORD)
+                instance.task_state = None
+                instance.save(
+                    expected_task_state=task_states.UPDATING_PASSWORD)
             except NotImplementedError:
                 _msg = _('set_admin_password is not implemented '
                          'by this driver or guest instance.')
                 LOG.warn(_msg, instance=instance)
-                self._instance_update(context,
-                                      instance['uuid'],
-                                      task_state=None,
-                                      expected_task_state=task_states.
-                                      UPDATING_PASSWORD)
+                instance.task_state = None
+                instance.save(
+                    expected_task_state=task_states.UPDATING_PASSWORD)
                 raise NotImplementedError(_msg)
             except exception.UnexpectedTaskStateError:
                 # interrupted by another (most likely delete) task

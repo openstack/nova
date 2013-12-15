@@ -271,8 +271,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_set_admin_password(self):
-        instance_ref, network_info = self._get_running_instance()
-        self.connection.set_admin_password(instance_ref, 'p4ssw0rd')
+        instance, network_info = self._get_running_instance(obj=True)
+        self.connection.set_admin_password(instance, 'p4ssw0rd')
 
     @catch_notimplementederror
     def test_inject_file(self):

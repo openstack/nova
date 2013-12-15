@@ -23,11 +23,11 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get(self, context, id):
+def fake_get(self, context, id, want_objects=False):
     return {'uuid': id}
 
 
-def fake_get_non_existed(self, context, id):
+def fake_get_non_existent(self, context, id, want_objects=False):
     raise exception.InstanceNotFound(instance_id=id)
 
 
@@ -39,8 +39,8 @@ def fake_set_admin_password_failed(self, context, instance, password=None):
     raise exception.InstancePasswordSetFailed(instance=instance, reason='')
 
 
-def fake_set_admin_password_non_implement(self, context, instance,
-                                          password=None):
+def fake_set_admin_password_not_implemented(self, context, instance,
+                                            password=None):
     raise NotImplementedError()
 
 
@@ -78,14 +78,14 @@ class AdminPasswordTest(test.NoDBTestCase):
         url = '/v3/servers/1/action'
         body = {'change_password': {'admin_password': 'test'}}
         self.stubs.Set(compute_api.API, 'set_admin_password',
-                       fake_set_admin_password_non_implement)
+                       fake_set_admin_password_not_implemented)
         res = self._make_request(url, body)
         self.assertEqual(res.status_int, 501)
 
     def test_change_password_with_non_existed_instance(self):
         url = '/v3/servers/1/action'
         body = {'change_password': {'admin_password': 'test'}}
-        self.stubs.Set(compute_api.API, 'get', fake_get_non_existed)
+        self.stubs.Set(compute_api.API, 'get', fake_get_non_existent)
         res = self._make_request(url, body)
         self.assertEqual(res.status_int, 404)
 
