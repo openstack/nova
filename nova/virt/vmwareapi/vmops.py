@@ -41,6 +41,7 @@ from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
+from nova.virt import diagnostics
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
@@ -1275,7 +1276,7 @@ class VMwareVMOps(object):
                 'num_cpu': int(query['summary.config.numCpu']),
                 'cpu_time': 0}
 
-    def get_diagnostics(self, instance):
+    def _get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         lst_properties = ["summary.config",
@@ -1292,8 +1293,31 @@ class VMwareVMOps(object):
         for value in query.values():
             prop_dict = vim.object_to_dict(value, list_depth=1)
             data.update(prop_dict)
+        return data
+
+    def get_diagnostics(self, instance):
+        """Return data about VM diagnostics."""
+        data = self._get_diagnostics(instance)
         # Add a namespace to all of the diagnostsics
         return dict([('vmware:' + k, v) for k, v in data.items()])
+
+    def get_instance_diagnostics(self, instance):
+        """Return data about VM diagnostics."""
+        data = self._get_diagnostics(instance)
+        state = data.get('powerState')
+        if state:
+            state = power_state.STATE_MAP[VMWARE_POWER_STATES[state]]
+        uptime = data.get('uptimeSeconds', 0)
+        config_drive = configdrive.required_by(instance)
+        diags = diagnostics.Diagnostics(state=state,
+                                        driver='vmwareapi',
+                                        config_drive=config_drive,
+                                        hypervisor_os='esxi',
+                                        uptime=uptime)
+        diags.memory_details.maximum = data.get('memorySizeMB', 0)
+        diags.memory_details.used = data.get('guestMemoryUsage', 0)
+        #TODO(garyk): add in cpu, nic and disk stats
+        return diags
 
     def _get_vnc_console_connection(self, instance):
         """Return connection info for a vnc console."""

@@ -265,7 +265,13 @@ class VMwareESXDriver(driver.ComputeDriver):
 
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
-        return self._vmops.get_diagnostics(instance)
+        data = self._vmops.get_diagnostics(instance)
+        return data
+
+    def get_instance_diagnostics(self, instance):
+        """Return data about VM diagnostics."""
+        data = self._vmops.get_instance_diagnostics(instance)
+        return data
 
     def get_vnc_console(self, context, instance):
         """Return link to instance's VNC console."""
@@ -727,7 +733,14 @@ class VMwareVCDriver(VMwareESXDriver):
     def get_diagnostics(self, instance):
         """Return data about VM diagnostics."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
-        return _vmops.get_diagnostics(instance)
+        data = _vmops.get_diagnostics(instance)
+        return data
+
+    def get_instance_diagnostics(self, instance):
+        """Return data about VM diagnostics."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        data = _vmops.get_instance_diagnostics(instance)
+        return data
 
     def host_power_action(self, host, action):
         """Host operations not supported by VC driver.
