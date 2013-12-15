@@ -1437,14 +1437,15 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_('Instance failed block device setup'),
                               instance=instance)
 
+    @object_compat
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password,
                set_access_ip=False):
         """Spawn an instance with error logging and update its power state."""
-        instance = self._instance_update(context, instance['uuid'],
-                vm_state=vm_states.BUILDING,
-                task_state=task_states.SPAWNING,
-                expected_task_state=task_states.BLOCK_DEVICE_MAPPING)
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = task_states.SPAWNING
+        instance.save(expected_task_state=task_states.BLOCK_DEVICE_MAPPING)
+
         try:
             self.driver.spawn(context, instance, image_meta,
                               injected_files, admin_password,
@@ -1456,11 +1457,10 @@ class ComputeManager(manager.Manager):
 
         current_power_state = self._get_power_state(context, instance)
 
-        update_data = dict(power_state=current_power_state,
-                           vm_state=vm_states.ACTIVE,
-                           task_state=None,
-                           expected_task_state=task_states.SPAWNING,
-                           launched_at=timeutils.utcnow())
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.launched_at = timeutils.utcnow()
 
         def _set_access_ip_values():
             """Add access ip values for a given instance.
@@ -1479,9 +1479,9 @@ class ComputeManager(manager.Manager):
                 if vif['network']['label'] == network_name:
                     for ip in vif.fixed_ips():
                         if ip['version'] == 4:
-                            update_data['access_ip_v4'] = ip['address']
+                            instance.access_ip_v4 = ip['address']
                         if ip['version'] == 6:
-                            update_data['access_ip_v6'] = ip['address']
+                            instance.access_ip_v6 = ip['address']
                     return
 
         if set_access_ip:
@@ -1489,8 +1489,9 @@ class ComputeManager(manager.Manager):
 
         if network_info is not None:
             network_info.wait(do_raise=True)
-        return self._instance_update(context, instance['uuid'],
-                                     **update_data)
+
+        instance.save(expected_task_state=task_states.SPAWNING)
+        return instance
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
                                      network_info=None, system_metadata=None,
@@ -1564,6 +1565,8 @@ class ComputeManager(manager.Manager):
                 block_device_mapping)
         return {'block_device_mapping': block_device_mapping}
 
+    # NOTE(mikal): No object_compat wrapper on this method because its
+    # callers all pass objects already
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
