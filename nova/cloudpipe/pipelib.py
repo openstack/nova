@@ -129,12 +129,11 @@ class CloudPipe(object):
         LOG.debug(_("Launching VPN for %s") % (context.project_id))
         key_name = self.setup_key_pair(context)
         group_name = self.setup_security_group(context)
-        instance_type = flavors.get_flavor_by_name(
-                CONF.vpn_flavor)
+        flavor = flavors.get_flavor_by_name(CONF.vpn_flavor)
         instance_name = '%s%s' % (context.project_id, CONF.vpn_key_suffix)
         user_data = self.get_encoded_zip(context.project_id)
         return self.compute_api.create(context,
-                                       instance_type,
+                                       flavor,
                                        CONF.vpn_image_id,
                                        display_name=instance_name,
                                        user_data=user_data,
