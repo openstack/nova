@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova.openstack.common import processutils
@@ -34,3 +35,20 @@ def teardown_network(container_id):
     except processutils.ProcessExecutionError:
         LOG.warning(_('Cannot remove network namespace, netns id: %s'),
                     container_id)
+
+
+def find_fixed_ip(instance, network_info):
+    for subnet in network_info['subnets']:
+        netmask = subnet['cidr'].split('/')[1]
+        for ip in subnet['ips']:
+            if ip['type'] == 'fixed' and ip['address']:
+                return ip['address'] + "/" + netmask
+    raise exception.InstanceDeployFailure(_('Cannot find fixed ip'),
+                                          instance_id=instance['uuid'])
+
+
+def find_gateway(instance, network_info):
+    for subnet in network_info['subnets']:
+        return subnet['gateway']['address']
+    raise exception.InstanceDeployFailure(_('Cannot find gateway'),
+                                          instance_id=instance['uuid'])
