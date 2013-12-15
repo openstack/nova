@@ -409,7 +409,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.8')
+    target = messaging.Target(version='3.9')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2686,6 +2686,7 @@ class ComputeManager(manager.Manager):
         image_meta['id'] = rescue_image_ref
         return image_meta
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2725,13 +2726,12 @@ class ComputeManager(manager.Manager):
                                                current_period=True)
 
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context,
-                              instance['uuid'],
-                              vm_state=vm_states.RESCUED,
-                              task_state=None,
-                              power_state=current_power_state,
-                              launched_at=timeutils.utcnow(),
-                              expected_task_state=task_states.RESCUING)
+        instance.vm_state = vm_states.RESCUED
+        instance.task_state = None
+        instance.power_state = current_power_state
+        instance.launched_at = timeutils.utcnow()
+        instance.save(expected_task_state=task_states.RESCUING)
+
         self._notify_about_instance_usage(context, instance,
                 "rescue.end", extra_usage_info=extra_usage_info,
                 network_info=network_info)
