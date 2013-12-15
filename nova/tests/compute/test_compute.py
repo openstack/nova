@@ -6024,17 +6024,17 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api,
                        'remove_fixed_ip_from_instance', _noop)
 
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         updated_at_1 = instance['updated_at']
 
         self.compute.add_fixed_ip_to_instance(self.context, 'fake', instance)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        updated_at_2 = instance['updated_at']
+        updated_at_2 = db.instance_get_by_uuid(self.context,
+                                               instance['uuid'])['updated_at']
 
         self.compute.remove_fixed_ip_from_instance(self.context, 'fake',
-                                                   instance)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        updated_at_3 = instance['updated_at']
+                                                   self._objectify(instance))
+        updated_at_3 = db.instance_get_by_uuid(self.context,
+                                               instance['uuid'])['updated_at']
 
         updated_ats = (updated_at_1, updated_at_2, updated_at_3)
         self.assertEqual(len(updated_ats), len(set(updated_ats)))
@@ -8045,7 +8045,9 @@ class ComputeAPITestCase(BaseTestCase):
                        lambda *a, **kw: None)
         self.compute_api.add_fixed_ip(self.context, self._objectify(instance),
                                       '1')
-        self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
+        self.compute_api.remove_fixed_ip(self.context,
+                                         self._objectify(instance),
+                                         '192.168.1.1')
         self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_attach_volume_invalid(self):

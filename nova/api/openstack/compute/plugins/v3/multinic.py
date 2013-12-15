@@ -58,7 +58,8 @@ class MultinicController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         address = body['remove_fixed_ip']['address']
 
         try:

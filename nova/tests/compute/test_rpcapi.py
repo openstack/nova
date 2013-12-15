@@ -549,7 +549,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_remove_fixed_ip_from_instance(self):
         self._test_compute_api('remove_fixed_ip_from_instance', 'cast',
-                instance=self.fake_instance, address='addr')
+                instance=self.fake_instance, address='addr',
+                version='3.13')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
