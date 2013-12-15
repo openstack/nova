@@ -1814,7 +1814,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['rescued'])
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context, instance=instance)
+        self.compute.unrescue_instance(self.context,
+                                       instance=self._objectify(instance))
         self.assertTrue(called['unrescued'])
 
         self.compute.terminate_instance(self.context,
@@ -1879,7 +1880,8 @@ class ComputeTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context, instance=instance)
+        self.compute.unrescue_instance(self.context,
+                                       instance=self._objectify(instance))
 
         expected_notifications = ['compute.instance.unrescue.start',
                                   'compute.instance.unrescue.end']
@@ -7008,7 +7010,7 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid, params)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.compute_api.unrescue(self.context, instance)
+        self.compute_api.unrescue(self.context, self._objectify(instance))
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.RESCUED)

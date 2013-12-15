@@ -224,6 +224,7 @@ class ComputeAPI(object):
         3.8 - Update set_admin_password() to take an instance object
         3.9 - Update rescue_instance() to take an instance object
         3.10 - Added get_rdp_console method
+        3.11 - Update unrescue_instance() to take an object
     '''
 
     VERSION_ALIASES = {
@@ -826,12 +827,15 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.11'):
+            version = '3.11'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'unrescue_instance', instance=instance_p)
+        cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
         # NOTE(russellb) Havana compat

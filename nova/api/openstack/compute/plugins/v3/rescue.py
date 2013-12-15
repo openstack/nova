@@ -77,7 +77,8 @@ class RescueController(wsgi.Controller):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = common.get_instance(self.compute_api, context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.unrescue(context, instance)
         except exception.InstanceInvalidState as state_error:
