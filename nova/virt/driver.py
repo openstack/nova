@@ -49,14 +49,6 @@ driver_opts = [
     cfg.BoolOpt('use_cow_images',
                 default=True,
                 help='Whether to use cow images'),
-    cfg.IntOpt('wait_shutdown_seconds',
-               default=120,
-               deprecated_name='libvirt_wait_soft_reboot_seconds',
-               help='Number of seconds to wait for instance to shut down after'
-                    ' a request is made for clean shutdown.  We continue with'
-                    ' the stop if instance does not shutdown within this'
-                    ' window. A value of 0 will still signal the instance but'
-                    ' not wait for it to shutdown'),
 ]
 
 CONF = cfg.CONF
@@ -250,7 +242,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, clean_shutdown=False):
+                destroy_disks=True):
         """Destroy (shutdown and delete) the specified instance.
 
         If the instance is not found (for example if networking failed), this
@@ -264,9 +256,6 @@ class ComputeDriver(object):
         :param block_device_info: Information about block devices that should
                                   be detached from the instance.
         :param destroy_disks: Indicates if disks should be destroyed
-        :param clean_shutdown: Indicates if the instance should be shutdown
-                               first
-
         """
         raise NotImplementedError()
 
@@ -460,7 +449,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, clean_shutdown=True):
+               rescue_password):
         """Rescue the specified instance."""
         raise NotImplementedError()
 
@@ -473,7 +462,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def power_off(self, instance, clean_shutdown=True):
+    def power_off(self, instance):
         """Power off the specified instance."""
         raise NotImplementedError()
 
@@ -482,7 +471,7 @@ class ComputeDriver(object):
         """Power on the specified instance."""
         raise NotImplementedError()
 
-    def soft_delete(self, instance, clean_shutdown=True):
+    def soft_delete(self, instance):
         """Soft delete the specified instance."""
         raise NotImplementedError()
 

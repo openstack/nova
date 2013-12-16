@@ -723,7 +723,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         return self.ctxt
 
     def test_force_hard_reboot(self):
-        self.flags(wait_shutdown_seconds=0)
+        self.flags(wait_soft_reboot_seconds=0, group='libvirt')
         self.test_reboot()
 
     def test_migrate_disk_and_power_off(self):

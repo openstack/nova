@@ -188,9 +188,8 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._vmops.reboot(instance, network_info)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, clean_shutdown=False):
+                destroy_disks=True):
         """Destroy VM instance."""
-        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.destroy(instance, network_info, destroy_disks)
 
     def pause(self, instance):
@@ -210,18 +209,16 @@ class VMwareESXDriver(driver.ComputeDriver):
         self._vmops.resume(instance)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, clean_shutdown=True):
+               rescue_password):
         """Rescue the specified instance."""
-        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.rescue(context, instance, network_info, image_meta)
 
     def unrescue(self, instance, network_info):
         """Unrescue the specified instance."""
         self._vmops.unrescue(instance)
 
-    def power_off(self, instance, clean_shutdown=True):
+    def power_off(self, instance):
         """Power off the specified instance."""
-        # TODO(PhilD): Add support for clean_shutdown
         self._vmops.power_off(instance)
 
     def power_on(self, context, instance, network_info,
@@ -660,9 +657,8 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops.reboot(instance, network_info)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, clean_shutdown=False):
+                destroy_disks=True):
         """Destroy VM instance."""
-        # TODO(PhilD): Add support for clean_shutdown
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.destroy(instance, network_info, destroy_disks)
 
@@ -687,9 +683,8 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops.resume(instance)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, clean_shutdown=True):
+               rescue_password):
         """Rescue the specified instance."""
-        # TODO(PhilD): Add support for clean_shutdown
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.rescue(context, instance, network_info, image_meta)
 
@@ -698,9 +693,8 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.unrescue(instance)
 
-    def power_off(self, instance, clean_shutdown=True):
+    def power_off(self, instance):
         """Power off the specified instance."""
-        # TODO(PhilD): Add support for clean_shutdown
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.power_off(instance)
 

@@ -187,31 +187,25 @@ class ComputeCellsAPI(compute_api.API):
                 pass
         return rv
 
-    def soft_delete(self, context, instance, clean_shutdown=False):
-        self._handle_cell_delete(context, instance,
-                                 method_name='soft_delete',
-                                 clean_shutdown=clean_shutdown)
+    def soft_delete(self, context, instance):
+        self._handle_cell_delete(context, instance, 'soft_delete')
 
-    def delete(self, context, instance, clean_shutdown=False):
-        self._handle_cell_delete(context, instance,
-                                 method_name='delete',
-                                 clean_shutdown=clean_shutdown)
+    def delete(self, context, instance):
+        self._handle_cell_delete(context, instance, 'delete')
 
-    def _handle_cell_delete(self, context, instance, method_name,
-                            clean_shutdown):
+    def _handle_cell_delete(self, context, instance, method_name):
         if not instance['cell_name']:
             delete_type = method_name == 'soft_delete' and 'soft' or 'hard'
             self.cells_rpcapi.instance_delete_everywhere(context,
-                    instance, delete_type, clean_shutdown)
+                    instance, delete_type)
             bdms = block_device.legacy_mapping(
                 self.db.block_device_mapping_get_all_by_instance(
                     context, instance['uuid']))
             # NOTE(danms): If we try to delete an instance with no cell,
             # there isn't anything to salvage, so we can hard-delete here.
-            super(ComputeCellsAPI, self)._local_delete(context, instance,
-                                  bdms=bdms, delete_type=method_name,
-                                  cb=self._do_delete,
-                                  clean_shutdown=clean_shutdown)
+            super(ComputeCellsAPI, self)._local_delete(context, instance, bdms,
+                                                       method_name,
+                                                       self._do_delete)
             return
 
         method = getattr(super(ComputeCellsAPI, self), method_name)
@@ -224,10 +218,9 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'restore')
 
     @check_instance_cell
-    def force_delete(self, context, instance, clean_shutdown=False):
+    def force_delete(self, context, instance):
         """Force delete a previously deleted (but not reclaimed) instance."""
-        super(ComputeCellsAPI, self).force_delete(context, instance,
-                                                  clean_shutdown)
+        super(ComputeCellsAPI, self).force_delete(context, instance)
         self._cast_to_cells(context, instance, 'force_delete')
 
     @check_instance_cell
@@ -268,15 +261,12 @@ class ComputeCellsAPI(compute_api.API):
         return self._call_to_cells(context, instance, 'get_diagnostics')
 
     @check_instance_cell
-    def rescue(self, context, instance, rescue_password=None,
-               clean_shutdown=True):
+    def rescue(self, context, instance, rescue_password=None):
         """Rescue the given instance."""
         super(ComputeCellsAPI, self).rescue(context, instance,
-                rescue_password=rescue_password,
-                clean_shutdown=clean_shutdown)
+                rescue_password=rescue_password)
         self._cast_to_cells(context, instance, 'rescue',
-                rescue_password=rescue_password,
-                clean_shutdown=clean_shutdown)
+                rescue_password=rescue_password)
 
     @check_instance_cell
     def unrescue(self, context, instance):
@@ -286,10 +276,9 @@ class ComputeCellsAPI(compute_api.API):
 
     @wrap_check_policy
     @check_instance_cell
-    def shelve(self, context, instance, clean_shutdown=True):
+    def shelve(self, context, instance):
         """Shelve the given instance."""
-        self._cast_to_cells(context, instance, 'shelve',
-                            clean_shutdown=clean_shutdown)
+        self._cast_to_cells(context, instance, 'shelve')
 
     @wrap_check_policy
     @check_instance_cell

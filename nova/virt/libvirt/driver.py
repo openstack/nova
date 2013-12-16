@@ -82,7 +82,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
-from nova.openstack.common import timeutils
 from nova.openstack.common import xmlutils
 from nova.pci import pci_manager
 from nova.pci import pci_utils
@@ -211,6 +210,13 @@ libvirt_opts = [
                     '(valid options are: sd, xvd, uvd, vd)',
                deprecated_name='libvirt_disk_prefix',
                deprecated_group='DEFAULT'),
+    cfg.IntOpt('wait_soft_reboot_seconds',
+               default=120,
+               help='Number of seconds to wait for instance to shut down after'
+                    ' soft reboot request is made. We fall back to hard reboot'
+                    ' if instance does not shutdown within this window.',
+               deprecated_name='libvirt_wait_soft_reboot_seconds',
+               deprecated_group='DEFAULT'),
     cfg.StrOpt('cpu_mode',
                help='Set to "host-model" to clone the host CPU feature flags; '
                     'to "host-passthrough" to use the host CPU model exactly; '
@@ -253,7 +259,6 @@ CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 CONF.import_opt('use_cow_images', 'nova.virt.driver')
-CONF.import_opt('wait_shutdown_seconds', 'nova.virt.driver')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
@@ -885,9 +890,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._destroy(instance)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, clean_shutdown=False):
-        if clean_shutdown:
-            self._shutdown(instance)
+                destroy_disks=True):
         self._destroy(instance)
         self._cleanup(context, instance, network_info, block_device_info,
                       destroy_disks)
@@ -1906,45 +1909,31 @@ class LibvirtDriver(driver.ComputeDriver):
         return self._hard_reboot(context, instance, network_info,
                                  block_device_info)
 
-    def _shutdown(self, instance, post_function=None):
-        """Attempt to shutdown  the instance gracefully.
+    def _soft_reboot(self, instance):
+        """Attempt to shutdown and restart the instance gracefully.
 
-        :returns: True if the shutdown succeeded
+        We use shutdown and create here so we can return if the guest
+        responded and actually rebooted. Note that this method only
+        succeeds if the guest responds to acpi. Therefore we return
+        success or failure so we can fall back to a hard reboot if
+        necessary.
+
+        :returns: True if the reboot succeeded
         """
-
-        try:
-            dom = self._lookup_by_name(instance["name"])
-        except exception.InstanceNotFound:
-            # If the instance has gone then we don't need to
-            # wait for it to shutdown
-            return True
-
+        dom = self._lookup_by_name(instance["name"])
         (state, _max_mem, _mem, _cpus, _t) = dom.info()
         state = LIBVIRT_POWER_STATE[state]
         old_domid = dom.ID()
-        LOG.debug(_("Shuting down instance from state %s") % state,
-                  instance=instance)
-        if (state == power_state.SHUTDOWN or
-                state == power_state.CRASHED):
-            LOG.info(_("Instance already shutdown."),
-                     instance=instance)
-            if post_function:
-                post_function(dom)
-            return True
-        elif state == power_state.RUNNING:
+        # NOTE(vish): This check allows us to reboot an instance that
+        #             is already shutdown.
+        if state == power_state.RUNNING:
             dom.shutdown()
-
-        # NOTE(PhilD): Because the call to get_info can be slow we
-        #              don't want to depend just on counting calls
-        #              to sleep(1).  Keep the loop count as a backstop
-        #              to avoid an infinite while loop, but also break
-        #              on the elapsed time.
-        start_time = timeutils.utcnow()
-
+        # NOTE(vish): This actually could take slightly longer than the
+        #             FLAG defines depending on how long the get_info
+        #             call takes to return.
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance))
-
-        for x in xrange(CONF.wait_shutdown_seconds):
+        for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
             dom = self._lookup_by_name(instance["name"])
             (state, _max_mem, _mem, _cpus, _t) = dom.info()
             state = LIBVIRT_POWER_STATE[state]
@@ -1957,44 +1946,17 @@ class LibvirtDriver(driver.ComputeDriver):
                              power_state.CRASHED]:
                     LOG.info(_("Instance shutdown successfully."),
                              instance=instance)
-                    if post_function:
-                        post_function(dom)
+                    self._create_domain(domain=dom)
+                    timer = loopingcall.FixedIntervalLoopingCall(
+                        self._wait_for_running, instance)
+                    timer.start(interval=0.5).wait()
                     return True
                 else:
                     LOG.info(_("Instance may have been rebooted during soft "
                                "reboot, so return now."), instance=instance)
                     return True
-
-            if timeutils.is_older_than(start_time,
-                                       CONF.wait_shutdown_seconds):
-                LOG.info(_("Instance failed to shutdown in %d seconds.") %
-                         CONF.wait_shutdown_seconds, instance=instance)
-                break
-
             greenthread.sleep(1)
         return False
-
-    def _soft_reboot(self, instance):
-        """Attempt to shutdown and restart the instance gracefully.
-
-        We use shutdown and create here so we can return if the guest
-        responded and actually rebooted. Note that this method only
-        succeeds if the guest responds to acpi. Therefore we return
-        success or failure so we can fall back to a hard reboot if
-        necessary.
-
-        :returns: True if the reboot succeeded
-        """
-
-        def _reboot_after_shutdown(dom):
-            self._create_domain(domain=dom)
-            timer = loopingcall.FixedIntervalLoopingCall(
-                self._wait_for_running, instance)
-            timer.start(interval=0.5).wait()
-            return True
-
-        return self._shutdown(instance,
-                              _reboot_after_shutdown)
 
     def _hard_reboot(self, context, instance, network_info,
                      block_device_info=None):
@@ -2076,10 +2038,8 @@ class LibvirtDriver(driver.ComputeDriver):
         dom = self._lookup_by_name(instance['name'])
         dom.resume()
 
-    def power_off(self, instance, clean_shutdown=True):
+    def power_off(self, instance):
         """Power off the specified instance."""
-        if clean_shutdown:
-            self._shutdown(instance)
         self._destroy(instance)
 
     def power_on(self, context, instance, network_info,
@@ -2129,7 +2089,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._hard_reboot(context, instance, network_info, block_device_info)
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, clean_shutdown=True):
+               rescue_password):
         """Loads a VM using rescue images.
 
         A rescue is normally performed when something goes wrong with the
@@ -2163,8 +2123,6 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self.to_xml(context, instance, network_info, disk_info,
                           image_meta, rescue=rescue_images,
                           write_to_disk=True)
-        if clean_shutdown:
-            self._shutdown(instance)
         self._destroy(instance)
         self._create_domain(xml)
 
@@ -4704,7 +4662,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not shared_storage:
             utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
 
-        self.power_off(instance, clean_shutdown=True)
+        self.power_off(instance)
 
         block_device_mapping = driver.block_device_info_get_mapping(
             block_device_info)

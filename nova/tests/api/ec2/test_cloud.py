@@ -2293,7 +2293,7 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.Set(fake_virt.FakeDriver, 'power_on', fake_power_on)
 
-        def fake_power_off(self, instance, clean_shutdown=True):
+        def fake_power_off(self, instance):
             virt_driver['powered_off'] = True
 
         self.stubs.Set(fake_virt.FakeDriver, 'power_off', fake_power_off)

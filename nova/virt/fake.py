@@ -154,7 +154,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def rescue(self, context, instance, network_info, image_meta,
-               rescue_password, clean_shutdown=True):
+               rescue_password):
         pass
 
     def unrescue(self, instance, network_info):
@@ -178,13 +178,13 @@ class FakeDriver(driver.ComputeDriver):
                                            block_device_info=None):
         pass
 
-    def power_off(self, instance, clean_shutdown=True):
+    def power_off(self, instance):
         pass
 
     def power_on(self, context, instance, network_info, block_device_info):
         pass
 
-    def soft_delete(self, instance, clean_shutdown=False):
+    def soft_delete(self, instance):
         pass
 
     def restore(self, instance):
@@ -203,7 +203,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, clean_shutdown=False):
+                destroy_disks=True):
         key = instance['name']
         if key in self.instances:
             del self.instances[key]

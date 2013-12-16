@@ -59,8 +59,7 @@ class HyperVDriver(driver.ComputeDriver):
         self._vmops.reboot(instance, network_info, reboot_type)
 
     def destroy(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, clean_shutdown=False):
-        # TODO(PhilD): Add support for clean_shutdown
+                destroy_disks=True):
         self._vmops.destroy(instance, network_info, block_device_info,
                             destroy_disks)
 
@@ -104,8 +103,7 @@ class HyperVDriver(driver.ComputeDriver):
     def resume(self, context, instance, network_info, block_device_info=None):
         self._vmops.resume(instance)
 
-    def power_off(self, instance, clean_shutdown=True):
-        # TODO(PhilD): Add support for clean_shutdown
+    def power_off(self, instance):
         self._vmops.power_off(instance)
 
     def power_on(self, context, instance, network_info,
