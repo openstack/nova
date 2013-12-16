@@ -712,9 +712,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 matchers.DictMatches(expected))
 
     def test_get_console_output(self):
-        self._create_instance_in_the_db()
-        res = self.conn.get_console_output(self.context, self.instance)
-        self.assertNotEqual(0, len(res))
+        self.assertRaises(NotImplementedError, self.conn.get_console_output,
+            None, None)
 
     def _test_finish_migration(self, power_on, resize_instance=False):
         """
