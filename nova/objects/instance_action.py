@@ -16,6 +16,7 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova.objects import base
 from nova.objects import fields
+from nova.openstack.common import timeutils
 
 
 class InstanceAction(base.NovaPersistentObject, base.NovaObject):
@@ -43,6 +44,23 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
         action.obj_reset_changes()
         return action
 
+    @staticmethod
+    def pack_action_start(context, instance_uuid, action_name):
+        values = {'request_id': context.request_id,
+                  'instance_uuid': instance_uuid,
+                  'user_id': context.user_id,
+                  'project_id': context.project_id,
+                  'action': action_name,
+                  'start_time': context.timestamp}
+        return values
+
+    @staticmethod
+    def pack_action_finish(context, instance_uuid):
+        values = {'request_id': context.request_id,
+                  'instance_uuid': instance_uuid,
+                  'finish_time': timeutils.utcnow()}
+        return values
+
     @base.remotable_classmethod
     def get_by_request_id(cls, context, instance_uuid, request_id):
         db_action = db.action_get_by_request_id(context, instance_uuid,
@@ -50,28 +68,24 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject):
         if db_action:
             return cls._from_db_object(context, cls(), db_action)
 
-    # NOTE(danms): Eventually the compute_utils.*action* methods
-    # can be here, I think
-
     @base.remotable_classmethod
     def action_start(cls, context, instance_uuid, action_name,
                      want_result=True):
-        values = compute_utils.pack_action_start(context, instance_uuid,
-                                                 action_name)
+        values = cls.pack_action_start(context, instance_uuid, action_name)
         db_action = db.action_start(context, values)
         if want_result:
             return cls._from_db_object(context, cls(), db_action)
 
     @base.remotable_classmethod
     def action_finish(cls, context, instance_uuid, want_result=True):
-        values = compute_utils.pack_action_finish(context, instance_uuid)
+        values = cls.pack_action_finish(context, instance_uuid)
         db_action = db.action_finish(context, values)
         if want_result:
             return cls._from_db_object(context, cls(), db_action)
 
     @base.remotable
     def finish(self, context):
-        values = compute_utils.pack_action_finish(context, self.instance_uuid)
+        values = self.pack_action_finish(context, self.instance_uuid)
         db_action = db.action_finish(context, values)
         self._from_db_object(context, self, db_action)
 
