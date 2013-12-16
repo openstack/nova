@@ -836,13 +836,11 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         """Start an instance via compute_api.start()."""
         self._call_compute_api_with_obj(message.ctxt, instance, 'start')
 
-    def stop_instance(self, message, instance, clean_shutdown):
+    def stop_instance(self, message, instance):
         """Stop an instance via compute_api.stop()."""
         do_cast = not message.need_response
         return self._call_compute_api_with_obj(message.ctxt, instance,
-                                               'stop',
-                                               clean_shutdown=clean_shutdown,
-                                               do_cast=do_cast)
+                                               'stop', do_cast=do_cast)
 
     def reboot_instance(self, message, instance, reboot_type):
         """Reboot an instance via compute_api.reboot()."""
@@ -860,13 +858,11 @@ class _TargetedMessageMethods(_BaseMessageMethods):
     def get_host_uptime(self, message, host_name):
         return self.host_api.get_host_uptime(message.ctxt, host_name)
 
-    def terminate_instance(self, message, instance, clean_shutdown):
-        self._call_compute_api_with_obj(message.ctxt, instance, 'delete',
-                                        clean_shutdown=clean_shutdown)
+    def terminate_instance(self, message, instance):
+        self._call_compute_api_with_obj(message.ctxt, instance, 'delete')
 
-    def soft_delete_instance(self, message, instance, clean_shutdown):
-        self._call_compute_api_with_obj(message.ctxt, instance, 'soft_delete',
-                                        clean_shutdown=clean_shutdown)
+    def soft_delete_instance(self, message, instance):
+        self._call_compute_api_with_obj(message.ctxt, instance, 'soft_delete')
 
     def pause_instance(self, message, instance):
         """Pause an instance via compute_api.pause()."""
@@ -1063,7 +1059,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             pass
 
     def instance_delete_everywhere(self, message, instance, delete_type,
-                                   clean_shutdown, **kwargs):
+                                   **kwargs):
         """Call compute API delete() or soft_delete() in every cell.
         This is used when the API cell doesn't know what cell an instance
         belongs to but the instance was requested to be deleted or
@@ -1072,11 +1068,9 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         LOG.debug(_("Got broadcast to %(delete_type)s delete instance"),
                   {'delete_type': delete_type}, instance=instance)
         if delete_type == 'soft':
-            self.compute_api.soft_delete(message.ctxt, instance,
-                                         clean_shutdown=clean_shutdown)
+            self.compute_api.soft_delete(message.ctxt, instance)
         else:
-            self.compute_api.delete(message.ctxt, instance,
-                                    clean_shutdown=clean_shutdown)
+            self.compute_api.delete(message.ctxt, instance)
 
     def instance_fault_create_at_top(self, message, instance_fault, **kwargs):
         """Destroy an instance from the DB if we're a top level cell."""
@@ -1437,14 +1431,12 @@ class MessageRunner(object):
                                     run_locally=False)
         message.process()
 
-    def instance_delete_everywhere(self, ctxt, instance, delete_type,
-                                   clean_shutdown):
+    def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """This is used by API cell when it didn't know what cell
         an instance was in, but the instance was requested to be
         deleted or soft_deleted.  So, we'll broadcast this everywhere.
         """
-        method_kwargs = dict(instance=instance, delete_type=delete_type,
-                             clean_shutdown=clean_shutdown)
+        method_kwargs = dict(instance=instance, delete_type=delete_type)
         message = _BroadcastMessage(self, ctxt,
                                     'instance_delete_everywhere',
                                     method_kwargs, 'down',
@@ -1696,20 +1688,17 @@ class MessageRunner(object):
         """Start an instance in its cell."""
         self._instance_action(ctxt, instance, 'start_instance')
 
-    def stop_instance(self, ctxt, instance, clean_shutdown, do_cast=True):
+    def stop_instance(self, ctxt, instance, do_cast=True):
         """Stop an instance in its cell."""
-        extra_kwargs = {'clean_shutdown': clean_shutdown}
         if do_cast:
-            self._instance_action(ctxt, instance, 'stop_instance',
-                                  extra_kwargs=extra_kwargs)
+            self._instance_action(ctxt, instance, 'stop_instance')
         else:
             return self._instance_action(ctxt, instance, 'stop_instance',
-                                         extra_kwargs=extra_kwargs,
                                          need_response=True)
 
     def reboot_instance(self, ctxt, instance, reboot_type):
         """Reboot an instance in its cell."""
-        extra_kwargs = {'reboot_type': reboot_type}
+        extra_kwargs = dict(reboot_type=reboot_type)
         self._instance_action(ctxt, instance, 'reboot_instance',
                               extra_kwargs=extra_kwargs)
 
@@ -1721,15 +1710,11 @@ class MessageRunner(object):
         """Resume an instance in its cell."""
         self._instance_action(ctxt, instance, 'resume_instance')
 
-    def terminate_instance(self, ctxt, instance, clean_shutdown=False):
-        extra_kwargs = {'clean_shutdown': clean_shutdown}
-        self._instance_action(ctxt, instance, 'terminate_instance',
-                              extra_kwargs=extra_kwargs)
+    def terminate_instance(self, ctxt, instance):
+        self._instance_action(ctxt, instance, 'terminate_instance')
 
-    def soft_delete_instance(self, ctxt, instance, clean_shutdown=False):
-        extra_kwargs = {'clean_shutdown': clean_shutdown}
-        self._instance_action(ctxt, instance, 'soft_delete_instance',
-                              extra_kwargs=extra_kwargs)
+    def soft_delete_instance(self, ctxt, instance):
+        self._instance_action(ctxt, instance, 'soft_delete_instance')
 
     def pause_instance(self, ctxt, instance):
         """Pause an instance in its cell."""

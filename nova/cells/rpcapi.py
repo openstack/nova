@@ -85,8 +85,6 @@ class CellsAPI(rpcclient.RpcProxy):
         ... Havana supports message version 1.24.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.24.
-
-        1.25 - Adds clean_shutdown option to stop_and delete methods
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -159,8 +157,7 @@ class CellsAPI(rpcclient.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         self.client.cast(ctxt, 'instance_destroy_at_top', instance=instance_p)
 
-    def instance_delete_everywhere(self, ctxt, instance, delete_type,
-                                   clean_shutdown=False):
+    def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """Delete instance everywhere.  delete_type may be 'soft'
         or 'hard'.  This is generally only used to resolve races
         when API cell doesn't know to what cell an instance belongs.
@@ -168,10 +165,8 @@ class CellsAPI(rpcclient.RpcProxy):
         if not CONF.cells.enable:
             return
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.25')
-        cctxt.cast(ctxt, 'instance_delete_everywhere',
-                   instance=instance_p, delete_type=delete_type,
-                   clean_shutdown=clean_shutdown)
+        self.client.cast(ctxt, 'instance_delete_everywhere',
+                         instance=instance_p, delete_type=delete_type)
 
     def instance_fault_create_at_top(self, ctxt, instance_fault):
         """Create an instance fault at the top."""
@@ -405,19 +400,17 @@ class CellsAPI(rpcclient.RpcProxy):
         cctxt = self.client.prepare(version='1.12')
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
-    def stop_instance(self, ctxt, instance, do_cast=True,
-                      clean_shutdown=True):
+    def stop_instance(self, ctxt, instance, do_cast=True):
         """Stop an instance in its cell.
 
         This method takes a new-world instance object.
         """
         if not CONF.cells.enable:
             return
-        cctxt = self.client.prepare(version='1.25')
+        cctxt = self.client.prepare(version='1.12')
         method = do_cast and cctxt.cast or cctxt.call
         return method(ctxt, 'stop_instance',
-                      instance=instance, do_cast=do_cast,
-                      clean_shutdown=clean_shutdown)
+                      instance=instance, do_cast=do_cast)
 
     def cell_create(self, ctxt, values):
         cctxt = self.client.prepare(version='1.13')
@@ -488,29 +481,25 @@ class CellsAPI(rpcclient.RpcProxy):
         cctxt = self.client.prepare(version='1.15')
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
-    def terminate_instance(self, ctxt, instance, bdms, reservations=None,
-                           clean_shutdown=False):
+    def terminate_instance(self, ctxt, instance, bdms, reservations=None):
         """Delete an instance in its cell.
 
         This method takes a new-world instance object.
         """
         if not CONF.cells.enable:
             return
-        cctxt = self.client.prepare(version='1.25')
-        cctxt.cast(ctxt, 'terminate_instance', instance=instance,
-                   clean_shutdown=clean_shutdown)
+        cctxt = self.client.prepare(version='1.18')
+        cctxt.cast(ctxt, 'terminate_instance', instance=instance)
 
-    def soft_delete_instance(self, ctxt, instance, reservations=None,
-                             clean_shutdown=False):
+    def soft_delete_instance(self, ctxt, instance, reservations=None):
         """Soft-delete an instance in its cell.
 
         This method takes a new-world instance object.
         """
         if not CONF.cells.enable:
             return
-        cctxt = self.client.prepare(version='1.25')
-        cctxt.cast(ctxt, 'soft_delete_instance', instance=instance,
-                   clean_shutdown=clean_shutdown)
+        cctxt = self.client.prepare(version='1.18')
+        cctxt.cast(ctxt, 'soft_delete_instance', instance=instance)
 
     def resize_instance(self, ctxt, instance, extra_instance_updates,
                        scheduler_hint, flavor, reservations):

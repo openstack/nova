@@ -65,7 +65,7 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.25'
+    RPC_API_VERSION = '1.24'
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -216,16 +216,13 @@ class CellsManager(manager.Manager):
         """Destroy an instance at the top level cell."""
         self.msg_runner.instance_destroy_at_top(ctxt, instance)
 
-    def instance_delete_everywhere(self, ctxt, instance, delete_type,
-                                   clean_shutdown=False):
+    def instance_delete_everywhere(self, ctxt, instance, delete_type):
         """This is used by API cell when it didn't know what cell
         an instance was in, but the instance was requested to be
         deleted or soft_deleted.  So, we'll broadcast this everywhere.
         """
-        self.msg_runner.instance_delete_everywhere(
-                                       ctxt, instance,
-                                       delete_type,
-                                       clean_shutdown=clean_shutdown)
+        self.msg_runner.instance_delete_everywhere(ctxt, instance,
+                                                   delete_type)
 
     def instance_fault_create_at_top(self, ctxt, instance_fault):
         """Create an instance fault at the top level cell."""
@@ -445,10 +442,9 @@ class CellsManager(manager.Manager):
         """Start an instance in its cell."""
         self.msg_runner.start_instance(ctxt, instance)
 
-    def stop_instance(self, ctxt, instance, clean_shutdown, do_cast=True):
+    def stop_instance(self, ctxt, instance, do_cast=True):
         """Stop an instance in its cell."""
         response = self.msg_runner.stop_instance(ctxt, instance,
-                                                 clean_shutdown=clean_shutdown,
                                                  do_cast=do_cast)
         if not do_cast:
             return response.value_or_raise()
@@ -485,15 +481,13 @@ class CellsManager(manager.Manager):
         """Resume an instance in its cell."""
         self.msg_runner.resume_instance(ctxt, instance)
 
-    def terminate_instance(self, ctxt, instance, clean_shutdown=False):
+    def terminate_instance(self, ctxt, instance):
         """Delete an instance in its cell."""
-        self.msg_runner.terminate_instance(ctxt, instance,
-                                           clean_shutdown)
+        self.msg_runner.terminate_instance(ctxt, instance)
 
-    def soft_delete_instance(self, ctxt, instance, clean_shutdown=False):
+    def soft_delete_instance(self, ctxt, instance):
         """Soft-delete an instance in its cell."""
-        self.msg_runner.soft_delete_instance(ctxt, instance,
-                                             clean_shutdown)
+        self.msg_runner.soft_delete_instance(ctxt, instance)
 
     def resize_instance(self, ctxt, instance, flavor,
                         extra_instance_updates):

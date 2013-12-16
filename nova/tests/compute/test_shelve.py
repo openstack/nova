@@ -57,7 +57,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve.start')
-        self.compute.driver.power_off(instance, True)
+        self.compute.driver.power_off(instance)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
         self.compute.driver.snapshot(self.context, instance, 'fake_image_id',
@@ -81,7 +81,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         if CONF.shelved_offload_time == 0:
             self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
-            self.compute.driver.power_off(instance, False)
+            self.compute.driver.power_off(instance)
             self.compute._get_power_state(self.context,
                                           instance).AndReturn(123)
             db.instance_update_and_get_original(self.context,
@@ -132,7 +132,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.compute._notify_about_instance_usage(self.context, instance,
                 'shelve_offload.start')
-        self.compute.driver.power_off(instance, True)
+        self.compute.driver.power_off(instance)
         self.compute._get_power_state(self.context,
                 instance).AndReturn(123)
         db.instance_update_and_get_original(self.context, instance['uuid'],

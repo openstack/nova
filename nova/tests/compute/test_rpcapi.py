@@ -400,15 +400,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_soft_delete_instance(self):
         self._test_compute_api('soft_delete_instance', 'cast',
                 instance=self.fake_instance,
-                reservations=['uuid1', 'uuid2'],
-                clean_shutdown=True,
-                version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('soft_delete_instance', 'cast',
-                instance=self.fake_instance,
-                reservations=['uuid1', 'uuid2'],
-                version='3.0')
+                reservations=['uuid1', 'uuid2'])
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -567,13 +559,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_rescue_instance(self):
         self._test_compute_api('rescue_instance', 'cast',
-                instance=self.fake_instance, rescue_password='pw',
-                clean_shutdown=True, version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('rescue_instance', 'cast',
-                instance=self.fake_instance, rescue_password='pw',
-                version='3.0')
+                instance=self.fake_instance, rescue_password='pw')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -707,13 +693,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_stop_instance_cast(self):
         self._test_compute_api('stop_instance', 'cast',
-                instance=self.fake_instance,
-                clean_shutdown=True, version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('stop_instance', 'cast',
-                instance=self.fake_instance,
-                version='3.0')
+                instance=self.fake_instance)
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -722,13 +702,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_stop_instance_call(self):
         self._test_compute_api('stop_instance', 'call',
-                instance=self.fake_instance,
-                clean_shutdown=True, version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('stop_instance', 'call',
-                instance=self.fake_instance,
-                version='3.0')
+                instance=self.fake_instance)
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -747,14 +721,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
                 instance=self.fake_instance, bdms=[],
-                reservations=['uuid1', 'uuid2'],
-                clean_shutdown=False, version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('terminate_instance', 'cast',
-                instance=self.fake_instance, bdms=[],
-                reservations=['uuid1', 'uuid2'],
-                version='3.0')
+                reservations=['uuid1', 'uuid2'])
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -782,13 +749,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_shelve_instance(self):
         self._test_compute_api('shelve_instance', 'cast',
-                instance=self.fake_instance, image_id='image_id',
-                clean_shutdown=True, version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('shelve_instance', 'cast',
-                instance=self.fake_instance, image_id='image_id',
-                version='3.0')
+                instance=self.fake_instance, image_id='image_id')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -798,12 +759,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_shelve_offload_instance(self):
         self._test_compute_api('shelve_offload_instance', 'cast',
-                instance=self.fake_instance,
-                clean_shutdown=True, version='3.4')
-
-        self.flags(compute='3.0', group='upgrade_levels')
-        self._test_compute_api('shelve_offload_instance', 'cast',
-                instance=self.fake_instance, version='3.0')
+                instance=self.fake_instance)
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

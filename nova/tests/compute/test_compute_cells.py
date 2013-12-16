@@ -153,7 +153,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
         cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, 'hard', False)
+                inst, 'hard')
         self.mox.ReplayAll()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
@@ -165,7 +165,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
                                  'instance_delete_everywhere')
         inst = self._create_fake_instance_obj()
         cells_rpcapi.instance_delete_everywhere(self.context,
-                inst, 'soft', False)
+                inst, 'soft')
         self.mox.ReplayAll()
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
