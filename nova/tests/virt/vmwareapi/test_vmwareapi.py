@@ -120,10 +120,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.node_name = 'test_url'
+        self.ds = 'ds1'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
+        vmwareapi_fake.reset()
         self.conn = driver.VMwareESXDriver(fake.FakeVirtAPI)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
@@ -274,8 +275,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """
 
         self._create_vm()
-        inst_file_path = '[fake-ds] %s/fake_name.vmdk' % self.uuid
-        cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
+        inst_file_path = '[%s] %s/fake_name.vmdk' % (self.ds, self.uuid)
+        cache_file_path = '[%s] vmware_base/fake_image_uuid.vmdk' % self.ds
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
         self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
 
@@ -283,8 +284,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
         self._create_vm()
-        cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
-        cache_root_path = '[fake-ds] vmware_base/fake_image_uuid.80.vmdk'
+        cache_file_path = '[%s] vmware_base/fake_image_uuid.vmdk' % self.ds
+        cache_root_path = '[%s] vmware_base/fake_image_uuid.80.vmdk' % self.ds
         self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
         self.assertTrue(vmwareapi_fake.get_file(cache_root_path))
 
@@ -328,8 +329,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.wait_task = self.conn._session._wait_for_task
         self.call_method = self.conn._session._call_method
         self.task_ref = None
-        cached_image = '[fake-ds] vmware_base/fake_image_uuid.80.vmdk'
-        tmp_file = '[fake-ds] vmware_base/fake_image_uuid.80-flat.vmdk'
+        cached_image = '[%s] vmware_base/fake_image_uuid.80.vmdk' % self.ds
+        tmp_file = '[%s] vmware_base/fake_image_uuid.80-flat.vmdk' % self.ds
 
         def fake_wait_for_task(instance_uuid, task_ref):
             if task_ref == self.task_ref:
@@ -1094,9 +1095,14 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.flags(cluster_name=[cluster_name, cluster_name2],
                    task_poll_interval=10, datastore_regex='.*', group='vmware')
         self.flags(vnc_enabled=False)
+        vmwareapi_fake.reset(vc=True)
         self.conn = driver.VMwareVCDriver(None, False)
         self.node_name = self.conn._resources.keys()[0]
         self.node_name2 = self.conn._resources.keys()[1]
+        if cluster_name2 in self.node_name2:
+            self.ds = 'ds1'
+        else:
+            self.ds = 'ds2'
         self.vnc_host = 'ha-host'
 
     def tearDown(self):
@@ -1210,11 +1216,11 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         # Check calls for delete vmdk and -flat.vmdk pair
         self.conn._vmops._delete_datastore_file(
                 mox.IgnoreArg(),
-                "[fake-ds] vmware-tmp/%s-flat.vmdk" % uuid_str,
+                "[%s] vmware-tmp/%s-flat.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
         self.conn._vmops._delete_datastore_file(
                 mox.IgnoreArg(),
-                "[fake-ds] vmware-tmp/%s.vmdk" % uuid_str,
+                "[%s] vmware-tmp/%s.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
 
         self.mox.ReplayAll()
@@ -1301,3 +1307,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self._create_instance_in_the_db()
         self.assertRaises(NotImplementedError, self.conn.unpause,
                           self.instance)
+
+    def test_datastore_dc_map(self):
+        vmops = self.conn._resources[self.node_name]['vmops']
+        self.assertEqual({}, vmops._datastore_dc_mapping)
+        self._create_vm()
+        # currently there are 2 data stores
+        self.assertEqual(2, len(vmops._datastore_dc_mapping))
