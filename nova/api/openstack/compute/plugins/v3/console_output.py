@@ -34,7 +34,7 @@ class ConsoleOutputController(wsgi.Controller):
         super(ConsoleOutputController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_console_output')
     def get_console_output(self, req, id, body):
         """Get text console output."""
@@ -69,6 +69,9 @@ class ConsoleOutputController(wsgi.Controller):
                                                          length)
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to get console log, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         # XML output is not correctly escaped, so remove invalid characters
         remove_re = re.compile('[\x00-\x08\x0B-\x1F]')

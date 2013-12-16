@@ -70,6 +70,9 @@ class ConsoleOutputController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(_('Unable to get console'))
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to get console log, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         # XML output is not correctly escaped, so remove invalid characters
         remove_re = re.compile('[\x00-\x08\x0B-\x1F]')
