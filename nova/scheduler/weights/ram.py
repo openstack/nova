@@ -36,7 +36,9 @@ CONF.register_opts(ram_weight_opts)
 
 
 class RAMWeigher(weights.BaseHostWeigher):
-    def _weight_multiplier(self):
+    minval = 0
+
+    def weight_multiplier(self):
         """Override the weight multiplier."""
         return CONF.ram_weight_multiplier
 

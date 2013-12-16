@@ -263,27 +263,35 @@ default when no filters are specified in the request.
 Weights
 -------
 
-Filter Scheduler uses so-called **weights** during its work.
+Filter Scheduler uses the so called **weights** during its work. A weigher is a
+way to select the best suitable host from a group of valid hosts by giving
+weights to all the hosts in the list.
 
-The Filter Scheduler weights hosts based on the config option
+In order to prioritize one weigher against another, all the weighers have to
+define a multiplier that will be applied before computing the weight for a node.
+All the weights are normalized beforehand so that the  multiplier can be applied
+easily. Therefore the final weight for the object will be::
+
+    weight = w1_multiplier * norm(w1) + w2_multiplier * norm(w2) + ...
+
+A weigher should be a subclass of ``weights.BaseHostWeigher`` and they must
+implement the ``weight_multiplier`` and ``weight_object`` methods. If the
+``weight_objects`` method is overriden it just return a list of weights, and not
+modify the weight of the object directly, since final weights are normalized and
+computed by ``weight.BaseWeightHandler``.
+
+The Filter Scheduler weighs hosts based on the config option
 `scheduler_weight_classes`, this defaults to
-`nova.scheduler.weights.all_weighers`, which selects all the available weighers
-in the package nova.scheduler.weights. Hosts are then weighted and sorted with
-the largest weight winning. For each host, the final weight is calculated by
-summing up all weigher's weight value multiplying its own weight_mutiplier:
+`nova.scheduler.weights.all_weighers`, which selects the following weighers:
 
-::
+* |RamWeigher| Hosts are then weighted and sorted with the largest weight winning.
+  If the multiplier is negative, the host with less RAM available will win (useful
+  for stacking hosts, instead of spreading).
+* |MetricsWeigher| This weigher can compute the weight based on the compute node
+  host's various metrics. The to-be weighed metrics and their weighing ratio
+  are specified in the configuration file as the followings::
 
-    final_weight = 0
-    for each weigher:
-        final_weight += weigher's weight_mutiplier * weigher's calculated weight value
-
-The weigher's weight_mutiplier can be set in the configuration file, e.g.
-
-::
-
-    [metrics]
-    weight_multiplier=1.0
+    metrics_weight_setting = name1=1.0, name2=-1.0
 
 Filter Scheduler finds local list of acceptable hosts by repeated filtering and
 weighing. Each time it chooses a host, it virtually consumes resources on it,
@@ -322,3 +330,5 @@ in :mod:``nova.tests.scheduler``.
 .. |AggregateTypeAffinityFilter| replace:: :class:`AggregateTypeAffinityFilter <nova.scheduler.filters.type_filter.AggregateTypeAffinityFilter>`
 .. |AggregateInstanceExtraSpecsFilter| replace:: :class:`AggregateInstanceExtraSpecsFilter <nova.scheduler.filters.aggregate_instance_extra_specs.AggregateInstanceExtraSpecsFilter>`
 .. |AggregateMultiTenancyIsolation| replace:: :class:`AggregateMultiTenancyIsolation <nova.scheduler.filters.aggregate_multitenancy_isolation.AggregateMultiTenancyIsolation>`
+
+.. |RamWeigher| replace:: :class:`RamWeigher <nova.scheduler.weights.all_weighers.RamWeigher>`

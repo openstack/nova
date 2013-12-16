@@ -76,7 +76,7 @@ class MetricsWeigher(weights.BaseHostWeigher):
                         " metrics_weight_setting: %s"),
                       ",".join(bad))
 
-    def _weight_multiplier(self):
+    def weight_multiplier(self):
         """Override the weight multiplier."""
         return CONF.metrics.weight_multiplier
 

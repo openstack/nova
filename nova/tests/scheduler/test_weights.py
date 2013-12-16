@@ -72,36 +72,61 @@ class RamWeigherTestCase(test.NoDBTestCase):
 
         # so, host4 should win:
         weighed_host = self._get_weighed_host(hostinfo_list)
-        self.assertEqual(weighed_host.weight, 8192)
+        self.assertEqual(weighed_host.weight, 1.0)
         self.assertEqual(weighed_host.obj.host, 'host4')
 
     def test_ram_filter_multiplier1(self):
-        self.flags(ram_weight_multiplier=-1.0)
+        self.flags(ram_weight_multiplier=0.0)
         hostinfo_list = self._get_all_hosts()
 
-        # host1: free_ram_mb=-512
-        # host2: free_ram_mb=-1024
-        # host3: free_ram_mb=-3072
-        # host4: free_ram_mb=-8192
+        # host1: free_ram_mb=512
+        # host2: free_ram_mb=1024
+        # host3: free_ram_mb=3072
+        # host4: free_ram_mb=8192
 
-        # so, host1 should win:
+        # We do not know the host, all have same weight.
         weighed_host = self._get_weighed_host(hostinfo_list)
-        self.assertEqual(weighed_host.weight, -512)
-        self.assertEqual(weighed_host.obj.host, 'host1')
+        self.assertEqual(weighed_host.weight, 0.0)
 
     def test_ram_filter_multiplier2(self):
         self.flags(ram_weight_multiplier=2.0)
         hostinfo_list = self._get_all_hosts()
 
-        # host1: free_ram_mb=512 * 2
-        # host2: free_ram_mb=1024 * 2
-        # host3: free_ram_mb=3072 * 2
-        # host4: free_ram_mb=8192 * 2
+        # host1: free_ram_mb=512
+        # host2: free_ram_mb=1024
+        # host3: free_ram_mb=3072
+        # host4: free_ram_mb=8192
 
         # so, host4 should win:
         weighed_host = self._get_weighed_host(hostinfo_list)
-        self.assertEqual(weighed_host.weight, 8192 * 2)
+        self.assertEqual(weighed_host.weight, 1.0 * 2)
         self.assertEqual(weighed_host.obj.host, 'host4')
+
+    def test_ram_filter_negative(self):
+        self.flags(ram_weight_multiplier=1.0)
+        hostinfo_list = self._get_all_hosts()
+        host_attr = {'id': 100, 'memory_mb': 8192, 'free_ram_mb': -512}
+        host_state = fakes.FakeHostState('negative', 'negative', host_attr)
+        hostinfo_list = list(hostinfo_list) + [host_state]
+
+        # host1: free_ram_mb=512
+        # host2: free_ram_mb=1024
+        # host3: free_ram_mb=3072
+        # host4: free_ram_mb=8192
+        # negativehost: free_ram_mb=-512
+
+        # so, host4 should win
+        weights = self.weight_handler.get_weighed_objects(self.weight_classes,
+                                                          hostinfo_list, {})
+
+        weighed_host = weights[0]
+        self.assertEqual(weighed_host.weight, 1)
+        self.assertEqual(weighed_host.obj.host, "host4")
+
+        # and negativehost should lose
+        weighed_host = weights[-1]
+        self.assertEqual(weighed_host.weight, 0)
+        self.assertEqual(weighed_host.obj.host, "negative")
 
 
 class MetricsWeigherTestCase(test.NoDBTestCase):
@@ -139,7 +164,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         # host4: foo=8192
         # so, host4 should win:
         setting = ['foo=1']
-        self._do_test(setting, 8192, 'host4')
+        self._do_test(setting, 1.0, 'host4')
 
     def test_multiple_resource(self):
         # host1: foo=512,  bar=1
@@ -148,7 +173,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         # host4: foo=8192, bar=0
         # so, host2 should win:
         setting = ['foo=0.0001', 'bar=1']
-        self._do_test(setting, 2.1024, 'host2')
+        self._do_test(setting, 1.0, 'host2')
 
     def test_single_resourcenegtive_ratio(self):
         # host1: foo=512
@@ -157,7 +182,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         # host4: foo=8192
         # so, host1 should win:
         setting = ['foo=-1']
-        self._do_test(setting, -512, 'host1')
+        self._do_test(setting, 1.0, 'host1')
 
     def test_multiple_resource_missing_ratio(self):
         # host1: foo=512,  bar=1
@@ -166,7 +191,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         # host4: foo=8192, bar=0
         # so, host4 should win:
         setting = ['foo=0.0001', 'bar']
-        self._do_test(setting, 0.8192, 'host4')
+        self._do_test(setting, 1.0, 'host4')
 
     def test_multiple_resource_wrong_ratio(self):
         # host1: foo=512,  bar=1
@@ -175,7 +200,7 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
         # host4: foo=8192, bar=0
         # so, host4 should win:
         setting = ['foo=0.0001', 'bar = 2.0t']
-        self._do_test(setting, 0.8192, 'host4')
+        self._do_test(setting, 1.0, 'host4')
 
     def _check_parsing_result(self, weigher, setting, results):
         self.flags(weight_setting=setting, group='metrics')
