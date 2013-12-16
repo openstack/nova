@@ -120,6 +120,7 @@ class ConductorAPI(rpcclient.RpcProxy):
     ...  - Remove security_group_get_by_instance() and
            security_group_rule_get_by_security_group()
     1.61 - Return deleted instance from instance_destroy()
+    1.62 - Added object_backport()
     """
 
     BASE_RPC_API_VERSION = '1.0'
@@ -472,6 +473,11 @@ class ConductorAPI(rpcclient.RpcProxy):
         cctxt = self.client.prepare(version='1.50')
         return cctxt.call(context, 'object_action', objinst=objinst,
                           objmethod=objmethod, args=args, kwargs=kwargs)
+
+    def object_backport(self, context, objinst, target_version):
+        cctxt = self.client.prepare(version='1.62')
+        return cctxt.call(context, 'object_backport', objinst=objinst,
+                          target_version=target_version)
 
 
 class ComputeTaskAPI(rpcclient.RpcProxy):
