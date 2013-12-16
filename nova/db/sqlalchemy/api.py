@@ -289,10 +289,14 @@ def exact_filter(query, model, filters, legal_keys):
     return query
 
 
-def convert_datetimes(values, *datetime_keys):
-    for key in values:
-        if key in datetime_keys and isinstance(values[key], six.string_types):
-            values[key] = timeutils.parse_strtime(values[key])
+def convert_objects_related_datetimes(values, *datetime_keys):
+    for key in datetime_keys:
+        if key in values and values[key]:
+            if isinstance(values[key], six.string_types):
+                values[key] = timeutils.parse_strtime(values[key])
+            # NOTE(danms): Strip UTC timezones from datetimes, since they're
+            # stored that way in the database
+            values[key] = values[key].replace(tzinfo=None)
     return values
 
 
@@ -623,7 +627,8 @@ def compute_node_create(context, values):
     with the most recent data.
     """
     _prep_stats_dict(values)
-    convert_datetimes(values, 'created_at', 'deleted_at', 'updated_at')
+    datetime_keys = ('created_at', 'deleted_at', 'updated_at')
+    convert_objects_related_datetimes(values, *datetime_keys)
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
@@ -680,7 +685,8 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
         # changes in data.  This ensures that we invalidate the
         # scheduler cache of compute node data in case of races.
         values['updated_at'] = timeutils.utcnow()
-        convert_datetimes(values, 'created_at', 'deleted_at', 'updated_at')
+        datetime_keys = ('created_at', 'deleted_at', 'updated_at')
+        convert_objects_related_datetimes(values, *datetime_keys)
         compute_ref.update(values)
     return compute_ref
 
@@ -1576,14 +1582,9 @@ def _handle_objects_related_type_conversions(values):
         if key in values and values[key] is not None:
             values[key] = str(values[key])
 
-    # NOTE(danms): Strip UTC timezones from datetimes, since they're
-    # stored that way in the database
-    for key in ('created_at', 'deleted_at', 'updated_at',
-                'launched_at', 'terminated_at', 'scheduled_at'):
-        if key in values and values[key]:
-            if isinstance(values[key], six.string_types):
-                values[key] = timeutils.parse_strtime(values[key])
-            values[key] = values[key].replace(tzinfo=None)
+    datetime_keys = ('created_at', 'deleted_at', 'updated_at',
+                     'launched_at', 'terminated_at', 'scheduled_at')
+    convert_objects_related_datetimes(values, *datetime_keys)
 
 
 @require_context
@@ -5285,7 +5286,7 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids):
 
 
 def action_start(context, values):
-    convert_datetimes(values, 'start_time')
+    convert_objects_related_datetimes(values, 'start_time')
     action_ref = models.InstanceAction()
     action_ref.update(values)
     action_ref.save()
@@ -5293,7 +5294,7 @@ def action_start(context, values):
 
 
 def action_finish(context, values):
-    convert_datetimes(values, 'start_time', 'finish_time')
+    convert_objects_related_datetimes(values, 'start_time', 'finish_time')
     session = get_session()
     with session.begin():
         action_ref = model_query(context, models.InstanceAction,
@@ -5337,7 +5338,7 @@ def _action_get_by_request_id(context, instance_uuid, request_id,
 
 def action_event_start(context, values):
     """Start an event on an instance action."""
-    convert_datetimes(values, 'start_time')
+    convert_objects_related_datetimes(values, 'start_time')
     session = get_session()
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],
@@ -5358,7 +5359,7 @@ def action_event_start(context, values):
 
 def action_event_finish(context, values):
     """Finish an event on an instance action."""
-    convert_datetimes(values, 'start_time', 'finish_time')
+    convert_objects_related_datetimes(values, 'start_time', 'finish_time')
     session = get_session()
     with session.begin():
         action = _action_get_by_request_id(context, values['instance_uuid'],
