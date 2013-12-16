@@ -488,6 +488,7 @@ class Connection(object):
             self.connection = None
         self.connection = kombu.connection.BrokerConnection(**params)
         self.connection_errors = self.connection.connection_errors
+        self.channel_errors = self.connection.channel_errors
         if self.memory_transport:
             # Kludge to speed up tests.
             self.connection.transport.polling_interval = 0.0
@@ -561,7 +562,7 @@ class Connection(object):
         while True:
             try:
                 return method(*args, **kwargs)
-            except (self.connection_errors, socket.timeout, IOError), e:
+            except (self.connection_errors, self.channel_errors, socket.timeout, IOError), e:
                 if error_callback:
                     error_callback(e)
             except Exception, e:
