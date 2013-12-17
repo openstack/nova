@@ -89,7 +89,7 @@ class ConfigDriveBuilder(object):
         filepath = os.path.join(self.tempdir, path)
         dirname = os.path.dirname(filepath)
         fileutils.ensure_tree(dirname)
-        with open(filepath, 'w') as f:
+        with open(filepath, 'wb') as f:
             f.write(data)
 
     def add_instance_metadata(self, instance_md):
@@ -123,7 +123,7 @@ class ConfigDriveBuilder(object):
     def _make_vfat(self, path):
         # NOTE(mikal): This is a little horrible, but I couldn't find an
         # equivalent to genisoimage for vfat filesystems.
-        with open(path, 'w') as f:
+        with open(path, 'wb') as f:
             f.truncate(CONFIGDRIVESIZE_BYTES)
 
         utils.mkfs('vfat', path, label='config-2')
