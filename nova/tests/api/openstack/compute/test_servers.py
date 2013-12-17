@@ -2233,6 +2233,12 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, self.req, self.body)
 
+    def test_create_user_data_malformed_bad_request(self):
+        self.ext_mgr.extensions = {'os-user-data': 'fake'}
+        params = {'user_data': 'u1234!'}
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
     def test_create_instance_invalid_key_name(self):
         image_href = 'http://localhost/v2/images/2'
         self.body['server']['imageRef'] = image_href
