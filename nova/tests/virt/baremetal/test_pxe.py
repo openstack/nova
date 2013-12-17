@@ -471,6 +471,17 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.driver.destroy_images(self.context, self.node, self.instance)
         self.mox.VerifyAll()
 
+    def test_dhcp_options_for_instance(self):
+        self._create_node()
+        self.mox.ReplayAll()
+        expected = [{'opt_name': 'bootfile-name',
+                     'opt_value': CONF.baremetal.pxe_bootfile_name},
+                    {'opt_name': 'server-ip-address', 'opt_value': CONF.my_ip},
+                    {'opt_name': 'tftp-server', 'opt_value': CONF.my_ip}]
+        res = self.driver.dhcp_options_for_instance(self.instance)
+        self.assertEqual(expected.sort(), res.sort())
+        self.mox.VerifyAll()
+
     def test_activate_bootloader_passes_details(self):
         self._create_node()
         macs = [nic['address'] for nic in self.nic_info]

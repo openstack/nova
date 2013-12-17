@@ -47,6 +47,14 @@ class NodeDriver(object):
     def get_console_output(self, node, instance):
         raise NotImplementedError()
 
+    def dhcp_options_for_instance(self, instance):
+        """Optional override to return the DHCP options to use for instance.
+
+        If no DHCP options are needed, this should not be overridden or None
+        should be returned.
+        """
+        return None
+
 
 class PowerManager(object):
 

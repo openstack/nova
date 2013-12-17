@@ -165,11 +165,6 @@ def get_pxe_config_file_path(instance):
     return os.path.join(CONF.baremetal.tftp_root, instance['uuid'], 'config')
 
 
-def get_pxe_bootfile_name(instance):
-    """Returns the pxe_bootfile_name option."""
-    return CONF.baremetal.pxe_bootfile_name
-
-
 def get_partition_sizes(instance):
     flavor = flavors.extract_flavor(instance)
     root_mb = flavor['root_gb'] * 1024
@@ -351,6 +346,15 @@ class PXE(base.NodeDriver):
         """Delete instance's image file."""
         bm_utils.unlink_without_raise(get_image_file_path(instance))
         bm_utils.rmtree_without_raise(get_image_dir_path(instance))
+
+    def dhcp_options_for_instance(self, instance):
+        return [{'opt_name': 'bootfile-name',
+                 'opt_value': CONF.baremetal.pxe_bootfile_name},
+                 {'opt_name': 'server-ip-address',
+                  'opt_value': CONF.my_ip},
+                 {'opt_name': 'tftp-server',
+                  'opt_value': CONF.my_ip}
+                 ]
 
     def activate_bootloader(self, context, node, instance, network_info):
         """Configure PXE boot loader for an instance

@@ -34,7 +34,6 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.virt.baremetal import baremetal_states
 from nova.virt.baremetal import db
-from nova.virt.baremetal import pxe
 from nova.virt import driver
 from nova.virt import firewall
 from nova.virt.libvirt import imagecache
@@ -509,17 +508,4 @@ class BareMetalDriver(driver.ComputeDriver):
                 db.bm_node_get_all(context, service_host=CONF.host)]
 
     def dhcp_options_for_instance(self, instance):
-        # NOTE(deva): This only works for PXE driver currently:
-        # If not running the PXE driver, you should not enable
-        # DHCP updates in nova.conf.
-        bootfile_name = pxe.get_pxe_bootfile_name(instance)
-
-        opts = [{'opt_name': 'bootfile-name',
-                 'opt_value': bootfile_name},
-                {'opt_name': 'server-ip-address',
-                 'opt_value': CONF.my_ip},
-                {'opt_name': 'tftp-server',
-                 'opt_value': CONF.my_ip}
-               ]
-
-        return opts
+        return self.driver.dhcp_options_for_instance(instance)
