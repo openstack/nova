@@ -637,10 +637,10 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.list_extensions().AndReturn(
             {'extensions': [{'name': 'nvp-qos'}]})
         self.mox.ReplayAll()
-        instance_type = flavors.get_default_flavor()
-        instance_type['rxtx_factor'] = 1
+        flavor = flavors.get_default_flavor()
+        flavor['rxtx_factor'] = 1
         sys_meta = utils.dict_to_metadata(
-            flavors.save_flavor_info({}, instance_type))
+            flavors.save_flavor_info({}, flavor))
         instance = {'system_metadata': sys_meta}
         port_req_body = {'port': {}}
         api._populate_neutron_extension_values(instance, port_req_body)

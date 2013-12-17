@@ -84,9 +84,9 @@ class ApiTestCase(test.TestCase):
         self.network_api.network_rpcapi.allocate_for_instance(
             mox.IgnoreArg(), **kwargs).AndReturn([])
         self.mox.ReplayAll()
-        inst_type = flavors.get_default_flavor()
-        inst_type['rxtx_factor'] = 0
-        sys_meta = flavors.save_flavor_info({}, inst_type)
+        flavor = flavors.get_default_flavor()
+        flavor['rxtx_factor'] = 0
+        sys_meta = flavors.save_flavor_info({}, flavor)
         instance = dict(id='id', uuid='uuid', project_id='project_id',
             host='host', system_metadata=utils.dict_to_metadata(sys_meta))
         self.network_api.allocate_for_instance(
@@ -156,12 +156,12 @@ class ApiTestCase(test.TestCase):
                           self.context, '123zzz')
 
     def _stub_migrate_instance_calls(self, method, multi_host, info):
-        fake_instance_type = flavors.get_default_flavor()
-        fake_instance_type['rxtx_factor'] = 1.21
+        fake_flavor = flavors.get_default_flavor()
+        fake_flavor['rxtx_factor'] = 1.21
         sys_meta = utils.dict_to_metadata(
-            flavors.save_flavor_info({}, fake_instance_type))
+            flavors.save_flavor_info({}, fake_flavor))
         fake_instance = {'uuid': 'fake_uuid',
-                         'instance_type_id': fake_instance_type['id'],
+                         'instance_type_id': fake_flavor['id'],
                          'project_id': 'fake_project_id',
                          'system_metadata': sys_meta}
         fake_migration = {'source_compute': 'fake_compute_source',
