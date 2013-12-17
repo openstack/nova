@@ -246,6 +246,32 @@ class NotDbApiTestCase(DbTestCase):
                           self.context, {'display_name': '%test%'},
                           marker=str(stdlib_uuid.uuid4()))
 
+    def test_convert_objects_related_datetimes(self):
+
+        t1 = timeutils.utcnow()
+        t2 = t1 + datetime.timedelta(seconds=10)
+        t3 = t2 + datetime.timedelta(hours=1)
+
+        t2_utc = t2.replace(tzinfo=iso8601.iso8601.Utc())
+        t3_utc = t3.replace(tzinfo=iso8601.iso8601.Utc())
+
+        datetime_keys = ('created_at', 'deleted_at')
+
+        test1 = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        sqlalchemy_api.convert_objects_related_datetimes(test1, *datetime_keys)
+        self.assertEqual(test1, expected_dict)
+
+        test2 = {'created_at': t1, 'deleted_at': t2_utc, 'updated_at': t3}
+        expected_dict = {'created_at': t1, 'deleted_at': t2, 'updated_at': t3}
+        sqlalchemy_api.convert_objects_related_datetimes(test2, *datetime_keys)
+        self.assertEqual(test2, expected_dict)
+
+        test3 = {'deleted_at': t2_utc, 'updated_at': t3_utc}
+        expected_dict = {'deleted_at': t2, 'updated_at': t3_utc}
+        sqlalchemy_api.convert_objects_related_datetimes(test3, *datetime_keys)
+        self.assertEqual(test3, expected_dict)
+
 
 class AggregateDBApiTestCase(test.TestCase):
     def setUp(self):
