@@ -977,6 +977,21 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.assertFalse(image._is_cloneable(location))
 
+    def test_image_path(self):
+
+        conf = "FakeConf"
+        pool = "FakePool"
+        user = "FakeUser"
+
+        self.flags(libvirt_images_rbd_pool=pool)
+        self.flags(libvirt_images_rbd_ceph_conf=conf)
+        self.flags(rbd_user=user)
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_path = "rbd:%s/%s:id=%s:conf=%s" % (pool, image.rbd_name,
+                                                user, conf)
+
+        self.assertEqual(image.path, rbd_path)
+
 
 class BackendTestCase(test.NoDBTestCase):
     INSTANCE = {'name': 'fake-instance',
