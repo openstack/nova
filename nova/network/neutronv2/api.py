@@ -975,15 +975,15 @@ class API(base_api.NetworkAPI):
         pool = pool or CONF.default_floating_pool
         pool_id = self._get_floating_ip_pool_id_by_name_or_id(client, pool)
 
-        # TODO(amotoki): handle exception during create_floatingip()
-        # At this timing it is ensured that a network for pool exists.
-        # quota error may be returned.
         param = {'floatingip': {'floating_network_id': pool_id}}
         try:
             fip = client.create_floatingip(param)
         except (neutron_client_exc.IpAddressGenerationFailureClient,
                 neutron_client_exc.ExternalIpAddressExhaustedClient) as e:
             raise exception.NoMoreFloatingIps(unicode(e))
+        except neutron_client_exc.OverQuotaClient as e:
+            raise exception.FloatingIpLimitExceeded(unicode(e))
+
         return fip['floatingip']['floating_ip_address']
 
     def _get_floating_ip_by_address(self, client, address):

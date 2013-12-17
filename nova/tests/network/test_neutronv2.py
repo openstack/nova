@@ -2311,6 +2311,21 @@ class TestNeutronv2WithMock(test.TestCase):
 
             list_ports_mock.assert_called_once_with(**list_port_mock_params)
 
+    def test_allocate_floating_ip_exceed_limit(self):
+        # Verify that the correct exception is thrown when quota exceed
+        pool_name = 'dummy'
+        api = neutronapi.API()
+        with contextlib.nested(
+            mock.patch.object(client.Client, 'create_floatingip'),
+            mock.patch.object(api,
+                '_get_floating_ip_pool_id_by_name_or_id')) as (
+            create_mock, get_mock):
+            create_mock.side_effect = neutronv2.exceptions.OverQuotaClient()
+
+            self.assertRaises(exception.FloatingIpLimitExceeded,
+                          api.allocate_floating_ip,
+                          self.context, pool_name)
+
 
 class TestNeutronv2ModuleMethods(test.TestCase):
 
