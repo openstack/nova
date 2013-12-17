@@ -105,9 +105,27 @@ service_opts = [
                help='maximum time since last check-in for up service'),
     ]
 
+cli_opts = [
+        cfg.StrOpt('host',
+                    help='Debug host (ip or name) to connect. Note '
+                        'that using the remote debug option changes how '
+                        'Nova uses the eventlet library to support async IO. '
+                        'This could result in failures that do not occur '
+                        'under normal operation. Use at your own risk.'),
+
+        cfg.IntOpt('port',
+                    help='Debug port to connect. Note '
+                        'that using the remote debug option changes how '
+                        'Nova uses the eventlet library to support async IO. '
+                        'This could result in failures that do not occur '
+                        'under normal operation. Use at your own risk.')
+
+    ]
+
 CONF = cfg.CONF
 CONF.register_opts(service_opts)
 CONF.import_opt('host', 'nova.netconf')
+CONF.register_cli_opts(cli_opts, 'remote_debug')
 
 
 class Service(service.Service):
@@ -249,6 +267,21 @@ class Service(service.Service):
             periodic_enable = CONF.periodic_enable
         if periodic_fuzzy_delay is None:
             periodic_fuzzy_delay = CONF.periodic_fuzzy_delay
+        if CONF.remote_debug.host and CONF.remote_debug.port:
+            from pydev import pydevd
+            LOG = logging.getLogger('nova')
+            LOG.debug(_('Listening on %(host)s:%(port)s for debug connection'),
+                {'host': CONF.remote_debug.host,
+                 'port': CONF.remote_debug.port})
+            pydevd.settrace(host=CONF.remote_debug.host,
+                            port=CONF.remote_debug.port,
+                            stdoutToServer=False,
+                            stderrToServer=False)
+            LOG.warn(_('WARNING: Using the remote debug option changes how '
+                'Nova uses the eventlet library to support async IO. This '
+                'could result in failures that do not occur under normal '
+                'operation. Use at your own risk.'))
+
         service_obj = cls(host, binary, topic, manager,
                           report_interval=report_interval,
                           periodic_enable=periodic_enable,
