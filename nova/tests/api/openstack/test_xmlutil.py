@@ -854,6 +854,42 @@ class MiscellaneousXMLUtilTests(test.NoDBTestCase):
         result = master.serialize(obj)
         self.assertEqual(expected_xml, result)
 
+    def test_make_flat_dict_with_parent(self):
+        # Our test object to serialize
+        obj = {"device": {"id": 1,
+                          "extra_info": {"key1": "value1",
+                                         "key2": "value2"}}}
+
+        expected_xml = (("<?xml version='1.0' encoding='UTF-8'?>\n"
+                    '<device id="1"><extra_info><key2>value2</key2>'
+                    '<key1>value1</key1></extra_info></device>'))
+
+        root = xmlutil.TemplateElement('device', selector='device')
+        root.set('id')
+        extra = xmlutil.make_flat_dict('extra_info', root=root)
+        root.append(extra)
+        master = xmlutil.MasterTemplate(root, 1)
+        result = master.serialize(obj)
+        self.assertEqual(expected_xml, result)
+
+    def test_make_flat_dict_with_dicts(self):
+        # Our test object to serialize
+        obj = {"device": {"id": 1,
+                          "extra_info": {"key1": "value1",
+                                         "key2": "value2"}}}
+
+        expected_xml = (("<?xml version='1.0' encoding='UTF-8'?>\n"
+                    '<device><id>1</id><extra_info><key2>value2</key2>'
+                    '<key1>value1</key1></extra_info></device>'))
+
+        root = xmlutil.make_flat_dict('device', selector='device',
+                                      ignore_sub_dicts=True)
+        extra = xmlutil.make_flat_dict('extra_info', selector='extra_info')
+        root.append(extra)
+        master = xmlutil.MasterTemplate(root, 1)
+        result = master.serialize(obj)
+        self.assertEqual(expected_xml, result)
+
     def test_safe_parse_xml(self):
 
         normal_body = ('<?xml version="1.0" ?>'
