@@ -479,6 +479,12 @@ class Rbd(Image):
         self.rbd = kwargs.get('rbd', rbd)
         self.rados = kwargs.get('rados', rados)
 
+        self.path = 'rbd:%s/%s' % (self.pool, self.rbd_name)
+        if self.rbd_user:
+            self.path += ':id=' + self.rbd_user
+        if self.ceph_conf:
+            self.path += ':conf=' + self.ceph_conf
+
     def _connect_to_rados(self, pool=None):
         client = self.rados.Rados(rados_id=self.rbd_user,
                                   conffile=self.ceph_conf)
@@ -603,8 +609,7 @@ class Rbd(Image):
             self._resize(self.rbd_name, size)
 
     def snapshot_extract(self, target, out_format):
-        snap = 'rbd:%s/%s' % (self.pool, self.rbd_name)
-        images.convert_image(snap, target, out_format)
+        images.convert_image(self.path, target, out_format)
 
 
 class Backend(object):
