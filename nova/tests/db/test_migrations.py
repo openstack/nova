@@ -607,71 +607,6 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
 
         self.assertEqual(sorted(members), sorted(index_columns))
 
-    # migration 161, fix system_metadata "None" values should be NULL
-    def _pre_upgrade_161(self, engine):
-        fake_instances = [dict(uuid='m161-uuid1')]
-        sm_base = dict(instance_uuid='m161-uuid1', value=None)
-        now = timeutils.utcnow().replace(microsecond=0)
-        fake_sys_meta = [
-            # Should be fixed
-            dict(sm_base, key='instance_type_foo', value='None'),
-            dict(sm_base, key='instance_type_bar', value='88 mph'),
-
-            # Should be unaffected
-            dict(sm_base, key='instance_type_name', value='None'),
-            dict(sm_base, key='instance_type_flavorid', value='None'),
-            dict(sm_base, key='foo', value='None'),
-            dict(sm_base, key='instance_type_bat'),
-            dict(sm_base, key='instance_type_baz', created_at=now),
-            ]
-
-        instances = db_utils.get_table(engine, 'instances')
-        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
-        engine.execute(instances.insert(), fake_instances)
-
-        data = {}
-        for sm in fake_sys_meta:
-            result = sys_meta.insert().values(sm).execute()
-            sm['id'] = result.inserted_primary_key[0]
-            data[sm['id']] = sm
-
-        return data
-
-    def _check_161(self, engine, data):
-        our_ids = data.keys()
-        sys_meta = db_utils.get_table(engine, 'instance_system_metadata')
-        results = sys_meta.select().where(sys_meta.c.id.in_(our_ids)).\
-                                    execute()
-        results = list(results)
-        self.assertEqual(len(our_ids), len(results))
-        for result in results:
-            the_id = result['id']
-            key = result['key']
-            original = data[the_id]
-
-            if key == 'instance_type_baz':
-                # Neither value nor created_at should have been altered
-                self.assertEqual(result['value'], original['value'])
-                self.assertEqual(result['created_at'], original['created_at'])
-            elif key in ['instance_type_name', 'instance_type_flavorid']:
-                # These should not have their values changed, but should
-                # have corrected created_at stamps
-                self.assertEqual(result['value'], original['value'])
-                self.assertIsInstance(result['created_at'], datetime.datetime)
-            elif key.startswith('instance_type'):
-                # Values like instance_type_% should be stamped and values
-                # converted from 'None' to None where appropriate
-                self.assertEqual(result['value'],
-                                 None if original['value'] == 'None'
-                                 else original['value'])
-                self.assertIsInstance(result['created_at'], datetime.datetime)
-            else:
-                # None of the non-instance_type values should have
-                # been touched. Since we didn't set created_at on any
-                # of them, they should all still be None.
-                self.assertEqual(result['value'], original['value'])
-                self.assertIsNone(result['created_at'])
-
     def _pre_upgrade_172(self, engine):
         instance_types = db_utils.get_table(engine, 'instance_types')
         data = [
@@ -997,7 +932,7 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
 
         data_list = [
             ("floating_ips", {'address': '10.12.14.16', 'deleted': 0}),
-            ("instance_info_caches", {'instance_uuid': 'm161-uuid1'}),
+            ("instance_info_caches", {'instance_uuid': 'm185-uuid1'}),
             ('instance_type_projects', {'instance_type_id': 1,
                                         'project_id': '116', 'deleted': 0}),
             ('instance_types', {'flavorid': "flavorid_12", 'deleted': 0,
@@ -1031,6 +966,9 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
                                   table.insert().execute, data)
 
     def _pre_upgrade_185(self, engine):
+        fake_instances = [dict(uuid='m185-uuid1')]
+        instances = db_utils.get_table(engine, 'instances')
+        engine.execute(instances.insert(), fake_instances)
         self._unique_constraint_check_migrate_185(engine, False)
 
     def check_185(self, engine):
