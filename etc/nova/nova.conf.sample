@@ -1153,6 +1153,11 @@
 # dropped. (string value)
 #iptables_drop_action=DROP
 
+# Amount of time, in seconds, that ovs_vsctl should wait for a
+# response from the database. 0 is to wait forever. (integer
+# value)
+#ovs_vsctl_timeout=120
+
 
 #
 # Options defined in nova.network.manager

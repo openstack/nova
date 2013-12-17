@@ -123,6 +123,10 @@ linux_net_opts = [
                default='DROP',
                help=('The table that iptables to jump to when a packet is '
                      'to be dropped.')),
+    cfg.IntOpt('ovs_vsctl_timeout',
+               default=120,
+               help='Amount of time, in seconds, that ovs_vsctl should wait '
+                    'for a response from the database. 0 is to wait forever.'),
     ]
 
 CONF = cfg.CONF
@@ -1272,20 +1276,28 @@ def _create_veth_pair(dev1_name, dev2_name):
                       run_as_root=True)
 
 
+def _ovs_vsctl(args):
+    full_args = ['ovs-vsctl', '--timeout=%s' % CONF.ovs_vsctl_timeout] + args
+    try:
+        return utils.execute(*full_args, run_as_root=True)
+    except Exception as e:
+        LOG.error(_("Unable to execute %(cmd)s. Exception: %(exception)s"),
+                  {'cmd': full_args, 'exception': e})
+        raise exception.AgentError(method=full_args)
+
+
 def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
-    utils.execute('ovs-vsctl', '--', '--may-exist', 'add-port',
-                  bridge, dev,
-                  '--', 'set', 'Interface', dev,
-                  'external-ids:iface-id=%s' % iface_id,
-                  'external-ids:iface-status=active',
-                  'external-ids:attached-mac=%s' % mac,
-                  'external-ids:vm-uuid=%s' % instance_id,
-                  run_as_root=True)
+    _ovs_vsctl(['--', '--may-exist', 'add-port',
+                bridge, dev,
+                '--', 'set', 'Interface', dev,
+                'external-ids:iface-id=%s' % iface_id,
+                'external-ids:iface-status=active',
+                'external-ids:attached-mac=%s' % mac,
+                'external-ids:vm-uuid=%s' % instance_id])
 
 
 def delete_ovs_vif_port(bridge, dev):
-    utils.execute('ovs-vsctl', 'del-port', bridge, dev,
-                  run_as_root=True)
+    _ovs_vsctl(['del-port', bridge, dev])
     delete_net_dev(dev)
 
 
@@ -1700,16 +1712,14 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
         dev = self.get_dev(network)
         if not device_exists(dev):
             bridge = CONF.linuxnet_ovs_integration_bridge
-            _execute('ovs-vsctl',
-                     '--', '--may-exist', 'add-port', bridge, dev,
-                     '--', 'set', 'Interface', dev, 'type=internal',
-                     '--', 'set', 'Interface', dev,
-                     'external-ids:iface-id=%s' % dev,
-                     '--', 'set', 'Interface', dev,
-                     'external-ids:iface-status=active',
-                     '--', 'set', 'Interface', dev,
-                     'external-ids:attached-mac=%s' % mac_address,
-                     run_as_root=True)
+            _ovs_vsctl(['--', '--may-exist', 'add-port', bridge, dev,
+                        '--', 'set', 'Interface', dev, 'type=internal',
+                        '--', 'set', 'Interface', dev,
+                        'external-ids:iface-id=%s' % dev,
+                        '--', 'set', 'Interface', dev,
+                        'external-ids:iface-status=active',
+                        '--', 'set', 'Interface', dev,
+                        'external-ids:attached-mac=%s' % mac_address])
             _execute('ip', 'link', 'set', dev, 'address', mac_address,
                      run_as_root=True)
             if CONF.network_device_mtu:
@@ -1741,8 +1751,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
     def unplug(self, network):
         dev = self.get_dev(network)
         bridge = CONF.linuxnet_ovs_integration_bridge
-        _execute('ovs-vsctl', '--', '--if-exists', 'del-port',
-                 bridge, dev, run_as_root=True)
+        _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
         return dev
 
     def get_dev(self, network):
