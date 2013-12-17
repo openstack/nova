@@ -2847,6 +2847,23 @@ class LibvirtConnTestCase(test.TestCase):
             ]
         self.assertEquals(gotFiles, wantFiles)
 
+    def test_create_ephemeral_default(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs.ext3', '-L', 'myVol', '-F',
+                      '/dev/something', run_as_root=True)
+        self.mox.ReplayAll()
+        conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               max_size=20)
+
+    def test_create_swap_default(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkswap', '/dev/something')
+        self.mox.ReplayAll()
+
+        conn._create_swap('/dev/something', 1, max_size=20)
+
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'
 
