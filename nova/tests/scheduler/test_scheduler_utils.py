@@ -15,6 +15,7 @@
 """
 Tests For Scheduler Utils
 """
+import mock
 import mox
 from oslo.config import cfg
 
@@ -26,6 +27,7 @@ from nova import notifications
 from nova import notifier as notify
 from nova.scheduler import utils as scheduler_utils
 from nova import test
+from nova.tests import fake_instance
 
 CONF = cfg.CONF
 
@@ -50,6 +52,20 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         request_spec = scheduler_utils.build_request_spec(self.context, image,
                                                           [instance])
         self.assertEqual({}, request_spec['image'])
+
+    @mock.patch.object(flavors, 'extract_flavor')
+    @mock.patch.object(db, 'flavor_extra_specs_get')
+    def test_build_request_spec_with_object(self, flavor_extra_specs_get,
+                                            extract_flavor):
+        instance_type = {'flavorid': 'fake-id'}
+        instance = fake_instance.fake_instance_obj(self.context)
+
+        extract_flavor.return_value = instance_type
+        flavor_extra_specs_get.return_value = []
+
+        request_spec = scheduler_utils.build_request_spec(self.context, None,
+                                                          [instance])
+        self.assertTrue(isinstance(request_spec['instance_properties'], dict))
 
     def _test_set_vm_state_and_notify(self, request_spec,
                                       expected_uuids):

@@ -20,7 +20,6 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova import exception
 from nova.image import glance
-from nova.objects import base as obj_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import rpcapi as scheduler_rpcapi
@@ -152,9 +151,8 @@ class LiveMigrationTask(object):
                                                      self.image_service,
                                                      self.instance.image_ref,
                                                      self.instance)
-        instance_p = obj_base.obj_to_primitive(self.instance)
         request_spec = scheduler_utils.build_request_spec(self.context, image,
-                                                          [instance_p])
+                                                          [self.instance])
 
         host = None
         while host is None:
