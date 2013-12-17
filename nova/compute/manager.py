@@ -415,7 +415,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.3'
+    RPC_API_VERSION = '3.4'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2103,6 +2103,7 @@ class ComputeManager(manager.Manager):
                 task_state=None)
         self._notify_about_instance_usage(context, instance, "restore.end")
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2116,7 +2117,7 @@ class ComputeManager(manager.Manager):
         remakes the VM with given 'metadata' and 'personalities'.
 
         :param context: `nova.RequestContext` object
-        :param instance: Instance dict
+        :param instance: Instance object
         :param orig_image_ref: Original image_ref before rebuild
         :param image_ref: New image_ref for rebuild
         :param injected_files: Files to inject
@@ -2130,8 +2131,8 @@ class ComputeManager(manager.Manager):
         """
         context = context.elevated()
 
-        orig_vm_state = instance['vm_state']
-        with self._error_out_instance_on_exception(context, instance['uuid']):
+        orig_vm_state = instance.vm_state
+        with self._error_out_instance_on_exception(context, instance.uuid):
             LOG.audit(_("Rebuilding instance"), context=context,
                       instance=instance)
 
@@ -2152,7 +2153,7 @@ class ComputeManager(manager.Manager):
                     LOG.info(_('disk on shared storage, recreating using'
                                ' existing disk'))
                 else:
-                    image_ref = orig_image_ref = instance['image_ref']
+                    image_ref = orig_image_ref = instance.image_ref
                     LOG.info(_("disk not on shared storagerebuilding from:"
                                " '%s'") % str(image_ref))
 
@@ -2167,9 +2168,9 @@ class ComputeManager(manager.Manager):
                     LOG.exception(_('Failed to get compute_info for %s') %
                                   self.host)
                 finally:
-                    instance = self._instance_update(
-                            context, instance['uuid'], host=self.host,
-                            node=node_name)
+                    instance.host = self.host
+                    instance.node = node_name
+                    instance.save()
 
             if image_ref:
                 image_meta = _get_image_meta(context, image_ref)
@@ -2181,7 +2182,8 @@ class ComputeManager(manager.Manager):
             # to point to the new one... we have to override it.
             orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
-            self.conductor_api.notify_usage_exists(context, instance,
+            self.conductor_api.notify_usage_exists(context,
+                    obj_base.obj_to_primitive(instance),
                     current_period=True, system_metadata=orig_sys_metadata,
                     extra_usage_info=extra_usage_info)
 
@@ -2190,11 +2192,9 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(context, instance,
                     "rebuild.start", extra_usage_info=extra_usage_info)
 
-            instance = self._instance_update(
-                    context, instance['uuid'],
-                    power_state=self._get_power_state(context, instance),
-                    task_state=task_states.REBUILDING,
-                    expected_task_state=task_states.REBUILDING)
+            instance.power_state = self._get_power_state(context, instance)
+            instance.task_state = task_states.REBUILDING
+            instance.save(expected_task_state=[task_states.REBUILDING])
 
             if recreate:
                 self.network_api.setup_networks_on_host(
@@ -2205,7 +2205,7 @@ class ComputeManager(manager.Manager):
             if bdms is None:
                 bdms = self.conductor_api.\
                         block_device_mapping_get_all_by_instance(
-                                context, instance)
+                                context, obj_base.obj_to_primitive(instance))
 
             # NOTE(sirp): this detach is necessary b/c we will reattach the
             # volumes in _prep_block_devices below.
@@ -2220,44 +2220,36 @@ class ComputeManager(manager.Manager):
                                     network_info,
                                     block_device_info=block_device_info)
 
-            instance = self._instance_update(
-                    context, instance['uuid'],
-                    task_state=task_states.REBUILD_BLOCK_DEVICE_MAPPING,
-                    expected_task_state=task_states.REBUILDING)
+            instance.task_state = task_states.REBUILD_BLOCK_DEVICE_MAPPING
+            instance.save(expected_task_state=[task_states.REBUILDING])
 
             block_device_info = self._prep_block_device(
                     context, instance, bdms)
 
             files = self._decode_files(injected_files)
 
-            instance = self._instance_update(
-                    context, instance['uuid'],
-                    task_state=task_states.REBUILD_SPAWNING,
-                    expected_task_state=
-                        task_states.REBUILD_BLOCK_DEVICE_MAPPING)
+            instance.task_state = task_states.REBUILD_SPAWNING
+            instance.save(expected_task_state=[
+                    task_states.REBUILD_BLOCK_DEVICE_MAPPING])
 
             self.driver.spawn(context, instance, image_meta,
                               files, new_pass,
                               network_info=network_info,
                               block_device_info=block_device_info)
 
-            instance = self._instance_update(
-                    context, instance['uuid'],
-                    power_state=self._get_power_state(context, instance),
-                    vm_state=vm_states.ACTIVE,
-                    task_state=None,
-                    expected_task_state=task_states.REBUILD_SPAWNING,
-                    launched_at=timeutils.utcnow())
+            instance.power_state = self._get_power_state(context, instance)
+            instance.vm_state = vm_states.ACTIVE
+            instance.task_state = None
+            instance.launched_at = timeutils.utcnow()
+            instance.save(expected_task_state=[task_states.REBUILD_SPAWNING])
 
             LOG.info(_("bringing vm to original state: '%s'") % orig_vm_state)
             if orig_vm_state == vm_states.STOPPED:
-                instance = self._instance_update(context, instance['uuid'],
-                                 vm_state=vm_states.ACTIVE,
-                                 task_state=task_states.POWERING_OFF,
-                                 progress=0)
-                inst_obj = instance_obj.Instance.get_by_uuid(context,
-                                                             instance['uuid'])
-                self.stop_instance(context, inst_obj)
+                instance.vm_state = vm_states.ACTIVE
+                instance.task_state = task_states.POWERING_OFF
+                instance.progress = 0
+                instance.save()
+                self.stop_instance(context, instance)
 
             self._notify_about_instance_usage(
                     context, instance, "rebuild.end",

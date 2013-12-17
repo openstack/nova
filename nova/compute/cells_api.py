@@ -47,7 +47,8 @@ class ComputeRPCAPIRedirect(object):
                         'unpause_instance', 'revert_resize',
                         'confirm_resize', 'reset_network',
                         'inject_network_info',
-                        'backup_instance', 'snapshot_instance']
+                        'backup_instance', 'snapshot_instance',
+                        'rebuild_instance']
 
     def __init__(self, cells_rpcapi):
         self.cells_rpcapi = cells_rpcapi
@@ -222,13 +223,6 @@ class ComputeCellsAPI(compute_api.API):
         """Force delete a previously deleted (but not reclaimed) instance."""
         super(ComputeCellsAPI, self).force_delete(context, instance)
         self._cast_to_cells(context, instance, 'force_delete')
-
-    @check_instance_cell
-    def rebuild(self, context, instance, *args, **kwargs):
-        """Rebuild the given instance with the provided attributes."""
-        super(ComputeCellsAPI, self).rebuild(context, instance, *args,
-                **kwargs)
-        self._cast_to_cells(context, instance, 'rebuild', *args, **kwargs)
 
     @check_instance_cell
     def evacuate(self, context, instance, *args, **kwargs):

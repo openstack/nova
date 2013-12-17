@@ -27,6 +27,7 @@ from nova.compute import vm_states
 from nova import db
 from nova import exception
 from nova.image import glance
+from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -453,12 +454,18 @@ class ServerActionsControllerTest(test.TestCase):
     def test_rebuild_proper_kernel_ram(self):
         instance_meta = {'kernel_id': None, 'ramdisk_id': None}
 
-        def fake_show(*args, **kwargs):
-            instance_meta['kernel_id'] = kwargs.get('kernel_id')
-            instance_meta['ramdisk_id'] = kwargs.get('ramdisk_id')
-            inst = fakes.stub_instance(INSTANCE_IDS[FAKE_UUID],
-                                       host='fake_host')
+        orig_get = compute_api.API.get
+
+        def wrap_get(*args, **kwargs):
+            inst = orig_get(*args, **kwargs)
+            instance_meta['instance'] = inst
             return inst
+
+        def fake_save(context, **kwargs):
+            instance = instance_meta['instance']
+            for key in instance_meta.keys():
+                if key in instance.obj_what_changed():
+                    instance_meta[key] = instance[key]
 
         def return_image_meta(*args, **kwargs):
             image_meta_table = {
@@ -477,7 +484,8 @@ class ServerActionsControllerTest(test.TestCase):
             return image_meta
 
         self.stubs.Set(fake._FakeImageService, 'show', return_image_meta)
-        self.stubs.Set(compute_api.API, 'update', fake_show)
+        self.stubs.Set(compute_api.API, 'get', wrap_get)
+        self.stubs.Set(instance_obj.Instance, 'save', fake_save)
         body = {
             "rebuild": {
                 "image_ref": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
@@ -485,8 +493,8 @@ class ServerActionsControllerTest(test.TestCase):
         }
         req = fakes.HTTPRequestV3.blank(self.url)
         self.controller._action_rebuild(req, FAKE_UUID, body).obj
-        self.assertEqual(instance_meta['kernel_id'], 1)
-        self.assertEqual(instance_meta['ramdisk_id'], 2)
+        self.assertEqual(instance_meta['kernel_id'], '1')
+        self.assertEqual(instance_meta['ramdisk_id'], '2')
 
     def test_resize_server(self):
 

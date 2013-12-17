@@ -85,6 +85,8 @@ class CellsAPI(rpcclient.RpcProxy):
         ... Havana supports message version 1.24.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.24.
+
+        1.25 - Adds rebuild_instance()
     '''
     BASE_RPC_API_VERSION = '1.0'
 
@@ -571,3 +573,16 @@ class CellsAPI(rpcclient.RpcProxy):
                    image_id=image_id,
                    backup_type=backup_type,
                    rotation=rotation)
+
+    def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
+                         image_ref, orig_image_ref, orig_sys_metadata, bdms,
+                         recreate=False, on_shared_storage=False, host=None,
+                         kwargs=None):
+        if not CONF.cells.enable:
+            return
+
+        cctxt = self.client.prepare(version='1.25')
+        cctxt.cast(ctxt, 'rebuild_instance',
+                   instance=instance, image_href=image_ref,
+                   admin_password=new_pass, files_to_inject=injected_files,
+                   kwargs=kwargs)
