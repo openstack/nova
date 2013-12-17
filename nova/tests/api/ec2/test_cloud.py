@@ -45,7 +45,11 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova.network import api as network_api
+from nova.network import model
 from nova.network import neutronv2
+from nova.objects import instance as instance_obj
+from nova.objects import instance_info_cache as instance_info_cache_obj
+from nova.objects import security_group as security_group_obj
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova import test
@@ -99,7 +103,7 @@ def get_fake_cache(get_floating):
         info[0]['network']['subnets'].append({'cidr': 'fe80:b33f::/64',
                                               'ips': [_ip(ipv6_addr)]})
 
-    return info
+    return model.NetworkInfo.hydrate(info)
 
 
 def get_instances_with_cached_ips(orig_func, get_floating,
@@ -108,13 +112,18 @@ def get_instances_with_cached_ips(orig_func, get_floating,
     entries
     """
     instances = orig_func(*args, **kwargs)
-    if isinstance(instances, list):
-        for instance in instances:
-            instance['info_cache'] = {'network_info':
-                                     get_fake_cache(get_floating)}
+
+    if kwargs.get('want_objects', False):
+        info_cache = instance_info_cache_obj.InstanceInfoCache()
+        info_cache.network_info = get_fake_cache(get_floating)
     else:
-        instances['info_cache'] = {'network_info':
-                                  get_fake_cache(get_floating)}
+        info_cache = {'network_info': get_fake_cache(get_floating)}
+
+    if isinstance(instances, (list, instance_obj.InstanceList)):
+        for instance in instances:
+            instance['info_cache'] = info_cache
+    else:
+        instances['info_cache'] = info_cache
     return instances
 
 
@@ -2423,24 +2432,29 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        self._fake_bdm_get)
 
-        def fake_get(ctxt, instance_id):
+        def fake_get(ctxt, instance_id, want_objects=False):
+            self.assertTrue(want_objects)
             inst_type = flavors.get_default_flavor()
             inst_type['name'] = 'fake_type'
             sys_meta = flavors.save_flavor_info({}, inst_type)
-            sys_meta = utils.dict_to_metadata(sys_meta)
-            return {
-                'id': 0,
-                'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
-                'root_device_name': '/dev/sdh',
-                'security_groups': [{'name': 'fake0'}, {'name': 'fake1'}],
-                'vm_state': vm_states.STOPPED,
-                'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
-                'ramdisk_id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                'user_data': 'fake-user data',
-                'shutdown_terminate': False,
-                'disable_terminate': False,
-                'system_metadata': sys_meta,
-                }
+            secgroups = security_group_obj.SecurityGroupList()
+            secgroups.objects.append(
+                security_group_obj.SecurityGroup(name='fake0'))
+            secgroups.objects.append(
+                security_group_obj.SecurityGroup(name='fake1'))
+            instance = instance_obj.Instance()
+            instance.id = 0
+            instance.uuid = 'e5fe5518-0288-4fa3-b0c4-c79764101b85'
+            instance.root_device_name = '/dev/sdh'
+            instance.security_groups = secgroups
+            instance.vm_state = vm_states.STOPPED
+            instance.kernel_id = 'cedef40a-ed67-4d10-800e-17455edce175'
+            instance.ramdisk_id = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
+            instance.user_data = 'fake-user data'
+            instance.shutdown_terminate = False
+            instance.disable_terminate = False
+            instance.system_metadata = sys_meta
+            return instance
         self.stubs.Set(self.cloud.compute_api, 'get', fake_get)
 
         def fake_get_instance_uuid_by_ec2_id(ctxt, int_id):
