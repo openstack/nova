@@ -318,7 +318,7 @@ class VMOps(object):
                         None, instance['name'], device_name)
 
         self._session.call_xenapi('VM.start_on', vm_ref,
-                                  self._session.get_xenapi_host(),
+                                  self._session.host_ref,
                                   False, False)
 
         # Allow higher-layers a chance to detach bad-volumes as well (in order
@@ -1856,7 +1856,7 @@ class VMOps(object):
         return self._session.call_xenapi("host.get_by_uuid", host_uuid)
 
     def _migrate_receive(self, ctxt):
-        destref = self._session.get_xenapi_host()
+        destref = self._session.host_ref
         # Get the network to for migrate.
         # This is the one associated with the pif marked management. From cli:
         # uuid=`xe pif-list --minimal management=true`

@@ -59,7 +59,7 @@ class Host(object):
             return 'off_maintenance'
         host_list = [host_ref for host_ref in
                      self._session.call_xenapi('host.get_all')
-                     if host_ref != self._session.get_xenapi_host()]
+                     if host_ref != self._session.host_ref]
         migrations_counter = vm_counter = 0
         ctxt = context.get_admin_context()
         for vm_ref, vm_rec in vm_utils.list_vms(self._session):

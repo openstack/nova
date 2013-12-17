@@ -71,6 +71,7 @@ class XenAPISession(object):
         url = self._create_first_session(url, user, pw, exception)
         self._populate_session_pool(url, user, pw, exception)
         self.host_uuid = self._get_host_uuid()
+        self.host_ref = self._get_host_ref()
         self.product_version, self.product_brand = \
             self._get_product_version_and_brand()
 
@@ -145,8 +146,7 @@ class XenAPISession(object):
         return product_version, product_brand
 
     def _get_software_version(self):
-        host = self.get_xenapi_host()
-        return self.call_xenapi('host.get_software_version', host)
+        return self.call_xenapi('host.get_software_version', self.host_ref)
 
     def get_session_id(self):
         """Return a string session_id.  Used for vnc consoles."""
@@ -162,7 +162,7 @@ class XenAPISession(object):
         finally:
             self._sessions.put(session)
 
-    def get_xenapi_host(self):
+    def _get_host_ref(self):
         """Return the xenapi host on which nova-compute runs on."""
         with self._get_session() as session:
             return session.xenapi.host.get_by_uuid(self.host_uuid)
@@ -174,12 +174,6 @@ class XenAPISession(object):
 
     def call_plugin(self, plugin, fn, args):
         """Call host.call_plugin on a background thread."""
-        # NOTE(johannes): Fetch host before we acquire a session. Since
-        # get_xenapi_host() acquires a session too, it can result in a
-        # deadlock if multiple greenthreads race with each other. See
-        # bug 924918
-        host = self.get_xenapi_host()
-
         # NOTE(armando): pass the host uuid along with the args so that
         # the plugin gets executed on the right host when using XS pools
         args['host_uuid'] = self.host_uuid
@@ -187,7 +181,7 @@ class XenAPISession(object):
         with self._get_session() as session:
             return self._unwrap_plugin_exceptions(
                                  session.xenapi.host.call_plugin,
-                                 host, plugin, fn, args)
+                                 self.host_ref, plugin, fn, args)
 
     def call_plugin_serialized(self, plugin, fn, *args, **kwargs):
         params = {'params': pickle.dumps(dict(args=args, kwargs=kwargs))}
