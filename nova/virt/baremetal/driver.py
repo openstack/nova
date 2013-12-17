@@ -497,7 +497,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
     def manage_image_cache(self, context, all_instances):
         """Manage the local cache of images."""
-        self.image_cache_manager.verify_base_images(context, all_instances)
+        self.image_cache_manager.update(context, all_instances)
 
     def get_console_output(self, context, instance):
         node = _get_baremetal_node_by_instance_uuid(instance.uuid)
