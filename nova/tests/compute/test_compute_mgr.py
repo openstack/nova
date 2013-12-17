@@ -772,6 +772,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, dest_check_data)
         if do_raise:
             mock_meth.AndRaise(test.TestingException())
+            self.mox.StubOutWithMock(self.compute.conductor_api,
+                    'instance_fault_create')
+            self.compute.conductor_api.instance_fault_create(self.context,
+                    mox.IgnoreArg())
         else:
             mock_meth.AndReturn(mig_data)
         self.compute.driver.check_can_live_migrate_destination_cleanup(
