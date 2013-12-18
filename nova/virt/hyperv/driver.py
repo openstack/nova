@@ -117,6 +117,11 @@ class HyperVDriver(driver.ComputeDriver):
                                               post_method, recover_method,
                                               block_migration, migrate_data)
 
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               network_info,
+                                               block_device_info):
+        self.destroy(context, instance, network_info, block_device_info)
+
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk, migrate_data=None):
         self._livemigrationops.pre_live_migration(context, instance,

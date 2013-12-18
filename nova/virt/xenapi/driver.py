@@ -547,6 +547,15 @@ class XenAPIDriver(driver.ComputeDriver):
         self._vmops.live_migrate(ctxt, instance_ref, dest, post_method,
                                  recover_method, block_migration, migrate_data)
 
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               network_info,
+                                               block_device_info):
+        # NOTE(johngarbutt) Destroying the VM is not appropriate here
+        # and in the cases where it might make sense,
+        # XenServer has already done it.
+        # TODO(johngarbutt) investigate if any cleanup is required here
+        pass
+
     def pre_live_migration(self, context, instance_ref, block_device_info,
                            network_info, data, migrate_data=None):
         """Preparation live migration.

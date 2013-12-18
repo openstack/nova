@@ -4427,7 +4427,8 @@ class ComputeManager(manager.Manager):
         #             from remote volumes if necessary
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
-        self.driver.destroy(context, instance, network_info, block_device_info)
+        self.driver.rollback_live_migration_at_destination(context, instance,
+                        network_info, block_device_info)
         self._notify_about_instance_usage(
                         context, instance, "live_migration.rollback.dest.end",
                         network_info=network_info)

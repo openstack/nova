@@ -4991,6 +4991,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(c, instance,
                                                         self.compute.host,
                                                         teardown=True)
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'rollback_live_migration_at_destination')
+        self.compute.driver.rollback_live_migration_at_destination(c,
+                instance, [], {'block_device_mapping': []})
 
         # start test
         self.mox.ReplayAll()

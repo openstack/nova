@@ -25,6 +25,7 @@ import mox
 import os
 import re
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -3661,6 +3662,15 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 
         self.assertEqual({"vdi0": "dest_sr_ref",
                           "vdi1": "dest_sr_ref"}, result)
+
+    def test_rollback_live_migration_at_destination(self):
+        stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)
+        conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+
+        with mock.patch.object(conn, "destroy") as mock_destroy:
+            conn.rollback_live_migration_at_destination("context",
+                    "instance", [], None)
+            self.assertFalse(mock_destroy.called)
 
 
 class XenAPIInjectMetadataTestCase(stubs.XenAPITestBaseNoDB):
