@@ -496,6 +496,11 @@ class ConductorAPI(rpcclient.RpcProxy):
         return cctxt.call(context, 'object_action', objinst=objinst,
                           objmethod=objmethod, args=args, kwargs=kwargs)
 
+    def object_backport(self, context, objinst, target_version):
+        cctxt = self.client.prepare(version='1.62')
+        return cctxt.call(context, 'object_backport', objinst=objinst,
+                          target_version=target_version)
+
 
 class ComputeTaskAPI(rpcclient.RpcProxy):
     """Client side of the conductor 'compute' namespaced RPC API
