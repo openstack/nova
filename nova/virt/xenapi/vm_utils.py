@@ -47,6 +47,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
+from nova.openstack.common import versionutils
 from nova.openstack.common import xmlutils
 from nova import unit
 from nova import utils
@@ -238,8 +239,8 @@ def get_vm_device_id(session, image_properties):
 
 
 def _hypervisor_supports_device_id(version):
-    hypervisor_major_minor_version = utils.get_major_minor_version(version)
-    return(hypervisor_major_minor_version >= 6.1)
+    version_as_string = '.'.join(str(v) for v in version)
+    return(versionutils.is_compatible('6.1', version_as_string))
 
 
 def create_vm(session, instance, name_label, kernel, ramdisk,
