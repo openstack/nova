@@ -21,6 +21,8 @@ from nova.compute import utils as compute_utils
 from nova import db
 from nova import notifications
 from nova import notifier as notify
+from nova.objects import base as obj_base
+from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -35,6 +37,9 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
     type.
     """
     instance = instances[0]
+    if isinstance(instance, instance_obj.Instance):
+        instance = obj_base.obj_to_primitive(instance)
+
     if instance_type is None:
         instance_type = flavors.extract_flavor(instance)
     # NOTE(comstud): This is a bit ugly, but will get cleaned up when
