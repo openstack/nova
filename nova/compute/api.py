@@ -1718,7 +1718,6 @@ class API(base.Base):
 
         self.compute_rpcapi.stop_instance(context, instance, do_cast=do_cast)
 
-    @wrap_check_policy
     @check_instance_lock
     @check_instance_host
     @check_instance_cell
@@ -1729,7 +1728,6 @@ class API(base.Base):
         """Stop an instance."""
         self.force_stop(context, instance, do_cast)
 
-    @wrap_check_policy
     @check_instance_lock
     @check_instance_host
     @check_instance_cell

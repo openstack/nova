@@ -11,6 +11,8 @@
     "compute:create:forced_host": "is_admin:True",
     "compute:get_all": "",
     "compute:get_all_tenants": "",
+    "compute:start": "rule:admin_or_owner",
+    "compute:stop": "rule:admin_or_owner",
     "compute:unlock_override": "rule:admin_api",
 
     "compute:shelve": "",
@@ -21,6 +23,8 @@
     "compute:volume_snapshot_delete": "",
 
     "admin_api": "is_admin:True",
+    "compute:v3:servers:start": "rule:admin_or_owner",
+    "compute:v3:servers:stop": "rule:admin_or_owner",
     "compute_extension:v3:os-access-ips:discoverable": "",
     "compute_extension:v3:os-access-ips": "",
     "compute_extension:accounts": "rule:admin_api",

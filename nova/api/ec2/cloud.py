@@ -28,6 +28,7 @@ from oslo.config import cfg
 from nova.api.ec2 import ec2utils
 from nova.api.ec2 import inst_state
 from nova.api.metadata import password
+from nova.api.openstack import extensions
 from nova.api import validator
 from nova import availability_zones
 from nova import block_device
@@ -1406,6 +1407,7 @@ class CloudController(object):
         instances = self._ec2_ids_to_instances(context, instance_id, True)
         LOG.debug(_("Going to stop instances"))
         for instance in instances:
+            extensions.check_compute_policy(context, 'stop', instance)
             self.compute_api.stop(context, instance)
         return True
 
@@ -1416,6 +1418,7 @@ class CloudController(object):
         instances = self._ec2_ids_to_instances(context, instance_id, True)
         LOG.debug(_("Going to start instances"))
         for instance in instances:
+            extensions.check_compute_policy(context, 'start', instance)
             self.compute_api.start(context, instance)
         return True
 
