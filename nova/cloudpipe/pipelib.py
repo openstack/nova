@@ -45,8 +45,6 @@ cloudpipe_opts = [
                default='0',
                help='image id used when starting up a cloudpipe vpn server'),
     cfg.StrOpt('vpn_flavor',
-               # Deprecated in Havana
-               deprecated_name='vpn_instance_type',
                default='m1.tiny',
                help=_('Flavor for vpn instances')),
     cfg.StrOpt('boot_script_template',
