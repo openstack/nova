@@ -3769,8 +3769,13 @@ class LibvirtDriver(driver.ComputeDriver):
                     if fun_cap.type == 'virt_functions':
                         return {'dev_type': 'type-PF'}
                     if fun_cap.type == 'phys_function':
+                        phys_address = "%s:%s:%s.%s" % (
+                            fun_cap.device_addrs[0][0].replace("0x", ''),
+                            fun_cap.device_addrs[0][1].replace("0x", ''),
+                            fun_cap.device_addrs[0][2].replace("0x", ''),
+                            fun_cap.device_addrs[0][3].replace("0x", ''))
                         return {'dev_type': 'type-VF',
-                                'phys_function': fun_cap.device_addrs}
+                                'phys_function': phys_address}
             return {'dev_type': 'type-PCI'}
 
         virtdev = self._conn.nodeDeviceLookupByName(devname)
