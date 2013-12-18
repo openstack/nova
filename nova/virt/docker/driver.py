@@ -59,11 +59,6 @@ LOG = log.getLogger(__name__)
 class DockerDriver(driver.ComputeDriver):
     """Docker hypervisor driver."""
 
-    capabilities = {
-        'has_imagecache': True,
-        'supports_recreate': True,
-    }
-
     def __init__(self, virtapi):
         super(DockerDriver, self).__init__(virtapi)
         self._docker = None
