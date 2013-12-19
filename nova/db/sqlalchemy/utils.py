@@ -576,16 +576,8 @@ def _drop_index(migrate_engine, table, index_name, idx_columns):
 
 def _change_index_columns(migrate_engine, table, index_name,
                           new_columns, old_columns):
-    if _index_exists(migrate_engine, table.name, index_name):
-        Index(
-            index_name,
-            *[getattr(table.c, col) for col in old_columns]
-        ).drop(migrate_engine)
-
-    Index(
-        index_name,
-        *[getattr(table.c, col) for col in new_columns]
-    ).create()
+    _drop_index(migrate_engine, table, index_name, old_columns)
+    _add_index(migrate_engine, table, index_name, new_columns)
 
 
 def modify_indexes(migrate_engine, data, upgrade=True):
