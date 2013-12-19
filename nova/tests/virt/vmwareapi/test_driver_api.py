@@ -288,7 +288,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self.image = {
             'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',
-            'disk_format': 'vhd',
+            'disk_format': 'vmdk',
             'size': 512,
         }
         nova.tests.image.fake.stub_out_image_service(self.stubs)
@@ -501,6 +501,77 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.ds)
         self.assertTrue(vmwareapi_fake.get_file(file))
         self.assertTrue(vmwareapi_fake.get_file(root))
+
+    def test_iso_disk_type_created(self):
+        self.image['disk_format'] = 'iso'
+        self._create_vm()
+        file = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' %
+                self.ds)
+        self.assertTrue(vmwareapi_fake.get_file(file))
+        vmdk_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
+        self.assertTrue(vmwareapi_fake.get_file(vmdk_file_path))
+
+    def test_iso_disk_cdrom_attach(self):
+        self.iso_path = (
+            '[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' % self.ds)
+
+        def fake_attach_cdrom(vm_ref, instance, data_store_ref,
+                              iso_uploaded_path):
+            self.assertEqual(iso_uploaded_path, self.iso_path)
+
+        self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
+                       fake_attach_cdrom)
+        self.image['disk_format'] = 'iso'
+        self._create_vm()
+
+    def test_iso_disk_cdrom_attach_with_config_drive(self):
+        self.flags(force_config_drive=True)
+        self.iso_path = [
+            ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' %
+             self.ds),
+            '[%s] fake-config-drive' % self.ds]
+        self.iso_unit_nos = [0, 1]
+        self.iso_index = 0
+
+        def fake_create_config_drive(instance, injected_files, password,
+                                     data_store_name, folder, uuid, cookies):
+            return 'fake-config-drive'
+
+        def fake_attach_cdrom(vm_ref, instance, data_store_ref,
+                              iso_uploaded_path):
+            self.assertEqual(iso_uploaded_path, self.iso_path[self.iso_index])
+            self.iso_index += 1
+
+        self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
+                       fake_attach_cdrom)
+        self.stubs.Set(self.conn._vmops, '_create_config_drive',
+                       fake_create_config_drive)
+
+        self.image['disk_format'] = 'iso'
+        self._create_vm()
+        self.assertEqual(self.iso_index, 2)
+
+    def test_cdrom_attach_with_config_drive(self):
+        self.flags(force_config_drive=True)
+        self.iso_path = '[%s] fake-config-drive' % self.ds
+        self.cd_attach_called = False
+
+        def fake_create_config_drive(instance, injected_files, password,
+                                     data_store_name, folder, uuid, cookies):
+            return 'fake-config-drive'
+
+        def fake_attach_cdrom(vm_ref, instance, data_store_ref,
+                              iso_uploaded_path):
+            self.assertEqual(iso_uploaded_path, self.iso_path)
+            self.cd_attach_called = True
+
+        self.stubs.Set(self.conn._vmops, "_attach_cdrom_to_vm",
+                       fake_attach_cdrom)
+        self.stubs.Set(self.conn._vmops, '_create_config_drive',
+                       fake_create_config_drive)
+
+        self._create_vm()
+        self.assertTrue(self.cd_attach_called)
 
     def test_spawn(self):
         self._create_vm()
