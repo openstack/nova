@@ -2077,27 +2077,24 @@ class API(base.Base):
             system metadata.  These properties start with 'image_'.
             Then add the properties for the new image.
             """
+            # FIXME(comstud): There's a race condition here in that if
+            # the system_metadata for this instance is updated after
+            # we do the previous save() and before we update.. those
+            # other updates will be lost. Since this problem exists in
+            # a lot of other places, I think it should be addressed in
+            # a DB layer overhaul.
 
-            # FIXME(comstud): There's a race condition here in that
-            # if the system_metadata for this instance is updated
-            # after we do the get and before we update.. those other
-            # updates will be lost. Since this problem exists in a lot
-            # of other places, I think it should be addressed in a DB
-            # layer overhaul.
-            sys_metadata = self.db.instance_system_metadata_get(context,
-                    instance['uuid'])
-            orig_sys_metadata = dict(sys_metadata)
+            orig_sys_metadata = dict(instance.system_metadata)
             # Remove the old keys
-            for key in sys_metadata.keys():
+            for key in instance.system_metadata.keys():
                 if key.startswith(utils.SM_IMAGE_PROP_PREFIX):
-                    del sys_metadata[key]
+                    del instance.system_metadata[key]
 
             # Add the new ones
             new_sys_metadata = utils.get_system_metadata_from_image(
                 image, flavor)
 
-            sys_metadata.update(new_sys_metadata)
-            instance.system_metadata = sys_metadata
+            instance.system_metadata.update(new_sys_metadata)
             instance.save()
             return orig_sys_metadata
 
