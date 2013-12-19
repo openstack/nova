@@ -516,9 +516,8 @@ class ComputeAPI(rpcclient.RpcProxy):
         version = self._get_compat_version('3.0', '2.0')
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
-        return cctxt.call(ctxt,
-                          'post_live_migration_at_destination',
-                          instance=instance_p, block_migration=block_migration)
+        cctxt.cast(ctxt, 'post_live_migration_at_destination',
+            instance=instance_p, block_migration=block_migration)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):

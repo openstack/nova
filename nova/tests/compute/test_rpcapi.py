@@ -378,7 +378,7 @@ class ComputeRpcAPITestCase(test.TestCase):
                 migrate_data={}, version='2.0')
 
     def test_post_live_migration_at_destination(self):
-        self._test_compute_api('post_live_migration_at_destination', 'call',
+        self._test_compute_api('post_live_migration_at_destination', 'cast',
                 instance=self.fake_instance, block_migration='block_migration',
                 host='host')
 
