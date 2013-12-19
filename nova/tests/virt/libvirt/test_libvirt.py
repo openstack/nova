@@ -754,6 +754,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Test new verion of libvirt, should find the `aes' feature
         with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
+            mock_libvirt['VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES'] = 1
             # Cleanup the capabilities cache firstly
             conn._caps = None
             caps = conn.get_host_capabilities()
@@ -2971,37 +2972,42 @@ class LibvirtConnTestCase(test.TestCase):
             expected_uri = type_uri_map[virt_type][0]
             checks = type_uri_map[virt_type][1]
             self.flags(virt_type=virt_type, group='libvirt')
-            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-            self.assertEqual(conn.uri(), expected_uri)
+            with mock.patch('nova.virt.libvirt.driver.libvirt') as old_virt:
+                del old_virt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-            network_info = _fake_network_info(self.stubs, 1)
-            disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                                instance_ref,
-                                                rescue=rescue)
-            xml = conn.to_xml(self.context, instance_ref,
-                              network_info, disk_info, rescue=rescue)
-            tree = etree.fromstring(xml)
-            for i, (check, expected_result) in enumerate(checks):
-                self.assertEqual(check(tree),
-                                 expected_result,
-                                 '%s != %s failed check %d' %
-                                 (check(tree), expected_result, i))
+                conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
-            for i, (check, expected_result) in enumerate(common_checks):
-                self.assertEqual(check(tree),
-                                 expected_result,
-                                 '%s != %s failed common check %d' %
-                                 (check(tree), expected_result, i))
+                self.assertEqual(conn.uri(), expected_uri)
 
-            filterref = './devices/interface/filterref'
-            vif = network_info[0]
-            nic_id = vif['address'].replace(':', '')
-            fw = firewall.NWFilterFirewall(fake.FakeVirtAPI(), conn)
-            instance_filter_name = fw._instance_filter_name(instance_ref,
-                                                            nic_id)
-            self.assertEqual(tree.find(filterref).get('filter'),
-                             instance_filter_name)
+                network_info = _fake_network_info(self.stubs, 1)
+                disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                    instance_ref,
+                                                    rescue=rescue)
+                xml = conn.to_xml(self.context, instance_ref,
+                                network_info, disk_info, rescue=rescue)
+                tree = etree.fromstring(xml)
+                for i, (check, expected_result) in enumerate(checks):
+                    self.assertEqual(check(tree),
+                                    expected_result,
+                                    '%s != %s failed check %d' %
+                                    (check(tree), expected_result, i))
+
+                for i, (check, expected_result) in enumerate(common_checks):
+                    self.assertEqual(check(tree),
+                                    expected_result,
+                                    '%s != %s failed common check %d' %
+                                    (check(tree), expected_result, i))
+
+                filterref = './devices/interface/filterref'
+                vif = network_info[0]
+                nic_id = vif['address'].replace(':', '')
+                fw = firewall.NWFilterFirewall(fake.FakeVirtAPI(), conn)
+                instance_filter_name = fw._instance_filter_name(instance_ref,
+                                                                nic_id)
+                self.assertEqual(tree.find(filterref).get('filter'),
+                                 instance_filter_name)
+
         # This test is supposed to make sure we don't
         # override a specifically set uri
         #
@@ -3706,19 +3712,23 @@ class LibvirtConnTestCase(test.TestCase):
 
         # Start test
         self.mox.ReplayAll()
-        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn.firewall_driver,
-                       'setup_basic_filtering',
-                       fake_none)
-        self.stubs.Set(conn.firewall_driver,
-                       'prepare_instance_filter',
-                       fake_none)
-        self.stubs.Set(imagebackend.Image,
-                       'cache',
-                       fake_none)
 
-        conn.spawn(self.context, instance, None, [], 'herp',
-                       network_info=network_info)
+        with mock.patch('nova.virt.libvirt.driver.libvirt') as old_virt:
+            del old_virt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
+
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+            self.stubs.Set(conn.firewall_driver,
+                        'setup_basic_filtering',
+                        fake_none)
+            self.stubs.Set(conn.firewall_driver,
+                        'prepare_instance_filter',
+                        fake_none)
+            self.stubs.Set(imagebackend.Image,
+                        'cache',
+                        fake_none)
+
+            conn.spawn(self.context, instance, None, [], 'herp',
+                        network_info=network_info)
 
         path = os.path.join(CONF.instances_path, instance['name'])
         if os.path.isdir(path):
