@@ -661,10 +661,13 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
                                     dest, sr_path, 0)]
         self.assertEqual(m_vhd_expected, mock_migrate_vhd.call_args_list)
 
-        prog_expected = [mock.call(context, instance, 1, 5),
-                         mock.call(context, instance, 2, 5),
-                         mock.call(context, instance, 3, 5),
-                         mock.call(context, instance, 4, 5)]
+        prog_expected = [
+            mock.call(context, instance, 1, 5),
+            mock.call(context, instance, 2, 5),
+            mock.call(context, instance, 3, 5),
+            mock.call(context, instance, 4, 5)
+            # 5/5: step to be executed by finish migration.
+            ]
         self.assertEqual(prog_expected, mock_update_progress.call_args_list)
 
     def test_migrate_disk_resizing_up_works_with_two_ephemeral(self,
@@ -704,10 +707,13 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
                                     "5-leaf", dest, sr_path, 0, 2)]
         self.assertEqual(m_vhd_expected, mock_migrate_vhd.call_args_list)
 
-        prog_expected = [mock.call(context, instance, 1, 5),
-                         mock.call(context, instance, 2, 5),
-                         mock.call(context, instance, 3, 5),
-                         mock.call(context, instance, 4, 5)]
+        prog_expected = [
+            mock.call(context, instance, 1, 5),
+            mock.call(context, instance, 2, 5),
+            mock.call(context, instance, 3, 5),
+            mock.call(context, instance, 4, 5)
+            # 5/5: step to be executed by finish migration.
+            ]
         self.assertEqual(prog_expected, mock_update_progress.call_args_list)
 
     @mock.patch.object(vmops.VMOps, '_restore_orig_vm_and_cleanup_orphan')
@@ -846,3 +852,70 @@ class ResizeVdisTestCase(VMOpsTestBase):
                                             4, 2000)
         mock_generate.assert_called_once_with(self.vmops._session, instance,
                                               None, 5, 1000)
+
+
+@mock.patch.object(vmops.VMOps, '_resize_ensure_vm_is_shutdown')
+@mock.patch.object(vmops.VMOps, '_apply_orig_vm_name_label')
+@mock.patch.object(vmops.VMOps, '_update_instance_progress')
+@mock.patch.object(vm_utils, 'get_vdi_for_vm_safely')
+@mock.patch.object(vm_utils, 'resize_disk')
+@mock.patch.object(vm_utils, 'migrate_vhd')
+@mock.patch.object(vm_utils, 'destroy_vdi')
+class MigrateDiskResizingDownTestCase(VMOpsTestBase):
+    def test_migrate_disk_resizing_down_works_no_ephemeral(
+        self,
+        mock_destroy_vdi,
+        mock_migrate_vhd,
+        mock_resize_disk,
+        mock_get_vdi_for_vm_safely,
+        mock_update_instance_progress,
+        mock_apply_orig_vm_name_label,
+        mock_resize_ensure_vm_is_shutdown):
+
+        context = "ctx"
+        instance = {"name": "fake", "uuid": "uuid"}
+        dest = "dest"
+        vm_ref = "vm_ref"
+        sr_path = "sr_path"
+        instance_type = dict(root_gb=1)
+        old_vdi_ref = "old_ref"
+        new_vdi_ref = "new_ref"
+        new_vdi_uuid = "new_uuid"
+
+        mock_get_vdi_for_vm_safely.return_value = (old_vdi_ref, None)
+        mock_resize_disk.return_value = (new_vdi_ref, new_vdi_uuid)
+
+        self.vmops._migrate_disk_resizing_down(context, instance, dest,
+                                               instance_type, vm_ref, sr_path)
+
+        mock_get_vdi_for_vm_safely.assert_called_once_with(
+            self.vmops._session,
+            vm_ref)
+        mock_resize_ensure_vm_is_shutdown.assert_called_once_with(
+            instance, vm_ref)
+        mock_apply_orig_vm_name_label.assert_called_once_with(
+            instance, vm_ref)
+        mock_resize_disk.assert_called_once_with(
+            self.vmops._session,
+            instance,
+            old_vdi_ref,
+            instance_type)
+        mock_migrate_vhd.assert_called_once_with(
+            self.vmops._session,
+            instance,
+            new_vdi_uuid,
+            dest,
+            sr_path, 0)
+        mock_destroy_vdi.assert_called_once_with(
+            self.vmops._session,
+            new_vdi_ref)
+
+        prog_expected = [
+            mock.call(context, instance, 1, 5),
+            mock.call(context, instance, 2, 5),
+            mock.call(context, instance, 3, 5),
+            mock.call(context, instance, 4, 5)
+            # 5/5: step to be executed by finish migration.
+            ]
+        self.assertEqual(prog_expected,
+                         mock_update_instance_progress.call_args_list)

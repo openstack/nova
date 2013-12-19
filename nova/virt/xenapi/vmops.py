@@ -107,7 +107,8 @@ DEVICE_EPHEMERAL = '4'
 DEVICE_CD = '1'
 
 
-def make_step_decorator(context, instance, update_instance_progress):
+def make_step_decorator(context, instance, update_instance_progress,
+                        total_offset=0):
     """Factory to create a decorator that records instance progress as a series
     of discrete steps.
 
@@ -131,7 +132,7 @@ def make_step_decorator(context, instance, update_instance_progress):
     the current-step-count would be 1 giving a progress of ``1 / 2 *
     100`` or 50%.
     """
-    step_info = dict(total=0, current=0)
+    step_info = dict(total=total_offset, current=0)
 
     def bump_progress():
         step_info['current'] += 1
@@ -774,7 +775,8 @@ class VMOps(object):
     def _migrate_disk_resizing_down(self, context, instance, dest,
                                     flavor, vm_ref, sr_path):
         step = make_step_decorator(context, instance,
-                                   self._update_instance_progress)
+                                   self._update_instance_progress,
+                                   total_offset=1)
 
         @step
         def fake_step_to_match_resizing_up():
@@ -810,10 +812,6 @@ class VMOps(object):
             # Clean up VDI now that it's been copied
             vm_utils.destroy_vdi(self._session, new_vdi_ref)
 
-        @step
-        def fake_step_to_be_executed_by_finish_migration():
-            pass
-
         undo_mgr = utils.UndoManager()
         try:
             fake_step_to_match_resizing_up()
@@ -832,8 +830,10 @@ class VMOps(object):
 
     def _migrate_disk_resizing_up(self, context, instance, dest, vm_ref,
                                   sr_path):
-        step = make_step_decorator(context, instance,
-                                   self._update_instance_progress)
+        step = make_step_decorator(context,
+                                   instance,
+                                   self._update_instance_progress,
+                                   total_offset=1)
         """
         NOTE(johngarbutt) Understanding how resize up works.
 
@@ -958,10 +958,6 @@ class VMOps(object):
                     vm_utils.migrate_vhd(self._session, instance,
                                          ephemeral_vdi_uuid, dest,
                                          sr_path, 0, ephemeral_disk_number)
-
-        @step
-        def fake_step_to_be_executed_by_finish_migration():
-            pass
 
         self._apply_orig_vm_name_label(instance, vm_ref)
         try:
