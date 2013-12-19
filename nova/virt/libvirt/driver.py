@@ -44,6 +44,7 @@ import errno
 import eventlet
 import functools
 import glob
+import mmap
 import os
 import shutil
 import socket
@@ -2319,6 +2320,11 @@ class LibvirtDriver(driver.ComputeDriver):
         hasDirectIO = True
         try:
             f = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
+            # Check is the write allowed with 512 byte alignment
+            align_size = 512
+            m = mmap.mmap(-1, align_size)
+            m.write(r"x" * align_size)
+            os.write(f, m)
             os.close(f)
             LOG.debug(_("Path '%(path)s' supports direct I/O") %
                       {'path': dirpath})
