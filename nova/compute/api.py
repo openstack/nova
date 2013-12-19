@@ -2715,7 +2715,8 @@ class API(base.Base):
                                     vm_states.SUSPENDED, vm_states.STOPPED,
                                     vm_states.RESIZED, vm_states.SOFT_DELETED],
                           task_state=None)
-    def attach_volume(self, context, instance, volume_id, device=None):
+    def attach_volume(self, context, instance, volume_id, device=None,
+                      disk_bus=None, device_type=None):
         """Attach an existing volume to an existing instance."""
         # NOTE(vish): Fail fast if the device is not going to pass. This
         #             will need to be removed along with the test if we
@@ -2729,17 +2730,19 @@ class API(base.Base):
         #             compute, the bdm will be created here and we will
         #             have to make sure that they are assigned atomically.
         device = self.compute_rpcapi.reserve_block_device_name(
-            context, device=device, instance=instance, volume_id=volume_id)
+            context, device=device, instance=instance, volume_id=volume_id,
+            disk_bus=disk_bus, device_type=device_type)
+        volume_bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+            context, volume_id)
         try:
             volume = self.volume_api.get(context, volume_id)
             self.volume_api.check_attach(context, volume, instance=instance)
             self.volume_api.reserve_volume(context, volume_id)
             self.compute_rpcapi.attach_volume(context, instance=instance,
-                    volume_id=volume_id, mountpoint=device)
+                    volume_id=volume_id, mountpoint=device, bdm=volume_bdm)
         except Exception:
             with excutils.save_and_reraise_exception():
-                self.db.block_device_mapping_destroy_by_instance_and_device(
-                        context, instance['uuid'], device)
+                volume_bdm.destroy(context)
 
         return device
 

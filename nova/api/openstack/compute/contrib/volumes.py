@@ -405,7 +405,8 @@ class VolumeAttachmentController(wsgi.Controller):
                   context=context)
 
         try:
-            instance = self.compute_api.get(context, server_id)
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
             device = self.compute_api.attach_volume(context, instance,
                                                     volume_id, device)
         except exception.NotFound:

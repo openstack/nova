@@ -31,6 +31,7 @@ from nova import conductor
 from nova import context
 from nova import network
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import security_group as secgroup_obj
 from nova.openstack.common.gettextutils import _
@@ -132,7 +133,7 @@ class InstanceMetadata():
         self.security_groups = secgroup_obj.SecurityGroupList.get_by_instance(
             ctxt, instance)
 
-        self.mappings = _format_instance_mapping(capi, ctxt, instance)
+        self.mappings = _format_instance_mapping(ctxt, instance)
 
         if instance.get('user_data', None) is not None:
             self.userdata_raw = base64.b64decode(instance['user_data'])
@@ -476,9 +477,9 @@ def get_metadata_by_instance_id(conductor_api, instance_id, address,
     return InstanceMetadata(instance, address)
 
 
-def _format_instance_mapping(conductor_api, ctxt, instance):
-    bdms = conductor_api.block_device_mapping_get_all_by_instance(
-               ctxt, instance)
+def _format_instance_mapping(ctxt, instance):
+    bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+            ctxt, instance.uuid)
     return block_device.instance_block_mapping(instance, bdms)
 
 

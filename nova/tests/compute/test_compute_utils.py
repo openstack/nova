@@ -28,11 +28,13 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova import rpc
 from nova import test
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
 from nova.tests import fake_network
@@ -90,19 +92,22 @@ class ComputeValidateDeviceTestCase(test.TestCase):
                                             self.flavor.items()]
 
     def _validate_device(self, device=None):
-        bdms = db.block_device_mapping_get_all_by_instance(
-            self.context, self.instance['uuid'])
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, self.instance['uuid'])
         return compute_utils.get_device_name_for_instance(
                 self.context, self.instance, bdms, device)
 
     @staticmethod
     def _fake_bdm(device):
-        return {
+        return fake_block_device.FakeDbBlockDeviceDict({
+            'source_type': 'volume',
+            'destination_type': 'volume',
             'device_name': device,
             'no_device': None,
             'volume_id': 'fake',
-            'snapshot_id': None
-        }
+            'snapshot_id': None,
+            'guest_format': None
+        })
 
     def test_wrap(self):
         self.data = []

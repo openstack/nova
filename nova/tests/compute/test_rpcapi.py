@@ -26,6 +26,7 @@ from nova import context
 from nova import db
 from nova.openstack.common import jsonutils
 from nova import test
+from nova.tests import fake_block_device
 
 CONF = cfg.CONF
 
@@ -38,6 +39,11 @@ class ComputeRpcAPITestCase(test.TestCase):
         inst = db.instance_create(self.context, {'host': 'fake_host',
                                                  'instance_type_id': 1})
         self.fake_instance = jsonutils.to_primitive(inst)
+        self.fake_volume_bdm = jsonutils.to_primitive(
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'source_type': 'volume', 'destination_type': 'volume',
+                     'instance_uuid': self.fake_instance['uuid'],
+                     'volume_id': 'fake-volume-id'}))
 
     def test_serialized_instance_has_name(self):
         self.assertIn('name', self.fake_instance)
@@ -124,7 +130,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_attach_volume(self):
         self._test_compute_api('attach_volume', 'cast',
-                instance=self.fake_instance, volume_id='id', mountpoint='mp')
+                instance=self.fake_instance, volume_id='id', mountpoint='mp',
+                bdm=self.fake_volume_bdm, version='3.16')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -497,7 +504,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_reserve_block_device_name(self):
         self._test_compute_api('reserve_block_device_name', 'call',
-                instance=self.fake_instance, device='device', volume_id='id')
+                instance=self.fake_instance, device='device', volume_id='id',
+                disk_bus='ide', device_type='cdrom', version='3.16')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

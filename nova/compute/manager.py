@@ -61,6 +61,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -413,7 +414,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.15')
+    target = messaging.Target(version='3.16')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3826,104 +3827,74 @@ class ComputeManager(manager.Manager):
 
         return console_info['port'] == port
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
-                                  volume_id):
+                                  volume_id, disk_bus=None, device_type=None):
+        # NOTE(ndipanov): disk_bus and device_type will be set to None if not
+        # passed (by older clients) and defaulted by the virt driver. Remove
+        # default values on the next major RPC version bump.
 
         @utils.synchronized(instance['uuid'])
         def do_reserve():
-            bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
-                context, instance)
+            bdms = (
+                block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid))
 
             device_name = compute_utils.get_device_name_for_instance(
                     context, instance, bdms, device)
 
             # NOTE(vish): create bdm here to avoid race condition
-            values = {'instance_uuid': instance['uuid'],
-                      'volume_id': volume_id or 'reserved',
-                      'device_name': device_name}
-
-            self.conductor_api.block_device_mapping_create(context, values)
+            bdm = block_device_obj.BlockDeviceMapping(
+                    source_type='volume', destination_type='volume',
+                    instance_uuid=instance.uuid,
+                    volume_id=volume_id or 'reserved',
+                    device_name=device_name,
+                    disk_bus=disk_bus, device_type=device_type)
+            bdm.create(context)
 
             return device_name
 
         return do_reserve()
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
-    def attach_volume(self, context, volume_id, mountpoint, instance):
+    def attach_volume(self, context, volume_id, mountpoint,
+                      instance, bdm=None):
         """Attach a volume to an instance."""
+        if not bdm:
+            bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                    context, volume_id)
+        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm)
         try:
-            return self._attach_volume(context, volume_id,
-                                       mountpoint, instance)
+            return self._attach_volume(context, instance, driver_bdm)
         except Exception:
             with excutils.save_and_reraise_exception():
-                capi = self.conductor_api
-                capi.block_device_mapping_destroy_by_instance_and_device(
-                        context, instance, mountpoint)
+                bdm.destroy(context)
 
-    def _attach_volume(self, context, volume_id, mountpoint, instance):
+    def _attach_volume(self, context, instance, bdm):
         context = context.elevated()
         LOG.audit(_('Attaching volume %(volume_id)s to %(mountpoint)s'),
-                  {'volume_id': volume_id, 'mountpoint': mountpoint},
+                  {'volume_id': bdm.volume_id,
+                  'mountpoint': bdm['mount_device']},
                   context=context, instance=instance)
         try:
-            connector = self.driver.get_volume_connector(instance)
-            connection_info = self.volume_api.initialize_connection(context,
-                                                                    volume_id,
-                                                                    connector)
+            bdm.attach(context, instance, self.volume_api, self.driver,
+                       do_check_attach=False, do_driver_attach=True)
         except Exception:  # pylint: disable=W0702
             with excutils.save_and_reraise_exception():
-                LOG.exception(_("Failed to connect to volume %(volume_id)s "
-                                "while attaching at %(mountpoint)s"),
-                              {'volume_id': volume_id,
-                               'mountpoint': mountpoint},
+                LOG.exception(_("Failed to attach %(volume_id)s "
+                                "at %(mountpoint)s"),
+                              {'volume_id': bdm.volume_id,
+                               'mountpoint': bdm['mount_device']},
                               context=context, instance=instance)
-                self.volume_api.unreserve_volume(context, volume_id)
+                self.volume_api.unreserve_volume(context, bdm.volume_id)
 
-        if 'serial' not in connection_info:
-            connection_info['serial'] = volume_id
-
-        encryption = encryptors.get_encryption_metadata(
-            context, self.volume_api, volume_id, connection_info)
-
-        try:
-            self.driver.attach_volume(context,
-                                      connection_info,
-                                      instance,
-                                      mountpoint,
-                                      encryption=encryption)
-        except Exception:  # pylint: disable=W0702
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_("Failed to attach volume %(volume_id)s "
-                                "at %(mountpoint)s") %
-                              {'volume_id': volume_id,
-                               'mountpoint': mountpoint},
-                              context=context, instance=instance)
-                self.volume_api.terminate_connection(context,
-                                                     volume_id,
-                                                     connector)
-
-        self.volume_api.attach(context,
-                               volume_id,
-                               instance['uuid'],
-                               mountpoint)
-        values = {
-            'instance_uuid': instance['uuid'],
-            'connection_info': jsonutils.dumps(connection_info),
-            'device_name': mountpoint,
-            'delete_on_termination': False,
-            'virtual_name': None,
-            'snapshot_id': None,
-            'volume_id': volume_id,
-            'volume_size': None,
-            'no_device': None}
-        self.conductor_api.block_device_mapping_update_or_create(context,
-                                                                 values)
-        info = dict(volume_id=volume_id)
+        info = {'volume_id': bdm.volume_id}
         self._notify_about_instance_usage(
             context, instance, "volume.attach", extra_usage_info=info)
 

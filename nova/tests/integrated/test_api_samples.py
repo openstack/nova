@@ -42,6 +42,7 @@ from nova import db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.network import api as network_api
+from nova.objects import block_device as block_device_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -3815,6 +3816,8 @@ class VolumeAttachmentsSampleJsonTest(VolumeAttachmentsSampleBase):
         self.stubs.Set(compute_manager.ComputeManager,
                        'attach_volume',
                        lambda *a, **k: None)
+        self.stubs.Set(block_device_obj.BlockDeviceMapping, 'get_by_volume_id',
+                       classmethod(lambda *a, **k: None))
 
         volume = fakes.stub_volume_get(None, context.get_admin_context(),
                                        'a26887c6-c47b-4654-abb5-dfadf7d3f803')

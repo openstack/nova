@@ -229,6 +229,9 @@ class ComputeAPI(object):
         3.13 - Update remove_fixed_ip_from_instance() to take an object
         3.14 - Update post_live_migration_at_destination() to take an object
         3.15 - Adds filter_properties and node to unshelve_instance()
+        3.16 - Make reserve_block_device_name and attach_volume use new-world
+              objects, and add disk_bus and device_type params to
+              reserve_block_device_name, and bdm param to attach_volume
     '''
 
     VERSION_ALIASES = {
@@ -306,15 +309,21 @@ class ComputeAPI(object):
                           instance=instance_p, network_id=network_id,
                           port_id=port_id, requested_ip=requested_ip)
 
-    def attach_volume(self, ctxt, instance, volume_id, mountpoint):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+    def attach_volume(self, ctxt, instance, volume_id, mountpoint, bdm=None):
+        # NOTE(ndipanov): Remove volume_id and mountpoint on the next major
+        # version bump - they are not needed when using bdm objects.
+        version = '3.16'
+        kw = {'instance': instance, 'volume_id': volume_id,
+              'mountpoint': mountpoint, 'bdm': bdm}
+        if not self.client.can_send_version(version):
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            kw['instance'] = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            del kw['bdm']
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'attach_volume',
-                   instance=instance_p, volume_id=volume_id,
-                   mountpoint=mountpoint)
+        cctxt.cast(ctxt, 'attach_volume', **kw)
 
     def change_instance_metadata(self, ctxt, instance, diff):
         if self.client.can_send_version('3.7'):
@@ -769,15 +778,24 @@ class ComputeAPI(object):
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'get_host_uptime')
 
-    def reserve_block_device_name(self, ctxt, instance, device, volume_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.3')
-        instance_p = jsonutils.to_primitive(instance)
+    def reserve_block_device_name(self, ctxt, instance, device, volume_id,
+                                  disk_bus=None, device_type=None):
+        version = '3.16'
+        kw = {'instance': instance, 'device': device,
+              'volume_id': volume_id, 'disk_bus': disk_bus,
+              'device_type': device_type}
+
+        if not self.client.can_send_version(version):
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.3')
+            kw['instance'] = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
+            del kw['disk_bus']
+            del kw['device_type']
+
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        return cctxt.call(ctxt, 'reserve_block_device_name',
-                          instance=instance_p, device=device,
-                          volume_id=volume_id)
+        return cctxt.call(ctxt, 'reserve_block_device_name', **kw)
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):

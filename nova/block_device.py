@@ -472,33 +472,34 @@ def instance_block_mapping(instance, bdms):
     if default_swap_device:
         mappings['swap'] = default_swap_device
     ebs_devices = []
+    blanks = []
 
     # 'ephemeralN', 'swap' and ebs
     for bdm in bdms:
-        if bdm['no_device']:
-            continue
-
         # ebs volume case
-        if (bdm['volume_id'] or bdm['snapshot_id']):
-            ebs_devices.append(bdm['device_name'])
+        if bdm.destination_type == 'volume':
+            ebs_devices.append(bdm.device_name)
             continue
 
-        virtual_name = bdm['virtual_name']
-        if not virtual_name:
-            continue
-
-        if is_swap_or_ephemeral(virtual_name):
-            mappings[virtual_name] = bdm['device_name']
+        if bdm.source_type == 'blank':
+            blanks.append(bdm)
 
     # NOTE(yamahata): I'm not sure how ebs device should be numbered.
     #                 Right now sort by device name for deterministic
     #                 result.
     if ebs_devices:
-        nebs = 0
         ebs_devices.sort()
-        for ebs in ebs_devices:
+        for nebs, ebs in enumerate(ebs_devices):
             mappings['ebs%d' % nebs] = ebs
-            nebs += 1
+
+    swap = [bdm for bdm in blanks if bdm.guest_format == 'swap']
+    if swap:
+        mappings['swap'] = swap.pop().device_name
+
+    ephemerals = [bdm for bdm in blanks if bdm.guest_format != 'swap']
+    if ephemerals:
+        for num, eph in enumerate(ephemerals):
+            mappings['ephemeral%d' % num] = eph.device_name
 
     return mappings
 

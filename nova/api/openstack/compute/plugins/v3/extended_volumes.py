@@ -137,7 +137,8 @@ class ExtendedVolumesController(wsgi.Controller):
                    'server_id': server_id},
                   context=context)
 
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         try:
             self.compute_api.attach_volume(context, instance,
                                            volume_id, device)

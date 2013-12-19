@@ -27,7 +27,6 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import service as service_obj
-from nova.openstack.common import excutils
 from nova import rpc
 
 
@@ -421,19 +420,17 @@ class ComputeCellsAPI(compute_api.API):
 
     @wrap_check_policy
     @check_instance_cell
-    def attach_volume(self, context, instance, volume_id, device=None):
+    def attach_volume(self, context, instance, volume_id, device=None,
+                      disk_bus=None, device_type=None):
         """Attach an existing volume to an existing instance."""
         if device and not block_device.match_device(device):
             raise exception.InvalidDevicePath(path=device)
-        try:
-            volume = self.volume_api.get(context, volume_id)
-            self.volume_api.check_attach(context, volume, instance=instance)
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                self.db.block_device_mapping_destroy_by_instance_and_device(
-                        context, instance['uuid'], device)
+
+        volume = self.volume_api.get(context, volume_id)
+        self.volume_api.check_attach(context, volume, instance=instance)
+
         return self._call_to_cells(context, instance, 'attach_volume',
-                volume_id, device)
+                volume_id, device, disk_bus, device_type)
 
     @check_instance_cell
     def _detach_volume(self, context, instance, volume):

@@ -44,6 +44,7 @@ from nova import exception
 from nova.network import api as network_api
 from nova.objects import instance as instance_obj
 from nova import test
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_network
 from nova.tests.objects import test_security_group
@@ -189,21 +190,27 @@ class MetadataTestCase(test.TestCase):
     def test_format_instance_mapping(self):
         # Make sure that _format_instance_mappings works.
         ctxt = None
-        instance_ref0 = {'id': 0,
+        instance_ref0 = instance_obj.Instance(**{'id': 0,
                          'uuid': 'e5fe5518-0288-4fa3-b0c4-c79764101b85',
-                         'root_device_name': None}
-        instance_ref1 = {'id': 0,
+                         'root_device_name': None,
+                         'default_ephemeral_device': None,
+                         'default_swap_device': None})
+        instance_ref1 = instance_obj.Instance(**{'id': 0,
                          'uuid': 'b65cee2f-8c69-4aeb-be2f-f79742548fc2',
-                         'root_device_name': '/dev/sda1'}
+                         'root_device_name': '/dev/sda1',
+                         'default_ephemeral_device': None,
+                         'default_swap_device': None})
 
         def fake_bdm_get(ctxt, uuid):
-            return [{'volume_id': 87654321,
+            return [fake_block_device.FakeDbBlockDeviceDict(
+                    {'volume_id': 87654321,
                      'snapshot_id': None,
                      'no_device': None,
                      'source_type': 'volume',
                      'destination_type': 'volume',
                      'delete_on_termination': True,
-                     'device_name': '/dev/sdh'},
+                     'device_name': '/dev/sdh'}),
+                    fake_block_device.FakeDbBlockDeviceDict(
                     {'volume_id': None,
                      'snapshot_id': None,
                      'no_device': None,
@@ -211,7 +218,8 @@ class MetadataTestCase(test.TestCase):
                      'destination_type': 'local',
                      'guest_format': 'swap',
                      'delete_on_termination': None,
-                     'device_name': '/dev/sdc'},
+                     'device_name': '/dev/sdc'}),
+                    fake_block_device.FakeDbBlockDeviceDict(
                     {'volume_id': None,
                      'snapshot_id': None,
                      'no_device': None,
@@ -219,7 +227,7 @@ class MetadataTestCase(test.TestCase):
                      'destination_type': 'local',
                      'guest_format': None,
                      'delete_on_termination': None,
-                     'device_name': '/dev/sdb'}]
+                     'device_name': '/dev/sdb'})]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_bdm_get)
@@ -232,9 +240,9 @@ class MetadataTestCase(test.TestCase):
 
         capi = conductor_api.LocalAPI()
 
-        self.assertEqual(base._format_instance_mapping(capi, ctxt,
+        self.assertEqual(base._format_instance_mapping(ctxt,
                          instance_ref0), block_device._DEFAULT_MAPPINGS)
-        self.assertEqual(base._format_instance_mapping(capi, ctxt,
+        self.assertEqual(base._format_instance_mapping(ctxt,
                          instance_ref1), expected)
 
     def test_pubkey(self):

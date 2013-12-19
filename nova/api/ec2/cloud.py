@@ -860,7 +860,8 @@ class CloudController(object):
         validate_ec2_id(volume_id)
         volume_id = ec2utils.ec2_vol_id_to_uuid(volume_id)
         instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, instance_id)
-        instance = self.compute_api.get(context, instance_uuid)
+        instance = self.compute_api.get(context, instance_uuid,
+                                        want_objects=True)
         LOG.audit(_('Attach volume %(volume_id)s to instance %(instance_id)s '
                     'at %(device)s'),
                   {'volume_id': volume_id,
