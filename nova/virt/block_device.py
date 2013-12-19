@@ -222,11 +222,6 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         volume_id = volume['id']
         context = context.elevated()
 
-        LOG.audit(_('Booting with volume %(volume_id)s at %(mountpoint)s'),
-                  {'volume_id': volume_id,
-                   'mountpoint': self['mount_device']},
-                  context=context, instance=instance)
-
         connector = virt_driver.get_volume_connector(instance)
         connection_info = volume_api.initialize_connection(context,
                                                            volume_id,
@@ -339,8 +334,16 @@ convert_images = functools.partial(_convert_block_devices,
 
 
 def attach_block_devices(block_device_mapping, *attach_args, **attach_kwargs):
-    map(operator.methodcaller('attach', *attach_args, **attach_kwargs),
-        block_device_mapping)
+    def _log_and_attach(bdm):
+        context = attach_args[0]
+        instance = attach_args[1]
+        LOG.audit(_('Booting with volume %(volume_id)s at %(mountpoint)s'),
+                  {'volume_id': bdm.volume_id,
+                   'mountpoint': bdm['mount_device']},
+                  context=context, instance=instance)
+        bdm.attach(*attach_args, **attach_kwargs)
+
+    map(_log_and_attach, block_device_mapping)
     return block_device_mapping
 
 
