@@ -1786,8 +1786,8 @@ class ComputeTestCase(BaseTestCase):
                            {"task_state": task_states.RESCUING})
         self.compute.rescue_instance(self.context, instance, None)
 
-        expected_notifications = ['compute.instance.exists',
-                                  'compute.instance.rescue.start',
+        expected_notifications = ['compute.instance.rescue.start',
+                                  'compute.instance.exists',
                                   'compute.instance.rescue.end']
         self.assertEqual([m.event_type for m in fake_notifier.NOTIFICATIONS],
                          expected_notifications)
@@ -1806,7 +1806,7 @@ class ComputeTestCase(BaseTestCase):
             self.assertIn('launched_at', payload)
             image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF)
             self.assertEqual(payload['image_ref_url'], image_ref_url)
-        msg = fake_notifier.NOTIFICATIONS[1]
+        msg = fake_notifier.NOTIFICATIONS[0]
         self.assertIn('rescue_image_name', msg.payload)
 
         self.compute.terminate_instance(self.context,
