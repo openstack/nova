@@ -56,7 +56,7 @@ disk_opts = [
     # NOTE(yamahata): ListOpt won't work because the command may include a
     #                 comma. For example:
     #
-    #                 mkfs.ext3 -O dir_index,extent -E stride=8,stripe-width=16
+    #                 mkfs.ext4 -O dir_index,extent -E stride=8,stripe-width=16
     #                           --label %(fs_label)s %(target)s
     #
     #                 list arguments are comma separated and there is no way to
@@ -82,7 +82,7 @@ CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 
 _MKFS_COMMAND = {}
 _DEFAULT_MKFS_COMMAND = None
-_DEFAULT_FS_BY_OSTYPE = {'linux': 'ext3',
+_DEFAULT_FS_BY_OSTYPE = {'linux': 'ext4',
                          'windows': 'ntfs'}
 
 for s in CONF.virt_mkfs:
@@ -115,7 +115,7 @@ def mkfs(os_type, fs_label, target, run_as_root=True):
     else:
         default_fs = CONF.default_ephemeral_format
         if not default_fs:
-            default_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext3')
+            default_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type, 'ext4')
         utils.mkfs(default_fs, target, fs_label, run_as_root=run_as_root)
 
 
