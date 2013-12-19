@@ -7762,12 +7762,16 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.conn, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
+        self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.conn._lookup_by_name('instance-%s' % instance['id']).\
             AndReturn(domain)
         self.conn.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockRebase('vda', 'snap.img', 0, 0)
+
+        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1000, 'end': 1000})
 
         self.mox.ReplayAll()
 
@@ -7790,12 +7794,16 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         self.mox.StubOutWithMock(self.conn, 'has_min_version')
         self.mox.StubOutWithMock(domain, 'blockRebase')
         self.mox.StubOutWithMock(domain, 'blockCommit')
+        self.mox.StubOutWithMock(domain, 'blockJobInfo')
 
         self.conn._lookup_by_name('instance-%s' % instance['id']).\
             AndReturn(domain)
         self.conn.has_min_version(mox.IgnoreArg()).AndReturn(True)
 
         domain.blockCommit('vda', 'other-snap.img', 'snap.img', 0, 0)
+
+        domain.blockJobInfo('vda', 0).AndReturn({'cur': 1, 'end': 1000})
+        domain.blockJobInfo('vda', 0).AndReturn({})
 
         self.mox.ReplayAll()
 
