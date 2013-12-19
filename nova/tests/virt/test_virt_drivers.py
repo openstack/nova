@@ -564,7 +564,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                        lambda *a: None, lambda *a: None)
 
     @catch_notimplementederror
-    def _check_available_resouce_fields(self, host_status):
+    def _check_available_resource_fields(self, host_status):
         keys = ['vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
                 'memory_mb_used', 'hypervisor_type', 'hypervisor_version',
                 'hypervisor_hostname', 'cpu_info', 'disk_available_least']
@@ -574,14 +574,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     @catch_notimplementederror
     def test_get_host_stats(self):
         host_status = self.connection.get_host_stats()
-        self._check_available_resouce_fields(host_status)
+        self._check_available_resource_fields(host_status)
         self.assertTrue(isinstance(host_status['hypervisor_version'], int))
 
     @catch_notimplementederror
     def test_get_available_resource(self):
         available_resource = self.connection.get_available_resource(
                 'myhostname')
-        self._check_available_resouce_fields(available_resource)
+        self._check_available_resource_fields(available_resource)
 
     @catch_notimplementederror
     def _check_host_cpu_status_fields(self, host_cpu_status):
