@@ -69,14 +69,11 @@ class ComputeValidateDeviceTestCase(test.TestCase):
             }
         self.data = []
 
-        def fake_get(instance_type_id, ctxt=None):
-            return self.instance_type
-
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        lambda context, instance: self.data)
 
-    def _update_instance_type(self, instance_type_info):
-        self.instance_type = {
+    def _update_flavor(self, flavor_info):
+        self.flavor = {
             'id': 1,
             'name': 'foo',
             'memory_mb': 128,
@@ -88,11 +85,11 @@ class ComputeValidateDeviceTestCase(test.TestCase):
             'rxtx_factor': 1.0,
             'vcpu_weight': 1,
             }
-        self.instance_type.update(instance_type_info)
+        self.flavor.update(flavor_info)
         self.instance['system_metadata'] = [{'key': 'instance_type_%s' % key,
                                              'value': value}
                                             for key, value in
-                                            self.instance_type.items()]
+                                            self.flavor.items()]
 
     def _validate_device(self, device=None):
         bdms = db.block_device_mapping_get_all_by_instance(
@@ -188,42 +185,42 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.assertEqual(device, '/dev/vdc')
 
     def test_ephemeral_xenapi(self):
-        self._update_instance_type({
+        self._update_flavor({
                 'ephemeral_gb': 10,
                 'swap': 0,
                 })
         self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.instance_type)
+                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdc')
 
     def test_swap_xenapi(self):
-        self._update_instance_type({
+        self._update_flavor({
                 'ephemeral_gb': 0,
                 'swap': 10,
                 })
         self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.instance_type)
+                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
 
     def test_swap_and_ephemeral_xenapi(self):
-        self._update_instance_type({
+        self._update_flavor({
                 'ephemeral_gb': 10,
                 'swap': 10,
                 })
         self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.instance_type)
+                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdd')
 
     def test_swap_and_one_attachment_xenapi(self):
-        self._update_instance_type({
+        self._update_flavor({
                 'ephemeral_gb': 0,
                 'swap': 10,
                 })
         self.stubs.Set(flavors, 'get_flavor',
-                       lambda instance_type_id, ctxt=None: self.instance_type)
+                       lambda instance_type_id, ctxt=None: self.flavor)
         device = self._validate_device()
         self.assertEqual(device, '/dev/xvdb')
         self.data.append(self._fake_bdm(device))
@@ -266,14 +263,14 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
                  'destination_type': 'volume',
                  'snapshot_id': 'fake-snapshot-id-1',
                  'boot_index': -1}]
-        self.instance_type = {'swap': 4}
+        self.flavor = {'swap': 4}
         self.instance = {'uuid': 'fake_instance', 'ephemeral_gb': 2}
         self.is_libvirt = False
         self.root_device_name = '/dev/vda'
         self.update_called = False
 
         def fake_extract_flavor(instance):
-            return self.instance_type
+            return self.flavor
 
         def fake_driver_matches(driver_string):
             if driver_string == 'libvirt.LibvirtDriver':
@@ -401,14 +398,14 @@ class UsageInfoTestCase(test.TestCase):
 
     def _create_instance(self, params={}):
         """Create a test instance."""
-        instance_type = flavors.get_flavor_by_name('m1.tiny')
-        sys_meta = flavors.save_flavor_info({}, instance_type)
+        flavor = flavors.get_flavor_by_name('m1.tiny')
+        sys_meta = flavors.save_flavor_info({}, flavor)
         inst = {}
         inst['image_ref'] = 1
         inst['reservation_id'] = 'r-fakeres'
         inst['user_id'] = self.user_id
         inst['project_id'] = self.project_id
-        inst['instance_type_id'] = instance_type['id']
+        inst['instance_type_id'] = flavor['id']
         inst['system_metadata'] = sys_meta
         inst['ami_launch_index'] = 0
         inst['root_gb'] = 0

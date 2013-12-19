@@ -1096,7 +1096,7 @@ def get_auto_disk_config_from_image_props(image_properties):
     return image_properties.get("auto_disk_config")
 
 
-def get_system_metadata_from_image(image_meta, instance_type=None):
+def get_system_metadata_from_image(image_meta, flavor=None):
     system_meta = {}
     prefix_format = SM_IMAGE_PROP_PREFIX + '%s'
 
@@ -1107,11 +1107,11 @@ def get_system_metadata_from_image(image_meta, instance_type=None):
     for key in SM_INHERITABLE_KEYS:
         value = image_meta.get(key)
 
-        if key == 'min_disk' and instance_type:
+        if key == 'min_disk' and flavor:
             if image_meta.get('disk_format') == 'vhd':
-                value = instance_type['root_gb']
+                value = flavor['root_gb']
             else:
-                value = max(value, instance_type['root_gb'])
+                value = max(value, flavor['root_gb'])
 
         if value is None:
             continue
