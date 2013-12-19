@@ -4587,6 +4587,7 @@ def instance_metadata_delete(context, instance_uuid, key):
 
 
 @require_context
+@_retry_on_deadlock
 def instance_metadata_update(context, instance_uuid, metadata, delete):
     all_keys = metadata.keys()
     session = get_session()
