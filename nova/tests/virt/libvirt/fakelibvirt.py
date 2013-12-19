@@ -498,6 +498,9 @@ class Domain(object):
     def maxMemory(self):
         return self._def['memory']
 
+    def blockJobInfo(self, disk, flags):
+        return {}
+
 
 class DomainSnapshot(object):
     def __init__(self, name, domain):
