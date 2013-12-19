@@ -671,7 +671,8 @@ class ComputeManager(manager.Manager):
             return
 
         if (instance.vm_state != vm_states.ERROR and
-            instance.task_state in [task_states.IMAGE_PENDING_UPLOAD,
+            instance.task_state in [task_states.IMAGE_SNAPSHOT_PENDING,
+                                    task_states.IMAGE_PENDING_UPLOAD,
                                     task_states.IMAGE_UPLOADING,
                                     task_states.IMAGE_SNAPSHOT]):
             LOG.debug(_("Instance in transitional state %s at start-up "
