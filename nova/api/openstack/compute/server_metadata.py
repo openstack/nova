@@ -111,7 +111,8 @@ class Controller(object):
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
-            server = self.compute_api.get(context, server_id)
+            server = self.compute_api.get(context, server_id,
+                                          want_objects=True)
             return self.compute_api.update_instance_metadata(context,
                                                              server,
                                                              metadata,
@@ -165,7 +166,8 @@ class Controller(object):
             raise exc.HTTPNotFound(explanation=msg)
 
         try:
-            server = self.compute_api.get(context, server_id)
+            server = self.compute_api.get(context, server_id,
+                                          want_objects=True)
             self.compute_api.delete_instance_metadata(context, server, id)
 
         except exception.InstanceNotFound:

@@ -7314,8 +7314,8 @@ class ComputeAPITestCase(BaseTestCase):
                        fake_change_instance_metadata)
 
         _context = context.get_admin_context()
-        instance = self._create_fake_instance({'metadata': {'key1': 'value1'}})
-        instance = dict(instance.iteritems())
+        instance = self._create_fake_instance_obj({'metadata':
+                                                       {'key1': 'value1'}})
 
         metadata = self.compute_api.get_instance_metadata(_context, instance)
         self.assertEqual(metadata, {'key1': 'value1'})

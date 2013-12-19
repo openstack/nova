@@ -23,6 +23,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 import nova.db
 from nova import exception
+from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
@@ -39,6 +40,11 @@ def return_create_instance_metadata_max(context, server_id, metadata, delete):
 
 def return_create_instance_metadata(context, server_id, metadata, delete):
     return stub_server_metadata()
+
+
+def fake_instance_save(inst, **kwargs):
+    inst.metadata = stub_server_metadata()
+    inst.obj_reset_changes()
 
 
 def return_server_metadata(context, server_id):
@@ -90,6 +96,7 @@ def return_server_by_uuid(context, server_uuid,
            'name': 'fake',
            'locked': False,
            'launched_at': timeutils.utcnow(),
+           'metadata': stub_server_metadata(),
            'vm_state': vm_states.ACTIVE})
 
 
@@ -201,8 +208,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create(self):
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_server_metadata)
-        self.stubs.Set(nova.db, 'instance_metadata_update',
-                       return_create_instance_metadata)
+        self.stubs.Set(instance_obj.Instance, 'save', fake_instance_save)
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
         req.content_type = "application/json"
@@ -278,8 +284,7 @@ class ServerMetaDataTest(BaseTest):
                           self.controller.create, req, self.uuid, body)
 
     def test_update_metadata(self):
-        self.stubs.Set(nova.db, 'instance_metadata_update',
-                       return_create_instance_metadata)
+        self.stubs.Set(instance_obj.Instance, 'save', fake_instance_save)
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
@@ -294,8 +299,7 @@ class ServerMetaDataTest(BaseTest):
         self.assertEqual(expected, response)
 
     def test_update_all(self):
-        self.stubs.Set(nova.db, 'instance_metadata_update',
-                       return_create_instance_metadata)
+        self.stubs.Set(instance_obj.Instance, 'save', fake_instance_save)
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'
         req.content_type = "application/json"
@@ -311,8 +315,7 @@ class ServerMetaDataTest(BaseTest):
         self.assertEqual(expected, res_dict)
 
     def test_update_all_empty_container(self):
-        self.stubs.Set(nova.db, 'instance_metadata_update',
-                       return_create_instance_metadata)
+        self.stubs.Set(instance_obj.Instance, 'save', fake_instance_save)
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'
         req.content_type = "application/json"
@@ -358,8 +361,7 @@ class ServerMetaDataTest(BaseTest):
                           self.controller.update_all, req, '100', body)
 
     def test_update_item(self):
-        self.stubs.Set(nova.db, 'instance_metadata_update',
-                       return_create_instance_metadata)
+        self.stubs.Set(instance_obj.Instance, 'save', fake_instance_save)
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {"key1": "value1"}}

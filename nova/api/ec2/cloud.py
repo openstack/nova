@@ -1757,7 +1757,8 @@ class CloudController(object):
 
         for ec2_id in resources:
             instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-            instance = self.compute_api.get(context, instance_uuid)
+            instance = self.compute_api.get(context, instance_uuid,
+                                            want_objects=True)
             self.compute_api.update_instance_metadata(context,
                 instance, metadata)
 
@@ -1791,7 +1792,8 @@ class CloudController(object):
 
         for ec2_id in resources:
             instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-            instance = self.compute_api.get(context, instance_uuid)
+            instance = self.compute_api.get(context, instance_uuid,
+                                            want_objects=True)
             for tag in tags:
                 if not isinstance(tag, dict):
                     msg = _('Expecting tagSet to be key/value pairs')

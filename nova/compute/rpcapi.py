@@ -220,6 +220,7 @@ class ComputeAPI(object):
         3.4 - Update rebuild_instance() to take an instance object
         3.5 - Pass preserve_ephemeral flag to rebuild_instance()
         3.6 - Make volume_snapshot_{create,delete} use new-world objects
+        3.7 - Update change_instance_metadata() to take an instance object
     '''
 
     VERSION_ALIASES = {
@@ -305,13 +306,16 @@ class ComputeAPI(object):
                    mountpoint=mountpoint)
 
     def change_instance_metadata(self, ctxt, instance, diff):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.7'):
+            version = '3.7'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'change_instance_metadata',
-                   instance=instance_p, diff=diff)
+                   instance=instance, diff=diff)
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
