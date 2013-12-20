@@ -9588,3 +9588,18 @@ class ComputeAPIClassNameTestCase(test.TestCase):
         self.flags(cell_type='fake_cell_type', group='cells')
         self.assertRaises(exception.InvalidInput,
                           compute._get_compute_api_class_name)
+
+
+class ComputeManagerV3TestCase(test.TestCase):
+    def test_v3_passes_through_to_v2(self):
+        self.count = 0
+
+        def _fake(*args, **kwargs):
+            self.count += 1
+
+        manager = compute_manager.ComputeManager()
+        proxy = compute_manager.ComputeV3Proxy(manager)
+        for m in proxy.supported_methods:
+            self.stubs.Set(manager, m, _fake)
+            getattr(proxy, m)()
+        self.assertEqual(self.count, len(proxy.supported_methods))
