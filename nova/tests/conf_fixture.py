@@ -53,7 +53,6 @@ class ConfFixture(config_fixture.Config):
                               'nova.tests.utils.dns_manager')
         self.conf.set_default('instance_dns_manager',
                               'nova.tests.utils.dns_manager')
-        self.conf.set_default('lock_path', None)
         self.conf.set_default('network_size', 8)
         self.conf.set_default('num_networks', 2)
         self.conf.set_default('rpc_backend',
