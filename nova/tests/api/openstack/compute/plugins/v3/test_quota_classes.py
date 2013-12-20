@@ -99,6 +99,19 @@ class QuotaClassSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'test_class', body)
 
+        body = {'quota_class_set': {'instances': 50.5}}
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
+        body = {'quota_class_set': {
+                'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
+        req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
+                                        use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
     def test_quotas_update_with_invalid_body(self):
         body = {'quota_class_set': None}
         req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',

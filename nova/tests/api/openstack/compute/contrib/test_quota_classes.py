@@ -129,17 +129,23 @@ class QuotaClassSetsTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'test_class', body)
 
-    def test_quotas_update_with_a_non_integer_value(self):
-        body = {'quota_class_set': {'instances': "not integer", 'cores': 50,
-                                    'ram': 51200, 'floating_ips': 10,
-                                    'fixed_ips': -1, 'metadata_items': 128,
-                                    'injected_files': 5,
-                                    'injected_file_content_bytes': 10240,
-                                    'injected_file_path_bytes': 255,
-                                    'security_groups': 10,
-                                    'security_group_rules': 20,
-                                    'key_pairs': 100}}
+    def test_quotas_update_with_non_integer(self):
+        body = {'quota_class_set': {'instances': "abc"}}
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake4/os-quota-class-sets/test_class',
+            use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
 
+        body = {'quota_class_set': {'instances': 50.5}}
+        req = fakes.HTTPRequest.blank(
+            '/v2/fake4/os-quota-class-sets/test_class',
+            use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
+                          req, 'test_class', body)
+
+        body = {'quota_class_set': {
+                'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
         req = fakes.HTTPRequest.blank(
             '/v2/fake4/os-quota-class-sets/test_class',
             use_admin_context=True)
