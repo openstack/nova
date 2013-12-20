@@ -551,11 +551,6 @@ def _inject_admin_password_into_fs(admin_passwd, fs):
                 "admin_passwd=<SANITIZED>"), {'fs': fs})
     admin_user = 'root'
 
-    fd, tmp_passwd = tempfile.mkstemp()
-    os.close(fd)
-    fd, tmp_shadow = tempfile.mkstemp()
-    os.close(fd)
-
     passwd_path = os.path.join('etc', 'passwd')
     shadow_path = os.path.join('etc', 'shadow')
 
