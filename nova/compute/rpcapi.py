@@ -36,7 +36,10 @@ CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
 rpcapi_cap_opt = cfg.StrOpt('compute',
-        help='Set a version cap for messages sent to compute services')
+        help='Set a version cap for messages sent to compute services. If you '
+             'plan to do a live upgrade from havana to icehouse, you should '
+             'set this option to "icehouse-compat" before beginning the live '
+             'upgrade procedure.')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
@@ -57,6 +60,17 @@ def _compute_host(host, instance):
         raise exception.NovaException(_('Unable to find host for '
                                         'Instance %s') % instance['uuid'])
     return instance['host']
+
+
+def _get_version(version):
+    # NOTE(russellb) If "[upgrade_levels] compute=icehouse-compat" is set in
+    # the config, we switch into a special mode where we send 3.0 as the
+    # version number instead of 2.latest.  3.0 == 2.latest, and both Havana
+    # and Icehouse compute nodes support 3.0.  This allows for a live
+    # upgrade environment with a mix of Havana and Icehouse compute nodes.
+    if CONF.upgrade_levels.compute == 'icehouse-compat':
+        return ComputeAPI.VERSION_ALIASES['icehouse-compat']
+    return version
 
 
 class ComputeAPI(rpcclient.RpcProxy):
@@ -216,6 +230,7 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     VERSION_ALIASES = {
         'grizzly': '2.27',
+        'icehouse-compat': '3.0',
     }
 
     def __init__(self):
@@ -240,14 +255,16 @@ class ComputeAPI(rpcclient.RpcProxy):
         '''
 
         aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(server=host, version='2.14')
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.14'))
         cctxt.cast(ctxt, 'add_aggregate_host',
                    aggregate=aggregate_p, host=host_param,
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
                    instance=instance_p, network_id=network_id)
 
@@ -255,21 +272,23 @@ class ComputeAPI(rpcclient.RpcProxy):
                          requested_ip):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.25')
+                                    version=_get_version('2.25'))
         return cctxt.call(ctxt, 'attach_interface',
                           instance=instance_p, network_id=network_id,
                           port_id=port_id, requested_ip=requested_ip)
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'attach_volume',
                    instance=instance_p, volume_id=volume_id,
                    mountpoint=mountpoint)
 
     def change_instance_metadata(self, ctxt, instance, diff):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'change_instance_metadata',
                    instance=instance_p, diff=diff)
 
@@ -281,7 +300,8 @@ class ComputeAPI(rpcclient.RpcProxy):
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
-        cctxt = self.client.prepare(server=destination, version=version)
+        cctxt = self.client.prepare(server=destination,
+                version=_get_version(version))
         return cctxt.call(ctxt, 'check_can_live_migrate_destination',
                           instance=instance,
                           block_migration=block_migration,
@@ -295,7 +315,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         return cctxt.call(ctxt, 'check_can_live_migrate_source',
                           instance=instance,
                           dest_check_data=dest_check_data)
@@ -303,7 +323,7 @@ class ComputeAPI(rpcclient.RpcProxy):
     def check_instance_shared_storage(self, ctxt, instance, data):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.28')
+                                    version=_get_version('2.28'))
         return cctxt.call(ctxt, 'check_instance_shared_storage',
                           instance=instance_p,
                           data=data)
@@ -319,7 +339,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(migration))
             version = '2.7'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
-                                    version=version)
+                                    version=_get_version(version))
         rpc_method = cctxt.cast if cast else cctxt.call
         return rpc_method(ctxt, 'confirm_resize',
                           instance=instance, migration=migration,
@@ -328,13 +348,14 @@ class ComputeAPI(rpcclient.RpcProxy):
     def detach_interface(self, ctxt, instance, port_id):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.25')
+                                    version=_get_version('2.25'))
         cctxt.cast(ctxt, 'detach_interface',
                    instance=instance_p, port_id=port_id)
 
     def detach_volume(self, ctxt, instance, volume_id):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'detach_volume',
                    instance=instance_p, volume_id=volume_id)
 
@@ -348,7 +369,8 @@ class ComputeAPI(rpcclient.RpcProxy):
             migration = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(migration))
             version = '2.8'
-        cctxt = self.client.prepare(server=host, version=version)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version(version))
         cctxt.cast(ctxt, 'finish_resize',
                    instance=instance, migration=migration,
                    image=image, disk_info=disk_info, reservations=reservations)
@@ -363,49 +385,55 @@ class ComputeAPI(rpcclient.RpcProxy):
             migration = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(migration))
             version = '2.13'
-        cctxt = self.client.prepare(server=host, version=version)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version(version))
         cctxt.cast(ctxt, 'finish_revert_resize',
                    instance=instance, migration=migration,
                    reservations=reservations)
 
     def get_console_output(self, ctxt, instance, tail_length):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'get_console_output',
                           instance=instance_p, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, console_type, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'get_console_pool_info',
                           console_type=console_type)
 
     def get_console_topic(self, ctxt, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'get_diagnostics',
                           instance=instance_p)
 
     def get_vnc_console(self, ctxt, instance, console_type):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'get_vnc_console',
                           instance=instance_p, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.24')
+                                    version=_get_version('2.24'))
         return cctxt.call(ctxt, 'get_spice_console',
                           instance=instance_p, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.26')
+                                    version=_get_version('2.26'))
         return cctxt.call(ctxt, 'validate_console_port',
                           instance=instance_p, port=port,
                           console_type=console_type)
@@ -419,17 +447,20 @@ class ComputeAPI(rpcclient.RpcProxy):
         :param mode:
         :param host: This is the host to send the message to.
         '''
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'host_maintenance_mode',
                           host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, action, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_file(self, ctxt, instance, path, file_contents):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'inject_file',
                    instance=instance_p, path=path,
                    file_contents=file_contents)
@@ -442,13 +473,14 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(instance))
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migrate_data=None):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'live_migration', instance=instance_p,
                    dest=dest, block_migration=block_migration,
                    migrate_data=migrate_data)
@@ -461,31 +493,35 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt,
                           'post_live_migration_at_destination',
                           instance=instance_p, block_migration=block_migration)
 
     def power_off_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'power_off_instance', instance=instance_p)
 
     def power_on_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'power_on_instance', instance=instance_p)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=host, version='2.21')
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.21'))
         return cctxt.call(ctxt, 'pre_live_migration',
                           instance=instance_p,
                           block_migration=block_migration,
@@ -502,7 +538,8 @@ class ComputeAPI(rpcclient.RpcProxy):
             version = '2.20'
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
-        cctxt = self.client.prepare(server=host, version=version)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version(version))
         cctxt.cast(ctxt, 'prep_resize',
                    instance=instance,
                    instance_type=instance_type_p,
@@ -520,7 +557,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         else:
             version = '2.32'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'reboot_instance',
                    instance=instance,
                    block_device_info=block_device_info,
@@ -532,7 +569,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         instance_p = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         cctxt = self.client.prepare(server=_compute_host(host, instance),
-                                    version='2.22')
+                                    version=_get_version('2.22'))
         cctxt.cast(ctxt, 'rebuild_instance',
                    instance=instance_p, new_pass=new_pass,
                    injected_files=injected_files, image_ref=image_ref,
@@ -541,7 +578,8 @@ class ComputeAPI(rpcclient.RpcProxy):
                    recreate=recreate, on_shared_storage=on_shared_storage)
 
     def refresh_provider_fw_rules(self, ctxt, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'refresh_provider_fw_rules')
 
     def remove_aggregate_host(self, ctxt, aggregate, host_param, host,
@@ -556,26 +594,30 @@ class ComputeAPI(rpcclient.RpcProxy):
         '''
 
         aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(server=host, version='2.15')
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.15'))
         cctxt.cast(ctxt, 'remove_aggregate_host',
                    aggregate=aggregate_p, host=host_param,
                    slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
                    instance=instance_p, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'remove_volume_connection',
                           instance=instance_p, volume_id=volume_id)
 
     def rescue_instance(self, ctxt, instance, rescue_password):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'rescue_instance',
                    instance=instance_p,
                    rescue_password=rescue_password)
@@ -588,7 +630,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(instance))
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
@@ -603,7 +645,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             version = '2.16'
         instance_type_p = jsonutils.to_primitive(instance_type)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'resize_instance',
                    instance=instance, migration=migration,
                    image=image, reservations=reservations,
@@ -617,7 +659,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
     def revert_resize(self, ctxt, instance, migration, host,
@@ -631,14 +673,15 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(migration))
             version = '2.12'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'revert_resize',
                    instance=instance, migration=migration,
                    reservations=reservations)
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'rollback_live_migration_at_destination',
                    instance=instance_p)
 
@@ -659,34 +702,38 @@ class ComputeAPI(rpcclient.RpcProxy):
             msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
         else:
             version = '2.19'
-        cctxt = self.client.prepare(server=host, version=version)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version(version))
         cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def set_admin_password(self, ctxt, instance, new_pass):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'set_admin_password',
                           instance=instance_p, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, enabled, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.34')
+                                    version=_get_version('2.34'))
         cctxt.cast(ctxt, 'swap_volume',
                    instance=instance, old_volume_id=old_volume_id,
                    new_volume_id=new_volume_id)
 
     def get_host_uptime(self, ctxt, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         return cctxt.call(ctxt, 'get_host_uptime')
 
     def reserve_block_device_name(self, ctxt, instance, device, volume_id):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.3')
+                                    version=_get_version('2.3'))
         return cctxt.call(ctxt, 'reserve_block_device_name',
                           instance=instance_p, device=device,
                           volume_id=volume_id)
@@ -694,7 +741,7 @@ class ComputeAPI(rpcclient.RpcProxy):
     def live_snapshot_instance(self, ctxt, instance, image_id):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.30')
+                                    version=_get_version('2.30'))
         cctxt.cast(ctxt, 'live_snapshot_instance',
                    instance=instance_p, image_id=image_id)
 
@@ -711,7 +758,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             extra_kwargs = dict(image_type='backup')
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, method,
                    instance=instance,
                    image_id=image_id,
@@ -731,7 +778,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                                 rotation=None)
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'snapshot_instance',
                    instance=instance,
                    image_id=image_id,
@@ -745,7 +792,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
     def stop_instance(self, ctxt, instance, do_cast=True):
@@ -756,7 +803,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', instance=instance)
 
@@ -768,7 +815,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
@@ -779,7 +826,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'terminate_instance',
                    instance=instance, bdms=bdms_p,
                    reservations=reservations)
@@ -792,12 +839,13 @@ class ComputeAPI(rpcclient.RpcProxy):
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance_p)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
@@ -807,28 +855,30 @@ class ComputeAPI(rpcclient.RpcProxy):
             version = '2.27'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=version)
+                                    version=_get_version(version))
         cctxt.cast(ctxt, 'soft_delete_instance',
                    instance=instance, reservations=reservations)
 
     def restore_instance(self, ctxt, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'restore_instance', instance=instance_p)
 
     def shelve_instance(self, ctxt, instance, image_id=None):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.31')
+                                    version=_get_version('2.31'))
         cctxt.cast(ctxt, 'shelve_instance',
                    instance=instance, image_id=image_id)
 
     def shelve_offload_instance(self, ctxt, instance):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.31')
+                                    version=_get_version('2.31'))
         cctxt.cast(ctxt, 'shelve_offload_instance', instance=instance)
 
     def unshelve_instance(self, ctxt, instance, host, image=None):
-        cctxt = self.client.prepare(server=host, version='2.31')
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.31'))
         cctxt.cast(ctxt, 'unshelve_instance',
                    instance=instance, image=image)
 
@@ -836,7 +886,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                                create_info):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.44')
+                                    version=_get_version('2.44'))
         cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance_p,
                    volume_id=volume_id, create_info=create_info)
 
@@ -844,7 +894,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                                delete_info):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version='2.44')
+                                    version=_get_version('2.44'))
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance_p,
                    volume_id=volume_id, snapshot_id=snapshot_id,
                    delete_info=delete_info)
@@ -878,18 +928,21 @@ class SecurityGroupAPI(rpcclient.RpcProxy):
         self.client = self.get_client()
 
     def refresh_security_group_rules(self, ctxt, security_group_id, host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'refresh_security_group_rules',
                    security_group_id=security_group_id)
 
     def refresh_security_group_members(self, ctxt, security_group_id,
             host):
-        cctxt = self.client.prepare(server=host)
+        cctxt = self.client.prepare(server=host,
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'refresh_security_group_members',
                    security_group_id=security_group_id)
 
     def refresh_instance_security_rules(self, ctxt, host, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance))
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=_get_version('2.0'))
         cctxt.cast(ctxt, 'refresh_instance_security_rules',
                    instance=instance_p)

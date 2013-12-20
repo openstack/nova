@@ -3181,8 +3181,10 @@
 # Options defined in nova.compute.rpcapi
 #
 
-# Set a version cap for messages sent to compute services
-# (string value)
+# Set a version cap for messages sent to compute services. If
+# you plan to do a live upgrade from havana to icehouse, you
+# should set this option to "icehouse-compat" before beginning
+# the live upgrade procedure. (string value)
 #compute=<None>
 
 
