@@ -50,6 +50,9 @@ class ConsolesController(wsgi.Controller):
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(
                     explanation=_('Instance not yet ready'))
+        except NotImplementedError:
+            msg = _("Unable to get vnc console, functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
