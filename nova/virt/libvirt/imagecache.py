@@ -34,6 +34,7 @@ from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import utils
 from nova.virt import imagecache
 from nova.virt.libvirt import utils as virtutils
@@ -297,7 +298,17 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 disk_path = os.path.join(CONF.instances_path, ent, 'disk')
                 if os.path.exists(disk_path):
                     LOG.debug(_('%s has a disk file'), ent)
-                    backing_file = virtutils.get_disk_backing_file(disk_path)
+                    try:
+                        backing_file = virtutils.get_disk_backing_file(
+                            disk_path)
+                    except processutils.ProcessExecutionError:
+                        # (for bug 1261442)
+                        if not os.path.exists(disk_path):
+                            LOG.debug(_('Failed to get disk backing file: %s'),
+                                      disk_path)
+                            continue
+                        else:
+                            raise
                     LOG.debug(_('Instance %(instance)s is backed by '
                                 '%(backing)s'),
                               {'instance': ent,
