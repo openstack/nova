@@ -21,13 +21,10 @@
 Class for VM tasks like spawn, snapshot, suspend, resume etc.
 """
 
-import base64
 import collections
 import copy
 import os
 import time
-import urllib
-import urllib2
 
 from oslo.config import cfg
 
@@ -1344,26 +1341,6 @@ class VMwareVMOps(object):
                                                            set(lst_properties))
         # Add a namespace to all of the diagnostsics
         return dict([('vmware:' + k, v) for k, v in data.items()])
-
-    def get_console_output(self, instance):
-        """Return snapshot of console."""
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
-
-        param_list = {"id": str(vm_ref.value)}
-        base_url = "%s://%s/screen?%s" % (self._session._scheme,
-                                         self._session._host_ip,
-                                         urllib.urlencode(param_list))
-        request = urllib2.Request(base_url)
-        base64string = base64.encodestring(
-                        '%s:%s' % (
-                        self._session._host_username,
-                        self._session._host_password)).replace('\n', '')
-        request.add_header("Authorization", "Basic %s" % base64string)
-        result = urllib2.urlopen(request)
-        if result.code == 200:
-            return result.read()
-        else:
-            return ""
 
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
