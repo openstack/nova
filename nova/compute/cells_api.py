@@ -150,11 +150,12 @@ class ComputeCellsAPI(compute_api.API):
         return self.cells_rpcapi.call_compute_api_method(context, cell_name,
                 method, instance_uuid, *args, **kwargs)
 
-    def _check_requested_networks(self, context, requested_networks):
+    def _check_requested_networks(self, context, requested_networks,
+                                  max_count):
         """Override compute API's checking of this.  It'll happen in
         child cell
         """
-        return
+        return max_count
 
     def create(self, *args, **kwargs):
         """We can use the base functionality, but I left this here just

@@ -410,15 +410,22 @@ class API(base.Base):
         return network_model.NetworkInfo.hydrate(nw_info)
 
     @wrap_check_policy
-    def validate_networks(self, context, requested_networks):
+    def validate_networks(self, context, requested_networks, num_instances):
         """validate the networks passed at the time of creating
-        the server
-        """
-        if not requested_networks:
-            return
+        the server.
 
-        return self.network_rpcapi.validate_networks(context,
-                                                     requested_networks)
+        Return the number of instances that can be successfully allocated
+        with the requested network configuration.
+        """
+        if requested_networks:
+            self.network_rpcapi.validate_networks(context,
+                                                  requested_networks)
+
+        # Neutron validation checks and returns how many of num_instances
+        # instances can be supported by the quota.  For Nova network
+        # this is part of the subsequent quota check, so we just return
+        # the requested number in this case.
+        return num_instances
 
     @wrap_check_policy
     def get_instance_uuids_by_ip_filter(self, context, filters):

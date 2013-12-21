@@ -803,7 +803,8 @@ class ServersController(wsgi.Controller):
                             admin_password=password,
                             requested_networks=requested_networks,
                             **create_kwargs)
-        except exception.QuotaError as error:
+        except (exception.QuotaError,
+                exception.PortLimitExceeded) as error:
             raise exc.HTTPRequestEntityTooLarge(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})

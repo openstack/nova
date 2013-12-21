@@ -241,8 +241,8 @@ def stub_out_nw_api(stubs, cls=None, private=None, publics=None):
         def get_floating_ips_by_fixed_address(*args, **kwargs):
             return publics
 
-        def validate_networks(*args, **kwargs):
-            pass
+        def validate_networks(self, context, networks, max_count):
+            return max_count
 
     if cls is None:
         cls = Fake

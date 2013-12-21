@@ -104,12 +104,13 @@ class API(base.Base):
         """Setup or teardown the network structures."""
 
     def _get_available_networks(self, context, project_id,
-                                net_ids=None):
+                                net_ids=None, neutron=None):
         """Return a network list available for the tenant.
         The list contains networks owned by the tenant and public networks.
         If net_ids specified, it searches networks with requested IDs only.
         """
-        neutron = neutronv2.get_client(context)
+        if not neutron:
+            neutron = neutronv2.get_client(context)
 
         if net_ids:
             # If user has specified to attach instance only to specific
@@ -509,13 +510,21 @@ class API(base.Base):
         raise exception.FixedIpNotFoundForSpecificInstance(
                 instance_uuid=instance['uuid'], ip=address)
 
-    def validate_networks(self, context, requested_networks):
-        """Validate that the tenant can use the requested networks."""
+    def validate_networks(self, context, requested_networks, num_instances):
+        """Validate that the tenant can use the requested networks.
+
+        Return the number of instances than can be successfully allocated
+        with the requested network configuration.
+        """
         LOG.debug(_('validate_networks() for %s'),
                   requested_networks)
 
+        neutron = neutronv2.get_client(context)
+        ports_needed_per_instance = 0
+
         if not requested_networks:
-            nets = self._get_available_networks(context, context.project_id)
+            nets = self._get_available_networks(context, context.project_id,
+                                                neutron=neutron)
             if len(nets) > 1:
                 # Attaching to more than one network by default doesn't
                 # make sense, as the order will be arbitrary and the guest OS
@@ -523,42 +532,64 @@ class API(base.Base):
                 msg = _("Multiple possible networks found, use a Network "
                          "ID to be more specific.")
                 raise exception.NetworkAmbiguous(msg)
-            return
+            else:
+                ports_needed_per_instance = 1
 
-        net_ids = []
+        else:
+            net_ids = []
 
-        for (net_id, _i, port_id) in requested_networks:
-            if port_id:
-                try:
-                    port = (neutronv2.get_client(context)
-                                     .show_port(port_id)
-                                     .get('port'))
-                except neutronv2.exceptions.NeutronClientException as e:
-                    if e.status_code == 404:
-                        port = None
-                    else:
-                        raise
-                if not port:
-                    raise exception.PortNotFound(port_id=port_id)
-                if port.get('device_id', None):
-                    raise exception.PortInUse(port_id=port_id)
-                net_id = port['network_id']
-            if net_id in net_ids:
-                raise exception.NetworkDuplicated(network_id=net_id)
-            net_ids.append(net_id)
+            for (net_id, _i, port_id) in requested_networks:
+                if port_id:
+                    try:
+                        port = neutron.show_port(port_id).get('port')
+                    except neutronv2.exceptions.NeutronClientException as e:
+                        if e.status_code == 404:
+                            port = None
+                        else:
+                            raise
+                    if not port:
+                        raise exception.PortNotFound(port_id=port_id)
+                    if port.get('device_id', None):
+                        raise exception.PortInUse(port_id=port_id)
+                    net_id = port['network_id']
+                else:
+                    ports_needed_per_instance += 1
 
-        # Now check to see if all requested networks exist
-        nets = self._get_available_networks(context,
-                                context.project_id, net_ids)
+                if net_id in net_ids:
+                    raise exception.NetworkDuplicated(network_id=net_id)
+                net_ids.append(net_id)
 
-        if len(nets) != len(net_ids):
-            requsted_netid_set = set(net_ids)
-            returned_netid_set = set([net['id'] for net in nets])
-            lostid_set = requsted_netid_set - returned_netid_set
-            id_str = ''
-            for _id in lostid_set:
-                id_str = id_str and id_str + ', ' + _id or _id
-            raise exception.NetworkNotFound(network_id=id_str)
+            # Now check to see if all requested networks exist
+            nets = self._get_available_networks(context,
+                                    context.project_id, net_ids,
+                                    neutron=neutron)
+
+            if len(nets) != len(net_ids):
+                requsted_netid_set = set(net_ids)
+                returned_netid_set = set([net['id'] for net in nets])
+                lostid_set = requsted_netid_set - returned_netid_set
+                id_str = ''
+                for _id in lostid_set:
+                    id_str = id_str and id_str + ', ' + _id or _id
+                raise exception.NetworkNotFound(network_id=id_str)
+
+        # Note(PhilD): Ideally Nova would create all required ports as part of
+        # network validation, but port creation requires some details
+        # from the hypervisor.  So we just check the quota and return
+        # how many of the requested number of instances can be created
+
+        ports = neutron.list_ports(tenant_id=context.project_id)['ports']
+        quotas = neutron.show_quota(tenant_id=context.project_id)['quota']
+        if quotas.get('port') == -1:
+            # Unlimited Port Quota
+            return num_instances
+        else:
+            free_ports = quotas.get('port') - len(ports)
+            ports_needed = ports_needed_per_instance * num_instances
+            if free_ports >= ports_needed:
+                return num_instances
+            else:
+                return free_ports // ports_needed_per_instance
 
     def _get_instance_uuids_by_ip(self, context, address):
         """Retrieve instance uuids associated with the given ip address.
