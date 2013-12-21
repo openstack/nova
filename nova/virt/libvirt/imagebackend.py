@@ -240,6 +240,11 @@ class Image(object):
     def snapshot_extract(self, target, out_format):
         raise NotImplementedError()
 
+    @abc.abstractproperty
+    def path(self):
+        """Return image path"""
+        pass
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -250,6 +255,10 @@ class Raw(Image):
                                   disk_name))
         self.preallocate = CONF.preallocate_images != 'none'
         self.correct_format()
+
+    @property
+    def path(self):
+        return self.path
 
     def correct_format(self):
         if os.path.exists(self.path):
@@ -291,6 +300,10 @@ class Qcow2(Image):
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
         self.preallocate = CONF.preallocate_images != 'none'
+
+    @property
+    def path(self):
+        return self.path
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         @utils.synchronized(base, external=True, lock_path=self.lock_path)
@@ -369,6 +382,10 @@ class Lvm(Image):
         # for the more general preallocate_images
         self.sparse = CONF.libvirt.sparse_logical_volumes
         self.preallocate = not self.sparse
+
+    @property
+    def path(self):
+        return self.path
 
     def _can_fallocate(self):
         return False
@@ -478,6 +495,12 @@ class Rbd(Image):
         self.rbd_user = ascii_str(CONF.libvirt.rbd_user)
         self.rbd = kwargs.get('rbd', rbd)
         self.rados = kwargs.get('rados', rados)
+
+    @property
+    def path(self):
+        raise RuntimeError(_('You should specify'
+                             ' libvirt_inject_partition'
+                             ' flag with value -2 in nova configuration'))
 
     def _connect_to_rados(self, pool=None):
         client = self.rados.Rados(rados_id=self.rbd_user,
