@@ -1148,6 +1148,28 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
               </devices>
             </domain>""")
 
+    def test_config_machine_type(self):
+        obj = config.LibvirtConfigGuest()
+        obj.virt_type = "kvm"
+        obj.memory = 100 * units.Mi
+        obj.vcpus = 2
+        obj.name = "demo"
+        obj.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0147"
+        obj.os_type = "hvm"
+        obj.os_mach_type = "fake_machine_type"
+        xml = obj.to_xml()
+
+        self.assertXmlEqual(xml, """
+            <domain type="kvm">
+              <uuid>b38a3f43-4be2-4046-897f-b67c2f5e0147</uuid>
+              <name>demo</name>
+              <memory>104857600</memory>
+              <vcpu>2</vcpu>
+              <os>
+                <type machine="fake_machine_type">hvm</type>
+              </os>
+            </domain>""")
+
     def test_ConfigGuest_parse_devices(self):
         xmldoc = """ <domain type="kvm">
                       <devices>

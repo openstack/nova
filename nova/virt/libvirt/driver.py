@@ -3076,6 +3076,22 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.sysinfo = self.get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
 
+            # The underlying machine type can be set as an image attribute,
+            # or otherwise based on some architecture specific defaults
+            if (image_meta is not None and image_meta.get('properties') and
+                   image_meta['properties'].get('hw_machine_type')
+                   is not None):
+                guest.os_mach_type = \
+                    image_meta['properties']['hw_machine_type']
+            else:
+                # For ARM systems we will default to vexpress-a15 for armv7
+                # and virt for aarch64
+                if caps.host.cpu.arch == "armv7l":
+                    guest.os_mach_type = "vexpress-a15"
+
+                if caps.host.cpu.arch == "aarch64":
+                    guest.os_mach_type = "virt"
+
         if CONF.libvirt.virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
             guest.os_cmdline = CONSOLE

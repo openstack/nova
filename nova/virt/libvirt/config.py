@@ -1109,6 +1109,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_init_path = None
         self.os_boot_dev = []
         self.os_smbios = None
+        self.os_mach_type = None
         self.devices = []
 
     def _format_basic_props(self, root):
@@ -1124,7 +1125,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
     def _format_os(self, root):
         os = etree.Element("os")
-        os.append(self._text_node("type", self.os_type))
+        type_node = self._text_node("type", self.os_type)
+        if self.os_mach_type is not None:
+            type_node.set("machine", self.os_mach_type)
+        os.append(type_node)
         if self.os_kernel is not None:
             os.append(self._text_node("kernel", self.os_kernel))
         if self.os_loader is not None:
