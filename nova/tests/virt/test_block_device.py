@@ -22,6 +22,7 @@ from nova.tests import matchers
 from nova.virt import block_device as driver_block_device
 from nova.virt import driver
 from nova.volume import cinder
+from nova.volume import encryptors
 
 
 class TestDriverBlockDevice(test.NoDBTestCase):
@@ -276,25 +277,57 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertRaises(driver_block_device._InvalidType,
                           self.driver_classes['image'], bdm)
 
-    def _test_volume_attach(self, driver_bdm, bdm_dict, fake_volume):
+    def _test_volume_attach(self, driver_bdm, bdm_dict,
+                            fake_volume, check_attach=True,
+                            fail_check_attach=False, driver_attach=False,
+                            fail_driver_attach=False):
         elevated_context = self.context.elevated()
         self.stubs.Set(self.context, 'elevated',
                        lambda: elevated_context)
         self.mox.StubOutWithMock(driver_bdm._bdm_obj, 'save')
+        self.mox.StubOutWithMock(encryptors, 'get_encryption_metadata')
         instance = {'id': 'fake_id', 'uuid': 'fake_uuid'}
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
         connection_info = {'data': {}}
         expected_conn_info = {'data': {},
                               'serial': fake_volume['id']}
+        enc_data = {'fake': 'enc_data'}
 
         self.volume_api.get(self.context,
                             fake_volume['id']).AndReturn(fake_volume)
-        self.volume_api.check_attach(self.context, fake_volume,
-                                instance=instance).AndReturn(None)
+        if check_attach:
+            if not fail_check_attach:
+                self.volume_api.check_attach(self.context, fake_volume,
+                                    instance=instance).AndReturn(None)
+            else:
+                self.volume_api.check_attach(self.context, fake_volume,
+                                    instance=instance).AndRaise(
+                                            test.TestingException)
+                return instance, expected_conn_info
+
         self.virt_driver.get_volume_connector(instance).AndReturn(connector)
         self.volume_api.initialize_connection(
             elevated_context, fake_volume['id'],
             connector).AndReturn(connection_info)
+        if driver_attach:
+            encryptors.get_encryption_metadata(
+                    elevated_context, self.volume_api, fake_volume['id'],
+                    connection_info).AndReturn(enc_data)
+            if not fail_driver_attach:
+                self.virt_driver.attach_volume(
+                        elevated_context, expected_conn_info, instance,
+                        bdm_dict['device_name'],
+                        encryption=enc_data).AndReturn(None)
+            else:
+                self.virt_driver.attach_volume(
+                        elevated_context, expected_conn_info, instance,
+                        bdm_dict['device_name'],
+                        encryption=enc_data).AndRaise(test.TestingException)
+                self.volume_api.terminate_connection(
+                        elevated_context, fake_volume['id'],
+                        expected_conn_info).AndReturn(None)
+                return instance, expected_conn_info
+
         self.volume_api.attach(elevated_context, fake_volume['id'],
                           'fake_uuid', bdm_dict['device_name']).AndReturn(None)
         driver_bdm._bdm_obj.save(self.context).AndReturn(None)
@@ -314,6 +347,48 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         self.volume_api, self.virt_driver)
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
+
+    def check_volume_attach_check_attach_fails(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1'}
+
+        instance, _ = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, fail_check_attach=True)
+        self.mox.ReplayAll()
+
+        self.asserRaises(test.TestingException, test_bdm.attach, self.context,
+                         instance, self.volume_api, self.virt_driver)
+
+    def test_volume_attach_no_check_driver_attach(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1'}
+
+        instance, expected_conn_info = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, check_attach=False,
+                driver_attach=True)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance,
+                        self.volume_api, self.virt_driver,
+                        do_check_attach=False, do_driver_attach=True)
+        self.assertThat(test_bdm['connection_info'],
+                        matchers.DictMatches(expected_conn_info))
+
+    def check_volume_attach_driver_attach_fails(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1'}
+
+        instance, _ = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, fail_check_attach=True)
+        self.mox.ReplayAll()
+
+        self.asserRaises(test.TestingException, test_bdm.attach, self.context,
+                         instance, self.volume_api, self.virt_driver,
+                         do_driver_attach=True)
 
     def test_refresh_connection(self):
         test_bdm = self.driver_classes['snapshot'](
