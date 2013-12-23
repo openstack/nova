@@ -1825,27 +1825,32 @@ class DeviceIdTestCase(VMUtilsTestBase):
     def test_device_id_is_none_if_not_specified_in_meta_data(self):
         image_meta = {}
         session = mock.Mock()
-        session.product_version = '6.1'
+        session.product_version = (6, 1, 0)
         self.assertIsNone(vm_utils.get_vm_device_id(session, image_meta))
 
     def test_get_device_id_if_hypervisor_version_is_greater_than_6_1(self):
         image_meta = {'xenapi_device_id': '0002'}
         session = mock.Mock()
-        session.product_version = '6.2'
+        session.product_version = (6, 2, 0)
         self.assertEqual('0002',
                          vm_utils.get_vm_device_id(session, image_meta))
-        session.product_version = '6.3.1'
+        session.product_version = (6, 3, 1)
         self.assertEqual('0002',
                          vm_utils.get_vm_device_id(session, image_meta))
 
     def test_raise_exception_if_device_id_not_supported_by_hyp_version(self):
         image_meta = {'xenapi_device_id': '0002'}
         session = mock.Mock()
-        session.product_version = '6.0'
+        session.product_version = (6, 0)
         exc = self.assertRaises(exception.NovaException,
-            vm_utils.get_vm_device_id, session, image_meta)
+                                vm_utils.get_vm_device_id, session, image_meta)
         self.assertEqual("Device id 0002 specified is not supported by "
-            "hypervisor version 6.0", exc.message)
+                         "hypervisor version (6, 0)", exc.message)
+        session.product_version = ('6a')
+        exc = self.assertRaises(exception.NovaException,
+                                vm_utils.get_vm_device_id, session, image_meta)
+        self.assertEqual("Device id 0002 specified is not supported by "
+                         "hypervisor version 6a", exc.message)
 
 
 class CreateVmRecordTestCase(VMUtilsTestBase):
