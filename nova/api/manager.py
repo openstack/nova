@@ -29,11 +29,4 @@ class MetadataManager(manager.Manager):
     def __init__(self, *args, **kwargs):
         super(MetadataManager, self).__init__(*args, **kwargs)
         self.network_driver = driver.load_network_driver()
-
-    def init_host(self):
-        """Perform any initialization.
-
-        Currently, we only add an iptables filter rule for the metadata
-        service.
-        """
         self.network_driver.metadata_accept()
