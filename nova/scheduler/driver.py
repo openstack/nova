@@ -106,11 +106,6 @@ class Scheduler(object):
                 CONF.scheduler_host_manager)
         self.servicegroup_api = servicegroup.API()
 
-    def update_service_capabilities(self, service_name, host, capabilities):
-        """Process a capability update from a service node."""
-        self.host_manager.update_service_capabilities(service_name,
-                host, capabilities)
-
     def hosts_up(self, context, topic):
         """Return the list of hosts that have a running service for topic."""
 

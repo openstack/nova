@@ -24,7 +24,6 @@ from nova.openstack.common import timeutils
 from nova.scheduler import filters
 from nova.scheduler import host_manager
 from nova import test
-from nova.tests import matchers
 from nova.tests.scheduler import fakes
 from nova import utils
 
@@ -266,53 +265,6 @@ class HostManagerTestCase(test.NoDBTestCase):
         result = self.host_manager.get_filtered_hosts(self.fake_hosts,
                 fake_properties)
         self._verify_result(info, result, False)
-
-    def test_update_service_capabilities(self):
-        service_states = self.host_manager.service_states
-        self.assertEqual(len(service_states.keys()), 0)
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
-        timeutils.utcnow().AndReturn(31337)
-        timeutils.utcnow().AndReturn(31339)
-
-        host1_compute_capabs = dict(free_memory=1234, host_memory=5678,
-                timestamp=1, hypervisor_hostname='node1')
-        host2_compute_capabs = dict(free_memory=8756, timestamp=1,
-                hypervisor_hostname='node2')
-
-        self.mox.ReplayAll()
-        self.host_manager.update_service_capabilities('compute', 'host1',
-                host1_compute_capabs)
-        self.host_manager.update_service_capabilities('compute', 'host2',
-                host2_compute_capabs)
-
-        # Make sure original dictionary wasn't copied
-        self.assertEqual(host1_compute_capabs['timestamp'], 1)
-
-        host1_compute_capabs['timestamp'] = 31337
-        host2_compute_capabs['timestamp'] = 31339
-
-        expected = {('host1', 'node1'): host1_compute_capabs,
-                    ('host2', 'node2'): host2_compute_capabs}
-        self.assertThat(service_states, matchers.DictMatches(expected))
-
-    def test_update_service_capabilities_node_key(self):
-        service_states = self.host_manager.service_states
-        self.assertThat(service_states, matchers.DictMatches({}))
-
-        host1_cap = {'hypervisor_hostname': 'host1-hvhn'}
-        host2_cap = {}
-
-        timeutils.set_time_override(31337)
-        self.host_manager.update_service_capabilities('compute', 'host1',
-                host1_cap)
-        timeutils.set_time_override(31338)
-        self.host_manager.update_service_capabilities('compute', 'host2',
-                host2_cap)
-        host1_cap['timestamp'] = 31337
-        host2_cap['timestamp'] = 31338
-        expected = {('host1', 'host1-hvhn'): host1_cap,
-                    ('host2', None): host2_cap}
-        self.assertThat(service_states, matchers.DictMatches(expected))
 
     def test_get_all_host_states(self):
 
