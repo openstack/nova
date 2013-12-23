@@ -3869,7 +3869,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.stubs.Set(conn, 'get_info', fake_get_info)
         if mkfs:
             self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
-                       {os_type: 'mkfs.ext3 --label %(fs_label)s %(target)s'})
+                       {os_type: 'mkfs.ext4 --label %(fs_label)s %(target)s'})
 
         image_meta = {'id': instance['image_ref']}
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -3976,7 +3976,7 @@ class LibvirtConnTestCase(test.TestCase):
     def test_create_ephemeral_default(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext3', '-F', '-L', 'myVol',
+        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'myVol',
                       '/dev/something', run_as_root=True)
         self.mox.ReplayAll()
         conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
@@ -3995,9 +3995,9 @@ class LibvirtConnTestCase(test.TestCase):
     def test_create_ephemeral_with_arbitrary(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
-                       {'linux': 'mkfs.ext3 --label %(fs_label)s %(target)s'})
+                       {'linux': 'mkfs.ext4 --label %(fs_label)s %(target)s'})
         self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs.ext3', '--label', 'myVol', '/dev/something',
+        utils.execute('mkfs.ext4', '--label', 'myVol', '/dev/something',
                       run_as_root=True)
         self.mox.ReplayAll()
         conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
