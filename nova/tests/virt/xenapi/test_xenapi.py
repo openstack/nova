@@ -2034,6 +2034,18 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         stats = self.conn.get_host_stats(True)
         self.assertEqual(stats['vcpus_used'], 4)
 
+    def test_pci_passthrough_devices_whitelist(self):
+        # NOTE(guillaume-thouvenin): This pci whitelist will be used to
+        # match with _plugin_xenhost_get_pci_device_details method in fake.py.
+        self.flags(pci_passthrough_whitelist=
+                   ['[{"vendor_id":"10de", "product_id":"11bf"}]'])
+        stats = self.conn.get_host_stats()
+        self.assertEqual(len(stats['pci_passthrough_devices']), 1)
+
+    def test_pci_passthrough_devices_no_whitelist(self):
+        stats = self.conn.get_host_stats()
+        self.assertEqual(len(stats['pci_passthrough_devices']), 0)
+
     def test_host_state_missing_sr(self):
         def fake_safe_find_sr(session):
             raise exception.StorageRepositoryNotFound('not there')
