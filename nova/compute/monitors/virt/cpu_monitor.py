@@ -20,6 +20,7 @@ CPU monitor based on compute driver to retrieve CPU information
 
 from oslo.config import cfg
 
+from nova.compute import monitors
 from nova.compute.monitors import cpu_monitor as monitor
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -48,74 +49,48 @@ class ComputeDriverCPUMonitor(monitor._CPUMonitorBase):
         self.source = CONF.compute_driver
         self.driver = self.compute_manager.driver
         self._cpu_stats = {}
-        self._data = {}
 
-    def add_timestamp(f):
-        """Decorator to indicate that a method needs to add a timestamp.
-
-        The decorator (w/o any argument) is used in this way in this class
-        only. When a function returning a value is decorated by the decorator,
-        which means a timestamp should be added into the returned value.
-        That is, a tuple (value, timestamp) is returned.
-
-        The timestamp is not the time when the function is called but probably
-        when the value the function returns was retrieved.
-        Actually the value is retrieved by the internal method
-        _update_cpustat(). Because we don't allow _update_cpustat() is called
-        so frequently. So, the value is read from the cache which was got in
-        the last call sometimes. And the timestamp is saved for utilization
-        aware scheduling in the future.
-
-        The decorator is mainly used in this class. If users hope to define
-        how the timestamp is got by themselves, they should not use this
-        decorator in their own classes.
-        """
-        def wrapper(self, **kwargs):
-            self._update_cpustat()
-            return f(self, **kwargs), self._data.get("timestamp")
-        return wrapper
-
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_frequency(self, **kwargs):
         return self._data.get("cpu.frequency")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_user_time(self, **kwargs):
         return self._data.get("cpu.user.time")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_kernel_time(self, **kwargs):
         return self._data.get("cpu.kernel.time")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_idle_time(self, **kwargs):
         return self._data.get("cpu.idle.time")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_iowait_time(self, **kwargs):
         return self._data.get("cpu.iowait.time")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_user_percent(self, **kwargs):
         return self._data.get("cpu.user.percent")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_kernel_percent(self, **kwargs):
         return self._data.get("cpu.kernel.percent")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_idle_percent(self, **kwargs):
         return self._data.get("cpu.idle.percent")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_iowait_percent(self, **kwargs):
         return self._data.get("cpu.iowait.percent")
 
-    @add_timestamp
+    @monitors.ResourceMonitorBase.add_timestamp
     def _get_cpu_percent(self, **kwargs):
         return self._data.get("cpu.percent")
 
-    def _update_cpustat(self, **kwargs):
+    def _update_data(self, **kwargs):
         # Don't allow to call this function so frequently (<= 1 sec)
         now = timeutils.utcnow()
         if self._data.get("timestamp") is not None:
