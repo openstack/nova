@@ -3120,8 +3120,13 @@ class LibvirtDriver(driver.ComputeDriver):
             tmrtc.name = "rtc"
             tmrtc.tickpolicy = "catchup"
 
+            tmhpet = vconfig.LibvirtConfigGuestTimer()
+            tmhpet.name = "hpet"
+            tmhpet.present = False
+
             clk.add_timer(tmpit)
             clk.add_timer(tmrtc)
+            clk.add_timer(tmhpet)
 
         for cfg in self.get_guest_storage_config(instance,
                                                  image_meta,
