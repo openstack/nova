@@ -169,7 +169,7 @@ class ExtensionsResource(wsgi.Resource):
     def delete(self, req, id):
         raise webob.exc.HTTPNotFound()
 
-    def create(self, req):
+    def create(self, req, body):
         raise webob.exc.HTTPNotFound()
 
 

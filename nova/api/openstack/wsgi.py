@@ -73,6 +73,11 @@ _ROUTES_METHODS = [
     'update',
 ]
 
+_METHODS_WITH_BODY = [
+    'POST',
+    'PUT',
+]
+
 
 class Request(webob.Request):
     """Add some OpenStack API-specific logic to the base webob.Request."""
@@ -823,14 +828,6 @@ class Resource(wsgi.Application):
             LOG.debug(_("Unrecognized Content-Type provided in request"))
             return None, ''
 
-        if not content_type:
-            LOG.debug(_("No Content-Type provided in request"))
-            return None, ''
-
-        if len(request.body) <= 0:
-            LOG.debug(_("Empty body provided in request"))
-            return None, ''
-
         return content_type, request.body
 
     def deserialize(self, meth, content_type, body):
@@ -910,6 +907,9 @@ class Resource(wsgi.Application):
 
         return None
 
+    def _should_have_body(self, request):
+        return request.method in _METHODS_WITH_BODY
+
     @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, request):
         """WSGI method that controls (de)serialization and method dispatch."""
@@ -955,10 +955,13 @@ class Resource(wsgi.Application):
 
         # Now, deserialize the request body...
         try:
-            if content_type:
-                contents = self.deserialize(meth, content_type, body)
-            else:
-                contents = {}
+            contents = {}
+            if self._should_have_body(request):
+                #allow empty body with PUT and POST
+                if request.content_length == 0:
+                    contents = {'body': None}
+                else:
+                    contents = self.deserialize(meth, content_type, body)
         except exception.InvalidContentType:
             msg = _("Unsupported Content-Type")
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
