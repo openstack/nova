@@ -111,8 +111,6 @@ class ImageCacheManager(object):
     def _list_base_images(self, base_dir):
         """Return a list of the images present in _base.
 
-        Note that this does not return a value. It instead populates a class
-        variable with a list of images that we need to try and explain.
         This method returns a dictionary with the following keys:
             - unexplained_images
             - originals
