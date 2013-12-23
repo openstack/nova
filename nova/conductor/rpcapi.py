@@ -525,11 +525,10 @@ class ComputeTaskAPI(rpcclient.RpcProxy):
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping, legacy_bdm=True):
-        instances_p = [jsonutils.to_primitive(inst) for inst in instances]
         image_p = jsonutils.to_primitive(image)
         cctxt = self.client.prepare(version='1.5')
         cctxt.cast(context, 'build_instances',
-                   instances=instances_p, image=image_p,
+                   instances=instances, image=image_p,
                    filter_properties=filter_properties,
                    admin_password=admin_password,
                    injected_files=injected_files,

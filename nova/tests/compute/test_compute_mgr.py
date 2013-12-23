@@ -808,8 +808,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         super(ComputeManagerBuildInstanceTestCase, self).setUp()
         self.compute = importutils.import_object(CONF.compute_manager)
         self.context = context.RequestContext('fake', 'fake')
-        self.instance = fake_instance.fake_db_instance(
-                vm_state=vm_states.ACTIVE)
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE,
+                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.admin_pass = 'pass'
         self.injected_files = []
         self.image = {}
@@ -833,30 +834,23 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.compute._resource_tracker_dict[self.node] = fake_rt
 
     def _do_build_instance_update(self, reschedule_update=False):
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.compute._instance_update(self.context, self.instance['uuid'],
-                vm_state=vm_states.BUILDING, task_state=None,
+        self.mox.StubOutWithMock(self.instance, 'save')
+        self.instance.save(
                 expected_task_state=(task_states.SCHEDULING, None)).AndReturn(
                         self.instance)
         if reschedule_update:
-            self.compute._instance_update(self.context, self.instance['uuid'],
-                    task_state=task_states.SCHEDULING).AndReturn(self.instance)
+            self.instance.save().AndReturn(self.instance)
 
     def _build_and_run_instance_update(self):
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(self.instance, 'save')
         self._build_resources_instance_update(stub=False)
-        self.compute._instance_update(self.context, self.instance['uuid'],
-                vm_state=vm_states.BUILDING, task_state=task_states.SPAWNING,
-                expected_task_state=
-                    task_states.BLOCK_DEVICE_MAPPING).AndReturn(self.instance)
+        self.instance.save(expected_task_state=
+                task_states.BLOCK_DEVICE_MAPPING).AndReturn(self.instance)
 
     def _build_resources_instance_update(self, stub=True):
         if stub:
-            self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.compute._instance_update(self.context, self.instance['uuid'],
-                vm_state=vm_states.BUILDING,
-                task_state=task_states.BLOCK_DEVICE_MAPPING).AndReturn(
-                        self.instance)
+            self.mox.StubOutWithMock(self.instance, 'save')
+        self.instance.save().AndReturn(self.instance)
 
     def _notify_about_instance_usage(self, event, stub=True, **kwargs):
         if stub:
@@ -1171,14 +1165,14 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     side_effect=exc),
                 mock.patch.object(conductor_rpcapi.ConductorAPI,
                     'instance_update'),
-                mock.patch.object(self.compute, '_instance_update',
+                mock.patch.object(self.instance, 'save',
                     side_effect=[self.instance, self.instance]),
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance',
                     return_value=self.network_info),
                 mock.patch.object(self.compute,
                     '_notify_about_instance_usage')
-        ) as (spawn, instance_update, _instance_update,
+        ) as (spawn, instance_update, save,
                 _build_networks_for_instance, _notify_about_instance_usage):
 
             self.assertRaises(exception.BuildAbortException,
@@ -1198,13 +1192,9 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 mock.call(self.context, self.instance, 'create.error',
                     extra_usage_info={'message': exc.format_message()})])
 
-            _instance_update.assert_has_calls([
-                mock.call(self.context, self.instance['uuid'],
-                    vm_state=vm_states.BUILDING,
-                    task_state=task_states.BLOCK_DEVICE_MAPPING),
-                mock.call(self.context, self.instance['uuid'],
-                    vm_state=vm_states.BUILDING,
-                    task_state=task_states.SPAWNING,
+            save.assert_has_calls([
+                mock.call(),
+                mock.call(
                     expected_task_state=task_states.BLOCK_DEVICE_MAPPING)])
 
             spawn.assert_has_calls(mock.call(self.context, self.instance,
