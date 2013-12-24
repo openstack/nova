@@ -17,8 +17,8 @@ import mock
 from nova.network import model as network_model
 from nova import test
 from nova import utils
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
 
@@ -105,41 +105,45 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertTrue(value,
                         "image level metadata failed to override global")
 
-    def _setup_create_cache_mocks(self):
+    def _setup_create_folder_mocks(self):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
-        base_name = ops._base_folder
+        base_name = 'folder'
         ds_name = "datastore"
         ds_ref = mock.Mock()
-        path = vm_util.build_datastore_path(ds_name, base_name)
-        ops._mkdir = mock.Mock()
-        return ds_name, ds_ref, ops, path
+        ds_ref.value = 1
+        dc_ref = mock.Mock()
+        ops._datastore_dc_mapping[ds_ref.value] = vmops.DcInfo(
+                ref=dc_ref,
+                name='fake-name',
+                vmFolder='fake-folder')
+        path = ds_util.build_datastore_path(ds_name, base_name)
+        ds_util.mkdir = mock.Mock()
+        return ds_name, ds_ref, ops, path, dc_ref
 
-    def test_create_cache_folder(self):
-        ds_name, ds_ref, ops, path = self._setup_create_cache_mocks()
-        ops.create_cache_folder(ds_name, ds_ref)
-        ops._mkdir.assert_called_with(path, ds_ref)
+    def test_create_folder_if_missing(self):
+        ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
+        ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
+        ds_util.mkdir.assert_called_with(ops._session, path, dc)
 
-    def test_create_cache_folder_with_exception(self):
-        ds_name, ds_ref, ops, path = self._setup_create_cache_mocks()
-        ops._mkdir.side_effect = error_util.FileAlreadyExistsException()
-        ops.create_cache_folder(ds_name, ds_ref)
-        # assert that the
-        ops._mkdir.assert_called_with(path, ds_ref)
+    def test_create_folder_if_missing_exception(self):
+        ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
+        ds_util.mkdir.side_effect = error_util.FileAlreadyExistsException()
+        ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
+        ds_util.mkdir.assert_called_with(ops._session, path, dc)
 
-    def test_check_if_folder_file_exists_with_existing(self):
+    @mock.patch.object(ds_util, 'file_exists', return_value=True)
+    def test_check_if_folder_file_exists_with_existing(self,
+                                                       mock_exists):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
-        ops.create_cache_folder = mock.Mock()
-        ops._file_exists = mock.Mock()
-        ops._file_exists.return_value = True
+        ops._create_folder_if_missing = mock.Mock()
         ops._check_if_folder_file_exists(mock.Mock(), "datastore",
                                          "folder", "some_file")
-        ops.create_cache_folder.assert_called_once()
+        ops._create_folder_if_missing.assert_called_once()
 
-    def test_check_if_folder_file_exists_no_existing(self):
+    @mock.patch.object(ds_util, 'file_exists', return_value=False)
+    def test_check_if_folder_file_exists_no_existing(self, mock_exists):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
-        ops.create_cache_folder = mock.Mock()
-        ops._file_exists = mock.Mock()
-        ops._file_exists.return_value = True
+        ops._create_folder_if_missing = mock.Mock()
         ops._check_if_folder_file_exists(mock.Mock(), "datastore",
                                          "folder", "some_file")
-        ops.create_cache_folder.assert_called_once()
+        ops._create_folder_if_missing.assert_called_once()

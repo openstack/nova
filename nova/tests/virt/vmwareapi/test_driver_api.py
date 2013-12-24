@@ -49,6 +49,7 @@ from nova import utils as nova_utils
 from nova.virt import driver as v_driver
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
@@ -269,6 +270,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                    host_password='test_pass',
                    cluster_name='test_cluster',
                    datastore_regex='.*',
+                   api_retry_count=1,
                    use_linked_clone=False, group='vmware')
         self.flags(vnc_enabled=False,
                    image_cache_subdirectory_name='vmware_base')
@@ -318,8 +320,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 raise exception.NovaException('Here is my fake exception')
             return self.login_session
 
+        def _fake_check_session(_self):
+            return True
+
         self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
         self.stubs.Set(time, 'sleep', lambda x: None)
+        self.stubs.Set(vmwareapi_fake.FakeVim, '_check_session',
+                       _fake_check_session)
         self.conn = driver.VMwareAPISession()
         self.assertEqual(self.attempts, 2)
 
@@ -551,6 +558,23 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
+
+    def test_spawn_disk_extend_exists(self):
+        root = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.80.vmdk' %
+                self.ds)
+        self.root = root
+
+        def _fake_extend(instance, requested_size, name, dc_ref):
+            vmwareapi_fake._add_file(self.root)
+
+        self.stubs.Set(self.conn._vmops, '_extend_virtual_disk',
+                       _fake_extend)
+
+        self._create_vm()
+        info = self.conn.get_info({'uuid': self.uuid,
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+        self.assertTrue(vmwareapi_fake.get_file(root))
 
     def test_spawn_disk_extend_sparse(self):
         self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
@@ -1512,6 +1536,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         cluster_name = 'test_cluster'
         cluster_name2 = 'test_cluster2'
         self.flags(cluster_name=[cluster_name, cluster_name2],
+                   api_retry_count=1,
                    task_poll_interval=10, datastore_regex='.*', group='vmware')
         self.flags(vnc_enabled=False,
                    image_cache_subdirectory_name='vmware_base')
@@ -1631,15 +1656,12 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                                  'generate_uuid')
         uuidutils.generate_uuid().AndReturn(uuid_str)
 
-        self.mox.StubOutWithMock(vmops.VMwareVMOps,
-                                 '_delete_datastore_file')
+        self.mox.StubOutWithMock(ds_util, 'file_delete')
         # Check calls for delete vmdk and -flat.vmdk pair
-        self.conn._vmops._delete_datastore_file(
-                mox.IgnoreArg(),
+        ds_util.file_delete(mox.IgnoreArg(),
                 "[%s] vmware_temp/%s-flat.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
-        self.conn._vmops._delete_datastore_file(
-                mox.IgnoreArg(),
+        ds_util.file_delete(mox.IgnoreArg(),
                 "[%s] vmware_temp/%s.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
 
