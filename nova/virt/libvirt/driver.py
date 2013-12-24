@@ -272,6 +272,8 @@ MAX_CONSOLE_BYTES = 100 * unit.Ki
 
 # The libvirt driver will prefix any disable reason codes with this string.
 DISABLE_PREFIX = 'AUTO: '
+# Disable reason for the service which was enabled or disabled without reason
+DISABLE_REASON_UNDEFINED = 'None'
 
 
 def patch_tpool_proxy():
@@ -2698,7 +2700,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if isinstance(enabled, bool):
             disable_service = not enabled
-            disable_reason = ''
+            disable_reason = DISABLE_REASON_UNDEFINED
         else:
             disable_service = bool(enabled)
             disable_reason = enabled
@@ -2720,7 +2722,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     service.disabled = disable_service
                     service.disabled_reason = (
                        DISABLE_PREFIX + disable_reason
-                       if disable_service else '')
+                       if disable_service else DISABLE_REASON_UNDEFINED)
                     service.save()
                     LOG.debug(_('Updating compute service status to %s'),
                                  status_name[disable_service])

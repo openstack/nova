@@ -737,7 +737,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
 
         # Previous status of the service: disabled: False
         # service_mock.__getitem__.return_value = False
-        service_mock.configure_mock(disabled_reason='',
+        service_mock.configure_mock(disabled_reason='None',
                                     disabled=False)
         from nova.objects import service as service_obj
         self.mox.StubOutWithMock(service_obj.Service,
@@ -764,7 +764,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.connection.set_host_enabled('my_test_host', True)
         self.assertFalse(service_mock.disabled)
-        self.assertEqual(service_mock.disabled_reason, '')
+        self.assertEqual(service_mock.disabled_reason, 'None')
 
     def test_set_host_enabled_when_manually_disabled(self):
         self.mox.UnsetStubs()
