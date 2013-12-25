@@ -214,7 +214,7 @@ class String(FieldType):
                               datetime.datetime)):
             return unicode(value)
         else:
-            raise ValueError(_('A string is required here, not %s'),
+            raise ValueError(_('A string is required here, not %s') %
                              value.__class__.__name__)
 
 
