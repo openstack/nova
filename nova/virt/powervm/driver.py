@@ -196,7 +196,7 @@ class PowerVMDriver(driver.ComputeDriver):
         raise NotImplementedError(_("Suspend is not supported by the"
                                     "PowerVM driver."))
 
-    def resume(self, instance, network_info, block_device_info=None):
+    def resume(self, context, instance, network_info, block_device_info=None):
         """resume the specified instance."""
         raise NotImplementedError(_("Resume is not supported by the"
                                     "PowerVM driver."))

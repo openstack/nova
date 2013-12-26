@@ -431,9 +431,16 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
-    def resume(self, instance, network_info, block_device_info=None):
-        """resume the specified instance."""
-        # TODO(Vek): Need to pass context in for access to auth_token
+    def resume(self, context, instance, network_info, block_device_info=None):
+        """
+        resume the specified instance.
+
+        :param context: the context for the resume
+        :param instance: the instance being resumed
+        :param network_info:
+           :py:meth:`~nova.network.manager.NetworkManager.get_instance_nw_info`
+        :param block_device_info: instance volume block device info
+        """
         raise NotImplementedError()
 
     def resume_state_on_host_boot(self, context, instance, network_info,
