@@ -144,3 +144,13 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
         req = self._create_request()
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 501)
+
+    def test_get_console_output_with_negative_length(self):
+        req = self._create_request(length_dict={'length': -1})
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)
+
+    def test_get_console_output_with_boolean_length(self):
+        req = self._create_request(length_dict={'length': True})
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 400)

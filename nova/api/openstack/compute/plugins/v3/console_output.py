@@ -19,8 +19,10 @@
 import re
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import console_output
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -36,6 +38,7 @@ class ConsoleOutputController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_console_output')
+    @validation.schema(console_output.get_console_output)
     def get_console_output(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
@@ -46,22 +49,7 @@ class ConsoleOutputController(wsgi.Controller):
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        try:
-            length = body['get_console_output'].get('length')
-        except (TypeError, KeyError):
-            raise webob.exc.HTTPBadRequest(_('get_console_output malformed '
-                                             'or missing from request body'))
-
-        if length is not None:
-            try:
-                # NOTE(maurosr): cast length into a string before cast into an
-                # integer to avoid thing like: int(2.5) which is 2 instead of
-                # raise ValueError like it would when we try int("2.5"). This
-                # can be removed once we have api validation landed.
-                int(str(length))
-            except ValueError:
-                raise webob.exc.HTTPBadRequest(_('Length in request body must '
-                                                 'be an integer value'))
+        length = body['get_console_output'].get('length')
 
         try:
             output = self.compute_api.get_console_output(context,
