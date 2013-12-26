@@ -110,16 +110,6 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         self.obj_reset_changes()
 
 
-def _make_instance_group_list(context, inst_list, db_list):
-    inst_list.objects = []
-    for group in db_list:
-        inst_obj = InstanceGroup._from_db_object(context, InstanceGroup(),
-                                                 group)
-        inst_list.objects.append(inst_obj)
-    inst_list.obj_reset_changes()
-    return inst_list
-
-
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3
@@ -136,9 +126,11 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_by_project_id(cls, context, project_id):
         groups = db.instance_group_get_all_by_project_id(context, project_id)
-        return _make_instance_group_list(context, cls(), groups)
+        return base.obj_make_list(context, InstanceGroupList(), InstanceGroup,
+                                  groups)
 
     @base.remotable_classmethod
     def get_all(cls, context):
         groups = db.instance_group_get_all(context)
-        return _make_instance_group_list(context, cls(), groups)
+        return base.obj_make_list(context, InstanceGroupList(), InstanceGroup,
+                                  groups)
