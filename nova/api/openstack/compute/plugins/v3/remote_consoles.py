@@ -15,8 +15,10 @@
 import webob
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import remote_consoles
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -33,6 +35,7 @@ class RemoteConsolesController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_vnc_console')
+    @validation.schema(remote_consoles.get_vnc_console)
     def get_vnc_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
@@ -63,6 +66,7 @@ class RemoteConsolesController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_spice_console')
+    @validation.schema(remote_consoles.get_spice_console)
     def get_spice_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
@@ -94,6 +98,7 @@ class RemoteConsolesController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_rdp_console')
+    @validation.schema(remote_consoles.get_rdp_console)
     def get_rdp_console(self, req, id, body):
         """Get text console output."""
         context = req.environ['nova.context']
