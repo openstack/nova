@@ -19,8 +19,10 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import rescue
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -50,6 +52,7 @@ class RescueController(wsgi.Controller):
     @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('rescue')
+    @validation.schema(rescue.rescue)
     def _rescue(self, req, id, body):
         """Rescue an instance."""
         context = req.environ["nova.context"]
