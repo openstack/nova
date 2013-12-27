@@ -908,6 +908,24 @@ class LibvirtConfigGuestGraphics(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigSeclabel(LibvirtConfigObject):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigSeclabel, self).__init__(root_name="seclabel",
+                                                      **kwargs)
+        self.type = 'dynamic'
+        self.baselabel = None
+
+    def format_dom(self):
+        seclabel = super(LibvirtConfigSeclabel, self).format_dom()
+
+        seclabel.set('type', self.type)
+        if self.baselabel:
+            seclabel.append(self._text_node("baselabel", self.baselabel))
+
+        return seclabel
+
+
 class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
 
     def __init__(self, **kwargs):
