@@ -18,11 +18,12 @@
 import webob
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import multinic
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 
@@ -43,15 +44,11 @@ class MultinicController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.action('add_fixed_ip')
+    @validation.schema(multinic.add_fixed_ip)
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
         context = req.environ['nova.context']
         authorize(context)
-
-        # Validate the input entity
-        if 'network_id' not in body['add_fixed_ip']:
-            msg = _("Missing 'network_id' argument for add_fixed_ip")
-            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_instance(context, id)
         network_id = body['add_fixed_ip']['network_id']
@@ -59,15 +56,11 @@ class MultinicController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('remove_fixed_ip')
+    @validation.schema(multinic.remove_fixed_ip)
     def _remove_fixed_ip(self, req, id, body):
         """Removes an IP from an instance."""
         context = req.environ['nova.context']
         authorize(context)
-
-        # Validate the input entity
-        if 'address' not in body['remove_fixed_ip']:
-            msg = _("Missing 'address' argument for remove_fixed_ip")
-            raise exc.HTTPBadRequest(explanation=msg)
 
         instance = self._get_instance(context, id)
         address = body['remove_fixed_ip']['address']
