@@ -767,7 +767,9 @@ class VMwareAPISession(object):
             except Exception as excep:
                 LOG.critical(_("Unable to connect to server at %(server)s, "
                     "sleeping for %(seconds)s seconds"),
-                    {'server': self._host_ip, 'seconds': delay})
+                    {'server': self._host_ip, 'seconds': delay},
+                    exc_info=True)
+                # exc_info logs the exception with the message
                 time.sleep(delay)
                 delay = min(2 * delay, 60)
 
