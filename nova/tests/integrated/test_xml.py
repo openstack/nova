@@ -56,3 +56,6 @@ class XmlTests(integrated_helpers._IntegratedTestBase):
 
 class XmlTestsV3(client.TestOpenStackClientV3Mixin, XmlTests):
     _api_version = 'v3'
+
+    def test_namespace_limits(self):
+        pass
