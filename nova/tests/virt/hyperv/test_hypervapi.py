@@ -37,13 +37,13 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import units
 from nova import test
 from nova.tests import fake_network
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.virt.hyperv import db_fakes
 from nova.tests.virt.hyperv import fake
-from nova import unit
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
@@ -279,12 +279,12 @@ class HyperVAPITestCase(test.NoDBTestCase):
 
         self.assertEqual(dic['vcpus'], cpu_info['NumberOfLogicalProcessors'])
         self.assertEqual(dic['hypervisor_hostname'], platform.node())
-        self.assertEqual(dic['memory_mb'], tot_mem_kb / unit.Ki)
+        self.assertEqual(dic['memory_mb'], tot_mem_kb / units.Ki)
         self.assertEqual(dic['memory_mb_used'],
-                         tot_mem_kb / unit.Ki - free_mem_kb / unit.Ki)
-        self.assertEqual(dic['local_gb'], tot_hdd_b / unit.Gi)
+                         tot_mem_kb / units.Ki - free_mem_kb / units.Ki)
+        self.assertEqual(dic['local_gb'], tot_hdd_b / units.Gi)
         self.assertEqual(dic['local_gb_used'],
-                         tot_hdd_b / unit.Gi - free_hdd_b / unit.Gi)
+                         tot_hdd_b / units.Gi - free_hdd_b / units.Gi)
         self.assertEqual(dic['hypervisor_version'],
                          windows_version.replace('.', ''))
         self.assertEqual(dic['supported_instances'],

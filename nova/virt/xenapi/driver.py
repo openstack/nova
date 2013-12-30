@@ -43,7 +43,7 @@ from oslo.config import cfg
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova import unit
+from nova.openstack.common import units
 from nova import utils
 from nova.virt import driver
 from nova.virt.xenapi.client import session
@@ -456,12 +456,12 @@ class XenAPIDriver(driver.ComputeDriver):
         host_stats = self.get_host_stats(refresh=True)
 
         # Updating host information
-        total_ram_mb = host_stats['host_memory_total'] / unit.Mi
+        total_ram_mb = host_stats['host_memory_total'] / units.Mi
         # NOTE(belliott) memory-free-computed is a value provided by XenServer
         # for gauging free memory more conservatively than memory-free.
-        free_ram_mb = host_stats['host_memory_free_computed'] / unit.Mi
-        total_disk_gb = host_stats['disk_total'] / unit.Gi
-        used_disk_gb = host_stats['disk_used'] / unit.Gi
+        free_ram_mb = host_stats['host_memory_free_computed'] / units.Mi
+        total_disk_gb = host_stats['disk_total'] / units.Gi
+        used_disk_gb = host_stats['disk_used'] / units.Gi
         hyper_ver = utils.convert_version_to_int(self._session.product_version)
         dic = {'vcpus': 0,
                'memory_mb': total_ram_mb,

@@ -28,7 +28,7 @@ helpers for populating up config object instances.
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova import unit
+from nova.openstack.common import units
 
 from lxml import etree
 
@@ -1073,7 +1073,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.virt_type = None
         self.uuid = None
         self.name = None
-        self.memory = 500 * unit.Mi
+        self.memory = 500 * units.Mi
         self.vcpus = 1
         self.cpuset = None
         self.cpu = None

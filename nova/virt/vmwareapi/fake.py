@@ -28,8 +28,8 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import units
 from nova.openstack.common import uuidutils
-from nova import unit
 from nova.virt.vmwareapi import error_util
 
 _CLASSES = ['Datacenter', 'Datastore', 'ResourcePool', 'VirtualMachine',
@@ -429,8 +429,8 @@ class ResourcePool(ManagedObject):
         memoryAllocation = DataObject()
         cpuAllocation = DataObject()
 
-        memory.maxUsage = 1000 * unit.Mi
-        memory.overallUsage = 500 * unit.Mi
+        memory.maxUsage = 1000 * units.Mi
+        memory.overallUsage = 500 * units.Mi
         cpu.maxUsage = 10000
         cpu.overallUsage = 1000
         runtime.cpu = cpu
@@ -527,7 +527,7 @@ class ClusterComputeResource(ManagedObject):
             summary.numCpuCores += host_summary.hardware.numCpuCores
             summary.numCpuThreads += host_summary.hardware.numCpuThreads
             summary.totalMemory += host_summary.hardware.memorySize
-            free_memory = (host_summary.hardware.memorySize / unit.Mi
+            free_memory = (host_summary.hardware.memorySize / units.Mi
                            - host_summary.quickStats.overallMemoryUsage)
             summary.effectiveMemory += free_memory if connected else 0
             summary.numEffectiveHosts += 1 if connected else 0
@@ -541,8 +541,8 @@ class Datastore(ManagedObject):
         super(Datastore, self).__init__("ds")
         self.set("summary.type", "VMFS")
         self.set("summary.name", name)
-        self.set("summary.capacity", capacity * unit.Gi)
-        self.set("summary.freeSpace", free * unit.Gi)
+        self.set("summary.capacity", capacity * units.Gi)
+        self.set("summary.freeSpace", free * units.Gi)
         self.set("summary.accessible", True)
         self.set("browser", "")
 
@@ -594,7 +594,7 @@ class HostSystem(ManagedObject):
         hardware.vendor = "Intel"
         hardware.cpuModel = "Intel(R) Xeon(R)"
         hardware.uuid = "host-uuid"
-        hardware.memorySize = unit.Gi
+        hardware.memorySize = units.Gi
         summary.hardware = hardware
 
         quickstats = DataObject()
