@@ -270,9 +270,6 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         Determine what images we have on disk. There will be other files in
         this directory so we only grab the ones which are the right length
         to be disk images.
-
-        Note that this does not return a value. It instead populates a class
-        variable with a list of images that we need to try and explain.
         """
 
         digest_size = hashlib.sha1().digestsize * 2
