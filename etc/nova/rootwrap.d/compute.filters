@@ -27,6 +27,9 @@ umount: CommandFilter, umount, root
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
 qemu-nbd: CommandFilter, qemu-nbd, root
 
+# nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
+blockdev: CommandFilter, blockdev, root
+
 # nova/virt/disk/mount/loop.py: 'losetup', '--find', '--show', image
 # nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
 losetup: CommandFilter, losetup, root

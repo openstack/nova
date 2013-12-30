@@ -129,3 +129,12 @@ class NbdMount(api.Mount):
         utils.execute('qemu-nbd', '-d', self.device, run_as_root=True)
         self.linked = False
         self.device = None
+
+    def flush_dev(self):
+        """flush NBD block device buffer."""
+        # Perform an explicit BLKFLSBUF to support older qemu-nbd(s).
+        # Without this flush, when a nbd device gets re-used the
+        # qemu-nbd intermittently hangs.
+        if self.device:
+            utils.execute('blockdev', '--flushbufs',
+                          self.device, run_as_root=True)

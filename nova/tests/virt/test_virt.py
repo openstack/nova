@@ -227,12 +227,14 @@ class TestVirtDisk(test.NoDBTestCase):
 
         disk_api.teardown_container('/mnt/nbd/nopart')
         expected_commands += [
+                              ('blockdev', '--flushbufs', '/dev/nbd15'),
                               ('umount', '/dev/nbd15'),
                               ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
 
         disk_api.teardown_container('/mnt/nbd/part')
         expected_commands += [
+                              ('blockdev', '--flushbufs', '/dev/nbd15'),
                               ('umount', '/dev/mapper/nbd15p1'),
                               ('kpartx', '-d', '/dev/nbd15'),
                               ('qemu-nbd', '-d', '/dev/nbd15'),
