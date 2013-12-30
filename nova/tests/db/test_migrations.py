@@ -43,7 +43,6 @@ postgres=# create database openstack_baremetal_citest with owner
 
 """
 
-import commands
 import ConfigParser
 import datetime
 import glob
@@ -58,6 +57,7 @@ import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -254,9 +254,10 @@ class BaseMigrationTestCase(test.NoDBTestCase):
         self._create_databases()
 
     def execute_cmd(self, cmd=None):
-        status, output = commands.getstatusoutput(cmd)
+        out, err = processutils.trycmd(cmd, shell=True, discard_warnings=True)
+        output = out or err
         LOG.debug(output)
-        self.assertEqual(0, status,
+        self.assertEqual('', err,
                          "Failed to run: %s\n%s" % (cmd, output))
 
     @utils.synchronized('pgadmin', external=True)
@@ -336,11 +337,14 @@ class BaseMigrationTestCase(test.NoDBTestCase):
 
             sql = ("create database if not exists %s;") % database
             createtable = sqlcmd % {'user': user, 'host': host, 'sql': sql}
-            status, output = commands.getstatusoutput(createtable)
-            if status != 0 and status != 256:
-                # 0 means databases is created
-                # 256 means it already exists (which is fine)
-                # otherwise raise an error
+            # 0 means databases is created
+            # 256 means it already exists (which is fine)
+            # otherwise raise an error
+            out, err = processutils.trycmd(createtable, shell=True,
+                                           check_exit_code=[0, 256],
+                                           discard_warnings=True)
+            output = out or err
+            if err != '':
                 self.fail("Failed to run: %s\n%s" % (createtable, output))
 
             os.unsetenv('PGPASSWORD')
