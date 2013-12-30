@@ -1468,7 +1468,6 @@ class _BaseTaskTestCase(object):
                 db_instance['uuid'], expected_attrs=['system_metadata'])
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
-        filter_properties = {}
         system_metadata = instance.system_metadata
 
         def fake_schedule_instances(context, image, filter_properties,
@@ -1726,8 +1725,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         scheduler_utils.build_request_spec(
                 self.context, image, [inst_obj],
                 instance_type='flavor').AndReturn(request_spec)
-
-        exc_info = exc.NoValidHost(reason="")
 
         self.conductor.scheduler_rpcapi.select_destinations(
                 self.context, request_spec, filter_props).AndReturn(hosts)
