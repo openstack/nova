@@ -73,12 +73,12 @@ __imagebackend_opts = [
                default='rbd',
                help='the RADOS pool in which rbd volumes are stored',
                deprecated_group='DEFAULT',
-               deprecated_name='libvirt_images_rdb_pool'),
+               deprecated_name='libvirt_images_rbd_pool'),
     cfg.StrOpt('images_rbd_ceph_conf',
                default='',  # default determined by librados
                help='path to the ceph configuration file to use',
                deprecated_group='DEFAULT',
-               deprecated_name='libvirt_images_rdb_ceph_conf'),
+               deprecated_name='libvirt_images_rbd_ceph_conf'),
         ]
 
 CONF = cfg.CONF
