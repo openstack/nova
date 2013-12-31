@@ -17,7 +17,7 @@
 
 class GuestFS(object):
 
-    def __init__(self):
+    def __init__(self, close_on_exit=True):
         self.drives = []
         self.running = False
         self.closed = False
