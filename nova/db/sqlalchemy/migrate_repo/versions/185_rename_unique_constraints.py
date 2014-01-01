@@ -97,11 +97,44 @@ def _uc_rename(migrate_engine, upgrade=True):
             if table in constraint_names and migrate_engine.name == "mysql":
                 instances = Table("instances", meta, autoload=True)
 
-                ForeignKeyConstraint(
-                    columns=[t.c.instance_uuid],
-                    refcolumns=[instances.c.uuid],
-                    name=constraint_names[table]
-                ).drop(engine=migrate_engine)
+                if upgrade and (table == 'instance_info_caches' or
+                                table == 'virtual_interfaces'):
+                    # NOTE(jhesketh): migration 133_folsom.py accidentally
+                    #                 changed the name of the FK constraint
+                    #                 from instance_info_caches_ibfk_1 to
+                    #                 instance_info_caches_instance_uuid_fkey
+                    #                 meaning databases who have upgraded from
+                    #                 before folsom have the old fkey.
+                    #                 We need to make sure all of the fkeys are
+                    #                 dropped and then add in the correct fkey
+                    #                 regardless. (This also means when 185 is
+                    #                 downgraded the user will keep the correct
+                    #                 fkey as defined in 133).
+                    #                 There also seems to be a case where both
+                    #                 versions of the fkey are present in a
+                    #                 database so we check for each.
+                    #                 Similarly on table virtual_interfaces it
+                    #                 is possible to get into a state of having
+                    #                 both virtual_interfaces_ibfk_1 and
+                    #                 virtual_interfaces_instance_uuid_fkey
+                    #                 present in the virtual_interfaces table.
+                    for index_name in \
+                            ['instance_info_caches_ibfk_1',
+                             'instance_info_caches_instance_uuid_fkey',
+                             'virtual_interfaces_ibfk_1',
+                             'virtual_interfaces_instance_uuid_fkey']:
+                        if index_name in [fk.name for fk in t.foreign_keys]:
+                            ForeignKeyConstraint(
+                                columns=[t.c.instance_uuid],
+                                refcolumns=[instances.c.uuid],
+                                name=index_name
+                            ).drop(engine=migrate_engine)
+                else:
+                    ForeignKeyConstraint(
+                        columns=[t.c.instance_uuid],
+                        refcolumns=[instances.c.uuid],
+                        name=constraint_names[table]
+                    ).drop(engine=migrate_engine)
 
             if upgrade:
                 old_name, new_name = old_uc_name, new_uc_name
