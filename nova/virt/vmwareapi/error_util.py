@@ -44,6 +44,11 @@ class SessionOverLoadException(VimException):
     pass
 
 
+class SessionConnectionException(VimException):
+    """Session Connection Exception."""
+    pass
+
+
 class VimAttributeError(VimException):
     """VI Attribute Error."""
     pass

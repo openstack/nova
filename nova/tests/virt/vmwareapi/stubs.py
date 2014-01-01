@@ -20,6 +20,7 @@ Stubouts for the test suite
 """
 
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vmops
@@ -34,6 +35,17 @@ def fake_get_vim_object(arg):
 def fake_is_vim_object(arg, module):
     """Stubs out the VMwareAPISession's is_vim_object method."""
     return isinstance(module, fake.FakeVim)
+
+
+def fake_temp_method_exception():
+    raise error_util.VimFaultException(
+            [error_util.FAULT_NOT_AUTHENTICATED],
+            "Session Empty/Not Authenticated")
+
+
+def fake_temp_session_exception():
+    raise error_util.SessionConnectionException([],
+            "Session Exception")
 
 
 def set_stubs(stubs):

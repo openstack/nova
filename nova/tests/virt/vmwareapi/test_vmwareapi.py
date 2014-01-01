@@ -21,6 +21,9 @@
 Test suite for VMwareAPI.
 """
 
+import contextlib
+
+import mock
 import mox
 from oslo.config import cfg
 
@@ -43,6 +46,7 @@ from nova import utils as nova_utils
 from nova.virt import driver as v_driver
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
@@ -52,10 +56,87 @@ from nova.virt.vmwareapi import volume_util
 from nova.virt.vmwareapi import volumeops
 
 
-class fake_vm_ref(object):
-    def __init__(self):
-        self.value = 4
-        self._type = 'VirtualMachine'
+class VMwareSessionTestCase(test.NoDBTestCase):
+
+    def _fake_is_vim_object(self, module):
+        return True
+
+    @mock.patch('time.sleep')
+    def test_call_method_vim_fault(self, mock_sleep):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        def _fake_session_is_active(self):
+            return False
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(driver.VMwareAPISession, '_session_is_active',
+                              _fake_session_is_active)
+        ) as (_fake_vim, _fake_create, _fake_is_active):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.VimFaultException,
+                              api_session._call_method,
+                              stubs, 'fake_temp_method_exception',
+                              *args, **kwargs)
+
+    def test_call_method_vim_empty(self):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        def _fake_session_is_active(self):
+            return True
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(driver.VMwareAPISession, '_session_is_active',
+                              _fake_session_is_active)
+        ) as (_fake_vim, _fake_create, _fake_is_active):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            res = api_session._call_method(stubs, 'fake_temp_method_exception',
+                                           *args, **kwargs)
+            self.assertEqual([], res)
+
+    @mock.patch('time.sleep')
+    def test_call_method_session_exception(self, mock_sleep):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+        ) as (_fake_vim, _fake_create):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.SessionConnectionException,
+                              api_session._call_method,
+                              stubs, 'fake_temp_session_exception',
+                              *args, **kwargs)
 
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):
