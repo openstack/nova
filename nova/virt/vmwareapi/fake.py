@@ -922,6 +922,7 @@ class FakeVim(object):
         self._session = uuidutils.generate_uuid()
         session = DataObject()
         session.key = self._session
+        session.userName = 'sessionUserName'
         _db_content['session'][self._session] = session
         return session
 
@@ -950,6 +951,13 @@ class FakeVim(object):
             raise error_util.VimFaultException(
                                [error_util.FAULT_NOT_AUTHENTICATED],
                                _("Session Invalid"))
+
+    def _session_is_active(self, *args, **kwargs):
+        try:
+            self._check_session()
+            return True
+        except Exception:
+            return False
 
     def _create_vm(self, method, *args, **kwargs):
         """Creates and registers a VM object with the Host System."""
@@ -1119,6 +1127,9 @@ class FakeVim(object):
             return lambda *args, **kwargs: self._login()
         elif attr_name == "Logout":
             self._logout()
+        elif attr_name == "SessionIsActive":
+            return lambda *args, **kwargs: self._session_is_active(
+                                               *args, **kwargs)
         elif attr_name == "TerminateSession":
             return lambda *args, **kwargs: self._terminate_session(
                                                *args, **kwargs)

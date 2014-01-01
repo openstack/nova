@@ -21,6 +21,7 @@
 Test suite for VMwareAPI.
 """
 
+import contextlib
 import copy
 
 import mock
@@ -96,6 +97,89 @@ class VMwareSudsTest(test.NoDBTestCase):
         self.assertIsNotNone(self.vim)
         self.assertRaises(error_util.VimException,
                           copy.deepcopy, self.vim)
+
+
+class VMwareSessionTestCase(test.NoDBTestCase):
+
+    def _fake_is_vim_object(self, module):
+        return True
+
+    @mock.patch('time.sleep')
+    def test_call_method_vim_fault(self, mock_sleep):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        def _fake_session_is_active(self):
+            return False
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(driver.VMwareAPISession, '_session_is_active',
+                              _fake_session_is_active)
+        ) as (_fake_vim, _fake_create, _fake_is_active):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.VimFaultException,
+                              api_session._call_method,
+                              stubs, 'fake_temp_method_exception',
+                              *args, **kwargs)
+
+    def test_call_method_vim_empty(self):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        def _fake_session_is_active(self):
+            return True
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(driver.VMwareAPISession, '_session_is_active',
+                              _fake_session_is_active)
+        ) as (_fake_vim, _fake_create, _fake_is_active):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            res = api_session._call_method(stubs, 'fake_temp_method_exception',
+                                           *args, **kwargs)
+            self.assertEqual([], res)
+
+    @mock.patch('time.sleep')
+    def test_call_method_session_exception(self, mock_sleep):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+        ) as (_fake_vim, _fake_create):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.SessionConnectionException,
+                              api_session._call_method,
+                              stubs, 'fake_temp_session_exception',
+                              *args, **kwargs)
 
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):
