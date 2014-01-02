@@ -48,26 +48,6 @@ def InetSmall():
                   'postgresql')
 
 
-# NOTE(dprince): We skip these columns for now.
-# These get cleaned up in 184_fix_159_migration_sync_shadow_table
-_SHADOW_SKIPS = [
-    ('instances', 'access_ip_v4'),
-    ('instances', 'access_ip_v6'),
-    ('networks', 'gateway'),
-    ('networks', 'gateway_v6'),
-    ('networks', 'netmask'),
-    ('networks', 'netmask_v6'),
-    ('networks', 'broadcast'),
-    ('networks', 'dns1'),
-    ('networks', 'dns2'),
-    ('networks', 'vpn_public_address'),
-    ('networks', 'vpn_private_address'),
-    ('networks', 'dhcp_start'),
-    ('fixed_ips', 'address'),
-    ('floating_ips', 'address'),
-    ('console_pools', 'address')]
-
-
 def _create_shadow_tables(migrate_engine):
     meta = MetaData(migrate_engine)
     meta.reflect(migrate_engine)
@@ -76,10 +56,6 @@ def _create_shadow_tables(migrate_engine):
     meta.bind = migrate_engine
 
     for table_name in table_names:
-        if table_name == 'security_group_default_rules':
-            #NOTE(dprince): Skip for now. This is fixed in
-            # 183_fix_157_migration_sync_shadow_table
-            continue
         table = Table(table_name, meta, autoload=True)
 
         columns = []
@@ -91,12 +67,6 @@ def _create_shadow_tables(migrate_engine):
             #                 sqlite.
             if isinstance(column.type, NullType):
                 column_copy = Column(column.name, BigInteger(), default=0)
-            elif (table_name, column.name) in _SHADOW_SKIPS:
-                column_copy = Column(column.name, Inet())
-            elif (table_name, column.name) == ('cells', 'deleted'):
-                #NOTE(dprince): Skip for now. This is fixed in
-                # 181_fix_179_migration_sync_shadow_table
-                column_copy = Column(column.name, Boolean())
             else:
                 column_copy = column.copy()
             columns.append(column_copy)
@@ -202,9 +172,8 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('device_name', String(length=255), nullable=False),
+        Column('device_name', String(length=255), nullable=True),
         Column('delete_on_termination', Boolean),
-        Column('virtual_name', String(length=255)),
         Column('snapshot_id', String(length=36), nullable=True),
         Column('volume_id', String(length=36), nullable=True),
         Column('volume_size', Integer),
@@ -212,6 +181,13 @@ def upgrade(migrate_engine):
         Column('connection_info', MediumText()),
         Column('instance_uuid', String(length=36)),
         Column('deleted', Integer),
+        Column('source_type', String(length=255), nullable=True),
+        Column('destination_type', String(length=255), nullable=True),
+        Column('guest_format', String(length=255), nullable=True),
+        Column('device_type', String(length=255), nullable=True),
+        Column('disk_bus', String(length=255), nullable=True),
+        Column('boot_index', Integer),
+        Column('image_id', String(length=36), nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -420,11 +396,66 @@ def upgrade(migrate_engine):
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
         Column('network_info', MediumText()),
-        Column('instance_uuid', String(length=36), nullable=False,
-               unique=True),
+        Column('instance_uuid', String(length=36), nullable=False),
         Column('deleted', Integer),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
+    )
+
+    groups = Table('instance_groups', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('deleted_at', DateTime),
+        Column('deleted', Integer),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('user_id', String(length=255)),
+        Column('project_id', String(length=255)),
+        Column('uuid', String(length=36), nullable=False),
+        Column('name', String(length=255)),
+        UniqueConstraint('uuid', 'deleted',
+                         name='uniq_instance_groups0uuid0deleted'),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    group_metadata = Table('instance_group_metadata', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('deleted_at', DateTime),
+        Column('deleted', Integer),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('key', String(length=255)),
+        Column('value', String(length=255)),
+        Column('group_id', Integer, ForeignKey('instance_groups.id'),
+               nullable=False),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    group_policy = Table('instance_group_policy', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('deleted_at', DateTime),
+        Column('deleted', Integer),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('policy', String(length=255)),
+        Column('group_id', Integer, ForeignKey('instance_groups.id'),
+               nullable=False),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
+    )
+
+    group_member = Table('instance_group_member', meta,
+        Column('created_at', DateTime),
+        Column('updated_at', DateTime),
+        Column('deleted_at', DateTime),
+        Column('deleted', Integer),
+        Column('id', Integer, primary_key=True, nullable=False),
+        Column('instance_id', String(length=255)),
+        Column('group_id', Integer, ForeignKey('instance_groups.id'),
+               nullable=False),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8',
     )
 
     instance_metadata = Table('instance_metadata', meta,
@@ -819,6 +850,7 @@ def upgrade(migrate_engine):
         Column('report_count', Integer, nullable=False),
         Column('disabled', Boolean),
         Column('deleted', Integer),
+        Column('disabled_reason', String(length=255)),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -916,7 +948,7 @@ def upgrade(migrate_engine):
         Column('updated_at', DateTime),
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
-        Column('address', String(length=255), unique=True),
+        Column('address', String(length=255)),
         Column('network_id', Integer),
         Column('uuid', String(length=36)),
         Column('instance_uuid', String(length=36), nullable=True),
@@ -1077,6 +1109,7 @@ def upgrade(migrate_engine):
               instance_metadata, instance_system_metadata,
               instance_type_extra_specs, instance_type_projects,
               instance_actions, instance_actions_events,
+              groups, group_metadata, group_policy, group_member,
               iscsi_targets, key_pairs, migrations, networks,
               provider_fw_rules, quota_classes, quota_usages, quotas,
               reservations, s3_images, security_group_instance_association,
@@ -1095,29 +1128,30 @@ def upgrade(migrate_engine):
             raise
 
     # task log unique constraint
-    task_log_uc = "uniq_task_name_x_host_x_period_beginning_x_period_ending"
+    task_log_uc = "uniq_task_log0task_name0host0period_beginning0period_ending"
     task_log_cols = ('task_name', 'host', 'period_beginning', 'period_ending')
     uc = UniqueConstraint(*task_log_cols, table=task_log, name=task_log_uc)
     uc.create()
 
     # networks unique constraint
     UniqueConstraint('vlan', 'deleted', table=networks,
-                     name='uniq_vlan_x_deleted').create()
-
-    # flavorid unique constraint
-    UniqueConstraint('flavorid', 'deleted', table=instance_types,
-                     name='uniq_flavorid_x_deleted').create()
+                     name='uniq_networks0vlan0deleted').create()
 
     # instance_type_name constraint
     UniqueConstraint('name', 'deleted', table=instance_types,
-                     name='uniq_name_x_deleted').create()
+                     name='uniq_instance_types0name0deleted').create()
+
+    # flavorid unique constraint
+    UniqueConstraint('flavorid', 'deleted', table=instance_types,
+                     name='uniq_instance_types0flavorid0deleted').create()
 
     # keypair contraint
     UniqueConstraint('user_id', 'name', 'deleted', table=key_pairs,
-                     name='key_pairs_uniq_name_and_user_id').create()
+                     name='uniq_key_pairs0user_id0name0deleted').create()
 
     # instance_type_projects constraint
-    inst_type_uc_name = 'uniq_instance_type_id_x_project_id_x_deleted'
+    inst_type_uc_name = 'uniq_instance_type_projects0instance_type_id0' + \
+                        'project_id0deleted'
     UniqueConstraint('instance_type_id', 'project_id', 'deleted',
                      table=instance_type_projects,
                      name=inst_type_uc_name).create()
@@ -1125,7 +1159,37 @@ def upgrade(migrate_engine):
     # floating_ips unique constraint
     UniqueConstraint('address', 'deleted',
                      table=floating_ips,
-                     name='uniq_address_x_deleted').create()
+                     name='uniq_floating_ips0address0deleted').create()
+
+    # instance_info_caches
+    UniqueConstraint('instance_uuid',
+                     table=instance_info_caches,
+                     name='uniq_instance_info_caches0instance_uuid').create()
+
+    # NOTE(dprince): 185_rename_unique_constraints.py from Havana added
+    # a duplicate index on the address column
+    # We fix this in 192_change_virtual_interface_uc.py and will be addressed
+    # in the next patchset in this series.
+    if migrate_engine.name == 'mysql':
+        UniqueConstraint('address',
+                         table=virtual_interfaces,
+                         name='address').create()
+
+    # virtual_interfaces
+    UniqueConstraint('address',
+                     table=virtual_interfaces,
+                     name='uniq_virtual_interfaces0address').create()
+
+    # cells
+    UniqueConstraint('name', 'deleted',
+                     table=cells,
+                     name='uniq_cell_name0deleted').create()
+
+    # security_groups
+    uc = UniqueConstraint('project_id', 'name', 'deleted',
+                     table=security_groups,
+                     name='uniq_security_groups0project_id0name0deleted')
+    uc.create()
 
     indexes = [
         # agent_builds
@@ -1144,10 +1208,16 @@ def upgrade(migrate_engine):
         Index('block_device_mapping_instance_uuid_device_name_idx',
               block_device_mapping.c.instance_uuid,
               block_device_mapping.c.device_name),
+
+        # NOTE(dprince): This is now a duplicate index on MySQL and needs to
+        # be removed there. We leave it here so the Index ordering
+        # matches on schema diffs (for MySQL).
+        # See Havana migration 186_new_bdm_format where we dropped the
+        # virtual_name column.
+        # IceHouse fix is here: https://bugs.launchpad.net/nova/+bug/1265839
         Index(
              'block_device_mapping_instance_uuid_virtual_name_device_name_idx',
              block_device_mapping.c.instance_uuid,
-             block_device_mapping.c.virtual_name,
              block_device_mapping.c.device_name),
 
         Index('block_device_mapping_instance_uuid_volume_id_idx',
@@ -1222,7 +1292,13 @@ def upgrade(migrate_engine):
         Index('ix_task_log_host', task_log.c.host),
         Index('ix_task_log_period_ending', task_log.c.period_ending),
 
-    ]
+        # instance group indexes
+        Index('instance_group_metadata_key_idx', group_metadata.c.key),
+        Index('instance_group_member_instance_idx',
+              group_member.c.instance_id),
+        Index('instance_group_policy_policy_idx', group_policy.c.policy),
+
+   ]
 
     # created first (to preserve ordering for schema diffs)
     mysql_pre_indexes = [
@@ -1335,10 +1411,23 @@ def upgrade(migrate_engine):
               instances.c.updated_at).create()
         Index('networks_cidr_v6_idx', networks.c.cidr_v6).create()
 
+    # NOTE(dprince): PostgreSQL doesn't allow duplicate indexes
+    # so we skip creation of select indexes (so schemas match exactly).
+    POSTGRES_INDEX_SKIPS = [
+        # See Havana migration 186_new_bdm_format where we dropped the
+        # virtual_name column.
+        # IceHouse fix is here: https://bugs.launchpad.net/nova/+bug/1265839
+        'block_device_mapping_instance_uuid_virtual_name_device_name_idx'
+    ]
+
     # MySQL/PostgreSQL indexes
     if migrate_engine.name == 'mysql' or migrate_engine.name == 'postgresql':
         for index in indexes:
-            index.create(migrate_engine)
+            if migrate_engine.name == 'postgresql' and \
+                index.name in POSTGRES_INDEX_SKIPS:
+                continue
+            else:
+                index.create(migrate_engine)
 
     for index in common_indexes:
         index.create(migrate_engine)
