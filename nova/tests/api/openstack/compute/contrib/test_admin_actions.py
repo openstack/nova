@@ -232,7 +232,7 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
                                  {'migrate': None})
         self.assertEqual(expected_result, res.status_int)
 
-    def test_migrate_live_enabled(self):
+    def _test_migrate_live_succeeded(self, param):
         self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
         instance = self._stub_instance_get()
         self.compute_api.live_migrate(self.context, instance, False,
@@ -241,16 +241,39 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
         self.mox.ReplayAll()
 
         res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {'os-migrateLive':
-                                  {'host': 'hostname',
-                                   'block_migration': False,
-                                   'disk_over_commit': False}})
+                                 {'os-migrateLive': param})
         self.assertEqual(202, res.status_int)
+
+    def test_migrate_live_enabled(self):
+        param = {'host': 'hostname',
+                 'block_migration': False,
+                 'disk_over_commit': False}
+        self._test_migrate_live_succeeded(param)
+
+    def test_migrate_live_enabled_with_string_param(self):
+        param = {'host': 'hostname',
+                 'block_migration': "False",
+                 'disk_over_commit': "False"}
+        self._test_migrate_live_succeeded(param)
 
     def test_migrate_live_missing_dict_param(self):
         body = {'os-migrateLive': {'dummy': 'hostname',
                                    'block_migration': False,
                                    'disk_over_commit': False}}
+        res = self._make_request('/servers/FAKE/action', body)
+        self.assertEqual(400, res.status_int)
+
+    def test_migrate_live_with_invalid_block_migration(self):
+        body = {'os-migrateLive': {'host': 'hostname',
+                                   'block_migration': "foo",
+                                   'disk_over_commit': False}}
+        res = self._make_request('/servers/FAKE/action', body)
+        self.assertEqual(400, res.status_int)
+
+    def test_migrate_live_with_invalid_disk_over_commit(self):
+        body = {'os-migrateLive': {'host': 'hostname',
+                                   'block_migration': False,
+                                   'disk_over_commit': "foo"}}
         res = self._make_request('/servers/FAKE/action', body)
         self.assertEqual(400, res.status_int)
 
