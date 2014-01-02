@@ -805,6 +805,8 @@ class CloudTestCase(test.TestCase):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         sys_meta = flavors.save_flavor_info(
             {}, flavors.get_flavor(1))
+
+        sys_meta['EC2_client_token'] = "client-token-1"
         inst1 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
@@ -812,6 +814,8 @@ class CloudTestCase(test.TestCase):
                                                   'hostname': 'server-1234',
                                                   'vm_state': 'active',
                                                   'system_metadata': sys_meta})
+
+        sys_meta['EC2_client_token'] = "client-token-2"
         inst2 = db.instance_create(self.context, {'reservation_id': 'a',
                                                   'image_ref': image_uuid,
                                                   'instance_type_id': 1,
@@ -851,6 +855,7 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['privateIpAddress'], '192.168.0.3')
         self.assertEqual(instance['dnsNameV6'],
                 'fe80:b33f::a8bb:ccff:fedd:eeff')
+        self.assertEqual(instance['clientToken'], 'client-token-2')
 
         # A filter with even one invalid id should cause an exception to be
         # raised
