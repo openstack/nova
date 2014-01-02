@@ -213,6 +213,9 @@ class _TestInstanceObject(object):
                                 use_slave=False
                                 ).AndReturn(dict(self.fake_instance,
                                                  host='new-host'))
+        self.mox.StubOutWithMock(instance_info_cache.InstanceInfoCache,
+                                 'refresh')
+        instance_info_cache.InstanceInfoCache.refresh()
         self.mox.ReplayAll()
         inst = instance.Instance.get_by_uuid(self.context, fake_uuid)
         self.assertEqual(inst.host, 'orig-host')

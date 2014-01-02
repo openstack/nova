@@ -96,6 +96,16 @@ class _TestInstanceInfoCacheObject(object):
     def test_save_without_update_cells(self):
         self._save_helper(None, False)
 
+    def test_refresh(self):
+        obj = instance_info_cache.InstanceInfoCache.new(self.context,
+                                                        'fake-uuid1')
+        self.mox.StubOutWithMock(db, 'instance_info_cache_get')
+        db.instance_info_cache_get(self.context, 'fake-uuid1').AndReturn(
+            fake_info_cache)
+        self.mox.ReplayAll()
+        obj.refresh()
+        self.assertEqual(fake_info_cache['instance_uuid'], obj.instance_uuid)
+
 
 class TestInstanceInfoCacheObject(test_objects._LocalTest,
                                   _TestInstanceInfoCacheObject):

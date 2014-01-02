@@ -96,3 +96,15 @@ class InstanceInfoCache(base.NovaPersistentObject, base.NovaObject):
     @base.remotable
     def delete(self, context):
         db.instance_info_cache_delete(context, self.instance_uuid)
+
+    @base.remotable
+    def refresh(self, context):
+        current = self.__class__.get_by_instance_uuid(context,
+                                                      self.instance_uuid)
+        current._context = None
+
+        for field in self.fields:
+            if self.obj_attr_is_set(field) and self[field] != current[field]:
+                self[field] = current[field]
+
+        self.obj_reset_changes()
