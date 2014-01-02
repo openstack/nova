@@ -359,7 +359,7 @@ class KeypairsTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_all_by_filters',
                         fakes.fake_instance_get_all_by_filters())
         self.stubs.Set(db, 'instance_get_by_uuid', fakes.fake_instance_get())
-        req = fakes.HTTPRequest.blank('/v3/servers/detail')
+        req = webob.Request.blank('/v3/servers/detail')
         res = req.get_response(self.app)
         server_dicts = jsonutils.loads(res.body)['servers']
         self.assertEqual(len(server_dicts), 5)
@@ -402,7 +402,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:index':
                              policy.parse_rule('role:admin')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs')
+        req = fakes.HTTPRequestV3.blank('/keypairs')
         self.assertRaises(exception.NotAuthorized,
                           self.KeyPairController.index,
                           req)
@@ -411,7 +411,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:index':
                              policy.parse_rule('')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs')
+        req = fakes.HTTPRequestV3.blank('/keypairs')
         res = self.KeyPairController.index(req)
         self.assertIn('keypairs', res)
 
@@ -419,7 +419,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:show':
                              policy.parse_rule('role:admin')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs/FAKE')
+        req = fakes.HTTPRequestV3.blank('/keypairs/FAKE')
         self.assertRaises(exception.NotAuthorized,
                           self.KeyPairController.show,
                           req, 'FAKE')
@@ -428,7 +428,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:show':
                              policy.parse_rule('')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs/FAKE')
+        req = fakes.HTTPRequestV3.blank('/keypairs/FAKE')
         res = self.KeyPairController.show(req, 'FAKE')
         self.assertIn('keypair', res)
 
@@ -436,7 +436,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:create':
                              policy.parse_rule('role:admin')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs')
+        req = fakes.HTTPRequestV3.blank('/keypairs')
         req.method = 'POST'
         self.assertRaises(exception.NotAuthorized,
                           self.KeyPairController.create,
@@ -447,7 +447,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:create':
                              policy.parse_rule('')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs')
+        req = fakes.HTTPRequestV3.blank('/keypairs')
         req.method = 'POST'
         res = self.KeyPairController.create(req, body=body)
         self.assertIn('keypair', res)
@@ -456,7 +456,7 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:delete':
                              policy.parse_rule('role:admin')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs/FAKE')
+        req = fakes.HTTPRequestV3.blank('/keypairs/FAKE')
         req.method = 'DELETE'
         self.assertRaises(exception.NotAuthorized,
                           self.KeyPairController.delete,
@@ -466,6 +466,6 @@ class KeypairPolicyTest(test.TestCase):
         rules = policy.Rules({'compute_extension:v3:keypairs:delete':
                              policy.parse_rule('')})
         policy.set_rules(rules)
-        req = fakes.HTTPRequest.blank('/v3/keypairs/FAKE')
+        req = fakes.HTTPRequestV3.blank('/keypairs/FAKE')
         req.method = 'DELETE'
         self.assertIsNone(self.KeyPairController.delete(req, 'FAKE'))

@@ -66,7 +66,7 @@ class ServerUsageTest(test.TestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', return_server)
 
     def _make_request(self, url):
-        req = fakes.HTTPRequest.blank(url)
+        req = fakes.HTTPRequestV3.blank(url)
         req.accept = self.content_type
         res = req.get_response(fakes.wsgi_app_v3(init_only=(
             'servers', 'os-server-usage')))

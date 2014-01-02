@@ -45,7 +45,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
                               policy.parse_rule('role:admin')})
         policy.set_rules(rules)
 
-        req = fakes.HTTPRequest.blank('/v3/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
 
@@ -56,7 +56,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        req = fakes.HTTPRequest.blank('/v3/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
 
@@ -65,7 +65,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         self.stubs.Set(shelve, 'auth_shelve', fake_auth_context)
         self.stubs.Set(compute_api.API, 'shelve',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/123/servers/12/os-shelve')
         self.assertRaises(webob.exc.HTTPConflict, self.controller._shelve,
                           req, str(uuid.uuid4()), {})
 
@@ -74,7 +74,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
                               policy.parse_rule('role:admin')})
         policy.set_rules(rules)
 
-        req = fakes.HTTPRequest.blank('/v3/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
 
@@ -85,7 +85,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        req = fakes.HTTPRequest.blank('/v3/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
 
@@ -94,7 +94,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         self.stubs.Set(shelve, 'auth_unshelve', fake_auth_context)
         self.stubs.Set(compute_api.API, 'unshelve',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/123/servers/12/os-shelve')
         self.assertRaises(webob.exc.HTTPConflict, self.controller._unshelve,
                           req, str(uuid.uuid4()), {})
 
@@ -103,7 +103,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
                               policy.parse_rule('role:admin')})
         policy.set_rules(rules)
 
-        req = fakes.HTTPRequest.blank('/v3/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
@@ -114,7 +114,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
-        req = fakes.HTTPRequest.blank('/v3/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
         self.assertRaises(exception.NotAuthorized,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
@@ -123,7 +123,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         self.stubs.Set(shelve, 'auth_shelve_offload', fake_auth_context)
         self.stubs.Set(compute_api.API, 'shelve_offload',
                        fakes.fake_actions_to_locked_server)
-        req = fakes.HTTPRequest.blank('/v2/123/servers/12/os-shelve')
+        req = fakes.HTTPRequestV3.blank('/123/servers/12/os-shelve')
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._shelve_offload,
                           req, str(uuid.uuid4()), {})

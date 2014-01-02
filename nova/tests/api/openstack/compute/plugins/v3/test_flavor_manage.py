@@ -110,7 +110,7 @@ class FlavorManageTest(test.NoDBTestCase):
         }
 
     def test_delete(self):
-        req = fakes.HTTPRequest.blank('/v3/flavors/1234')
+        req = fakes.HTTPRequestV3.blank('/flavors/1234')
         res = self.controller._delete(req, 1234)
         self.assertEqual(res.status_int, 204)
 
