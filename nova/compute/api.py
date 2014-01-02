@@ -1326,7 +1326,7 @@ class API(base.Base):
                                                image_ref)
 
     def _delete(self, context, instance, delete_type, cb, **instance_attrs):
-        if instance['disable_terminate']:
+        if instance.disable_terminate:
             LOG.info(_('instance termination disabled'),
                      instance=instance)
             return
@@ -1334,15 +1334,15 @@ class API(base.Base):
         host = instance['host']
         bdms = block_device.legacy_mapping(
                     self.db.block_device_mapping_get_all_by_instance(
-                    context, instance['uuid']))
+                    context, instance.uuid))
         reservations = None
 
-        if context.is_admin and context.project_id != instance['project_id']:
-            project_id = instance['project_id']
+        if context.is_admin and context.project_id != instance.project_id:
+            project_id = instance.project_id
         else:
             project_id = context.project_id
-        if context.user_id != instance['user_id']:
-            user_id = instance['user_id']
+        if context.user_id != instance.user_id:
+            user_id = instance.user_id
         else:
             user_id = context.user_id
 
@@ -1394,7 +1394,7 @@ class API(base.Base):
                 except exception.ObjectActionError:
                     instance.refresh()
 
-            if instance['vm_state'] == vm_states.RESIZED:
+            if instance.vm_state == vm_states.RESIZED:
                 self._confirm_resize_on_deleting(context, instance)
 
             is_up = False
@@ -1526,7 +1526,6 @@ class API(base.Base):
     def _local_delete(self, context, instance, bdms, delete_type, cb):
         LOG.warning(_("instance's host %s is down, deleting from "
                       "database") % instance['host'], instance=instance)
-        instance_uuid = instance['uuid']
         instance.info_cache.delete()
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.start" % delete_type)
@@ -1535,8 +1534,6 @@ class API(base.Base):
         if self.cell_type != 'api':
             self.network_api.deallocate_for_instance(elevated,
                                                      instance)
-        system_meta = self.db.instance_system_metadata_get(context,
-                instance_uuid)
 
         # cleanup volumes
         for bdm in bdms:
@@ -1558,10 +1555,11 @@ class API(base.Base):
                     LOG.warn(err_str % exc, instance=instance)
             self.db.block_device_mapping_destroy(context, bdm['id'])
         cb(context, instance, bdms, local=True)
+        sys_meta = instance.system_metadata
         instance.destroy()
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.end" % delete_type,
-            system_metadata=system_meta)
+            system_metadata=sys_meta)
 
     def _do_delete(self, context, instance, bdms, reservations=None,
                    local=False):

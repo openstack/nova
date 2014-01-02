@@ -427,8 +427,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.context.elevated().AndReturn(self.context)
         self.compute_api.network_api.deallocate_for_instance(
                 self.context, inst)
-        db.instance_system_metadata_get(self.context,
-                                        inst.uuid).AndReturn('sys-meta')
         state = ('soft' in delete_type and vm_states.SOFT_DELETED or
                 vm_states.DELETED)
         updates.update({'vm_state': state,
@@ -444,7 +442,7 @@ class _ComputeAPIUnitTestMixIn(object):
         compute_utils.notify_about_instance_usage(
                 mox.IgnoreArg(),
                 self.context, inst, '%s.end' % delete_type,
-                system_metadata='sys-meta')
+                system_metadata=inst.system_metadata)
 
     def _test_delete(self, delete_type, **attrs):
         reservations = 'fake-resv'
@@ -668,8 +666,6 @@ class _ComputeAPIUnitTestMixIn(object):
         if self.cell_type != 'api':
             self.compute_api.network_api.deallocate_for_instance(
                         self.context, inst)
-        db.instance_system_metadata_get(self.context, inst.uuid
-                                            ).AndReturn('sys-meta')
 
         self.compute_api.volume_api.terminate_connection(
             mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
@@ -680,7 +676,7 @@ class _ComputeAPIUnitTestMixIn(object):
         compute_utils.notify_about_instance_usage(
                 mox.IgnoreArg(),
                 self.context, inst, 'delete.end',
-                system_metadata='sys-meta')
+                system_metadata=inst.system_metadata)
 
         self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,
