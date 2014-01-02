@@ -543,7 +543,6 @@ class Executor(wsgi.Application):
     def __call__(self, req):
         context = req.environ['nova.context']
         api_request = req.environ['ec2.request']
-        result = None
         try:
             result = api_request.invoke(context)
         except exception.InstanceNotFound as ex:
