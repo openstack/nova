@@ -200,6 +200,7 @@ class BaseTestCase(test.TestCase):
             'memory_mb': 2,
             'root_gb': 3,
             'ephemeral_gb': 1,
+            'ephemeral_key_uuid': None,
             'os_type': 'Linux',
             'project_id': '123456',
             'vcpus': 1,

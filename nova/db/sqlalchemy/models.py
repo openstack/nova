@@ -234,6 +234,7 @@ class Instance(BASE, NovaBase):
     vcpus = Column(Integer)
     root_gb = Column(Integer)
     ephemeral_gb = Column(Integer)
+    ephemeral_key_uuid = Column(String(36))
 
     # This is not related to hostname, above.  It refers
     #  to the nova node.
