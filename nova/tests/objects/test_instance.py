@@ -258,7 +258,13 @@ class _TestInstanceObject(object):
         if exp_vm_state:
             expected_updates['expected_vm_state'] = exp_vm_state
         if exp_task_state:
-            expected_updates['expected_task_state'] = exp_task_state
+            if (exp_task_state == 'image_snapshot' and
+                    'instance_version' in save_kwargs and
+                    save_kwargs['instance_version'] == '1.9'):
+                expected_updates['expected_task_state'] = [
+                    'image_snapshot', 'image_snapshot_pending']
+            else:
+                expected_updates['expected_task_state'] = exp_task_state
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(db, 'instance_info_cache_update')
@@ -295,6 +301,8 @@ class _TestInstanceObject(object):
         self.mox.ReplayAll()
 
         inst = instance.Instance.get_by_uuid(self.context, old_ref['uuid'])
+        if 'instance_version' in save_kwargs:
+            inst.VERSION = save_kwargs.pop('instance_version')
         self.assertEqual('old', inst.task_state)
         self.assertEqual('old', inst.vm_state)
         self.assertEqual('old', inst.user_data)
@@ -322,6 +330,11 @@ class _TestInstanceObject(object):
 
     def test_save_exp_task_state(self):
         self._save_test_helper(None, {'expected_task_state': ['meow']})
+
+    def test_save_exp_task_state_havana(self):
+        self._save_test_helper(None, {
+                'expected_task_state': 'image_snapshot',
+                'instance_version': '1.9'})
 
     def test_save_exp_vm_state_api_cell(self):
         self._save_test_helper('api', {'expected_vm_state': ['meow']})

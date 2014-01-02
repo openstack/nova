@@ -436,6 +436,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 updates['cleaned'] = 0
 
         if expected_task_state is not None:
+            if (self.VERSION == '1.9' and
+                    expected_task_state == 'image_snapshot'):
+                # NOTE(danms): Icehouse introduced a pending state which
+                # Havana doesn't know about. If we're an old instance,
+                # tolerate the pending state as well
+                expected_task_state = [
+                    expected_task_state, 'image_snapshot_pending']
             updates['expected_task_state'] = expected_task_state
         if expected_vm_state is not None:
             updates['expected_vm_state'] = expected_vm_state
