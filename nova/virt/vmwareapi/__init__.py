@@ -15,7 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """
-:mod:`vmwareapi` -- Nova support for VMware ESX/ESXi Server through VMware API.
+:mod:`vmwareapi` -- Nova support for VMware ESX/vCenter through VMware API.
 """
 # NOTE(sdague) for nicer compute_driver specification
 from nova.virt.vmwareapi import driver

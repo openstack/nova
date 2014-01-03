@@ -47,17 +47,11 @@ LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               help='URL for connection to VMware ESX/VC host. Required if '
-                    'compute_driver is vmwareapi.VMwareESXDriver or '
-                    'vmwareapi.VMwareVCDriver.'),
+               help='URL for connection to VMware ESX/VC host.'),
     cfg.StrOpt('host_username',
-               help='Username for connection to VMware ESX/VC host. '
-                    'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
+               help='Username for connection to VMware ESX/VC host.'),
     cfg.StrOpt('host_password',
-               help='Password for connection to VMware ESX/VC host. '
-                    'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.',
+               help='Password for connection to VMware ESX/VC host.',
                secret=True),
     cfg.MultiStrOpt('cluster_name',
                help='Name of a VMware Cluster ComputeResource. Used only if '
@@ -68,16 +62,11 @@ vmwareapi_opts = [
                     'vmwareapi.VMwareVCDriver.'),
     cfg.FloatOpt('task_poll_interval',
                  default=5.0,
-                 help='The interval used for polling of remote tasks. '
-                       'Used only if compute_driver is '
-                       'vmwareapi.VMwareESXDriver or '
-                       'vmwareapi.VMwareVCDriver.'),
+                 help='The interval used for polling of remote tasks.'),
     cfg.IntOpt('api_retry_count',
                default=10,
                help='The number of times we retry on failures, e.g., '
-                    'socket error, etc. '
-                    'Used only if compute_driver is '
-                    'vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.'),
+                    'socket error, etc.'),
     cfg.IntOpt('vnc_port',
                default=5900,
                help='VNC starting port'),
@@ -352,7 +341,7 @@ class VMwareESXDriver(driver.ComputeDriver):
 
 
 class VMwareVCDriver(VMwareESXDriver):
-    """The ESX host connection object."""
+    """The vCenter connection object."""
 
     # The vCenter driver includes several additional VMware vSphere
     # capabilities that include API that act on hosts or groups of

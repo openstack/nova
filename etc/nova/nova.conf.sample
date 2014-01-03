@@ -2117,19 +2117,15 @@
 # Options defined in nova.virt.vmwareapi.driver
 #
 
-# URL for connection to VMware ESX/VC host. Required if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
+# URL for connection to VMware ESX/VC host. (string value)
 #host_ip=<None>
 
-# Username for connection to VMware ESX/VC host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
+# Username for connection to VMware ESX/VC host. (string
+# value)
 #host_username=<None>
 
-# Password for connection to VMware ESX/VC host. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (string value)
+# Password for connection to VMware ESX/VC host. (string
+# value)
 #host_password=<None>
 
 # Name of a VMware Cluster ComputeResource. Used only if
@@ -2140,15 +2136,12 @@
 # compute_driver is vmwareapi.VMwareVCDriver. (string value)
 #datastore_regex=<None>
 
-# The interval used for polling of remote tasks. Used only if
-# compute_driver is vmwareapi.VMwareESXDriver or
-# vmwareapi.VMwareVCDriver. (floating point value)
+# The interval used for polling of remote tasks. (floating
+# point value)
 #task_poll_interval=5.0
 
 # The number of times we retry on failures, e.g., socket
-# error, etc. Used only if compute_driver is
-# vmwareapi.VMwareESXDriver or vmwareapi.VMwareVCDriver.
-# (integer value)
+# error, etc. (integer value)
 #api_retry_count=10
 
 # VNC starting port (integer value)
