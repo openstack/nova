@@ -726,19 +726,15 @@ class VMwareVMOps(object):
         def _check_if_tmp_folder_exists():
             # Copy the contents of the VM that were there just before the
             # snapshot was taken
-            ds_ref_ret = vim_util.get_dynamic_property(
-                                    self._session._get_vim(),
-                                    vm_ref,
-                                    "VirtualMachine",
-                                    "datastore")
+            ds_ref_ret = self._session._call_method(
+                vim_util, "get_dynamic_property", vm_ref, "VirtualMachine",
+                "datastore")
             if ds_ref_ret is None:
                 raise exception.DatastoreNotFound()
             ds_ref = ds_ref_ret.ManagedObjectReference[0]
-            ds_browser = vim_util.get_dynamic_property(
-                                       self._session._get_vim(),
-                                       ds_ref,
-                                       "Datastore",
-                                       "browser")
+            ds_browser = self._session._call_method(
+                vim_util, "get_dynamic_property", ds_ref, "Datastore",
+                "browser")
             # Check if the vmware-tmp folder exists or not. If not, create one
             tmp_folder_path = vm_util.build_datastore_path(datastore_name,
                                                            "vmware-tmp")
@@ -1540,11 +1536,8 @@ class VMwareVMOps(object):
 
     def _check_if_folder_file_exists(self, ds_ref, ds_name,
                                      folder_name, file_name):
-        ds_browser = vim_util.get_dynamic_property(
-                                self._session._get_vim(),
-                                ds_ref,
-                                "Datastore",
-                                "browser")
+        ds_browser = self._session._call_method(
+            vim_util, "get_dynamic_property", ds_ref, "Datastore", "browser")
         # Check if the folder exists or not. If not, create one
         # Check if the file exists or not.
         folder_path = vm_util.build_datastore_path(ds_name, folder_name)
