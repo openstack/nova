@@ -216,16 +216,12 @@ def upgrade(migrate_engine):
         Column('deleted_at', DateTime),
         Column('id', Integer, primary_key=True, nullable=False),
         Column('api_url', String(length=255)),
-        Column('username', String(length=255)),
-        Column('password', String(length=255)),
         Column('weight_offset', Float),
         Column('weight_scale', Float),
         Column('name', String(length=255)),
         Column('is_parent', Boolean),
-        Column('rpc_host', String(length=255)),
-        Column('rpc_port', Integer),
-        Column('rpc_virtual_host', String(length=255)),
         Column('deleted', Integer),
+        Column('transport_url', String(length=255), nullable=False),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -855,46 +851,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    sm_backend_config = Table('sm_backend_config', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('flavor_id', Integer, ForeignKey('sm_flavors.id'),
-               nullable=False),
-        Column('sr_uuid', String(length=255)),
-        Column('sr_type', String(length=255)),
-        Column('config_params', String(length=2047)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    sm_flavors = Table('sm_flavors', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('label', String(length=255)),
-        Column('description', String(length=255)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    sm_volume = Table('sm_volume', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', String(length=36), primary_key=True,
-                  nullable=False, autoincrement=False),
-        Column('backend_id', Integer, nullable=False),
-        Column('vdi_uuid', String(length=255)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
     snapshot_id_mappings = Table('snapshot_id_mappings', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -957,25 +913,6 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
-    virtual_storage_arrays = Table('virtual_storage_arrays', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('display_name', String(length=255)),
-        Column('display_description', String(length=255)),
-        Column('project_id', String(length=255)),
-        Column('availability_zone', String(length=255)),
-        Column('instance_type_id', Integer, nullable=False),
-        Column('image_ref', String(length=255)),
-        Column('vc_count', Integer, nullable=False),
-        Column('vol_count', Integer, nullable=False),
-        Column('status', String(length=255)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
     volume_id_mappings = Table('volume_id_mappings', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -983,44 +920,6 @@ def upgrade(migrate_engine):
         Column('id', Integer, primary_key=True, nullable=False),
         Column('uuid', String(length=36), nullable=False),
         Column('deleted', Integer),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    volume_metadata = Table('volume_metadata', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('volume_id', String(length=36), nullable=False),
-        Column('key', String(length=255)),
-        Column('value', String(length=255)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    volume_type_extra_specs = Table('volume_type_extra_specs', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('volume_type_id', Integer, ForeignKey('volume_types.id'),
-               nullable=False),
-        Column('key', String(length=255)),
-        Column('value', String(length=255)),
-        mysql_engine='InnoDB',
-        mysql_charset='utf8'
-    )
-
-    volume_types = Table('volume_types', meta,
-        Column('created_at', DateTime),
-        Column('updated_at', DateTime),
-        Column('deleted_at', DateTime),
-        Column('deleted', Boolean),
-        Column('id', Integer, primary_key=True, nullable=False),
-        Column('name', String(length=255)),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -1097,9 +996,7 @@ def upgrade(migrate_engine):
 
     # create all tables
     tables = [aggregates, console_pools, instance_types,
-              security_groups, sm_flavors, sm_backend_config,
-              snapshots, volume_types,
-              volumes,
+              security_groups, snapshots, volumes,
               # those that are children and others later
               agent_builds, aggregate_hosts, aggregate_metadata,
               block_device_mapping, bw_usage_cache, cells,
@@ -1114,10 +1011,10 @@ def upgrade(migrate_engine):
               provider_fw_rules, quota_classes, quota_usages, quotas,
               reservations, s3_images, security_group_instance_association,
               security_group_rules, security_group_default_rules,
-              services, sm_volume, snapshot_id_mappings, task_log,
+              services, snapshot_id_mappings, task_log,
               virtual_interfaces,
-              virtual_storage_arrays, volume_id_mappings, volume_metadata,
-              volume_type_extra_specs, volume_usage_cache]
+              volume_id_mappings,
+              volume_usage_cache]
 
     for table in tables:
         try:
@@ -1166,19 +1063,9 @@ def upgrade(migrate_engine):
                      table=instance_info_caches,
                      name='uniq_instance_info_caches0instance_uuid').create()
 
-    # NOTE(dprince): 185_rename_unique_constraints.py from Havana added
-    # a duplicate index on the address column
-    # We fix this in 192_change_virtual_interface_uc.py and will be addressed
-    # in the next patchset in this series.
-    if migrate_engine.name == 'mysql':
-        UniqueConstraint('address',
-                         table=virtual_interfaces,
-                         name='address').create()
-
-    # virtual_interfaces
-    UniqueConstraint('address',
+    UniqueConstraint('address', 'deleted',
                      table=virtual_interfaces,
-                     name='uniq_virtual_interfaces0address').create()
+                     name='uniq_virtual_interfaces0address0deleted').create()
 
     # cells
     UniqueConstraint('name', 'deleted',
@@ -1190,6 +1077,40 @@ def upgrade(migrate_engine):
                      table=security_groups,
                      name='uniq_security_groups0project_id0name0deleted')
     uc.create()
+
+    # quotas
+    UniqueConstraint('project_id', 'resource', 'deleted',
+                     table=quotas,
+                     name='uniq_quotas0project_id0resource0deleted').create()
+
+    # fixed_ips
+    UniqueConstraint('address', 'deleted',
+                     table=fixed_ips,
+                     name='uniq_fixed_ips0address0deleted').create()
+
+    # services
+    UniqueConstraint('host', 'topic', 'deleted',
+                     table=services,
+                     name='uniq_services0host0topic0deleted').create()
+    UniqueConstraint('host', 'binary', 'deleted',
+                     table=services,
+                     name='uniq_services0host0binary0deleted').create()
+
+    # agent_builds
+    uc_name = 'uniq_agent_builds0hypervisor0os0architecture0deleted'
+    UniqueConstraint('hypervisor', 'os', 'architecture', 'deleted',
+                     table=agent_builds,
+                     name=uc_name).create()
+
+    uc_name = 'uniq_console_pools0host0console_type0compute_host0deleted'
+    UniqueConstraint('host', 'console_type', 'compute_host', 'deleted',
+                     table=console_pools,
+                     name=uc_name).create()
+
+    uc_name = 'uniq_aggregate_hosts0host0aggregate_id0deleted'
+    UniqueConstraint('host', 'aggregate_id', 'deleted',
+                     table=aggregate_hosts,
+                     name=uc_name).create()
 
     indexes = [
         # agent_builds
@@ -1272,7 +1193,6 @@ def upgrade(migrate_engine):
         # reservations
         Index('ix_reservations_project_id', reservations.c.project_id),
 
-
         # security_group_instance_association
         Index('security_group_instance_association_instance_uuid_idx',
               security_group_instance_association.c.instance_uuid),
@@ -1298,6 +1218,50 @@ def upgrade(migrate_engine):
               group_member.c.instance_id),
         Index('instance_group_policy_policy_idx', group_policy.c.policy),
 
+
+        # NOTE(dprince) NOTE: move these into the common_indexes
+        # section once we get past 201
+        Index('certificates_project_id_deleted_idx',
+              certificates.c.project_id, certificates.c.deleted),
+        Index('certificates_user_id_deleted_idx', certificates.c.user_id,
+              certificates.c.deleted),
+
+        Index('fixed_ips_network_id_host_deleted_idx', fixed_ips.c.network_id,
+              fixed_ips.c.host, fixed_ips.c.deleted),
+
+        Index('fixed_ips_address_reserved_network_id_deleted_idx',
+              fixed_ips.c.address, fixed_ips.c.reserved,
+              fixed_ips.c.network_id, fixed_ips.c.deleted),
+
+        Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
+              floating_ips.c.pool, floating_ips.c.deleted,
+              floating_ips.c.fixed_ip_id, floating_ips.c.project_id),
+
+        # instance_faults
+        Index('instance_faults_host_idx', instance_faults.c.host),
+        Index('instance_faults_instance_uuid_deleted_created_at_idx',
+              instance_faults.c.instance_uuid, instance_faults.c.deleted,
+              instance_faults.c.created_at),
+
+        Index('iscsi_targets_host_volume_id_deleted_idx',
+              iscsi_targets.c.host, iscsi_targets.c.volume_id,
+              iscsi_targets.c.deleted),
+
+        Index('networks_cidr_v6_idx', networks.c.cidr_v6),
+
+        Index('networks_bridge_deleted_idx', networks.c.bridge,
+              networks.c.deleted),
+
+        Index('networks_project_id_deleted_idx', networks.c.project_id,
+              networks.c.deleted),
+
+        Index('networks_uuid_project_id_deleted_idx',
+              networks.c.uuid, networks.c.project_id, networks.c.deleted),
+
+        Index('networks_vlan_deleted_idx', networks.c.vlan,
+              networks.c.deleted),
+
+
    ]
 
     # created first (to preserve ordering for schema diffs)
@@ -1308,15 +1272,12 @@ def upgrade(migrate_engine):
         Index('instance_type_id', instance_type_projects.c.instance_type_id),
         Index('project_id', dns_domains.c.project_id),
         Index('fixed_ip_id', floating_ips.c.fixed_ip_id),
-        Index('backend_id', sm_volume.c.backend_id),
         Index('network_id', virtual_interfaces.c.network_id),
         Index('network_id', fixed_ips.c.network_id),
         Index('fixed_ips_virtual_interface_id_fkey',
                   fixed_ips.c.virtual_interface_id),
         Index('address', fixed_ips.c.address),
         Index('fixed_ips_instance_uuid_fkey', fixed_ips.c.instance_uuid),
-        Index('instance_faults_instance_uuid_deleted_created_at_idx',
-              instance_faults.c.instance_uuid, instance_faults.c.created_at),
         Index('instance_uuid', instance_system_metadata.c.instance_uuid),
         Index('iscsi_targets_volume_id_fkey', iscsi_targets.c.volume_id),
         Index('snapshot_id', block_device_mapping.c.snapshot_id),
@@ -1324,60 +1285,16 @@ def upgrade(migrate_engine):
         Index('virtual_interfaces_instance_uuid_fkey',
               virtual_interfaces.c.instance_uuid),
         Index('volume_id', block_device_mapping.c.volume_id),
-        Index('volume_metadata_volume_id_fkey', volume_metadata.c.volume_id),
 
         Index('security_group_id',
               security_group_instance_association.c.security_group_id),
-
-        Index('instances_host_deleted_idx', instances.c.host),
-        Index('networks_bridge_deleted_idx', networks.c.bridge),
 
     ]
 
     # created later (to preserve ordering for schema diffs)
     mysql_post_indexes = [
-
-        Index('instances_uuid_deleted_idx', instances.c.uuid),
-        Index('instances_task_state_updated_at_idx',
-              instances.c.task_state,
-              instances.c.updated_at),
-
-        Index('instances_host_node_deleted_idx', instances.c.host,
-              instances.c.node),
-
-        Index('migrations_instance_uuid_and_status_idx',
+       Index('migrations_instance_uuid_and_status_idx',
               migrations.c.instance_uuid, migrations.c.status),
-
-        Index('certificates_project_id_deleted_idx',
-              certificates.c.project_id),
-        Index('certificates_user_id_deleted_idx', certificates.c.user_id),
-
-        Index('fixed_ips_network_id_host_deleted_idx', fixed_ips.c.network_id,
-              fixed_ips.c.host),
-
-        Index('fixed_ips_address_reserved_network_id_deleted_idx',
-              fixed_ips.c.address, fixed_ips.c.reserved,
-              fixed_ips.c.network_id),
-
-        Index('fixed_ips_deleted_allocated_idx', fixed_ips.c.address,
-              fixed_ips.c.allocated),
-
-
-        Index('floating_ips_pool_deleted_fixed_ip_id_project_id_idx',
-              floating_ips.c.pool, floating_ips.c.fixed_ip_id,
-              floating_ips.c.project_id),
-
-        Index('iscsi_targets_host_volume_id_deleted_idx',
-              iscsi_targets.c.host, iscsi_targets.c.volume_id),
-
-        Index('networks_project_id_deleted_idx', networks.c.project_id),
-
-        Index('networks_uuid_project_id_deleted_idx',
-              networks.c.uuid, networks.c.project_id),
-
-        Index('networks_vlan_deleted_idx', networks.c.vlan),
-        Index('networks_cidr_v6_idx', networks.c.cidr_v6),
-
     ]
 
     # Common indexes (indexes we apply to all databases)
@@ -1393,8 +1310,21 @@ def upgrade(migrate_engine):
         Index('instance_uuid_idx', instance_actions.c.instance_uuid),
         Index('request_id_idx', instance_actions.c.request_id),
 
-        # instance_faults
-        Index('instance_faults_host_idx', instance_faults.c.host)
+        Index('fixed_ips_deleted_allocated_idx', fixed_ips.c.address,
+              fixed_ips.c.deleted, fixed_ips.c.allocated),
+
+        Index('instances_task_state_updated_at_idx',
+              instances.c.task_state,
+              instances.c.updated_at),
+
+        Index('instances_host_deleted_idx', instances.c.host,
+              instances.c.deleted),
+
+        Index('instances_uuid_deleted_idx', instances.c.uuid,
+              instances.c.deleted),
+
+        Index('instances_host_node_deleted_idx', instances.c.host,
+              instances.c.node, instances.c.deleted),
 
     ]
 
@@ -1406,10 +1336,6 @@ def upgrade(migrate_engine):
     # PostgreSQL specific indexes
     if migrate_engine.name == 'postgresql':
         Index('address', fixed_ips.c.address).create()
-        Index('instances_task_state_updated_at_idx',
-              instances.c.task_state,
-              instances.c.updated_at).create()
-        Index('networks_cidr_v6_idx', networks.c.cidr_v6).create()
 
     # NOTE(dprince): PostgreSQL doesn't allow duplicate indexes
     # so we skip creation of select indexes (so schemas match exactly).
@@ -1483,18 +1409,9 @@ def upgrade(migrate_engine):
               [[security_group_instance_association.c.security_group_id],
                   [security_groups.c.id],
                   'security_group_instance_association_ibfk_1'],
-              [[sm_volume.c.backend_id],
-                  [sm_backend_config.c.id],
-                  'sm_volume_ibfk_2'],
-              [[sm_volume.c.id],
-                  [volumes.c.id],
-                  'sm_volume_id_fkey'],
               [[virtual_interfaces.c.instance_uuid],
                   [instances.c.uuid],
                   'virtual_interfaces_instance_uuid_fkey'],
-              [[volume_metadata.c.volume_id],
-                  [volumes.c.id],
-                  'volume_metadata_volume_id_fkey'],
 
             ]
 
