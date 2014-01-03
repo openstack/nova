@@ -201,7 +201,6 @@ class API(base.Base):
         """
         hypervisor_macs = kwargs.get('macs', None)
         available_macs = None
-        dhcp_opts = None
         if hypervisor_macs is not None:
             # Make a copy we can mutate: records macs that have not been used
             # to create a port on a network. If we find a mac with a
