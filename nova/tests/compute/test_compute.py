@@ -1095,7 +1095,7 @@ class ComputeTestCase(BaseTestCase):
         self.rt.update_available_resource(self.context.elevated())
         params = {"memory_mb": 999999999999}
         filter_properties = {'limits': {'memory_mb': None}}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {},
                 filter_properties, [], None, None, True, None, False)
         self.assertEqual(999999999999, self.rt.compute_node['memory_mb_used'])
@@ -1106,7 +1106,7 @@ class ComputeTestCase(BaseTestCase):
         params = {"root_gb": 999999999999,
                   "ephemeral_gb": 99999999999}
         filter_properties = {'limits': {'disk_gb': None}}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {},
                 filter_properties, [], None, None, True, None, False)
 
@@ -1115,21 +1115,21 @@ class ComputeTestCase(BaseTestCase):
         self.rt.update_available_resource(self.context.elevated())
         filter_properties = {'limits': {'memory_mb': 4096, 'disk_gb': 1000}}
         params = {"memory_mb": 1024, "root_gb": 128, "ephemeral_gb": 128}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {},
                 filter_properties, [], None, None, True, None, False)
         self.assertEqual(1024, self.rt.compute_node['memory_mb_used'])
         self.assertEqual(256, self.rt.compute_node['local_gb_used'])
 
         params = {"memory_mb": 2048, "root_gb": 256, "ephemeral_gb": 256}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {},
                 filter_properties, [], None, None, True, None, False)
         self.assertEqual(3072, self.rt.compute_node['memory_mb_used'])
         self.assertEqual(768, self.rt.compute_node['local_gb_used'])
 
         params = {"memory_mb": 8192, "root_gb": 8192, "ephemeral_gb": 8192}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.assertRaises(exception.ComputeResourcesUnavailable,
                 self.compute.run_instance, self.context, instance,
                 {}, filter_properties, [], None, None, True, None, False)
@@ -1165,7 +1165,7 @@ class ComputeTestCase(BaseTestCase):
         # total_mem_mb, but is less than the oversubscribed limit:
         params = {"memory_mb": instance_mb, "root_gb": 128,
                   "ephemeral_gb": 128}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
 
         limits = {'memory_mb': oversub_limit_mb}
         filter_properties = {'limits': limits}
@@ -1216,7 +1216,7 @@ class ComputeTestCase(BaseTestCase):
         # total_mem_mb, but is less than the oversubscribed limit:
         params = {"memory_mb": 10, "root_gb": 1,
                   "ephemeral_gb": 1, "vcpus": 2}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {},
                 filter_properties, [], None, None, True, None, False)
 
@@ -1225,7 +1225,7 @@ class ComputeTestCase(BaseTestCase):
         # create one more instance:
         params = {"memory_mb": 10, "root_gb": 1,
                   "ephemeral_gb": 1, "vcpus": 1}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {},
                 filter_properties, [], None, None, True, None, False)
 
@@ -1241,7 +1241,7 @@ class ComputeTestCase(BaseTestCase):
         # now oversubscribe vcpus and fail:
         params = {"memory_mb": 10, "root_gb": 1,
                   "ephemeral_gb": 1, "vcpus": 2}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
 
         limits = {'vcpu': 3}
         filter_properties = {'limits': limits}
@@ -1265,7 +1265,7 @@ class ComputeTestCase(BaseTestCase):
         # build an instance, specifying an amount of disk that exceeds
         # total_disk_gb, but is less than the oversubscribed limit:
         params = {"root_gb": instance_gb, "memory_mb": 10}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
 
         limits = {'disk_gb': oversub_limit_gb}
         filter_properties = {'limits': limits}
@@ -1300,7 +1300,7 @@ class ComputeTestCase(BaseTestCase):
                 filter_properties, [], None, None, True, None, False)
 
     def test_create_instance_without_node_param(self):
-        instance = self._create_fake_instance({'node': None})
+        instance = self._create_fake_instance_obj({'node': None})
 
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
@@ -1312,7 +1312,7 @@ class ComputeTestCase(BaseTestCase):
     def test_create_instance_no_image(self):
         # Create instance with no image provided.
         params = {'image_ref': ''}
-        instance = self._create_fake_instance(params)
+        instance = self._create_fake_instance_obj(params)
         self.compute.run_instance(self.context, instance, {}, {}, [], None,
                 None, True, None, False)
         self._assert_state({'vm_state': vm_states.ACTIVE,
@@ -1403,7 +1403,7 @@ class ComputeTestCase(BaseTestCase):
         def fake(*args, **kwargs):
             raise test.TestingException()
         self.stubs.Set(self.compute.driver, 'spawn', fake)
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.assertRaises(test.TestingException, self.compute.run_instance,
                           self.context, instance=instance, request_spec={},
                           filter_properties={}, requested_networks=[],
@@ -1423,7 +1423,7 @@ class ComputeTestCase(BaseTestCase):
         Make sure that when an instance is not found during spawn
         that the network is deallocated
         """
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         def fake(*args, **kwargs):
             raise exception.InstanceNotFound(instance_id="fake")
@@ -9655,7 +9655,7 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
 
     def setUp(self):
         super(ComputeInjectedFilesTestCase, self).setUp()
-        self.instance = self._create_fake_instance()
+        self.instance = self._create_fake_instance_obj()
         self.stubs.Set(self.compute.driver, 'spawn', self._spawn)
 
     def _spawn(self, context, instance, image_meta, injected_files,
