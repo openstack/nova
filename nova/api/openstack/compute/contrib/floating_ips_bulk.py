@@ -162,9 +162,6 @@ class Floating_ips_bulk(extensions.ExtensionDescriptor):
                  "floating_ips_bulk/api/v2")
     updated = "2012-10-29T13:25:27-06:00"
 
-    def __init__(self, ext_mgr):
-        ext_mgr.register(self)
-
     def get_resources(self):
         resources = []
         resource = extensions.ResourceExtension('os-floating-ips-bulk',

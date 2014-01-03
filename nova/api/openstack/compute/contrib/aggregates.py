@@ -234,9 +234,6 @@ class Aggregates(extensions.ExtensionDescriptor):
     namespace = "http://docs.openstack.org/compute/ext/aggregates/api/v1.1"
     updated = "2012-01-12T00:00:00+00:00"
 
-    def __init__(self, ext_mgr):
-        ext_mgr.register(self)
-
     def get_resources(self):
         resources = []
         res = extensions.ResourceExtension('os-aggregates',

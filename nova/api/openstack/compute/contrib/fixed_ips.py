@@ -85,9 +85,6 @@ class Fixed_ips(extensions.ExtensionDescriptor):
     namespace = "http://docs.openstack.org/compute/ext/fixed_ips/api/v2"
     updated = "2012-10-18T13:25:27-06:00"
 
-    def __init__(self, ext_mgr):
-        ext_mgr.register(self)
-
     def get_resources(self):
         member_actions = {'action': 'POST'}
         resources = []
