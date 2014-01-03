@@ -264,4 +264,7 @@ class ViewBuilderV3(ViewBuilder):
         if server["server"]["status"] in self._progress_statuses:
             server["server"]["progress"] = instance.get("progress", 0)
 
+        # We should modify the "image" to empty dictionary
+        if not server["server"]["image"]:
+            server["server"]["image"] = {}
         return server

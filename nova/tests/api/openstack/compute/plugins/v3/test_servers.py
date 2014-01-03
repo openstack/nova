@@ -2954,7 +2954,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_no_image(self):
         self.instance["image_ref"] = ""
         output = self.view_builder.show(self.request, self.instance)
-        self.assertEqual(output['server']['image'], "")
+        self.assertEqual(output['server']['image'], {})
 
     def test_build_server_detail_with_fault(self):
         self.instance['vm_state'] = vm_states.ERROR
@@ -3457,6 +3457,85 @@ class ServerXMLSerializationTest(test.TestCase):
                                  str(ip['type']))
                 self.assertEqual(str(ip_elem.get('mac_addr')),
                                  str(ip['mac_addr']))
+
+    def test_show_no_image(self):
+        serializer = servers.ServerTemplate()
+
+        fixture = {
+            "server": {
+                "id": FAKE_UUID,
+                "user_id": "fake",
+                "tenant_id": "fake",
+                'created': self.TIMESTAMP,
+                'updated': self.TIMESTAMP,
+                "progress": 0,
+                "name": "test_server",
+                "status": "BUILD",
+                "host_id": 'e4d909c290d0fb1ca068ffaddf22cbd0',
+                "image": {},
+                "flavor": {
+                    "id": "1",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": self.FLAVOR_BOOKMARK,
+                        },
+                    ],
+                },
+                "addresses": {
+                    "network_one": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.138",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+                        },
+                    ],
+                    "network_two": [
+                        {
+                            "version": 4,
+                            "addr": "67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+                        },
+                        {
+                            "version": 6,
+                            "addr": "::babe:67.23.10.139",
+                            "type": "fixed",
+                            "mac_addr": "aa:aa:aa:aa:aa:aa"
+                        },
+                    ],
+                },
+                "metadata": {
+                    "Open": "Stack",
+                    "Number": "1",
+                },
+                'links': [
+                    {
+                        'href': self.SERVER_HREF,
+                        'rel': 'self',
+                    },
+                    {
+                        'href': self.SERVER_BOOKMARK,
+                        'rel': 'bookmark',
+                    },
+                ],
+            }
+        }
+
+        output = serializer.serialize(fixture)
+        root = etree.XML(output)
+        # Only need to verify the "image"
+        image_root = root.find('{0}image'.format(NS))
+        self.assertIsNone(image_root.get('id'))
+        link_nodes = image_root.findall('{0}link'.format(ATOMNS))
+        self.assertEqual(len(link_nodes), 0)
 
     def test_create(self):
         serializer = servers.FullServerTemplate()
