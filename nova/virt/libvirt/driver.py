@@ -91,6 +91,7 @@ from nova import unit
 from nova import utils
 from nova import version
 from nova.virt import configdrive
+from nova.virt import cpu
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import event as virtevent
@@ -248,10 +249,6 @@ libvirt_opts = [
                  help='Specific cachemodes to use for different disk types '
                       'e.g: file=directsync,block=none',
                 deprecated_group='DEFAULT'),
-    cfg.StrOpt('vcpu_pin_set',
-                help='Which pcpus can be used by vcpus of instance '
-                     'e.g: "4-12,^8,15"',
-               deprecated_group='DEFAULT'),
     ]
 
 CONF = cfg.CONF
@@ -263,6 +260,7 @@ CONF.import_opt('use_cow_images', 'nova.virt.driver')
 CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
+CONF.import_opt('vcpu_pin_set', 'nova.virt.cpu')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -2991,7 +2989,7 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.uuid = instance['uuid']
         guest.memory = inst_type['memory_mb'] * 1024
         guest.vcpus = inst_type['vcpus']
-        guest.cpuset = CONF.libvirt.vcpu_pin_set
+        guest.cpuset = CONF.vcpu_pin_set
 
         quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
         for key, value in inst_type['extra_specs'].iteritems():
@@ -3498,56 +3496,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return interfaces
 
-    def _get_cpuset_ids(self):
-        """
-        Parsing vcpu_pin_set config.
-
-        Returns a list of pcpu ids can be used by instances.
-        """
-        cpuset_ids = set()
-        cpuset_reject_ids = set()
-        for rule in CONF.libvirt.vcpu_pin_set.split(','):
-            rule = rule.strip()
-            # Handle multi ','
-            if len(rule) < 1:
-                continue
-            # Note the count limit in the .split() call
-            range_parts = rule.split('-', 1)
-            if len(range_parts) > 1:
-                # So, this was a range; start by converting the parts to ints
-                try:
-                    start, end = [int(p.strip()) for p in range_parts]
-                except ValueError:
-                    raise exception.Invalid(_("Invalid range expression %r")
-                                            % rule)
-                # Make sure it's a valid range
-                if start > end:
-                    raise exception.Invalid(_("Invalid range expression %r")
-                                            % rule)
-                # Add available pcpu ids to set
-                cpuset_ids |= set(range(start, end + 1))
-            elif rule[0] == '^':
-                # Not a range, the rule is an exclusion rule; convert to int
-                try:
-                    cpuset_reject_ids.add(int(rule[1:].strip()))
-                except ValueError:
-                    raise exception.Invalid(_("Invalid exclusion "
-                                              "expression %r") % rule)
-            else:
-                # OK, a single PCPU to include; convert to int
-                try:
-                    cpuset_ids.add(int(rule))
-                except ValueError:
-                    raise exception.Invalid(_("Invalid inclusion "
-                                              "expression %r") % rule)
-        # Use sets to handle the exclusion rules for us
-        cpuset_ids -= cpuset_reject_ids
-        if not cpuset_ids:
-            raise exception.Invalid(_("No CPUs available after parsing %r") %
-                                    CONF.libvirt.vcpu_pin_set)
-        # This will convert the set to a sorted list for us
-        return sorted(cpuset_ids)
-
     def get_vcpu_total(self):
         """Get available vcpu number of physical computer.
 
@@ -3564,11 +3512,11 @@ class LibvirtDriver(driver.ComputeDriver):
                        "function is not implemented for this platform. "))
             return 0
 
-        if CONF.libvirt.vcpu_pin_set is None:
+        if CONF.vcpu_pin_set is None:
             self._vcpu_total = total_pcpus
             return self._vcpu_total
 
-        available_ids = self._get_cpuset_ids()
+        available_ids = cpu.get_cpuset_ids()
         if available_ids[-1] >= total_pcpus:
             raise exception.Invalid(_("Invalid vcpu_pin_set config, "
                                       "out of hypervisor cpu range."))

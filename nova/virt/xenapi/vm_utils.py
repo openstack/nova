@@ -52,6 +52,7 @@ from nova.openstack.common import xmlutils
 from nova import unit
 from nova import utils
 from nova.virt import configdrive
+from nova.virt import cpu
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt.xenapi import agent
@@ -266,6 +267,11 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
         # NOTE(johngarbutt) bug in XenServer 6.1 and 6.2 means
         # we need to specify both weight and cap for either to apply
         vcpu_params = {"weight": str(vcpu_weight), "cap": "0"}
+
+    cpu_mask_list = cpu.get_cpuset_ids()
+    if cpu_mask_list:
+        cpu_mask = ",".join(str(cpu_id) for cpu_id in cpu_mask_list)
+        vcpu_params["mask"] = cpu_mask
 
     rec = {
         'actions_after_crash': 'destroy',

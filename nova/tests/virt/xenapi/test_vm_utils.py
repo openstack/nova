@@ -1430,41 +1430,71 @@ class ScanSrTestCase(VMUtilsTestBase):
         mock_sleep.assert_called_once_with(2)
 
 
-class AllowVSSProviderTest(VMUtilsTestBase):
-    def setUp(self):
-        super(AllowVSSProviderTest, self).setUp()
-        self.flags(disable_process_locking=True,
-                   instance_name_template='%d',
-                   firewall_driver='nova.virt.xenapi.firewall.'
-                                   'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
-                   connection_password='test_pass',
-                   group='xenserver')
-        stubs.stubout_session(self.stubs, fake.SessionBase)
-        driver = xenapi_conn.XenAPIDriver(False)
-        self.session = driver._session
-        self.session.is_local_connection = False
-        self.instance = {
-            'uuid': 'fakeinstance',
-            'kernel_id': 'kernel',
+@mock.patch.object(flavors, 'extract_flavor',
+                   return_value={
+                            'memory_mb': 1024,
+                            'vcpus': 1,
+                            'vcpu_weight': 1.0,
+                        })
+class CreateVmTestCase(VMUtilsTestBase):
+    def test_vss_provider(self, mock_extract):
+        self.flags(vcpu_pin_set="2,3")
+        session = mock.Mock()
+        instance = {
+            "uuid": "uuid",
         }
 
-    def test_allow_vss_provider(self):
-        def fake_extract_flavor(inst):
-            return {
-                'memory_mb': 1024,
-                'vcpus': 1,
-                'vcpu_weight': 1.0,
-            }
-
-        def fake_call_xenapi(command, rec):
-            xenstore_data = rec.get('xenstore_data')
-            self.assertIn('vm-data/allowvssprovider', xenstore_data)
-
-        self.stubs.Set(flavors, 'extract_flavor', fake_extract_flavor)
-        self.stubs.Set(self.session, 'call_xenapi', fake_call_xenapi)
-        vm_utils.create_vm(self.session, self.instance, "label",
+        vm_utils.create_vm(session, instance, "label",
                            "kernel", "ramdisk")
+
+        vm_rec = {
+            'VCPUs_params': {'cap': '0', 'mask': '2,3', 'weight': '1.0'},
+            'PV_args': '',
+            'memory_static_min': '0',
+            'ha_restart_priority': '',
+            'HVM_boot_policy': 'BIOS order',
+            'PV_bootloader': '', 'tags': [],
+            'VCPUs_max': '1',
+            'memory_static_max': '1073741824',
+            'actions_after_shutdown': 'destroy',
+            'memory_dynamic_max': '1073741824',
+            'user_version': '0',
+            'xenstore_data': {'vm-data/allowvssprovider': 'false'},
+            'blocked_operations': {},
+            'is_a_template': False,
+            'name_description': '',
+            'memory_dynamic_min': '1073741824',
+            'actions_after_crash': 'destroy',
+            'memory_target': '1073741824',
+            'PV_ramdisk': '',
+            'PV_bootloader_args': '',
+            'PCI_bus': '',
+            'other_config': {'nova_uuid': 'uuid'},
+            'name_label': 'label',
+            'actions_after_reboot': 'restart',
+            'VCPUs_at_startup': '1',
+            'HVM_boot_params': {'order': 'dc'},
+            'platform': {'nx': 'true', 'pae': 'true', 'apic': 'true',
+                         'timeoffset': '0', 'viridian': 'true',
+                         'acpi': 'true'},
+            'PV_legacy_args': '',
+            'PV_kernel': '',
+            'affinity': '',
+            'recommendations': '',
+            'ha_always_run': False
+        }
+        session.call_xenapi.assert_called_once_with("VM.create", vm_rec)
+
+    def test_invalid_cpu_mask_raises(self, mock_extract):
+        self.flags(vcpu_pin_set="asdf")
+        session = mock.Mock()
+        instance = {
+            "uuid": "uuid",
+        }
+        self.assertRaises(exception.Invalid,
+                          vm_utils.create_vm,
+                          session, instance, "label",
+                          "kernel", "ramdisk")
 
 
 class DetermineVmModeTestCase(VMUtilsTestBase):
