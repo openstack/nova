@@ -1968,8 +1968,9 @@ class VMOps(object):
                 self._call_live_migrate_command(
                     "VM.assert_can_migrate", vm_ref, migrate_data)
             except self._session.XenAPI.Failure as exc:
-                LOG.exception(exc)
-                msg = _('VM.assert_can_migrate failed')
+                reason = exc.details[0]
+                msg = _('assert_can_migrate failed because: %s') % reason
+                LOG.debug(msg, exc_info=True)
                 raise exception.MigrationPreCheckError(reason=msg)
         return dest_check_data
 
