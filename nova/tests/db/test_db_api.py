@@ -1805,6 +1805,30 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Make sure instance metadata is deleted as well
         self.assertEqual({}, instance_meta)
 
+    def test_delete_instance_faults_on_instance_destroy(self):
+        ctxt = context.get_admin_context()
+        uuid = str(stdlib_uuid.uuid4())
+        # Create faults
+        db.instance_create(ctxt, {'uuid': uuid})
+
+        fault_values = {
+            'message': 'message',
+            'details': 'detail',
+            'instance_uuid': uuid,
+            'code': 404,
+            'host': 'localhost'
+        }
+        fault = db.instance_fault_create(ctxt, fault_values)
+
+        # Retrieve the fault to ensure it was successfully added
+        faults = db.instance_fault_get_by_instance_uuids(ctxt, [uuid])
+        self.assertEqual(1, len(faults[uuid]))
+        self._assertEqualObjects(fault, faults[uuid][0])
+        db.instance_destroy(ctxt, uuid)
+        faults = db.instance_fault_get_by_instance_uuids(ctxt, [uuid])
+        # Make sure instance faults is deleted as well
+        self.assertEqual(0, len(faults[uuid]))
+
     def test_instance_update_with_and_get_original(self):
         instance = self.create_instance_with_args(vm_state='building')
         (old_ref, new_ref) = db.instance_update_and_get_original(self.ctxt,
