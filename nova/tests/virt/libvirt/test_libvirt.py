@@ -4200,7 +4200,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         conn.get_num_instances()
         self.assertTrue(not service_mock.disabled and
-                        not service_mock.disabled_reason)
+                        service_mock.disabled_reason is 'None')
 
     def test_broken_connection_no_wrapped_conn(self):
         # Tests that calling _close_callback when _wrapped_conn is None
