@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:os-disk-config="http://docs.openstack.org/compute/ext/disk_config/api/v3" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" id="31c9e8eb-0527-4dfe-a631-52d487baa7be" admin_password="Sjn7LYAiNLZH" os-disk-config:disk_config="AUTO">
-  <metadata/>
-  <atom:link href="http://openstack.example.com/v3/servers/31c9e8eb-0527-4dfe-a631-52d487baa7be" rel="self"/>
-  <atom:link href="http://openstack.example.com/servers/31c9e8eb-0527-4dfe-a631-52d487baa7be" rel="bookmark"/>
-</server>
