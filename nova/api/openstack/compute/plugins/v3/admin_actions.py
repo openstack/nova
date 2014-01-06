@@ -215,11 +215,7 @@ class AdminActionsController(wsgi.Controller):
         """
         context = req.environ["nova.context"]
         authorize(context, 'create_backup')
-
-        try:
-            entity = body["create_backup"]
-        except (KeyError, TypeError):
-            raise exc.HTTPBadRequest(_("Malformed request body"))
+        entity = body["create_backup"]
 
         try:
             image_name = entity["name"]

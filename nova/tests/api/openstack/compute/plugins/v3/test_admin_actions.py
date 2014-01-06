@@ -514,6 +514,17 @@ class CreateBackupTests(CommonMixin, test.NoDBTestCase):
         self._test_non_existing_instance('create_backup',
                                          body_map=body_map)
 
+    def test_create_backup_with_invalid_create_backup(self):
+        body = {
+            'create_backupup': {
+                'name': 'Backup 1',
+                'backup_type': 'daily',
+                'rotation': 1,
+            },
+        }
+        res = self._make_request(self._make_url('fake'), body)
+        self.assertEqual(400, res.status_int)
+
 
 class ResetStateTests(test.NoDBTestCase):
     def setUp(self):
