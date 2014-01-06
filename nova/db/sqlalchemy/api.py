@@ -63,6 +63,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova import quota
 
 db_opts = [
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
@@ -855,10 +856,35 @@ def _ip_range_splitter(ips, block_size=256):
 def floating_ip_bulk_destroy(context, ips):
     session = get_session()
     with session.begin():
+        project_id_to_quota_count = collections.defaultdict(int)
         for ip_block in _ip_range_splitter(ips):
+            # Find any floating IPs that were not auto_assigned and
+            # thus need quota released.
+            query = model_query(context, models.FloatingIp).\
+                filter(models.FloatingIp.address.in_(ip_block)).\
+                filter_by(auto_assigned=False)
+            rows = query.all()
+            for row in rows:
+                # The count is negative since we release quota by
+                # reserving negative quota.
+                project_id_to_quota_count[row['project_id']] -= 1
+            # Delete the floating IPs.
             model_query(context, models.FloatingIp).\
                 filter(models.FloatingIp.address.in_(ip_block)).\
                 soft_delete(synchronize_session='fetch')
+        # Delete the quotas, if needed.
+        for project_id, count in project_id_to_quota_count.iteritems():
+            try:
+                reservations = quota.QUOTAS.reserve(context,
+                                                    project_id=project_id,
+                                                    floating_ips=count)
+                quota.QUOTAS.commit(context,
+                                    reservations,
+                                    project_id=project_id)
+            except Exception:
+                LOG.exception(_("Failed to update usages bulk "
+                                "deallocating floating IP"))
+                raise
 
 
 @require_context
