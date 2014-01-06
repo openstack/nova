@@ -3076,6 +3076,11 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 guest.os_boot_dev = blockinfo.get_boot_order(disk_info)
 
+        if (image_meta and
+                image_meta.get('properties', {}).get('os_command_line')):
+            guest.os_cmdline = \
+                    image_meta['properties'].get('os_command_line')
+
         if ((CONF.libvirt.virt_type != "lxc" and
              CONF.libvirt.virt_type != "uml")):
             guest.acpi = True
