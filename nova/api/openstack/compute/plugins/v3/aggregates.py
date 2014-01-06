@@ -65,7 +65,7 @@ class AggregateController(wsgi.Controller):
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='index')
         aggregates = self.api.get_aggregate_list(context)
         return {'aggregates': [self._marshall_aggregate(a)['aggregate']
                                for a in aggregates]}
@@ -75,7 +75,7 @@ class AggregateController(wsgi.Controller):
     def create(self, req, body):
         """Creates an aggregate, given its name and availability_zone."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='create')
         if not self.is_valid_body(body, 'aggregate'):
             raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
         try:
@@ -102,7 +102,7 @@ class AggregateController(wsgi.Controller):
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='show')
         try:
             aggregate = self.api.get_aggregate(context, id)
         except exception.AggregateNotFound as e:
@@ -113,7 +113,7 @@ class AggregateController(wsgi.Controller):
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='update')
         if not self.is_valid_body(body, 'aggregate'):
             raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
         updates = body["aggregate"]
@@ -144,7 +144,7 @@ class AggregateController(wsgi.Controller):
     def delete(self, req, id):
         """Removes an aggregate by id."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='delete')
         try:
             self.api.delete_aggregate(context, id)
         except exception.AggregateNotFound as e:
@@ -157,7 +157,7 @@ class AggregateController(wsgi.Controller):
     def _add_host(self, req, id, host):
         """Adds a host to the specified aggregate."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='add_host')
         try:
             aggregate = self.api.add_host_to_aggregate(context, id, host)
         except (exception.AggregateNotFound,
@@ -175,7 +175,7 @@ class AggregateController(wsgi.Controller):
     def _remove_host(self, req, id, host):
         """Removes a host from the specified aggregate."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='remove_host')
         try:
             aggregate = self.api.remove_host_from_aggregate(context, id, host)
         except (exception.AggregateNotFound, exception.AggregateHostNotFound,
@@ -194,7 +194,7 @@ class AggregateController(wsgi.Controller):
     def _set_metadata(self, req, id, body):
         """Replaces the aggregate's existing metadata with new metadata."""
         context = _get_context(req)
-        authorize(context)
+        authorize(context, action='set_metadata')
         if not self.is_valid_body(body, 'set_metadata'):
             raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
         if not self.is_valid_body(body["set_metadata"], "metadata"):
