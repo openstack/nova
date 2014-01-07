@@ -705,8 +705,15 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertThat(expected, matchers.DictMatches(result))
 
     def test_close_callback(self):
-        def get_lib_version_stub():
-            return (1 * 1000 * 1000) + (0 * 1000) + 1
+        class FakeConn(object):
+            def getLibVersion(self):
+                return (1 * 1000 * 1000) + (0 * 1000) + 1
+
+            def domainEventRegisterAny(self, *args, **kwargs):
+                pass
+
+            def registerCloseCallback(self, cb, opaque):
+                pass
 
         self.close_callback = None
 
@@ -714,31 +721,79 @@ class LibvirtConnTestCase(test.TestCase):
             self.close_callback = cb
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.stubs.Set(self.conn, "getLibVersion", get_lib_version_stub)
+        conn._wrapped_conn = FakeConn()
+
         self.mox.StubOutWithMock(conn, '_connect')
-        self.mox.StubOutWithMock(self.conn, 'registerCloseCallback')
+        self.mox.StubOutWithMock(conn._conn, 'registerCloseCallback')
         self.mox.StubOutWithMock(conn, 'set_host_enabled')
 
-        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(self.conn)
-        self.conn.registerCloseCallback(
-            mox.IgnoreArg(), mox.IgnoreArg()).WithSideEffects(
-                set_close_callback)
+        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn._conn)
+        conn._conn.registerCloseCallback(
+            mox.IgnoreArg(), mox.IgnoreArg()
+        ).WithSideEffects(set_close_callback)
         conn.set_host_enabled('fake-mini', True)
         conn.set_host_enabled('fake-mini', 'Connection to libvirt lost: 1')
-        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(self.conn)
+        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn._conn)
         conn.set_host_enabled('fake-mini', True)
-        self.conn.registerCloseCallback(mox.IgnoreArg(), mox.IgnoreArg())
+        conn._conn.registerCloseCallback(mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
 
         # verify that the driver registers for the close callback
         # and re-connects after receiving the callback
-        conn._get_connection()
+        conn._get_new_connection()
 
         self.assertTrue(self.close_callback)
-        self.close_callback(self.conn, 1, None)
+        self.close_callback(conn._conn, 1, None)
 
         conn._get_connection()
         self.mox.UnsetStubs()
+
+    def test_close_callback_bad_signature(self):
+        class FakeConn(object):
+            def getLibVersion(self):
+                return (1 * 1000 * 1000) + (0 * 1000) + 0
+
+            def domainEventRegisterAny(self, *args, **kwargs):
+                pass
+
+            def registerCloseCallback(self, cb, opaque, *args, **kwargs):
+                pass
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn._wrapped_conn = FakeConn()
+
+        self.mox.StubOutWithMock(conn, '_connect')
+        self.mox.StubOutWithMock(conn._conn, 'registerCloseCallback')
+        self.mox.StubOutWithMock(conn, 'set_host_enabled')
+
+        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn._conn)
+        conn.set_host_enabled('fake-mini', True)
+        conn._conn.registerCloseCallback(
+            mox.IgnoreArg(), mox.IgnoreArg()).AndRaise(TypeError)
+
+        self.mox.ReplayAll()
+        conn._get_new_connection()
+
+    def test_close_callback_not_defined(self):
+        class FakeConn():
+            def getLibVersion(self):
+                return (0 * 1000 * 1000) + (9 * 1000) + 0
+
+            def domainEventRegisterAny(self, *args, **kwargs):
+                pass
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn._wrapped_conn = FakeConn()
+
+        self.mox.StubOutWithMock(conn, '_connect')
+        self.mox.StubOutWithMock(conn, 'set_host_enabled')
+
+        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
+            conn._wrapped_conn)
+        conn.set_host_enabled('fake-mini', True)
+
+        self.mox.ReplayAll()
+        conn._get_new_connection()
 
     def test_cpu_features_bug_1217630(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -7606,18 +7661,26 @@ class LibvirtNonblockingTestCase(test.TestCase):
         jsonutils.to_primitive(connection._conn, convert_instances=True)
 
     def test_tpool_execute_calls_libvirt(self):
-        self.mox.StubOutWithMock(eventlet.tpool, 'execute')
         conn = libvirt.virConnect()
         conn.is_expected = True
+
+        self.mox.StubOutWithMock(eventlet.tpool, 'execute')
         eventlet.tpool.execute(
-            libvirt.openAuth, 'test:///default',
-            mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn)
+            libvirt.openAuth,
+            'test:///default',
+            mox.IgnoreArg(),
+            mox.IgnoreArg()).AndReturn(conn)
         eventlet.tpool.execute(
             conn.domainEventRegisterAny,
             None,
             libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
             mox.IgnoreArg(),
             mox.IgnoreArg())
+        if hasattr(libvirt.virConnect, 'registerCloseCallback'):
+            eventlet.tpool.execute(
+                conn.registerCloseCallback,
+                mox.IgnoreArg(),
+                mox.IgnoreArg())
         self.mox.ReplayAll()
 
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
