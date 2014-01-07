@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova.objects import base
 from nova.objects import fields
 
@@ -49,7 +50,11 @@ class KeyPair(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
         updates = self.obj_get_changes()
+        updates.pop('id', None)
         db_keypair = db.key_pair_create(context, updates)
         self._from_db_object(context, self, db_keypair)
 
