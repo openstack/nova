@@ -265,7 +265,7 @@ class VolumeNotCreated(NovaException):
 
 class InvalidKeypair(Invalid):
     ec2_code = 'InvalidKeyPair.Format'
-    msg_fmt = _("Keypair data is invalid") + ": %(reason)s"
+    msg_fmt = _("Keypair data is invalid: %(reason)s")
 
 
 class InvalidRequest(Invalid):
@@ -273,12 +273,12 @@ class InvalidRequest(Invalid):
 
 
 class InvalidInput(Invalid):
-    msg_fmt = _("Invalid input received") + ": %(reason)s"
+    msg_fmt = _("Invalid input received: %(reason)s")
 
 
 class InvalidVolume(Invalid):
     ec2_code = 'UnsupportedOperation'
-    msg_fmt = _("Invalid volume") + ": %(reason)s"
+    msg_fmt = _("Invalid volume: %(reason)s")
 
 
 class InvalidVolumeAccessMode(Invalid):
@@ -286,11 +286,11 @@ class InvalidVolumeAccessMode(Invalid):
 
 
 class InvalidMetadata(Invalid):
-    msg_fmt = _("Invalid metadata") + ": %(reason)s"
+    msg_fmt = _("Invalid metadata: %(reason)s")
 
 
 class InvalidMetadataSize(Invalid):
-    msg_fmt = _("Invalid metadata size") + ": %(reason)s"
+    msg_fmt = _("Invalid metadata size: %(reason)s")
 
 
 class InvalidPortRange(Invalid):
@@ -357,35 +357,35 @@ class InstanceNotReady(Invalid):
 
 
 class InstanceSuspendFailure(Invalid):
-    msg_fmt = _("Failed to suspend instance") + ": %(reason)s"
+    msg_fmt = _("Failed to suspend instance: %(reason)s")
 
 
 class InstanceResumeFailure(Invalid):
-    msg_fmt = _("Failed to resume instance: %(reason)s.")
+    msg_fmt = _("Failed to resume instance: %(reason)s")
 
 
 class InstancePowerOnFailure(Invalid):
-    msg_fmt = _("Failed to power on instance: %(reason)s.")
+    msg_fmt = _("Failed to power on instance: %(reason)s")
 
 
 class InstancePowerOffFailure(Invalid):
-    msg_fmt = _("Failed to power off instance: %(reason)s.")
+    msg_fmt = _("Failed to power off instance: %(reason)s")
 
 
 class InstanceRebootFailure(Invalid):
-    msg_fmt = _("Failed to reboot instance") + ": %(reason)s"
+    msg_fmt = _("Failed to reboot instance: %(reason)s")
 
 
 class InstanceTerminationFailure(Invalid):
-    msg_fmt = _("Failed to terminate instance") + ": %(reason)s"
+    msg_fmt = _("Failed to terminate instance: %(reason)s")
 
 
 class InstanceDeployFailure(Invalid):
-    msg_fmt = _("Failed to deploy instance") + ": %(reason)s"
+    msg_fmt = _("Failed to deploy instance: %(reason)s")
 
 
 class MultiplePortsNotApplicable(Invalid):
-    msg_fmt = _("Failed to launch instances") + ": %(reason)s"
+    msg_fmt = _("Failed to launch instances: %(reason)s")
 
 
 class ServiceUnavailable(Invalid):
@@ -441,7 +441,7 @@ class DeviceIsBusy(Invalid):
 
 
 class InvalidCPUInfo(Invalid):
-    msg_fmt = _("Unacceptable CPU info") + ": %(reason)s"
+    msg_fmt = _("Unacceptable CPU info: %(reason)s")
 
 
 class InvalidIpAddressError(Invalid):
@@ -1029,11 +1029,11 @@ class InvalidLocalStorage(NovaException):
 
 
 class MigrationError(NovaException):
-    msg_fmt = _("Migration error") + ": %(reason)s"
+    msg_fmt = _("Migration error: %(reason)s")
 
 
 class MigrationPreCheckError(MigrationError):
-    msg_fmt = _("Migration pre-check error") + ": %(reason)s"
+    msg_fmt = _("Migration pre-check error: %(reason)s")
 
 
 class MalformedRequestBody(NovaException):
@@ -1080,7 +1080,7 @@ class NoValidHost(NovaException):
 
 class QuotaError(NovaException):
     ec2_code = 'ResourceLimitExceeded'
-    msg_fmt = _("Quota exceeded") + ": code=%(code)s"
+    msg_fmt = _("Quota exceeded: code=%(code)s")
     code = 413
     headers = {'Retry-After': 0}
     safe = True
