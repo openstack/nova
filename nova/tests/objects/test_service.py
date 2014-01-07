@@ -85,6 +85,17 @@ class _TestServiceObject(object):
         service_obj.create(self.context)
         self.assertEqual(fake_service['id'], service_obj.id)
 
+    def test_recreate_fails(self):
+        self.mox.StubOutWithMock(db, 'service_create')
+        db.service_create(self.context, {'host': 'fake-host'}).AndReturn(
+            fake_service)
+        self.mox.ReplayAll()
+        service_obj = service.Service()
+        service_obj.host = 'fake-host'
+        service_obj.create(self.context)
+        self.assertRaises(exception.ObjectActionError, service_obj.create,
+                          self.context)
+
     def test_save(self):
         self.mox.StubOutWithMock(db, 'service_update')
         db.service_update(self.context, 123, {'host': 'fake-host'}).AndReturn(
