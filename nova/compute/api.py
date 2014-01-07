@@ -2875,9 +2875,7 @@ class API(base.Base):
                           task_state=None)
     def delete_instance_metadata(self, context, instance, key):
         """Delete the given metadata item from an instance."""
-        self.db.instance_metadata_delete(context, instance['uuid'], key)
-        instance['metadata'] = {}
-        notifications.send_update(context, instance, instance)
+        instance.delete_metadata_key(key)
         self.compute_rpcapi.change_instance_metadata(context,
                                                      instance=instance,
                                                      diff={key: ['-']})
