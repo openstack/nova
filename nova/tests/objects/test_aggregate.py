@@ -53,6 +53,18 @@ class _TestAggregateObject(object):
         agg.create(self.context)
         self.compare_obj(agg, fake_aggregate, subs=SUBS)
 
+    def test_recreate_fails(self):
+        self.mox.StubOutWithMock(db, 'aggregate_create')
+        db.aggregate_create(self.context, {'name': 'foo'},
+                            metadata={'one': 'two'}).AndReturn(fake_aggregate)
+        self.mox.ReplayAll()
+        agg = aggregate.Aggregate()
+        agg.name = 'foo'
+        agg.metadata = {'one': 'two'}
+        agg.create(self.context)
+        self.assertRaises(exception.ObjectActionError, agg.create,
+                          self.context)
+
     def test_save(self):
         self.mox.StubOutWithMock(db, 'aggregate_update')
         db.aggregate_update(self.context, 123, {'name': 'baz'}).AndReturn(
