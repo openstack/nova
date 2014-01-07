@@ -346,7 +346,7 @@ class VMwareESXDriver(driver.ComputeDriver):
 
 
 class VMwareVCDriver(VMwareESXDriver):
-    """The vCenter connection object."""
+    """The VC host connection object."""
 
     # The vCenter driver includes several additional VMware vSphere
     # capabilities that include API that act on hosts or groups of

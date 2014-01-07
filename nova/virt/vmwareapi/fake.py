@@ -597,6 +597,13 @@ class HostSystem(ManagedObject):
         hardware.memorySize = units.Gi
         summary.hardware = hardware
 
+        runtime = DataObject()
+        if connected:
+            runtime.connectionState = "connected"
+        else:
+            runtime.connectionState = "disconnected"
+        summary.runtime = runtime
+
         quickstats = DataObject()
         quickstats.overallMemoryUsage = 500
         summary.quickStats = quickstats
@@ -616,8 +623,8 @@ class HostSystem(ManagedObject):
         self.set("summary", summary)
         self.set("capability.maxHostSupportedVcpus", 600)
         self.set("summary.runtime.inMaintenanceMode", False)
-        self.set("runtime.connectionState", "connected")
         self.set("summary.hardware", hardware)
+        self.set("summary.runtime", runtime)
         self.set("config.network.pnic", net_info_pnic)
         self.set("connected", connected)
 
