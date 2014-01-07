@@ -78,19 +78,19 @@ class QuotaClassSetsTest(test.TestCase):
                           req, 'test_class')
 
     def test_quotas_update_as_admin(self):
-        body = {'quota_class_set': {'instances': 50, 'cores': 50,
-                                    'ram': 51200, 'floating_ips': 10,
-                                    'fixed_ips': -1, 'metadata_items': 128,
-                                    'id': 'test_class',
-                                    'security_groups': 10,
-                                    'security_group_rules': 20,
-                                    'key_pairs': 100}}
+        req_body = {'quota_class_set': {'instances': 10, 'cores': 20,
+                                        'ram': 51200, 'floating_ips': 10,
+                                        'fixed_ips': -1, 'metadata_items': 128,
+                                        'security_groups': 10,
+                                        'security_group_rules': 20,
+                                        'key_pairs': 100}}
+        res_body = quota_set('test_class')
 
         req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class',
                                         use_admin_context=True)
-        res_dict = self.controller.update(req, 'test_class', body)
+        res_dict = self.controller.update(req, 'test_class', req_body)
 
-        self.assertEqual(res_dict, body)
+        self.assertEqual(res_body, res_dict)
 
     def test_quotas_update_with_non_integer(self):
         body = {'quota_class_set': {'instances': "abc"}}
