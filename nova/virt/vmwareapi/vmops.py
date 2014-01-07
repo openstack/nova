@@ -1630,13 +1630,19 @@ class VMwareVMOps(object):
         then a directory with this name is created at the topmost level of the
         DataStore.
         """
-        LOG.debug(_("Creating directory with path %s") % ds_path)
+        LOG.debug(_("Creating directory with path %s"), ds_path)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
-        self._session._call_method(self._session._get_vim(), "MakeDirectory",
+        try:
+            self._session._call_method(
+                    self._session._get_vim(), "MakeDirectory",
                     self._session._get_vim().get_service_content().fileManager,
                     name=ds_path, datacenter=dc_info.ref,
                     createParentDirectories=True)
-        LOG.debug(_("Created directory with path %s") % ds_path)
+            LOG.debug(_("Created directory with path %s"), ds_path)
+        except error_util.FileAlreadyExistsException:
+            LOG.debug(_("Multiple processes/threads are trying to create "
+                        "directory %(ds_path)s on %(ds)s."),
+                          {'ds_path': ds_path, 'ds': dc_info.name})
 
     def _check_if_folder_file_exists(self, ds_ref, ds_name,
                                      folder_name, file_name):
