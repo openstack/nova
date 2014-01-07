@@ -14,6 +14,7 @@
 
 from nova import context
 from nova import db
+from nova import exception
 from nova.objects import migration
 from nova.openstack.common import timeutils
 from nova.tests import fake_instance
@@ -80,6 +81,19 @@ class _TestMigrationObject(object):
         mig.source_compute = 'foo'
         mig.create(ctxt)
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
+
+    def test_recreate_fails(self):
+        ctxt = context.get_admin_context()
+        fake_migration = fake_db_migration()
+        self.mox.StubOutWithMock(db, 'migration_create')
+        db.migration_create(ctxt, {'source_compute': 'foo'}).AndReturn(
+            fake_migration)
+        self.mox.ReplayAll()
+        mig = migration.Migration()
+        mig.source_compute = 'foo'
+        mig.create(ctxt)
+        self.assertRaises(exception.ObjectActionError, mig.create,
+                          self.context)
 
     def test_save(self):
         ctxt = context.get_admin_context()
