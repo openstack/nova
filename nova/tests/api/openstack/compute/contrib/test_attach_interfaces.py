@@ -190,7 +190,6 @@ class InterfaceAttachTests(test.NoDBTestCase):
         attachments = attach_interfaces.InterfaceAttachmentController()
         req = webob.Request.blank('/v2/fake/os-interfaces/attach')
         req.method = 'POST'
-        body = jsonutils.dumps({'port_id': FAKE_PORT_ID1})
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
