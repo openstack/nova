@@ -289,7 +289,7 @@ class DockerDriver(driver.ComputeDriver):
         default_cmd = self._get_default_cmd(image_name)
         if default_cmd:
             args['Cmd'] = default_cmd
-        container_id = self.docker.create_container(args)
+        container_id = self._create_container(instance, args)
         if not container_id:
             msg = _('Image name "{0}" does not exist, fetching it...')
             LOG.info(msg.format(image_name))
@@ -298,7 +298,7 @@ class DockerDriver(driver.ComputeDriver):
                 raise exception.InstanceDeployFailure(
                     _('Cannot pull missing image'),
                     instance_id=instance['name'])
-            container_id = self.docker.create_container(args)
+            container_id = self._create_container(instance, args)
             if not container_id:
                 raise exception.InstanceDeployFailure(
                     _('Cannot create container'),
@@ -406,3 +406,7 @@ class DockerDriver(driver.ComputeDriver):
         """
         flavor = flavors.extract_flavor(instance)
         return int(flavor['vcpus']) * 1024
+
+    def _create_container(self, instance, args):
+        name = "nova-" + instance['uuid']
+        return self.docker.create_container(args, name)

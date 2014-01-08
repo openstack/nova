@@ -15,6 +15,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 import mox
 
 from nova.openstack.common import jsonutils
@@ -56,6 +58,7 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
 
     def test_create_container(self):
         mock_conn = self.mox.CreateMockAnything()
+        expected_uuid = uuid.uuid4()
 
         expected_body = jsonutils.dumps({
             'Hostname': '',
@@ -76,9 +79,11 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
             'Volumes': {},
             'VolumesFrom': '',
         })
-        mock_conn.request('POST', '/v1.4/containers/create',
-                          body=expected_body,
-                          headers={'Content-Type': 'application/json'})
+
+        mock_conn.request('POST', '/v1.7/containers/create?name={0}'.format(
+            expected_uuid),
+            body=expected_body,
+            headers={'Content-Type': 'application/json'})
         response = FakeResponse(201, data='{"id": "XXX"}',
                                 headers={'Content-Type': 'application/json'})
         mock_conn.getresponse().AndReturn(response)
@@ -86,14 +91,14 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
-        container_id = client.create_container({})
+        container_id = client.create_container({}, expected_uuid)
         self.assertEqual('XXX', container_id)
 
         self.mox.VerifyAll()
 
     def test_create_container_with_args(self):
         mock_conn = self.mox.CreateMockAnything()
-
+        expected_uuid = uuid.uuid4()
         expected_body = jsonutils.dumps({
             'Hostname': 'marco',
             'User': '',
@@ -113,9 +118,10 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
             'Volumes': {},
             'VolumesFrom': '',
         })
-        mock_conn.request('POST', '/v1.4/containers/create',
-                          body=expected_body,
-                          headers={'Content-Type': 'application/json'})
+        mock_conn.request('POST', '/v1.7/containers/create?name={0}'.format(
+            expected_uuid),
+            body=expected_body,
+            headers={'Content-Type': 'application/json'})
         response = FakeResponse(201, data='{"id": "XXX"}',
                                 headers={'Content-Type': 'application/json'})
         mock_conn.getresponse().AndReturn(response)
@@ -128,17 +134,20 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
             'Memory': 512,
             'Image': 'example',
         }
-        container_id = client.create_container(args)
+
+        container_id = client.create_container(args, expected_uuid)
         self.assertEqual('XXX', container_id)
 
         self.mox.VerifyAll()
 
     def test_create_container_no_id_in_response(self):
         mock_conn = self.mox.CreateMockAnything()
+        expected_uuid = uuid.uuid4()
 
-        mock_conn.request('POST', '/v1.4/containers/create',
-                          body=mox.IgnoreArg(),
-                          headers={'Content-Type': 'application/json'})
+        mock_conn.request('POST', '/v1.7/containers/create?name={0}'.format(
+            expected_uuid),
+            body=mox.IgnoreArg(),
+            headers={'Content-Type': 'application/json'})
         response = FakeResponse(201, data='{"ping": "pong"}',
                                 headers={'Content-Type': 'application/json'})
         mock_conn.getresponse().AndReturn(response)
@@ -146,24 +155,26 @@ class DockerHTTPClientTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
-        container_id = client.create_container({})
+        container_id = client.create_container({}, expected_uuid)
         self.assertIsNone(container_id)
 
         self.mox.VerifyAll()
 
     def test_create_container_bad_return_code(self):
         mock_conn = self.mox.CreateMockAnything()
+        expected_uuid = uuid.uuid4()
 
-        mock_conn.request('POST', '/v1.4/containers/create',
-                          body=mox.IgnoreArg(),
-                          headers={'Content-Type': 'application/json'})
+        mock_conn.request('POST', '/v1.7/containers/create?name={0}'.format(
+            expected_uuid),
+            body=mox.IgnoreArg(),
+            headers={'Content-Type': 'application/json'})
         response = FakeResponse(400)
         mock_conn.getresponse().AndReturn(response)
 
         self.mox.ReplayAll()
 
         client = nova.virt.docker.client.DockerHTTPClient(mock_conn)
-        container_id = client.create_container({})
+        container_id = client.create_container({}, expected_uuid)
         self.assertIsNone(container_id)
 
         self.mox.VerifyAll()

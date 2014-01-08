@@ -110,7 +110,7 @@ class DockerHTTPClient(object):
             '/v1.4/containers/ps?all={0}&limit=50'.format(int(_all)))
         return resp.json
 
-    def create_container(self, args):
+    def create_container(self, args, name):
         data = {
             'Hostname': '',
             'User': '',
@@ -133,7 +133,7 @@ class DockerHTTPClient(object):
         data.update(args)
         resp = self.make_request(
             'POST',
-            '/v1.4/containers/create',
+            '/v1.7/containers/create?name={0}'.format(name),
             body=jsonutils.dumps(data))
         if resp.code != 201:
             return
