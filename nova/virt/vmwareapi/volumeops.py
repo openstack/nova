@@ -76,7 +76,6 @@ class VMwareVolumeOps(object):
                    'device_name': device_name, 'disk_type': disk_type})
 
     def _update_volume_details(self, vm_ref, instance, volume_uuid):
-        instance_name = instance['name']
         instance_uuid = instance['uuid']
 
         # Store the uuid of the volume_device
@@ -165,7 +164,6 @@ class VMwareVolumeOps(object):
 
     def get_volume_connector(self, instance):
         """Return volume connector information."""
-        instance_name = instance['name']
         try:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
         except exception.InstanceNotFound:
