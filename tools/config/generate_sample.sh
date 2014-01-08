@@ -77,16 +77,23 @@ find $TARGETDIR -type f -name "*.pyc" -delete
 FILES=$(find $TARGETDIR -type f -name "*.py" ! -path "*/tests/*" \
         -exec grep -l "Opt(" {} + | sed -e "s/^$BASEDIRESC\///g" | sort -u)
 
+EXTRA_MODULES_FILE="`dirname $0`/oslo.config.generator.rc"
+if test -r "$EXTRA_MODULES_FILE"
+then
+    source "$EXTRA_MODULES_FILE"
+fi
+
 export EVENTLET_NO_GREENDNS=yes
 
 OS_VARS=$(set | sed -n '/^OS_/s/=[^=]*$//gp' | xargs)
 [ "$OS_VARS" ] && eval "unset \$OS_VARS"
-
-MODULEPATH=nova.openstack.common.config.generator
+DEFAULT_MODULEPATH=nova.openstack.common.config.generator
+MODULEPATH=${MODULEPATH:-$DEFAULT_MODULEPATH}
 OUTPUTFILE=$OUTPUTDIR/$PACKAGENAME.conf.sample
 python -m $MODULEPATH $FILES > $OUTPUTFILE
 
-# Hook to allow projects to specify custom config file snippets
-for CONCAT_FILE in $BASEDIR/tools/config/*.conf.sample; do
+# Hook to allow projects to append custom config file snippets
+CONCAT_FILES=$(ls $BASEDIR/tools/config/*.conf.sample 2>/dev/null)
+for CONCAT_FILE in $CONCAT_FILES; do
     cat $CONCAT_FILE >> $OUTPUTFILE
 done

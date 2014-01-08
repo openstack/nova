@@ -1,0 +1,1 @@
+export NOVA_CONFIG_GENERATOR_EXTRA_MODULES=keystoneclient.middleware.auth_token

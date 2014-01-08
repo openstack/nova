@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 SINA Corporation
 # All Rights Reserved.
 #
@@ -28,6 +26,7 @@ import sys
 import textwrap
 
 from oslo.config import cfg
+import six
 
 from nova.openstack.common import gettextutils
 from nova.openstack.common import importutils
@@ -78,6 +77,16 @@ def generate(srcfiles):
     # The options list is a list of (module, options) tuples
     opts_by_group = {'DEFAULT': []}
 
+    extra_modules = os.getenv("NOVA_CONFIG_GENERATOR_EXTRA_MODULES", "")
+    if extra_modules:
+        for module_name in extra_modules.split(','):
+            module_name = module_name.strip()
+            module = _import_module(module_name)
+            if module:
+                for group, opts in _list_opts(module):
+                    opts_by_group.setdefault(group, []).append((module_name,
+                                                                opts))
+
     for pkg_name in pkg_names:
         mods = mods_by_pkg.get(pkg_name)
         mods.sort()
@@ -93,8 +102,8 @@ def generate(srcfiles):
                 opts_by_group.setdefault(group, []).append((mod_str, opts))
 
     print_group_opts('DEFAULT', opts_by_group.pop('DEFAULT', []))
-    for group, opts in opts_by_group.items():
-        print_group_opts(group, opts)
+    for group in sorted(opts_by_group.keys()):
+        print_group_opts(group, opts_by_group[group])
 
 
 def _import_module(mod_str):
@@ -104,17 +113,17 @@ def _import_module(mod_str):
             return sys.modules[mod_str[4:]]
         else:
             return importutils.import_module(mod_str)
-    except ImportError as ie:
-        sys.stderr.write("%s\n" % str(ie))
-        return None
-    except Exception:
+    except Exception as e:
+        sys.stderr.write("Error importing module %s: %s\n" % (mod_str, str(e)))
         return None
 
 
 def _is_in_group(opt, group):
     "Check if opt is in group."
     for key, value in group._opts.items():
-        if value['opt'] == opt:
+        # NOTE(llu): Temporary workaround for bug #1262148, wait until
+        # newly released oslo.config support '==' operator.
+        if not(value['opt'] != opt):
             return True
     return False
 
@@ -214,11 +223,19 @@ def _print_opt(opt):
         sys.exit(1)
     opt_help += ' (' + OPT_TYPES[opt_type] + ')'
     print('#', "\n# ".join(textwrap.wrap(opt_help, WORDWRAP_WIDTH)))
+    if opt.deprecated_opts:
+        for deprecated_opt in opt.deprecated_opts:
+            if deprecated_opt.name:
+                deprecated_group = (deprecated_opt.group if
+                                    deprecated_opt.group else "DEFAULT")
+                print('# Deprecated group/name - [%s]/%s' %
+                      (deprecated_group,
+                       deprecated_opt.name))
     try:
         if opt_default is None:
             print('#%s=<None>' % opt_name)
         elif opt_type == STROPT:
-            assert(isinstance(opt_default, basestring))
+            assert(isinstance(opt_default, six.string_types))
             print('#%s=%s' % (opt_name, _sanitize_default(opt_name,
                                                           opt_default)))
         elif opt_type == BOOLOPT:
@@ -247,9 +264,6 @@ def _print_opt(opt):
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("usage: %s [srcfile]...\n" % sys.argv[0])
-        sys.exit(0)
     generate(sys.argv[1:])
 
 if __name__ == '__main__':
