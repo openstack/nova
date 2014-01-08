@@ -36,7 +36,6 @@ S3 client with this module::
 
 import bisect
 import datetime
-import hashlib
 import os
 import os.path
 import urllib
@@ -206,7 +205,7 @@ class BaseRequestHandler(object):
         if self.application.bucket_depth < 1:
             return os.path.abspath(os.path.join(
                 self.application.directory, bucket, object_name))
-        hash = hashlib.md5(object_name).hexdigest()
+        hash = utils.get_hash_str(object_name)
         path = os.path.abspath(os.path.join(
             self.application.directory, bucket))
         for i in range(self.application.bucket_depth):
@@ -348,7 +347,7 @@ class ObjectHandler(BaseRequestHandler):
         object_file.write(self.request.body)
         object_file.close()
         self.set_header('ETag',
-                        '"%s"' % hashlib.md5(self.request.body).hexdigest())
+                        '"%s"' % utils.get_hash_str(self.request.body))
         self.finish()
 
     def delete(self, bucket, object_name):

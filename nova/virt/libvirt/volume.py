@@ -19,7 +19,6 @@
 """Volume drivers for libvirt."""
 
 import glob
-import hashlib
 import os
 import time
 import urllib2
@@ -616,7 +615,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         @type options: string
         """
         mount_path = os.path.join(CONF.libvirt.nfs_mount_point_base,
-                                  self.get_hash_str(nfs_export))
+                                  utils.get_hash_str(nfs_export))
         self._mount_nfs(mount_path, nfs_export, options, ensure=True)
         return mount_path
 
@@ -639,11 +638,6 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
                 LOG.warn(_("%s is already mounted"), nfs_share)
             else:
                 raise
-
-    @staticmethod
-    def get_hash_str(base_str):
-        """returns string that represents hash of base_str (in hex format)."""
-        return hashlib.md5(base_str).hexdigest()
 
 
 class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
@@ -753,7 +747,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         @type options: string
         """
         mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-                                  self.get_hash_str(glusterfs_export))
+                                  utils.get_hash_str(glusterfs_export))
         self._mount_glusterfs(mount_path, glusterfs_export,
                               options, ensure=True)
         return mount_path
@@ -775,11 +769,6 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
                 LOG.warn(_("%s is already mounted"), glusterfs_share)
             else:
                 raise
-
-    @staticmethod
-    def get_hash_str(base_str):
-        """returns string that represents hash of base_str (in hex format)."""
-        return hashlib.md5(base_str).hexdigest()
 
 
 class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
