@@ -2502,8 +2502,10 @@ class ComputeManager(manager.Manager):
             msg = _("Instance disappeared during snapshot")
             LOG.debug(msg, instance=instance)
         except exception.ImageNotFound:
-            msg = _("Image not found")
-            LOG.debug(msg, instance=instance)
+            instance.task_state = None
+            instance.save()
+            msg = _("Image not found during snapshot")
+            LOG.warn(msg, instance=instance)
 
     @rpc_common.client_exceptions(NotImplementedError)
     def volume_snapshot_create(self, context, instance, volume_id,
