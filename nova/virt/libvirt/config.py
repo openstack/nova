@@ -487,6 +487,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.logical_block_size = None
         self.physical_block_size = None
         self.readonly = False
+        self.snapshot = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
