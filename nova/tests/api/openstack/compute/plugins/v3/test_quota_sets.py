@@ -18,6 +18,7 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas
 from nova import context as context_maker
+from nova import exception
 from nova import quota
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -116,7 +117,7 @@ class QuotaSetsTest(test.TestCase):
         body = self._generate_quota_set()
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/' + id,
                                       use_admin_context=True)
-        res_dict = self.controller.update(req, id, body)
+        res_dict = self.controller.update(req, id, body=body)
         body['quota_set'].update(id=id)
         self.assertEqual(res_dict, body)
 
@@ -128,10 +129,9 @@ class QuotaSetsTest(test.TestCase):
                               'security_groups': 0,
                               'security_group_rules': 0,
                               'key_pairs': 100, 'fixed_ips': -1}}
-
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/' + id,
-                                      use_admin_context=True)
-        res_dict = self.controller.update(req, id, body)
+                                     use_admin_context=True)
+        res_dict = self.controller.update(req, id, body=body)
         body['quota_set'].update(id=id)
         self.assertEqual(res_dict, body)
 
@@ -140,7 +140,7 @@ class QuotaSetsTest(test.TestCase):
 
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          req, 'update_me', body)
+                          req, 'update_me', body=body)
 
     def test_quotas_update_invalid_key(self):
         body = self._generate_quota_set()
@@ -149,8 +149,8 @@ class QuotaSetsTest(test.TestCase):
 
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
     def test_quotas_update_filtered_key(self):
         body = self._generate_quota_set()
@@ -159,56 +159,54 @@ class QuotaSetsTest(test.TestCase):
 
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
     def test_quotas_update_invalid_limit(self):
         body = self._generate_quota_set(instances=-2)
 
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
     def test_quotas_update_invalid_value_json_fromat_empty_string(self):
-        id = 'update_me'
-        expected_resp = self._generate_quota_set(id=id)
-
         # when PUT JSON format with empty string for quota
         body = self._generate_quota_set(ram='')
-        req = fakes.HTTPRequestV3.blank('/os-quota-sets/' + id,
+
+        req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        res_dict = self.controller.update(req, id, body)
-        self.assertEqual(res_dict, expected_resp)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, id, body=body)
 
     def test_quotas_update_invalid_value_non_int(self):
         # when PUT non integer value
         body = self._generate_quota_set(ram={}, instances=test)
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
         body = {'quota_set': {'instances': 50.5}}
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
         body = {'quota_set': {
                 'instances': u'\u30aa\u30fc\u30d7\u30f3'}}
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
     def test_quotas_update_without_quota_set(self):
         # when without the quota_set para
         body = {}
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
-        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 'update_me', body=body)
 
     def test_quotas_delete_as_unauthorized_user(self):
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234')
@@ -235,7 +233,7 @@ class QuotaSetsTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+                          req, 'update_me', body=body)
 
     def test_quotas_force_update_exceed_in_used(self):
         id = 'update_me'
@@ -253,7 +251,7 @@ class QuotaSetsTest(test.TestCase):
         fake_quotas.get('cores')['limit'] = 10
         fake_quotas.get('instances')['limit'] = 200
 
-        res_dict = self.controller.update(req, id, body)
+        res_dict = self.controller.update(req, id, body=body)
         self.assertEqual(res_dict, expected)
 
     def test_user_quotas_show_as_admin(self):
@@ -289,7 +287,7 @@ class QuotaSetsTest(test.TestCase):
 
         url = '/os-quota-sets/update_me?user_id=1'
         req = fakes.HTTPRequestV3.blank(url, use_admin_context=True)
-        res_dict = self.controller.update(req, 'update_me', body)
+        res_dict = self.controller.update(req, 'update_me', body=body)
         body['quota_set'].update({'id': 'update_me'})
         self.assertEqual(res_dict, body)
 
@@ -299,14 +297,14 @@ class QuotaSetsTest(test.TestCase):
         url = '/os-quota-sets/update_me?user_id=1'
         req = fakes.HTTPRequestV3.blank(url)
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
-                          req, 'update_me', body)
+                          req, 'update_me', body=body)
 
     def test_user_quotas_update_exceed_project(self):
         body = {'quota_set': {'instances': 20}}
         url = '/os-quota-sets/update_me?user_id=1'
         req = fakes.HTTPRequestV3.blank(url, use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
-                          req, 'update_me', body)
+                          req, 'update_me', body=body)
 
     def test_user_quotas_delete_as_unauthorized_user(self):
         req = fakes.HTTPRequestV3.blank('/os-quota-sets/1234?user_id=1')
