@@ -1635,7 +1635,8 @@ class ComputeManager(manager.Manager):
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
                 self._set_instance_error_state(context, instance.uuid)
-            except exception.UnexpectedTaskStateError as e:
+            except exception.UnexpectedDeletingTaskStateError as e:
+                # The instance is deleting, so clean up but don't error.
                 LOG.debug(e.format_message(), instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
@@ -1684,7 +1685,7 @@ class ComputeManager(manager.Manager):
                 self._notify_about_instance_usage(context, instance,
                         'create.end',
                         extra_usage_info={'message': e.format_message()})
-        except exception.UnexpectedTaskStateError as e:
+        except exception.UnexpectedDeletingTaskStateError as e:
             with excutils.save_and_reraise_exception():
                 msg = e.format_message()
                 self._notify_about_instance_usage(context, instance,
@@ -1732,15 +1733,16 @@ class ComputeManager(manager.Manager):
             security_groups, image, block_device_mapping):
         resources = {}
 
-        # Verify that all the BDMs have a device_name set and assign a
-        # default to the ones missing it with the help of the driver.
-        self._default_block_device_names(context, instance, image,
-                block_device_mapping)
-
         try:
             network_info = self._build_networks_for_instance(context, instance,
                     requested_networks, security_groups)
             resources['network_info'] = network_info
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError):
+            raise
+        except exception.UnexpectedTaskStateError as e:
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
+                    reason=e.format_message())
         except Exception:
             # Because this allocation is async any failures are likely to occur
             # when the driver accesses network_info during spawn().
@@ -1749,14 +1751,25 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
 
-        instance.vm_state = vm_states.BUILDING
-        instance.task_state = task_states.BLOCK_DEVICE_MAPPING
-        instance.save()
-
         try:
+            # Verify that all the BDMs have a device_name set and assign a
+            # default to the ones missing it with the help of the driver.
+            self._default_block_device_names(context, instance, image,
+                    block_device_mapping)
+
+            instance.vm_state = vm_states.BUILDING
+            instance.task_state = task_states.BLOCK_DEVICE_MAPPING
+            instance.save()
+
             block_device_info = self._prep_block_device(context, instance,
                     block_device_mapping)
             resources['block_device_info'] = block_device_info
+        except (exception.InstanceNotFound,
+                exception.UnexpectedDeletingTaskStateError):
+            raise
+        except exception.UnexpectedTaskStateError as e:
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
+                    reason=e.format_message())
         except Exception:
             LOG.exception(_('Failure prepping block device'),
                     instance=instance)
