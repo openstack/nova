@@ -53,9 +53,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         nwapi = self.compute.network_api
         self.mox.StubOutWithMock(nwapi, 'allocate_for_instance')
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(time, 'sleep')
 
-        instance = {}
+        instance = fake_instance.fake_db_instance(system_metadata={})
         is_vpn = 'fake-is-vpn'
         req_networks = 'fake-req-networks'
         macs = 'fake-macs'
@@ -79,6 +80,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 requested_networks=req_networks, macs=macs,
                 security_groups=sec_groups,
                 dhcp_options=dhcp_options).AndReturn(final_result)
+        self.compute._instance_update(self.context, instance['uuid'],
+                system_metadata={'network_allocated': 'True'})
 
         self.mox.ReplayAll()
 
@@ -1383,28 +1386,47 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.compute._cleanup_build_resources, self.context,
                 self.instance, self.block_device_mapping)
 
-    def test_build_networks_if_none_found(self):
+    def test_build_networks_if_not_allocated(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                system_metadata={},
+                expected_attrs=['system_metadata'])
+
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.compute._get_instance_nw_info(self.context,
-                self.instance).AndReturn(self.network_info)
-        self.compute._allocate_network(self.context, self.instance,
+        self.compute._allocate_network(self.context, instance,
                 self.requested_networks, None, self.security_groups, None)
         self.mox.ReplayAll()
 
-        self.compute._build_networks_for_instance(self.context, self.instance,
+        self.compute._build_networks_for_instance(self.context, instance,
+                self.requested_networks, self.security_groups)
+
+    def test_build_networks_if_allocated_false(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                system_metadata=dict(network_allocated='False'),
+                expected_attrs=['system_metadata'])
+
+        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
+        self.mox.StubOutWithMock(self.compute, '_allocate_network')
+        self.compute._allocate_network(self.context, instance,
+                self.requested_networks, None, self.security_groups, None)
+        self.mox.ReplayAll()
+
+        self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
 
     def test_return_networks_if_found(self):
+        instance = fake_instance.fake_instance_obj(self.context,
+                system_metadata=dict(network_allocated='True'),
+                expected_attrs=['system_metadata'])
+
         def fake_network_info():
             return network_model.NetworkInfo([{'address': '123.123.123.123'}])
 
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute, '_allocate_network')
-        self.compute._get_instance_nw_info(self.context,
-                self.instance).AndReturn(
+        self.compute._get_instance_nw_info(self.context, instance).AndReturn(
                     network_model.NetworkInfoAsyncWrapper(fake_network_info))
         self.mox.ReplayAll()
 
-        self.compute._build_networks_for_instance(self.context, self.instance,
+        self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)

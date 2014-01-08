@@ -73,6 +73,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import safe_utils
@@ -1238,6 +1239,12 @@ class ComputeManager(manager.Manager):
                         dhcp_options=dhcp_options)
                 LOG.debug(_('Instance network_info: |%s|'), nwinfo,
                           instance=instance)
+                # NOTE(alaski): This can be done more cleanly once we're sure
+                # we'll receive an object.
+                sys_meta = utils.metadata_to_dict(instance['system_metadata'])
+                sys_meta['network_allocated'] = 'True'
+                self._instance_update(context, instance['uuid'],
+                        system_metadata=sys_meta)
                 return nwinfo
             except Exception:
                 exc_info = sys.exc_info()
@@ -1260,10 +1267,10 @@ class ComputeManager(manager.Manager):
     def _build_networks_for_instance(self, context, instance,
             requested_networks, security_groups):
 
-        # May have been allocated previously and rescheduled to this host
-        network_info = self._get_instance_nw_info(context, instance)
-        if len(network_info) > 0:
-            return network_info
+        # If we're here from a reschedule the network may already be allocated.
+        if strutils.bool_from_string(
+                instance.system_metadata.get('network_allocated', 'False')):
+            return self._get_instance_nw_info(context, instance)
 
         if not self.is_neutron_security_groups:
             security_groups = []
@@ -1722,6 +1729,9 @@ class ComputeManager(manager.Manager):
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=str(e))
 
+        # NOTE(alaski): This is only useful during reschedules, remove it now.
+        instance.system_metadata.pop('network_allocated', None)
+
         instance.power_state = self._get_power_state(context, instance)
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = None
@@ -1799,6 +1809,8 @@ class ComputeManager(manager.Manager):
             requested_networks):
         try:
             self._deallocate_network(context, instance, requested_networks)
+            instance.system_metadata['network_allocated'] = 'False'
+            instance.save()
         except Exception:
             msg = _('Failed to deallocate networks')
             LOG.exception(msg, instance=instance)
