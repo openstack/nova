@@ -578,12 +578,6 @@ class Rbd(Image):
         if self.rbd is None:
             raise RuntimeError(_('rbd python libraries not found'))
 
-        old_format = True
-        features = 0
-        if self._supports_layering():
-            old_format = False
-            features = self.rbd.RBD_FEATURE_LAYERING
-
         if not os.path.exists(base):
             prepare_template(target=base, max_size=size, *args, **kwargs)
         else:
