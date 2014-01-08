@@ -195,9 +195,9 @@ def stub_vm_utils_with_vdi_attached_here(function):
 
 
 def create_instance_with_system_metadata(context, instance_values):
-    instance_type = db.flavor_get(context,
+    flavor = db.flavor_get(context,
                                   instance_values['instance_type_id'])
-    sys_meta = flavors.save_flavor_info({}, instance_type)
+    sys_meta = flavors.save_flavor_info({}, flavor)
     instance_values['system_metadata'] = sys_meta
     return db.instance_create(context, instance_values)
 
@@ -574,11 +574,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.vm = vm
 
     def check_vm_record(self, conn, instance_type_id, check_injection):
-        instance_type = db.flavor_get(conn, instance_type_id)
-        mem_kib = long(instance_type['memory_mb']) << 10
+        flavor = db.flavor_get(conn, instance_type_id)
+        mem_kib = long(flavor['memory_mb']) << 10
         mem_bytes = str(mem_kib << 10)
-        vcpus = instance_type['vcpus']
-        vcpu_weight = instance_type['vcpu_weight']
+        vcpus = flavor['vcpus']
+        vcpu_weight = flavor['vcpu_weight']
 
         self.assertEqual(self.vm_info['max_mem'], mem_kib)
         self.assertEqual(self.vm_info['mem'], mem_kib)
@@ -1453,9 +1453,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_per_instance_usage_running(self):
         instance = self._create_instance(spawn=True)
-        instance_type = flavors.get_flavor(3)
+        flavor = flavors.get_flavor(3)
 
-        expected = {instance['uuid']: {'memory_mb': instance_type['memory_mb'],
+        expected = {instance['uuid']: {'memory_mb': flavor['memory_mb'],
                                        'uuid': instance['uuid']}}
         actual = self.conn.get_per_instance_usage()
         self.assertEqual(expected, actual)
@@ -1879,7 +1879,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         instance = {'auto_disk_config': True, 'uuid': 'uuid'}
         vm_ref = "vm_ref"
         dest = "dest"
-        instance_type = "type"
+        flavor = "type"
         sr_path = "sr_path"
 
         virtapi.instance_update(self.context, 'uuid', {'progress': 20.0})
@@ -1892,7 +1892,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         new_vdi_ref = "new_ref"
         new_vdi_uuid = "new_uuid"
         vm_utils.resize_disk(vmops._session, instance, old_vdi_ref,
-            instance_type).AndReturn((new_vdi_ref, new_vdi_uuid))
+            flavor).AndReturn((new_vdi_ref, new_vdi_uuid))
         virtapi.instance_update(self.context, 'uuid', {'progress': 60.0})
         vm_utils.migrate_vhd(vmops._session, instance, new_vdi_uuid, dest,
                              sr_path, 0).AndRaise(
@@ -1905,7 +1905,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
         self.assertRaises(exception.InstanceFaultRollback,
                           vmops._migrate_disk_resizing_down, self.context,
-                          instance, dest, instance_type, vm_ref, sr_path)
+                          instance, dest, flavor, vm_ref, sr_path)
 
     def test_resize_ensure_vm_is_shutdown_cleanly(self):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)

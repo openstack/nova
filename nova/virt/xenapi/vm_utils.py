@@ -257,11 +257,11 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 
         3. Using hardware virtualization
     """
-    instance_type = flavors.extract_flavor(instance)
-    mem = str(long(instance_type['memory_mb']) * unit.Mi)
-    vcpus = str(instance_type['vcpus'])
+    flavor = flavors.extract_flavor(instance)
+    mem = str(long(flavor['memory_mb']) * unit.Mi)
+    vcpus = str(flavor['vcpus'])
 
-    vcpu_weight = instance_type['vcpu_weight']
+    vcpu_weight = flavor['vcpu_weight']
     vcpu_params = {}
     if vcpu_weight is not None:
         # NOTE(johngarbutt) bug in XenServer 6.1 and 6.2 means
@@ -385,8 +385,8 @@ def is_vm_shutdown(session, vm_ref):
 
 
 def is_enough_free_mem(session, instance):
-    instance_type = flavors.extract_flavor(instance)
-    mem = long(instance_type['memory_mb']) * unit.Mi
+    flavor = flavors.extract_flavor(instance)
+    mem = long(flavor['memory_mb']) * unit.Mi
     host_free_mem = long(session.call_xenapi("host.compute_free_memory",
                                              session.host_ref))
     return host_free_mem >= mem
@@ -907,8 +907,8 @@ def _find_cached_image(session, image_id, sr_ref):
         return recs.keys()[0]
 
 
-def resize_disk(session, instance, vdi_ref, instance_type):
-    size_gb = instance_type['root_gb']
+def resize_disk(session, instance, vdi_ref, flavor):
+    size_gb = flavor['root_gb']
     if size_gb == 0:
         reason = _("Can't resize a disk to 0 GB.")
         raise exception.ResizeError(reason=reason)
@@ -1446,17 +1446,17 @@ def _get_vdi_chain_size(session, vdi_uuid):
 
 
 def _check_vdi_size(context, session, instance, vdi_uuid):
-    instance_type = flavors.extract_flavor(instance)
-    allowed_size = (instance_type['root_gb'] +
+    flavor = flavors.extract_flavor(instance)
+    allowed_size = (flavor['root_gb'] +
                     VHD_SIZE_CHECK_FUDGE_FACTOR_GB) * unit.Gi
 
-    if not instance_type['root_gb']:
+    if not flavor['root_gb']:
         # root_gb=0 indicates that we're disabling size checks
         return
 
     size = _get_vdi_chain_size(session, vdi_uuid)
     if size > allowed_size:
-        LOG.error(_("Image size %(size)d exceeded instance_type "
+        LOG.error(_("Image size %(size)d exceeded flavor "
                     "allowed size %(allowed_size)d"),
                   {'size': size, 'allowed_size': allowed_size},
                   instance=instance)

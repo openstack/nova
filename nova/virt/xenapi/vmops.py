@@ -554,12 +554,12 @@ class VMOps(object):
                       disk_image_type, network_info,
                       admin_password=None, files=None):
         ctx = nova_context.get_admin_context()
-        instance_type = flavors.extract_flavor(instance)
+        flavor = flavors.extract_flavor(instance)
 
         # Attach (required) root disk
         if disk_image_type == vm_utils.ImageType.DISK_ISO:
             # DISK_ISO needs two VBDs: the ISO disk and a blank RW disk
-            root_disk_size = instance_type['root_gb']
+            root_disk_size = flavor['root_gb']
             if root_disk_size > 0:
                 vm_utils.generate_iso_blank_root_disk(self._session, instance,
                     vm_ref, DEVICE_ROOT, name_label, root_disk_size)
@@ -575,7 +575,7 @@ class VMOps(object):
                             "resize root disk..."), instance=instance)
                 vm_utils.try_auto_configure_disk(self._session,
                                                  root_vdi['ref'],
-                                                 instance_type['root_gb'])
+                                                 flavor['root_gb'])
 
             vm_utils.create_vbd(self._session, vm_ref, root_vdi['ref'],
                                 DEVICE_ROOT, bootable=True,
@@ -595,12 +595,12 @@ class VMOps(object):
                                 osvol=vdi_info.get('osvol'))
 
         # Attach (optional) swap disk
-        swap_mb = instance_type['swap']
+        swap_mb = flavor['swap']
         if swap_mb:
             vm_utils.generate_swap(self._session, instance, vm_ref,
                                    DEVICE_SWAP, name_label, swap_mb)
 
-        ephemeral_gb = instance_type['ephemeral_gb']
+        ephemeral_gb = flavor['ephemeral_gb']
         if ephemeral_gb:
             ephemeral_vdis = vdis.get('ephemerals')
             if ephemeral_vdis:
@@ -773,7 +773,7 @@ class VMOps(object):
                     reason=_("Unable to terminate instance."))
 
     def _migrate_disk_resizing_down(self, context, instance, dest,
-                                    instance_type, vm_ref, sr_path):
+                                    flavor, vm_ref, sr_path):
         step = make_step_decorator(context, instance,
                                    self._update_instance_progress)
 
@@ -795,7 +795,7 @@ class VMOps(object):
         @step
         def create_copy_vdi_and_resize(undo_mgr, old_vdi_ref):
             new_vdi_ref, new_vdi_uuid = vm_utils.resize_disk(self._session,
-                instance, old_vdi_ref, instance_type)
+                instance, old_vdi_ref, flavor)
 
             def cleanup_vdi_copy():
                 vm_utils.destroy_vdi(self._session, new_vdi_ref)
@@ -1001,9 +1001,9 @@ class VMOps(object):
         name_label = self._get_orig_vm_name_label(instance)
         vm_utils.set_vm_name_label(self._session, vm_ref, name_label)
 
-    def _ensure_not_resize_ephemeral(self, instance, instance_type):
+    def _ensure_not_resize_ephemeral(self, instance, flavor):
         old_gb = instance["ephemeral_gb"]
-        new_gb = instance_type["ephemeral_gb"]
+        new_gb = flavor["ephemeral_gb"]
 
         if old_gb != new_gb:
             reason = _("Unable to resize ephemeral disks")

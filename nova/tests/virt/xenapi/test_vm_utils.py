@@ -1888,8 +1888,8 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
     def test_create_vm_record(self, mock_extract_flavor):
         session = mock.Mock()
         instance = {"uuid": "uuid123"}
-        instance_type = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
-        mock_extract_flavor.return_value = instance_type
+        flavor = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
+        mock_extract_flavor.return_value = flavor
 
         vm_utils.create_vm(session, instance, "name", "kernel", "ramdisk",
                            device_id="0002")
