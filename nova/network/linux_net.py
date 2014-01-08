@@ -127,6 +127,9 @@ linux_net_opts = [
                default=120,
                help='Amount of time, in seconds, that ovs_vsctl should wait '
                     'for a response from the database. 0 is to wait forever.'),
+    cfg.BoolOpt('fake_network',
+                default=False,
+                help='If passed, use fake network devices and addresses'),
     ]
 
 CONF = cfg.CONF

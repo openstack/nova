@@ -1154,6 +1154,10 @@
 # value)
 #ovs_vsctl_timeout=120
 
+# If passed, use fake network devices and addresses (boolean
+# value)
+#fake_network=false
+
 
 #
 # Options defined in nova.network.manager
@@ -1210,10 +1214,6 @@
 # Number of attempts to create unique mac address (integer
 # value)
 #create_unique_mac_address_attempts=5
-
-# If passed, use fake network devices and addresses (boolean
-# value)
-#fake_network=false
 
 # If True, skip using the queue and make local calls (boolean
 # value)

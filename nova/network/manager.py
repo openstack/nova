@@ -126,9 +126,6 @@ network_opts = [
     cfg.IntOpt('create_unique_mac_address_attempts',
                default=5,
                help='Number of attempts to create unique mac address'),
-    cfg.BoolOpt('fake_network',
-                default=False,
-                help='If passed, use fake network devices and addresses'),
     cfg.BoolOpt('fake_call',
                 default=False,
                 help='If True, skip using the queue and make local calls'),
@@ -168,6 +165,7 @@ CONF.register_opts(network_opts)
 CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('my_ip', 'nova.netconf')
 CONF.import_opt('network_topic', 'nova.network.rpcapi')
+CONF.import_opt('fake_network', 'nova.network.linux_net')
 
 
 class RPCAllocateFixedIP(object):
