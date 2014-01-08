@@ -2480,6 +2480,20 @@ class ComputeTestCase(BaseTestCase):
     def test_snapshot_fails_cleanup_ignores_exception(self):
         self._test_snapshot_fails(True)
 
+    def test_snapshot_fails_with_glance_error(self):
+        def fake_snapshot(*args, **kwargs):
+            raise exception.ImageNotFound(image_id='xxx')
+
+        self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
+        fake_image.stub_out_image_service(self.stubs)
+
+        inst_obj = self._get_snapshotting_instance()
+
+        self.compute.snapshot_instance(
+                          self.context, image_id='fakesnap',
+                          instance=inst_obj)
+        self._assert_state({'task_state': None})
+
     def test_snapshot_handles_cases_when_instance_is_deleted(self):
         inst_obj = self._get_snapshotting_instance()
         inst_obj.task_state = task_states.DELETING
