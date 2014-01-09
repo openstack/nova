@@ -46,6 +46,7 @@ from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.db.sqlalchemy import session as db_session
+from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 from nova import quota
@@ -5465,31 +5466,21 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                  supported_instances='',
                                  pci_stats='',
                                  metrics='',
-                                 extra_resources='')
+                                 extra_resources='',
+                                 stats='')
         # add some random stats
         self.stats = dict(num_instances=3, num_proj_12345=2,
                      num_proj_23456=2, num_vm_building=3)
-        self.compute_node_dict['stats'] = self.stats
+        self.compute_node_dict['stats'] = jsonutils.dumps(self.stats)
         self.flags(reserved_host_memory_mb=0)
         self.flags(reserved_host_disk_mb=0)
         self.item = db.compute_node_create(self.ctxt, self.compute_node_dict)
 
-    def _stats_as_dict(self, stats):
-        d = {}
-        for s in stats:
-            key = s['key']
-            d[key] = s['value']
-        return d
-
-    def _stats_equal(self, stats, new_stats):
-        for k, v in stats.iteritems():
-            self.assertEqual(v, int(new_stats[k]))
-
     def test_compute_node_create(self):
         self._assertEqualObjects(self.compute_node_dict, self.item,
                                 ignored_keys=self._ignored_keys + ['stats'])
-        new_stats = self._stats_as_dict(self.item['stats'])
-        self._stats_equal(self.stats, new_stats)
+        new_stats = jsonutils.loads(self.item['stats'])
+        self.assertEqual(self.stats, new_stats)
 
     def test_compute_node_get_all(self):
         date_fields = set(['created_at', 'updated_at',
@@ -5506,8 +5497,8 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                 self.assertFalse(date_fields & node_fields)
             else:
                 self.assertTrue(date_fields <= node_fields)
-            new_stats = self._stats_as_dict(node['stats'])
-            self._stats_equal(self.stats, new_stats)
+            new_stats = jsonutils.loads(node['stats'])
+            self.assertEqual(self.stats, new_stats)
 
     def test_compute_node_get_all_deleted_compute_node(self):
         # Create a service and compute node and ensure we can find its stats;
@@ -5521,7 +5512,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             # Create a compute node
             compute_node_data = self.compute_node_dict.copy()
             compute_node_data['service_id'] = service['id']
-            compute_node_data['stats'] = self.stats.copy()
+            compute_node_data['stats'] = jsonutils.dumps(self.stats.copy())
             compute_node_data['hypervisor_hostname'] = 'hypervisor-%s' % x
             node = db.compute_node_create(self.ctxt, compute_node_data)
 
@@ -5535,7 +5526,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                     break
             self.assertIsNotNone(found)
             # Now ensure the match has stats!
-            self.assertNotEqual(self._stats_as_dict(found['stats']), {})
+            self.assertNotEqual(jsonutils.loads(found['stats']), {})
 
             # Now delete the newly-created compute node to ensure the related
             # compute node stats are wiped in a cascaded fashion
@@ -5556,7 +5547,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for name in ['bm_node1', 'bm_node2']:
             compute_node_data = self.compute_node_dict.copy()
             compute_node_data['service_id'] = service['id']
-            compute_node_data['stats'] = self.stats
+            compute_node_data['stats'] = jsonutils.dumps(self.stats)
             compute_node_data['hypervisor_hostname'] = 'bm_node_1'
             node = db.compute_node_create(self.ctxt, compute_node_data)
 
@@ -5576,24 +5567,24 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         node = db.compute_node_get(self.ctxt, compute_node_id)
         self._assertEqualObjects(self.compute_node_dict, node,
                         ignored_keys=self._ignored_keys + ['stats', 'service'])
-        new_stats = self._stats_as_dict(node['stats'])
-        self._stats_equal(self.stats, new_stats)
+        new_stats = jsonutils.loads(node['stats'])
+        self.assertEqual(self.stats, new_stats)
 
     def test_compute_node_update(self):
         compute_node_id = self.item['id']
-        stats = self._stats_as_dict(self.item['stats'])
+        stats = jsonutils.loads(self.item['stats'])
         # change some values:
         stats['num_instances'] = 8
         stats['num_tribbles'] = 1
         values = {
             'vcpus': 4,
-            'stats': stats,
+            'stats': jsonutils.dumps(stats),
         }
         item_updated = db.compute_node_update(self.ctxt, compute_node_id,
                                               values)
         self.assertEqual(4, item_updated['vcpus'])
-        new_stats = self._stats_as_dict(item_updated['stats'])
-        self._stats_equal(stats, new_stats)
+        new_stats = jsonutils.loads(item_updated['stats'])
+        self.assertEqual(stats, new_stats)
 
     def test_compute_node_delete(self):
         compute_node_id = self.item['id']
@@ -5610,7 +5601,7 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
             service = db.service_create(self.ctxt, new_service)
             self.compute_node_dict['service_id'] = service['id']
             self.compute_node_dict['hypervisor_hostname'] = 'testhost' + str(i)
-            self.compute_node_dict['stats'] = self.stats
+            self.compute_node_dict['stats'] = jsonutils.dumps(self.stats)
             node = db.compute_node_create(self.ctxt, self.compute_node_dict)
             nodes_created.append(node)
         nodes = db.compute_node_search_by_hypervisor(self.ctxt, 'host')
@@ -5646,39 +5637,6 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                         {'updated_at': first.updated_at,
                                          'free_ram_mb': '13'})
         self.assertNotEqual(first['updated_at'], second['updated_at'])
-
-    def test_compute_node_stat_unchanged(self):
-        # don't update unchanged stat values:
-        stats = self.item['stats']
-        stats_updated_at = dict([(stat['key'], stat['updated_at'])
-                                  for stat in stats])
-        stats_values = self._stats_as_dict(stats)
-        new_values = {'stats': stats_values}
-        compute_node_id = self.item['id']
-        db.compute_node_update(self.ctxt, compute_node_id, new_values)
-        updated_node = db.compute_node_get(self.ctxt, compute_node_id)
-        updated_stats = updated_node['stats']
-        for stat in updated_stats:
-            self.assertEqual(stat['updated_at'], stats_updated_at[stat['key']])
-
-    def test_compute_node_stat_prune(self):
-        for stat in self.item['stats']:
-            if stat['key'] == 'num_instances':
-                num_instance_stat = stat
-                break
-
-        values = {
-            'stats': dict(num_instances=1)
-        }
-        db.compute_node_update(self.ctxt, self.item['id'], values,
-                               prune_stats=True)
-        item_updated = db.compute_node_get_all(self.ctxt)[0]
-        self.assertEqual(1, len(item_updated['stats']))
-
-        stat = item_updated['stats'][0]
-        self.assertEqual(num_instance_stat['id'], stat['id'])
-        self.assertEqual(num_instance_stat['key'], stat['key'])
-        self.assertEqual(1, int(stat['value']))
 
 
 class ProviderFwRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):

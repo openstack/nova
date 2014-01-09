@@ -681,6 +681,22 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         for table_name in table_names:
             self.assertTableNotExists(engine, 'dump_' + table_name)
 
+    def _check_233(self, engine, data):
+        self.assertColumnExists(engine, 'compute_nodes', 'stats')
+
+        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        self.assertTrue(isinstance(compute_nodes.c.stats.type,
+                            sqlalchemy.types.Text))
+
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError, db_utils.get_table,
+                          engine, 'compute_node_stats')
+
+    def _post_downgrade_233(self, engine):
+        self.assertColumnNotExists(engine, 'compute_nodes', 'stats')
+
+        # confirm compute_node_stats exists
+        db_utils.get_table(engine, 'compute_node_stats')
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""

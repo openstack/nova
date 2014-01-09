@@ -242,7 +242,7 @@ class ResourceTracker(object):
                     self.pci_tracker.update_pci_for_migration(instance,
                                                               sign=-1)
                 self._update_usage(self.compute_node, itype, sign=-1)
-                self.compute_node['stats'] = self.stats
+                self.compute_node['stats'] = jsonutils.dumps(self.stats)
 
                 ctxt = context.get_admin_context()
                 self._update(ctxt, self.compute_node)
@@ -381,7 +381,7 @@ class ResourceTracker(object):
 
         else:
             # just update the record:
-            self._update(context, resources, prune_stats=True)
+            self._update(context, resources)
             LOG.info(_('Compute_service record updated for %(host)s:%(node)s')
                     % {'host': self.host, 'node': self.nodename})
 
@@ -448,12 +448,12 @@ class ResourceTracker(object):
         if 'pci_devices' in resources:
             LOG.audit(_("Free PCI devices: %s") % resources['pci_devices'])
 
-    def _update(self, context, values, prune_stats=False):
+    def _update(self, context, values):
         """Persist the compute node updates to the DB."""
         if "service" in self.compute_node:
             del self.compute_node['service']
         self.compute_node = self.conductor_api.compute_node_update(
-            context, self.compute_node, values, prune_stats)
+            context, self.compute_node, values)
         if self.pci_tracker:
             self.pci_tracker.save(context)
 
@@ -521,7 +521,7 @@ class ResourceTracker(object):
             if self.pci_tracker:
                 self.pci_tracker.update_pci_for_migration(instance)
             self._update_usage(resources, itype)
-            resources['stats'] = self.stats
+            resources['stats'] = jsonutils.dumps(self.stats)
             if self.pci_tracker:
                 resources['pci_stats'] = jsonutils.dumps(
                         self.pci_tracker.stats)
@@ -594,7 +594,7 @@ class ResourceTracker(object):
             self._update_usage(resources, instance, sign=sign)
 
         resources['current_workload'] = self.stats.calculate_workload()
-        resources['stats'] = self.stats
+        resources['stats'] = jsonutils.dumps(self.stats)
         if self.pci_tracker:
             resources['pci_stats'] = jsonutils.dumps(self.pci_tracker.stats)
         else:

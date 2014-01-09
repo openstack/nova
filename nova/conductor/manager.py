@@ -453,8 +453,9 @@ class ConductorManager(manager.Manager):
         return jsonutils.to_primitive(result)
 
     def compute_node_update(self, context, node, values, prune_stats=False):
-        result = self.db.compute_node_update(context, node['id'], values,
-                                             prune_stats)
+        # NOTE(belliott) prune_stats is no longer relevant and will be
+        # ignored
+        result = self.db.compute_node_update(context, node['id'], values)
         return jsonutils.to_primitive(result)
 
     def compute_node_delete(self, context, node):

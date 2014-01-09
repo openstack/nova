@@ -215,7 +215,9 @@ class HostState(object):
         # Don't store stats directly in host_state to make sure these don't
         # overwrite any values, or get overwritten themselves. Store in self so
         # filters can schedule with them.
-        self.stats = self._statmap(compute.get('stats', []))
+        stats = compute.get('stats', None) or '{}'
+        self.stats = jsonutils.loads(stats)
+
         self.hypervisor_version = compute['hypervisor_version']
 
         # Track number of instances on host
@@ -302,9 +304,6 @@ class HostState(object):
                 task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
                 task_states.IMAGE_BACKUP]:
             self.num_io_ops += 1
-
-    def _statmap(self, stats):
-        return dict((st['key'], st['value']) for st in stats)
 
     def __repr__(self):
         return ("(%s, %s) ram:%s disk:%s io_ops:%s instances:%s" %

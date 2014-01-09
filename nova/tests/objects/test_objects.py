@@ -27,6 +27,7 @@ from nova import exception
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import utils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import rpc
 from nova import test
@@ -294,7 +295,8 @@ class TestUtils(test.TestCase):
             self.assertEqual(db_objs[index]['missing'], item.missing)
 
 
-def compare_obj(test, obj, db_obj, subs=None, allow_missing=None):
+def compare_obj(test, obj, db_obj, subs=None, allow_missing=None,
+                comparators=None):
     """Compare a NovaObject and a dict-like database object.
 
     This automatically converts TZ-aware datetimes and iterates over
@@ -305,12 +307,15 @@ def compare_obj(test, obj, db_obj, subs=None, allow_missing=None):
     :param:db_obj: The dict-like database object to use as reference
     :param:subs: A dict of objkey=dbkey field substitutions
     :param:allow_missing: A list of fields that may not be in db_obj
+    :param:comparators: Map of comparator functions to use for certain fields
     """
 
     if subs is None:
         subs = {}
     if allow_missing is None:
         allow_missing = []
+    if comparators is None:
+        comparators = {}
 
     for key in obj.fields:
         if key in allow_missing and not obj.obj_attr_is_set(key):
@@ -320,7 +325,12 @@ def compare_obj(test, obj, db_obj, subs=None, allow_missing=None):
         db_val = db_obj[db_key]
         if isinstance(obj_val, datetime.datetime):
             obj_val = obj_val.replace(tzinfo=None)
-        test.assertEqual(db_val, obj_val)
+
+        if key in comparators:
+            comparator = comparators[key]
+            comparator(db_val, obj_val)
+        else:
+            test.assertEqual(db_val, obj_val)
 
 
 class _BaseTestCase(test.TestCase):
@@ -329,8 +339,15 @@ class _BaseTestCase(test.TestCase):
         self.remote_object_calls = list()
         self.context = context.RequestContext('fake-user', 'fake-project')
 
-    def compare_obj(self, obj, db_obj, subs=None, allow_missing=None):
-        compare_obj(self, obj, db_obj, subs=subs, allow_missing=allow_missing)
+    def compare_obj(self, obj, db_obj, subs=None, allow_missing=None,
+                    comparators=None):
+        compare_obj(self, obj, db_obj, subs=subs, allow_missing=allow_missing,
+                    comparators=comparators)
+
+    def json_comparator(self, expected, obj_val):
+        # json-ify an object field for comparison with its db str
+        #equivalent
+        self.assertEqual(expected, jsonutils.dumps(obj_val))
 
     def assertNotIsInstance(self, obj, cls, msg=None):
         """Python < v2.7 compatibility.  Assert 'not isinstance(obj, cls)."""

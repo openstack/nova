@@ -1,4 +1,4 @@
-#    Copyright 2013 IBM Corp.
+#    Copyright 2013 IBM Corp
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,13 +15,15 @@
 from nova import db
 from nova.objects import base
 from nova.objects import fields
+from nova.openstack.common import jsonutils
 
 
 class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added get_by_service_id()
     # Version 1.2: String attributes updated to support unicode
-    VERSION = '1.2'
+    # Version 1.3: Added stats field
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(),
@@ -42,12 +44,29 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'cpu_info': fields.StringField(nullable=True),
         'disk_available_least': fields.IntegerField(nullable=True),
         'metrics': fields.StringField(nullable=True),
+        'stats': fields.DictOfNullableStringsField(nullable=True),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = (int(target_version.split('.')[0]),
+                          int(target_version.split('.')[1]))
+        if target_version < (1, 3):
+            # pre 1.3 version does not have a stats field
+            del primitive['stats']
 
     @staticmethod
     def _from_db_object(context, compute, db_compute):
-        for key in compute.fields:
+
+        fields = set(compute.fields) - set(['stats'])
+        for key in fields:
             compute[key] = db_compute[key]
+
+        stats = db_compute['stats']
+        if stats:
+            compute['stats'] = jsonutils.loads(stats)
+        else:
+            compute['stats'] = {}
+
         compute._context = context
         compute.obj_reset_changes()
         return compute
@@ -70,10 +89,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def save(self, context, prune_stats=False):
+        # NOTE(belliott) ignore prune_stats param, no longer relevant
         updates = self.obj_get_changes()
         updates.pop('id', None)
-        db_compute = db.compute_node_update(context, self.id, updates,
-                                            prune_stats=prune_stats)
+
+        stats = updates.pop('stats', None)
+        if stats is not None:
+            updates['stats'] = jsonutils.dumps(stats)
+
+        db_compute = db.compute_node_update(context, self.id, updates)
         self._from_db_object(context, self, db_compute)
 
     @base.remotable
@@ -93,13 +117,15 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
 class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              ComputeNode <= version 1.2
-    VERSION = '1.0'
+    # Version 1.1 ComputeNode version 1.3
+    VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
     child_versions = {
         '1.0': '1.2',
         # NOTE(danms): ComputeNode was at 1.2 before we added this
+        '1.1': '1.3',
         }
 
     @base.remotable_classmethod
