@@ -290,6 +290,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         else:
             self._connect_to_iscsi_portal(iscsi_properties)
 
+            # Detect new/resized LUNs for existing sessions
+            self._run_iscsiadm(iscsi_properties, ("--rescan",))
+
         host_device = self._get_host_device(iscsi_properties)
 
         # The /dev/disk/by-path/... node is not always present immediately
@@ -336,12 +339,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     def disconnect_volume(self, connection_info, disk_dev):
         """Detach the volume from instance_name."""
         iscsi_properties = connection_info['data']
+        host_device = self._get_host_device(iscsi_properties)
         multipath_device = None
         if self.use_multipath:
-            host_device = ("/dev/disk/by-path/ip-%s-iscsi-%s-lun-%s" %
-                           (iscsi_properties['target_portal'],
-                            iscsi_properties['target_iqn'],
-                            iscsi_properties.get('target_lun', 0)))
             multipath_device = self._get_multipath_device_name(host_device)
 
         super(LibvirtISCSIVolumeDriver,
@@ -360,6 +360,19 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         devices = [dev for dev in devices if dev.startswith(device_prefix)]
         if not devices:
             self._disconnect_from_iscsi_portal(iscsi_properties)
+        elif host_device not in devices:
+            # Delete device if LUN is not in use by another instance
+            self._delete_device(host_device)
+
+    def _delete_device(self, device_path):
+        device_name = os.path.basename(os.path.realpath(device_path))
+        delete_control = '/sys/block/' + device_name + '/device/delete'
+        if os.path.exists(delete_control):
+            # Copy '1' from stdin to the device delete control file
+            utils.execute('cp', '/dev/stdin', delete_control,
+                          process_input='1', run_as_root=True)
+        else:
+            LOG.warn(_("Unable to delete volume device %s"), device_name)
 
     def _remove_multipath_device_descriptor(self, disk_descriptor):
         disk_descriptor = disk_descriptor.replace('/dev/mapper/', '')
@@ -401,6 +414,9 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             # disconnect if no other multipath devices with same iqn
             self._disconnect_mpath(iscsi_properties)
             return
+        elif multipath_device not in devices:
+            # delete the devices associated w/ the unused multipath
+            self._delete_mpath(iscsi_properties, multipath_device)
 
         # else do not disconnect iscsi portals,
         # as they are used for other luns,
@@ -496,6 +512,16 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         except IndexError:
             return []
         return [entry for entry in devices if entry.startswith("ip-")]
+
+    def _delete_mpath(self, iscsi_properties, multipath_device):
+        entries = self._get_iscsi_devices()
+        iqn_lun = '%s-lun-%s' % (iscsi_properties['target_iqn'],
+                                 iscsi_properties.get('target_lun', 0))
+        for dev in ['/dev/disk/by-path/%s' % dev for dev in entries
+                    if iqn_lun in dev]:
+            self._delete_device(dev)
+
+        self._rescan_multipath()
 
     def _disconnect_mpath(self, iscsi_properties):
         entries = self._get_iscsi_devices()

@@ -215,3 +215,6 @@ rpc.mountd: CommandFilter, rpc.mountd, root
 
 # nova/virt/libvirt/utils.py:
 rbd: CommandFilter, rbd, root
+
+# nova/virt/libvirt/volume.py: 'cp', '/dev/stdin', delete_control..
+cp: CommandFilter, cp, root
