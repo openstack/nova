@@ -151,6 +151,28 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
             image_info['container_format'] = 'docker'
         self.connection.spawn(self.context, instance_href, image_info,
                               'fake_files', 'fake_password')
+        self._assert_cpu_shares(instance_href)
+
+    def test_create_container_vcpus_2(self, image_info=None):
+        flavor = utils.get_test_flavor(options={
+            'name': 'vcpu_2',
+            'flavorid': 'vcpu_2',
+            'vcpus': 2
+        })
+        instance_href = utils.get_test_instance(flavor=flavor)
+        if image_info is None:
+            image_info = utils.get_test_image_info(None, instance_href)
+            image_info['disk_format'] = 'raw'
+            image_info['container_format'] = 'docker'
+        self.connection.spawn(self.context, instance_href, image_info,
+                              'fake_files', 'fake_password')
+        self._assert_cpu_shares(instance_href, vcpus=2)
+
+    def _assert_cpu_shares(self, instance_href, vcpus=4):
+        container_id = self.connection.find_container_by_name(
+            instance_href['name']).get('id')
+        container_info = self.connection.docker.inspect_container(container_id)
+        self.assertEqual(vcpus * 1024, container_info['Config']['CpuShares'])
 
     def test_create_container_wrong_image(self):
         instance_href = utils.get_test_instance()
