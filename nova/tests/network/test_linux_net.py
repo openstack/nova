@@ -782,6 +782,8 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return existing, ""
             if args[0] == 'ip' and args[1] == 'route' and args[2] == 'show':
                 return routes, ""
+            if args[0] == 'sysctl':
+                return '1\n', ''
         self.stubs.Set(utils, 'execute', fake_execute)
         network = {'dhcp_server': '192.168.1.1',
                    'cidr': '192.168.1.0/24',
@@ -798,7 +800,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
-            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
+            ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'del', '192.168.0.1/24',
@@ -822,7 +824,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
-            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
+            ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'route', 'del', 'default', 'dev', 'eth0'),
@@ -851,7 +853,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
-            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
+            ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('ip', '-f', 'inet6', 'addr', 'change',
              '2001:db8::/64', 'dev', 'eth0'),
@@ -865,7 +867,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             "    inet6 dead::beef:dead:beef:dead/64 scope link\n"
             "    valid_lft forever preferred_lft forever\n")
         expected = [
-            ('sysctl', '-w', 'net.ipv4.ip_forward=1'),
+            ('sysctl', '-n', 'net.ipv4.ip_forward'),
             ('ip', 'addr', 'show', 'dev', 'eth0', 'scope', 'global'),
             ('ip', 'route', 'show', 'dev', 'eth0'),
             ('ip', 'addr', 'add', '192.168.1.1/24',
@@ -968,7 +970,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                           run_as_root=True, check_exit_code=False),
                 mock.call('ip', 'route', 'show', 'dev', 'eth0'),
                 mock.call('ip', 'addr', 'show', 'dev', 'eth0', 'scope',
-                          'global', run_as_root=True),
+                          'global'),
                 ]
             }
         with contextlib.nested(

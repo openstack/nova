@@ -809,12 +809,19 @@ def clean_conntrack(fixed_ip):
         LOG.exception(_('Error deleting conntrack entries for %s'), fixed_ip)
 
 
+def _enable_ipv4_forwarding():
+    sysctl_key = 'net.ipv4.ip_forward'
+    stdout, stderr = _execute('sysctl', '-n', sysctl_key)
+    if stdout.strip() is not '1':
+        _execute('sysctl', '-w', '%s=1' % sysctl_key, run_as_root=True)
+
+
 @utils.synchronized('lock_gateway', external=True)
 def initialize_gateway_device(dev, network_ref):
     if not network_ref:
         return
 
-    _execute('sysctl', '-w', 'net.ipv4.ip_forward=1', run_as_root=True)
+    _enable_ipv4_forwarding()
 
     # NOTE(vish): The ip for dnsmasq has to be the first address on the
     #             bridge for it to respond to reqests properly
@@ -823,7 +830,7 @@ def initialize_gateway_device(dev, network_ref):
     new_ip_params = [[full_ip, 'brd', network_ref['broadcast']]]
     old_ip_params = []
     out, err = _execute('ip', 'addr', 'show', 'dev', dev,
-                        'scope', 'global', run_as_root=True)
+                        'scope', 'global')
     for line in out.split('\n'):
         fields = line.split()
         if fields and fields[0] == 'inet':
@@ -833,8 +840,7 @@ def initialize_gateway_device(dev, network_ref):
                 new_ip_params.append(ip_params)
     if not old_ip_params or old_ip_params[0][0] != full_ip:
         old_routes = []
-        result = _execute('ip', 'route', 'show', 'dev', dev,
-                          run_as_root=True)
+        result = _execute('ip', 'route', 'show', 'dev', dev)
         if result:
             out, err = result
             for line in out.split('\n'):
@@ -1197,11 +1203,7 @@ def _execute(*cmd, **kwargs):
 
 def device_exists(device):
     """Check if ethernet device exists."""
-    try:
-        _execute('ip', 'link', 'show', 'dev', device, run_as_root=True)
-    except processutils.ProcessExecutionError:
-        return False
-    return True
+    return os.path.exists('/sys/class/net/%s' % device)
 
 
 def _dhcp_file(dev, kind):
@@ -1534,7 +1536,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                     _execute('ip', 'route', 'del', *fields,
                              run_as_root=True)
             out, err = _execute('ip', 'addr', 'show', 'dev', interface,
-                                'scope', 'global', run_as_root=True)
+                                'scope', 'global')
             for line in out.split('\n'):
                 fields = line.split()
                 if fields and fields[0] == 'inet':

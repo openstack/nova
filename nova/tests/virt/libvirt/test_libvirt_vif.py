@@ -550,7 +550,9 @@ class LibvirtVifTestCase(test.TestCase):
                                       network=mynetwork)
             d.unplug_iovisor(None, myvif)
 
-    def test_plug_iovisor(self):
+    @mock.patch('nova.network.linux_net.device_exists')
+    def test_plug_iovisor(self, device_exists):
+        device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
