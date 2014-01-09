@@ -179,7 +179,7 @@ def convert_image(source, dest, out_format, run_as_root=False):
     utils.execute(*cmd, run_as_root=run_as_root)
 
 
-def fetch(context, image_href, path, _user_id, _project_id):
+def fetch(context, image_href, path, _user_id, _project_id, max_size=0):
     # TODO(vish): Improve context handling and add owner and auth data
     #             when it is added to glance.  Right now there is no
     #             auth checking in glance, so we assume that access was
@@ -190,9 +190,10 @@ def fetch(context, image_href, path, _user_id, _project_id):
         image_service.download(context, image_id, dst_path=path)
 
 
-def fetch_to_raw(context, image_href, path, user_id, project_id):
+def fetch_to_raw(context, image_href, path, user_id, project_id, max_size=0):
     path_tmp = "%s.part" % path
-    fetch(context, image_href, path_tmp, user_id, project_id)
+    fetch(context, image_href, path_tmp, user_id, project_id,
+          max_size=max_size)
 
     with fileutils.remove_path_on_error(path_tmp):
         data = qemu_img_info(path_tmp)
@@ -208,6 +209,23 @@ def fetch_to_raw(context, image_href, path, user_id, project_id):
             raise exception.ImageUnacceptable(image_id=image_href,
                 reason=(_("fmt=%(fmt)s backed by: %(backing_file)s") %
                         {'fmt': fmt, 'backing_file': backing_file}))
+
+        # We can't generally shrink incoming images, so disallow
+        # images > size of the flavor we're booting.  Checking here avoids
+        # an immediate DoS where we convert large qcow images to raw
+        # (which may compress well but not be sparse).
+        # TODO(p-draigbrady): loop through all flavor sizes, so that
+        # we might continue here and not discard the download.
+        # If we did that we'd have to do the higher level size checks
+        # irrespective of whether the base image was prepared or not.
+        disk_size = data.virtual_size
+        if max_size and max_size < disk_size:
+            msg = _('%(base)s virtual size %(disk_size)s '
+                    'larger than flavor root disk size %(size)s')
+            LOG.error(msg % {'base': path,
+                             'disk_size': disk_size,
+                             'size': max_size})
+            raise exception.InstanceTypeDiskTooSmall()
 
         if fmt != "raw" and CONF.force_raw_images:
             staged = "%s.converted" % path

@@ -914,9 +914,9 @@ class LibvirtDriver(driver.ComputeDriver):
             if ('data' in connection_info and
                     'volume_id' in connection_info['data']):
                 volume_id = connection_info['data']['volume_id']
-                encryption = \
-                    encryptors.get_encryption_metadata(context, volume_id,
-                                                       connection_info)
+                encryption = encryptors.get_encryption_metadata(
+                    context, self._volume_api, volume_id, connection_info)
+
                 if encryption:
                     # The volume must be detached from the VM before
                     # disconnecting it from its encryptor. Otherwise, the
@@ -2253,12 +2253,13 @@ class LibvirtDriver(driver.ComputeDriver):
         if fs_format:
             utils.mkfs(fs_format, target, label)
 
-    def _create_ephemeral(self, target, ephemeral_size, fs_label, os_type):
+    def _create_ephemeral(self, target, ephemeral_size, fs_label, os_type,
+                          max_size=None):
         self._create_local(target, ephemeral_size)
         disk.mkfs(os_type, fs_label, target)
 
     @staticmethod
-    def _create_swap(target, swap_mb):
+    def _create_swap(target, swap_mb, max_size=None):
         """Create a swap file of specified size."""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
         utils.mkfs('swap', target)
@@ -2268,10 +2269,20 @@ class LibvirtDriver(driver.ComputeDriver):
         return os.path.join(libvirt_utils.get_instance_path(instance),
                             'console.log')
 
+    @staticmethod
+    def _get_disk_config_path(instance):
+        return os.path.join(libvirt_utils.get_instance_path(instance),
+                            'disk.config')
+
     def _chown_console_log_for_instance(self, instance):
         console_log = self._get_console_log_path(instance)
         if os.path.exists(console_log):
             libvirt_utils.chown(console_log, os.getuid())
+
+    def _chown_disk_config_for_instance(self, instance):
+        disk_config = self._get_disk_config_path(instance)
+        if os.path.exists(disk_config):
+            libvirt_utils.chown(disk_config, os.getuid())
 
     def _create_image(self, context, instance,
                       disk_mapping, suffix='',
@@ -2305,6 +2316,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # NOTE(dprince): for rescue console.log may already exist... chown it.
         self._chown_console_log_for_instance(instance)
+
+        # NOTE(yaguang): For evacuate disk.config already exist in shared
+        # storage, chown it.
+        self._chown_disk_config_for_instance(instance)
 
         # NOTE(vish): No need add the suffix to console.log
         libvirt_utils.write_to_file(
@@ -2425,6 +2440,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # File injection only if needed
         elif inject_files and CONF.libvirt_inject_partition != -2:
+
+            if booted_from_volume:
+                LOG.warn(_('File injection into a boot from volume '
+                           'instance is not supported'), instance=instance)
+
             target_partition = None
             if not instance['kernel_id']:
                 target_partition = CONF.libvirt_inject_partition
@@ -3191,9 +3211,9 @@ class LibvirtDriver(driver.ComputeDriver):
                         {'connection_info': jsonutils.dumps(connection_info)})
 
                 volume_id = connection_info['data']['volume_id']
-                encryption = \
-                        encryptors.get_encryption_metadata(context, volume_id,
-                                                           connection_info)
+                encryption = encryptors.get_encryption_metadata(
+                    context, self._volume_api, volume_id, connection_info)
+
                 if encryption:
                     encryptor = self._get_volume_encryptor(connection_info,
                                                            encryption)

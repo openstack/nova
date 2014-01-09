@@ -128,6 +128,16 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
         self.assertEquals(fake_host_name, host_name)
 
+    def test_get_host_ref_no_hosts_in_cluster(self):
+        self.assertRaises(exception.NoValidHost,
+                          vm_util.get_host_ref,
+                          fake_session(""), 'fake_cluster')
+
+    def test_get_datastore_ref_and_name_no_host_in_cluster(self):
+        self.assertRaises(exception.DatastoreNotFound,
+                          vm_util.get_datastore_ref_and_name,
+                          fake_session(""), 'fake_cluster')
+
     def test_get_host_name_for_vm(self):
         fake_host = fake.HostSystem()
         fake_host_id = fake_host.obj.value
@@ -210,6 +220,19 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertRaises(exception.DatastoreNotFound,
                 vm_util.get_datastore_ref_and_name,
                 fake_session(fake_objects))
+
+    def test_get_resize_spec(self):
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': 'bda5fb9e-b347-40e8-8256-42397848cb00',
+                         'vcpus': 2, 'memory_mb': 2048}
+        result = vm_util.get_vm_resize_spec(fake.FakeFactory(),
+                                            fake_instance)
+        expected = """{'memoryMB': 2048,
+                       'numCPUs': 2,
+                       'obj_name': 'ns0:VirtualMachineConfigSpec'}"""
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
 
     def test_get_cdrom_attach_config_spec(self):
 
@@ -344,3 +367,49 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         refs = vm_util.get_all_cluster_refs_by_name(fake_session(fake_objects),
                                                     ['cluster'])
         self.assertTrue(not refs)
+
+    def test_propset_dict_simple(self):
+        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
+        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
+
+        object = ObjectContent(propSet=[
+                    DynamicProperty(name='foo', val="bar")])
+        propdict = vm_util.propset_dict(object.propSet)
+        self.assertEqual("bar", propdict['foo'])
+
+    def test_propset_dict_complex(self):
+        ObjectContent = collections.namedtuple('ObjectContent', ['propSet'])
+        DynamicProperty = collections.namedtuple('Property', ['name', 'val'])
+        MoRef = collections.namedtuple('Val', ['value'])
+
+        object = ObjectContent(propSet=[
+                    DynamicProperty(name='foo', val="bar"),
+                    DynamicProperty(name='some.thing',
+                                    val=MoRef(value='else')),
+                    DynamicProperty(name='another.thing', val='value')])
+
+        propdict = vm_util.propset_dict(object.propSet)
+        self.assertEqual("bar", propdict['foo'])
+        self.assertTrue(hasattr(propdict['some.thing'], 'value'))
+        self.assertEqual("else", propdict['some.thing'].value)
+        self.assertEqual("value", propdict['another.thing'])
+
+    def _test_detach_virtual_disk_spec(self, destroy_disk=False):
+        virtual_device_config = vm_util.detach_virtual_disk_spec(
+                                                     fake.FakeFactory(),
+                                                     'fake_device',
+                                                     destroy_disk)
+        self.assertEqual('remove', virtual_device_config.operation)
+        self.assertEqual('fake_device', virtual_device_config.device)
+        self.assertEqual('ns0:VirtualDeviceConfigSpec',
+                         virtual_device_config.obj_name)
+        if destroy_disk:
+            self.assertEqual('destroy', virtual_device_config.fileOperation)
+        else:
+            self.assertFalse(hasattr(virtual_device_config, 'fileOperation'))
+
+    def test_detach_virtual_disk_spec(self):
+        self._test_detach_virtual_disk_spec(destroy_disk=False)
+
+    def test_detach_virtual_disk_destroy_spec(self):
+        self._test_detach_virtual_disk_spec(destroy_disk=True)

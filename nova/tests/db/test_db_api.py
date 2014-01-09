@@ -1339,6 +1339,18 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for key in dt_keys:
             self.assertEqual(inst[key], dt)
 
+    def test_instance_update_no_metadata_clobber(self):
+        meta = {'foo': 'bar'}
+        sys_meta = {'sfoo': 'sbar'}
+        values = {
+            'metadata': meta,
+            'system_metadata': sys_meta,
+            }
+        inst = db.instance_create(self.ctxt, {})
+        inst = db.instance_update(self.ctxt, inst['uuid'], values)
+        self.assertEqual({'foo': 'bar'}, meta)
+        self.assertEqual({'sfoo': 'sbar'}, sys_meta)
+
     def test_instance_get_all_with_meta(self):
         inst = self.create_instance_with_args()
         for inst in db.instance_get_all(self.ctxt):
@@ -2570,7 +2582,7 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         all_flavors = db.flavor_get_all(self.ctxt)
 
         # Set the 3rd result as the marker
-        marker_flavorid = all_flavors[2]['id']
+        marker_flavorid = all_flavors[2]['flavorid']
         marked_flavors = db.flavor_get_all(self.ctxt, marker=marker_flavorid)
         # We expect everything /after/ the 3rd result
         expected_results = all_flavors[3:]

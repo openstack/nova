@@ -66,7 +66,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.0',
+                    'nova_object.version': '1.9',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -85,7 +85,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.0',
+                    'nova_object.version': '1.9',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
@@ -254,7 +254,8 @@ class _TestInstanceObject(object):
         db.instance_update_and_get_original(
                 self.context, fake_uuid, expected_updates,
                 update_cells=False,
-                columns_to_join=['info_cache', 'security_groups']
+                columns_to_join=['info_cache', 'security_groups',
+                    'system_metadata']
                 ).AndReturn((old_ref, new_ref))
         if cell_type == 'api':
             cells_rpcapi.CellsAPI().AndReturn(cells_api_mock)
@@ -324,7 +325,8 @@ class _TestInstanceObject(object):
                                 ).AndReturn(old_ref)
         db.instance_update_and_get_original(
                 self.context, fake_uuid, expected_updates, update_cells=False,
-                columns_to_join=['info_cache', 'security_groups']
+                columns_to_join=['info_cache', 'security_groups',
+                    'system_metadata']
                 ).AndReturn((old_ref, new_ref))
         notifications.send_update(self.context, mox.IgnoreArg(),
                                   mox.IgnoreArg())

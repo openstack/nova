@@ -20,6 +20,7 @@
 The VMware API VM utility module to build SOAP object specs.
 """
 
+import collections
 import copy
 
 from nova import exception
@@ -103,6 +104,14 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.extraConfig = extra_config
 
     return config_spec
+
+
+def get_vm_resize_spec(client_factory, instance):
+    """Provides updates for a VM spec."""
+    resize_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
+    resize_spec.numCPUs = int(instance['vcpus'])
+    resize_spec.memoryMB = int(instance['memory_mb'])
+    return resize_spec
 
 
 def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
@@ -254,13 +263,15 @@ def get_cdrom_attach_config_spec(client_factory,
     return config_spec
 
 
-def get_vmdk_detach_config_spec(client_factory, device):
+def get_vmdk_detach_config_spec(client_factory, device,
+                                destroy_disk=False):
     """Builds the vmdk detach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
     device_config_spec = []
-    virtual_device_config_spec = delete_virtual_disk_spec(client_factory,
-                                                          device)
+    virtual_device_config_spec = detach_virtual_disk_spec(client_factory,
+                                                          device,
+                                                          destroy_disk)
 
     device_config_spec.append(virtual_device_config_spec)
 
@@ -460,14 +471,15 @@ def create_virtual_disk_spec(client_factory, controller_key,
     return virtual_device_config
 
 
-def delete_virtual_disk_spec(client_factory, device):
+def detach_virtual_disk_spec(client_factory, device, destroy_disk=False):
     """
-    Builds spec for the deletion of an already existing Virtual Disk from VM.
+    Builds spec for the detach of an already existing Virtual Disk from VM.
     """
     virtual_device_config = client_factory.create(
                             'ns0:VirtualDeviceConfigSpec')
     virtual_device_config.operation = "remove"
-    virtual_device_config.fileOperation = "destroy"
+    if destroy_disk:
+        virtual_device_config.fileOperation = "destroy"
     virtual_device_config.device = device
 
     return virtual_device_config
@@ -479,7 +491,8 @@ def clone_vm_spec(client_factory, location,
     clone_spec = client_factory.create('ns0:VirtualMachineCloneSpec')
     clone_spec.location = location
     clone_spec.powerOn = power_on
-    clone_spec.snapshot = snapshot
+    if snapshot:
+        clone_spec.snapshot = snapshot
     clone_spec.template = template
     return clone_spec
 
@@ -490,7 +503,8 @@ def relocate_vm_spec(client_factory, datastore=None, host=None,
     rel_spec = client_factory.create('ns0:VirtualMachineRelocateSpec')
     rel_spec.datastore = datastore
     rel_spec.diskMoveType = disk_move_type
-    rel_spec.host = host
+    if host:
+        rel_spec.host = host
     return rel_spec
 
 
@@ -826,29 +840,81 @@ def get_host_ref(session, cluster=None):
         host_ret = session._call_method(vim_util, "get_dynamic_property",
                                         cluster, "ClusterComputeResource",
                                         "host")
-        if host_ret is None:
-            return
-        if not host_ret.ManagedObjectReference:
-            return
+        if not host_ret or not host_ret.ManagedObjectReference:
+            msg = _('No host available on cluster')
+            raise exception.NoValidHost(reason=msg)
         host_mor = host_ret.ManagedObjectReference[0]
 
     return host_mor
 
 
+def propset_dict(propset):
+    """Turn a propset list into a dictionary
+
+    PropSet is an optional attribute on ObjectContent objects
+    that are returned by the VMware API.
+
+    You can read more about these at:
+    http://pubs.vmware.com/vsphere-51/index.jsp
+        #com.vmware.wssdk.apiref.doc/
+            vmodl.query.PropertyCollector.ObjectContent.html
+
+    :param propset: a property "set" from ObjectContent
+    :return: dictionary representing property set
+    """
+    if propset is None:
+        return {}
+
+    #TODO(hartsocks): once support for Python 2.6 is dropped
+    # change to {[(prop.name, prop.val) for prop in propset]}
+    return dict([(prop.name, prop.val) for prop in propset])
+
+
 def _get_datastore_ref_and_name(data_stores, datastore_regex=None):
-    for elem in data_stores.objects:
-        propset_dict = dict([(prop.name, prop.val) for prop in elem.propSet])
+    # selects the datastore with the most freespace
+    """Find a usable datastore in a given RetrieveResult object.
+
+    :param data_stores: a RetrieveResult object from vSphere API call
+    :param datastore_regex: an optional regular expression to match names
+    :return: datastore_ref, datastore_name, capacity, freespace
+    """
+    DSRecord = collections.namedtuple(
+        'DSRecord', ['datastore', 'name', 'capacity', 'freespace'])
+
+    # we lean on checks performed in caller methods to validate the
+    # datastore reference is not None. If it is, the caller handles
+    # a None reference as appropriate in its context.
+    found_ds = DSRecord(datastore=None, name=None, capacity=None, freespace=0)
+
+    # datastores is actually a RetrieveResult object from vSphere API call
+    for obj_content in data_stores.objects:
+        # the propset attribute "need not be set" by returning API
+        if not hasattr(obj_content, 'propSet'):
+            continue
+
+        propdict = propset_dict(obj_content.propSet)
         # Local storage identifier vSphere doesn't support CIFS or
         # vfat for datastores, therefore filtered
-        ds_type = propset_dict['summary.type']
-        ds_name = propset_dict['summary.name']
+        ds_type = propdict['summary.type']
+        ds_name = propdict['summary.name']
         if ((ds_type == 'VMFS' or ds_type == 'NFS') and
-                propset_dict['summary.accessible']):
-            if not datastore_regex or datastore_regex.match(ds_name):
-                return (elem.obj,
-                        ds_name,
-                        propset_dict['summary.capacity'],
-                        propset_dict['summary.freeSpace'])
+                propdict['summary.accessible']):
+            if datastore_regex is None or datastore_regex.match(ds_name):
+                new_ds = DSRecord(
+                    datastore=obj_content.obj,
+                    name=ds_name,
+                    capacity=propdict['summary.capacity'],
+                    freespace=propdict['summary.freeSpace'])
+                # find the largest freespace to return
+                if new_ds.freespace > found_ds.freespace:
+                    found_ds = new_ds
+
+    #TODO(hartsocks): refactor driver to use DSRecord namedtuple
+    # using DSRecord through out will help keep related information
+    # together and improve readability and organisation of the code.
+    if found_ds.datastore is not None:
+        return (found_ds.datastore, found_ds.name,
+                    found_ds.capacity, found_ds.freespace)
 
 
 def get_datastore_ref_and_name(session, cluster=None, host=None,
@@ -871,7 +937,7 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                         "get_dynamic_property", host,
                                         "HostSystem", "datastore")
 
-        if datastore_ret is None:
+        if not datastore_ret:
             raise exception.DatastoreNotFound()
         data_store_mors = datastore_ret.ManagedObjectReference
         data_stores = session._call_method(vim_util,

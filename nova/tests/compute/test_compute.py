@@ -1356,11 +1356,11 @@ class ComputeTestCase(BaseTestCase):
         the instance goes to ERROR state, keeping the task state
         """
         def fake(*args, **kwargs):
-            raise test.TestingException()
+            raise exception.InvalidBDM()
         self.stubs.Set(nova.compute.manager.ComputeManager,
                        '_prep_block_device', fake)
         instance = self._create_fake_instance()
-        self.assertRaises(test.TestingException, self.compute.run_instance,
+        self.assertRaises(exception.InvalidBDM, self.compute.run_instance,
                           self.context, instance=instance)
         #check state is failed even after the periodic poll
         self._assert_state({'vm_state': vm_states.ERROR,
@@ -2071,7 +2071,7 @@ class ComputeTestCase(BaseTestCase):
         db.instance_update_and_get_original(econtext, instance['uuid'],
                                             {'power_state': fake_power_state1},
                                             update_cells=False,
-                                            columns_to_join=[],
+                                            columns_to_join=['system_metadata']
                                             ).AndReturn((None,
                                                          updated_dbinstance1))
 
@@ -2117,7 +2117,7 @@ class ComputeTestCase(BaseTestCase):
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
-                columns_to_join=[],
+                columns_to_join=['system_metadata'],
                 ).AndRaise(exception.InstanceNotFound(
                     instance_id=instance['uuid']))
             self.compute._notify_about_instance_usage(
@@ -2129,7 +2129,7 @@ class ComputeTestCase(BaseTestCase):
                 econtext, updated_dbinstance1['uuid'],
                 {'vm_state': vm_states.ERROR},
                 update_cells=False,
-                columns_to_join=[],
+                columns_to_join=['system_metadata'],
                 ).AndRaise(exception.InstanceNotFound(
                     instance_id=instance['uuid']))
         else:
@@ -2139,7 +2139,7 @@ class ComputeTestCase(BaseTestCase):
                  'task_state': None,
                  'vm_state': vm_states.ACTIVE},
                 update_cells=False,
-                columns_to_join=[],
+                columns_to_join=['system_metadata'],
                 ).AndReturn((None, updated_dbinstance2))
             self.compute._notify_about_instance_usage(
                 econtext,
@@ -7136,24 +7136,33 @@ class ComputeAPITestCase(BaseTestCase):
              'volume_id': '33333333-aaaa-bbbb-cccc-333333333333',
              'delete_on_termination': False}]
 
+        image_meta = {'properties': {'block_device_mapping': [
+            {'device_name': '/dev/vda',
+             'snapshot_id': '33333333-aaaa-bbbb-cccc-333333333333'}]}}
+
         # We get an image BDM
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, 1, 1, fake_legacy_bdms, True)
+            base_options, {}, 1, 1, fake_legacy_bdms, True)
         self.assertEqual(len(transformed_bdm), 2)
 
-        # No image BDM created
+        # No image BDM created if image already defines a root BDM
         base_options['root_device_name'] = 'vda'
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, 1, 1, fake_legacy_bdms, True)
+            base_options, image_meta, 1, 1, [], True)
+        self.assertEqual(len(transformed_bdm), 1)
+
+        # No image BDM created
+        transformed_bdm = self.compute_api._check_and_transform_bdm(
+            base_options, {}, 1, 1, fake_legacy_bdms, True)
         self.assertEqual(len(transformed_bdm), 1)
 
         # Volumes with multiple instances fails
         self.assertRaises(exception.InvalidRequest,
             self.compute_api._check_and_transform_bdm,
-            base_options, 1, 2, fake_legacy_bdms, True)
+            base_options, {}, 1, 2, fake_legacy_bdms, True)
 
         checked_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, 1, 1, transformed_bdm, True)
+            base_options, {}, 1, 1, transformed_bdm, True)
         self.assertEqual(checked_bdm, transformed_bdm)
 
     def test_volume_size(self):
@@ -8993,6 +9002,20 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         self.assertRaises(exception.UnexpectedTaskStateError,
                 self.compute._run_instance, self.context, None, {}, None, None,
                 None, False, None, self.instance, False)
+
+    def test_no_reschedule_on_block_device_fail(self):
+        self.mox.StubOutWithMock(self.compute, '_prep_block_device')
+        self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
+
+        exc = exception.InvalidBDM()
+
+        self.compute._prep_block_device(mox.IgnoreArg(), self.instance,
+                                        mox.IgnoreArg()).AndRaise(exc)
+
+        self.mox.ReplayAll()
+        self.assertRaises(exception.InvalidBDM, self.compute._run_instance,
+                          self.context, None, {}, None, None, None, False,
+                          None, self.instance, False)
 
 
 class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):

@@ -443,6 +443,11 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
         expected_attrs = [attr for attr in _INSTANCE_OPTIONAL_JOINED_FIELDS
                                if self.obj_attr_is_set(attr)]
+        # NOTE(alaski): We need to pull system_metadata for the
+        # notification.send_update() below.  If we don't there's a KeyError
+        # when it tries to extract the flavor.
+        if 'system_metadata' not in expected_attrs:
+            expected_attrs.append('system_metadata')
         old_ref, inst_ref = db.instance_update_and_get_original(
                 context, self.uuid, updates, update_cells=False,
                 columns_to_join=_expected_cols(expected_attrs))

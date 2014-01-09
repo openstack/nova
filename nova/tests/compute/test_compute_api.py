@@ -13,10 +13,12 @@
 
 """Unit tests for compute API."""
 
+import copy
 import datetime
 import iso8601
 import mox
 
+from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova.compute import flavors
@@ -37,6 +39,7 @@ from nova.openstack.common import uuidutils
 from nova import quota
 from nova import test
 from nova.tests.image import fake as fake_image
+from nova.tests import matchers
 from nova.tests.objects import test_migration
 from nova.tests.objects import test_service
 
@@ -134,11 +137,14 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(quota.QUOTAS, "limit_check")
         self.mox.StubOutWithMock(quota.QUOTAS, "reserve")
 
-        quota_exception = exception.OverQuota(
-            quotas={'instances': 1, 'cores': 1, 'ram': 1},
-            usages=dict((r, {'in_use': 1, 'reserved': 1}) for r in
-                        ['instances', 'cores', 'ram']),
-            overs=['instances'])
+        quotas = {'instances': 1, 'cores': 1, 'ram': 1}
+        usages = dict((r, {'in_use': 1, 'reserved': 1}) for r in
+                    ['instances', 'cores', 'ram'])
+        headroom = dict((res, quotas[res] -
+                       (usages[res]['in_use'] + usages[res]['reserved']))
+                    for res in quotas.keys())
+        quota_exception = exception.OverQuota(quotas=quotas,
+            usages=usages, overs=['instances'], headroom=headroom)
 
         for _unused in range(2):
             self.compute_api._get_image(self.context, image_href).AndReturn(
@@ -412,7 +418,31 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst, migration,
             migration['source_compute'], 'rsvs', cast=False)
 
+    def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
+        inst.info_cache.delete()
+        compute_utils.notify_about_instance_usage(
+                mox.IgnoreArg(), self.context, inst,
+                '%s.start' % delete_type)
+        self.context.elevated().AndReturn(self.context)
+        self.compute_api.network_api.deallocate_for_instance(
+                self.context, inst)
+        db.instance_system_metadata_get(self.context,
+                                        inst.uuid).AndReturn('sys-meta')
+        state = ('soft' in delete_type and vm_states.SOFT_DELETED or
+                vm_states.DELETED)
+        updates.update({'vm_state': state,
+                        'task_state': None,
+                        'terminated_at': delete_time})
+        inst.save()
+
+        db.instance_destroy(self.context, inst.uuid, constraint=None)
+        compute_utils.notify_about_instance_usage(
+                mox.IgnoreArg(),
+                self.context, inst, '%s.end' % delete_type,
+                system_metadata='sys-meta')
+
     def _test_delete(self, delete_type, **attrs):
+        reservations = 'fake-resv'
         inst = self._create_instance_obj()
         inst.update(attrs)
         inst._context = self.context
@@ -445,77 +475,77 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
-                                 'confirm_resize')
+        rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
+        self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
 
         db.block_device_mapping_get_all_by_instance(
             self.context, inst.uuid).AndReturn([])
         inst.save()
         self.compute_api._create_reservations(
             self.context, inst, inst.instance_type_id, inst.project_id,
-            inst.user_id).AndReturn('fake-resv')
+            inst.user_id).AndReturn(reservations)
 
-        if inst.vm_state == vm_states.RESIZED:
-            self._test_delete_resized_part(inst)
+        # NOTE(comstud): This is getting messy.  But what we are wanting
+        # to test is:
+        # If cells is enabled and we're the API cell:
+        #   * Cast to cells_rpcapi.<method> with reservations=None
+        #   * Commit reservations
+        # Otherwise:
+        #   * Check for downed host
+        #   * If downed host:
+        #     * Clean up instance, destroying it, sending notifications.
+        #       (Tested in _test_downed_host_part())
+        #     * Commit reservations
+        #   * If not downed host:
+        #     * Record the action start.
+        #     * Cast to compute_rpcapi.<method> with the reservations
 
-        self.context.elevated().MultipleTimes().AndReturn(self.context)
-        db.service_get_by_compute_host(self.context, inst.host).AndReturn(
-            test_service.fake_service)
-        self.compute_api.servicegroup_api.service_is_up(
-            mox.IsA(service_obj.Service)).AndReturn(inst.host != 'down-host')
+        cast = True
+        commit_quotas = True
+        if not self.is_cells:
+            if inst.vm_state == vm_states.RESIZED:
+                self._test_delete_resized_part(inst)
 
-        if self.is_cells:
-            rpcapi = self.compute_api.cells_rpcapi
-        else:
-            rpcapi = self.compute_api.compute_rpcapi
+            self.context.elevated().AndReturn(self.context)
+            db.service_get_by_compute_host(
+                    self.context, inst.host).AndReturn(
+                            test_service.fake_service)
+            self.compute_api.servicegroup_api.service_is_up(
+                    mox.IsA(service_obj.Service)).AndReturn(
+                            inst.host != 'down-host')
 
-        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
-        self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
+            if inst.host == 'down-host':
+                self._test_downed_host_part(inst, updates, delete_time,
+                                            delete_type)
+                cast = False
+            else:
+                # Happens on the manager side
+                commit_quotas = False
 
-        if inst.host == 'down-host':
-            inst.info_cache.delete()
-            compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
-                                                      self.context,
-                                                      inst,
-                                                      '%s.start' % delete_type)
+        if cast:
             if not self.is_cells:
-                self.compute_api.network_api.deallocate_for_instance(
-                        self.context, inst)
-            db.instance_system_metadata_get(self.context, inst.uuid
-                                            ).AndReturn('sys-meta')
-            state = ('soft' in delete_type and vm_states.SOFT_DELETED or
-                     vm_states.DELETED)
-            updates.update({'vm_state': state,
-                            'task_state': None,
-                            'terminated_at': delete_time})
-            inst.save()
-            if self.is_cells:
-                if delete_type == 'soft_delete':
-                    rpcapi.soft_delete_instance(self.context, inst,
-                                                reservations=None)
-                else:
-                    rpcapi.terminate_instance(self.context, inst, [],
-                                              reservations=None)
-            db.instance_destroy(self.context, inst.uuid, constraint=None)
-            compute_utils.notify_about_instance_usage(
-                mox.IgnoreArg(),
-                self.context, inst, '%s.end' % delete_type,
-                system_metadata='sys-meta')
+                self.compute_api._record_action_start(self.context, inst,
+                                                      instance_actions.DELETE)
+            if commit_quotas:
+                cast_reservations = None
+            else:
+                cast_reservations = reservations
+            if delete_type == 'soft_delete':
+                rpcapi.soft_delete_instance(self.context, inst,
+                                            reservations=cast_reservations)
+            elif delete_type in ['delete', 'force_delete']:
+                rpcapi.terminate_instance(self.context, inst, [],
+                                          reservations=cast_reservations)
 
-        if inst.host == 'down-host':
-            quota.QUOTAS.commit(self.context, 'fake-resv',
+        if commit_quotas:
+            # Local delete or when is_cells is True.
+            quota.QUOTAS.commit(self.context, reservations,
                                 project_id=inst.project_id,
                                 user_id=inst.user_id)
-        elif delete_type == 'soft_delete':
-            self.compute_api._record_action_start(self.context, inst,
-                                                  instance_actions.DELETE)
-            rpcapi.soft_delete_instance(self.context, inst,
-                                        reservations='fake-resv')
-        elif delete_type in ['delete', 'force_delete']:
-            self.compute_api._record_action_start(self.context, inst,
-                                                  instance_actions.DELETE)
-            rpcapi.terminate_instance(self.context, inst, [],
-                                      reservations='fake-resv')
 
         self.mox.ReplayAll()
 
@@ -559,6 +589,13 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(db, 'constraint')
         self.mox.StubOutWithMock(db, 'instance_destroy')
         self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
+        self.mox.StubOutWithMock(compute_utils,
+                                 'notify_about_instance_usage')
+        if self.is_cells:
+            rpcapi = self.compute_api.cells_rpcapi
+        else:
+            rpcapi = self.compute_api.compute_rpcapi
+        self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
 
         db.block_device_mapping_get_all_by_instance(self.context,
                                                     inst.uuid).AndReturn([])
@@ -567,8 +604,21 @@ class _ComputeAPIUnitTestMixIn(object):
                                               inst, inst.instance_type_id,
                                               inst.project_id, inst.user_id
                                               ).AndReturn(None)
-        db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
-        db.instance_destroy(self.context, inst.uuid, constraint='constraint')
+
+        if self.is_cells:
+            rpcapi.terminate_instance(self.context, inst, [],
+                                      reservations=None)
+        else:
+            compute_utils.notify_about_instance_usage(mox.IgnoreArg(),
+                                                      self.context,
+                                                      inst,
+                                                      'delete.start')
+            db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
+            db.instance_destroy(self.context, inst.uuid,
+                                constraint='constraint')
+            compute_utils.notify_about_instance_usage(
+                    mox.IgnoreArg(), self.context, inst, 'delete.end',
+                    system_metadata=inst.system_metadata)
 
         self.mox.ReplayAll()
 
@@ -978,9 +1028,16 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_flavor,
                 current_flavor).AndReturn(deltas)
         usage = dict(in_use=0, reserved=0)
-        over_quota_args = dict(quotas={'resource': 0},
-                               usages={'resource': usage},
-                               overs=['resource'])
+        quotas = {'resource': 0}
+        usages = {'resource': usage}
+        overs = ['resource']
+        headroom = {'resource': quotas['resource'] -
+            (usages['resource']['in_use'] + usages['resource']['reserved'])}
+        over_quota_args = dict(quotas=quotas,
+                               usages=usages,
+                               overs=overs,
+                               headroom=headroom)
+
         self.compute_api._reserve_quota_delta(self.context, deltas,
                 project_id=fake_inst['project_id']).AndRaise(
                         exception.OverQuota(**over_quota_args))
@@ -1322,6 +1379,82 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_backup_with_base_image_ref(self):
         self._test_snapshot_and_backup(is_snapshot=False,
                                        with_base_ref=True)
+
+    def test_snapshot_volume_backed(self):
+        instance = self._create_instance_obj()
+        instance['root_device_name'] = 'vda'
+
+        instance_bdms = []
+
+        image_meta = {
+            'id': 'fake-image-id',
+            'properties': {'mappings': []},
+            'status': 'fake-status',
+            'location': 'far-away',
+        }
+
+        expect_meta = {
+            'name': 'test-snapshot',
+            'properties': {'root_device_name': 'vda', 'mappings': 'DONTCARE'},
+            'size': 0,
+        }
+
+        def fake_get_instance_bdms(context, instance):
+            return copy.deepcopy(instance_bdms)
+
+        def fake_image_create(context, image_meta, data):
+            self.assertThat(image_meta, matchers.DictMatches(expect_meta))
+
+        def fake_volume_get(context, volume_id):
+            return {'id': volume_id, 'display_description': ''}
+
+        def fake_volume_create_snapshot(context, volume_id, name, description):
+            return {'id': '%s-snapshot' % volume_id}
+
+        self.stubs.Set(self.compute_api, 'get_instance_bdms',
+                       fake_get_instance_bdms)
+        self.stubs.Set(self.compute_api.image_service, 'create',
+                       fake_image_create)
+        self.stubs.Set(self.compute_api.volume_api, 'get',
+                       fake_volume_get)
+        self.stubs.Set(self.compute_api.volume_api, 'create_snapshot_force',
+                       fake_volume_create_snapshot)
+
+        # No block devices defined
+        self.compute_api.snapshot_volume_backed(
+            self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
+
+        bdm = {'no_device': False, 'volume_id': '1',
+               'connection_info': 'inf', 'device_name': '/dev/vda'}
+
+        for key in block_device.BlockDeviceDict._db_only_fields:
+            bdm[key] = 'MUST DELETE'
+
+        instance_bdms.append(bdm)
+
+        expect_meta['properties']['block_device_mapping'] = []
+
+        expect_meta['properties']['block_device_mapping'].append(
+            {'no_device': False, 'snapshot_id': '1-snapshot',
+             'device_name': '/dev/vda'})
+
+        # All the db_only fields and the volume ones are removed
+        self.compute_api.snapshot_volume_backed(
+            self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
+
+        image_mappings = [{'device': 'vda', 'virtual': 'ephemeral0'},
+                          {'device': 'vdb', 'virtual': 'swap'},
+                          {'device': 'vdc', 'virtual': 'ephemeral1'}]
+
+        image_meta['properties']['mappings'] = image_mappings
+
+        expect_meta['properties']['block_device_mapping'].extend([
+            {'no_device': True, 'device_name': '/dev/vdb'},
+            {'no_device': True, 'device_name': '/dev/vdc'}])
+
+        # Check that the mappgins from the image properties are included
+        self.compute_api.snapshot_volume_backed(
+            self.context, instance, copy.deepcopy(image_meta), 'test-snapshot')
 
     def test_volume_snapshot_create(self):
         volume_id = '1'

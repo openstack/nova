@@ -86,7 +86,7 @@ class VHDUtils(object):
 
     def resize_vhd(self, vhd_path, new_max_size, is_file_max_size=True):
         if is_file_max_size:
-            new_internal_max_size = self._get_internal_vhd_size_by_file_size(
+            new_internal_max_size = self.get_internal_vhd_size_by_file_size(
                                             vhd_path, new_max_size)
         else:
             new_internal_max_size = new_max_size
@@ -97,8 +97,7 @@ class VHDUtils(object):
             Path=vhd_path, MaxInternalSize=new_internal_max_size)
         self._vmutils.check_ret_val(ret_val, job_path)
 
-    def _get_internal_vhd_size_by_file_size(self, vhd_path,
-                                            new_vhd_file_size):
+    def get_internal_vhd_size_by_file_size(self, vhd_path, new_vhd_file_size):
         """Fixed VHD size = Data Block size + 512 bytes
            Dynamic_VHD_size = Dynamic Disk Header
                              + Copy of hard disk footer

@@ -1063,6 +1063,16 @@ class ComputeManager(manager.SchedulerDependentManager):
                         instance_uuid=instance['uuid'], reason=msg)
             else:
                 raise exc_info[0], exc_info[1], exc_info[2]
+        except exception.InvalidBDM:
+            with excutils.save_and_reraise_exception():
+                if network_info is not None:
+                    network_info.wait(do_raise=False)
+                try:
+                    self._deallocate_network(context, instance)
+                except Exception:
+                    msg = _('Failed to dealloc network '
+                            'for failed instance')
+                    LOG.exception(msg, instance=instance)
         except Exception:
             exc_info = sys.exc_info()
             # try to re-schedule instance:
@@ -1388,9 +1398,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             return block_device_info
 
         except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.exception(_('Instance failed block device setup'),
-                              instance=instance)
+            LOG.exception(_('Instance failed block device setup'),
+                          instance=instance)
+            raise exception.InvalidBDM()
 
     def _spawn(self, context, instance, image_meta, network_info,
                block_device_info, injected_files, admin_password,
@@ -3442,7 +3452,7 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         network_info = self._get_instance_nw_info(context, instance)
         bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
-                context, instance)
+                context, instance, legacy=False)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
         try:
@@ -3659,8 +3669,9 @@ class ComputeManager(manager.SchedulerDependentManager):
         if 'serial' not in connection_info:
             connection_info['serial'] = volume_id
 
-        encryption = encryptors.get_encryption_metadata(context, volume_id,
-                                                        connection_info)
+        encryption = encryptors.get_encryption_metadata(
+            context, self.volume_api, volume_id, connection_info)
+
         try:
             self.driver.attach_volume(context,
                                       connection_info,
@@ -3717,8 +3728,9 @@ class ComputeManager(manager.SchedulerDependentManager):
                 LOG.warn(_('Detaching volume from unknown instance'),
                          context=context, instance=instance)
 
-            encryption = encryptors.get_encryption_metadata(context, volume_id,
-                                                            connection_info)
+            encryption = encryptors.get_encryption_metadata(
+                context, self.volume_api, volume_id, connection_info)
+
             self.driver.detach_volume(connection_info,
                                       instance,
                                       mp,
@@ -4297,7 +4309,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         This is implemented by keeping a cache of uuids of instances
         that live on this host.  On each call, we pop one off of a
         list, pull the DB record, and try the call to the network API.
-        If anything errors, we don't care.  It's possible the instance
+        If anything errors don't fail, as it's possible the instance
         has been deleted, etc.
         """
         heal_interval = CONF.heal_instance_info_cache_interval
@@ -4338,9 +4350,8 @@ class ComputeManager(manager.SchedulerDependentManager):
             self._get_instance_nw_info(context, instance)
             LOG.debug(_('Updated the info_cache for instance'),
                       instance=instance)
-        except Exception:
-            # We don't care about any failures
-            pass
+        except Exception as e:
+            LOG.debug(_("An error occurred: %s"), e)
 
     @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):

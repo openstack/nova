@@ -3537,6 +3537,20 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn.spawn(self.context, instance, None, [], None)
 
+    def test_chown_disk_config_for_instance(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = copy.deepcopy(self.test_instance)
+        instance['name'] = 'test_name'
+        self.mox.StubOutWithMock(fake_libvirt_utils, 'get_instance_path')
+        self.mox.StubOutWithMock(os.path, 'exists')
+        self.mox.StubOutWithMock(fake_libvirt_utils, 'chown')
+        fake_libvirt_utils.get_instance_path(instance).AndReturn('/tmp/uuid')
+        os.path.exists('/tmp/uuid/disk.config').AndReturn(True)
+        fake_libvirt_utils.chown('/tmp/uuid/disk.config', os.getuid())
+
+        self.mox.ReplayAll()
+        conn._chown_disk_config_for_instance(instance)
+
     def test_create_image_plain(self):
         gotFiles = []
 
@@ -3658,6 +3672,23 @@ class LibvirtConnTestCase(test.TestCase):
              'size': 500 * 1024 * 1024},
             ]
         self.assertEquals(gotFiles, wantFiles)
+
+    def test_create_ephemeral_default(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkfs.ext3', '-L', 'myVol', '-F',
+                      '/dev/something', run_as_root=True)
+        self.mox.ReplayAll()
+        conn._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
+                               max_size=20)
+
+    def test_create_swap_default(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('mkswap', '/dev/something')
+        self.mox.ReplayAll()
+
+        conn._create_swap('/dev/something', 1, max_size=20)
 
     def test_get_console_output_file(self):
         fake_libvirt_utils.files['console.log'] = '01234567890'
@@ -6308,7 +6339,8 @@ disk size: 4.4M''', ''))
         image_id = '4'
         user_id = 'fake'
         project_id = 'fake'
-        images.fetch_to_raw(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target, user_id, project_id,
+                            max_size=0)
 
         self.mox.ReplayAll()
         libvirt_utils.fetch_image(context, target, image_id,
@@ -6338,20 +6370,27 @@ disk size: 4.4M''', ''))
                 file_format = path.split('.')[-2]
             elif file_format == 'converted':
                 file_format = 'raw'
+
             if 'backing' in path:
                 backing_file = 'backing'
             else:
                 backing_file = None
 
+            if 'big' in path:
+                virtual_size = 2
+            else:
+                virtual_size = 1
+
             FakeImgInfo.file_format = file_format
             FakeImgInfo.backing_file = backing_file
+            FakeImgInfo.virtual_size = virtual_size
 
             return FakeImgInfo()
 
         self.stubs.Set(utils, 'execute', fake_execute)
         self.stubs.Set(os, 'rename', fake_rename)
         self.stubs.Set(os, 'unlink', fake_unlink)
-        self.stubs.Set(images, 'fetch', lambda *_: None)
+        self.stubs.Set(images, 'fetch', lambda *_, **__: None)
         self.stubs.Set(images, 'qemu_img_info', fake_qemu_img_info)
         self.stubs.Set(fileutils, 'delete_if_exists', fake_rm_on_error)
 
@@ -6373,7 +6412,8 @@ disk size: 4.4M''', ''))
                               't.qcow2.part', 't.qcow2.converted'),
                              ('rm', 't.qcow2.part'),
                              ('mv', 't.qcow2.converted', 't.qcow2')]
-        images.fetch_to_raw(context, image_id, target, user_id, project_id)
+        images.fetch_to_raw(context, image_id, target, user_id, project_id,
+                            max_size=1)
         self.assertEqual(self.executes, expected_commands)
 
         target = 't.raw'
@@ -6388,6 +6428,15 @@ disk size: 4.4M''', ''))
         self.assertRaises(exception.ImageUnacceptable,
                           images.fetch_to_raw,
                           context, image_id, target, user_id, project_id)
+        self.assertEqual(self.executes, expected_commands)
+
+        target = 'big.qcow2'
+        self.executes = []
+        expected_commands = [('rm', '-f', 'big.qcow2.part')]
+        self.assertRaises(exception.InstanceTypeDiskTooSmall,
+                          images.fetch_to_raw,
+                          context, image_id, target, user_id, project_id,
+                          max_size=1)
         self.assertEqual(self.executes, expected_commands)
 
         del self.executes

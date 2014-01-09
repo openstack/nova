@@ -2177,6 +2177,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
 # delete=True behavior of instance_metadata_update(...)
 def _instance_metadata_update_in_place(context, instance, metadata_type, model,
                                        metadata, session):
+    metadata = dict(metadata)
     to_delete = []
     for keyvalue in instance[metadata_type]:
         key = keyvalue['key']
@@ -3209,8 +3210,29 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             usages = user_usages
         usages = dict((k, dict(in_use=v['in_use'], reserved=v['reserved']))
                       for k, v in usages.items())
+        headroom = dict((res, user_quotas[res] -
+                             (usages[res]['in_use'] + usages[res]['reserved']))
+                        for res in user_quotas.keys())
+
+        # If quota_cores is unlimited [-1]:
+        # - set cores headroom based on instances headroom:
+        if user_quotas.get('cores') == -1:
+            if deltas['cores']:
+                hc = headroom['instances'] * deltas['cores']
+                headroom['cores'] = hc / deltas['instances']
+            else:
+                headroom['cores'] = headroom['instances']
+
+        # If quota_ram is unlimited [-1]:
+        # - set ram headroom based on instances headroom:
+        if user_quotas.get('ram') == -1:
+            if deltas['ram']:
+                hr = headroom['instances'] * deltas['ram']
+                headroom['ram'] = hr / deltas['instances']
+            else:
+                headroom['ram'] = headroom['instances']
         raise exception.OverQuota(overs=sorted(overs), quotas=user_quotas,
-                                  usages=usages)
+                                  usages=usages, headroom=headroom)
 
     return reservations
 
@@ -4232,7 +4254,7 @@ def flavor_get_all(context, inactive=False, filters=None,
     if marker is not None:
         marker = _instance_type_get_query(context,
                                           read_deleted=read_deleted).\
-                    filter_by(id=marker).\
+                    filter_by(flavorid=marker).\
                     first()
         if not marker:
             raise exception.MarkerNotFound(marker)

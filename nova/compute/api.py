@@ -330,10 +330,7 @@ class API(base.Base):
             quotas = exc.kwargs['quotas']
             usages = exc.kwargs['usages']
             overs = exc.kwargs['overs']
-
-            headroom = dict((res, quotas[res] -
-                             (usages[res]['in_use'] + usages[res]['reserved']))
-                            for res in quotas.keys())
+            headroom = exc.kwargs['headroom']
 
             allowed = headroom['instances']
             # Reduce 'allowed' instances in line with the cores & ram headroom
@@ -592,15 +589,25 @@ class API(base.Base):
             if int(image.get('min_disk') or 0) > root_gb:
                     raise exception.InstanceTypeDiskTooSmall()
 
-    def _check_and_transform_bdm(self, base_options, min_count, max_count,
-                                 block_device_mapping, legacy_bdm):
+    def _check_and_transform_bdm(self, base_options, image_meta, min_count,
+                                 max_count, block_device_mapping, legacy_bdm):
+        # NOTE (ndipanov): Assume root dev name is 'vda' if not supplied.
+        #                  It's needed for legacy conversion to work.
+        root_device_name = (base_options.get('root_device_name') or 'vda')
+        image_ref = base_options.get('image_ref', '')
+
+        # Get the block device mappings defined by the image.
+        image_defined_bdms = \
+            image_meta.get('properties', {}).get('block_device_mapping', [])
+
         if legacy_bdm:
-            # NOTE (ndipanov): Assume root dev name is 'vda' if not supplied.
-            #                  It's needed for legacy conversion to work.
-            root_device_name = (base_options.get('root_device_name') or 'vda')
+            block_device_mapping += image_defined_bdms
             block_device_mapping = block_device.from_legacy_mapping(
-                block_device_mapping, base_options.get('image_ref', ''),
-                root_device_name)
+                 block_device_mapping, image_ref, root_device_name)
+        elif image_defined_bdms:
+            # NOTE (ndipanov): For now assume that image mapping is legacy
+            block_device_mapping += block_device.from_legacy_mapping(
+                image_defined_bdms, None, root_device_name)
 
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: bdm['source_type'] == 'volume',
@@ -861,7 +868,7 @@ class API(base.Base):
                 block_device_mapping, auto_disk_config, reservation_id)
 
         block_device_mapping = self._check_and_transform_bdm(
-            base_options, min_count, max_count,
+            base_options, boot_meta, min_count, max_count,
             block_device_mapping, legacy_bdm)
 
         instances = self._provision_instances(context, instance_type,
@@ -1030,15 +1037,10 @@ class API(base.Base):
             image_mapping = self._prepare_image_mapping(instance_type,
                                                 instance_uuid, image_mapping)
 
-        # NOTE (ndipanov): For now assume that image mapping is legacy
-        image_bdm = block_device.from_legacy_mapping(
-            image_properties.get('block_device_mapping', []),
-            None, instance['root_device_name'])
-
         self._validate_bdm(context, instance, instance_type,
-                           block_device_mapping + image_mapping + image_bdm)
+                           block_device_mapping + image_mapping)
 
-        for mapping in (image_mapping, image_bdm, block_device_mapping):
+        for mapping in (image_mapping, block_device_mapping):
             if not mapping:
                 continue
             self._update_block_device_mapping(context,
@@ -1263,7 +1265,6 @@ class API(base.Base):
 
         if image:
             image_props = image.get("properties", {})
-            LOG.error(image_props)
             auto_disk_config_img = \
                 utils.get_auto_disk_config_from_image_props(image_props)
             image_ref = image.get("id")
@@ -1313,9 +1314,30 @@ class API(base.Base):
                                                      new_type_id,
                                                      project_id, user_id)
 
+            if self.cell_type == 'api':
+                # NOTE(comstud): If we're in the API cell, we need to
+                # skip all remaining logic and just call the callback,
+                # which will cause a cast to the child cell.  Also,
+                # commit reservations here early until we have a better
+                # way to deal with quotas with cells.
+                cb(context, instance, bdms, reservations=None)
+                if reservations:
+                    QUOTAS.commit(context,
+                                  reservations,
+                                  project_id=project_id,
+                                  user_id=user_id)
+                return
+
             if not host:
                 try:
+                    compute_utils.notify_about_instance_usage(
+                            self.notifier, context, instance,
+                            "%s.start" % delete_type)
                     instance.destroy()
+                    compute_utils.notify_about_instance_usage(
+                            self.notifier, context, instance,
+                            "%s.end" % delete_type,
+                            system_metadata=instance.system_metadata)
                     if reservations:
                         QUOTAS.commit(context,
                                       reservations,
@@ -1907,12 +1929,18 @@ class API(base.Base):
             properties['root_device_name'] = instance['root_device_name']
         properties.update(extra_properties or {})
 
+        # TODO(xqueralt): Use new style BDM in volume snapshots
         bdms = self.get_instance_bdms(context, instance)
 
         mapping = []
         for bdm in bdms:
             if bdm['no_device']:
                 continue
+
+            # Clean the BDM of the database related fields to prevent
+            # duplicates in the future (e.g. the id was being preserved)
+            for field in block_device.BlockDeviceDict._db_only_fields:
+                bdm.pop(field, None)
 
             volume_id = bdm.get('volume_id')
             if volume_id:
@@ -1925,7 +1953,11 @@ class API(base.Base):
                 snapshot = self.volume_api.create_snapshot_force(
                     context, volume['id'], name, volume['display_description'])
                 bdm['snapshot_id'] = snapshot['id']
-                bdm['volume_id'] = None
+
+                # Clean the extra volume related fields that will be generated
+                # when booting from the new snapshot.
+                bdm.pop('volume_id')
+                bdm.pop('connection_info')
 
             mapping.append(bdm)
 
@@ -2286,10 +2318,7 @@ class API(base.Base):
             quotas = exc.kwargs['quotas']
             usages = exc.kwargs['usages']
             overs = exc.kwargs['overs']
-
-            headroom = dict((res, quotas[res] -
-                             (usages[res]['in_use'] + usages[res]['reserved']))
-                            for res in quotas.keys())
+            headroom = exc.kwargs['headroom']
 
             resource = overs[0]
             used = quotas[resource] - headroom[resource]

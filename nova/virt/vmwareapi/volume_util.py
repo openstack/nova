@@ -68,21 +68,16 @@ def find_st(session, data, cluster=None):
     lst_properties = ["config.storageDevice.hostBusAdapter",
                       "config.storageDevice.scsiTopology",
                       "config.storageDevice.scsiLun"]
-    props = session._call_method(vim_util, "get_object_properties",
-                       None, host_mor, "HostSystem",
-                       lst_properties)
+    prop_dict = session._call_method(vim_util, "get_dynamic_properties",
+                       host_mor, "HostSystem", lst_properties)
     result = (None, None)
     hbas_ret = None
     scsi_topology = None
     scsi_lun_ret = None
-    for elem in props:
-        for prop in elem.propSet:
-            if prop.name == "config.storageDevice.hostBusAdapter":
-                hbas_ret = prop.val
-            elif prop.name == "config.storageDevice.scsiTopology":
-                scsi_topology = prop.val
-            elif prop.name == "config.storageDevice.scsiLun":
-                scsi_lun_ret = prop.val
+    if prop_dict:
+        hbas_ret = prop_dict.get('config.storageDevice.hostBusAdapter')
+        scsi_topology = prop_dict.get('config.storageDevice.scsiTopology')
+        scsi_lun_ret = prop_dict.get('config.storageDevice.scsiLun')
 
     # Meaning there are no host bus adapters on the host
     if hbas_ret is None:
