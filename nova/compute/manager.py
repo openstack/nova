@@ -2659,9 +2659,6 @@ class ComputeManager(manager.Manager):
         admin_password = (rescue_password if rescue_password else
                       utils.generate_password())
 
-        self.conductor_api.notify_usage_exists(context, instance,
-                                               current_period=True)
-
         network_info = self._get_instance_nw_info(context, instance)
 
         rescue_image_meta = self._get_rescue_image(context, instance)
@@ -2682,6 +2679,9 @@ class ComputeManager(manager.Manager):
             raise exception.InstanceNotRescuable(
                 instance_id=instance['uuid'],
                 reason=_("Driver Error: %s") % unicode(e))
+
+        self.conductor_api.notify_usage_exists(context, instance,
+                                               current_period=True)
 
         current_power_state = self._get_power_state(context, instance)
         instance = self._instance_update(context,
