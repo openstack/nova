@@ -1861,6 +1861,70 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(instance['instanceState']['name'], 'running')
         self.assertEqual(instance['instanceType'], 'm1.small')
 
+    def test_run_instances_invalid_maxcount(self):
+        kwargs = {'image_id': 'ami-00000001',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 0}
+        run_instances = self.cloud.run_instances
+
+        def fake_show(self, context, id):
+            return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
+                    'container_format': 'ami',
+                    'status': 'active',
+                    'properties': {
+                    'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'type': 'machine'},
+                    'status': 'active'}
+        self.stubs.UnsetAll()
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.assertRaises(exception.InvalidInput, run_instances,
+                          self.context, **kwargs)
+
+    def test_run_instances_invalid_mincount(self):
+        kwargs = {'image_id': 'ami-00000001',
+                  'instance_type': CONF.default_flavor,
+                  'min_count': 0}
+        run_instances = self.cloud.run_instances
+
+        def fake_show(self, context, id):
+            return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
+                    'container_format': 'ami',
+                    'status': 'active',
+                    'properties': {
+                    'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'type': 'machine'},
+                    'status': 'active'}
+        self.stubs.UnsetAll()
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.assertRaises(exception.InvalidInput, run_instances,
+                          self.context, **kwargs)
+
+    def test_run_instances_invalid_count(self):
+        kwargs = {'image_id': 'ami-00000001',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1,
+                  'min_count': 2}
+        run_instances = self.cloud.run_instances
+
+        def fake_show(self, context, id):
+            return {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'name': 'fake_name',
+                    'container_format': 'ami',
+                    'status': 'active',
+                    'properties': {
+                    'kernel_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'ramdisk_id': 'cedef40a-ed67-4d10-800e-17455edce175',
+                    'type': 'machine'},
+                    'status': 'active'}
+        self.stubs.UnsetAll()
+        self.stubs.Set(fake._FakeImageService, 'show', fake_show)
+        self.assertRaises(exception.InvalidInput, run_instances,
+                          self.context, **kwargs)
+
     def test_run_instances_availability_zone(self):
         kwargs = {'image_id': 'ami-00000001',
                   'instance_type': CONF.default_flavor,
