@@ -7586,6 +7586,12 @@ class LibvirtNonblockingTestCase(test.TestCase):
         eventlet.tpool.execute(
             libvirt.openAuth, 'test:///default',
             mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn)
+        eventlet.tpool.execute(
+            conn.domainEventRegisterAny,
+            None,
+            libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
+            mox.IgnoreArg(),
+            mox.IgnoreArg())
         self.mox.ReplayAll()
 
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
