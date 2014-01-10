@@ -1315,7 +1315,8 @@ class ServersController(wsgi.Controller):
         LOG.debug(_('start instance'), instance=instance)
         try:
             self.compute_api.start(context, instance)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+        except (exception.InstanceNotReady, exception.InstanceIsLocked,
+                exception.InstanceInvalidState) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
@@ -1328,7 +1329,8 @@ class ServersController(wsgi.Controller):
         LOG.debug(_('stop instance'), instance=instance)
         try:
             self.compute_api.stop(context, instance)
-        except (exception.InstanceNotReady, exception.InstanceIsLocked) as e:
+        except (exception.InstanceNotReady, exception.InstanceIsLocked,
+                exception.InstanceInvalidState) as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
 
