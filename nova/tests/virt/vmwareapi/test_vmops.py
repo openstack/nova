@@ -16,6 +16,7 @@ import contextlib
 import copy
 
 import mock
+from oslo.vmware import exceptions as vexc
 
 from nova.compute import power_state
 from nova import context
@@ -33,7 +34,6 @@ from nova.tests.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
@@ -158,7 +158,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_create_folder_if_missing_exception(self):
         ds_name, ds_ref, ops, path, dc = self._setup_create_folder_mocks()
-        ds_util.mkdir.side_effect = error_util.FileAlreadyExistsException()
+        ds_util.mkdir.side_effect = vexc.FileAlreadyExistsException()
         ops._create_folder_if_missing(ds_name, ds_ref, 'folder')
         ds_util.mkdir.assert_called_with(ops._session, path, dc)
 
@@ -716,7 +716,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 _fetch_image.assert_called_once_with(
                         self._context,
                         self._instance,
-                        self._session._host_ip,
+                        self._session._host,
                         self._dc_info.name,
                         self._ds.name,
                         upload_file_name,
@@ -803,17 +803,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         }
         self._test_spawn(block_device_info=block_device_info)
 
-    @mock.patch('nova.virt.vmwareapi.driver.VMwareAPISession._get_vim_object')
-    def test_build_virtual_machine(self, mock_get_vim_object):
-        mock_get_vim_object.return_value = vmwareapi_fake.FakeVim()
-
-        fake_session = driver.VMwareAPISession()
-        fake_vmops = vmops.VMwareVCVMOps(fake_session, None, None)
-
+    def test_build_virtual_machine(self):
         image_id = nova.tests.image.fake.get_valid_image_id()
         image = vmware_images.VMwareImage(image_id=image_id)
 
-        vm_ref = fake_vmops.build_virtual_machine(self._instance,
+        vm_ref = self._vmops.build_virtual_machine(self._instance,
                                                   'fake-instance-name',
                                                   image, self._dc_info,
                                                   self._ds, self.network_info)

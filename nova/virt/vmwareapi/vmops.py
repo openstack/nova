@@ -22,8 +22,11 @@ Class for VM tasks like spawn, snapshot, suspend, resume etc.
 import collections
 import copy
 import os
+import time
 
+import decorator
 from oslo.config import cfg
+from oslo.vmware import exceptions as vexc
 
 from nova.api.metadata import base as instance_metadata
 from nova import compute
@@ -48,7 +51,6 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import vif as vmwarevif
-from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
@@ -110,6 +112,29 @@ class VirtualMachineInstanceConfigInfo(object):
         return self.cache_image_folder.join(cached_image_file_name)
 
 
+# Note(vui): See https://bugs.launchpad.net/nova/+bug/1363349
+# for cases where mocking time.sleep() can have unintended effects on code
+# not under test. For now, unblock the affected test cases by providing
+# a wrapper function to work around needing to mock time.sleep()
+def _time_sleep_wrapper(delay):
+    time.sleep(delay)
+
+
+@decorator.decorator
+def retry_if_task_in_progress(f, *args, **kwargs):
+    retries = max(CONF.vmware.api_retry_count, 1)
+    delay = 1
+    for attempt in range(1, retries + 1):
+        if attempt != 1:
+            _time_sleep_wrapper(delay)
+            delay = min(2 * delay, 60)
+        try:
+            f(*args, **kwargs)
+            return
+        except error_util.TaskInProgress:
+            pass
+
+
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
@@ -150,7 +175,7 @@ class VMwareVMOps(object):
         return lst_vm_names
 
     def _extend_virtual_disk(self, instance, requested_size, name, dc_ref):
-        service_content = self._session._get_vim().get_service_content()
+        service_content = self._session._get_vim().service_content
         LOG.debug("Extending root virtual disk to %s", requested_size)
         vmdk_extend_task = self._session._call_method(
                 self._session._get_vim(),
@@ -177,10 +202,10 @@ class VMwareVMOps(object):
     def _delete_datastore_file(self, instance, datastore_path, dc_ref):
         try:
             ds_util.file_delete(self._session, datastore_path, dc_ref)
-        except (error_util.CannotDeleteFileException,
-                error_util.FileFaultException,
-                error_util.FileLockedException,
-                error_util.FileNotFoundException):
+        except (vexc.CannotDeleteFileException,
+                vexc.FileFaultException,
+                vexc.FileLockedException,
+                vexc.FileNotFoundException):
             LOG.debug("Unable to delete %(ds)s. There may be more than "
                       "one process or thread trying to delete the file",
                       {'ds': datastore_path},
@@ -427,7 +452,7 @@ class VMwareVMOps(object):
 
                 vmware_images.fetch_image(context,
                                           instance,
-                                          self._session._host_ip,
+                                          self._session._host,
                                           dc_info.name,
                                           datastore.name,
                                           upload_rel_path,
@@ -453,7 +478,7 @@ class VMwareVMOps(object):
                 try:
                     ds_util.file_move(self._session, dc_info.ref,
                                       src_folder, dest_folder)
-                except error_util.FileAlreadyExistsException:
+                except vexc.FileAlreadyExistsException:
                     # File move has failed. This may be due to the fact that a
                     # process or thread has already completed the opertaion.
                     # In the event of a FileAlreadyExists we continue,
@@ -563,7 +588,7 @@ class VMwareVMOps(object):
                                         ds_util.file_delete(self._session,
                                                             root_vmdk_path,
                                                             dc_info.ref)
-                                    except error_util.FileNotFoundException:
+                                    except vexc.FileNotFoundException:
                                         # File was never created: cleanup not
                                         # required
                                         pass
@@ -623,7 +648,7 @@ class VMwareVMOps(object):
                         upload_folder)
                     vmware_images.upload_iso_to_datastore(
                         tmp_file, instance,
-                        host=self._session._host_ip,
+                        host=self._session._host,
                         data_center_name=dc_name,
                         datastore_name=data_store_name,
                         cookies=cookies,
@@ -681,7 +706,7 @@ class VMwareVMOps(object):
         snapshot = task_info.result
         return snapshot
 
-    @vim.retry_if_task_in_progress
+    @retry_if_task_in_progress
     def _delete_vm_snapshot(self, instance, vm_ref, snapshot):
         LOG.debug("Deleting Snapshot of the VM instance", instance=instance)
         delete_snapshot_task = self._session._call_method(
@@ -708,7 +733,7 @@ class VMwareVMOps(object):
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         client_factory = self._session._get_vim().client.factory
-        service_content = self._session._get_vim().get_service_content()
+        service_content = self._session._get_vim().service_content
 
         def _get_vm_and_vmdk_attribs():
             # Get the vmdk file name that the VM is pointing to
@@ -800,7 +825,7 @@ class VMwareVMOps(object):
                 disk_type=constants.DEFAULT_DISK_TYPE,
                 adapter_type=adapter_type,
                 image_version=1,
-                host=self._session._host_ip,
+                host=self._session._host,
                 data_center_name=dc_info.name,
                 datastore_name=datastore_name,
                 cookies=cookies,
@@ -1268,7 +1293,7 @@ class VMwareVMOps(object):
         data = {}
         # All of values received are objects. Convert them to dictionaries
         for value in query.values():
-            prop_dict = vim.object_to_dict(value, list_depth=1)
+            prop_dict = vim_util.object_to_dict(value, list_depth=1)
             data.update(prop_dict)
         return data
 
@@ -1436,7 +1461,7 @@ class VMwareVMOps(object):
         try:
             ds_util.mkdir(self._session, path, dc_info.ref)
             LOG.debug("Folder %s created.", path)
-        except error_util.FileAlreadyExistsException:
+        except vexc.FileAlreadyExistsException:
             # NOTE(hartsocks): if the folder already exists, that
             # just means the folder was prepped by another process.
             pass

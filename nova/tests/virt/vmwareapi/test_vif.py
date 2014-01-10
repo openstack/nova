@@ -17,6 +17,7 @@ import contextlib
 
 import mock
 from oslo.config import cfg
+from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.network import model as network_model
@@ -24,7 +25,6 @@ from nova import test
 from nova.tests import matchers
 from nova.tests import utils
 from nova.tests.virt.vmwareapi import fake
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
 from nova.virt.vmwareapi import vim_util
@@ -280,7 +280,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
     def test_create_port_group_already_exists(self):
         def fake_call_method(module, method, *args, **kwargs):
             if method == 'AddPortGroup':
-                raise error_util.AlreadyExistsException()
+                raise vexc.AlreadyExistsException()
 
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_add_vswitch_port_group_spec'),
@@ -295,7 +295,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
     def test_create_port_group_exception(self):
         def fake_call_method(module, method, *args, **kwargs):
             if method == 'AddPortGroup':
-                raise error_util.VMwareDriverException()
+                raise vexc.VMwareDriverException()
 
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_add_vswitch_port_group_spec'),
@@ -303,7 +303,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
             mock.patch.object(self.session, '_call_method',
                               fake_call_method)
         ) as (_add_vswitch, _get_host, _call_method):
-            self.assertRaises(error_util.VMwareDriverException,
+            self.assertRaises(vexc.VMwareDriverException,
                               network_util.create_port_group,
                               self.session, 'pg_name',
                               'vswitch_name', vlan_id=0,
@@ -312,7 +312,7 @@ class VMwareVifTestCase(test.NoDBTestCase):
     def test_get_neutron_network_invalid_property(self):
         def fake_call_method(module, method, *args, **kwargs):
             if method == 'get_dynamic_property':
-                raise error_util.InvalidPropertyException()
+                raise vexc.InvalidPropertyException()
 
         with contextlib.nested(
             mock.patch.object(vm_util, 'get_host_ref'),

@@ -17,10 +17,11 @@ Datastore utility functions
 """
 import posixpath
 
+from oslo.vmware import exceptions as vexc
+
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
@@ -338,7 +339,7 @@ def file_delete(session, ds_path, dc_ref):
     file_delete_task = session._call_method(
             session._get_vim(),
             "DeleteDatastoreFile_Task",
-            vim.get_service_content().fileManager,
+            vim.service_content.fileManager,
             name=str(ds_path),
             datacenter=dc_ref)
     session._wait_for_task(file_delete_task)
@@ -375,7 +376,7 @@ def file_move(session, dc_ref, src_file, dst_file):
     move_task = session._call_method(
             session._get_vim(),
             "MoveDatastoreFile_Task",
-            vim.get_service_content().fileManager,
+            vim.service_content.fileManager,
             sourceName=str(src_file),
             sourceDatacenter=dc_ref,
             destinationName=str(dst_file),
@@ -402,7 +403,7 @@ def file_exists(session, ds_browser, ds_path, file_name):
                                              searchSpec=search_spec)
     try:
         task_info = session._wait_for_task(search_task)
-    except error_util.FileNotFoundException:
+    except vexc.FileNotFoundException:
         return False
 
     file_exists = (getattr(task_info.result, 'file', False) and
@@ -417,7 +418,7 @@ def mkdir(session, ds_path, dc_ref):
     """
     LOG.debug("Creating directory with path %s", ds_path)
     session._call_method(session._get_vim(), "MakeDirectory",
-            session._get_vim().get_service_content().fileManager,
+            session._get_vim().service_content.fileManager,
             name=str(ds_path), datacenter=dc_ref,
             createParentDirectories=True)
     LOG.debug("Created directory with path %s", ds_path)
@@ -435,7 +436,7 @@ def get_sub_folders(session, ds_browser, ds_path):
             datastorePath=str(ds_path))
     try:
         task_info = session._wait_for_task(search_task)
-    except error_util.FileNotFoundException:
+    except vexc.FileNotFoundException:
         return set()
     # populate the folder entries
     if hasattr(task_info.result, 'file'):

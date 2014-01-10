@@ -22,6 +22,7 @@ import copy
 import functools
 
 from oslo.config import cfg
+from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _
@@ -30,7 +31,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
 from nova.virt.vmwareapi import constants
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 
 CONF = cfg.CONF
@@ -854,7 +854,7 @@ def _get_vm_ref_from_vm_uuid(session, instance_uuid):
     vm_refs = session._call_method(
         session._get_vim(),
         "FindAllByUuid",
-        session._get_vim().get_service_content().searchIndex,
+        session._get_vim().service_content.searchIndex,
         uuid=instance_uuid,
         vmSearch=True,
         instanceUuid=True)
@@ -1298,7 +1298,7 @@ def create_virtual_disk(session, dc_ref, adapter_type, disk_type,
     vmdk_create_task = session._call_method(
             session._get_vim(),
             "CreateVirtualDisk_Task",
-            session._get_vim().get_service_content().virtualDiskManager,
+            session._get_vim().service_content.virtualDiskManager,
             name=virtual_disk_path,
             datacenter=dc_ref,
             spec=vmdk_create_spec)
@@ -1328,7 +1328,7 @@ def copy_virtual_disk(session, dc_ref, source, dest, copy_spec=None):
     vmdk_copy_task = session._call_method(
             vim,
             "CopyVirtualDisk_Task",
-            vim.get_service_content().virtualDiskManager,
+            vim.service_content.virtualDiskManager,
             sourceName=source,
             sourceDatacenter=dc_ref,
             destName=dest,
@@ -1356,7 +1356,7 @@ def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
     if vm_ref is None:
         LOG.warn(_("vmwareapi:vm_util:clone_vmref_for_instance, called "
                    "with vm_ref=None"))
-        raise error_util.MissingParameter(param="vm_ref")
+        raise vexc.MissingParameter(param="vm_ref")
     # Get the clone vm spec
     client_factory = session._get_vim().client.factory
     rel_spec = relocate_vm_spec(client_factory, ds_ref, host_ref,
@@ -1449,7 +1449,7 @@ def power_on_instance(session, instance, vm_ref=None):
                                     "PowerOnVM_Task", vm_ref)
         session._wait_for_task(poweron_task)
         LOG.debug("Powered on the VM", instance=instance)
-    except error_util.InvalidPowerStateException:
+    except vexc.InvalidPowerStateException:
         LOG.debug("VM already powered on", instance=instance)
 
 
@@ -1528,5 +1528,5 @@ def power_off_instance(session, instance, vm_ref=None):
                                          "PowerOffVM_Task", vm_ref)
         session._wait_for_task(poweroff_task)
         LOG.debug("Powered off the VM", instance=instance)
-    except error_util.InvalidPowerStateException:
+    except vexc.InvalidPowerStateException:
         LOG.debug("VM already powered off", instance=instance)

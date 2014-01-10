@@ -22,7 +22,6 @@ from oslo.config import cfg
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import log as logging
-from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
@@ -300,7 +299,7 @@ class VMwareVolumeOps(object):
 
     def _get_volume_ref(self, volume_ref_name):
         """Get the volume moref from the ref name."""
-        return vim.get_moref(volume_ref_name, 'VirtualMachine')
+        return vim_util.get_moref(volume_ref_name, 'VirtualMachine')
 
     def _get_vmdk_base_volume_device(self, volume_ref):
         # Get the vmdk file name that the VM is pointing to

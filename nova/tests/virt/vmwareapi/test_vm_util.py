@@ -19,13 +19,13 @@ import contextlib
 import re
 
 import mock
+from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.network import model as network_model
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.virt.vmwareapi import fake
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vm_util
 
 
@@ -815,7 +815,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                               return_value='fake-task'),
             mock.patch.object(
                     session, "_wait_for_task",
-                    side_effect=error_util.InvalidPowerStateException),
+                    side_effect=vexc.InvalidPowerStateException),
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_on_instance(session, fake_instance,
                                       vm_ref='fake-vm-ref')
@@ -826,7 +826,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_create_virtual_disk(self):
         session = fake.FakeSession()
-        dm = session._get_vim().get_service_content().virtualDiskManager
+        dm = session._get_vim().service_content.virtualDiskManager
         with contextlib.nested(
             mock.patch.object(vm_util, "get_vmdk_create_spec",
                               return_value='fake-spec'),
@@ -852,7 +852,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_copy_virtual_disk(self):
         session = fake.FakeSession()
-        dm = session._get_vim().get_service_content().virtualDiskManager
+        dm = session._get_vim().service_content.virtualDiskManager
         with contextlib.nested(
             mock.patch.object(session, "_call_method",
                               return_value='fake-task'),
@@ -1052,7 +1052,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                               return_value='fake-task'),
             mock.patch.object(
                     session, '_wait_for_task',
-                    side_effect=error_util.InvalidPowerStateException)
+                    side_effect=vexc.InvalidPowerStateException)
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_off_instance(session, fake_instance, 'fake-vm-ref')
             fake_call_method.assert_called_once_with(session._get_vim(),

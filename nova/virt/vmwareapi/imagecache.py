@@ -36,6 +36,7 @@ This will ensure that a image is not deleted during the spawn.
 """
 
 from oslo.config import cfg
+from oslo.vmware import exceptions as vexc
 
 from nova.i18n import _
 from nova.openstack.common import lockutils
@@ -43,7 +44,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.virt import imagecache
 from nova.virt.vmwareapi import ds_util
-from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
@@ -66,14 +66,14 @@ class ImageCacheManager(imagecache.ImageCacheManager):
     def _folder_delete(self, ds_path, dc_ref):
         try:
             ds_util.file_delete(self._session, ds_path, dc_ref)
-        except (error_util.CannotDeleteFileException,
-                error_util.FileFaultException,
-                error_util.FileLockedException) as e:
+        except (vexc.CannotDeleteFileException,
+                vexc.FileFaultException,
+                vexc.FileLockedException) as e:
             # There may be more than one process or thread that tries
             # to delete the file.
             LOG.warning(_("Unable to delete %(file)s. Exception: %(ex)s"),
                         {'file': ds_path, 'ex': e})
-        except error_util.FileNotFoundException:
+        except vexc.FileNotFoundException:
             LOG.debug("File not found: %s", ds_path)
 
     def timestamp_folder_get(self, ds_path, image_id):
@@ -142,7 +142,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     ts_path = path.join(self._get_timestamp_filename())
                     try:
                         ds_util.mkdir(self._session, ts_path, dc_info.ref)
-                    except error_util.FileAlreadyExistsException:
+                    except vexc.FileAlreadyExistsException:
                         LOG.debug("Timestamp already exists.")
                     LOG.info(_("Image %s is no longer used by this node. "
                                "Pending deletion!"), image)

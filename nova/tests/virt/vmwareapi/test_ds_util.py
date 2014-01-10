@@ -16,6 +16,7 @@ import contextlib
 import re
 
 import mock
+from oslo.vmware import exceptions as vexc
 
 from nova import exception
 from nova.i18n import _
@@ -23,7 +24,6 @@ from nova.openstack.common import units
 from nova import test
 from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import ds_util
-from nova.virt.vmwareapi import error_util
 
 
 class DsUtilTestCase(test.NoDBTestCase):
@@ -146,7 +146,7 @@ class DsUtilTestCase(test.NoDBTestCase):
 
         def fake_wait_for_task(task_ref):
             if task_ref == 'fake_exists_task':
-                raise error_util.FileNotFoundException()
+                raise vexc.FileNotFoundException()
 
             # Should never get here
             self.fail()
