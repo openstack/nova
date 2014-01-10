@@ -52,11 +52,3 @@ _STATE_MAP = {
     SUSPENDED: 'suspended',
     BUILDING: 'building',
 }
-
-
-def name(code):
-    return _STATE_MAP[code]
-
-
-def valid_states():
-    return _STATE_MAP.keys()
