@@ -416,7 +416,7 @@ class BareMetalDriver(driver.ComputeDriver):
         return self.volume_driver.get_volume_connector(instance)
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
-                      encryption=None):
+                      disk_bus=None, device_type=None, encryption=None):
         return self.volume_driver.attach_volume(connection_info,
                                                 instance, mountpoint)
 

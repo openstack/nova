@@ -398,7 +398,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
-                      encryption=None):
+                      disk_bus=None, device_type=None, encryption=None):
         """Attach the disk to the instance at mountpoint using info."""
         raise NotImplementedError()
 

@@ -72,7 +72,7 @@ class HyperVDriver(driver.ComputeDriver):
         return self._vmops.get_info(instance)
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
-                      encryption=None):
+                      disk_bus=None, device_type=None, encryption=None):
         return self._volumeops.attach_volume(connection_info,
                                              instance['name'])
 

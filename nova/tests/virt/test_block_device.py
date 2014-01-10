@@ -317,11 +317,15 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 self.virt_driver.attach_volume(
                         elevated_context, expected_conn_info, instance,
                         bdm_dict['device_name'],
+                        disk_bus=bdm_dict['disk_bus'],
+                        device_type=bdm_dict['device_type'],
                         encryption=enc_data).AndReturn(None)
             else:
                 self.virt_driver.attach_volume(
                         elevated_context, expected_conn_info, instance,
                         bdm_dict['device_name'],
+                        disk_bus=bdm_dict['disk_bus'],
+                        device_type=bdm_dict['device_type'],
                         encryption=enc_data).AndRaise(test.TestingException)
                 self.volume_api.terminate_connection(
                         elevated_context, fake_volume['id'],

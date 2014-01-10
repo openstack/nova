@@ -430,7 +430,7 @@ class XenAPIDriver(driver.ComputeDriver):
         return xs_url.netloc
 
     def attach_volume(self, context, connection_info, instance, mountpoint,
-                      encryption=None):
+                      disk_bus=None, device_type=None, encryption=None):
         """Attach volume storage to VM instance."""
         return self._volumeops.attach_volume(connection_info,
                                              instance['name'],
