@@ -14,13 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import admin_password_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -52,17 +53,13 @@ class AdminPasswordController(wsgi.Controller):
     @wsgi.response(204)
     @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.deserializers(xml=ChangePasswordDeserializer)
+    @validation.schema(request_body_schema=
+                       admin_password_schema.change_password)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        if (not self.is_valid_body(body, 'change_password')
-                or 'admin_password' not in body['change_password']):
-            msg = _("No admin_password was specified")
-            raise exc.HTTPBadRequest(explanation=msg)
+
         password = body['change_password']['admin_password']
-        if not isinstance(password, six.string_types):
-            msg = _("Invalid admin password")
-            raise exc.HTTPBadRequest(explanation=msg)
         try:
             instance = self.compute_api.get(context, id)
         except exception.InstanceNotFound as e:
