@@ -135,9 +135,9 @@ class VMRCSessionConsole(VMRCConsole):
         if vm_ref is None:
             raise exception.InstanceNotFound(instance_id=instance_name)
         virtual_machine_ticket = vim_session._call_method(
-                vim_session._get_vim(),
+                vim_session.vim,
                 'AcquireCloneTicket',
-                vim_session._get_vim().get_service_content().sessionManager)
+                vim_session.vim.get_service_content().sessionManager)
         json_data = jsonutils.dumps({'vm_id': str(vm_ref.value),
                                      'username': virtual_machine_ticket,
                                      'password': virtual_machine_ticket})

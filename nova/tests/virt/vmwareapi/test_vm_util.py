@@ -777,7 +777,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_on_instance(session, fake_instance,
                                       vm_ref='fake-vm-ref')
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOnVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
@@ -794,7 +794,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         ) as (fake_get_vm_ref, fake_call_method, fake_wait_for_task):
             vm_util.power_on_instance(session, fake_instance)
             fake_get_vm_ref.assert_called_once_with(session, fake_instance)
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOnVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
@@ -812,7 +812,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                               vm_util.power_on_instance,
                               session, fake_instance,
                               vm_ref='fake-vm-ref')
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOnVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
@@ -829,14 +829,14 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_on_instance(session, fake_instance,
                                       vm_ref='fake-vm-ref')
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOnVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
 
     def test_create_virtual_disk(self):
         session = fake.FakeSession()
-        dm = session._get_vim().service_content.virtualDiskManager
+        dm = session.vim.service_content.virtualDiskManager
         with contextlib.nested(
             mock.patch.object(vm_util, "get_vmdk_create_spec",
                               return_value='fake-spec'),
@@ -848,11 +848,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                         'fake-adapter-type', 'fake-disk-type',
                                         'fake-path', 7)
             fake_get_spec.assert_called_once_with(
-                    session._get_vim().client.factory, 7,
+                    session.vim.client.factory, 7,
                     'fake-adapter-type',
                     'fake-disk-type')
             fake_call_method.assert_called_once_with(
-                    session._get_vim(),
+                    session.vim,
                     "CreateVirtualDisk_Task",
                     dm,
                     name='fake-path',
@@ -862,7 +862,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_copy_virtual_disk(self):
         session = fake.FakeSession()
-        dm = session._get_vim().service_content.virtualDiskManager
+        dm = session.vim.service_content.virtualDiskManager
         with contextlib.nested(
             mock.patch.object(session, "_call_method",
                               return_value='fake-task'),
@@ -871,7 +871,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             vm_util.copy_virtual_disk(session, 'fake-dc-ref',
                                       'fake-source', 'fake-dest')
             fake_call_method.assert_called_once_with(
-                    session._get_vim(),
+                    session.vim,
                     "CopyVirtualDisk_Task",
                     dm,
                     sourceName='fake-source',
@@ -1011,7 +1011,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             mock.patch.object(session, '_wait_for_task')
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_off_instance(session, fake_instance, 'fake-vm-ref')
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOffVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
@@ -1028,7 +1028,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_off_instance(session, fake_instance)
             fake_get_ref.assert_called_once_with(session, fake_instance)
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOffVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
@@ -1046,7 +1046,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
             self.assertRaises(exception.NovaException,
                               vm_util.power_off_instance,
                               session, fake_instance, 'fake-vm-ref')
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOffVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
@@ -1064,7 +1064,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                     side_effect=vexc.InvalidPowerStateException)
         ) as (fake_call_method, fake_wait_for_task):
             vm_util.power_off_instance(session, fake_instance, 'fake-vm-ref')
-            fake_call_method.assert_called_once_with(session._get_vim(),
+            fake_call_method.assert_called_once_with(session.vim,
                                                      "PowerOffVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')

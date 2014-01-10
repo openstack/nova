@@ -1060,9 +1060,6 @@ class FakeSession(object):
     def __init__(self):
         self.vim = FakeVim()
 
-    def _get_vim(self):
-        return self.vim
-
     def _call_method(self, module, method, *args, **kwargs):
         raise NotImplementedError()
 

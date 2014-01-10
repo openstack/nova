@@ -665,10 +665,6 @@ class VMwareAPISession(api.VMwareAPISession):
         else:
             return self.invoke_api(module, method, *args, **kwargs)
 
-    def _get_vim(self):
-        """Create the VIM Object instance."""
-        return self.vim
-
     def _wait_for_task(self, task_ref):
         """Return a Deferred that will give the result of the given task.
         The task is polled until it completes.

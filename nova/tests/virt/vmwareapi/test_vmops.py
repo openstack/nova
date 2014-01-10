@@ -439,10 +439,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          power_on=power_on)
             if resize_instance:
                 fake_vm_resize_spec.assert_called_once_with(
-                    self._session._get_vim().client.factory,
+                    self._session.vim.client.factory,
                     self._instance)
                 fake_call_method.assert_has_calls(mock.call(
-                    self._session._get_vim(),
+                    self._session.vim,
                     "ReconfigVM_Task",
                     'f',
                     spec='fake-spec'))
@@ -828,7 +828,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             if allocations is None:
                 allocations = {}
             mock_get_create_spec.assert_called_once_with(
-                    self._session._get_vim().client.factory,
+                    self._session.vim.client.factory,
                     self._instance,
                     'fake_uuid',
                     'fake_ds',
@@ -842,10 +842,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'fake_create_spec',
                     'fake_rp_ref')
             mock_get_and_set_vnc_config.assert_called_once_with(
-                self._session._get_vim().client.factory,
+                self._session.vim.client.factory,
                 self._instance)
             mock_set_machine_id.assert_called_once_with(
-                self._session._get_vim().client.factory,
+                self._session.vim.client.factory,
                 self._instance,
                 network_info)
             if power_on:

@@ -847,9 +847,9 @@ def _get_vm_ref_from_vm_uuid(session, instance_uuid):
     'config_spec.instanceUuid' set to 'instance_uuid'.
     """
     vm_refs = session._call_method(
-        session._get_vim(),
+        session.vim,
         "FindAllByUuid",
-        session._get_vim().service_content.searchIndex,
+        session.vim.service_content.searchIndex,
         uuid=instance_uuid,
         vmSearch=True,
         instanceUuid=True)
@@ -1265,7 +1265,7 @@ def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
     """Create VM on ESX host."""
     LOG.debug("Creating VM on the ESX host", instance=instance)
     vm_create_task = session._call_method(
-        session._get_vim(),
+        session.vim,
         "CreateVM_Task", vm_folder,
         config=config_spec, pool=res_pool_ref)
     task_info = session._wait_for_task(vm_create_task)
@@ -1286,15 +1286,15 @@ def create_virtual_disk(session, dc_ref, adapter_type, disk_type,
                "adapter_type": adapter_type})
 
     vmdk_create_spec = get_vmdk_create_spec(
-            session._get_vim().client.factory,
+            session.vim.client.factory,
             size_in_kb,
             adapter_type,
             disk_type)
 
     vmdk_create_task = session._call_method(
-            session._get_vim(),
+            session.vim,
             "CreateVirtualDisk_Task",
-            session._get_vim().service_content.virtualDiskManager,
+            session.vim.service_content.virtualDiskManager,
             name=virtual_disk_path,
             datacenter=dc_ref,
             spec=vmdk_create_spec)
@@ -1319,7 +1319,7 @@ def copy_virtual_disk(session, dc_ref, source, dest):
     """
     LOG.debug("Copying Virtual Disk %(source)s to %(dest)s",
               {'source': source, 'dest': dest})
-    vim = session._get_vim()
+    vim = session.vim
     vmdk_copy_task = session._call_method(
             vim,
             "CopyVirtualDisk_Task",
@@ -1334,7 +1334,7 @@ def copy_virtual_disk(session, dc_ref, source, dest):
 
 def reconfigure_vm(session, vm_ref, config_spec):
     """Reconfigure a VM according to the config spec."""
-    reconfig_task = session._call_method(session._get_vim(),
+    reconfig_task = session._call_method(session.vim,
                                          "ReconfigVM_Task", vm_ref,
                                          spec=config_spec)
     session._wait_for_task(reconfig_task)
@@ -1352,7 +1352,7 @@ def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
                    "with vm_ref=None"))
         raise vexc.MissingParameter(param="vm_ref")
     # Get the clone vm spec
-    client_factory = session._get_vim().client.factory
+    client_factory = session.vim.client.factory
     rel_spec = relocate_vm_spec(client_factory, ds_ref, host_ref,
                     disk_move_type='moveAllDiskBackingsAndDisallowSharing')
     extra_opts = {'nvp.vm-uuid': instance['uuid']}
@@ -1363,7 +1363,7 @@ def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
     # Clone VM on ESX host
     LOG.debug("Cloning VM for instance %s", instance['uuid'],
               instance=instance)
-    vm_clone_task = session._call_method(session._get_vim(), "CloneVM_Task",
+    vm_clone_task = session._call_method(session.vim, "CloneVM_Task",
                                          vm_ref, folder=vmfolder_ref,
                                          name=instance['uuid'],
                                          spec=clone_spec)
@@ -1387,7 +1387,7 @@ def disassociate_vmref_from_instance(session, instance, vm_ref=None,
     if vm_ref is None:
         vm_ref = get_vm_ref(session, instance)
     extra_opts = {'nvp.vm-uuid': instance['uuid'] + suffix}
-    client_factory = session._get_vim().client.factory
+    client_factory = session.vim.client.factory
     reconfig_spec = get_vm_extra_config_spec(client_factory, extra_opts)
     reconfig_spec.name = instance['uuid'] + suffix
     reconfig_spec.instanceUuid = ''
@@ -1417,7 +1417,7 @@ def associate_vmref_for_instance(session, instance, vm_ref=None,
             raise exception.InstanceNotFound(instance_id=instance['uuid']
                                             + suffix)
     extra_opts = {'nvp.vm-uuid': instance['uuid']}
-    client_factory = session._get_vim().client.factory
+    client_factory = session.vim.client.factory
     reconfig_spec = get_vm_extra_config_spec(client_factory, extra_opts)
     reconfig_spec.name = instance['uuid']
     reconfig_spec.instanceUuid = instance['uuid']
@@ -1439,7 +1439,7 @@ def power_on_instance(session, instance, vm_ref=None):
     LOG.debug("Powering on the VM", instance=instance)
     try:
         poweron_task = session._call_method(
-                                    session._get_vim(),
+                                    session.vim,
                                     "PowerOnVM_Task", vm_ref)
         session._wait_for_task(poweron_task)
         LOG.debug("Powered on the VM", instance=instance)
@@ -1518,7 +1518,7 @@ def power_off_instance(session, instance, vm_ref=None):
 
     LOG.debug("Powering off the VM", instance=instance)
     try:
-        poweroff_task = session._call_method(session._get_vim(),
+        poweroff_task = session._call_method(session.vim,
                                          "PowerOffVM_Task", vm_ref)
         session._wait_for_task(poweroff_task)
         LOG.debug("Powered off the VM", instance=instance)

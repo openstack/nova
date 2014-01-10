@@ -122,7 +122,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         ds_browser = self._ds_browser.get(ds_ref.value)
         if not ds_browser:
             ds_browser = vim_util.get_dynamic_property(
-                    self._session._get_vim(), ds_ref,
+                    self._session.vim, ds_ref,
                     "Datastore", "browser")
             self._ds_browser[ds_ref.value] = ds_browser
         return ds_browser
