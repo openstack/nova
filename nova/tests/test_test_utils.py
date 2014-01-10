@@ -16,6 +16,7 @@
 
 import errno
 import socket
+import tempfile
 
 import fixtures
 
@@ -57,7 +58,7 @@ class TestUtilsTestCase(test.TestCase):
             raise e
 
         def fake_socket_ok(x, y):
-            return
+            return tempfile.TemporaryFile()
 
         with fixtures.MonkeyPatch('socket.socket', fake_socket_fail):
             self.assertFalse(test_utils.is_ipv6_supported())
