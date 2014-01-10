@@ -113,7 +113,7 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
             get_disk_usage
         ):
             # run the code
-            stats = self.connection.get_available_resource(nodename='test')
+            stats = self.connection._get_available_resource(nodename='test')
             # make our assertions
             get_memory_usage.assert_called_once_with()
             get_disk_usage.assert_called_once_with()
@@ -178,7 +178,7 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
             instance_href['uuid']))
 
     def _assert_cpu_shares(self, instance_href, vcpus=4):
-        container_id = self.connection.find_container_by_name(
+        container_id = self.connection._find_container_by_name(
             instance_href['name']).get('id')
         container_info = self.connection.docker.inspect_container(container_id)
         self.assertEqual(vcpus * 1024, container_info['Config']['CpuShares'])
@@ -201,7 +201,7 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
 
     @mock.patch.object(network, 'teardown_network')
     @mock.patch.object(nova.virt.docker.driver.DockerDriver,
-                'find_container_by_name', return_value={'id': 'fake_id'})
+                '_find_container_by_name', return_value={'id': 'fake_id'})
     def test_destroy_container(self, byname_mock, teardown_mock):
         instance = utils.get_test_instance()
         self.connection.destroy(self.context, instance, 'fake_networkinfo')
