@@ -445,6 +445,10 @@ def fake_instance_get(**kwargs):
     return _return_server
 
 
+def fake_actions_to_locked_server(self, context, instance, *args):
+    raise exc.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+
 def fake_instance_get_all_by_filters(num_servers=5, **kwargs):
     def _return_servers(context, *args, **kwargs):
         servers_list = []

@@ -112,10 +112,6 @@ def fake_start_stop_not_ready(self, context, instance):
     raise exception.InstanceNotReady(instance_id=instance["uuid"])
 
 
-def fake_start_stop_locked_server(self, context, instance):
-    raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
-
 def fake_instance_get_by_uuid_not_found(context, uuid,
                                         columns_to_join, use_slave=False):
     raise exception.InstanceNotFound(instance_id=uuid)
@@ -1270,6 +1266,16 @@ class ServersControllerDeleteTest(ControllerTest):
 
         self.assertTrue(self.server_delete_called)
 
+    def test_delete_locked_server(self):
+        req = self._create_delete_request(FAKE_UUID)
+        self.stubs.Set(compute_api.API, 'soft_delete',
+                       fakes.fake_actions_to_locked_server)
+        self.stubs.Set(compute_api.API, 'delete',
+                       fakes.fake_actions_to_locked_server)
+
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.delete,
+                          req, FAKE_UUID)
+
     def test_delete_server_instance_while_resize(self):
         req = self._create_delete_request(FAKE_UUID)
         self.stubs.Set(db, 'instance_get_by_uuid',
@@ -1434,7 +1440,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.controller._start_server, req, FAKE_UUID, body)
 
     def test_start_locked_server(self):
-        self.stubs.Set(compute_api.API, 'start', fake_start_stop_locked_server)
+        self.stubs.Set(compute_api.API, 'start',
+                       fakes.fake_actions_to_locked_server)
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
@@ -1457,7 +1464,8 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.controller._stop_server, req, FAKE_UUID, body)
 
     def test_stop_locked_server(self):
-        self.stubs.Set(compute_api.API, 'stop', fake_start_stop_locked_server)
+        self.stubs.Set(compute_api.API, 'stop',
+                       fakes.fake_actions_to_locked_server)
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,

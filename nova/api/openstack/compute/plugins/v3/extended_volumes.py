@@ -94,6 +94,8 @@ class ExtendedVolumesController(wsgi.Controller):
                     pass
                 except exception.InvalidVolume as e:
                     raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                               'swap_volume')
@@ -169,6 +171,8 @@ class ExtendedVolumesController(wsgi.Controller):
                                            volume_id, device)
         except (exception.InstanceNotFound, exception.VolumeNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(
                 state_error, 'attach_volume')
@@ -228,6 +232,8 @@ class ExtendedVolumesController(wsgi.Controller):
                 pass
             except exception.InvalidVolume as e:
                 raise exc.HTTPBadRequest(explanation=e.format_message())
+            except exception.InstanceIsLocked as e:
+                raise exc.HTTPConflict(explanation=e.format_message())
             except exception.InstanceInvalidState as state_error:
                 common.raise_http_conflict_for_instance_invalid_state(
                     state_error, 'detach_volume')

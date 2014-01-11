@@ -410,6 +410,8 @@ class VolumeAttachmentController(wsgi.Controller):
                                                     volume_id, device)
         except exception.NotFound:
             raise exc.HTTPNotFound()
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'attach_volume')
@@ -471,6 +473,8 @@ class VolumeAttachmentController(wsgi.Controller):
                     # The volume is not attached.  Treat it as NotFound
                     # by falling through.
                     pass
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'swap_volume')
@@ -514,6 +518,8 @@ class VolumeAttachmentController(wsgi.Controller):
                     # The volume is not attached.  Treat it as NotFound
                     # by falling through.
                     pass
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_volume')
