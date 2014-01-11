@@ -4492,7 +4492,7 @@ class ComputeManager(manager.Manager):
             filters = {'task_state': task_states.REBOOTING,
                        'host': self.host}
             rebooting = instance_obj.InstanceList.get_by_filters(
-                context, filters, expected_attrs=[])
+                context, filters, expected_attrs=[], use_slave=True)
 
             to_poll = []
             for instance in rebooting:
@@ -4508,7 +4508,7 @@ class ComputeManager(manager.Manager):
             filters = {'vm_state': vm_states.RESCUED,
                        'host': self.host}
             rescued_instances = self.conductor_api.instance_get_all_by_filters(
-                context, filters, columns_to_join=[])
+                context, filters, columns_to_join=[], use_slave=True)
 
             to_unrescue = []
             for instance in rescued_instances:
@@ -4591,7 +4591,8 @@ class ComputeManager(manager.Manager):
         filters = {'vm_state': vm_states.SHELVED,
                    'host': self.host}
         shelved_instances = instance_obj.InstanceList.get_by_filters(
-            context, filters=filters, expected_attrs=['system_metadata'])
+            context, filters=filters, expected_attrs=['system_metadata'],
+            use_slave=True)
 
         to_gc = []
         for instance in shelved_instances:
@@ -4979,7 +4980,8 @@ class ComputeManager(manager.Manager):
                    'host': self.host}
         instances = instance_obj.InstanceList.get_by_filters(
             context, filters,
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
+            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS,
+            use_slave=True)
         for instance in instances:
             if self._deleted_old_enough(instance, interval):
                 capi = self.conductor_api

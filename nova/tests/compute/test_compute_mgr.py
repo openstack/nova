@@ -436,7 +436,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 {'uuid': [inst['uuid'] for
                           inst in driver_instances]},
                 'created_at', 'desc', columns_to_join=None,
-                limit=None, marker=None).AndReturn(
+                limit=None, marker=None,
+                use_slave=False).AndReturn(
                         driver_instances)
 
         self.mox.ReplayAll()
@@ -476,7 +477,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         db.instance_get_all_by_filters(
                 fake_context, filters,
                 'created_at', 'desc', columns_to_join=None,
-                limit=None, marker=None).AndReturn(all_instances)
+                limit=None, marker=None,
+                use_slave=False).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 

@@ -647,12 +647,13 @@ def instance_get_all(context, columns_to_join=None):
 
 def instance_get_all_by_filters(context, filters, sort_key='created_at',
                                 sort_dir='desc', limit=None, marker=None,
-                                columns_to_join=None):
+                                columns_to_join=None, use_slave=False):
     """Get all instances that match all filters."""
     return IMPL.instance_get_all_by_filters(context, filters, sort_key,
                                             sort_dir, limit=limit,
                                             marker=marker,
-                                            columns_to_join=columns_to_join)
+                                            columns_to_join=columns_to_join,
+                                            use_slave=use_slave)
 
 
 def instance_get_active_by_window_joined(context, begin, end=None,
