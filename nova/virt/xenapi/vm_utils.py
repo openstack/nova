@@ -164,7 +164,7 @@ PROGRESS_INTERVAL_SECONDS = 300
 
 # Fudge factor to allow for the VHD chain to be slightly larger than
 # the partitioned space. Otherwise, legitimate images near their
-# maximum allowed size can fail on build with InstanceDiskTypeTooSmall.
+# maximum allowed size can fail on build with FlavorDiskTooSmall.
 VHD_SIZE_CHECK_FUDGE_FACTOR_GB = 10
 
 
