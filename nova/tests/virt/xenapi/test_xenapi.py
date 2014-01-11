@@ -1641,8 +1641,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_up_root_vdi(instance,
-                                        {'uuid': vdi_uuid, 'ref': vdi_ref})
+        conn._vmops._resize_up_vdis(instance,
+                {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}})
         self.assertEqual(called['resize'], True)
 
     def test_resize_xcp(self):
@@ -1660,8 +1660,8 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vdi_ref = xenapi_fake.create_vdi('hurr', 'fake')
         vdi_uuid = xenapi_fake.get_record('VDI', vdi_ref)['uuid']
-        conn._vmops._resize_up_root_vdi(instance,
-                                        {'uuid': vdi_uuid, 'ref': vdi_ref})
+        conn._vmops._resize_up_vdis(instance,
+                {'root': {'uuid': vdi_uuid, 'ref': vdi_ref}})
         self.assertEqual(called['resize'], True)
 
     def test_migrate_disk_and_power_off(self):
