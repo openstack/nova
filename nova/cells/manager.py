@@ -531,7 +531,7 @@ class CellsManager(manager.Manager):
                                         backup_type, rotation)
 
     def rebuild_instance(self, ctxt, instance, image_href, admin_password,
-                         files_to_inject, kwargs):
+                         files_to_inject, preserve_ephemeral, kwargs):
         self.msg_runner.rebuild_instance(ctxt, instance, image_href,
                                          admin_password, files_to_inject,
-                                         kwargs)
+                                         preserve_ephemeral, kwargs)
