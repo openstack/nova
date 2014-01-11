@@ -621,7 +621,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/nfs/share1'
         export_mnt_base = os.path.join(mnt_base,
-                libvirt_driver.get_hash_str(export_string))
+                utils.get_hash_str(export_string))
         file_path = os.path.join(export_mnt_base, self.name)
 
         connection_info = {'data': {'export': export_string,
@@ -644,7 +644,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         export_string = '192.168.1.1:/nfs/share1'
         options = '-o intr,nfsvers=3'
         export_mnt_base = os.path.join(mnt_base,
-                libvirt_driver.get_hash_str(export_string))
+                utils.get_hash_str(export_string))
         file_path = os.path.join(export_mnt_base, self.name)
 
         connection_info = {'data': {'export': export_string,
@@ -692,7 +692,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
         export_string = '192.168.1.1:/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
-                libvirt_driver.get_hash_str(export_string))
+                utils.get_hash_str(export_string))
         file_path = os.path.join(export_mnt_base, self.name)
 
         connection_info = {'data': {'export': export_string,
@@ -735,7 +735,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         export_string = '192.168.1.1:/volume-00001'
         options = '-o backupvolfile-server=192.168.1.2'
         export_mnt_base = os.path.join(mnt_base,
-                libvirt_driver.get_hash_str(export_string))
+                utils.get_hash_str(export_string))
         file_path = os.path.join(export_mnt_base, self.name)
 
         connection_info = {'data': {'export': export_string,

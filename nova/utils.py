@@ -22,6 +22,7 @@
 import contextlib
 import datetime
 import functools
+import hashlib
 import inspect
 import os
 import pyclbr
@@ -1137,3 +1138,8 @@ def get_image_from_system_metadata(system_meta):
         image_meta['properties'] = properties
 
     return image_meta
+
+
+def get_hash_str(base_str):
+    """returns string that represents hash of base_str (in hex format)."""
+    return hashlib.md5(base_str).hexdigest()

@@ -17,6 +17,7 @@
 import __builtin__
 import datetime
 import functools
+import hashlib
 import importlib
 import os
 import os.path
@@ -302,6 +303,12 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertRaises(netaddr.AddrFormatError,
                           utils.get_shortened_ipv6_cidr,
                           "failure")
+
+    def test_get_hash_str(self):
+        base_str = "foo"
+        value = hashlib.md5(base_str).hexdigest()
+        self.assertEqual(
+            value, utils.get_hash_str(base_str))
 
 
 class MonkeyPatchTestCase(test.NoDBTestCase):
