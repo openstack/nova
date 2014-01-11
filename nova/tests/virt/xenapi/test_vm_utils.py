@@ -1069,12 +1069,15 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                           'primary', '0', '-0',
                           check_exit_code=True, run_as_root=True)
 
-    def _check_vdi(self, vdi_ref):
+    def _check_vdi(self, vdi_ref, check_attached=True):
         vdi_rec = self.session.call_xenapi("VDI.get_record", vdi_ref)
         self.assertEqual(str(10 * unit.Mi), vdi_rec["virtual_size"])
-        vbd_ref = vdi_rec["VBDs"][0]
-        vbd_rec = self.session.call_xenapi("VBD.get_record", vbd_ref)
-        self.assertEqual(self.vm_ref, vbd_rec['VM'])
+        if check_attached:
+            vbd_ref = vdi_rec["VBDs"][0]
+            vbd_rec = self.session.call_xenapi("VBD.get_record", vbd_ref)
+            self.assertEqual(self.vm_ref, vbd_rec['VM'])
+        else:
+            self.assertEqual(0, len(vdi_rec["VBDs"]))
 
     @test_xenapi.stub_vm_utils_with_vdi_attached_here
     def test_generate_disk_with_no_fs_given(self):
@@ -1119,7 +1122,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
             self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
 
     @test_xenapi.stub_vm_utils_with_vdi_attached_here
-    def test_generate_disk_ephemeral_local(self):
+    def test_generate_disk_ephemeral_local_not_attached(self):
         self.session.is_local_connection = True
         self._expect_parted_calls()
         utils.execute('mkfs', '-t', 'ext4', '/dev/mapper/fakedev1',
@@ -1127,8 +1130,8 @@ class GenerateDiskTestCase(VMUtilsTestBase):
 
         self.mox.ReplayAll()
         vdi_ref = vm_utils._generate_disk(self.session, {"uuid": "fake_uuid"},
-            self.vm_ref, "2", "name", "ephemeral", 10, "ext4")
-        self._check_vdi(vdi_ref)
+            None, "2", "name", "ephemeral", 10, "ext4")
+        self._check_vdi(vdi_ref, check_attached=False)
 
 
 class GenerateEphemeralTestCase(VMUtilsTestBase):
