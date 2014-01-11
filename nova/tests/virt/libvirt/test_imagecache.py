@@ -29,6 +29,7 @@ from nova import conductor
 from nova import db
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt.libvirt import imagecache
@@ -227,6 +228,24 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         self.assertEqual(inuse_images, [found])
         self.assertEqual(len(image_cache_manager.unexplained_images), 0)
+
+    def test_list_backing_images_disk_notexist(self):
+        self.stubs.Set(os, 'listdir',
+                       lambda x: ['_base', 'banana-42-hamster'])
+        self.stubs.Set(os.path, 'exists',
+                       lambda x: x.find('banana-42-hamster') != -1)
+
+        def fake_get_disk(disk_path):
+            raise processutils.ProcessExecutionError()
+
+        self.stubs.Set(virtutils, 'get_disk_backing_file', fake_get_disk)
+
+        image_cache_manager = imagecache.ImageCacheManager()
+        image_cache_manager.unexplained_images = []
+        image_cache_manager.instance_names = self.stock_instance_names
+
+        self.assertRaises(processutils.ProcessExecutionError,
+                          image_cache_manager._list_backing_images)
 
     def test_find_base_file_nothing(self):
         self.stubs.Set(os.path, 'exists', lambda x: False)
