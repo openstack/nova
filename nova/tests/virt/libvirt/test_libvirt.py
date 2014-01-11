@@ -745,16 +745,17 @@ class LibvirtConnTestCase(test.TestCase):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         # Test old version of libvirt, it shouldn't see the `aes' feature
-        caps = conn.get_host_capabilities()
-        self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
+        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
+            del mock_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
+            caps = conn.get_host_capabilities()
+            self.assertNotIn('aes', [x.name for x in caps.host.cpu.features])
 
         # Test new verion of libvirt, should find the `aes' feature
-        # Cleanup the capabilities cache firstly
-        conn._caps = None
-        setattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES', 1)
-        caps = conn.get_host_capabilities()
-        delattr(libvirt, 'VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES')
-        self.assertIn('aes', [x.name for x in caps.host.cpu.features])
+        with mock.patch('nova.virt.libvirt.driver.libvirt') as mock_libvirt:
+            # Cleanup the capabilities cache firstly
+            conn._caps = None
+            caps = conn.get_host_capabilities()
+            self.assertIn('aes', [x.name for x in caps.host.cpu.features])
 
     def test_lxc_get_host_capabilities_failed(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -3643,13 +3644,22 @@ class LibvirtConnTestCase(test.TestCase):
             </capabilities>
             """
 
+        def fake_baselineCPU(cpu, flag):
+            return """<cpu mode='custom' match='exact'>
+                        <model fallback='allow'>Penryn</model>
+                        <vendor>Intel</vendor>
+                        <feature policy='require' name='xtpr'/>
+                      </cpu>
+                   """
+
         # _fake_network_info must be called before create_fake_libvirt_mock(),
         # as _fake_network_info calls importutils.import_class() and
         # create_fake_libvirt_mock() mocks importutils.import_class().
         network_info = _fake_network_info(self.stubs, 1)
         self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
                                       getCapabilities=fake_getCapabilities,
-                                      getVersion=lambda: 1005001)
+                                      getVersion=lambda: 1005001,
+                                      baselineCPU=fake_baselineCPU)
 
         instance_ref = self.test_instance
         instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
