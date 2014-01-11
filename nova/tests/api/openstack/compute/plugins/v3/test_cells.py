@@ -393,6 +393,7 @@ class CellsTest(BaseCellsTest):
         def sync_instances(self, context, **kwargs):
             call_info['project_id'] = kwargs.get('project_id')
             call_info['updated_since'] = kwargs.get('updated_since')
+            call_info['deleted'] = kwargs.get('deleted')
 
         self.stubs.Set(cells_rpcapi.CellsAPI, 'sync_instances', sync_instances)
 
@@ -417,6 +418,28 @@ class CellsTest(BaseCellsTest):
         self.assertEqual(call_info['updated_since'], expected)
 
         body = {'updated_since': 'skjdfkjsdkf'}
+        self.assertRaises(exc.HTTPBadRequest,
+                self.controller.sync_instances, req, body=body)
+
+        body = {'deleted': False}
+        self.controller.sync_instances(req, body=body)
+        self.assertIsNone(call_info['project_id'])
+        self.assertIsNone(call_info['updated_since'])
+        self.assertEqual(call_info['deleted'], False)
+
+        body = {'deleted': 'False'}
+        self.controller.sync_instances(req, body=body)
+        self.assertIsNone(call_info['project_id'])
+        self.assertIsNone(call_info['updated_since'])
+        self.assertEqual(call_info['deleted'], False)
+
+        body = {'deleted': 'True'}
+        self.controller.sync_instances(req, body=body)
+        self.assertIsNone(call_info['project_id'])
+        self.assertIsNone(call_info['updated_since'])
+        self.assertEqual(call_info['deleted'], True)
+
+        body = {'deleted': 'foo'}
         self.assertRaises(exc.HTTPBadRequest,
                 self.controller.sync_instances, req, body=body)
 

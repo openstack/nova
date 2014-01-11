@@ -18,6 +18,7 @@
 """The cells extension."""
 
 from oslo.config import cfg
+import six
 from webob import exc
 
 from nova.api.openstack import common
@@ -30,6 +31,7 @@ from nova.compute import api as compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 
 
@@ -398,6 +400,11 @@ class Controller(object):
             msg = _("Only 'updated_since', 'project_id' and 'deleted' are "
                     "understood.")
             raise exc.HTTPBadRequest(explanation=msg)
+        if isinstance(deleted, six.string_types):
+            try:
+                deleted = strutils.bool_from_string(deleted, strict=True)
+            except ValueError as err:
+                raise exc.HTTPBadRequest(explanation=str(err))
         if updated_since:
             try:
                 timeutils.parse_isotime(updated_since)
