@@ -745,6 +745,10 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
                           utils.validate_integer,
                           55, "doing 55 in a 54",
                           max_value=54)
+        self.assertRaises(exception.InvalidInput,
+                          utils.validate_integer,
+                          unichr(129), "UnicodeError",
+                          max_value=1000)
 
 
 class ValidateNeutronConfiguration(test.NoDBTestCase):
