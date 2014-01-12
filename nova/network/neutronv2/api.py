@@ -172,12 +172,13 @@ class API(base.Base):
                       instance=instance)
             return port_id
         except neutron_client_exc.NeutronClientException as e:
-            LOG.exception(_('Neutron error creating port on network %s') %
-                          network_id, instance=instance)
             # NOTE(mriedem): OverQuota in neutron is a 409
             if e.status_code == 409:
+                LOG.warning(_('Neutron error: quota exceeded'))
                 raise exception.PortLimitExceeded()
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Neutron error creating port on network %s'),
+                              network_id, instance=instance)
 
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
@@ -545,7 +546,9 @@ class API(base.Base):
                         if e.status_code == 404:
                             port = None
                         else:
-                            raise
+                            with excutils.save_and_reraise_exception():
+                                LOG.exception(_("Failed to access port %s"),
+                                              port_id)
                     if not port:
                         raise exception.PortNotFound(port_id=port_id)
                     if port.get('device_id', None):
@@ -734,7 +737,8 @@ class API(base.Base):
             if e.status_code == 404:
                 raise exception.FloatingIpNotFound(id=id)
             else:
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_('Unable to access floating IP %s'), id)
         pool_dict = self._setup_net_dict(client,
                                          fip['floating_network_id'])
         port_dict = self._setup_port_dict(client, fip['port_id'])
@@ -861,7 +865,10 @@ class API(base.Base):
         except neutronv2.exceptions.NeutronClientException as e:
             if e.status_code == 404:
                 return []
-            raise
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Unable to access floating IP %(fixed_ip)s '
+                                'for port %(port_id)'),
+                              {'fixed_ip': fixed_ip, 'port_id': port})
         return data['floatingips']
 
     def release_floating_ip(self, context, address,
