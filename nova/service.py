@@ -346,6 +346,13 @@ class WSGIService(object):
         self.port = getattr(CONF, '%s_listen_port' % name, 0)
         self.workers = (getattr(CONF, '%s_workers' % name, None) or
                         utils.cpu_count())
+        if self.workers and self.workers < 1:
+            worker_name = '%s_workers' % name
+            msg = (_("%(worker_name)s value of %(workers)s is invalid, "
+                     "must be greater than 0") %
+                   {'worker_name': worker_name,
+                    'workers': str(self.workers)})
+            raise exception.InvalidInput(msg)
         self.use_ssl = use_ssl
         self.server = wsgi.Server(name,
                                   self.app,

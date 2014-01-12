@@ -223,6 +223,11 @@ class TestWSGIService(test.TestCase):
         self.assertNotEqual(0, test_service.port)
         test_service.stop()
 
+    def test_service_start_with_illegal_workers(self):
+        CONF.set_override("osapi_compute_workers", -1)
+        self.assertRaises(exception.InvalidInput,
+                          service.WSGIService, "osapi_compute")
+
     @testtools.skipIf(not utils.is_ipv6_supported(), "no ipv6 support")
     def test_service_random_port_with_ipv6(self):
         CONF.set_default("test_service_listen", "::1")
