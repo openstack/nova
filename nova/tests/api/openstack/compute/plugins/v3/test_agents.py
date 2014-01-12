@@ -118,7 +118,7 @@ class AgentsTest(test.NoDBTestCase):
                     'url': 'xxx://xxxx/xxx/xxx',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545',
                     'agent_id': 1}}
-        res_dict = self.controller.create(req, body)
+        res_dict = self.controller.create(req, body=body)
         self.assertEqual(res_dict, response)
         self.assertEqual(self.controller.create.wsgi_code, 201)
 
@@ -132,7 +132,8 @@ class AgentsTest(test.NoDBTestCase):
                 'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(exc.HTTPConflict, self.controller.create, req, body)
+        self.assertRaises(exc.HTTPConflict, self.controller.create, req,
+                          body=body)
 
     def test_agents_create_without_md5hash(self):
         req = FakeRequest()
@@ -141,8 +142,8 @@ class AgentsTest(test.NoDBTestCase):
                 'architecture': 'x86',
                 'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_without_url(self):
         req = FakeRequest()
@@ -151,8 +152,8 @@ class AgentsTest(test.NoDBTestCase):
                 'architecture': 'x86',
                 'version': '7.0',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_without_version(self):
         req = FakeRequest()
@@ -161,8 +162,8 @@ class AgentsTest(test.NoDBTestCase):
                 'architecture': 'x86',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_without_architecture(self):
         req = FakeRequest()
@@ -171,8 +172,8 @@ class AgentsTest(test.NoDBTestCase):
                 'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_without_os(self):
         req = FakeRequest()
@@ -181,8 +182,8 @@ class AgentsTest(test.NoDBTestCase):
                 'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_without_hypervisor(self):
         req = FakeRequest()
@@ -191,20 +192,20 @@ class AgentsTest(test.NoDBTestCase):
                 'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_with_wrong_type(self):
         req = FakeRequest()
         body = {'agent': None}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_with_empty_type(self):
         req = FakeRequest()
         body = {}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def _test_agents_create_with_invalid_length(self, key):
         req = FakeRequest()
@@ -215,8 +216,8 @@ class AgentsTest(test.NoDBTestCase):
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['agent'][key] = 'x' * 256
-        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
-                          req, body)
+        self.assertRaises(exception.ValidationError, self.controller.create,
+                          req, body=body)
 
     def test_agents_create_with_invalid_length_hypervisor(self):
         self._test_agents_create_with_invalid_length('hypervisor')
@@ -297,39 +298,39 @@ class AgentsTest(test.NoDBTestCase):
                     'version': '7.0',
                     'url': 'xxx://xxxx/xxx/xxx',
                     'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
-        res_dict = self.controller.update(req, 1, body)
+        res_dict = self.controller.update(req, 1, body=body)
         self.assertEqual(res_dict, response)
 
     def test_agents_update_without_md5hash(self):
         req = FakeRequest()
         body = {'agent': {'version': '7.0',
                 'url': 'xxx://xxxx/xxx/xxx'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          req, 1, body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 1, body=body)
 
     def test_agents_update_without_url(self):
         req = FakeRequest()
         body = {'agent': {'version': '7.0'}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          req, 1, body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 1, body=body)
 
     def test_agents_update_without_version(self):
         req = FakeRequest()
         body = {'agent': {}}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          req, 1, body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 1, body=body)
 
     def test_agents_update_with_wrong_type(self):
         req = FakeRequest()
         body = {'agent': None}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          req, 1, body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 1, body=body)
 
     def test_agents_update_with_empty(self):
         req = FakeRequest()
         body = {}
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          req, 1, body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 1, body=body)
 
     def _test_agents_update_with_invalid_length(self, key):
         req = FakeRequest()
@@ -337,8 +338,8 @@ class AgentsTest(test.NoDBTestCase):
                 'url': 'xxx://xxxx/xxx/xxx',
                 'md5hash': 'add6bb58e139be103324d04d82d8f545'}}
         body['agent'][key] = 'x' * 256
-        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
-                          req, 1, body)
+        self.assertRaises(exception.ValidationError, self.controller.update,
+                          req, 1, body=body)
 
     def test_agents_update_with_invalid_length_version(self):
         self._test_agents_update_with_invalid_length('version')
