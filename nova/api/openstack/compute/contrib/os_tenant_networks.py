@@ -130,6 +130,8 @@ class NetworkController(object):
             if CONF.enable_network_quota and reservation:
                 QUOTAS.commit(context, reservation)
             response = exc.HTTPAccepted()
+        except exception.PolicyNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=str(e))
         except exception.NetworkNotFound:
             response = exc.HTTPNotFound(_("Network not found"))
 
@@ -179,6 +181,8 @@ class NetworkController(object):
                                                label=label, **kwargs)
             if CONF.enable_network_quota:
                 QUOTAS.commit(context, reservation)
+        except exception.PolicyNotAuthorized as e:
+            raise exc.HTTPForbidden(explanation=str(e))
         except Exception:
             if CONF.enable_network_quota:
                 QUOTAS.rollback(context, reservation)
