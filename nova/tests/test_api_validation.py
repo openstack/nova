@@ -15,6 +15,7 @@
 #    under the License.
 
 from nova.api import validation
+from nova.api.validation import parameter_types
 from nova import exception
 from nova import test
 
@@ -332,6 +333,179 @@ class IntegerRangeTestCase(APIValidationTestCase):
         detail = ("Invalid input for field/attribute foo. Value: 11."
                   " 11.0 is greater than the maximum of 10")
         self.check_validation_error(self.post, body={'foo': '11'},
+                                    expected_detail=detail)
+
+
+class BooleanTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(BooleanTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.boolean,
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_boolean(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': True}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': False}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'True'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'False'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '1'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '0'}))
+
+    def test_validate_boolean_fails(self):
+        enum_boolean = ("[True, 'True', 'TRUE', 'true', '1',"
+                        " False, 'False', 'FALSE', 'false', '0']")
+
+        detail = ("Invalid input for field/attribute foo. Value: bar."
+                  " 'bar' is not one of %s") % enum_boolean
+        self.check_validation_error(self.post, body={'foo': 'bar'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: 2."
+                  " '2' is not one of %s") % enum_boolean
+        self.check_validation_error(self.post, body={'foo': '2'},
+                                    expected_detail=detail)
+
+
+class HostnameTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(HostnameTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.hostname,
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_hostname(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'localhost'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'localhost.localdomain.com'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my-host'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my_host'}))
+
+    def test_validate_hostname_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: True."
+                  " True is not of type 'string'")
+        self.check_validation_error(self.post, body={'foo': True},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: 1."
+                  " 1 is not of type 'string'")
+        self.check_validation_error(self.post, body={'foo': 1},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: my$host."
+                  " 'my$host' does not match '^[a-zA-Z0-9-._]*$'")
+        self.check_validation_error(self.post, body={'foo': 'my$host'},
+                                    expected_detail=detail)
+
+
+class HostnameIPaddressTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(HostnameIPaddressTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.hostname_or_ip_address,
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_hostname_or_ip_address(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'localhost'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'localhost.localdomain.com'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my-host'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 'my_host'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '192.168.10.100'}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '2001:db8::9abc'}))
+
+    def test_validate_hostname_or_ip_address_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: True."
+                  " True is not of type 'string'")
+        self.check_validation_error(self.post, body={'foo': True},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: 1."
+                  " 1 is not of type 'string'")
+        self.check_validation_error(self.post, body={'foo': 1},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: my$host."
+                  " 'my$host' does not match '^[a-zA-Z0-9-_.:]*$'")
+        self.check_validation_error(self.post, body={'foo': 'my$host'},
+                                    expected_detail=detail)
+
+
+class TcpUdpPortTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(TcpUdpPortTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': parameter_types.tcp_udp_port,
+            },
+        }
+
+        @validation.schema(request_body_schema=schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_tcp_udp_port(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': 1024}))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '1024'}))
+
+    def test_validate_tcp_udp_port_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: True."
+                  " True is not of type 'integer', 'string'")
+        self.check_validation_error(self.post, body={'foo': True},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: 65536."
+                  " 65536.0 is greater than the maximum of 65535")
+        self.check_validation_error(self.post, body={'foo': 65536},
                                     expected_detail=detail)
 
 

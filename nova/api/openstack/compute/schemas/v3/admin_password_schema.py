@@ -14,13 +14,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.validation import parameter_types
+
+
 change_password = {
     'type': 'object',
     'properties': {
         'change_password': {
             'type': 'object',
             'properties': {
-                'admin_password': {'type': 'string'},
+                'admin_password': parameter_types.admin_password,
             },
             'required': ['admin_password'],
             'additionalProperties': False,
