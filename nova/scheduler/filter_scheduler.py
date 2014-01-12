@@ -127,15 +127,6 @@ class FilterScheduler(driver.Scheduler):
 
         self.notifier.info(context, 'scheduler.run_instance.end', payload)
 
-    def select_hosts(self, context, request_spec, filter_properties):
-        """Selects a filtered set of hosts."""
-        instance_uuids = request_spec.get('instance_uuids')
-        hosts = [host.obj.host for host in self._schedule(context,
-            request_spec, filter_properties, instance_uuids)]
-        if not hosts:
-            raise exception.NoValidHost(reason="")
-        return hosts
-
     def select_destinations(self, context, request_spec, filter_properties):
         """Selects a filtered set of hosts and nodes."""
         num_instances = request_spec['num_instances']

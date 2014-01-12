@@ -78,6 +78,7 @@ class SchedulerAPI(rpcclient.RpcProxy):
         handle the version_cap being set to 2.9.
 
         ... - Deprecated live_migration() call, moved to conductor
+        ... - Deprecated select_hosts()
     '''
 
     #
@@ -136,9 +137,3 @@ class SchedulerAPI(rpcclient.RpcProxy):
                          image=image_p, request_spec=request_spec,
                          filter_properties=filter_properties,
                          reservations=reservations_p)
-
-    def select_hosts(self, ctxt, request_spec, filter_properties):
-        cctxt = self.client.prepare(version='2.6')
-        return cctxt.call(ctxt, 'select_hosts',
-                          request_spec=request_spec,
-                          filter_properties=filter_properties)

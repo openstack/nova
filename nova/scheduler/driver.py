@@ -145,8 +145,3 @@ class Scheduler(object):
         """
         msg = _("Driver must implement select_destinations")
         raise NotImplementedError(msg)
-
-    def select_hosts(self, context, request_spec, filter_properties):
-        """Must override select_hosts method for scheduler to work."""
-        msg = _("Driver must implement select_hosts")
-        raise NotImplementedError(msg)

@@ -533,57 +533,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual(50, hosts[0].weight)
 
-    def test_select_hosts_happy_day(self):
-        """select_hosts is basically a wrapper around the _select() method.
-
-        Similar to the _select tests, this just does a happy path test to
-        ensure there is nothing glaringly wrong.
-        """
-
-        self.next_weight = 1.0
-
-        selected_hosts = []
-
-        def _fake_weigh_objects(_self, functions, hosts, options):
-            self.next_weight += 2.0
-            host_state = hosts[0]
-            selected_hosts.append(host_state.host)
-            return [weights.WeighedHost(host_state, self.next_weight)]
-
-        sched = fakes.FakeFilterScheduler()
-        fake_context = context.RequestContext('user', 'project',
-            is_admin=True)
-
-        self.stubs.Set(sched.host_manager, 'get_filtered_hosts',
-            fake_get_filtered_hosts)
-        self.stubs.Set(weights.HostWeightHandler,
-            'get_weighed_objects', _fake_weigh_objects)
-        fakes.mox_host_manager_db_calls(self.mox, fake_context)
-
-        request_spec = {'num_instances': 10,
-                        'instance_type': {'memory_mb': 512, 'root_gb': 512,
-                                          'ephemeral_gb': 0,
-                                          'vcpus': 1},
-                        'instance_properties': {'project_id': 1,
-                                                'root_gb': 512,
-                                                'memory_mb': 512,
-                                                'ephemeral_gb': 0,
-                                                'vcpus': 1,
-                                                'os_type': 'Linux'}}
-        self.mox.ReplayAll()
-        hosts = sched.select_hosts(fake_context, request_spec, {})
-        self.assertEqual(len(hosts), 10)
-        self.assertEqual(hosts, selected_hosts)
-
-    def test_select_hosts_no_valid_host(self):
-
-        def _return_no_host(*args, **kwargs):
-            return []
-
-        self.stubs.Set(self.driver, '_schedule', _return_no_host)
-        self.assertRaises(exception.NoValidHost,
-                          self.driver.select_hosts, self.context, {}, {})
-
     def test_select_destinations(self):
         """select_destinations is basically a wrapper around _schedule().
 

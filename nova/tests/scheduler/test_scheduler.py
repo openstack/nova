@@ -451,9 +451,9 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                               self.context, None, request)
 
     def test_select_hosts_throws_rpc_clientexception(self):
-        self.mox.StubOutWithMock(self.manager.driver, 'select_hosts')
+        self.mox.StubOutWithMock(self.manager.driver, 'select_destinations')
 
-        self.manager.driver.select_hosts(self.context, {}, {}).AndRaise(
+        self.manager.driver.select_destinations(self.context, {}, {}).AndRaise(
                 exception.NoValidHost(reason=""))
 
         self.mox.ReplayAll()
@@ -591,10 +591,6 @@ class SchedulerDriverBaseTestCase(SchedulerTestCase):
                          self.driver.schedule_run_instance,
                          self.context, fake_request_spec, None, None, None,
                          None, None, False)
-
-    def test_unimplemented_select_hosts(self):
-        self.assertRaises(NotImplementedError,
-                          self.driver.select_hosts, self.context, {}, {})
 
     def test_unimplemented_select_destinations(self):
         self.assertRaises(NotImplementedError,
