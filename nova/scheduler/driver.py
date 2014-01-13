@@ -104,6 +104,10 @@ class Scheduler(object):
                 CONF.scheduler_host_manager)
         self.servicegroup_api = servicegroup.API()
 
+    def run_periodic_tasks(self, context):
+        """Manager calls this so drivers can perform periodic tasks."""
+        pass
+
     def hosts_up(self, context, topic):
         """Return the list of hosts that have a running service for topic."""
 
