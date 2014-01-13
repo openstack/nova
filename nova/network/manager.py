@@ -65,6 +65,7 @@ from nova.network import rpcapi as network_rpcapi
 from nova.network.security_group import openstack_driver
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
+from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -241,9 +242,8 @@ class RPCAllocateFixedIP(object):
                     address)
 
         if network['multi_host']:
-            service = self.db.service_get_by_host_and_topic(context,
-                                                            host,
-                                                            CONF.network_topic)
+            service = service_obj.Service.get_by_host_and_topic(
+                context, host, CONF.network_topic)
             if not service or not self.servicegroup_api.service_is_up(service):
                 # NOTE(vish): deallocate the fixed ip locally but don't
                 #             teardown network devices
