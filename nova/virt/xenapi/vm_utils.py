@@ -50,6 +50,7 @@ from nova.openstack.common import versionutils
 from nova.openstack.common import xmlutils
 from nova import utils
 from nova.virt import configdrive
+from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt import hardware
@@ -1784,12 +1785,36 @@ def compile_info(session, vm_ref):
             'cpu_time': 0}
 
 
-def compile_diagnostics(record):
+def compile_instance_diagnostics(instance, vm_rec):
+    vm_power_state_int = XENAPI_POWER_STATE[vm_rec['power_state']]
+    vm_power_state = power_state.STATE_MAP[vm_power_state_int]
+    config_drive = configdrive.required_by(instance)
+
+    diags = diagnostics.Diagnostics(state=vm_power_state,
+                                    driver='xenapi',
+                                    config_drive=config_drive)
+
+    for cpu_num in range(0, long(vm_rec['VCPUs_max'])):
+        diags.add_cpu()
+
+    for vif in vm_rec['VIFs']:
+        diags.add_nic()
+
+    for vbd in vm_rec['VBDs']:
+        diags.add_disk()
+
+    max_mem_bytes = long(vm_rec['memory_dynamic_max'])
+    diags.memory_details.maximum = max_mem_bytes / units.Mi
+
+    return diags
+
+
+def compile_diagnostics(vm_rec):
     """Compile VM diagnostics data."""
     try:
         keys = []
         diags = {}
-        vm_uuid = record["uuid"]
+        vm_uuid = vm_rec["uuid"]
         xml = _get_rrd(_get_rrd_server(), vm_uuid)
         if xml:
             rrd = xmlutils.safe_minidom_parse_string(xml)

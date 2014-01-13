@@ -237,6 +237,14 @@ def after_VBD_create(vbd_ref, vbd_rec):
         vdi_rec['VBDs'].append(vbd_ref)
 
 
+def after_VIF_create(vif_ref, vif_rec):
+    """Create backref from VM to VIF when VIF is created.
+    """
+    vm_ref = vif_rec['VM']
+    vm_rec = _db_content['VM'][vm_ref]
+    vm_rec['VIFs'].append(vif_ref)
+
+
 def after_VM_create(vm_ref, vm_rec):
     """Create read-only fields in the VM record."""
     vm_rec.setdefault('domid', -1)
@@ -246,6 +254,7 @@ def after_VM_create(vm_ref, vm_rec):
     vm_rec.setdefault('memory_dynamic_max', str(8 * units.Gi))
     vm_rec.setdefault('VCPUs_max', str(4))
     vm_rec.setdefault('VBDs', [])
+    vm_rec.setdefault('VIFs', [])
     vm_rec.setdefault('resident_on', '')
 
 
