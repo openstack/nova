@@ -17,7 +17,7 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.schemas.v3 import extended_volumes_schema
+from nova.api.openstack.compute.schemas.v3 import extended_volumes
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -52,8 +52,7 @@ class ExtendedVolumesController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('swap_volume_attachment')
-    @validation.schema(request_body_schema=
-                       extended_volumes_schema.swap_volume_attachment)
+    @validation.schema(extended_volumes.swap_volume_attachment)
     def swap(self, req, id, body):
         context = req.environ['nova.context']
         authorize_swap(context)
@@ -126,7 +125,7 @@ class ExtendedVolumesController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('attach')
-    @validation.schema(request_body_schema=extended_volumes_schema.attach)
+    @validation.schema(extended_volumes.attach)
     def attach(self, req, id, body):
         server_id = id
         context = req.environ['nova.context']
@@ -161,7 +160,7 @@ class ExtendedVolumesController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('detach')
-    @validation.schema(request_body_schema=extended_volumes_schema.detach)
+    @validation.schema(extended_volumes.detach)
     def detach(self, req, id, body):
         server_id = id
         context = req.environ['nova.context']

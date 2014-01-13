@@ -17,7 +17,7 @@
 
 import webob
 
-from nova.api.openstack.compute.schemas.v3 import flavor_access_schema
+from nova.api.openstack.compute.schemas.v3 import flavor_access
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -107,8 +107,7 @@ class FlavorActionController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action("add_tenant_access")
-    @validation.schema(request_body_schema=
-                       flavor_access_schema.add_tenant_access)
+    @validation.schema(flavor_access.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="add_tenant_access")
@@ -129,8 +128,7 @@ class FlavorActionController(wsgi.Controller):
 
     @extensions.expected_errors((400, 403, 404))
     @wsgi.action("remove_tenant_access")
-    @validation.schema(request_body_schema=
-                       flavor_access_schema.remove_tenant_access)
+    @validation.schema(flavor_access.remove_tenant_access)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="remove_tenant_access")
