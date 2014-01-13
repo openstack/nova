@@ -24,3 +24,4 @@ def register_all():
     __import__('nova.objects.migration')
     __import__('nova.objects.quotas')
     __import__('nova.objects.virtual_interface')
+    __import__('nova.objects.network')
