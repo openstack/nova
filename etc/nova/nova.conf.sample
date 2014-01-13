@@ -2738,6 +2738,12 @@
 # value)
 #memcache_secret_key=<None>
 
+# (optional) indicate whether to set the X-Service-Catalog
+# header. If False, middleware will not ask for service
+# catalog on token validation and will not set the X-Service-
+# Catalog header. (boolean value)
+#include_service_catalog=true
+
 
 [libvirt]
 
