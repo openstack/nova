@@ -19,9 +19,11 @@
 
 import webob
 
+from nova.api.openstack.compute.schemas.v3 import flavor_access_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api import validation
 from nova import exception
 from nova.objects import flavor as flavor_obj
 from nova.openstack.common.gettextutils import _
@@ -156,19 +158,14 @@ class FlavorActionController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.serializers(xml=FlavorAccessTemplate)
     @wsgi.action("add_tenant_access")
+    @validation.schema(request_body_schema=
+                       flavor_access_schema.add_tenant_access)
     def _add_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="add_tenant_access")
 
-        if not self.is_valid_body(body, 'add_tenant_access'):
-            raise webob.exc.HTTPBadRequest(explanation=_("Invalid request"))
-
         vals = body['add_tenant_access']
-        try:
-            tenant = vals['tenant_id']
-        except KeyError:
-            raise webob.exc.HTTPBadRequest(
-                explanation=_("tenant_id is required"))
+        tenant = vals['tenant_id']
 
         flavor = flavor_obj.Flavor(context=context, flavorid=id)
         try:
@@ -184,19 +181,14 @@ class FlavorActionController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404))
     @wsgi.serializers(xml=FlavorAccessTemplate)
     @wsgi.action("remove_tenant_access")
+    @validation.schema(request_body_schema=
+                       flavor_access_schema.remove_tenant_access)
     def _remove_tenant_access(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context, action="remove_tenant_access")
 
-        if not self.is_valid_body(body, 'remove_tenant_access'):
-            raise webob.exc.HTTPBadRequest(explanation=_("Invalid request"))
-
         vals = body['remove_tenant_access']
-        try:
-            tenant = vals['tenant_id']
-        except KeyError:
-            raise webob.exc.HTTPBadRequest(
-                explanation=_("tenant_id is required"))
+        tenant = vals['tenant_id']
 
         flavor = flavor_obj.Flavor(context=context, flavorid=id)
         try:

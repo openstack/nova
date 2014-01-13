@@ -274,7 +274,7 @@ class FlavorAccessTest(test.NoDBTestCase):
         req = fakes.HTTPRequestV3.blank('/flavors/3/action',
                                         use_admin_context=True)
         result = self.flavor_action_controller.\
-            _add_tenant_access(req, '3', body)
+            _add_tenant_access(req, '3', body=body)
         self.assertEqual(result, expected)
 
     def test_add_tenant_access_with_non_existed_flavor(self):
@@ -287,14 +287,14 @@ class FlavorAccessTest(test.NoDBTestCase):
                                         use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_action_controller._add_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_add_tenant_access_with_no_admin_user(self):
         req = fakes.HTTPRequestV3.blank('/flavors/2/action')
         body = {'add_tenant_access': {'tenant_id': 'proj2'}}
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.flavor_action_controller._add_tenant_access,
-                          req, '2', body)
+                          req, '2', body=body)
 
     def test_add_tenant_access_without_policy_check(self):
         req = fakes.HTTPRequestV3.blank('/flavors/3/action')
@@ -306,7 +306,7 @@ class FlavorAccessTest(test.NoDBTestCase):
         self.stubs.Set(flavor_access, 'authorize', fake_authorize)
         self.assertRaises(exc.HTTPForbidden,
                           self.flavor_action_controller._add_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_add_tenant_access_without_tenant_id(self):
         def stub_add_flavor_access(context, flavorid, projectid):
@@ -316,9 +316,9 @@ class FlavorAccessTest(test.NoDBTestCase):
         body = {'add_tenant_access': {}}
         req = fakes.HTTPRequestV3.blank('/flavors/3/action',
                                         use_admin_context=True)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.flavor_action_controller._add_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_add_tenant_access_with_invalid_request(self):
         def stub_add_flavor_access(context, flavorid, projectid):
@@ -328,9 +328,9 @@ class FlavorAccessTest(test.NoDBTestCase):
         body = {'add_tenant_access': None}
         req = fakes.HTTPRequestV3.blank('/flavors/3/action',
                                         use_admin_context=True)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.flavor_action_controller._add_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_add_tenant_access_with_already_added_access(self):
         def stub_add_flavor_access(context, flavorid, projectid):
@@ -343,7 +343,7 @@ class FlavorAccessTest(test.NoDBTestCase):
                                         use_admin_context=True)
         self.assertRaises(exc.HTTPConflict,
                           self.flavor_action_controller._add_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_remove_tenant_access_with_bad_access(self):
         def stub_remove_flavor_access(context, flavorid, projectid):
@@ -356,7 +356,7 @@ class FlavorAccessTest(test.NoDBTestCase):
                                         use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_action_controller._remove_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_remove_tenant_access_with_non_existed_flavor(self):
         def stub_remove_flavor_access(context, flavorid, projectid):
@@ -368,7 +368,7 @@ class FlavorAccessTest(test.NoDBTestCase):
                                         use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_action_controller._remove_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_remove_tenant_access_without_tenant_id(self):
         def stub_remove_flavor_access(context, flavorid, projectid):
@@ -378,9 +378,9 @@ class FlavorAccessTest(test.NoDBTestCase):
         body = {'remove_tenant_access': {}}
         req = fakes.HTTPRequestV3.blank('/flavors/3/action',
                                         use_admin_context=True)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.flavor_action_controller._remove_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_remove_tenant_access_with_invalid_request(self):
         def stub_remove_flavor_access(context, flavorid, projectid):
@@ -390,9 +390,9 @@ class FlavorAccessTest(test.NoDBTestCase):
         body = {'remove_tenant_access': None}
         req = fakes.HTTPRequestV3.blank('/flavors/3/action',
                                         use_admin_context=True)
-        self.assertRaises(exc.HTTPBadRequest,
+        self.assertRaises(exception.ValidationError,
                           self.flavor_action_controller._remove_tenant_access,
-                          req, '3', body)
+                          req, '3', body=body)
 
     def test_remove_tenant_access_with_no_admin_user(self):
         req = fakes.HTTPRequestV3.blank('flavors/2/action',
@@ -400,7 +400,7 @@ class FlavorAccessTest(test.NoDBTestCase):
         body = {'remove_tenant_access': {'tenant_id': 'proj2'}}
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.flavor_action_controller._remove_tenant_access,
-                          req, '2', body)
+                          req, '2', body=body)
 
     def test_remove_tenant_access_without_policy_check(self):
         req = fakes.HTTPRequestV3.blank('/flavors/2/action')
@@ -412,7 +412,7 @@ class FlavorAccessTest(test.NoDBTestCase):
         self.stubs.Set(flavor_access, 'authorize', fake_authorize)
         self.assertRaises(exc.HTTPForbidden,
                           self.flavor_action_controller._remove_tenant_access,
-                          req, '2', body)
+                          req, '2', body=body)
 
 
 class FlavorAccessSerializerTest(test.NoDBTestCase):
