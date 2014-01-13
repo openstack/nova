@@ -19,14 +19,15 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import extended_volumes_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.openstack.common import uuidutils
 from nova import volume
 
 ALIAS = "os-extended-volumes"
@@ -54,22 +55,20 @@ class ExtendedVolumesController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('swap_volume_attachment')
+    @validation.schema(request_body_schema=
+                       extended_volumes_schema.swap_volume_attachment)
     def swap(self, req, id, body):
         context = req.environ['nova.context']
         authorize_swap(context)
 
-        try:
-            old_volume_id = body['swap_volume_attachment']['old_volume_id']
-            self._validate_volume_id(old_volume_id)
-            old_volume = self.volume_api.get(context, old_volume_id)
+        old_volume_id = body['swap_volume_attachment']['old_volume_id']
+        new_volume_id = body['swap_volume_attachment']['new_volume_id']
 
-            new_volume_id = body['swap_volume_attachment']['new_volume_id']
-            self._validate_volume_id(new_volume_id)
+        try:
+            old_volume = self.volume_api.get(context, old_volume_id)
             new_volume = self.volume_api.get(context, new_volume_id)
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
-        except KeyError:
-            raise exc.HTTPBadRequest("The request body is invalid")
 
         try:
             instance = self.compute_api.get(context, id,
@@ -131,32 +130,17 @@ class ExtendedVolumesController(wsgi.Controller):
                 # the core API adding it in its 'detail' method.
                 self._extend_server(context, server, db_instance)
 
-    def _validate_volume_id(self, volume_id):
-        if not uuidutils.is_uuid_like(volume_id):
-            msg = _("Bad volumeId format: volumeId is "
-                    "not in proper format (%s)") % volume_id
-            raise exc.HTTPBadRequest(explanation=msg)
-
     @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('attach')
+    @validation.schema(request_body_schema=extended_volumes_schema.attach)
     def attach(self, req, id, body):
         server_id = id
         context = req.environ['nova.context']
         authorize_attach(context)
 
-        if not self.is_valid_body(body, 'attach'):
-            raise exc.HTTPBadRequest(_("The request body invalid"))
-
-        try:
-            volume_id = body['attach']['volume_id']
-        except KeyError:
-            raise exc.HTTPBadRequest(_("Could not find volume_id from request"
-                                       "parameter"))
-
+        volume_id = body['attach']['volume_id']
         device = body['attach'].get('device')
-
-        self._validate_volume_id(volume_id)
 
         LOG.audit(_("Attach volume %(volume_id)s to instance %(server_id)s "
                     "at %(device)s"),
@@ -184,19 +168,14 @@ class ExtendedVolumesController(wsgi.Controller):
     @extensions.expected_errors((400, 404, 409))
     @wsgi.response(202)
     @wsgi.action('detach')
+    @validation.schema(request_body_schema=extended_volumes_schema.detach)
     def detach(self, req, id, body):
         server_id = id
         context = req.environ['nova.context']
         authorize_detach(context)
 
-        if not self.is_valid_body(body, 'detach'):
-            raise exc.HTTPBadRequest(_("The request body invalid"))
-        try:
-            volume_id = body['detach']['volume_id']
-        except KeyError:
-            raise exc.HTTPBadRequest(_("Could not find volume_id from request"
-                                       "parameter"))
-        self._validate_volume_id(volume_id)
+        volume_id = body['detach']['volume_id']
+
         LOG.audit(_("Detach volume %(volume_id)s from "
                     "instance %(server_id)s"),
                   {"volume_id": volume_id,

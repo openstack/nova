@@ -299,7 +299,7 @@ class ExtendedVolumesTest(test.TestCase):
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = context.get_admin_context()
-        return self.Controller.swap(req, UUID1, body)
+        return self.Controller.swap(req, UUID1, body=body)
 
     def test_swap_volume(self):
         self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
@@ -326,13 +326,15 @@ class ExtendedVolumesTest(test.TestCase):
     def test_swap_volume_with_bad_action(self):
         self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
         body = {'swap_volume_attachment_bad_action': None}
-        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap, body=body)
+        self.assertRaises(exception.ValidationError, self._test_swap,
+                          body=body)
 
     def test_swap_volume_with_invalid_body(self):
         self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
         body = {'swap_volume_attachment': {'bad_volume_id_body': UUID1,
                                            'new_volume_id': UUID2}}
-        self.assertRaises(webob.exc.HTTPBadRequest, self._test_swap, body=body)
+        self.assertRaises(exception.ValidationError, self._test_swap,
+                          body=body)
 
     def test_swap_volume_with_invalid_volume(self):
         self.stubs.Set(compute.api.API, 'swap_volume',
