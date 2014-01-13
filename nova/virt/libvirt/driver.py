@@ -1523,6 +1523,16 @@ class LibvirtDriver(driver.ComputeDriver):
 
     @staticmethod
     def _wait_for_block_job(domain, disk_path, abort_on_error=False):
+        """Wait for libvirt block job to complete.
+
+        Libvirt may return either cur==end or an empty dict when
+        the job is complete, depending on whether the job has been
+        cleaned up by libvirt yet, or not.
+
+        :returns: True if still in progress
+                  False if completed
+        """
+
         status = domain.blockJobInfo(disk_path, 0)
         if status == -1 and abort_on_error:
             msg = _('libvirt error while requesting blockjob info.')
@@ -1533,7 +1543,7 @@ class LibvirtDriver(driver.ComputeDriver):
         except Exception:
             return False
 
-        if cur == end and cur != 0 and end != 0:
+        if cur == end:
             return False
         else:
             return True
