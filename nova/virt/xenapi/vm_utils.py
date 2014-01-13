@@ -330,7 +330,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
     if device_id:
         rec['platform']['device_id'] = device_id
 
-    vm_ref = session.call_xenapi('VM.create', rec)
+    vm_ref = session.VM.create(rec)
     LOG.debug(_('Created VM'), instance=instance)
     return vm_ref
 
@@ -338,7 +338,7 @@ def create_vm(session, instance, name_label, kernel, ramdisk,
 def destroy_vm(session, instance, vm_ref):
     """Destroys a VM record."""
     try:
-        session.call_xenapi('VM.destroy', vm_ref)
+        session.VM.destroy(vm_ref)
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         return
