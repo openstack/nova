@@ -1154,12 +1154,10 @@ class LibvirtDriver(driver.ComputeDriver):
         instance_name = instance['name']
         virt_dom = self._lookup_by_name(instance_name)
         disk_dev = mountpoint.rpartition("/")[2]
-        disk_info = {
-            'dev': disk_dev,
-            'bus': blockinfo.get_disk_bus_for_disk_dev(
-                CONF.libvirt.virt_type, disk_dev),
-            'type': 'disk',
-            }
+        bdm = {
+            'device_name': disk_dev,
+            'disk_bus': disk_bus,
+            'device_type': device_type}
 
         # Note(cfb): If the volume has a custom block size, check that
         #            that we are using QEMU/KVM and libvirt >= 0.10.2. The
@@ -1182,6 +1180,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         "required.") % ver
                 raise exception.Invalid(msg)
 
+        disk_info = blockinfo.get_info_from_bdm(CONF.libvirt.virt_type, bdm)
         conf = self.volume_driver_method('connect_volume',
                                          connection_info,
                                          disk_info)

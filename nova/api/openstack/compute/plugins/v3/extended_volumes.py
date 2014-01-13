@@ -129,6 +129,8 @@ class ExtendedVolumesController(wsgi.Controller):
 
         volume_id = body['attach']['volume_id']
         device = body['attach'].get('device')
+        disk_bus = body['attach'].get('disk_bus')
+        device_type = body['attach'].get('device_type')
 
         LOG.audit(_("Attach volume %(volume_id)s to instance %(server_id)s "
                     "at %(device)s"),
@@ -141,7 +143,9 @@ class ExtendedVolumesController(wsgi.Controller):
                                        want_objects=True)
         try:
             self.compute_api.attach_volume(context, instance,
-                                           volume_id, device)
+                                           volume_id, device,
+                                           disk_bus=disk_bus,
+                                           device_type=device_type)
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:

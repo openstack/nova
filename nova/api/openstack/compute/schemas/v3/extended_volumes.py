@@ -49,6 +49,12 @@ attach = {
                     #       nova/block_device.py.
                     'pattern': '(^/dev/x{0,1}[a-z]{0,1}d{0,1})([a-z]+)[0-9]*$'
                 },
+                'disk_bus': {
+                    'type': 'string'
+                },
+                'device_type': {
+                    'type': 'string',
+                }
             },
             'required': ['volume_id'],
             'additionalProperties': False,

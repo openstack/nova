@@ -1,6 +1,8 @@
 {
     "attach": {
         "volume_id": "a26887c6-c47b-4654-abb5-dfadf7d3f803",
-        "device": "/dev/vdd"
+        "device": "/dev/vdd",
+        "disk_bus": "ide",
+        "device_type": "cdrom"
     }
 }

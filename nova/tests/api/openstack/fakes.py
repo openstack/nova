@@ -443,7 +443,7 @@ def fake_instance_get(**kwargs):
     return _return_server
 
 
-def fake_actions_to_locked_server(self, context, instance, *args):
+def fake_actions_to_locked_server(self, context, instance, *args, **kwargs):
     raise exc.InstanceIsLocked(instance_uuid=instance['uuid'])
 
 

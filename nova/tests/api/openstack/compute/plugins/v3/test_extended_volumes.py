@@ -53,28 +53,32 @@ def fake_compute_get_instance_bdms(*args, **kwargs):
     return [{'volume_id': UUID1}, {'volume_id': UUID2}]
 
 
-def fake_attach_volume(self, context, instance, volume_id, device):
+def fake_attach_volume(self, context, instance, volume_id,
+                       device, disk_bus, device_type):
     pass
 
 
 def fake_attach_volume_not_found_vol(self, context, instance, volume_id,
-                                     device):
+                                     device, disk_bus, device_type):
     raise exception.VolumeNotFound(volume_id=volume_id)
 
 
 def fake_attach_volume_invalid_device_path(self, context, instance,
-                                           volume_id, device):
+                                           volume_id, device, disk_bus,
+                                           device_type):
     raise exception.InvalidDevicePath(path=device)
 
 
 def fake_attach_volume_instance_invalid_state(self, context, instance,
-                                              volume_id, device):
+                                              volume_id, device, disk_bus,
+                                              device_type):
     raise exception.InstanceInvalidState(instance_uuid=UUID1, state='',
                                          method='', attr='')
 
 
 def fake_attach_volume_invalid_volume(self, context, instance,
-                                      volume_id, device):
+                                      volume_id, device, disk_bus,
+                                      device_type):
     raise exception.InvalidVolume(reason='')
 
 
@@ -99,6 +103,12 @@ def fake_swap_volume_unattached_volume(self, context, instance,
 
 def fake_detach_volume_invalid_volume(self, context, instance, volume):
     raise exception.InvalidVolume(reason='')
+
+
+def fake_swap_volume_instance_invalid_state(self, context, instance,
+                                              volume_id, device):
+    raise exception.InstanceInvalidState(instance_uuid=UUID1, state='',
+                                         method='', attr='')
 
 
 def fake_volume_get(*args, **kwargs):
@@ -225,6 +235,13 @@ class ExtendedVolumesTest(test.TestCase):
         res = self._make_request(url, {"attach": {"volume_id": UUID1}})
         self.assertEqual(res.status_int, 409)
 
+    def test_attach_volume_disk_bus_and_disk_dev(self):
+        url = "/v3/servers/%s/action" % UUID1
+        res = self._make_request(url, {"attach": {"volume_id": UUID1,
+                                                  "device": "/dev/vdb",
+                                                  "disk_bus": "ide",
+                                                  "device_type": "cdrom"}})
+
     def test_attach_volume_with_bad_id(self):
         url = "/v3/servers/%s/action" % UUID1
         res = self._make_request(url, {"attach": {"volume_id": 'xxx'}})
@@ -339,7 +356,7 @@ class ExtendedVolumesTest(test.TestCase):
 
     def test_swap_volume_with_bad_state_instance(self):
         self.stubs.Set(compute.api.API, 'swap_volume',
-                       fake_attach_volume_instance_invalid_state)
+                       fake_swap_volume_instance_invalid_state)
         self.assertRaises(webob.exc.HTTPConflict, self._test_swap)
 
     def test_swap_volume_no_attachment(self):

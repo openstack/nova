@@ -70,6 +70,8 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
 
     def test_attach_volume(self):
         device_name = '/dev/vdd'
+        disk_bus = 'ide'
+        device_type = 'cdrom'
         self.stubs.Set(cinder.API, 'get', fakes.stub_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', lambda *a, **k: None)
         self.stubs.Set(cinder.API, 'reserve_volume', lambda *a, **k: None)
@@ -86,7 +88,9 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
                                        'a26887c6-c47b-4654-abb5-dfadf7d3f803')
         subs = {
             'volume_id': volume['id'],
-            'device': device_name
+            'device': device_name,
+            'disk_bus': 'ide',
+            'device_type': 'cdrom'
         }
         server_id = self._post_server()
         response = self._do_post('servers/%s/action'
