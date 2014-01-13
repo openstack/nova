@@ -572,7 +572,6 @@ class VMwareVCDriver(VMwareESXDriver):
         self.dict_mors = vm_util.get_all_cluster_refs_by_name(
                                 self._session,
                                 CONF.vmware.cluster_name)
-        nodes = self.dict_mors.keys()
         node_list = []
         self._update_resources()
         for node in self.dict_mors.keys():

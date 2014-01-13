@@ -512,7 +512,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         root_disk = [{'connection_info': connection_info}]
         v_driver.block_device_info_get_mapping(
                 mox.IgnoreArg()).AndReturn(root_disk)
-        mount_point = '/dev/vdc'
         self.mox.StubOutWithMock(volumeops.VMwareVolumeOps,
                                  '_get_res_pool_of_vm')
         volumeops.VMwareVolumeOps._get_res_pool_of_vm(
@@ -1053,7 +1052,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('vmdk')
         mount_point = '/dev/vdc'
-        discover = ('fake_name', 'fake_uuid')
 
         # create fake backing info
         volume_device = vmwareapi_fake.DataObject()
