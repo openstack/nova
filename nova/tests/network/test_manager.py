@@ -130,16 +130,28 @@ floating_ip_fields = {'id': 0,
                       'auto_assigned': False}
 
 vifs = [{'id': 0,
+         'created_at': None,
+         'updated_at': None,
+         'deleted_at': None,
+         'deleted': 0,
          'address': 'DE:AD:BE:EF:00:00',
          'uuid': '00000000-0000-0000-0000-0000000000000000',
          'network_id': 0,
          'instance_uuid': 0},
         {'id': 1,
+         'created_at': None,
+         'updated_at': None,
+         'deleted_at': None,
+         'deleted': 0,
          'address': 'DE:AD:BE:EF:00:01',
          'uuid': '00000000-0000-0000-0000-0000000000000001',
          'network_id': 1,
          'instance_uuid': 0},
         {'id': 2,
+         'created_at': None,
+         'updated_at': None,
+         'deleted_at': None,
+         'deleted': 0,
          'address': 'DE:AD:BE:EF:00:02',
          'uuid': '00000000-0000-0000-0000-0000000000000002',
          'network_id': 2,
@@ -353,7 +365,7 @@ class FlatNetworkTestCase(test.TestCase):
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -399,7 +411,7 @@ class FlatNetworkTestCase(test.TestCase):
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -489,7 +501,7 @@ class FlatNetworkTestCase(test.TestCase):
                                    mox.IgnoreArg()).AndReturn(fixedip)
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
 
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
@@ -588,7 +600,7 @@ class VlanNetworkTestCase(test.TestCase):
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
                                 mox.IgnoreArg(), use_slave=False,
                                 columns_to_join=['info_cache',
@@ -631,7 +643,7 @@ class VlanNetworkTestCase(test.TestCase):
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
                                 mox.IgnoreArg(), use_slave=False,
                                 columns_to_join=['info_cache',
@@ -1136,7 +1148,7 @@ class VlanNetworkTestCase(test.TestCase):
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
-                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
+                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
@@ -1222,7 +1234,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(db, 'network_get', network_get)
 
         def vif_get(_context, _vif_id):
-            return {'address': 'fake_mac'}
+            return vifs[0]
 
         self.stubs.Set(db, 'virtual_interface_get', vif_get)
         context1 = context.RequestContext('user', 'project1')
@@ -1240,7 +1252,8 @@ class VlanNetworkTestCase(test.TestCase):
 
         self.flags(force_dhcp_release=True)
         self.mox.StubOutWithMock(linux_net, 'release_dhcp')
-        linux_net.release_dhcp(network['bridge'], fixed['address'], 'fake_mac')
+        linux_net.release_dhcp(network['bridge'], fixed['address'],
+                'DE:AD:BE:EF:00:00')
         self.mox.ReplayAll()
         self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
         fixed = db.fixed_ip_get_by_address(elevated, fix_addr)
@@ -1632,7 +1645,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue(manager.create_networks(*args))
 
     def test_get_instance_uuids_by_ip_regex(self):
-        manager = fake_network.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
 
@@ -1677,7 +1690,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
     def test_get_instance_uuids_by_ipv6_regex(self):
-        manager = fake_network.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
 
@@ -1724,7 +1737,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
     def test_get_instance_uuids_by_ip(self):
-        manager = fake_network.FakeNetworkManager()
+        manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
 
@@ -2489,7 +2502,7 @@ class FloatingIPTestCase(test.TestCase):
         crash_test_dummy_vif = {
             'address': macs[1],
             'instance_uuid': 'fake_uuid',
-            'network_id': 'fake_net',
+            'network_id': 123,
             'uuid': 'fake_uuid',
             }
         self.network.db.virtual_interface_create(ctxt, crash_test_dummy_vif)
@@ -2504,11 +2517,15 @@ class FloatingIPTestCase(test.TestCase):
         def fake_vif_save(vif):
             if vif.address == crash_test_dummy_vif['address']:
                 raise db_exc.DBError("If you're smart, you'll retry!")
+            # NOTE(russellb) The VirtualInterface object requires an ID to be
+            # set, and we expect it to get set automatically when we do the
+            # save.
+            vif.id = 1
         self.stubs.Set(models.VirtualInterface, 'save', fake_vif_save)
 
         # Attempt to add another and make sure that both MACs are consumed
         # by the retry loop
-        self.network._add_virtual_interface(ctxt, 'fake_uuid', 'fake_net')
+        self.network._add_virtual_interface(ctxt, 'fake_uuid', 123)
         self.assertEqual(macs, [])
 
     def test_deallocate_client_exceptions(self):

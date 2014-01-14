@@ -66,6 +66,7 @@ from nova.network.security_group import openstack_driver
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.objects import service as service_obj
+from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -408,43 +409,42 @@ class NetworkManager(manager.Manager):
         #                this. But for now it "works", this could suck on
         #                large installs.
 
-        vifs = self.db.virtual_interface_get_all(context)
+        vifs = vif_obj.VirtualInterfaceList.get_all(context)
         results = []
 
         for vif in vifs:
-            if vif['instance_uuid'] is None:
+            if vif.instance_uuid is None:
                 continue
 
-            network = self._get_network_by_id(context, vif['network_id'])
+            network = self._get_network_by_id(context, vif.network_id)
             fixed_ipv6 = None
             if network['cidr_v6'] is not None:
                 fixed_ipv6 = ipv6.to_global(network['cidr_v6'],
-                                            vif['address'],
+                                            vif.address,
                                             context.project_id)
 
             if fixed_ipv6 and ipv6_filter.match(fixed_ipv6):
-                results.append({'instance_uuid': vif['instance_uuid'],
+                results.append({'instance_uuid': vif.instance_uuid,
                                 'ip': fixed_ipv6})
 
-            vif_id = vif['id']
             fixed_ips = self.db.fixed_ips_by_virtual_interface(context,
-                                                               vif_id)
+                                                               vif.id)
             for fixed_ip in fixed_ips:
                 if not fixed_ip or not fixed_ip['address']:
                     continue
                 if fixed_ip['address'] == fixed_ip_filter:
-                    results.append({'instance_uuid': vif['instance_uuid'],
+                    results.append({'instance_uuid': vif.instance_uuid,
                                     'ip': fixed_ip['address']})
                     continue
                 if ip_filter.match(fixed_ip['address']):
-                    results.append({'instance_uuid': vif['instance_uuid'],
+                    results.append({'instance_uuid': vif.instance_uuid,
                                     'ip': fixed_ip['address']})
                     continue
                 for floating_ip in fixed_ip.get('floating_ips', []):
                     if not floating_ip or not floating_ip['address']:
                         continue
                     if ip_filter.match(floating_ip['address']):
-                        results.append({'instance_uuid': vif['instance_uuid'],
+                        results.append({'instance_uuid': vif.instance_uuid,
                                         'ip': floating_ip['address']})
                         continue
 
@@ -500,8 +500,8 @@ class NetworkManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 # If we fail to allocate any one mac address, clean up all
                 # allocated VIFs
-                self.db.virtual_interface_delete_by_instance(context,
-                                                             instance_uuid)
+                vif_obj.VirtualInterface.delete_by_instance_uuid(context,
+                        instance_uuid)
 
         self._allocate_fixed_ips(admin_context, instance_uuid,
                                  host, networks, vpn=vpn,
@@ -549,8 +549,8 @@ class NetworkManager(manager.Manager):
             self.network_rpcapi.update_dns(context, network_ids)
 
         # deallocate vifs (mac addresses)
-        self.db.virtual_interface_delete_by_instance(read_deleted_context,
-                                                     instance_uuid)
+        vif_obj.VirtualInterface.delete_by_instance_uuid(read_deleted_context,
+                instance_uuid)
 
     @rpc_common.client_exceptions(exception.InstanceNotFound)
     def get_instance_nw_info(self, context, instance_id, rxtx_factor,
@@ -569,17 +569,14 @@ class NetworkManager(manager.Manager):
             instance_id = instance_uuid
         instance_uuid = instance_id
 
-        # TODO(geekinutah): Is this worth objectifying as it's slated for
-        #                   deprecation?
-        vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance_uuid,
-                                                         use_slave=use_slave)
+        vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
+                instance_uuid, use_slave=use_slave)
         networks = {}
 
         for vif in vifs:
-            if vif.get('network_id') is not None:
-                network = self._get_network_by_id(context, vif['network_id'])
-                networks[vif['uuid']] = network
+            if vif.network_id is not None:
+                network = self._get_network_by_id(context, vif.network_id)
+                networks[vif.uuid] = network
 
         nw_info = self.build_network_info_model(context, vifs, networks,
                                                          rxtx_factor, host)
@@ -592,18 +589,18 @@ class NetworkManager(manager.Manager):
         """
         nw_info = network_model.NetworkInfo()
         for vif in vifs:
-            vif_dict = {'id': vif['uuid'],
+            vif_dict = {'id': vif.uuid,
                         'type': network_model.VIF_TYPE_BRIDGE,
-                        'address': vif['address']}
+                        'address': vif.address}
 
             # handle case where vif doesn't have a network
-            if not networks.get(vif['uuid']):
+            if not networks.get(vif.uuid):
                 vif = network_model.VIF(**vif_dict)
                 nw_info.append(vif)
                 continue
 
             # get network dict for vif from args and build the subnets
-            network = networks[vif['uuid']]
+            network = networks[vif.uuid]
             subnets = self._get_subnets_from_network(context, network, vif,
                                                      instance_host)
 
@@ -616,11 +613,11 @@ class NetworkManager(manager.Manager):
             # get fixed_ips
             v4_IPs = self.ipam.get_v4_ips_by_interface(context,
                                                        network['uuid'],
-                                                       vif['uuid'],
+                                                       vif.uuid,
                                                        network['project_id'])
             v6_IPs = self.ipam.get_v6_ips_by_interface(context,
                                                        network['uuid'],
-                                                       vif['uuid'],
+                                                       vif.uuid,
                                                        network['project_id'])
 
             # create model FixedIPs from these fixed_ips
@@ -681,7 +678,7 @@ class NetworkManager(manager.Manager):
         """Returns the 1 or 2 possible subnets for a nova network."""
         # get subnets
         ipam_subnets = self.ipam.get_subnets_by_net_id(context,
-                           network['project_id'], network['uuid'], vif['uuid'])
+                           network['project_id'], network['uuid'], vif.uuid)
 
         subnets = []
         for subnet in ipam_subnets:
@@ -744,24 +741,21 @@ class NetworkManager(manager.Manager):
 
     def _add_virtual_interface(self, context, instance_uuid, network_id,
                               mac=None):
-        vif = {'address': mac,
-               'instance_uuid': instance_uuid,
-               'network_id': network_id,
-               'uuid': str(uuid.uuid4())}
-
-        if mac is None:
-            vif['address'] = utils.generate_mac_address()
-            attempts = CONF.create_unique_mac_address_attempts
-        else:
-            attempts = 1
-
+        attempts = 1 if mac else CONF.create_unique_mac_address_attempts
         for i in range(attempts):
             try:
-                return self.db.virtual_interface_create(context, vif)
+                vif = vif_obj.VirtualInterface()
+                vif.address = mac or utils.generate_mac_address()
+                vif.instance_uuid = instance_uuid
+                vif.network_id = network_id
+                vif.uuid = str(uuid.uuid4())
+                vif.create(context)
+                return vif
             except exception.VirtualInterfaceCreateException:
-                vif['address'] = utils.generate_mac_address()
-        else:
-            raise exception.VirtualInterfaceMacAddressException()
+                # Try again up to max number of attempts
+                pass
+
+        raise exception.VirtualInterfaceMacAddressException()
 
     def add_fixed_ip_to_instance(self, context, instance_id, host, network_id,
                                  rxtx_factor=None):
@@ -852,10 +846,10 @@ class NetworkManager(manager.Manager):
                 else:
                     address = self.db.fixed_ip_associate_pool(
                         context.elevated(), network['id'], instance_id)
-                get_vif = self.db.virtual_interface_get_by_instance_and_network
-                vif = get_vif(context, instance_id, network['id'])
+                vif = vif_obj.VirtualInterface.get_by_instance_and_network(
+                        context, instance_id, network['id'])
                 values = {'allocated': True,
-                          'virtual_interface_id': vif['id']}
+                          'virtual_interface_id': vif.id}
                 self.db.fixed_ip_update(context, address, values)
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
@@ -927,7 +921,7 @@ class NetworkManager(manager.Manager):
                     LOG.error(msg % address)
                     return
 
-                vif = self.db.virtual_interface_get(context, vif_id)
+                vif = vif_obj.VirtualInterface.get_by_id(context, vif_id)
 
                 if not vif:
                     LOG.error(msg % address)
@@ -939,7 +933,7 @@ class NetworkManager(manager.Manager):
                 self._teardown_network_on_host(context, network)
                 # NOTE(vish): This forces a packet so that the release_fixed_ip
                 #             callback will get called by nova-dhcpbridge.
-                self.driver.release_dhcp(dev, address, vif['address'])
+                self.driver.release_dhcp(dev, address, vif.address)
 
                 # NOTE(yufang521247): This is probably a failed dhcp fixed ip.
                 # DHCPRELEASE packet sent to dnsmasq would not trigger
@@ -1285,10 +1279,10 @@ class NetworkManager(manager.Manager):
             call_func = self._setup_network_on_host
 
         instance = instance_obj.Instance.get_by_id(context, instance_id)
-        vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance.uuid)
+        vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
+                instance['uuid'])
         for vif in vifs:
-            network = self.db.network_get(context, vif['network_id'])
+            network = self.db.network_get(context, vif.network_id)
             if not network['multi_host']:
                 #NOTE (tr3buchet): if using multi_host, host is instance[host]
                 host = network['host']
@@ -1369,6 +1363,8 @@ class NetworkManager(manager.Manager):
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
         instance = instance_obj.Instance.get_by_id(context, instance_id)
+        # NOTE(russellb) No need to object-ify this since
+        # get_vifs_by_instance() is unused and set to be removed.
         vifs = self.db.virtual_interface_get_by_instance(context,
                                                          instance.uuid)
         for vif in vifs:
@@ -1425,6 +1421,8 @@ class NetworkManager(manager.Manager):
         """Returns the vifs record for the mac_address."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
+        # NOTE(russellb) No need to object-ify this since
+        # get_vifs_by_instance() is unused and set to be removed.
         vif = self.db.virtual_interface_get_by_address(context,
                                                         mac_address)
         if vif.get('network_id') is not None:
@@ -1737,10 +1735,10 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                                                           network['id'],
                                                           instance_id)
 
-        vif = self.db.virtual_interface_get_by_instance_and_network(
+        vif = vif_obj.VirtualInterface.get_by_instance_and_network(
             context, instance_id, network['id'])
         values = {'allocated': True,
-                  'virtual_interface_id': vif['id']}
+                  'virtual_interface_id': vif.id}
         self.db.fixed_ip_update(context, address, values)
 
         if not kwargs.get('vpn', None):
