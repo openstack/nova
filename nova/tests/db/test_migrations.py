@@ -588,6 +588,10 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         t = db_utils.get_table(engine, table)
         self.assertNotIn(column, t.c)
 
+    def assertTableNotExists(self, engine, table):
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          db_utils.get_table, engine, table)
+
     def assertIndexExists(self, engine, table, index):
         t = db_utils.get_table(engine, table)
         index_names = [idx.name for idx in t.indexes]
@@ -669,6 +673,13 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _post_downgrade_231(self, engine):
         self.assertColumnNotExists(engine, 'instances', 'ephemeral_key_uuid')
         self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
+
+    def _check_232(self, engine, data):
+        table_names = ['compute_node_stats', 'compute_nodes',
+                       'instance_actions', 'instance_actions_events',
+                       'instance_faults', 'migrations']
+        for table_name in table_names:
+            self.assertTableNotExists(engine, 'dump_' + table_name)
 
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
