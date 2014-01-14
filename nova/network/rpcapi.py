@@ -67,6 +67,8 @@ class NetworkAPI(rpcclient.RpcProxy):
         ... Havana supports message version 1.10.  So, any changes to existing
         methods in 1.x after that point should be done such that they can
         handle the version_cap being set to 1.10.
+
+        NOTE: remove unused method get_vifs_by_instance()
     '''
 
     #
@@ -143,12 +145,6 @@ class NetworkAPI(rpcclient.RpcProxy):
     def get_instance_id_by_floating_address(self, ctxt, address):
         return self.client.call(ctxt, 'get_instance_id_by_floating_address',
                                 address=address)
-
-    def get_vifs_by_instance(self, ctxt, instance_id):
-        # NOTE(vish): When the db calls are converted to store network
-        #             data by instance_uuid, this should pass uuid instead.
-        return self.client.call(ctxt, 'get_vifs_by_instance',
-                                instance_id=instance_id)
 
     def get_vif_by_mac_address(self, ctxt, mac_address):
         return self.client.call(ctxt, 'get_vif_by_mac_address',
