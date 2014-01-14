@@ -127,7 +127,15 @@ def _create_dump_tables(migrate_engine):
         table = Table(table_name, meta, autoload=True)
 
         dump_table_name = 'dump_' + table.name
-        columns = [c.copy() for c in table.columns]
+        columns = []
+        for column in table.columns:
+            # NOTE(dprince): The dump_ tables were originally created from an
+            # earlier schema version so we don't want to add the pci_stats
+            # column so that schema diffs are exactly the same.
+            if column.name == 'pci_stats':
+                continue
+            else:
+                columns.append(column.copy())
         table_dump = Table(dump_table_name, meta, *columns,
                            mysql_engine='InnoDB')
         table_dump.create()
@@ -300,6 +308,7 @@ def upgrade(migrate_engine):
         Column('deleted', Integer),
         Column('host_ip', InetSmall()),
         Column('supported_instances', Text),
+        Column('pci_stats', Text, nullable=True),
         mysql_engine='InnoDB',
         mysql_charset='utf8'
     )
@@ -725,6 +734,33 @@ def upgrade(migrate_engine):
         mysql_charset='utf8'
     )
 
+    pci_devices_uc_name = 'uniq_pci_devices0compute_node_id0address0deleted'
+    pci_devices = Table('pci_devices', meta,
+        Column('created_at', DateTime(timezone=False)),
+        Column('updated_at', DateTime(timezone=False)),
+        Column('deleted_at', DateTime(timezone=False)),
+        Column('deleted', Integer, default=0, nullable=False),
+        Column('id', Integer, primary_key=True),
+        Column('compute_node_id', Integer, nullable=False),
+        Column('address', String(12), nullable=False),
+        Column('product_id', String(4)),
+        Column('vendor_id', String(4)),
+        Column('dev_type', String(8)),
+        Column('dev_id', String(255)),
+        Column('label', String(255), nullable=False),
+        Column('status', String(36), nullable=False),
+        Column('extra_info', Text, nullable=True),
+        Column('instance_uuid', String(36), nullable=True),
+        Index('ix_pci_devices_compute_node_id_deleted',
+              'compute_node_id', 'deleted'),
+        Index('ix_pci_devices_instance_uuid_deleted',
+              'instance_uuid', 'deleted'),
+        UniqueConstraint('compute_node_id',
+                        'address', 'deleted',
+                        name=pci_devices_uc_name),
+        mysql_engine='InnoDB',
+        mysql_charset='utf8')
+
     provider_fw_rules = Table('provider_fw_rules', meta,
         Column('created_at', DateTime),
         Column('updated_at', DateTime),
@@ -1052,8 +1088,8 @@ def upgrade(migrate_engine):
               instance_actions, instance_actions_events,
               groups, group_metadata, group_policy, group_member,
               iscsi_targets, key_pairs, migrations, networks,
-              provider_fw_rules, quota_classes, quota_usages, quotas,
-              project_user_quotas,
+              pci_devices, provider_fw_rules, quota_classes, quota_usages,
+              quotas, project_user_quotas,
               reservations, s3_images, security_group_instance_association,
               security_group_rules, security_group_default_rules,
               services, snapshot_id_mappings, task_log,
@@ -1157,6 +1193,11 @@ def upgrade(migrate_engine):
                      table=aggregate_hosts,
                      name=uc_name).create()
 
+    uc_name = 'uniq_aggregate_metadata0aggregate_id0key0deleted'
+    UniqueConstraint('aggregate_id', 'key', 'deleted',
+                     table=aggregate_metadata,
+                     name=uc_name).create()
+
     uc_name = 'uniq_instance_type_extra_specs0instance_type_id0key0deleted'
     UniqueConstraint('instance_type_id', 'key', 'deleted',
                      table=instance_type_extra_specs,
@@ -1183,12 +1224,6 @@ def upgrade(migrate_engine):
 
         Index('security_group_id',
               security_group_instance_association.c.security_group_id),
-    ]
-
-    # created later (to preserve ordering for schema diffs)
-    mysql_post_indexes = [
-       Index('migrations_instance_uuid_and_status_idx',
-              migrations.c.instance_uuid, migrations.c.status),
     ]
 
     # Common indexes (indexes we apply to all databases)
@@ -1335,6 +1370,16 @@ def upgrade(migrate_engine):
               iscsi_targets.c.host, iscsi_targets.c.volume_id,
               iscsi_targets.c.deleted),
 
+        # migrations
+        Index('migrations_by_host_nodes_and_status_idx',
+              migrations.c.deleted, migrations.c.source_compute,
+              migrations.c.dest_compute, migrations.c.source_node,
+              migrations.c.dest_node, migrations.c.status),
+
+        Index('migrations_instance_uuid_and_status_idx',
+              migrations.c.deleted, migrations.c.instance_uuid,
+              migrations.c.status),
+
         # networks
         Index('networks_host_idx', networks.c.host),
 
@@ -1392,6 +1437,13 @@ def upgrade(migrate_engine):
         for index in mysql_pre_indexes:
             index.create(migrate_engine)
 
+        # mysql-specific index by leftmost 100 chars.  (mysql gets angry if the
+        # index key length is too long.)
+        sql = ("create index migrations_by_host_nodes_and_status_idx ON "
+               "migrations (deleted, source_compute(100), dest_compute(100), "
+               "source_node(100), dest_node(100), status)")
+        migrate_engine.execute(sql)
+
     # PostgreSQL specific indexes
     if migrate_engine.name == 'postgresql':
         Index('address', fixed_ips.c.address).create()
@@ -1405,27 +1457,22 @@ def upgrade(migrate_engine):
         'block_device_mapping_instance_uuid_virtual_name_device_name_idx'
     ]
 
+    MYSQL_INDEX_SKIPS = [
+        # we create this one manually for MySQL above
+        'migrations_by_host_nodes_and_status_idx'
+    ]
+
     for index in common_indexes:
         if migrate_engine.name == 'postgresql' and \
             index.name in POSTGRES_INDEX_SKIPS:
+            continue
+        if migrate_engine.name == 'mysql' and \
+            index.name in MYSQL_INDEX_SKIPS:
             continue
         else:
             index.create(migrate_engine)
 
     Index('project_id', dns_domains.c.project_id).drop
-
-    # special case for migrations_by_host_nodes_and_status_idx index
-    if migrate_engine.name == "mysql":
-
-        for index in mysql_post_indexes:
-            index.create(migrate_engine)
-
-        # mysql-specific index by leftmost 100 chars.  (mysql gets angry if the
-        # index key length is too long.)
-        sql = ("create index migrations_by_host_nodes_and_status_idx ON "
-               "migrations (source_compute(100), dest_compute(100), "
-               "source_node(100), dest_node(100), status)")
-        migrate_engine.execute(sql)
 
     fkeys = [
               [[fixed_ips.c.instance_uuid],
