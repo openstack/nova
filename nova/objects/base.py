@@ -328,7 +328,13 @@ class NovaObject(object):
 
     def obj_what_changed(self):
         """Returns a set of fields that have been modified."""
-        return self._changed_fields
+        changes = set(self._changed_fields)
+        for field in self.fields:
+            if (self.obj_attr_is_set(field) and
+                    isinstance(self[field], NovaObject) and
+                    self[field].obj_what_changed()):
+                changes.add(field)
+        return changes
 
     def obj_get_changes(self):
         """Returns a dict of changed fields and their new values."""
@@ -506,6 +512,13 @@ class ObjectListBase(object):
                 primitives[index]['nova_object.data'],
                 child_target_version)
             primitives[index]['nova_object.version'] = child_target_version
+
+    def obj_what_changed(self):
+        changes = set(self._changed_fields)
+        for child in self.objects:
+            if child.obj_what_changed():
+                changes.add('objects')
+        return changes
 
 
 class NovaObjectSerializer(messaging.NoOpSerializer):
