@@ -69,6 +69,7 @@ class NetworkAPI(rpcclient.RpcProxy):
         handle the version_cap being set to 1.10.
 
         NOTE: remove unused method get_vifs_by_instance()
+        NOTE: remove unused method get_vif_by_mac_address()
     '''
 
     #
@@ -145,10 +146,6 @@ class NetworkAPI(rpcclient.RpcProxy):
     def get_instance_id_by_floating_address(self, ctxt, address):
         return self.client.call(ctxt, 'get_instance_id_by_floating_address',
                                 address=address)
-
-    def get_vif_by_mac_address(self, ctxt, mac_address):
-        return self.client.call(ctxt, 'get_vif_by_mac_address',
-                                mac_address=mac_address)
 
     def allocate_floating_ip(self, ctxt, project_id, pool, auto_assigned):
         return self.client.call(ctxt, 'allocate_floating_ip',
