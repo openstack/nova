@@ -63,9 +63,11 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.network.security_group import openstack_driver
+from nova.objects import base as obj_base
 from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
+from nova.objects import network as network_obj
 from nova.objects import service as service_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import excutils
@@ -1108,11 +1110,11 @@ class NetworkManager(manager.Manager):
             # NOTE(jkoelker): This replaces the _validate_cidrs call and
             #                 prevents looping multiple times
             try:
-                nets = self.db.network_get_all(context)
+                nets = network_obj.NetworkList.get_all(context)
             except exception.NoNetworksFound:
                 nets = []
             num_used_nets = len(nets)
-            used_subnets = [netaddr.IPNetwork(net['cidr']) for net in nets]
+            used_subnets = [net.cidr for net in nets]
 
             def find_next(subnet):
                 next_subnet = subnet.next()
@@ -1149,73 +1151,70 @@ class NetworkManager(manager.Manager):
                             raise exception.CidrConflict(
                                 msg % {'cidr': subnet, 'smaller': used_subnet})
 
-        networks = []
+        networks = network_obj.NetworkList(context=context,
+                                           objects=[])
         subnets = itertools.izip_longest(subnets_v4, subnets_v6)
         for index, (subnet_v4, subnet_v6) in enumerate(subnets):
-            net = {}
-            net['bridge'] = bridge
-            net['bridge_interface'] = bridge_interface
-            net['multi_host'] = multi_host
+            net = network_obj.Network(context=context)
+            net.bridge = bridge
+            net.bridge_interface = bridge_interface
+            net.multi_host = multi_host
 
-            net['dns1'] = dns1
-            net['dns2'] = dns2
+            net.dns1 = dns1
+            net.dns2 = dns2
 
-            net['project_id'] = kwargs.get('project_id')
+            net.project_id = kwargs.get('project_id')
 
             if num_networks > 1:
-                net['label'] = '%s_%d' % (label, index)
+                net.label = '%s_%d' % (label, index)
             else:
-                net['label'] = label
+                net.label = label
 
             if cidr and subnet_v4:
-                net['cidr'] = str(subnet_v4)
-                net['netmask'] = str(subnet_v4.netmask)
-                net['gateway'] = gateway or str(subnet_v4[1])
-                net['broadcast'] = str(subnet_v4.broadcast)
-                net['dhcp_start'] = str(subnet_v4[2])
+                net.cidr = str(subnet_v4)
+                net.netmask = str(subnet_v4.netmask)
+                net.gateway = gateway or str(subnet_v4[1])
+                net.broadcast = str(subnet_v4.broadcast)
+                net.dhcp_start = str(subnet_v4[2])
 
             if cidr_v6 and subnet_v6:
-                net['cidr_v6'] = str(subnet_v6)
+                net.cidr_v6 = str(subnet_v6)
                 if gateway_v6:
                     # use a pre-defined gateway if one is provided
-                    net['gateway_v6'] = str(gateway_v6)
+                    net.gateway_v6 = str(gateway_v6)
                 else:
-                    net['gateway_v6'] = str(subnet_v6[1])
+                    net.gateway_v6 = str(subnet_v6[1])
 
-                net['netmask_v6'] = str(subnet_v6._prefixlen)
+                net.netmask_v6 = str(subnet_v6.netmask)
 
             if CONF.network_manager == 'nova.network.manager.VlanManager':
                 vlan = kwargs.get('vlan', None)
                 if not vlan:
                     index_vlan = index + num_used_nets
                     vlan = kwargs['vlan_start'] + index_vlan
-                    used_vlans = [x['vlan'] for x in nets]
+                    used_vlans = [x.vlan for x in nets]
                     if vlan in used_vlans:
                         # That vlan is used, try to get another one
                         used_vlans.sort()
                         vlan = used_vlans[-1] + 1
 
-                net['vpn_private_address'] = str(subnet_v4[2])
-                net['dhcp_start'] = str(subnet_v4[3])
-                net['vlan'] = vlan
-                net['bridge'] = 'br%s' % vlan
+                net.vpn_private_address = str(subnet_v4[2])
+                net.dhcp_start = str(subnet_v4[3])
+                net.vlan = vlan
+                net.bridge = 'br%s' % vlan
 
                 # NOTE(vish): This makes ports unique across the cloud, a more
                 #             robust solution would be to make them uniq per ip
                 index_vpn = index + num_used_nets
-                net['vpn_public_port'] = kwargs['vpn_start'] + index_vpn
+                net.vpn_public_port = kwargs['vpn_start'] + index_vpn
 
-            # None if network with cidr or cidr_v6 already exists
-            network = self.db.network_create_safe(context, net)
+            net.create()
+            networks.objects.append(net)
 
-            if not network:
-                raise ValueError(_('Network already exists!'))
-            else:
-                networks.append(network)
-
-            if network and cidr and subnet_v4:
-                self._create_fixed_ips(context, network['id'], fixed_cidr)
-        return jsonutils.to_primitive(networks)
+            if cidr and subnet_v4:
+                self._create_fixed_ips(context, net.id, fixed_cidr)
+        # NOTE(danms): Remove this in RPC API v2.0
+        return obj_base.obj_to_primitive(networks)
 
     def delete_network(self, context, fixed_range, uuid,
             require_disassociated=True):
