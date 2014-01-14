@@ -16,13 +16,13 @@
 """The Aggregate admin API extension."""
 
 import datetime
-import functools
 
-import six
 from webob import exc
 
+from nova.api.openstack.compute.schemas.v3 import aggregates
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -36,24 +36,6 @@ authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
 
 def _get_context(req):
     return req.environ['nova.context']
-
-
-def get_host_from_body(fn):
-    """Makes sure that the host exists."""
-    @functools.wraps(fn)
-    def wrapped(self, req, id, body, *args, **kwargs):
-        if not self.is_valid_body(body, fn.wsgi_action):
-            raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
-        host = body[fn.wsgi_action].get('host')
-        if host is None:
-            raise exc.HTTPBadRequest(
-                explanation=_("Could not find host to be set in "
-                              "request body"))
-        if not isinstance(host, six.string_types):
-            raise exc.HTTPBadRequest(
-                explanation=_("The value of host must be a string"))
-        return fn(self, req, id, host, *args, **kwargs)
-    return wrapped
 
 
 class AggregateController(wsgi.Controller):
@@ -72,28 +54,16 @@ class AggregateController(wsgi.Controller):
 
     @extensions.expected_errors((400, 409))
     @wsgi.response(201)
+    @validation.schema(aggregates.create)
     def create(self, req, body):
         """Creates an aggregate, given its name and
         optional availability zone.
         """
         context = _get_context(req)
         authorize(context, action='create')
-        if not self.is_valid_body(body, 'aggregate'):
-            raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
-        try:
-            host_aggregate = body["aggregate"]
-            name = host_aggregate["name"]
-        except KeyError as e:
-            msg = _("Could not find %s parameter in the request") % e.args[0]
-            raise exc.HTTPBadRequest(explanation=msg)
+        host_aggregate = body["aggregate"]
+        name = host_aggregate["name"]
         avail_zone = host_aggregate.get("availability_zone")
-        try:
-            utils.check_string_length(name, "Aggregate name", 1, 255)
-            if avail_zone is not None:
-                utils.check_string_length(avail_zone, "Availability_zone", 1,
-                                          255)
-        except exception.InvalidInput as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         try:
             aggregate = self.api.create_aggregate(context, name, avail_zone)
@@ -115,30 +85,12 @@ class AggregateController(wsgi.Controller):
         return self._marshall_aggregate(aggregate)
 
     @extensions.expected_errors((400, 404, 409))
+    @validation.schema(aggregates.update)
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
         authorize(context, action='update')
-        if not self.is_valid_body(body, 'aggregate'):
-            raise exc.HTTPBadRequest(explanation=_("Invalid request body"))
         updates = body["aggregate"]
-        if len(updates) < 1:
-            raise exc.HTTPBadRequest(
-                explanation=_("Request body is empty"))
-        for key in updates.keys():
-            if key not in ["name", "availability_zone"]:
-                msg = _("Invalid key %s in request body.") % key
-                raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            if 'name' in updates:
-                utils.check_string_length(updates['name'], "Aggregate name", 1,
-                                          255)
-            if updates.get("availability_zone") is not None:
-                utils.check_string_length(updates['availability_zone'],
-                                          "Availability_zone", 1, 255)
-        except exception.InvalidInput as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
@@ -163,11 +115,13 @@ class AggregateController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @extensions.expected_errors((400, 404, 409))
-    @get_host_from_body
     @wsgi.action('add_host')
     @wsgi.response(202)
-    def _add_host(self, req, id, host):
+    @validation.schema(aggregates.add_host)
+    def _add_host(self, req, id, body):
         """Adds a host to the specified aggregate."""
+        host = body['add_host']['host']
+
         context = _get_context(req)
         authorize(context, action='add_host')
         try:
@@ -181,11 +135,13 @@ class AggregateController(wsgi.Controller):
         return self._marshall_aggregate(aggregate)
 
     @extensions.expected_errors((400, 404, 409))
-    @get_host_from_body
     @wsgi.action('remove_host')
     @wsgi.response(202)
-    def _remove_host(self, req, id, host):
+    @validation.schema(aggregates.remove_host)
+    def _remove_host(self, req, id, body):
         """Removes a host from the specified aggregate."""
+        host = body['remove_host']['host']
+
         context = _get_context(req)
         authorize(context, action='remove_host')
         try:
