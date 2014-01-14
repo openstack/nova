@@ -34,7 +34,8 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'disk_used': 5 * units.Gi,
                 'host_hostname': 'somename',
                 'supported_instances': 'x86_64',
-                'host_cpu_info': {'cpu_count': 50}}
+                'host_cpu_info': {'cpu_count': 50},
+                'vcpus_used': 10}
 
     def test_available_resource(self):
         self.flags(connection_url='test_url',
@@ -48,15 +49,14 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
 
         resources = driver.get_available_resource(None)
         self.assertEqual(6008002, resources['hypervisor_version'])
-        self.assertEqual(0, resources['vcpus'])
+        self.assertEqual(50, resources['vcpus'])
         self.assertEqual(3, resources['memory_mb'])
         self.assertEqual(4, resources['local_gb'])
-        self.assertEqual(0, resources['vcpus_used'])
+        self.assertEqual(10, resources['vcpus_used'])
         self.assertEqual(3 - 2, resources['memory_mb_used'])
         self.assertEqual(5, resources['local_gb_used'])
         self.assertEqual('xen', resources['hypervisor_type'])
         self.assertEqual('somename', resources['hypervisor_hostname'])
-        self.assertEqual(50, resources['cpu_info'])
 
     def test_overhead(self):
         self.flags(connection_url='test_url',

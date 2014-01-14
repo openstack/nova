@@ -673,6 +673,7 @@ class SessionBase(object):
                                                     'free': 30,
                                                     'free-computed': 40},
                                     'host_hostname': 'fake-xenhost',
+                                    'host_cpu_info': {'cpu_count': 50},
                                     })
 
     def _plugin_poweraction(self, method, args):
