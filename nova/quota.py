@@ -198,7 +198,8 @@ class DbQuotaDriver(object):
 
     def get_user_quotas(self, context, resources, project_id, user_id,
                         quota_class=None, defaults=True,
-                        usages=True):
+                        usages=True, project_quotas=None,
+                        user_quotas=None):
         """
         Given a list of resources, retrieve the quotas for the given
         user and project.
@@ -218,11 +219,15 @@ class DbQuotaDriver(object):
                          specific value for the resource.
         :param usages: If True, the current in_use and reserved counts
                        will also be returned.
+        :param project_quotas: Quotas dictionary for the specified project.
+        :param user_quotas: Quotas dictionary for the specified project
+                            and user.
         """
-        user_quotas = db.quota_get_all_by_project_and_user(context,
-                                                           project_id, user_id)
+        user_quotas = user_quotas or db.quota_get_all_by_project_and_user(
+            context, project_id, user_id)
         # Use the project quota for default user quota.
-        proj_quotas = db.quota_get_all_by_project(context, project_id)
+        proj_quotas = project_quotas or db.quota_get_all_by_project(
+            context, project_id)
         for key, value in proj_quotas.iteritems():
             if key not in user_quotas.keys():
                 user_quotas[key] = value
@@ -237,7 +242,7 @@ class DbQuotaDriver(object):
 
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
-                           usages=True, remains=False):
+                           usages=True, remains=False, project_quotas=None):
         """
         Given a list of resources, retrieve the quotas for the given
         project.
@@ -258,8 +263,10 @@ class DbQuotaDriver(object):
                        will also be returned.
         :param remains: If True, the current remains of the project will
                         will be returned.
+        :param project_quotas: Quotas dictionary for the specified project.
         """
-        project_quotas = db.quota_get_all_by_project(context, project_id)
+        project_quotas = project_quotas or db.quota_get_all_by_project(
+            context, project_id)
         project_usages = None
         if usages:
             project_usages = db.quota_usage_get_all_by_project(context,
@@ -281,14 +288,18 @@ class DbQuotaDriver(object):
         :param user_id: The ID of the user to return quotas for.
         """
         settable_quotas = {}
+        db_proj_quotas = db.quota_get_all_by_project(context, project_id)
         project_quotas = self.get_project_quotas(context, resources,
-                                                 project_id, remains=True)
+                                                 project_id, remains=True,
+                                                 project_quotas=db_proj_quotas)
         if user_id:
-            user_quotas = self.get_user_quotas(context, resources,
-                                               project_id, user_id)
             setted_quotas = db.quota_get_all_by_project_and_user(context,
                                                      project_id,
                                                      user_id)
+            user_quotas = self.get_user_quotas(context, resources,
+                                               project_id, user_id,
+                                               project_quotas=db_proj_quotas,
+                                               user_quotas=setted_quotas)
             for key, value in user_quotas.items():
                 maximum = project_quotas[key]['remains'] +\
                         setted_quotas.get(key, 0)
@@ -304,7 +315,7 @@ class DbQuotaDriver(object):
         return settable_quotas
 
     def _get_quotas(self, context, resources, keys, has_sync, project_id=None,
-                    user_id=None):
+                    user_id=None, project_quotas=None):
         """
         A helper method which retrieves the quotas for the specific
         resources identified by keys, and which apply to the current
@@ -323,6 +334,7 @@ class DbQuotaDriver(object):
         :param user_id: Specify the user_id if current context
                         is admin and admin wants to impact on
                         common user.
+        :param project_quotas: Quotas dictionary for the specified project.
         """
 
         # Filter resources
@@ -343,13 +355,15 @@ class DbQuotaDriver(object):
             # Grab and return the quotas (without usages)
             quotas = self.get_user_quotas(context, sub_resources,
                                           project_id, user_id,
-                                          context.quota_class, usages=False)
+                                          context.quota_class, usages=False,
+                                          project_quotas=project_quotas)
         else:
             # Grab and return the quotas (without usages)
             quotas = self.get_project_quotas(context, sub_resources,
                                              project_id,
                                              context.quota_class,
-                                             usages=False)
+                                             usages=False,
+                                             project_quotas=project_quotas)
 
         return dict((k, v['limit']) for k, v in quotas.items())
 
@@ -395,11 +409,14 @@ class DbQuotaDriver(object):
             user_id = context.user_id
 
         # Get the applicable quotas
+        project_quotas = db.quota_get_all_by_project(context, project_id)
         quotas = self._get_quotas(context, resources, values.keys(),
-                                  has_sync=False, project_id=project_id)
+                                  has_sync=False, project_id=project_id,
+                                  project_quotas=project_quotas)
         user_quotas = self._get_quotas(context, resources, values.keys(),
                                        has_sync=False, project_id=project_id,
-                                       user_id=user_id)
+                                       user_id=user_id,
+                                       project_quotas=project_quotas)
 
         # Check the quotas and construct a list of the resources that
         # would be put over limit by the desired values
@@ -481,11 +498,14 @@ class DbQuotaDriver(object):
         # NOTE(Vek): We're not worried about races at this point.
         #            Yes, the admin may be in the process of reducing
         #            quotas, but that's a pretty rare thing.
+        project_quotas = db.quota_get_all_by_project(context, project_id)
         quotas = self._get_quotas(context, resources, deltas.keys(),
-                                  has_sync=True, project_id=project_id)
+                                  has_sync=True, project_id=project_id,
+                                  project_quotas=project_quotas)
         user_quotas = self._get_quotas(context, resources, deltas.keys(),
                                        has_sync=True, project_id=project_id,
-                                       user_id=user_id)
+                                       user_id=user_id,
+                                       project_quotas=project_quotas)
 
         # NOTE(Vek): Most of the work here has to be done in the DB
         #            API, because we have to do it in a transaction,
