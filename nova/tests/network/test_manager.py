@@ -270,10 +270,14 @@ class FlatNetworkTestCase(test.TestCase):
 
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
-                       project_only=mox.IgnoreArg()).AndReturn(networks[1])
+                       project_only=mox.IgnoreArg()
+                       ).AndReturn(dict(test_network.fake_network,
+                                        **networks[1]))
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
-                       project_only=mox.IgnoreArg()).AndReturn(networks[0])
+                       project_only=mox.IgnoreArg()
+                       ).AndReturn(dict(test_network.fake_network,
+                                        **networks[0]))
 
         ip = fixed_ips[1].copy()
         ip['instance_uuid'] = None
@@ -392,7 +396,9 @@ class FlatNetworkTestCase(test.TestCase):
 
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
-                       project_only=mox.IgnoreArg()).AndReturn(networks[0])
+                       project_only=mox.IgnoreArg()
+                       ).AndReturn(dict(test_network.fake_network,
+                                        **networks[0]))
         db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
 
         self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
@@ -437,7 +443,9 @@ class FlatNetworkTestCase(test.TestCase):
                                                       uuid=FAKEUUID))
 
         db.network_get_by_uuid(mox.IgnoreArg(),
-                               mox.IgnoreArg()).AndReturn(networks[0])
+                               mox.IgnoreArg()
+                               ).AndReturn(dict(test_network.fake_network,
+                                                **networks[0]))
         db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
 
         self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
@@ -527,7 +535,9 @@ class FlatNetworkTestCase(test.TestCase):
                                                       uuid=FAKEUUID))
 
         db.network_get_by_uuid(mox.IgnoreArg(),
-                               mox.IgnoreArg()).AndReturn(networks[0])
+                               mox.IgnoreArg()
+                               ).AndReturn(dict(test_network.fake_network,
+                                                **networks[0]))
         db.network_update(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
 
         self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
@@ -713,11 +723,12 @@ class VlanNetworkTestCase(test.TestCase):
 
         self.assertEqual(networks[0]["vlan"], 102)
 
-    def test_validate_networks(self):
+    @mock.patch('nova.db.network_get')
+    def test_validate_networks(self, net_get):
         def network_get(_context, network_id, project_only='allow_none'):
-            return networks[network_id]
+            return dict(test_network.fake_network, **networks[network_id])
 
-        self.stubs.Set(db, 'network_get', network_get)
+        net_get.side_effect = network_get
         self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
         self.mox.StubOutWithMock(db, "fixed_ip_get_by_address")
 
@@ -1174,7 +1185,9 @@ class VlanNetworkTestCase(test.TestCase):
                                    mox.IgnoreArg()).AndReturn('192.168.0.101')
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
-                       project_only=mox.IgnoreArg()).AndReturn(networks[0])
+                       project_only=mox.IgnoreArg()
+                       ).AndReturn(dict(test_network.fake_network,
+                                        **networks[0]))
         db.instance_get_by_uuid(mox.IgnoreArg(),
                                 mox.IgnoreArg(), use_slave=False,
                                 columns_to_join=['info_cache',
@@ -1193,7 +1206,7 @@ class VlanNetworkTestCase(test.TestCase):
         """
 
         def network_get(_context, network_id, project_only="allow_none"):
-            return networks[network_id]
+            return dict(test_network.fake_network, **networks[network_id])
 
         self.stubs.Set(db, 'network_get', network_get)
 
@@ -1248,7 +1261,7 @@ class VlanNetworkTestCase(test.TestCase):
         """
 
         def network_get(_context, network_id, project_only="allow_none"):
-            return networks[network_id]
+            return dict(test_network.fake_network, **networks[network_id])
 
         self.stubs.Set(db, 'network_get', network_get)
 
@@ -1282,7 +1295,7 @@ class VlanNetworkTestCase(test.TestCase):
         # Verify doesn't deallocate deleted fixed_ip from deleted network.
 
         def network_get(_context, network_id, project_only="allow_none"):
-            return networks[network_id]
+            return dict(test_network.fake_network, **networks[network_id])
 
         def teardown_network_on_host(_context, network):
             if network['id'] == 0:
@@ -1320,7 +1333,7 @@ class VlanNetworkTestCase(test.TestCase):
         """
 
         def network_get(_context, network_id, project_only="allow_none"):
-            return networks[network_id]
+            return dict(test_network.fake_network, **networks[network_id])
 
         self.stubs.Set(db, 'network_get', network_get)
 
@@ -1345,7 +1358,7 @@ class VlanNetworkTestCase(test.TestCase):
     def test_fixed_ip_cleanup_fail(self):
         # Verify IP is not deallocated if the security group refresh fails.
         def network_get(_context, network_id, project_only="allow_none"):
-            return networks[network_id]
+            return dict(test_network.fake_network, **networks[network_id])
 
         self.stubs.Set(db, 'network_get', network_get)
 
@@ -1657,10 +1670,13 @@ class CommonNetworkTestCase(test.TestCase):
                 'fd00::/48', None, None, None, None, None]
         self.assertTrue(manager.create_networks(*args))
 
-    def test_get_instance_uuids_by_ip_regex(self):
+    @mock.patch('nova.db.network_get')
+    def test_get_instance_uuids_by_ip_regex(self, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
+        network_get.return_value = dict(test_network.fake_network,
+                                        **manager.db.network_get(None, 1))
 
         # Greedy get eveything
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
@@ -1702,10 +1718,16 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
         self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
-    def test_get_instance_uuids_by_ipv6_regex(self):
+    @mock.patch('nova.db.network_get')
+    def test_get_instance_uuids_by_ipv6_regex(self, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
+
+        def _network_get(context, network_id, **args):
+            return dict(test_network.fake_network,
+                        **manager.db.network_get(context, network_id))
+        network_get.side_effect = _network_get
 
         # Greedy get eveything
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
@@ -1749,10 +1771,13 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(res[0]['instance_uuid'], _vifs[1]['instance_uuid'])
         self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
-    def test_get_instance_uuids_by_ip(self):
+    @mock.patch('nova.db.network_get')
+    def test_get_instance_uuids_by_ip(self, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
+        network_get.return_value = dict(test_network.fake_network,
+                                        **manager.db.network_get(None, 1))
 
         # No regex for you!
         res = manager.get_instance_uuids_by_ip_filter(fake_context,
@@ -1781,27 +1806,20 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(len(res), 1)
         self.assertEqual(res[0]['instance_uuid'], _vifs[2]['instance_uuid'])
 
-    def test_get_network(self):
+    @mock.patch('nova.db.network_get_by_uuid')
+    def test_get_network(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
-        manager.db.network_get_by_uuid(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndReturn(networks[0])
-        self.mox.ReplayAll()
+        get.return_value = dict(test_network.fake_network, **networks[0])
         uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         network = manager.get_network(fake_context, uuid)
         self.assertEqual(network['uuid'], uuid)
 
-    def test_get_network_not_found(self):
+    @mock.patch('nova.db.network_get_by_uuid')
+    def test_get_network_not_found(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
-        manager.db.network_get_by_uuid(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(
-                    exception.NetworkNotFoundForUUID(uuid='fake')
-                )
-        self.mox.ReplayAll()
+        get.side_effect = exception.NetworkNotFoundForUUID(uuid='foo')
         uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.assertRaises(exception.NetworkNotFound,
                           manager.get_network, fake_context, uuid)
@@ -1819,26 +1837,20 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(output[1]['uuid'],
                          'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
 
-    def test_disassociate_network(self):
+    @mock.patch('nova.db.network_get_by_uuid')
+    def test_disassociate_network(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
-        manager.db.network_get_by_uuid(mox.IgnoreArg(),
-                                       mox.IgnoreArg()).AndReturn(networks[0])
-        self.mox.ReplayAll()
+        get.return_value = dict(test_network.fake_network,
+                                **networks[0])
         uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         manager.disassociate_network(fake_context, uuid)
 
-    def test_disassociate_network_not_found(self):
+    @mock.patch('nova.db.network_get_by_uuid')
+    def test_disassociate_network_not_found(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_by_uuid')
-        manager.db.network_get_by_uuid(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(
-                    exception.NetworkNotFoundForUUID(uuid='fake')
-                )
-        self.mox.ReplayAll()
+        get.side_effect = exception.NetworkNotFoundForUUID(uuid='fake')
         uuid = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
         self.assertRaises(exception.NetworkNotFound,
                           manager.disassociate_network, fake_context, uuid)
@@ -2009,7 +2021,7 @@ class RPCAllocateTestCase(test.TestCase):
             return address
 
         def fake_network_get(*args, **kwargs):
-            return {}
+            return test_network.fake_network
 
         self.stubs.Set(self.rpc_fixed, 'allocate_fixed_ip', fake_allocate)
         self.stubs.Set(self.rpc_fixed.db, 'network_get', fake_network_get)
@@ -2245,7 +2257,8 @@ class FloatingIPTestCase(test.TestCase):
                 'project_id': self.project_id, 'deleted': True})
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
-                'host': CONF.host})
+                'host': CONF.host,
+                'label': 'foo'})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})
@@ -2263,7 +2276,8 @@ class FloatingIPTestCase(test.TestCase):
                 'project_id': self.project_id})
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
-                'host': CONF.host})
+                'host': CONF.host,
+                'label': 'foo'})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
                 'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
                 'network_id': network['id']})

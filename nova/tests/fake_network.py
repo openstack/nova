@@ -220,7 +220,15 @@ def fake_network(network_id, ipv6=None):
              'host': None,
              'project_id': 'fake_project',
              'vpn_public_address': '192.168.%d.2' % network_id,
-             'rxtx_base': network_id * 10}
+             'vpn_public_port': None,
+             'vpn_private_address': None,
+             'dhcp_start': None,
+             'rxtx_base': network_id * 10,
+             'priority': None,
+             'deleted': False,
+             'created_at': None,
+             'updated_at': None,
+             'deleted_at': None}
     if ipv6:
         fake_network['cidr_v6'] = '2001:db8:0:%x::/64' % network_id
         fake_network['gateway_v6'] = '2001:db8:0:%x::1' % network_id

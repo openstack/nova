@@ -1223,14 +1223,14 @@ class NetworkManager(manager.Manager):
         # Prefer uuid but we'll also take cidr for backwards compatibility
         elevated = context.elevated()
         if uuid:
-            network = self.db.network_get_by_uuid(elevated, uuid)
+            network = network_obj.Network.get_by_uuid(elevated, uuid)
         elif fixed_range:
-            network = self.db.network_get_by_cidr(elevated, fixed_range)
+            network = network_obj.Network.get_by_cidr(elevated, fixed_range)
 
-        if require_disassociated and network['project_id'] is not None:
+        if require_disassociated and network.project_id is not None:
             raise ValueError(_('Network must be disassociated from project %s'
-                               ' before delete') % network['project_id'])
-        self.db.network_delete_safe(context, network['id'])
+                               ' before delete') % network.project_id)
+        self.db.network_delete_safe(context, network.id)
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
@@ -1284,8 +1284,8 @@ class NetworkManager(manager.Manager):
         vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
                 instance['uuid'])
         for vif in vifs:
-            network = self.db.network_get(context, vif.network_id)
-            if not network['multi_host']:
+            network = network_obj.Network.get_by_id(context, vif.network_id)
+            if not network.multi_host:
                 #NOTE (tr3buchet): if using multi_host, host is instance[host]
                 host = network['host']
             if self.host == host or host is None:
@@ -1296,7 +1296,7 @@ class NetworkManager(manager.Manager):
                 # i'm not the right host, run call on correct host
                 green_threads.append(eventlet.spawn(
                         self.network_rpcapi.rpc_setup_network_on_host, context,
-                        network['id'], teardown, host))
+                        network.id, teardown, host))
 
         # wait for all of the setups (if any) to finish
         for gt in green_threads:
@@ -1309,7 +1309,7 @@ class NetworkManager(manager.Manager):
             call_func = self._setup_network_on_host
 
         # subcall from original setup_networks_on_host
-        network = self.db.network_get(context, network_id)
+        network = network_obj.Network.get_by_id(context, network_id)
         call_func(context, network)
 
     def _setup_network_on_host(self, context, network):
@@ -1351,8 +1351,8 @@ class NetworkManager(manager.Manager):
                         instance_uuid=fixed_ip_ref['instance_uuid'])
 
     def _get_network_by_id(self, context, network_id):
-        return self.db.network_get(context, network_id,
-                                   project_only="allow_none")
+        return network_obj.Network.get_by_id(context, network_id,
+                                             project_only='allow_none')
 
     def _get_networks_by_uuids(self, context, network_uuids):
         networks = network_obj.NetworkList.get_by_uuids(
@@ -1388,8 +1388,8 @@ class NetworkManager(manager.Manager):
     def get_network(self, context, network_uuid):
         # NOTE(vish): used locally
 
-        network = self.db.network_get_by_uuid(context.elevated(), network_uuid)
-        return jsonutils.to_primitive(network)
+        return network_obj.Network.get_by_uuid(context.elevated(),
+                                               network_uuid)
 
     def get_all_networks(self, context):
         # NOTE(vish): This is no longer used but can't be removed until
@@ -1797,7 +1797,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         # NOTE(vish): Don't allow access to networks with project_id=None as
         #             these are networks that haven't been allocated to a
         #             project yet.
-        return self.db.network_get(context, network_id, project_only=True)
+        return network_obj.Network.get_by_id(context, network_id,
+                                             project_only=True)
 
     def _get_networks_by_uuids(self, context, network_uuids):
         # NOTE(vish): Don't allow access to networks with project_id=None as
