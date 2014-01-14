@@ -1090,9 +1090,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                  'attach_disk_to_vm')
         volumeops.VMwareVolumeOps.attach_disk_to_vm(mox.IgnoreArg(),
                 self.instance, mox.IgnoreArg(), mox.IgnoreArg(),
-                vmdk_path='fake_path',
-                controller_key=mox.IgnoreArg(),
-                unit_number=mox.IgnoreArg())
+                vmdk_path='fake_path')
         self.mox.ReplayAll()
         self.conn.attach_volume(None, connection_info, self.instance,
                                 mount_point)
@@ -1159,8 +1157,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                  'attach_disk_to_vm')
         volumeops.VMwareVolumeOps.attach_disk_to_vm(mox.IgnoreArg(),
                 self.instance, mox.IgnoreArg(), 'rdmp',
-                controller_key=mox.IgnoreArg(),
-                unit_number=mox.IgnoreArg(),
                 device_name=mox.IgnoreArg())
         self.mox.ReplayAll()
         self.conn.attach_volume(None, connection_info, self.instance,

@@ -44,7 +44,6 @@ class VMwareVolumeOps(object):
     def attach_disk_to_vm(self, vm_ref, instance,
                           adapter_type, disk_type, vmdk_path=None,
                           disk_size=None, linked_clone=False,
-                          controller_key=None, unit_number=None,
                           device_name=None):
         """
         Attach disk to VM by reconfiguration.
@@ -52,10 +51,21 @@ class VMwareVolumeOps(object):
         instance_name = instance['name']
         instance_uuid = instance['uuid']
         client_factory = self._session._get_vim().client.factory
+        devices = self._session._call_method(vim_util,
+                                    "get_dynamic_property", vm_ref,
+                                    "VirtualMachine", "config.hardware.device")
+        (controller_key, unit_number,
+         controller_spec) = vm_util.allocate_controller_key_and_unit_number(
+                                                              client_factory,
+                                                              devices,
+                                                              adapter_type)
+
         vmdk_attach_config_spec = vm_util.get_vmdk_attach_config_spec(
-                                    client_factory, adapter_type, disk_type,
-                                    vmdk_path, disk_size, linked_clone,
-                                    controller_key, unit_number, device_name)
+                                    client_factory, disk_type, vmdk_path,
+                                    disk_size, linked_clone, controller_key,
+                                    unit_number, device_name)
+        if controller_spec:
+            vmdk_attach_config_spec.deviceChange.append(controller_spec)
 
         LOG.debug(_("Reconfiguring VM instance %(instance_name)s to attach "
                     "disk %(vmdk_path)s or device %(device_name)s with type "
@@ -174,16 +184,6 @@ class VMwareVolumeOps(object):
             connector['instance'] = vm_ref.value
         return connector
 
-    def _get_unit_number(self, mountpoint, unit_number):
-        """Get a unit number for the device."""
-        mount_unit = volume_util.mountpoint_to_number(mountpoint)
-        # Figure out the correct unit number
-        if unit_number < mount_unit:
-            new_unit_number = mount_unit
-        else:
-            new_unit_number = unit_number + 1
-        return new_unit_number
-
     def _get_volume_ref(self, volume_ref_name):
         """Get the volume moref from the ref name."""
         return vim.get_moref(volume_ref_name, 'VirtualMachine')
@@ -207,21 +207,17 @@ class VMwareVolumeOps(object):
         volume_vmdk_path = volume_device.backing.fileName
 
         # Get details required for adding disk device such as
-        # adapter_type, unit_number, controller_key
+        # adapter_type, disk_type
         hw_devices = self._session._call_method(vim_util,
                                                 'get_dynamic_property',
                                                 vm_ref, 'VirtualMachine',
                                                 'config.hardware.device')
-        (vmdk_file_path, controller_key, adapter_type, disk_type,
-         unit_number) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+        (vmdk_file_path, adapter_type,
+         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
 
-        unit_number = self._get_unit_number(mountpoint, unit_number)
         # Attach the disk to virtual machine instance
         self.attach_disk_to_vm(vm_ref, instance, adapter_type,
-                               disk_type,
-                               vmdk_path=volume_vmdk_path,
-                               controller_key=controller_key,
-                               unit_number=unit_number)
+                               disk_type, vmdk_path=volume_vmdk_path)
 
         # Store the uuid of the volume_device
         self._update_volume_details(vm_ref, instance, data['volume_id'])
@@ -252,14 +248,11 @@ class VMwareVolumeOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-        vmdk_file_path, controller_key, adapter_type, disk_type, unit_number \
-            = vm_util.get_vmdk_path_and_adapter_type(hardware_devices)
+        (vmdk_file_path, adapter_type,
+         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hardware_devices)
 
-        unit_number = self._get_unit_number(mountpoint, unit_number)
         self.attach_disk_to_vm(vm_ref, instance,
                                adapter_type, 'rdmp',
-                               controller_key=controller_key,
-                               unit_number=unit_number,
                                device_name=device_name)
         LOG.info(_("Mountpoint %(mountpoint)s attached to "
                    "instance %(instance_name)s"),
@@ -360,19 +353,17 @@ class VMwareVolumeOps(object):
                                  destroy_disk=True)
         # Attach the current disk to the volume_ref
         # Get details required for adding disk device such as
-        # adapter_type, unit_number, controller_key
+        # adapter_type, disk_type
         hw_devices = self._session._call_method(vim_util,
                                                 'get_dynamic_property',
                                                 volume_ref, 'VirtualMachine',
                                                 'config.hardware.device')
-        (vmdk_file_path, controller_key, adapter_type, disk_type,
-         unit_number) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
+        (vmdk_file_path, adapter_type,
+         disk_type) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
         # Attach the current volume to the volume_ref
         self.attach_disk_to_vm(volume_ref, instance,
                                adapter_type, disk_type,
-                               vmdk_path=current_device_path,
-                               controller_key=controller_key,
-                               unit_number=unit_number)
+                               vmdk_path=current_device_path)
 
     def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
         # Get the vmdk file name that the VM is pointing to

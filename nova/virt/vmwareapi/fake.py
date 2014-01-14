@@ -273,10 +273,11 @@ class VirtualDisk(DataObject):
     Virtual Disk class.
     """
 
-    def __init__(self):
+    def __init__(self, controllerKey=0, unitNumber=0):
         super(VirtualDisk, self).__init__()
         self.key = 0
-        self.unitNumber = 0
+        self.controllerKey = controllerKey
+        self.unitNumber = unitNumber
 
 
 class VirtualDiskFlatVer2BackingInfo(DataObject):
@@ -296,9 +297,17 @@ class VirtualDiskRawDiskMappingVer1BackingInfo(DataObject):
         self.lunUuid = ""
 
 
+class VirtualIDEController(DataObject):
+
+    def __init__(self, key=0):
+        self.key = key
+
+
 class VirtualLsiLogicController(DataObject):
     """VirtualLsiLogicController class."""
-    pass
+    def __init__(self, key=0, scsiCtlrUnitNumber=0):
+        self.key = key
+        self.scsiCtlrUnitNumber = scsiCtlrUnitNumber
 
 
 class VirtualLsiLogicSASController(DataObject):
@@ -383,8 +392,8 @@ class VirtualMachine(ManagedObject):
                 return
 
             # Case of Reconfig of VM to attach disk
-            controller_key = val.deviceChange[1].device.controllerKey
-            filename = val.deviceChange[1].device.backing.fileName
+            controller_key = val.deviceChange[0].device.controllerKey
+            filename = val.deviceChange[0].device.backing.fileName
 
             disk = VirtualDisk()
             disk.controllerKey = controller_key
