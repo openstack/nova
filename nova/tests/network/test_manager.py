@@ -1838,8 +1838,11 @@ class CommonNetworkTestCase(test.TestCase):
         self.stubs.Set(net_manager.l3driver, 'initialize_gateway',
                                              lambda *args: None)
         self.mox.StubOutWithMock(db, 'network_get_all_by_host')
+        fake_networks = [dict(test_network.fake_network, **n)
+                         for n in networks]
         db.network_get_all_by_host(mox.IgnoreArg(),
-                        mox.IgnoreArg()).MultipleTimes().AndReturn(networks)
+                                   mox.IgnoreArg()
+                                   ).MultipleTimes().AndReturn(fake_networks)
         self.mox.ReplayAll()
 
         net_manager.init_host()

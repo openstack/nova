@@ -344,7 +344,7 @@ class NetworkManager(manager.Manager):
         # NOTE(vish): Set up networks for which this host already has
         #             an ip address.
         ctxt = context.get_admin_context()
-        for network in self.db.network_get_all_by_host(ctxt, self.host):
+        for network in network_obj.NetworkList.get_by_host(ctxt, self.host):
             self._setup_network_on_host(ctxt, network)
             if CONF.update_dns_entries:
                 dev = self.driver.get_dev(network)
@@ -1435,7 +1435,7 @@ class NetworkManager(manager.Manager):
         spacing=CONF.dns_update_periodic_interval)
     def _periodic_update_dns(self, context):
         """Update local DNS entries of all networks on this host."""
-        networks = self.db.network_get_all_by_host(context, self.host)
+        networks = network_obj.NetworkList.get_by_host(context, self.host)
         for network in networks:
             dev = self.driver.get_dev(network)
             self.driver.update_dns(context, dev, network)
@@ -1446,8 +1446,8 @@ class NetworkManager(manager.Manager):
             return
 
         networks = [network for network in
-                    self.db.network_get_all_by_host(context, self.host)
-                    if network['multi_host'] and network['id'] in network_ids]
+                    network_obj.NetworkList.get_by_host(context, self.host)
+                    if network.multi_host and network.id in network_ids]
         for network in networks:
             dev = self.driver.get_dev(network)
             self.driver.update_dns(context, dev, network)
@@ -1628,7 +1628,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
         standalone service.
         """
         ctxt = context.get_admin_context()
-        networks = self.db.network_get_all_by_host(ctxt, self.host)
+        networks = network_obj.NetworkList.get_by_host(ctxt, self.host)
         self.l3driver.initialize(fixed_range=False, networks=networks)
         super(FlatDHCPManager, self).init_host()
         self.init_host_floating_ips()
@@ -1710,7 +1710,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         """
 
         ctxt = context.get_admin_context()
-        networks = self.db.network_get_all_by_host(ctxt, self.host)
+        networks = network_obj.NetworkList.get_by_host(ctxt, self.host)
         self.l3driver.initialize(fixed_range=False, networks=networks)
         NetworkManager.init_host(self)
         self.init_host_floating_ips()
