@@ -31,6 +31,7 @@ from nova.network import floating_ips
 from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
+from nova.objects import network as network_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -630,8 +631,10 @@ class VlanNetworkTestCase(test.TestCase):
                                                       uuid=FAKEUUID))
         self.mox.ReplayAll()
 
-        network = dict(networks[0])
-        network['vpn_private_address'] = '192.168.0.2'
+        network = network_obj.Network._from_db_object(
+            self.context, network_obj.Network(),
+            dict(test_network.fake_network, **networks[0]))
+        network.vpn_private_address = '192.168.0.2'
         self.network.allocate_fixed_ip(self.context, FAKEUUID, network,
                                        vpn=True)
 
@@ -673,8 +676,10 @@ class VlanNetworkTestCase(test.TestCase):
                                                       uuid=FAKEUUID))
         self.mox.ReplayAll()
 
-        network = dict(networks[0])
-        network['vpn_private_address'] = '192.168.0.2'
+        network = network_obj.Network._from_db_object(
+            self.context, network_obj.Network(),
+            dict(test_network.fake_network, **networks[0]))
+        network.vpn_private_address = '192.168.0.2'
         self.network.allocate_fixed_ip(self.context, FAKEUUID, network)
 
     def test_create_networks_too_big(self):
@@ -1943,9 +1948,12 @@ class CommonNetworkTestCase(test.TestCase):
                        'vpn_public_address': '192.168.2.2',
                        'vpn_public_port': '22',
                        'vpn_private_address': '10.0.0.2'}
+        new_network_obj = network_obj.Network._from_db_object(
+            self.context, network_obj.Network(),
+            dict(test_network.fake_network, **new_network))
 
         ctxt = context.get_admin_context()
-        net_manager._setup_network_on_host(ctxt, new_network)
+        net_manager._setup_network_on_host(ctxt, new_network_obj)
 
         # Get the new iptables rules that got created from adding a new network
         current_lines = []
