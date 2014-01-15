@@ -1516,3 +1516,7 @@ class RngDeviceNotExist(Invalid):
 class RequestedVRamTooHigh(NovaException):
     msg_fmt = _("The requested amount of video memory %(req_vram)d is higher"
                 "than the maximum allowed by flavor %(max_vram)d.")
+
+
+class InvalidWatchdogAction(Invalid):
+    msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")

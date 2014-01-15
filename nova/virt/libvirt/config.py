@@ -1103,6 +1103,23 @@ class LibvirtConfigGuestChannel(LibvirtConfigGuestCharBase):
         return dev
 
 
+class LibvirtConfigGuestWatchdog(LibvirtConfigGuestDevice):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestWatchdog, self).__init__(root_name="watchdog",
+                                                         **kwargs)
+
+        self.model = 'i6300esb'
+        self.action = 'reset'
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestWatchdog, self).format_dom()
+
+        dev.set('model', self.model)
+        dev.set('action', self.action)
+
+        return dev
+
+
 class LibvirtConfigGuest(LibvirtConfigObject):
 
     def __init__(self, **kwargs):
