@@ -1232,7 +1232,7 @@ class NetworkManager(manager.Manager):
         if require_disassociated and network.project_id is not None:
             raise ValueError(_('Network must be disassociated from project %s'
                                ' before delete') % network.project_id)
-        self.db.network_delete_safe(context, network.id)
+        network.destroy()
 
     @property
     def _bottom_reserved_ips(self):  # pylint: disable=R0201
