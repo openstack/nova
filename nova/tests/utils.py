@@ -206,3 +206,9 @@ def is_ipv6_supported():
             has_ipv6_support = False
 
     return has_ipv6_support
+
+
+def get_api_version(request):
+    api_version = 2
+    if request.path[2:3].isdigit():
+        return int(request.path[2:3])

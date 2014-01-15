@@ -335,6 +335,14 @@ class XMLDeserializerTest(test.NoDBTestCase):
 
 
 class ResourceTest(test.NoDBTestCase):
+
+    def get_req_id_header_name(self, request):
+        header_name = 'x-openstack-request-id'
+        if utils.get_api_version(request) < 3:
+                header_name = 'x-compute-request-id'
+
+        return header_name
+
     def test_resource_call_with_method_get(self):
         class Controller(object):
             def index(self, req):
@@ -639,8 +647,6 @@ class ResourceTest(test.NoDBTestCase):
         context = req.environ['nova.context']
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
-        self.assertEqual(response.headers['x-compute-request-id'],
-                context.request_id)
         self.assertEqual(response.body, '{"foo": "bar"}')
         self.assertEqual(response.status_int, 200)
 
@@ -655,7 +661,8 @@ class ResourceTest(test.NoDBTestCase):
         # NOTE(alaski): This test is really to ensure that a str response
         # doesn't error.  Not having a request_id header is a side effect of
         # our wsgi setup, ideally it would be there.
-        self.assertFalse(hasattr(response.headers, 'x-compute-request-id'))
+        expected_header = self.get_req_id_header_name(req)
+        self.assertFalse(hasattr(response.headers, expected_header))
         self.assertEqual(response.body, 'foo')
         self.assertEqual(response.status_int, 200)
 
@@ -668,8 +675,6 @@ class ResourceTest(test.NoDBTestCase):
         context = req.environ['nova.context']
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
-        self.assertEqual(response.headers['x-compute-request-id'],
-                context.request_id)
         self.assertEqual(response.body, '')
         self.assertEqual(response.status_int, 200)
 

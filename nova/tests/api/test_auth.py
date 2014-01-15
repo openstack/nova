@@ -19,6 +19,7 @@ import webob.exc
 
 import nova.api.auth
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.middleware import request_id
 from nova import test
 
 CONF = cfg.CONF
@@ -69,6 +70,14 @@ class TestNovaKeystoneContextMiddleware(test.NoDBTestCase):
         self.request.headers['X_SERVICE_CATALOG'] = "bad json"
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '500 Internal Server Error')
+
+    def test_request_id_extracted_from_env(self):
+        req_id = 'dummy-request-id'
+        self.request.headers['X_PROJECT_ID'] = 'testtenantid'
+        self.request.headers['X_USER_ID'] = 'testuserid'
+        self.request.environ[request_id.ENV_REQUEST_ID] = req_id
+        self.request.get_response(self.middleware)
+        self.assertEqual(req_id, self.context.request_id)
 
 
 class TestKeystoneMiddlewareRoles(test.NoDBTestCase):

@@ -24,6 +24,7 @@ from nova import context
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.openstack.common.middleware import request_id
 from nova import wsgi
 
 
@@ -113,6 +114,8 @@ class NovaKeystoneContext(wsgi.Middleware):
         project_name = req.headers.get('X_TENANT_NAME')
         user_name = req.headers.get('X_USER_NAME')
 
+        req_id = req.environ.get(request_id.ENV_REQUEST_ID)
+
         # Get the auth token
         auth_token = req.headers.get('X_AUTH_TOKEN',
                                      req.headers.get('X_STORAGE_TOKEN'))
@@ -138,7 +141,8 @@ class NovaKeystoneContext(wsgi.Middleware):
                                      roles=roles,
                                      auth_token=auth_token,
                                      remote_address=remote_address,
-                                     service_catalog=service_catalog)
+                                     service_catalog=service_catalog,
+                                     request_id=req_id)
 
         req.environ['nova.context'] = ctx
         return self.application
