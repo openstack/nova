@@ -1313,6 +1313,8 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(expected, real)
 
     def test_security_group_ensure_default(self):
+        self.ctxt.project_id = 'fake'
+        self.ctxt.user_id = 'fake'
         self.assertEqual(0, len(db.security_group_get_by_project(
                                     self.ctxt,
                                     self.ctxt.project_id)))
@@ -1325,6 +1327,12 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         self.assertEqual(1, len(security_groups))
         self.assertEqual("default", security_groups[0]["name"])
+
+        usage = db.quota_usage_get(self.ctxt,
+                                   self.ctxt.project_id,
+                                   'security_groups',
+                                   self.ctxt.user_id)
+        self.assertEqual(1, usage.in_use)
 
     def test_security_group_update(self):
         security_group = self._create_security_group({})
