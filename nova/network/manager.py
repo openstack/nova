@@ -1406,7 +1406,7 @@ class NetworkManager(manager.Manager):
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
         network = self.get_network(context, network_uuid)
-        self.db.network_disassociate(context, network['id'])
+        network.disassociate(context, network.id)
 
     def get_fixed_ip(self, context, id):
         """Return a fixed ip."""
@@ -1767,10 +1767,11 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
     def add_network_to_project(self, context, project_id, network_uuid=None):
         """Force adds another network to a project."""
         if network_uuid is not None:
-            network_id = self.get_network(context, network_uuid)['id']
+            network_id = self.get_network(context, network_uuid).id
         else:
             network_id = None
-        self.db.network_associate(context, project_id, network_id, force=True)
+        network_obj.Network.associate(context, project_id, network_id,
+                                      force=True)
 
     def associate(self, context, network_uuid, associations):
         """Associate or disassociate host or project to network."""
@@ -1781,20 +1782,18 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         if 'host' in associations:
             host = associations['host']
             if host is None:
-                self.db.network_disassociate(context, network_id,
-                                             disassociate_host=True,
-                                             disassociate_project=False)
+                network.disassociate(context, network_id,
+                                     host=True, project=False)
             else:
                 network.host = self.host
                 network.save()
         if 'project' in associations:
             project = associations['project']
             if project is None:
-                self.db.network_disassociate(context, network_id,
-                                             disassociate_host=False,
-                                             disassociate_project=True)
+                network.disassociate(context, network_id,
+                                     host=False, project=True)
             else:
-                self.db.network_associate(context, project, network_id, True)
+                network.associate(context, project, network_id, force=True)
 
     def _get_network_by_id(self, context, network_id):
         # NOTE(vish): Don't allow access to networks with project_id=None as
