@@ -4540,8 +4540,11 @@ class LibvirtDriver(driver.ComputeDriver):
                         info['over_committed_disk_size'])
             except OSError as e:
                 if e.errno == errno.ENOENT:
-                    LOG.error(_('Getting disk size of %(i_name)s: %(e)s'),
-                              {'i_name': i_name, 'e': e})
+                    LOG.warning(_('Periodic task is updating the host stat, '
+                                  'it is trying to get disk %(i_name)s, '
+                                  'but disk file was removed by concurrent '
+                                  'operations such as resize.'),
+                                {'i_name': i_name})
                 else:
                     raise
             except exception.InstanceNotFound:
