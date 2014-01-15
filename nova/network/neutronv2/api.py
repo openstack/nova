@@ -104,6 +104,10 @@ neutron_opts = [
                      'neutron client requests.',
                deprecated_group='DEFAULT',
                deprecated_name='neutron_ca_certificates_file'),
+    cfg.BoolOpt('allow_duplicate_networks',
+                default=False,
+                help='Allow an instance to have multiple vNICs attached to '
+                    'the same Neutron network.'),
    ]
 
 CONF = cfg.CONF
@@ -258,8 +262,8 @@ class API(base_api.NetworkAPI):
         requested_networks = kwargs.get('requested_networks')
         dhcp_opts = kwargs.get('dhcp_options', None)
         ports = {}
-        fixed_ips = {}
         net_ids = []
+        ordered_networks = []
         if requested_networks:
             for network_id, fixed_ip, port_id in requested_networks:
                 if port_id:
@@ -277,18 +281,29 @@ class API(base_api.NetworkAPI):
                             # discard rather than popping.
                             available_macs.discard(port['mac_address'])
                     network_id = port['network_id']
-                    ports[network_id] = port
-                elif fixed_ip and network_id:
-                    fixed_ips[network_id] = fixed_ip
+                    ports[port_id] = port
                 if network_id:
                     net_ids.append(network_id)
+                    ordered_networks.append((network_id, fixed_ip, port_id))
 
         nets = self._get_available_networks(context, instance['project_id'],
                                             net_ids)
-
         if not nets:
             LOG.warn(_("No network configured!"), instance=instance)
             return network_model.NetworkInfo([])
+
+        # if this function is directly called without a requested_network param
+        # or if it is indirectly called through allocate_port_for_instance()
+        # with None params=(network_id=None, requested_ip=None, port_id=None):
+        if (not requested_networks
+            or requested_networks == [(None, None, None)]):
+            # bug/1267723 - if no network is requested and more
+            # than one is available then raise NetworkAmbiguous Exception
+            if len(nets) > 1:
+                msg = _("Multiple possible networks found, use a Network "
+                         "ID to be more specific.")
+                raise exception.NetworkAmbiguous(msg)
+            ordered_networks.append((nets[0]['id'], None, None))
 
         security_groups = kwargs.get('security_groups', [])
         security_group_ids = []
@@ -328,7 +343,20 @@ class API(base_api.NetworkAPI):
         touched_port_ids = []
         created_port_ids = []
         ports_in_requested_order = []
-        for network in nets:
+        nets_in_requested_order = []
+        for network_id, fixed_ip, port_id in ordered_networks:
+            # Network lookup for available network_id
+            network = None
+            for net in nets:
+                if net['id'] == network_id:
+                    network = net
+                    break
+            # if network_id did not pass validate_networks() and not available
+            # here then skip it safely not continuing with a None Network
+            else:
+                continue
+
+            nets_in_requested_order.append(network)
             # If security groups are requested on an instance then the
             # network must has a subnet associated with it. Some plugins
             # implement the port-security extension which requires
@@ -345,21 +373,21 @@ class API(base_api.NetworkAPI):
             port_req_body = {'port': {'device_id': instance['uuid'],
                                       'device_owner': zone}}
             try:
-                port = ports.get(network_id)
                 self._populate_neutron_extension_values(context, instance,
                                                         port_req_body)
                 # Requires admin creds to set port bindings
                 port_client = (neutron if not
                                self._has_port_binding_extension(context) else
                                neutronv2.get_client(context, admin=True))
-                if port:
+                if port_id:
+                    port = ports[port_id]
                     port_client.update_port(port['id'], port_req_body)
                     touched_port_ids.append(port['id'])
                     ports_in_requested_order.append(port['id'])
                 else:
                     created_port = self._create_port(
                             port_client, instance, network_id,
-                            port_req_body, fixed_ips.get(network_id),
+                            port_req_body, fixed_ip,
                             security_group_ids, available_macs, dhcp_opts)
                     created_port_ids.append(created_port)
                     ports_in_requested_order.append(created_port)
@@ -387,7 +415,8 @@ class API(base_api.NetworkAPI):
                             msg = _("Failed to delete port %s")
                             LOG.exception(msg, port_id)
 
-        nw_info = self.get_instance_nw_info(context, instance, networks=nets,
+        nw_info = self.get_instance_nw_info(context, instance,
+                                            networks=nets_in_requested_order,
                                             port_ids=ports_in_requested_order)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
@@ -690,8 +719,9 @@ class API(base_api.NetworkAPI):
                                                     address=fixed_ip,
                                                     instance_uuid=i_uuid)
 
-                if net_id in instance_on_net_ids:
-                    raise exception.NetworkDuplicated(network_id=net_id)
+                if (not CONF.neutron.allow_duplicate_networks and
+                    net_id in instance_on_net_ids):
+                        raise exception.NetworkDuplicated(network_id=net_id)
                 instance_on_net_ids.append(net_id)
 
             # Now check to see if all requested networks exist
@@ -709,10 +739,11 @@ class API(base_api.NetworkAPI):
                     requested_netid_set = set(net_ids_requested)
                     returned_netid_set = set([net['id'] for net in nets])
                     lostid_set = requested_netid_set - returned_netid_set
-                    id_str = ''
-                    for _id in lostid_set:
-                        id_str = id_str and id_str + ', ' + _id or _id
-                    raise exception.NetworkNotFound(network_id=id_str)
+                    if lostid_set:
+                        id_str = ''
+                        for _id in lostid_set:
+                            id_str = id_str and id_str + ', ' + _id or _id
+                        raise exception.NetworkNotFound(network_id=id_str)
 
         # Note(PhilD): Ideally Nova would create all required ports as part of
         # network validation, but port creation requires some details
