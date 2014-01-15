@@ -549,19 +549,19 @@ class ComputeDriver(object):
                        migrate_data=None):
         """Live migration of an instance to another host.
 
-        :params ctxt: security context
-        :params instance_ref:
+        :param ctxt: security context
+        :param instance_ref:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params dest: destination host
-        :params post_method:
+        :param dest: destination host
+        :param post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
-        :params recover_method:
+        :param recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
-        :params block_migration: if true, migrate VM disk.
-        :params migrate_data: implementation specific params.
+        :param block_migration: if true, migrate VM disk.
+        :param migrate_data: implementation specific params.
 
         """
         raise NotImplementedError()
@@ -751,7 +751,7 @@ class ComputeDriver(object):
         not be started when setting-up filtering rules operations
         are not completed.
 
-        :params instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param instance_ref: nova.db.sqlalchemy.models.Instance object
 
         """
         # TODO(Vek): Need to pass context in for access to auth_token

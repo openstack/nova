@@ -4182,20 +4182,20 @@ class LibvirtDriver(driver.ComputeDriver):
                        migrate_data=None):
         """Spawning live_migration operation for distributing high-load.
 
-        :params context: security context
-        :params instance:
+        :param context: security context
+        :param instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params dest: destination host
-        :params block_migration: destination host
-        :params post_method:
+        :param dest: destination host
+        :param block_migration: destination host
+        :param post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
-        :params recover_method:
+        :param recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
-        :params block_migration: if true, do block migration.
-        :params migrate_data: implementation specific params
+        :param block_migration: if true, do block migration.
+        :param migrate_data: implementation specific params
 
         """
 
@@ -4208,18 +4208,18 @@ class LibvirtDriver(driver.ComputeDriver):
                         migrate_data=None):
         """Do live migration.
 
-        :params context: security context
-        :params instance:
+        :param context: security context
+        :param instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params dest: destination host
-        :params post_method:
+        :param dest: destination host
+        :param post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
-        :params recover_method:
+        :param recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
-        :params migrate_data: implementation specific params
+        :param migrate_data: implementation specific params
         """
 
         # Do live migration.
@@ -4350,14 +4350,14 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_images_and_backing(self, context, instance, instance_dir,
                                    disk_info_json):
         """
-        :params context: security context
-        :params instance:
+        :param context: security context
+        :param instance:
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
-        :params instance_dir:
+        :param instance_dir:
             instance path to use, calculated externally to handle block
             migrating an instance with an old style instance path
-        :params disk_info_json:
+        :param disk_info_json:
             json strings specified in get_instance_disk_info
 
         """
