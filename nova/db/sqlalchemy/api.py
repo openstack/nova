@@ -4987,7 +4987,6 @@ def _aggregate_get_query(context, model_class, id_field=None, id=None,
     return query
 
 
-@require_admin_context
 def aggregate_create(context, values, metadata=None):
     session = get_session()
     query = _aggregate_get_query(context,
@@ -5012,7 +5011,6 @@ def aggregate_create(context, values, metadata=None):
     return aggregate_get(context, aggregate.id)
 
 
-@require_admin_context
 def aggregate_get(context, aggregate_id):
     query = _aggregate_get_query(context,
                                  models.Aggregate,
@@ -5026,7 +5024,6 @@ def aggregate_get(context, aggregate_id):
     return aggregate
 
 
-@require_admin_context
 def aggregate_get_by_host(context, host, key=None):
     """Return rows that match host (mandatory) and metadata key (optional).
 
@@ -5045,7 +5042,6 @@ def aggregate_get_by_host(context, host, key=None):
     return query.all()
 
 
-@require_admin_context
 def aggregate_metadata_get_by_host(context, host, key=None):
     query = model_query(context, models.Aggregate)
     query = query.join("_hosts")
@@ -5064,7 +5060,6 @@ def aggregate_metadata_get_by_host(context, host, key=None):
     return dict(metadata)
 
 
-@require_admin_context
 def aggregate_metadata_get_by_metadata_key(context, aggregate_id, key):
     query = model_query(context, models.Aggregate)
     query = query.join("_metadata")
@@ -5080,7 +5075,6 @@ def aggregate_metadata_get_by_metadata_key(context, aggregate_id, key):
     return dict(metadata)
 
 
-@require_admin_context
 def aggregate_host_get_by_metadata_key(context, key):
     query = model_query(context, models.Aggregate)
     query = query.join("_metadata")
@@ -5096,7 +5090,6 @@ def aggregate_host_get_by_metadata_key(context, key):
     return dict(metadata)
 
 
-@require_admin_context
 def aggregate_update(context, aggregate_id, values):
     session = get_session()
     aggregate = (_aggregate_get_query(context,
@@ -5129,7 +5122,6 @@ def aggregate_update(context, aggregate_id, values):
         raise exception.AggregateNotFound(aggregate_id=aggregate_id)
 
 
-@require_admin_context
 def aggregate_delete(context, aggregate_id):
     session = get_session()
     with session.begin():
@@ -5149,7 +5141,6 @@ def aggregate_delete(context, aggregate_id):
                     soft_delete()
 
 
-@require_admin_context
 def aggregate_get_all(context):
     return _aggregate_get_query(context, models.Aggregate).all()
 
@@ -5163,7 +5154,6 @@ def _aggregate_metadata_get_query(context, aggregate_id, session=None,
                 filter_by(aggregate_id=aggregate_id)
 
 
-@require_admin_context
 @require_aggregate_exists
 def aggregate_metadata_get(context, aggregate_id):
     rows = model_query(context,
@@ -5173,7 +5163,6 @@ def aggregate_metadata_get(context, aggregate_id):
     return dict([(r['key'], r['value']) for r in rows])
 
 
-@require_admin_context
 @require_aggregate_exists
 def aggregate_metadata_delete(context, aggregate_id, key):
     count = _aggregate_get_query(context,
@@ -5187,7 +5176,6 @@ def aggregate_metadata_delete(context, aggregate_id, key):
                                                   metadata_key=key)
 
 
-@require_admin_context
 @require_aggregate_exists
 def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                            max_retries=10):
@@ -5234,7 +5222,6 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                     LOG.warn(msg)
 
 
-@require_admin_context
 @require_aggregate_exists
 def aggregate_host_get_all(context, aggregate_id):
     rows = model_query(context,
@@ -5244,7 +5231,6 @@ def aggregate_host_get_all(context, aggregate_id):
     return [r.host for r in rows]
 
 
-@require_admin_context
 @require_aggregate_exists
 def aggregate_host_delete(context, aggregate_id, host):
     count = _aggregate_get_query(context,
@@ -5258,7 +5244,6 @@ def aggregate_host_delete(context, aggregate_id, host):
                                               host=host)
 
 
-@require_admin_context
 @require_aggregate_exists
 def aggregate_host_add(context, aggregate_id, host):
     host_ref = models.AggregateHost()
