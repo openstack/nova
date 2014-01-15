@@ -36,7 +36,7 @@ def get_fake_instance_data(name, project_id, user_id):
             'kernel_id': "1",
             'ramdisk_id': "1",
             'mac_address': "de:ad:be:ef:be:ef",
-            'instance_type':
+            'flavor':
             {'name': 'm1.tiny',
              'memory_mb': 512,
              'vcpus': 1,
@@ -55,7 +55,7 @@ def get_fake_image_data(project_id, user_id):
             'kernel_id': "1",
             'ramdisk_id': "1",
             'mac_address': "de:ad:be:ef:be:ef",
-            'instance_type': 'm1.tiny',
+            'flavor': 'm1.tiny',
             }
 
 
@@ -93,7 +93,7 @@ def get_fake_block_device_info(target_portal, volume_id):
 def stub_out_db_instance_api(stubs):
     """Stubs out the db API for creating Instances."""
 
-    INSTANCE_TYPES = {
+    FLAVORS = {
         'm1.tiny': dict(memory_mb=512, vcpus=1, root_gb=0, flavorid=1),
         'm1.small': dict(memory_mb=2048, vcpus=1, root_gb=20, flavorid=2),
         'm1.medium': dict(memory_mb=4096, vcpus=2, root_gb=40, flavorid=3),
@@ -127,10 +127,10 @@ def stub_out_db_instance_api(stubs):
     def fake_instance_create(context, values):
         """Stubs out the db.instance_create method."""
 
-        if 'instance_type' not in values:
+        if 'flavor' not in values:
             return
 
-        instance_type = values['instance_type']
+        flavor = values['flavor']
 
         base_options = {
             'name': values['name'],
@@ -144,25 +144,25 @@ def stub_out_db_instance_api(stubs):
             'task_state': task_states.SCHEDULING,
             'user_id': values['user_id'],
             'project_id': values['project_id'],
-            'instance_type': instance_type,
-            'memory_mb': instance_type['memory_mb'],
-            'vcpus': instance_type['vcpus'],
+            'flavor': flavor,
+            'memory_mb': flavor['memory_mb'],
+            'vcpus': flavor['vcpus'],
             'mac_addresses': [{'address': values['mac_address']}],
-            'root_gb': instance_type['root_gb'],
+            'root_gb': flavor['root_gb'],
         }
         return FakeModel(base_options)
 
-    def fake_instance_type_get_all(context, inactive=0, filters=None):
-        return INSTANCE_TYPES.values()
+    def fake_flavor_get_all(context, inactive=0, filters=None):
+        return FLAVORS.values()
 
-    def fake_instance_type_get_by_name(context, name):
-        return INSTANCE_TYPES[name]
+    def fake_flavor_get_by_name(context, name):
+        return FLAVORS[name]
 
     def fake_block_device_mapping_get_all_by_instance(context, instance_uuid):
         return {}
 
     stubs.Set(db, 'instance_create', fake_instance_create)
-    stubs.Set(db, 'flavor_get_all', fake_instance_type_get_all)
-    stubs.Set(db, 'flavor_get_by_name', fake_instance_type_get_by_name)
+    stubs.Set(db, 'flavor_get_all', fake_flavor_get_all)
+    stubs.Set(db, 'flavor_get_by_name', fake_flavor_get_by_name)
     stubs.Set(db, 'block_device_mapping_get_all_by_instance',
               fake_block_device_mapping_get_all_by_instance)
