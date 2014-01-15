@@ -69,6 +69,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
+from nova.openstack.common import timeutils
 from nova.openstack.common import units
 from nova.openstack.common import xmlutils
 from nova.pci import pci_manager
@@ -79,6 +80,7 @@ from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
+from nova.virt import diagnostics
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import event as virtevent
@@ -5312,24 +5314,25 @@ class LibvirtDriver(driver.ComputeDriver):
         """Confirms a resize, destroying the source VM."""
         self._cleanup_resize(instance, network_info)
 
-    def get_diagnostics(self, instance):
-        def get_io_devices(xml_doc):
-            """get the list of io devices from the xml document."""
-            result = {"volumes": [], "ifaces": []}
-            try:
-                doc = etree.fromstring(xml_doc)
-            except Exception:
-                return result
-            blocks = [('./devices/disk', 'volumes'),
-                ('./devices/interface', 'ifaces')]
-            for block, key in blocks:
-                section = doc.findall(block)
-                for node in section:
-                    for child in node.getchildren():
-                        if child.tag == 'target' and child.get('dev'):
-                            result[key].append(child.get('dev'))
+    @staticmethod
+    def _get_io_devices(xml_doc):
+        """get the list of io devices from the xml document."""
+        result = {"volumes": [], "ifaces": []}
+        try:
+            doc = etree.fromstring(xml_doc)
+        except Exception:
             return result
+        blocks = [('./devices/disk', 'volumes'),
+            ('./devices/interface', 'ifaces')]
+        for block, key in blocks:
+            section = doc.findall(block)
+            for node in section:
+                for child in node.getchildren():
+                    if child.tag == 'target' and child.get('dev'):
+                        result[key].append(child.get('dev'))
+        return result
 
+    def get_diagnostics(self, instance):
         domain = self._lookup_by_name(instance['name'])
         output = {}
         # get cpu time, might launch an exception if the method
@@ -5343,7 +5346,7 @@ class LibvirtDriver(driver.ComputeDriver):
             pass
         # get io status
         xml = domain.XMLDesc(0)
-        dom_io = get_io_devices(xml)
+        dom_io = LibvirtDriver._get_io_devices(xml)
         for guest_disk in dom_io["volumes"]:
             try:
                 # blockStats might launch an exception if the method
@@ -5384,6 +5387,76 @@ class LibvirtDriver(driver.ComputeDriver):
         except (libvirt.libvirtError, AttributeError):
             pass
         return output
+
+    def get_instance_diagnostics(self, instance):
+        domain = self._lookup_by_name(instance['name'])
+        xml = domain.XMLDesc(0)
+        xml_doc = etree.fromstring(xml)
+
+        (state, max_mem, mem, num_cpu, cpu_time) = domain.info()
+        config_drive = configdrive.required_by(instance)
+        launched_at = timeutils.normalize_time(instance['launched_at'])
+        uptime = timeutils.delta_seconds(launched_at,
+                                         timeutils.utcnow())
+        diags = diagnostics.Diagnostics(state=power_state.STATE_MAP[state],
+                                        driver='libvirt',
+                                        config_drive=config_drive,
+                                        hypervisor_os='linux',
+                                        uptime=uptime)
+        diags.memory_details.maximum = max_mem / units.Mi
+        diags.memory_details.used = mem / units.Mi
+
+        # get cpu time, might launch an exception if the method
+        # is not supported by the underlying hypervisor being
+        # used by libvirt
+        try:
+            cputime = domain.vcpus()[0]
+            num_cpus = len(cputime)
+            for i in range(num_cpus):
+                diags.add_cpu(time=cputime[i][2])
+        except libvirt.libvirtError:
+            pass
+        # get io status
+        dom_io = LibvirtDriver._get_io_devices(xml)
+        for guest_disk in dom_io["volumes"]:
+            try:
+                # blockStats might launch an exception if the method
+                # is not supported by the underlying hypervisor being
+                # used by libvirt
+                stats = domain.blockStats(guest_disk)
+                diags.add_disk(read_bytes=stats[1],
+                               read_requests=stats[0],
+                               write_bytes=stats[3],
+                               write_requests=stats[2])
+            except libvirt.libvirtError:
+                pass
+        for interface in dom_io["ifaces"]:
+            try:
+                # interfaceStats might launch an exception if the method
+                # is not supported by the underlying hypervisor being
+                # used by libvirt
+                stats = domain.interfaceStats(interface)
+                diags.add_nic(rx_octets=stats[0],
+                              rx_errors=stats[2],
+                              rx_drop=stats[3],
+                              rx_packets=stats[1],
+                              tx_octets=stats[4],
+                              tx_errors=stats[6],
+                              tx_drop=stats[7],
+                              tx_packets=stats[5])
+            except libvirt.libvirtError:
+                pass
+
+        # Update mac addresses of interface if stats have been reported
+        if len(diags.nic_details) > 0:
+            ret = xml_doc.findall('./devices/interface')
+            index = 0
+            for node in ret:
+                for child in node.getchildren():
+                    if child.tag == 'mac':
+                        diags.nic_details[index].mac_address = child.get(
+                            'address')
+        return diags
 
     def instance_on_disk(self, instance):
         # ensure directories exist and are writable

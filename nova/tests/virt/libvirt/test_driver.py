@@ -16,6 +16,7 @@
 import __builtin__
 import contextlib
 import copy
+import datetime
 import errno
 import functools
 import os
@@ -51,6 +52,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import loopingcall
 from nova.openstack.common import processutils
+from nova.openstack.common import timeutils
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova.pci import pci_manager
@@ -200,7 +202,8 @@ class FakeVirtDomain(object):
         return self.id
 
     def info(self):
-        return [power_state.RUNNING, None, None, None, None]
+        return [power_state.RUNNING, 2048 * units.Mi, 1234 * units.Mi,
+                None, None]
 
     def create(self):
         pass
@@ -6723,6 +6726,43 @@ class LibvirtConnTestCase(test.TestCase,
                   }
         self.assertEqual(actual, expect)
 
+        lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
+        diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
+        timeutils.set_time_override(diags_time)
+
+        actual = conn.get_instance_diagnostics({"name": "testvirt",
+                                                "launched_at": lt})
+        expected = {'config_drive': False,
+                    'cpu_details': [],
+                    'disk_details': [{'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L},
+                                     {'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L}],
+                    'driver': 'libvirt',
+                    'hypervisor_os': 'linux',
+                    'memory_details': {'maximum': 2048, 'used': 1234},
+                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
+                                     'rx_drop': 0L,
+                                     'rx_errors': 0L,
+                                     'rx_octets': 4408L,
+                                     'rx_packets': 82L,
+                                     'tx_drop': 0L,
+                                     'tx_errors': 0L,
+                                     'tx_octets': 0L,
+                                     'tx_packets': 0L}],
+                    'state': 'running',
+                    'uptime': 10,
+                    'version': '1.0'}
+        self.assertEqual(expected, actual.serialize())
+
     def test_diagnostic_blockstats_exception(self):
         xml = """
                 <domain type='kvm'>
@@ -6796,6 +6836,35 @@ class LibvirtConnTestCase(test.TestCase,
                   'vnet0_tx_packets': 0L,
                   }
         self.assertEqual(actual, expect)
+
+        lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
+        diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
+        timeutils.set_time_override(diags_time)
+
+        actual = conn.get_instance_diagnostics({"name": "testvirt",
+                                                "launched_at": lt})
+        expected = {'config_drive': False,
+                    'cpu_details': [{'time': 15340000000L},
+                                    {'time': 1640000000L},
+                                    {'time': 3040000000L},
+                                    {'time': 1420000000L}],
+                    'disk_details': [],
+                    'driver': 'libvirt',
+                    'hypervisor_os': 'linux',
+                    'memory_details': {'maximum': 2048, 'used': 1234},
+                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
+                                     'rx_drop': 0L,
+                                     'rx_errors': 0L,
+                                     'rx_octets': 4408L,
+                                     'rx_packets': 82L,
+                                     'tx_drop': 0L,
+                                     'tx_errors': 0L,
+                                     'tx_octets': 0L,
+                                     'tx_packets': 0L}],
+                    'state': 'running',
+                    'uptime': 10,
+                    'version': '1.0'}
+        self.assertEqual(expected, actual.serialize())
 
     def test_diagnostic_interfacestats_exception(self):
         xml = """
@@ -6872,6 +6941,38 @@ class LibvirtConnTestCase(test.TestCase,
                   'memory-rss': 200164L,
                   }
         self.assertEqual(actual, expect)
+
+        lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
+        diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
+        timeutils.set_time_override(diags_time)
+
+        actual = conn.get_instance_diagnostics({"name": "testvirt",
+                                                "launched_at": lt})
+        expected = {'config_drive': False,
+                    'cpu_details': [{'time': 15340000000L},
+                                    {'time': 1640000000L},
+                                    {'time': 3040000000L},
+                                    {'time': 1420000000L}],
+                    'disk_details': [{'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L},
+                                     {'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L}],
+                    'driver': 'libvirt',
+                    'hypervisor_os': 'linux',
+                    'memory_details': {'maximum': 2048, 'used': 1234},
+                    'nic_details': [],
+                    'state': 'running',
+                    'uptime': 10,
+                    'version': '1.0'}
+        self.assertEqual(expected, actual.serialize())
 
     def test_diagnostic_memorystats_exception(self):
         xml = """
@@ -6954,6 +7055,46 @@ class LibvirtConnTestCase(test.TestCase,
                   'vnet0_tx_packets': 0L,
                   }
         self.assertEqual(actual, expect)
+
+        lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
+        diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
+        timeutils.set_time_override(diags_time)
+
+        actual = conn.get_instance_diagnostics({"name": "testvirt",
+                                                "launched_at": lt})
+        expected = {'config_drive': False,
+                    'cpu_details': [{'time': 15340000000L},
+                                    {'time': 1640000000L},
+                                    {'time': 3040000000L},
+                                    {'time': 1420000000L}],
+                    'disk_details': [{'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L},
+                                     {'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L}],
+                    'driver': 'libvirt',
+                    'hypervisor_os': 'linux',
+                    'memory_details': {'maximum': 2048, 'used': 1234},
+                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
+                                     'rx_drop': 0L,
+                                     'rx_errors': 0L,
+                                     'rx_octets': 4408L,
+                                     'rx_packets': 82L,
+                                     'tx_drop': 0L,
+                                     'tx_errors': 0L,
+                                     'tx_octets': 0L,
+                                     'tx_packets': 0L}],
+                    'state': 'running',
+                    'uptime': 10,
+                    'version': '1.0'}
+        self.assertEqual(expected, actual.serialize())
 
     def test_diagnostic_full(self):
         xml = """
@@ -7038,6 +7179,46 @@ class LibvirtConnTestCase(test.TestCase,
                   'vnet0_tx_packets': 0L,
                   }
         self.assertEqual(actual, expect)
+
+        lt = datetime.datetime(2012, 11, 22, 12, 00, 00)
+        diags_time = datetime.datetime(2012, 11, 22, 12, 00, 10)
+        timeutils.set_time_override(diags_time)
+
+        actual = conn.get_instance_diagnostics({"name": "testvirt",
+                                                "launched_at": lt})
+        expected = {'config_drive': False,
+                    'cpu_details': [{'time': 15340000000L},
+                                    {'time': 1640000000L},
+                                    {'time': 3040000000L},
+                                    {'time': 1420000000L}],
+                    'disk_details': [{'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L},
+                                     {'errors_count': 0,
+                                      'id': '',
+                                      'read_bytes': 688640L,
+                                      'read_requests': 169L,
+                                      'write_bytes': 0L,
+                                      'write_requests': 0L}],
+                    'driver': 'libvirt',
+                    'hypervisor_os': 'linux',
+                    'memory_details': {'maximum': 2048, 'used': 1234},
+                    'nic_details': [{'mac_address': '52:54:00:a4:38:38',
+                                     'rx_drop': 0L,
+                                     'rx_errors': 0L,
+                                     'rx_octets': 4408L,
+                                     'rx_packets': 82L,
+                                     'tx_drop': 0L,
+                                     'tx_errors': 0L,
+                                     'tx_octets': 0L,
+                                     'tx_packets': 0L}],
+                    'state': 'running',
+                    'uptime': 10,
+                    'version': '1.0'}
+        self.assertEqual(expected, actual.serialize())
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_list_instance_domains")
