@@ -30,6 +30,7 @@ import six
 
 from nova import db
 from nova import exception
+from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
@@ -971,11 +972,11 @@ def get_dhcp_opts(context, network_ref):
         instance_set = set([datum['instance_uuid'] for datum in data])
         default_gw_vif = {}
         for instance_uuid in instance_set:
-            vifs = db.virtual_interface_get_by_instance(context,
-                                                        instance_uuid)
+            vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
+                    instance_uuid)
             if vifs:
                 #offer a default gateway to the first virtual interface
-                default_gw_vif[instance_uuid] = vifs[0]['id']
+                default_gw_vif[instance_uuid] = vifs[0].id
 
         for datum in data:
             instance_uuid = datum['instance_uuid']
