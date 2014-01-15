@@ -4804,10 +4804,14 @@ class ComputeTestCase(BaseTestCase):
         """
         # Create stubs
         result = {}
+        # No share storage live migration don't need to destroy at source
+        # server because instance has been migrated to destination, but a
+        # cleanup for block device and network are needed.
 
-        def fakedestroy(*args, **kwargs):
-            result['destroyed'] = True
-        self.stubs.Set(self.compute.driver, 'destroy', fakedestroy)
+        def fakecleanup(*args, **kwargs):
+            result['cleanup'] = True
+
+        self.stubs.Set(self.compute.driver, 'cleanup', fakecleanup)
         dest = 'desthost'
         srchost = self.compute.host
 
@@ -4847,8 +4851,8 @@ class ComputeTestCase(BaseTestCase):
         migrate_data = {'is_shared_storage': False}
         self.compute._post_live_migration(c, inst_ref, dest,
                                           migrate_data=migrate_data)
-        self.assertIn('destroyed', result)
-        self.assertTrue(result['destroyed'] == True)
+        self.assertIn('cleanup', result)
+        self.assertEqual(result['cleanup'], True)
 
     def test_post_live_migration_working_correctly(self):
         # Confirm post_live_migration() works as expected correctly.

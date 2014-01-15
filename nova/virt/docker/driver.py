@@ -319,6 +319,11 @@ class DockerDriver(driver.ComputeDriver):
         self.docker.stop_container(container_id)
         self.docker.destroy_container(container_id)
 
+    def cleanup(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
+        """Cleanup after instance being destroyed by Hypervisor."""
+        pass
+
     def reboot(self, context, instance, network_info, reboot_type,
                block_device_info=None, bad_volumes_callback=None):
         container_id = self.find_container_by_name(instance['name']).get('id')

@@ -212,6 +212,10 @@ class FakeDriver(driver.ComputeDriver):
                         {'key': key,
                          'inst': self.instances}, instance=instance)
 
+    def cleanup(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
+        pass
+
     def attach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Attach the disk to the instance at mountpoint using info."""

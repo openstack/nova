@@ -327,6 +327,11 @@ class BareMetalDriver(driver.ComputeDriver):
                     LOG.error(_("Error while recording destroy failure in "
                                 "baremetal database: %s") % e)
 
+    def cleanup(self, context, instance, network_info, block_device_info=None,
+                destroy_disks=True):
+        """Cleanup after instance being destroyed."""
+        pass
+
     def power_off(self, instance, node=None):
         """Power off the specified instance."""
         if not node:
