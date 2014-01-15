@@ -1651,8 +1651,16 @@
 # Deprecated group/name - [DEFAULT]/logdir
 #log_dir=<None>
 
-# Use syslog for logging. (boolean value)
+# Use syslog for logging. Existing syslog format is DEPRECATED
+# during I, and then will be changed in J to honor RFC5424
+# (boolean value)
 #use_syslog=false
+
+# (Optional) Use syslog rfc5424 format for logging. If
+# enabled, will add APP-NAME (RFC5424) before the MSG part of
+# the syslog message.  The old format without APP-NAME is
+# deprecated in I, and will be removed in J. (boolean value)
+#use_syslog_rfc_format=false
 
 # syslog facility to receive log lines (string value)
 #syslog_log_facility=LOG_USER
