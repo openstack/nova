@@ -18,6 +18,7 @@
 # under the License.
 
 import fixtures
+import mock
 import mox
 from oslo.config import cfg
 
@@ -38,6 +39,7 @@ from nova.openstack.common import rpc
 from nova.openstack.common.rpc import common as rpc_common
 from nova import quota
 from nova import test
+from nova.tests import fake_instance
 from nova.tests import fake_ldap
 from nova.tests import fake_network
 from nova.tests import matchers
@@ -49,6 +51,9 @@ LOG = logging.getLogger(__name__)
 
 HOST = "testhost"
 FAKEUUID = "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"
+
+
+fake_inst = fake_instance.fake_db_instance
 
 
 networks = [{'id': 0,
@@ -358,8 +363,11 @@ class FlatNetworkTestCase(test.TestCase):
                              fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.instance_get_by_uuid(self.context,
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                                    'uuid': FAKEUUID})
+                                mox.IgnoreArg(), use_slave=False,
+                                columns_to_join=['info_cache',
+                                                 'security_groups']
+                                ).AndReturn(fake_inst(display_name=HOST,
+                                                      uuid=FAKEUUID))
 
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
@@ -401,8 +409,11 @@ class FlatNetworkTestCase(test.TestCase):
                              fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.instance_get_by_uuid(self.context,
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                                    'uuid': FAKEUUID})
+                                mox.IgnoreArg(), use_slave=False,
+                                columns_to_join=['info_cache',
+                                                 'security_groups']
+                                ).AndReturn(fake_inst(display_name=HOST,
+                                                      uuid=FAKEUUID))
 
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()).AndReturn(networks[0])
@@ -488,8 +499,11 @@ class FlatNetworkTestCase(test.TestCase):
                              fixed_ips=mox.IgnoreArg()).AndReturn(None)
 
         db.instance_get_by_uuid(self.context,
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                                    'uuid': FAKEUUID})
+                                mox.IgnoreArg(), use_slave=False,
+                                columns_to_join=['info_cache',
+                                                 'security_groups']
+                                ).AndReturn(fake_inst(display_name=HOST,
+                                                      uuid=FAKEUUID))
 
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()).AndReturn(networks[0])
@@ -576,8 +590,11 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                        mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                                    'uuid': FAKEUUID})
+                                mox.IgnoreArg(), use_slave=False,
+                                columns_to_join=['info_cache',
+                                                 'security_groups']
+                                ).AndReturn(fake_inst(display_name=HOST,
+                                                      uuid=FAKEUUID))
         self.mox.ReplayAll()
 
         network = dict(networks[0])
@@ -616,8 +633,11 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn({'id': 0})
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                            'uuid': FAKEUUID})
+                                mox.IgnoreArg(), use_slave=False,
+                                columns_to_join=['info_cache',
+                                                 'security_groups']
+                                ).AndReturn(fake_inst(display_name=HOST,
+                                                      uuid=FAKEUUID))
         self.mox.ReplayAll()
 
         network = dict(networks[0])
@@ -1125,8 +1145,11 @@ class VlanNetworkTestCase(test.TestCase):
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()).AndReturn(networks[0])
         db.instance_get_by_uuid(mox.IgnoreArg(),
-                mox.IgnoreArg()).AndReturn({'display_name': HOST,
-                                            'uuid': FAKEUUID})
+                                mox.IgnoreArg(), use_slave=False,
+                                columns_to_join=['info_cache',
+                                                 'security_groups']
+                                ).AndReturn(fake_inst(display_name=HOST,
+                                                      uuid=FAKEUUID))
         self.network.get_instance_nw_info(mox.IgnoreArg(), mox.IgnoreArg(),
                                           mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
@@ -1392,10 +1415,11 @@ class CommonNetworkTestCase(test.TestCase):
                           manager.get_instance_nw_info,
                           self.context, FAKEUUID, 'fake_rxtx_factor', HOST)
 
-    def test_deallocate_for_instance_passes_host_info(self):
+    @mock.patch('nova.db.instance_get')
+    def test_deallocate_for_instance_passes_host_info(self, instance_get):
         manager = fake_network.FakeNetworkManager()
         db = manager.db
-        db.instance_get = lambda _x, _y: dict(uuid='ignoreduuid')
+        instance_get.return_value = fake_inst(uuid='ignoreduuid')
         db.virtual_interface_delete_by_instance = lambda _x, _y: None
         ctx = context.RequestContext('igonre', 'igonre')
 

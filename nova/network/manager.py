@@ -528,9 +528,9 @@ class NetworkManager(manager.Manager):
         read_deleted_context = context.elevated(read_deleted='yes')
         instance_uuid = kwargs['instance_id']
         if not uuidutils.is_uuid_like(instance_uuid):
-            instance = self.db.instance_get(read_deleted_context,
-                                            instance_uuid)
-            instance_uuid = instance['uuid']
+            instance = instance_obj.Instance.get_by_id(read_deleted_context,
+                                                       instance_uuid)
+            instance_uuid = instance.uuid
 
         host = kwargs.get('host')
 
@@ -864,8 +864,8 @@ class NetworkManager(manager.Manager):
 
             # NOTE(vish) This db query could be removed if we pass az and name
             #            (or the whole instance object).
-            instance = self.db.instance_get_by_uuid(context, instance_id)
-            name = instance['display_name']
+            instance = instance_obj.Instance.get_by_uuid(context, instance_id)
+            name = instance.display_name
 
             if self._validate_instance_zone_for_dns_domain(context, instance):
                 self.instance_dns_manager.create_entry(
@@ -889,9 +889,8 @@ class NetworkManager(manager.Manager):
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
-        instance = self.db.instance_get_by_uuid(
-                context.elevated(read_deleted='yes'),
-                instance_uuid)
+        instance = instance_obj.Instance.get_by_uuid(
+            context.elevated(read_deleted='yes'), instance_uuid)
         project_id = instance.project_id
         try:
             reservations = self.quotas.reserve(context,
@@ -1287,9 +1286,9 @@ class NetworkManager(manager.Manager):
         else:
             call_func = self._setup_network_on_host
 
-        instance = self.db.instance_get(context, instance_id)
+        instance = instance_obj.Instance.get_by_id(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance['uuid'])
+                                                         instance.uuid)
         for vif in vifs:
             network = self.db.network_get(context, vif['network_id'])
             if not network['multi_host']:
@@ -1371,9 +1370,9 @@ class NetworkManager(manager.Manager):
         """Returns the vifs associated with an instance."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        instance = self.db.instance_get(context, instance_id)
+        instance = instance_obj.Instance.get_by_id(context, instance_id)
         vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance['uuid'])
+                                                         instance.uuid)
         for vif in vifs:
             if vif.get('network_id') is not None:
                 network = self._get_network_by_id(context, vif['network_id'])
@@ -1752,11 +1751,10 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
-        instance = self.db.instance_get_by_uuid(context, instance_id)
+        instance = instance_obj.Instance.get_by_uuid(context, instance_id)
 
-        name = instance['display_name']
+        name = instance.display_name
         if self._validate_instance_zone_for_dns_domain(context, instance):
-            name = instance['display_name']
             self.instance_dns_manager.create_entry(name, address,
                                                    "A",
                                                    self.instance_dns_domain)
