@@ -1144,7 +1144,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
             fixed_ip_ref.network_id = network_id
         fixed_ip_ref.instance_uuid = instance_uuid
         session.add(fixed_ip_ref)
-    return fixed_ip_ref['address']
+    return fixed_ip_ref
 
 
 @require_admin_context
@@ -1179,7 +1179,7 @@ def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
         if host:
             fixed_ip_ref['host'] = host
         session.add(fixed_ip_ref)
-    return fixed_ip_ref['address']
+    return fixed_ip_ref
 
 
 @require_context
