@@ -4781,8 +4781,9 @@ class ComputeManager(manager.Manager):
             else:
                 update_cells = False
 
-            instances = self.conductor_api.instance_get_all_by_host(
-                context, self.host, columns_to_join=[])
+            instances = instance_obj.InstanceList.get_by_host(context,
+                                                              self.host,
+                                                              use_slave=True)
             try:
                 bw_counters = self.driver.get_all_bw_counters(instances)
             except NotImplementedError:
@@ -4804,6 +4805,8 @@ class ComputeManager(manager.Manager):
                 bw_out = 0
                 last_ctr_in = None
                 last_ctr_out = None
+                # TODO(geekinutah): Once bw_usage_cache object is created
+                #                   need to revisit this and slaveify.
                 usage = self.conductor_api.bw_usage_get(context,
                                                         bw_ctr['uuid'],
                                                         start_time,
@@ -4814,6 +4817,7 @@ class ComputeManager(manager.Manager):
                     last_ctr_in = usage['last_ctr_in']
                     last_ctr_out = usage['last_ctr_out']
                 else:
+                    # TODO(geekinutah): Same here, pls slaveify
                     usage = self.conductor_api.bw_usage_get(
                         context, bw_ctr['uuid'], prev_time,
                         bw_ctr['mac_address'])

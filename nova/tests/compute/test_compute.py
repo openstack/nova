@@ -537,21 +537,22 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.UnsetStubs()
 
     def test_poll_bandwidth_usage_not_implemented(self):
-        ctxt = 'MockContext'
+        ctxt = context.get_admin_context()
 
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_bw_counters')
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(time, 'time')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'instance_get_all_by_host')
+        self.mox.StubOutWithMock(instance_obj.InstanceList,
+                                 'get_by_host')
         # Following methods will be called
         utils.last_completed_audit_period().AndReturn((0, 0))
         time.time().AndReturn(10)
         # Note - time called two more times from Log
         time.time().AndReturn(20)
         time.time().AndReturn(21)
-        self.compute.conductor_api.instance_get_all_by_host(ctxt,
-                           'fake-mini', columns_to_join=[]).AndReturn([])
+        instance_obj.InstanceList.get_by_host(ctxt,
+                           'fake-mini',
+                           use_slave=True).AndReturn([])
         self.compute.driver.get_all_bw_counters([]).AndRaise(
             NotImplementedError)
         self.mox.ReplayAll()
