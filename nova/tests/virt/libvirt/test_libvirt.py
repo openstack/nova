@@ -2748,7 +2748,8 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.stubs.Set(os, 'open', os_open_stub)
 
-        def connection_supports_direct_io_stub(*args, **kwargs):
+        @staticmethod
+        def connection_supports_direct_io_stub(dirpath):
             return directio_supported
 
         self.stubs.Set(libvirt_driver.LibvirtDriver,
