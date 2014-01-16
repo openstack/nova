@@ -6146,6 +6146,45 @@ class ComputeTestCase(BaseTestCase):
                                                  instance,
                                                  {}, bdms)
 
+    def test_default_block_device_names_calls_db_update(self):
+        instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
+        instance['root_device_name'] = None
+        bdms[0]['device_name'] = None
+        bdms.append({'id': 4, 'instance_uuid': 'fake-instance',
+                     'source_type': 'volume', 'device_name': None,
+                     'destination_type': 'volume',
+                     'volume_id': 'fake-volume-id-1'})
+
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'default_root_device_name')
+        self.mox.StubOutWithMock(compute_utils, 'get_next_device_name')
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
+        self.mox.StubOutWithMock(self.compute.driver,
+                                 'default_device_names_for_instance')
+        self.mox.StubOutWithMock(self.compute.conductor_api,
+                                 'block_device_mapping_update')
+
+        self.compute.driver.default_root_device_name(
+                instance, {}, bdms[0]).AndRaise(NotImplementedError)
+        compute_utils.get_next_device_name(instance, []).AndReturn('/dev/vda')
+        self.compute._instance_update(self.context, instance['uuid'],
+                                      root_device_name='/dev/vda')
+        self.compute.conductor_api.block_device_mapping_update(
+                self.context, 3, {'device_name': '/dev/vda'})
+        self.compute.driver.default_device_names_for_instance(
+                instance, '/dev/vda', [], [], bdms).AndRaise(
+                        NotImplementedError)
+        compute_utils.get_next_device_name(
+                instance, ['/dev/vda'], '/dev/vda').AndReturn('/dev/vdb')
+        self.compute.conductor_api.block_device_mapping_update(
+                self.context, 4, {'device_name': '/dev/vdb'})
+        self.mox.ReplayAll()
+
+        self.compute._default_block_device_names(self.context,
+                                                 instance,
+                                                 {}, bdms)
+        self.assertEqual(bdms[1]['device_name'], '/dev/vdb')
+
 
 class ComputeAPITestCase(BaseTestCase):
     def setUp(self):
