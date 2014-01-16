@@ -58,7 +58,7 @@ class ExtendedAZController(wsgi.Controller):
 
 
 class Extended_availability_zone(extensions.ExtensionDescriptor):
-    """Extended Server Attributes support."""
+    """Extended Availability Zone support."""
 
     name = "ExtendedAvailabilityZone"
     alias = "OS-EXT-AZ"
