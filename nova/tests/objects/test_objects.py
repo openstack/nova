@@ -714,6 +714,9 @@ class TestObjectListBase(test.TestCase):
         self.assertEqual(objlist[2], objlist.objects[2])
         self.assertEqual(objlist.count(objlist.objects[0]), 1)
         self.assertEqual(objlist.index(objlist.objects[1]), 1)
+        objlist.sort(key=lambda x: x.foo, reverse=True)
+        self.assertEqual([3, 2, 1],
+                         [x.foo for x in objlist])
 
     def test_serialization(self):
         class Foo(base.ObjectListBase, base.NovaObject):
