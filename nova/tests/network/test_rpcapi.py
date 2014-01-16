@@ -101,10 +101,6 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
     def test_get_all_networks(self):
         self._test_network_api('get_all_networks', rpc_method='call')
 
-    def test_get_network(self):
-        self._test_network_api('get_network', rpc_method='call',
-                network_uuid='fake_uuid')
-
     def test_create_networks(self):
         self._test_network_api('create_networks', rpc_method='call',
                 arg1='arg', arg2='arg')
