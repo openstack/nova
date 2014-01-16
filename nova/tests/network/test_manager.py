@@ -1503,15 +1503,18 @@ class CommonNetworkTestCase(test.TestCase):
                           self.context, FAKEUUID, 'fake_rxtx_factor', HOST)
 
     @mock.patch('nova.db.instance_get')
-    def test_deallocate_for_instance_passes_host_info(self, instance_get):
+    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    def test_deallocate_for_instance_passes_host_info(self, fixed_get,
+                                                      instance_get):
         manager = fake_network.FakeNetworkManager()
         db = manager.db
         instance_get.return_value = fake_inst(uuid='ignoreduuid')
         db.virtual_interface_delete_by_instance = lambda _x, _y: None
         ctx = context.RequestContext('igonre', 'igonre')
 
-        db.fixed_ip_get_by_instance = lambda x, y: [dict(address='1.2.3.4',
-                                                    network_id='ignoredid')]
+        fixed_get.return_value = [dict(test_fixed_ip.fake_fixed_ip,
+                                       address='1.2.3.4',
+                                       network_id=123)]
 
         manager.deallocate_for_instance(
             ctx, instance_id='ignore', host='somehost')
@@ -1520,16 +1523,23 @@ class CommonNetworkTestCase(test.TestCase):
             (ctx, '1.2.3.4', 'somehost')
         ], manager.deallocate_fixed_ip_calls)
 
-    def test_remove_fixed_ip_from_instance(self):
+    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    def test_remove_fixed_ip_from_instance(self, get):
         manager = fake_network.FakeNetworkManager()
-        manager.remove_fixed_ip_from_instance(self.context, 99,
+        get.return_value = [
+            dict(test_fixed_ip.fake_fixed_ip, **x)
+            for x in manager.db.fixed_ip_get_by_instance(None,
+                                                         FAKEUUID)]
+        manager.remove_fixed_ip_from_instance(self.context, FAKEUUID,
                                               HOST,
                                               '10.0.0.1')
 
         self.assertEqual(manager.deallocate_called, '10.0.0.1')
 
-    def test_remove_fixed_ip_from_instance_bad_input(self):
+    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    def test_remove_fixed_ip_from_instance_bad_input(self, get):
         manager = fake_network.FakeNetworkManager()
+        get.return_value = []
         self.assertRaises(exception.FixedIpNotFoundForSpecificInstance,
                           manager.remove_fixed_ip_from_instance,
                           self.context, 99, HOST, 'bad input')

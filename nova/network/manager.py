@@ -74,7 +74,6 @@ from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common.rpc import common as rpc_common
@@ -327,10 +326,10 @@ class NetworkManager(manager.Manager):
             host = self.host
         network_id = network_ref['id']
         try:
-            fip = self.db.fixed_ip_get_by_network_host(context,
-                                                       network_id,
-                                                       host)
-            return fip['address']
+            fip = fixed_ip_obj.FixedIP.get_by_network_and_host(context,
+                                                               network_id,
+                                                               host)
+            return fip.address
         except exception.FixedIpNotFoundForNetworkHost:
             elevated = context.elevated()
             fip = fixed_ip_obj.FixedIP.associate_pool(elevated,
@@ -542,19 +541,21 @@ class NetworkManager(manager.Manager):
         host = kwargs.get('host')
 
         try:
-            fixed_ips = (kwargs.get('fixed_ips') or
-                         self.db.fixed_ip_get_by_instance(read_deleted_context,
-                                                          instance_uuid))
+            if 'fixed_ips' in kwargs:
+                fixed_ips = kwargs['fixed_ips']
+            else:
+                fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(
+                    read_deleted_context, instance_uuid)
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         LOG.debug(_("network deallocation for instance"),
                   context=context, instance_uuid=instance_uuid)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
-            self.deallocate_fixed_ip(context, fixed_ip['address'], host=host)
+            self.deallocate_fixed_ip(context, str(fixed_ip.address), host=host)
 
         if CONF.update_dns_entries:
-            network_ids = [fixed_ip['network_id'] for fixed_ip in fixed_ips]
+            network_ids = [fixed_ip.network_id for fixed_ip in fixed_ips]
             self.network_rpcapi.update_dns(context, network_ids)
 
         # deallocate vifs (mac addresses)
@@ -786,15 +787,16 @@ class NetworkManager(manager.Manager):
     def remove_fixed_ip_from_instance(self, context, instance_id, host,
                                       address, rxtx_factor=None):
         """Removes a fixed ip from an instance from specified network."""
-        fixed_ips = self.db.fixed_ip_get_by_instance(context, instance_id)
+        fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(context,
+                                                                  instance_id)
         for fixed_ip in fixed_ips:
-            if fixed_ip['address'] == address:
+            if str(fixed_ip.address) == address:
                 self.deallocate_fixed_ip(context, address, host)
                 # NOTE(vish): this probably isn't a dhcp ip so just
                 #             deallocate it now. In the extremely rare
                 #             case that this is a race condition, we
                 #             will just get a warn in lease or release.
-                if not fixed_ip.get('leased'):
+                if not fixed_ip.leased:
                     self.db.fixed_ip_disassociate(context, address)
                 return self.get_instance_nw_info(context, instance_id,
                                                  rxtx_factor, host)
@@ -1386,11 +1388,12 @@ class NetworkManager(manager.Manager):
         """Returns the instance id a floating ip's fixed ip is allocated to."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        fixed_ip = self.db.fixed_ip_get_by_floating_address(context, address)
+        fixed_ip = fixed_ip_obj.FixedIP.get_by_floating_address(context,
+                                                                address)
         if fixed_ip is None:
             return None
         else:
-            return fixed_ip['instance_uuid']
+            return fixed_ip.instance_uuid
 
     def get_network(self, context, network_uuid):
         # NOTE(vish): used locally
@@ -1417,8 +1420,7 @@ class NetworkManager(manager.Manager):
         """Return a fixed ip."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        fixed = self.db.fixed_ip_get(context, id)
-        return jsonutils.to_primitive(fixed)
+        return fixed_ip_obj.FixedIP.get_by_id(context, id)
 
     def get_fixed_ip_by_address(self, context, address):
         # NOTE(vish): This is no longer used but can't be removed until
