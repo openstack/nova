@@ -1525,7 +1525,8 @@ class CommonNetworkTestCase(test.TestCase):
         ], manager.deallocate_fixed_ip_calls)
 
     @mock.patch('nova.db.fixed_ip_get_by_instance')
-    def test_remove_fixed_ip_from_instance(self, get):
+    @mock.patch('nova.db.fixed_ip_disassociate')
+    def test_remove_fixed_ip_from_instance(self, disassociate, get):
         manager = fake_network.FakeNetworkManager()
         get.return_value = [
             dict(test_fixed_ip.fake_fixed_ip, **x)
@@ -1536,6 +1537,7 @@ class CommonNetworkTestCase(test.TestCase):
                                               '10.0.0.1')
 
         self.assertEqual(manager.deallocate_called, '10.0.0.1')
+        disassociate.assert_called_once_with(self.context, '10.0.0.1')
 
     @mock.patch('nova.db.fixed_ip_get_by_instance')
     def test_remove_fixed_ip_from_instance_bad_input(self, get):

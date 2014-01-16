@@ -795,7 +795,7 @@ class NetworkManager(manager.Manager):
                 #             case that this is a race condition, we
                 #             will just get a warn in lease or release.
                 if not fixed_ip.leased:
-                    self.db.fixed_ip_disassociate(context, address)
+                    fixed_ip.disassociate()
                 return self.get_instance_nw_info(context, instance_id,
                                                  rxtx_factor, host)
         raise exception.FixedIpNotFoundForSpecificInstance(
@@ -956,8 +956,7 @@ class NetworkManager(manager.Manager):
                     context, address)
                 if (instance_uuid == fixed_ip_ref.instance_uuid and
                         not fixed_ip_ref.leased):
-                    self.db.fixed_ip_disassociate(context, address)
-
+                    fixed_ip_ref.disassociate()
             else:
                 # We can't try to free the IP address so just call teardown
                 self._teardown_network_on_host(context, network)
@@ -1000,7 +999,7 @@ class NetworkManager(manager.Manager):
                                 fixed_ip.address,
                                 {'leased': False})
         if not fixed_ip.allocated:
-            self.db.fixed_ip_disassociate(context, address)
+            fixed_ip.disassociate()
 
     @staticmethod
     def _convert_int_args(kwargs):
@@ -1513,7 +1512,7 @@ class FlatManager(NetworkManager):
         """Returns a fixed ip to the pool."""
         super(FlatManager, self).deallocate_fixed_ip(context, address, host,
                                                      teardown)
-        self.db.fixed_ip_disassociate(context, address)
+        fixed_ip_obj.FixedIP.disassociate_by_address(context, address)
 
     def _setup_network_on_host(self, context, network):
         """Setup Network on this host."""
