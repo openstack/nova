@@ -17,6 +17,8 @@ import datetime
 from nova.api.openstack.compute.plugins.v3 import migrations
 from nova import context
 from nova import exception
+from nova.objects import base
+from nova.objects import migration
 from nova.openstack.common.fixture import moxstubout
 from nova import test
 
@@ -35,6 +37,8 @@ fake_migrations = [
         'new_instance_type_id': 2,
         'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+        'deleted_at': None,
+        'deleted': False
     },
     {
         'id': 5678,
@@ -49,8 +53,16 @@ fake_migrations = [
         'new_instance_type_id': 6,
         'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
         'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
+        'deleted_at': None,
+        'deleted': False
     }
 ]
+
+migrations_obj = base.obj_make_list(
+    'fake-context',
+    migration.MigrationList(),
+    migration.Migration,
+    fake_migrations)
 
 
 class FakeRequest(object):
@@ -70,16 +82,22 @@ class MigrationsTestCase(test.NoDBTestCase):
         self.mox = mox_fixture.mox
 
     def test_index(self):
-        migrations_in_progress = {'migrations': fake_migrations}
+        migrations_in_progress = {
+            'migrations': migrations.output(migrations_obj)}
+
+        for mig in migrations_in_progress['migrations']:
+            self.assertTrue('id' in mig)
+            self.assertTrue('deleted' not in mig)
+            self.assertTrue('deleted_at' not in mig)
+
         filters = {'host': 'host1', 'status': 'migrating',
                    'cell_name': 'ChildCell'}
         self.req.GET = filters
         self.mox.StubOutWithMock(self.controller.compute_api,
                                  "get_migrations")
 
-        self.controller.compute_api.\
-            get_migrations(self.context, filters).\
-            AndReturn(fake_migrations)
+        self.controller.compute_api.get_migrations(
+            self.context, filters).AndReturn(migrations_obj)
         self.mox.ReplayAll()
 
         response = self.controller.index(self.req)

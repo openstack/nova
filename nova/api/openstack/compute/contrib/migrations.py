@@ -14,6 +14,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
+from nova.objects import base as obj_base
 
 
 XMLNS = "http://docs.openstack.org/compute/ext/migrations/api/v2.0"
@@ -23,6 +24,19 @@ ALIAS = "os-migrations"
 def authorize(context, action_name):
     action = 'migrations:%s' % action_name
     extensions.extension_authorizer('compute', action)(context)
+
+
+def output(migrations_obj):
+    """Returns the desired output of the API from an object.
+
+    From a MigrationsList's object this method returns a list of
+    primitive objects with the only necessary fields.
+    """
+    objects = obj_base.obj_to_primitive(migrations_obj)
+    for obj in objects:
+        del obj['deleted']
+        del obj['deleted_at']
+    return objects
 
 
 class MigrationsTemplate(xmlutil.TemplateBuilder):
@@ -57,7 +71,7 @@ class MigrationsController(object):
         context = req.environ['nova.context']
         authorize(context, "index")
         migrations = self.compute_api.get_migrations(context, req.GET)
-        return {'migrations': migrations}
+        return {'migrations': output(migrations)}
 
 
 class Migrations(extensions.ExtensionDescriptor):
