@@ -534,7 +534,12 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             executes.append(args)
             return "", ""
 
+        def fake_add_dhcp_mangle_rule(*args, **kwargs):
+            executes.append(args)
+
         self.stubs.Set(linux_net, '_execute', fake_execute)
+        self.stubs.Set(linux_net, '_add_dhcp_mangle_rule',
+                       fake_add_dhcp_mangle_rule)
 
         self.stubs.Set(os, 'chmod', lambda *a, **kw: None)
         self.stubs.Set(linux_net, 'write_to_file', lambda *a, **kw: None)
@@ -570,7 +575,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
             if extra_expected:
                 expected += extra_expected
-            self.assertEqual([tuple(expected)], executes)
+            self.assertEqual([(dev,), tuple(expected)], executes)
 
     def test_dnsmasq_execute(self):
         self._test_dnsmasq_execute()
