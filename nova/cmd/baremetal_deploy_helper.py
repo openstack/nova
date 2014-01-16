@@ -47,6 +47,10 @@ QUEUE = Queue.Queue()
 LOG = logging.getLogger(__name__)
 
 
+class BareMetalDeployException(Exception):
+    pass
+
+
 # All functions are called from deploy() directly or indirectly.
 # They are split for stub-out.
 
@@ -186,6 +190,10 @@ def get_image_mb(image_path):
 
 def work_on_disk(dev, root_mb, swap_mb, ephemeral_mb, image_path):
     """Creates partitions and write an image to the root partition."""
+    def raise_exception(msg):
+        LOG.error(msg)
+        raise BareMetalDeployException(msg)
+
     if ephemeral_mb:
         ephemeral_part = "%s-part1" % dev
         swap_part = "%s-part2" % dev
@@ -195,20 +203,17 @@ def work_on_disk(dev, root_mb, swap_mb, ephemeral_mb, image_path):
         swap_part = "%s-part2" % dev
 
     if not is_block_device(dev):
-        LOG.warn(_("parent device '%s' not found"), dev)
-        return
+        raise_exception(_("parent device '%s' not found") % dev)
     make_partitions(dev, root_mb, swap_mb, ephemeral_mb)
     if not is_block_device(root_part):
-        LOG.warn(_("root device '%s' not found"), root_part)
-        return
+        raise_exception(_("root device '%s' not found") % root_part)
     if not is_block_device(swap_part):
-        LOG.warn(_("swap device '%s' not found"), swap_part)
-        return
+        raise_exception(_("swap device '%s' not found") % swap_part)
+    if ephemeral_mb and not is_block_device(ephemeral_part):
+        raise_exception(_("ephemeral device '%s' not found") % ephemeral_part)
     dd(image_path, root_part)
     mkswap(swap_part)
-    if ephemeral_mb and not is_block_device(ephemeral_part):
-        LOG.warn(_("ephemeral device '%s' not found"), ephemeral_part)
-    elif ephemeral_mb:
+    if ephemeral_mb:
         mkfs_ephemeral(ephemeral_part)
 
     try:
