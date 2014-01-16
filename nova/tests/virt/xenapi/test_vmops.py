@@ -19,6 +19,7 @@ import mock
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import exception
+from nova.pci import pci_manager
 from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
@@ -216,6 +217,8 @@ class SpawnTestCase(VMOpsTestBase):
         self.mox.StubOutWithMock(self.vmops, '_create_vm_record')
         self.mox.StubOutWithMock(self.vmops, '_destroy')
         self.mox.StubOutWithMock(self.vmops, '_attach_disks')
+        self.mox.StubOutWithMock(pci_manager, 'get_instance_pci_devs')
+        self.mox.StubOutWithMock(vm_utils, 'set_other_config_pci')
         self.mox.StubOutWithMock(self.vmops, '_attach_orig_disk_for_rescue')
         self.mox.StubOutWithMock(self.vmops, 'inject_network_info')
         self.mox.StubOutWithMock(self.vmops, '_inject_hostname')
@@ -236,8 +239,8 @@ class SpawnTestCase(VMOpsTestBase):
                                  'apply_instance_filter')
 
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
-                    rescue=False, include_root_vdi=True,
-                    throw_exception=None):
+                    rescue=False, include_root_vdi=True, throw_exception=None,
+                    attach_pci_dev=False):
         self._stub_out_common()
 
         instance = {"name": "dummy", "uuid": "fake_uuid"}
@@ -293,6 +296,30 @@ class SpawnTestCase(VMOpsTestBase):
 
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
                           network_info, admin_password, injected_files)
+        if attach_pci_dev:
+            fake_dev = {
+                'created_at': None,
+                'updated_at': None,
+                'deleted_at': None,
+                'deleted': None,
+                'id': 1,
+                'compute_node_id': 1,
+                'address': '00:00.0',
+                'vendor_id': '1234',
+                'product_id': 'abcd',
+                'dev_type': 'type-PCI',
+                'status': 'available',
+                'dev_id': 'devid',
+                'label': 'label',
+                'instance_uuid': None,
+                'extra_info': '{}',
+            }
+            pci_manager.get_instance_pci_devs(instance).AndReturn([fake_dev])
+            vm_utils.set_other_config_pci(self.vmops._session,
+                                          vm_ref,
+                                          "0/0000:00:00.0")
+        else:
+            pci_manager.get_instance_pci_devs(instance).AndReturn([])
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -354,6 +381,9 @@ class SpawnTestCase(VMOpsTestBase):
                          name_label_param="bob",
                          block_device_info_param={"root_device_name": ""})
 
+    def test_spawn_with_pci_available_on_the_host(self):
+        self._test_spawn(attach_pci_dev=True)
+
     def test_spawn_performs_rollback_and_throws_exception(self):
         self.assertRaises(test.TestingException, self._test_spawn,
                           throw_exception=test.TestingException())
@@ -401,6 +431,7 @@ class SpawnTestCase(VMOpsTestBase):
         self.vmops._attach_disks(instance, vm_ref, name_label, vdis, di_type,
                                  network_info, None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
+        pci_manager.get_instance_pci_devs(instance).AndReturn([])
 
         self.vmops._inject_instance_metadata(instance, vm_ref)
         self.vmops._inject_auto_disk_config(instance, vm_ref)
