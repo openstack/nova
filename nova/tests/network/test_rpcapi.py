@@ -18,11 +18,13 @@ Unit Tests for nova.network.rpcapi
 
 import collections
 
+import mox
 from oslo.config import cfg
 
 from nova import context
 from nova.network import rpcapi as network_rpcapi
 from nova import test
+from nova.tests import fake_instance
 
 CONF = cfg.CONF
 
@@ -71,16 +73,26 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
             'migrate_instance_finish',
             'allocate_for_instance', 'deallocate_for_instance',
         ]
-        if method in targeted_methods and 'host' in expected_kwargs:
-            host = expected_kwargs['host']
-            if method not in ['allocate_for_instance',
-                              'deallocate_for_instance',
-                              'deallocate_fixed_ip']:
-                expected_kwargs.pop('host')
+        targeted_by_instance = ['deallocate_for_instance']
+        if method in targeted_methods and ('host' in expected_kwargs or
+                'instance' in expected_kwargs):
+            if method in targeted_by_instance:
+                host = expected_kwargs['instance']['host']
+            else:
+                host = expected_kwargs['host']
+                if method not in ['allocate_for_instance',
+                                  'deallocate_fixed_ip']:
+                    expected_kwargs.pop('host')
             if CONF.multi_host:
                 prepare_kwargs['server'] = host
 
         self.mox.StubOutWithMock(rpcapi, 'client')
+
+        version_check = [
+            'deallocate_for_instance'
+        ]
+        if method in version_check:
+            rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
 
         if prepare_kwargs:
             rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
@@ -176,14 +188,15 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
                 macs=[], version='1.9')
 
     def test_deallocate_for_instance(self):
+        instance = fake_instance.fake_instance_obj(context.get_admin_context())
         self._test_network_api('deallocate_for_instance', rpc_method='call',
-                instance_id='fake_id', project_id='fake_id', host='fake_host',
-                requested_networks=self.DefaultArg(None))
+                requested_networks=self.DefaultArg(None), instance=instance,
+                version='1.11')
 
     def test_deallocate_for_instance_with_expected_networks(self):
+        instance = fake_instance.fake_instance_obj(context.get_admin_context())
         self._test_network_api('deallocate_for_instance', rpc_method='call',
-                instance_id='fake_id', project_id='fake_id',
-                host='fake_host', requested_networks={})
+                instance=instance, requested_networks={}, version='1.11')
 
     def test_add_fixed_ip_to_instance(self):
         self._test_network_api('add_fixed_ip_to_instance', rpc_method='call',
