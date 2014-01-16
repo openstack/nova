@@ -1335,3 +1335,33 @@ class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):
                                           c.get('bus'),
                                           c.get('slot'),
                                           c.get('function')))
+
+
+class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestRng, self).__init__(root_name="rng",
+                                                      **kwargs)
+
+        self.model = 'random'
+        self.backend = '/dev/random'
+        self.rate_period = None
+        self.rate_bytes = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestRng, self).format_dom()
+        dev.set('model', 'virtio')
+
+        backend = etree.Element("backend")
+        backend.set("model", self.model)
+        backend.text = self.backend
+
+        if self.rate_period and self.rate_bytes:
+            rate = etree.Element("rate")
+            rate.set("period", str(self.rate_period))
+            rate.set("bytes", str(self.rate_bytes))
+            dev.append(rate)
+
+        dev.append(backend)
+
+        return dev
