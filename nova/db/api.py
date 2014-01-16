@@ -397,6 +397,11 @@ def dnsdomain_list(context):
     return IMPL.dnsdomain_list(context)
 
 
+def dnsdomain_get_all(context):
+    """Get a list of all dnsdomains in our database."""
+    return IMPL.dnsdomain_get_all(context)
+
+
 def dnsdomain_register_for_zone(context, fqdomain, zone):
     """Associated a DNS domain with an availability zone."""
     return IMPL.dnsdomain_register_for_zone(context, fqdomain, zone)
