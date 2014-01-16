@@ -333,9 +333,10 @@ class NetworkManager(manager.Manager):
             return fip['address']
         except exception.FixedIpNotFoundForNetworkHost:
             elevated = context.elevated()
-            return self.db.fixed_ip_associate_pool(elevated,
-                                                   network_id,
-                                                   host=host).address
+            fip = fixed_ip_obj.FixedIP.associate_pool(elevated,
+                                                      network_id,
+                                                      host=host)
+            return fip.address
 
     def get_dhcp_leases(self, ctxt, network_ref):
         """Broker the request to the driver to fetch the dhcp leases."""
@@ -848,18 +849,17 @@ class NetworkManager(manager.Manager):
             if network['cidr']:
                 address = kwargs.get('address', None)
                 if address:
-                    address = self.db.fixed_ip_associate(context,
-                                                         address,
+                    fip = fixed_ip_obj.FixedIP.associate(context, address,
                                                          instance_id,
-                                                         network['id']).address
+                                                         network['id'])
                 else:
-                    address = self.db.fixed_ip_associate_pool(
-                        context.elevated(), network['id'], instance_id).address
+                    fip = fixed_ip_obj.FixedIP.associate_pool(
+                        context.elevated(), network['id'], instance_id)
                 vif = vif_obj.VirtualInterface.get_by_instance_and_network(
                         context, instance_id, network['id'])
                 values = {'allocated': True,
-                          'virtual_interface_id': vif.id}
-                self.db.fixed_ip_update(context, address, values)
+                          'virtual_interface_id': vif['id']}
+                self.db.fixed_ip_update(context, str(fip.address), values)
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
 
@@ -870,9 +870,10 @@ class NetworkManager(manager.Manager):
 
             if self._validate_instance_zone_for_dns_domain(context, instance):
                 self.instance_dns_manager.create_entry(
-                    name, address, "A", self.instance_dns_domain)
+                    name, str(fip.address), "A", self.instance_dns_domain)
                 self.instance_dns_manager.create_entry(
-                    instance_id, address, "A", self.instance_dns_domain)
+                    instance_id, str(fip.address), "A",
+                    self.instance_dns_domain)
             self._setup_network_on_host(context, network)
 
             self.quotas.commit(context, reservations)
@@ -1725,27 +1726,25 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         if kwargs.get('vpn', None):
             address = network['vpn_private_address']
-            self.db.fixed_ip_associate(context,
-                                       address,
-                                       instance_id,
-                                       network['id'],
-                                       reserved=True)
+            fixed_ip_obj.FixedIP.associate(context, address, instance_id,
+                                           network['id'], reserved=True)
         else:
             address = kwargs.get('address', None)
             if address:
-                address = self.db.fixed_ip_associate(context, address,
+                fip = fixed_ip_obj.FixedIP.associate(context, address,
                                                      instance_id,
-                                                     network['id']).address
+                                                     network['id'])
             else:
-                address = self.db.fixed_ip_associate_pool(context,
+                fip = fixed_ip_obj.FixedIP.associate_pool(context,
                                                           network['id'],
-                                                          instance_id).address
+                                                          instance_id)
+            address = fip.address
 
         vif = vif_obj.VirtualInterface.get_by_instance_and_network(
             context, instance_id, network['id'])
         values = {'allocated': True,
                   'virtual_interface_id': vif.id}
-        self.db.fixed_ip_update(context, address, values)
+        self.db.fixed_ip_update(context, str(address), values)
 
         if not kwargs.get('vpn', None):
             self._do_trigger_security_group_members_refresh_for_instance(
