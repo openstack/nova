@@ -3522,6 +3522,16 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         ignored_keys = ['created_at', 'id', 'deleted_at', 'updated_at']
         self._assertEqualObjects(param, fixed_ip_data, ignored_keys)
 
+    def test_fixed_ip_get_by_address(self):
+        instance_uuid = self._create_instance()
+        db.fixed_ip_create(self.ctxt, {'address': '1.2.3.4',
+                                       'instance_uuid': instance_uuid,
+                                       })
+        fixed_ip = db.fixed_ip_get_by_address(self.ctxt, '1.2.3.4',
+                                              columns_to_join=['instance'])
+        self.assertIn('instance', fixed_ip.__dict__)
+        self.assertEqual(instance_uuid, fixed_ip.instance.uuid)
+
     def test_fixed_ip_get_by_address_detailed_not_found_exception(self):
         self.assertRaises(exception.FixedIpNotFoundForAddress,
                           db.fixed_ip_get_by_address_detailed, self.ctxt,
