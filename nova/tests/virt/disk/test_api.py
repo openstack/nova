@@ -23,9 +23,27 @@ from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt.disk import api
+from nova.virt.disk.mount import api as mount
+
+
+class FakeMount(object):
+    device = None
+
+    @staticmethod
+    def instance_for_format(imgfile, mountdir, partition, imgfmt):
+        return FakeMount()
+
+    def get_dev(self):
+        pass
+
+    def unget_dev(self):
+        pass
 
 
 class APITestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(APITestCase, self).setUp()
 
     def test_can_resize_need_fs_type_specified(self):
         # NOTE(mikal): Bug 1094373 saw a regression where we failed to
@@ -90,3 +108,53 @@ class APITestCase(test.NoDBTestCase):
                           processutils.ProcessExecutionError("fs error"))
         self.mox.ReplayAll()
         api.resize2fs(imgfile)
+
+    def test_extend_qcow_success(self):
+        imgfile = tempfile.NamedTemporaryFile()
+        imgsize = 10
+        device = "/dev/sdh"
+        use_cow = True
+
+        self.flags(resize_fs_using_block_device=True)
+        mounter = FakeMount.instance_for_format(
+            imgfile, None, None, 'qcow2')
+        mounter.device = device
+
+        self.mox.StubOutWithMock(api, 'can_resize_image')
+        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(api, 'is_image_partitionless')
+        self.mox.StubOutWithMock(mounter, 'get_dev')
+        self.mox.StubOutWithMock(mounter, 'unget_dev')
+        self.mox.StubOutWithMock(api, 'resize2fs')
+        self.mox.StubOutWithMock(mount.Mount, 'instance_for_format')
+
+        api.can_resize_image(imgfile, imgsize).AndReturn(True)
+        utils.execute('qemu-img', 'resize', imgfile, imgsize)
+        api.is_image_partitionless(imgfile, use_cow).AndReturn(True)
+        mount.Mount.instance_for_format(
+            imgfile, None, None, 'qcow2').AndReturn(mounter)
+        mounter.get_dev().AndReturn(True)
+        api.resize2fs(mounter.device, run_as_root=True, check_exit_code=[0])
+        mounter.unget_dev()
+
+        self.mox.ReplayAll()
+        api.extend(imgfile, imgsize, use_cow=use_cow)
+
+    def test_extend_raw_success(self):
+        imgfile = tempfile.NamedTemporaryFile()
+        imgsize = 10
+        device = "/dev/sdh"
+        use_cow = False
+
+        self.mox.StubOutWithMock(api, 'can_resize_image')
+        self.mox.StubOutWithMock(utils, 'execute')
+        self.mox.StubOutWithMock(api, 'is_image_partitionless')
+        self.mox.StubOutWithMock(api, 'resize2fs')
+
+        api.can_resize_image(imgfile, imgsize).AndReturn(True)
+        utils.execute('qemu-img', 'resize', imgfile, imgsize)
+        api.is_image_partitionless(imgfile, use_cow).AndReturn(True)
+        api.resize2fs(imgfile, run_as_root=False, check_exit_code=[0])
+
+        self.mox.ReplayAll()
+        api.extend(imgfile, imgsize, use_cow=use_cow)
