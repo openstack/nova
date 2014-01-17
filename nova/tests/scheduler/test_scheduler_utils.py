@@ -65,7 +65,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         request_spec = scheduler_utils.build_request_spec(self.context, None,
                                                           [instance])
-        self.assertTrue(isinstance(request_spec['instance_properties'], dict))
+        self.assertIsInstance(request_spec['instance_properties'], dict)
 
     def _test_set_vm_state_and_notify(self, request_spec,
                                       expected_uuids):

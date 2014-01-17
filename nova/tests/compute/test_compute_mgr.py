@@ -1302,7 +1302,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.image, self.block_device_mapping):
                 pass
         except Exception as e:
-            self.assertTrue(isinstance(e, exception.BuildAbortException))
+            self.assertIsInstance(e, exception.BuildAbortException)
 
     def test_failed_bdm_prep_from_delete_raises_unexpected(self):
         with contextlib.nested(
@@ -1320,9 +1320,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.image, self.block_device_mapping):
                     pass
             except Exception as e:
-                self.assertTrue(
-                        isinstance(e,
-                            exception.UnexpectedDeletingTaskStateError))
+                self.assertIsInstance(e,
+                    exception.UnexpectedDeletingTaskStateError)
 
             _build_networks_for_instance.assert_has_calls(
                     mock.call(self.context, self.instance,
@@ -1343,7 +1342,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.block_device_mapping):
                 pass
         except Exception as e:
-            self.assertTrue(isinstance(e, exception.BuildAbortException))
+            self.assertIsInstance(e, exception.BuildAbortException)
 
     def test_failed_network_alloc_from_delete_raises_unexpected(self):
         with mock.patch.object(self.compute,
@@ -1359,7 +1358,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.image, self.block_device_mapping):
                     pass
             except Exception as e:
-                self.assertTrue(isinstance(e, exc))
+                self.assertIsInstance(e, exc)
 
             _build_networks.assert_has_calls(
                     mock.call(self.context, self.instance,
@@ -1409,7 +1408,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.image, self.block_device_mapping):
                 fake_spawn()
         except Exception as e:
-            self.assertTrue(isinstance(e, exception.BuildAbortException))
+            self.assertIsInstance(e, exception.BuildAbortException)
 
     def test_cleanup_cleans_volumes(self):
         self.mox.StubOutWithMock(self.compute, '_cleanup_volumes')

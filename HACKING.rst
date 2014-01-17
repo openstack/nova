@@ -24,6 +24,10 @@ Nova Specific Commandments
 - [N314] vim configuration should not be kept in source files.
 - [N315] We do not use @authors tags in source files. We have git to track
   authorship.
+- [N316] Change assertTrue(isinstance(A, B)) by optimal assert like
+  assertIsInstance(A, B).
+- [N317] Change assertEqual(type(A), B) by optimal assert like
+  assertIsInstance(A, B)
 
 Creating Unit Tests
 -------------------
