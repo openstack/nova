@@ -639,7 +639,7 @@ class NetworkManager(manager.Manager):
                     continue
                 gfipbfa = self.ipam.get_floating_ips_by_fixed_address
                 floating_ips = gfipbfa(context, fixed_ip['address'])
-                floating_ips = [network_model.IP(address=ip['address'],
+                floating_ips = [network_model.IP(address=str(ip['address']),
                                                  type='floating')
                                 for ip in floating_ips]
                 for ip in floating_ips:
