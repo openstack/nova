@@ -356,10 +356,11 @@ class FloatingIP(object):
         @utils.synchronized(unicode(floating_address))
         def do_associate():
             # associate floating ip
-            fixed = self.db.floating_ip_fixed_ip_associate(context,
-                                                           floating_address,
-                                                           fixed_address,
-                                                           self.host)
+            floating = floating_ip_obj.FloatingIP.associate(context,
+                                                            floating_address,
+                                                            fixed_address,
+                                                            self.host)
+            fixed = floating.fixed_ip
             if not fixed:
                 # NOTE(vish): ip was already associated
                 return
@@ -370,8 +371,8 @@ class FloatingIP(object):
             except processutils.ProcessExecutionError as e:
                 with excutils.save_and_reraise_exception() as exc_ctxt:
                     try:
-                        self.db.floating_ip_disassociate(context,
-                                floating_address)
+                        floating_ip_obj.FloatingIP.disassociate(
+                            context, floating_address)
                     except Exception:
                         LOG.warn(_('Failed to disassociated floating '
                                    'address: %s'), floating_address)
@@ -461,15 +462,16 @@ class FloatingIP(object):
             #             don't worry about this case because the minuscule
             #             window where the ip is on both hosts shouldn't cause
             #             any problems.
-            fixed = self.db.floating_ip_disassociate(context, address)
-
+            floating = floating_ip_obj.FloatingIP.disassociate(context,
+                                                               address)
+            fixed = floating.fixed_ip
             if not fixed:
                 # NOTE(vish): ip was already disassociated
                 return
             if interface:
                 # go go driver time
-                self.l3driver.remove_floating_ip(address, fixed['address'],
-                                                 interface, fixed['network'])
+                self.l3driver.remove_floating_ip(address, fixed.address,
+                                                 interface, fixed.network)
             payload = dict(project_id=context.project_id,
                            instance_id=instance_uuid,
                            floating_ip=address)
