@@ -72,6 +72,8 @@ CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts)
 CONF.import_opt('base_dir_name', 'nova.virt.libvirt.imagecache')
 CONF.import_opt('preallocate_images', 'nova.virt.driver')
+CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume')
+CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume')
 
 LOG = logging.getLogger(__name__)
 
