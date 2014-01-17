@@ -940,7 +940,8 @@ class VlanNetworkTestCase(test.TestCase):
                         network_id=123)
 
         def fake4_network(*args, **kwargs):
-            return {'multi_host': False, 'host': 'jibberjabber'}
+            return dict(test_network.fake_network,
+                        multi_host=False, host='jibberjabber')
 
         # fixed ip with local host
         def fake5(*args, **kwargs):
@@ -952,7 +953,8 @@ class VlanNetworkTestCase(test.TestCase):
                         network_id=1234)
 
         def fake5_network(*args, **kwargs):
-            return {'multi_host': False, 'host': 'testhost'}
+            return dict(test_network.fake_network,
+                        multi_host=False, host='testhost')
 
         def fake6(ctxt, method, **kwargs):
             self.local = False
@@ -1132,8 +1134,9 @@ class VlanNetworkTestCase(test.TestCase):
                         network_id=123)
 
         def fake4_network(*args, **kwargs):
-            return {'multi_host': False,
-                    'host': 'jibberjabber'}
+            return dict(test_network.fake_network,
+                        multi_host=False,
+                        host='jibberjabber')
 
         # fixed ip with local host
         def fake5(*args, **kwargs):
@@ -1145,7 +1148,8 @@ class VlanNetworkTestCase(test.TestCase):
                         network_id=1234)
 
         def fake5_network(*args, **kwargs):
-            return {'multi_host': False, 'host': 'testhost'}
+            return dict(test_network.fake_network,
+                        multi_host=False, host='testhost')
 
         def fake6(ctxt, method, **kwargs):
             self.local = False
@@ -1245,7 +1249,8 @@ class VlanNetworkTestCase(test.TestCase):
         """Makes sure that we cannot deallocaate or disassociate
         a public ip of other project.
         """
-        net_get.return_value = dict(networks[1])
+        net_get.return_value = dict(test_network.fake_network,
+                                    **networks[1])
 
         context1 = context.RequestContext('user', 'project1')
         context2 = context.RequestContext('user', 'project2')
@@ -2206,7 +2211,9 @@ class FloatingIPTestCase(test.TestCase):
             is_admin=False)
 
     @mock.patch('nova.db.fixed_ip_get')
-    def test_disassociate_floating_ip_multi_host_calls(self, fixed_get):
+    @mock.patch('nova.db.network_get')
+    def test_disassociate_floating_ip_multi_host_calls(self, net_get,
+                                                       fixed_get):
         floating_ip = {
             'fixed_ip_id': 12
         }
@@ -2215,9 +2222,8 @@ class FloatingIPTestCase(test.TestCase):
                         network_id=None,
                         instance_uuid='instance-uuid')
 
-        network = {
-            'multi_host': True
-        }
+        network = dict(test_network.fake_network,
+                       multi_host=True)
 
         instance = {
             'host': 'some-other-host'
@@ -2235,10 +2241,7 @@ class FloatingIPTestCase(test.TestCase):
                        lambda _x, _y: True)
 
         fixed_get.return_value = fixed_ip
-
-        self.stubs.Set(self.network.db,
-                       'network_get',
-                       lambda _x, _y: network)
+        net_get.return_value = network
 
         self.stubs.Set(self.network.db,
                        'instance_get_by_uuid',
@@ -2262,7 +2265,8 @@ class FloatingIPTestCase(test.TestCase):
         self.network.disassociate_floating_ip(ctxt, 'fl_ip', True)
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
-    def test_associate_floating_ip_multi_host_calls(self, fixed_get):
+    @mock.patch('nova.db.network_get')
+    def test_associate_floating_ip_multi_host_calls(self, net_get, fixed_get):
         floating_ip = {
             'fixed_ip_id': None
         }
@@ -2271,9 +2275,8 @@ class FloatingIPTestCase(test.TestCase):
                         network_id=None,
                         instance_uuid='instance-uuid')
 
-        network = {
-            'multi_host': True
-        }
+        network = dict(test_network.fake_network,
+                       multi_host=True)
 
         instance = {
             'host': 'some-other-host'
@@ -2291,10 +2294,7 @@ class FloatingIPTestCase(test.TestCase):
                        lambda _x, _y: True)
 
         fixed_get.return_value = fixed_ip
-
-        self.stubs.Set(self.network.db,
-                       'network_get',
-                       lambda _x, _y: network)
+        net_get.return_value = network
 
         self.stubs.Set(self.network.db,
                        'instance_get_by_uuid',
