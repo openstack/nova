@@ -438,6 +438,12 @@ class VMwareVCDriver(VMwareESXDriver):
                                    post_method, recover_method,
                                    block_migration)
 
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               network_info,
+                                               block_device_info):
+        """Clean up destination node after a failed live migration."""
+        self.destroy(context, instance, network_info, block_device_info)
+
     def get_vnc_console(self, context, instance):
         """Return link to instance's VNC console using vCenter logic."""
         # In this situation, ESXi and vCenter require different

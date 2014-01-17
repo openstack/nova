@@ -4275,6 +4275,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                           instance['user_id'],
                                           instance['project_id'])
 
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               network_info,
+                                               block_device_info):
+        """Clean up destination node after a failed live migration."""
+        self.destroy(context, instance, network_info, block_device_info)
+
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data=None):
         """Preparation live migration."""

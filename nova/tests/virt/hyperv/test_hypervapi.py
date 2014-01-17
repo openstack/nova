@@ -19,13 +19,14 @@ Test suite for the Hyper-V driver and related APIs.
 """
 
 import io
-import mox
 import os
 import platform
 import shutil
 import time
 import uuid
 
+import mock
+import mox
 from oslo.config import cfg
 
 from nova.api.metadata import base as instance_metadata
@@ -1628,3 +1629,10 @@ class HyperVAPITestCase(test.NoDBTestCase):
                           self._conn.unplug_vifs,
                           instance=self._test_spawn_instance,
                           network_info=None)
+
+    def test_rollback_live_migration_at_destination(self):
+        with mock.patch.object(self._conn, "destroy") as mock_destroy:
+            self._conn.rollback_live_migration_at_destination(self._context,
+                    self._test_spawn_instance, [], None)
+            mock_destroy.assert_called_once_with(self._context,
+                    self._test_spawn_instance, [], None)

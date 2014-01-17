@@ -1441,3 +1441,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self._create_vm()
         # currently there are 2 data stores
         self.assertEqual(2, len(vmops._datastore_dc_mapping))
+
+    def test_rollback_live_migration_at_destination(self):
+        with mock.patch.object(self.conn, "destroy") as mock_destroy:
+            self.conn.rollback_live_migration_at_destination(self.context,
+                    "instance", [], None)
+            mock_destroy.assert_called_once_with(self.context,
+                    "instance", [], None)

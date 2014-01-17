@@ -584,6 +584,19 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def rollback_live_migration_at_destination(self, ctxt, instance_ref,
+                                               network_info,
+                                               block_device_info):
+        """Clean up destination node after a failed live migration.
+
+        :param ctxt: security context
+        :param instance_ref: instance object that was being migrated
+        :param network_info: instance network information
+        :param block_device_info: instance block device information
+
+        """
+        raise NotImplementedError()
+
     def post_live_migration(self, ctxt, instance_ref, block_device_info,
                             migrate_data=None):
         """Post operation of live migration at source host.

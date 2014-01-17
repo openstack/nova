@@ -3325,6 +3325,14 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
+    def test_rollback_live_migration_at_destination(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with mock.patch.object(conn, "destroy") as mock_destroy:
+            conn.rollback_live_migration_at_destination("context",
+                    "instance", [], None)
+            mock_destroy.assert_called_once_with("context",
+                    "instance", [], None)
+
     def _do_test_create_images_and_backing(self, disk_type):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
