@@ -3030,7 +3030,7 @@
 
 # How the metrics are going to be weighed. This should be in
 # the form of "<name1>=<ratio1>, <name2>=<ratio2>, ...", where
-# <nameX> is one of the metric to be weighed, and <ratioX> is
+# <nameX> is one of the metrics to be weighed, and <ratioX> is
 # the corresponding ratio. So for "name1=1.0, name2=-1.0" The
 # final weight would be name1.value * 1.0 + name2.value *
 # -1.0. (list value)
