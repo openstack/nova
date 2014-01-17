@@ -16,8 +16,10 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import server_metadata
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -56,10 +58,8 @@ class ServerMetadataController(wsgi.Controller):
     @extensions.expected_errors((400, 403, 404, 409, 413))
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of metadata.
+    @validation.schema(server_metadata.create)
     def create(self, req, server_id, body):
-        if not self.is_valid_body(body, 'metadata'):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
         metadata = body['metadata']
         context = req.environ['nova.context']
 
@@ -71,17 +71,11 @@ class ServerMetadataController(wsgi.Controller):
         return {'metadata': new_metadata}
 
     @extensions.expected_errors((400, 403, 404, 409, 413))
+    @validation.schema(server_metadata.update)
     def update(self, req, server_id, id, body):
-        if not self.is_valid_body(body, 'meta'):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
         meta_item = body['meta']
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
-            raise exc.HTTPBadRequest(explanation=expl)
-
-        if len(meta_item) > 1:
-            expl = _('Request body contains too many items')
             raise exc.HTTPBadRequest(explanation=expl)
 
         context = req.environ['nova.context']
@@ -93,10 +87,8 @@ class ServerMetadataController(wsgi.Controller):
         return {'meta': meta_item}
 
     @extensions.expected_errors((400, 403, 404, 409, 413))
+    @validation.schema(server_metadata.update_all)
     def update_all(self, req, server_id, body):
-        if not self.is_valid_body(body, 'metadata'):
-            msg = _("Malformed request body")
-            raise exc.HTTPBadRequest(explanation=msg)
         metadata = body['metadata']
         context = req.environ['nova.context']
         new_metadata = self._update_instance_metadata(context,
@@ -115,13 +107,6 @@ class ServerMetadataController(wsgi.Controller):
                                                              server,
                                                              metadata,
                                                              delete)
-
-        except exception.InvalidMetadata as error:
-            raise exc.HTTPBadRequest(explanation=error.format_message())
-
-        except exception.InvalidMetadataSize as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message())
 
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
