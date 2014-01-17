@@ -74,6 +74,7 @@ class NetworkAPI(object):
         NOTE: remove unused method get_all_networks()
         1.11 - Add instance to deallocate_for_instance().  Remove instance_id,
                project_id, and host.
+        1.12 - Add instance to deallocate_fixed_ip()
     '''
 
     VERSION_ALIASES = {
@@ -290,10 +291,16 @@ class NetworkAPI(object):
                           instance_id=instance_id, network_id=network_id,
                           address=address, vpn=vpn)
 
-    def deallocate_fixed_ip(self, ctxt, address, host):
-        cctxt = self.client.prepare(server=host)
+    def deallocate_fixed_ip(self, ctxt, address, host, instance):
+        kwargs = {}
+        if self.client.can_send_version('1.12'):
+            version = '1.12'
+            kwargs['instance'] = instance
+        else:
+            version = '1.0'
+        cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'deallocate_fixed_ip',
-                          address=address, host=host)
+                          address=address, host=host, **kwargs)
 
     def update_dns(self, ctxt, network_ids):
         cctxt = self.client.prepare(fanout=True, version='1.3')

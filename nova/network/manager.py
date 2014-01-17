@@ -227,7 +227,8 @@ class RPCAllocateFixedIP(object):
         network = self._get_network_by_id(context, network_id)
         return self.allocate_fixed_ip(context, instance_id, network, **kwargs)
 
-    def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
+    def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
+            instance=None):
         """Call the superclass deallocate_fixed_ip if i'm the correct host
         otherwise call to the correct host
         """
@@ -242,7 +243,7 @@ class RPCAllocateFixedIP(object):
         if host == self.host:
             # NOTE(vish): deallocate the fixed ip locally
             return super(RPCAllocateFixedIP, self).deallocate_fixed_ip(context,
-                    address)
+                    address, instance=instance)
 
         if network.multi_host:
             service = service_obj.Service.get_by_host_and_topic(
@@ -251,9 +252,10 @@ class RPCAllocateFixedIP(object):
                 # NOTE(vish): deallocate the fixed ip locally but don't
                 #             teardown network devices
                 return super(RPCAllocateFixedIP, self).deallocate_fixed_ip(
-                        context, address, teardown=False)
+                        context, address, teardown=False, instance=instance)
 
-        self.network_rpcapi.deallocate_fixed_ip(context, address, host)
+        self.network_rpcapi.deallocate_fixed_ip(context, address, host,
+                instance)
 
 
 class NetworkManager(manager.Manager):
@@ -269,7 +271,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.11')
+    target = messaging.Target(version='1.12')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -535,11 +537,15 @@ class NetworkManager(manager.Manager):
             instance_uuid = instance.uuid
             host = instance.host
         else:
-            instance_uuid = kwargs['instance_id']
-            if not uuidutils.is_uuid_like(instance_uuid):
+            instance_id = kwargs['instance_id']
+            if uuidutils.is_uuid_like(instance_id):
+                instance = instance_obj.Instance.get_by_uuid(
+                        read_deleted_context, instance_id)
+            else:
                 instance = instance_obj.Instance.get_by_id(
-                        read_deleted_context, instance_uuid)
-                instance_uuid = instance.uuid
+                        read_deleted_context, instance_id)
+            # NOTE(russellb) in case instance_id was an ID and not UUID
+            instance_uuid = instance.uuid
             host = kwargs.get('host')
 
         try:
@@ -554,7 +560,8 @@ class NetworkManager(manager.Manager):
                   context=context, instance_uuid=instance_uuid)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
-            self.deallocate_fixed_ip(context, str(fixed_ip.address), host=host)
+            self.deallocate_fixed_ip(context, str(fixed_ip.address), host=host,
+                    instance=instance)
 
         if CONF.update_dns_entries:
             network_ids = [fixed_ip.network_id for fixed_ip in fixed_ips]
@@ -887,20 +894,23 @@ class NetworkManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self.quotas.rollback(context, reservations)
 
-    def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
+    def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
+            instance=None):
         """Returns a fixed ip to the pool."""
         fixed_ip_ref = fixed_ip_obj.FixedIP.get_by_address(
             context, address, expected_attrs=['network'])
         instance_uuid = fixed_ip_ref.instance_uuid
         vif_id = fixed_ip_ref.virtual_interface_id
 
-        # NOTE(vish) This db query could be removed if we pass az and name
-        #            (or the whole instance object).
-        # NOTE(danms) We can't use fixed_ip_ref.instance because
-        #             instance may be deleted and the relationship
-        #             doesn't extend to deleted instances
-        instance = instance_obj.Instance.get_by_uuid(
-            context.elevated(read_deleted='yes'), instance_uuid)
+        if not instance:
+            # NOTE(vish) This db query could be removed if we pass az and name
+            #            (or the whole instance object).
+            # NOTE(danms) We can't use fixed_ip_ref.instance because
+            #             instance may be deleted and the relationship
+            #             doesn't extend to deleted instances
+            instance = instance_obj.Instance.get_by_uuid(
+                context.elevated(read_deleted='yes'), instance_uuid)
+
         project_id = instance.project_id
         try:
             reservations = self.quotas.reserve(context,
@@ -1508,10 +1518,12 @@ class FlatManager(NetworkManager):
             self.allocate_fixed_ip(context, instance_id,
                                    network, address=address)
 
-    def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
+    def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
+            instance=None):
         """Returns a fixed ip to the pool."""
         super(FlatManager, self).deallocate_fixed_ip(context, address, host,
-                                                     teardown)
+                                                     teardown,
+                                                     instance=instance)
         fixed_ip_obj.FixedIP.disassociate_by_address(context, address)
 
     def _setup_network_on_host(self, context, network):
