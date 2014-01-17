@@ -644,6 +644,21 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.assertEqual(inspect.getargspec(imagebackend.Image.libvirt_info),
                          inspect.getargspec(self.image_class.libvirt_info))
 
+    def test_image_path(self):
+
+        conf = "FakeConf"
+        pool = "FakePool"
+        user = "FakeUser"
+
+        self.flags(images_rbd_pool=pool, group='libvirt')
+        self.flags(images_rbd_ceph_conf=conf, group='libvirt')
+        self.flags(rbd_user=user, group='libvirt')
+        image = self.image_class(self.INSTANCE, self.NAME)
+        rbd_path = "rbd:%s/%s:id=%s:conf=%s" % (pool, image.rbd_name,
+                                                user, conf)
+
+        self.assertEqual(image.path, rbd_path)
+
 
 class BackendTestCase(test.NoDBTestCase):
     INSTANCE = {'name': 'fake-instance',
