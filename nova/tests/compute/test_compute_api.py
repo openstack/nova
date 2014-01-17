@@ -1449,6 +1449,7 @@ class _ComputeAPIUnitTestMixIn(object):
             'name': 'test-snapshot',
             'properties': {'root_device_name': 'vda', 'mappings': 'DONTCARE'},
             'size': 0,
+            'is_public': False
         }
 
         def fake_get_instance_bdms(context, instance):
