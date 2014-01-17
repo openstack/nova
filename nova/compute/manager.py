@@ -3682,6 +3682,7 @@ class ComputeManager(manager.Manager):
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound,
+                                   exception.ConsoleTypeUnavailable,
                                    NotImplementedError)
     @wrap_exception()
     @wrap_instance_fault
@@ -3719,7 +3720,8 @@ class ComputeManager(manager.Manager):
 
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
-                                   exception.InstanceNotFound)
+                                   exception.InstanceNotFound,
+                                   exception.ConsoleTypeUnavailable)
     @wrap_exception()
     @wrap_instance_fault
     @object_compat

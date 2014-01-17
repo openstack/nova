@@ -47,6 +47,8 @@ class RemoteConsolesController(wsgi.Controller):
                                                       console_type)
         except exception.ConsoleTypeInvalid as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.ConsoleTypeUnavailable as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
@@ -73,6 +75,8 @@ class RemoteConsolesController(wsgi.Controller):
                                                         instance,
                                                         console_type)
         except exception.ConsoleTypeInvalid as e:
+            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.ConsoleTypeUnavailable as e:
             raise webob.exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
