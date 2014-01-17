@@ -27,15 +27,13 @@ umount: CommandFilter, umount, root
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
 qemu-nbd: CommandFilter, qemu-nbd, root
 
-# nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
-blockdev: CommandFilter, blockdev, root
-
 # nova/virt/disk/mount/loop.py: 'losetup', '--find', '--show', image
 # nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
 losetup: CommandFilter, losetup, root
 
 # nova/virt/libvirt/utils.py: 'blockdev', '--getsize64', path
-blockdev: RegExpFilter, blockdev, root, blockdev, --getsize64, /dev/.*
+# nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
+blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /dev/.*
 
 # nova/virt/disk/vfs/localfs.py: 'tee', canonpath
 tee: CommandFilter, tee, root
