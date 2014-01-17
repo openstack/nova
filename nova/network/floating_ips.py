@@ -566,9 +566,8 @@ class FloatingIP(object):
 
             # NOTE(wenjianhn): Make this address will not be bound to public
             # interface when restarts nova-network on dest compute node
-            self.db.floating_ip_update(context,
-                                       floating_ip.address,
-                                       {'host': None})
+            floating_ip.host = None
+            floating_ip.save()
 
     def migrate_instance_finish(self, context, instance_uuid,
                                 floating_addresses, host=None,
@@ -595,9 +594,8 @@ class FloatingIP(object):
                          {'address': address, 'instance_uuid': instance_uuid})
                 continue
 
-            self.db.floating_ip_update(context,
-                                       floating_ip.address,
-                                       {'host': dest})
+            floating_ip.host = dest
+            floating_ip.save()
 
             interface = CONF.public_interface or floating_ip.interface
             fixed_ip = floating_ip.fixed_ip
