@@ -30,4 +30,5 @@ stevedore>=0.12
 websockify>=0.5.1,<0.6
 wsgiref>=0.1.2
 oslo.config>=1.2.0
+oslo.rootwrap
 pycadf>=0.1.9
