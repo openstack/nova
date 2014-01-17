@@ -40,7 +40,10 @@ class _TestSecurityGroupRuleObject(object):
             rule = security_group_rule.SecurityGroupRule.get_by_id(
                 self.context, 1)
             for field in fake_rule:
-                self.assertEqual(fake_rule[field], rule[field])
+                if field == 'cidr':
+                    self.assertEqual(fake_rule[field], str(rule[field]))
+                else:
+                    self.assertEqual(fake_rule[field], rule[field])
             sgrg.assert_called_with(self.context, 1)
 
     def test_get_by_security_group(self):

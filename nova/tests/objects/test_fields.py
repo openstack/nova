@@ -251,16 +251,43 @@ class TestNetworkModel(TestField):
         self.from_primitive_values = [(model.json(), model)]
 
 
-class TestCIDR(TestField):
+class TestIPNetwork(TestField):
     def setUp(self):
-        super(TestCIDR, self).setUp()
-        self.field = fields.Field(fields.CIDR())
-        good = ['192.168.0.1/24', '192.168.0.0/16', '192.168.0.0/8',
-                '192.168.0.0/0', '1.2.3.4/32', '1.2.3.4/22', '0/0',
-                '::1/128', '::1/64', '::1/0']
-        self.coerce_good_values = [(x, x) for x in good]
-        self.coerce_bad_values = ['192.168.0.0', '192.168.0.0/f',
-                                  '192.168.0.0/foo', '192.168.0.0/33',
+        super(TestIPNetwork, self).setUp()
+        self.field = fields.Field(fields.IPNetwork())
+        good = ['192.168.1.0/24', '0.0.0.0/0', '::1/128', '::1/64', '::1/0']
+        self.coerce_good_values = [(x, netaddr.IPNetwork(x)) for x in good]
+        self.coerce_bad_values = ['192.168.0.0/f', '192.168.0.0/foo',
                                   '::1/129', '192.168.0.0/-1']
-        self.to_primitive_values = [(x, x) for x in good]
-        self.from_primitive_values = self.to_primitive_values
+        self.to_primitive_values = [(netaddr.IPNetwork(x), x)
+                                    for x in good]
+        self.from_primitive_values = [(x, netaddr.IPNetwork(x))
+                                      for x in good]
+
+
+class TestIPV4Network(TestField):
+    def setUp(self):
+        super(TestIPV4Network, self).setUp()
+        self.field = fields.Field(fields.IPV4Network())
+        good = ['192.168.1.0/24', '0.0.0.0/0']
+        self.coerce_good_values = [(x, netaddr.IPNetwork(x)) for x in good]
+        self.coerce_bad_values = ['192.168.0.0/f', '192.168.0.0/foo',
+                                  '::1/129', '192.168.0.0/-1']
+        self.to_primitive_values = [(netaddr.IPNetwork(x), x)
+                                    for x in good]
+        self.from_primitive_values = [(x, netaddr.IPNetwork(x))
+                                      for x in good]
+
+
+class TestIPV6Network(TestField):
+    def setUp(self):
+        super(TestIPV6Network, self).setUp()
+        self.field = fields.Field(fields.IPV6Network())
+        good = ['::1/128', '::1/64', '::1/0']
+        self.coerce_good_values = [(x, netaddr.IPNetwork(x)) for x in good]
+        self.coerce_bad_values = ['192.168.0.0/f', '192.168.0.0/foo',
+                                  '::1/129', '192.168.0.0/-1']
+        self.to_primitive_values = [(netaddr.IPNetwork(x), x)
+                                    for x in good]
+        self.from_primitive_values = [(x, netaddr.IPNetwork(x))
+                                      for x in good]

@@ -296,6 +296,33 @@ class IPV6Address(IPAddress):
         return result
 
 
+class IPNetwork(IPAddress):
+    @staticmethod
+    def coerce(obj, attr, value):
+        try:
+            return netaddr.IPNetwork(value)
+        except netaddr.AddrFormatError as e:
+            raise ValueError(str(e))
+
+
+class IPV4Network(IPNetwork):
+    @staticmethod
+    def coerce(obj, attr, value):
+        try:
+            return netaddr.IPNetwork(value, version=4)
+        except netaddr.AddrFormatError as e:
+            raise ValueError(str(e))
+
+
+class IPV6Network(IPNetwork):
+    @staticmethod
+    def coerce(obj, attr, value):
+        try:
+            return netaddr.IPNetwork(value, version=6)
+        except netaddr.AddrFormatError as e:
+            raise ValueError(str(e))
+
+
 class CompoundFieldType(FieldType):
     def __init__(self, element_type, **field_args):
         self._element_type = Field(element_type, **field_args)
@@ -397,30 +424,6 @@ class NetworkModel(FieldType):
         return network_model.NetworkInfo.hydrate(value)
 
 
-class CIDR(FieldType):
-    @staticmethod
-    def coerce(obj, attr, value):
-        try:
-            network, length = value.split('/')
-        except (ValueError, AttributeError):
-            raise ValueError(_('CIDR "%s" is not in proper form') % value)
-        try:
-            network = netaddr.IPAddress(network)
-        except netaddr.AddrFormatError:
-            raise ValueError(_('Network "%s" is not valid') % network)
-        try:
-            length = int(length)
-            assert (length >= 0)
-        except (ValueError, AssertionError):
-            raise ValueError(_('Netmask length "%s" is not valid') % length)
-        if ((network.version == 4 and length > 32) or
-                (network.version == 6 and length > 128)):
-            raise ValueError(_('Netmask length "%(length)s" is not valid '
-                               'for IPv%(version)i address') %
-                             {'length': length, 'version': network.version})
-        return value
-
-
 class AutoTypedField(Field):
     AUTO_TYPE = None
 
@@ -462,6 +465,18 @@ class IPV4AddressField(AutoTypedField):
 
 class IPV6AddressField(AutoTypedField):
     AUTO_TYPE = IPV6Address()
+
+
+class IPNetworkField(AutoTypedField):
+    AUTO_TYPE = IPNetwork()
+
+
+class IPV4NetworkField(AutoTypedField):
+    AUTO_TYPE = IPV4Network()
+
+
+class IPV6NetworkField(AutoTypedField):
+    AUTO_TYPE = IPV6Network()
 
 
 class DictOfStringsField(AutoTypedField):

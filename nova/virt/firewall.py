@@ -400,7 +400,7 @@ class IptablesFirewallDriver(FirewallDriver):
                     args += self._build_icmp_rule(rule, version)
                 if rule['cidr']:
                     LOG.debug('Using cidr %r', rule['cidr'], instance=instance)
-                    args += ['-s', rule['cidr']]
+                    args += ['-s', str(rule['cidr'])]
                     fw_rules += [' '.join(args)]
                 else:
                     if rule['grantee_group']:
