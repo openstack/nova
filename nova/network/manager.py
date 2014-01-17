@@ -358,9 +358,9 @@ class NetworkManager(manager.Manager):
             now = timeutils.utcnow()
             timeout = CONF.fixed_ip_disassociate_timeout
             time = now - datetime.timedelta(seconds=timeout)
-            num = self.db.fixed_ip_disassociate_all_by_timeout(context,
-                                                               self.host,
-                                                               time)
+            num = fixed_ip_obj.FixedIP.disassociate_all_by_timeout(context,
+                                                                   self.host,
+                                                                   time)
             if num:
                 LOG.debug(_('Disassociated %s stale fixed ip(s)'), num)
 
