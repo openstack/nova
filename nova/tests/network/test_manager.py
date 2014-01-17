@@ -2212,7 +2212,8 @@ class FloatingIPTestCase(test.TestCase):
 
     @mock.patch('nova.db.fixed_ip_get')
     @mock.patch('nova.db.network_get')
-    def test_disassociate_floating_ip_multi_host_calls(self, net_get,
+    @mock.patch('nova.db.instance_get_by_uuid')
+    def test_disassociate_floating_ip_multi_host_calls(self, inst_get, net_get,
                                                        fixed_get):
         floating_ip = {
             'fixed_ip_id': 12
@@ -2225,9 +2226,7 @@ class FloatingIPTestCase(test.TestCase):
         network = dict(test_network.fake_network,
                        multi_host=True)
 
-        instance = {
-            'host': 'some-other-host'
-        }
+        instance = dict(fake_instance.fake_db_instance(host='some-other-host'))
 
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
@@ -2242,10 +2241,7 @@ class FloatingIPTestCase(test.TestCase):
 
         fixed_get.return_value = fixed_ip
         net_get.return_value = network
-
-        self.stubs.Set(self.network.db,
-                       'instance_get_by_uuid',
-                       lambda _x, _y: instance)
+        inst_get.return_value = instance
 
         self.stubs.Set(self.network.db,
                        'service_get_by_host_and_topic',
@@ -2266,7 +2262,9 @@ class FloatingIPTestCase(test.TestCase):
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')
-    def test_associate_floating_ip_multi_host_calls(self, net_get, fixed_get):
+    @mock.patch('nova.db.instance_get_by_uuid')
+    def test_associate_floating_ip_multi_host_calls(self, inst_get, net_get,
+                                                    fixed_get):
         floating_ip = {
             'fixed_ip_id': None
         }
@@ -2278,9 +2276,7 @@ class FloatingIPTestCase(test.TestCase):
         network = dict(test_network.fake_network,
                        multi_host=True)
 
-        instance = {
-            'host': 'some-other-host'
-        }
+        instance = dict(fake_instance.fake_db_instance(host='some-other-host'))
 
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
@@ -2295,10 +2291,7 @@ class FloatingIPTestCase(test.TestCase):
 
         fixed_get.return_value = fixed_ip
         net_get.return_value = network
-
-        self.stubs.Set(self.network.db,
-                       'instance_get_by_uuid',
-                       lambda _x, _y: instance)
+        inst_get.return_value = instance
 
         self.mox.StubOutWithMock(
             self.network.network_rpcapi, '_associate_floating_ip')

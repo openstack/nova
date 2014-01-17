@@ -24,6 +24,7 @@ from nova import exception
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import fixed_ip as fixed_ip_obj
+from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
@@ -153,9 +154,9 @@ class FloatingIP(object):
             # NOTE(francois.charlier): in some cases the instance might be
             # deleted before the IPs are released, so we need to get deleted
             # instances too
-            instance = self.db.instance_get(
-                    context.elevated(read_deleted='yes'), instance_uuid)
-            instance_uuid = instance['uuid']
+            instance = instance_obj.Instance.get_by_id(
+                context.elevated(read_deleted='yes'), instance_uuid)
+            instance_uuid = instance.uuid
 
         try:
             fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(
@@ -328,9 +329,9 @@ class FloatingIP(object):
         network = network_obj.Network.get_by_id(context.elevated(),
                                                 fixed_ip.network_id)
         if network.multi_host:
-            instance = self.db.instance_get_by_uuid(context,
-                                                    fixed_ip.instance_uuid)
-            host = instance['host']
+            instance = instance_obj.Instance.get_by_uuid(
+                context, fixed_ip.instance_uuid)
+            host = instance.host
         else:
             host = network.host
 
@@ -421,12 +422,12 @@ class FloatingIP(object):
                                                 fixed_ip.network_id)
         interface = floating_ip.get('interface')
         if network.multi_host:
-            instance = self.db.instance_get_by_uuid(context,
-                                                    fixed_ip.instance_uuid)
+            instance = instance_obj.Instance.get_by_uuid(
+                context, fixed_ip.instance_uuid)
             service = self.db.service_get_by_host_and_topic(
-                    context.elevated(), instance['host'], CONF.network_topic)
+                    context.elevated(), instance.host, CONF.network_topic)
             if service and self.servicegroup_api.service_is_up(service):
-                host = instance['host']
+                host = instance.host
             else:
                 # NOTE(vish): if the service is down just deallocate the data
                 #             locally. Set the host to local so the call will
