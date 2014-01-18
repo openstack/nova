@@ -475,8 +475,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
                    group='libvirt')
 
-        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
-        libvirt_driver.LibvirtDriver._conn = fake
+        self.stubs.Set(libvirt_driver.LibvirtDriver, '_conn', fake)
 
     def fake_lookup(self, instance_name):
         return FakeVirtDomain()
