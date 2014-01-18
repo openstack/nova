@@ -23,7 +23,7 @@ from oslo.config import cfg
 
 consoleauth_topic_opt = cfg.StrOpt('consoleauth_topic',
         default='consoleauth',
-        help='the topic console auth proxy nodes listen on')
+        help='The topic console auth proxy nodes listen on')
 
 CONF = cfg.CONF
 CONF.register_opt(consoleauth_topic_opt)

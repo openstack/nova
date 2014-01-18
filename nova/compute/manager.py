@@ -94,7 +94,7 @@ compute_opts = [
                help='Console proxy host to use to connect '
                     'to instances on this host.'),
     cfg.StrOpt('default_access_ip_network_name',
-               help='Name of network to use to set access ips for instances'),
+               help='Name of network to use to set access IPs for instances'),
     cfg.BoolOpt('defer_iptables_apply',
                 default=False,
                 help='Whether to batch up the application of IPTables rules'
@@ -102,7 +102,7 @@ compute_opts = [
                      ' init phase'),
     cfg.StrOpt('instances_path',
                default=paths.state_path_def('instances'),
-               help='where instances are stored on disk'),
+               help='Where instances are stored on disk'),
     cfg.BoolOpt('instance_usage_audit',
                default=False,
                help="Generate periodic compute.instance.exists notifications"),
@@ -121,10 +121,10 @@ compute_opts = [
 interval_opts = [
     cfg.IntOpt('bandwidth_poll_interval',
                default=600,
-               help='interval to pull bandwidth usage info'),
+               help='Interval to pull bandwidth usage info'),
     cfg.IntOpt('sync_power_state_interval',
                default=600,
-               help='interval to sync power states between '
+               help='Interval to sync power states between '
                     'the database and the hypervisor'),
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,

@@ -29,10 +29,10 @@ from nova.virt.vmwareapi import vim_util
 vmrc_opts = [
     cfg.IntOpt('console_vmrc_port',
                default=443,
-               help="port for VMware VMRC connections"),
+               help="Port for VMware VMRC connections"),
     cfg.IntOpt('console_vmrc_error_retries',
                default=10,
-               help="number of retries for retrieving VMRC information"),
+               help="Number of retries for retrieving VMRC information"),
     ]
 
 CONF = cfg.CONF

@@ -70,7 +70,7 @@ utils_opts = [
                help='Length of generated instance admin passwords'),
     cfg.StrOpt('instance_usage_audit_period',
                default='month',
-               help='time period to generate instance usages for.  '
+               help='Time period to generate instance usages for.  '
                     'Time period must be hour, day, month or year'),
     cfg.StrOpt('rootwrap_config',
                default="/etc/nova/rootwrap.conf",

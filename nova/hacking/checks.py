@@ -16,6 +16,7 @@
 import re
 
 session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
+cfg_re = re.compile(".*\scfg\.")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -47,7 +48,19 @@ def use_timeutils_utcnow(logical_line):
             yield (pos, msg % (f, f))
 
 
+def capital_cfg_help(logical_line, tokens):
+    msg = "N500: capitalize help string"
+
+    if cfg_re.match(logical_line):
+        for t in range(len(tokens)):
+            if tokens[t][1] == "help":
+                txt = tokens[t + 2][1]
+                if len(txt) > 1 and txt[1].islower():
+                    yield(0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
     register(use_timeutils_utcnow)
+    register(capital_cfg_help)

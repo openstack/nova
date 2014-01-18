@@ -4,11 +4,11 @@
 # Options defined in nova.availability_zones
 #
 
-# availability_zone to show internal services under (string
-# value)
+# The availability_zone to show internal services under
+# (string value)
 #internal_service_availability_zone=internal
 
-# default compute node availability_zone (string value)
+# Default compute node availability_zone (string value)
 #default_availability_zone=nova
 
 
@@ -47,7 +47,7 @@
 # Options defined in nova.exception
 #
 
-# make exception message format errors fatal (boolean value)
+# Make exception message format errors fatal (boolean value)
 #fatal_exception_format_errors=false
 
 
@@ -55,7 +55,7 @@
 # Options defined in nova.netconf
 #
 
-# ip address of this host (string value)
+# IP address of this host (string value)
 #my_ip=10.0.0.1
 
 # Name of this node.  This can be an opaque identifier.  It is
@@ -64,7 +64,7 @@
 # ZeroMQ, a valid hostname, FQDN, or IP address (string value)
 #host=nova
 
-# use ipv6 (boolean value)
+# Use IPv6 (boolean value)
 #use_ipv6=false
 
 
@@ -115,59 +115,59 @@
 # Options defined in nova.quota
 #
 
-# number of instances allowed per project (integer value)
+# Number of instances allowed per project (integer value)
 #quota_instances=10
 
-# number of instance cores allowed per project (integer value)
+# Number of instance cores allowed per project (integer value)
 #quota_cores=20
 
-# megabytes of instance ram allowed per project (integer
+# Megabytes of instance RAM allowed per project (integer
 # value)
 #quota_ram=51200
 
-# number of floating ips allowed per project (integer value)
+# Number of floating IPs allowed per project (integer value)
 #quota_floating_ips=10
 
-# number of fixed ips allowed per project (this should be at
+# Number of fixed IPs allowed per project (this should be at
 # least the number of instances allowed) (integer value)
 #quota_fixed_ips=-1
 
-# number of metadata items allowed per instance (integer
+# Number of metadata items allowed per instance (integer
 # value)
 #quota_metadata_items=128
 
-# number of injected files allowed (integer value)
+# Number of injected files allowed (integer value)
 #quota_injected_files=5
 
-# number of bytes allowed per injected file (integer value)
+# Number of bytes allowed per injected file (integer value)
 #quota_injected_file_content_bytes=10240
 
-# number of bytes allowed per injected file path (integer
+# Number of bytes allowed per injected file path (integer
 # value)
 #quota_injected_file_path_bytes=255
 
-# number of security groups per project (integer value)
+# Number of security groups per project (integer value)
 #quota_security_groups=10
 
-# number of security rules per security group (integer value)
+# Number of security rules per security group (integer value)
 #quota_security_group_rules=20
 
-# number of key pairs per user (integer value)
+# Number of key pairs per user (integer value)
 #quota_key_pairs=100
 
-# number of seconds until a reservation expires (integer
+# Number of seconds until a reservation expires (integer
 # value)
 #reservation_expire=86400
 
-# count of reservations until usage is refreshed (integer
+# Count of reservations until usage is refreshed (integer
 # value)
 #until_refresh=0
 
-# number of seconds between subsequent usage refreshes
+# Number of seconds between subsequent usage refreshes
 # (integer value)
 #max_age=0
 
-# default driver to use for quota checks (string value)
+# Default driver to use for quota checks (string value)
 #quota_driver=nova.quota.DbQuotaDriver
 
 
@@ -175,22 +175,22 @@
 # Options defined in nova.service
 #
 
-# seconds between nodes reporting state to datastore (integer
+# Seconds between nodes reporting state to datastore (integer
 # value)
 #report_interval=10
 
-# enable periodic tasks (boolean value)
+# Enable periodic tasks (boolean value)
 #periodic_enable=true
 
-# range of seconds to randomly delay when starting the
+# Range of seconds to randomly delay when starting the
 # periodic task scheduler to reduce stampeding. (Disable by
 # setting to 0) (integer value)
 #periodic_fuzzy_delay=60
 
-# a list of APIs to enable by default (list value)
+# A list of APIs to enable by default (list value)
 #enabled_apis=ec2,osapi_compute,metadata
 
-# a list of APIs with enabled SSL (list value)
+# A list of APIs with enabled SSL (list value)
 #enabled_ssl_apis=
 
 # The IP address on which the EC2 API will listen. (string
@@ -228,23 +228,23 @@
 # Number of workers for metadata service (integer value)
 #metadata_workers=<None>
 
-# full class name for the Manager for compute (string value)
+# Full class name for the Manager for compute (string value)
 #compute_manager=nova.compute.manager.ComputeManager
 
-# full class name for the Manager for console proxy (string
+# Full class name for the Manager for console proxy (string
 # value)
 #console_manager=nova.console.manager.ConsoleProxyManager
 
-# full class name for the Manager for cert (string value)
+# Full class name for the Manager for cert (string value)
 #cert_manager=nova.cert.manager.CertManager
 
-# full class name for the Manager for network (string value)
+# Full class name for the Manager for network (string value)
 #network_manager=nova.network.manager.VlanManager
 
-# full class name for the Manager for scheduler (string value)
+# Full class name for the Manager for scheduler (string value)
 #scheduler_manager=nova.scheduler.manager.SchedulerManager
 
-# maximum time since last check-in for up service (integer
+# Maximum time since last check-in for up service (integer
 # value)
 #service_down_time=60
 
@@ -270,7 +270,7 @@
 # Length of generated instance admin passwords (integer value)
 #password_length=12
 
-# time period to generate instance usages for.  Time period
+# Time period to generate instance usages for.  Time period
 # must be hour, day, month or year (string value)
 #instance_usage_audit_period=month
 
@@ -320,8 +320,8 @@
 # Options defined in nova.api.auth
 #
 
-# whether to use per-user rate limiting for the api. This
-# option is only used by v2 api. rate limiting is removed from
+# Whether to use per-user rate limiting for the api. This
+# option is only used by v2 api. Rate limiting is removed from
 # v3 api. (boolean value)
 #api_rate_limit=false
 
@@ -366,24 +366,24 @@
 # Options defined in nova.api.ec2.cloud
 #
 
-# the ip of the ec2 api server (string value)
+# The IP address of the EC2 API server (string value)
 #ec2_host=$my_ip
 
-# the internal ip of the ec2 api server (string value)
+# The internal IP address of the EC2 API server (string value)
 #ec2_dmz_host=$my_ip
 
-# the port of the ec2 api server (integer value)
+# The port of the EC2 API server (integer value)
 #ec2_port=8773
 
-# the protocol to use when connecting to the ec2 api server
+# The protocol to use when connecting to the EC2 API server
 # (http, https) (string value)
 #ec2_scheme=http
 
-# the path prefix used to call the ec2 api server (string
+# The path prefix used to call the ec2 API server (string
 # value)
 #ec2_path=/services/Cloud
 
-# list of region=fqdn pairs separated by commas (list value)
+# List of region=fqdn pairs separated by commas (list value)
 #region_list=
 
 
@@ -424,7 +424,7 @@
 # Options defined in nova.api.openstack.common
 #
 
-# the maximum number of items returned in a single response
+# The maximum number of items returned in a single response
 # from a collection resource (integer value)
 #osapi_max_limit=1000
 
@@ -512,7 +512,7 @@
 # Options defined in nova.api.sizelimit
 #
 
-# the maximum body size per each osapi request(bytes) (integer
+# The maximum body size per each osapi request(bytes) (integer
 # value)
 #osapi_max_request_body_size=114688
 
@@ -521,7 +521,7 @@
 # Options defined in nova.cert.rpcapi
 #
 
-# the topic cert nodes listen on (string value)
+# The topic cert nodes listen on (string value)
 #cert_topic=cert
 
 
@@ -529,7 +529,7 @@
 # Options defined in nova.cloudpipe.pipelib
 #
 
-# image id used when starting up a cloudpipe vpn server
+# Image ID used when starting up a cloudpipe vpn server
 # (string value)
 #vpn_image_id=0
 
@@ -613,7 +613,7 @@
 # in single-host environments. (boolean value)
 #allow_migrate_to_same_host=false
 
-# availability zone to use when user doesn't specify one
+# Availability zone to use when user doesn't specify one
 # (string value)
 #default_schedule_zone=<None>
 
@@ -621,7 +621,7 @@
 # inherit from an instance (list value)
 #non_inheritable_image_properties=cache_in_nova,bittorrent
 
-# kernel image that indicates not to use a kernel, but to use
+# Kernel image that indicates not to use a kernel, but to use
 # a raw disk image instead (string value)
 #null_kernel=nokernel
 
@@ -645,7 +645,7 @@
 # Options defined in nova.compute.flavors
 #
 
-# default flavor to use for the EC2 API only. The Nova API
+# Default flavor to use for the EC2 API only. The Nova API
 # does not support a default flavor. (string value)
 #default_flavor=m1.small
 
@@ -658,7 +658,7 @@
 # host. (string value)
 #console_host=nova
 
-# Name of network to use to set access ips for instances
+# Name of network to use to set access IPs for instances
 # (string value)
 #default_access_ip_network_name=<None>
 
@@ -667,7 +667,7 @@
 # (boolean value)
 #defer_iptables_apply=false
 
-# where instances are stored on disk (string value)
+# Where instances are stored on disk (string value)
 #instances_path=$state_path/instances
 
 # Generate periodic compute.instance.exists notifications
@@ -690,10 +690,10 @@
 # (integer value)
 #maximum_instance_delete_attempts=5
 
-# interval to pull bandwidth usage info (integer value)
+# Interval to pull bandwidth usage info (integer value)
 #bandwidth_poll_interval=600
 
-# interval to sync power states between the database and the
+# Interval to sync power states between the database and the
 # hypervisor (integer value)
 #sync_power_state_interval=600
 
@@ -791,7 +791,7 @@
 # Options defined in nova.compute.rpcapi
 #
 
-# the topic compute nodes listen on (string value)
+# The topic compute nodes listen on (string value)
 #compute_topic=compute
 
 
@@ -823,7 +823,7 @@
 # Options defined in nova.console.rpcapi
 #
 
-# the topic console proxy nodes listen on (string value)
+# The topic console proxy nodes listen on (string value)
 #console_topic=console
 
 
@@ -831,10 +831,10 @@
 # Options defined in nova.console.vmrc
 #
 
-# port for VMware VMRC connections (integer value)
+# Port for VMware VMRC connections (integer value)
 #console_vmrc_port=443
 
-# number of retries for retrieving VMRC information (integer
+# Number of retries for retrieving VMRC information (integer
 # value)
 #console_vmrc_error_retries=10
 
@@ -846,7 +846,7 @@
 # XVP conf template (string value)
 #console_xvp_conf_template=$pybasedir/nova/console/xvp.conf.template
 
-# generated XVP conf file (string value)
+# Generated XVP conf file (string value)
 #console_xvp_conf=/etc/xvp.conf
 
 # XVP master process pid file (string value)
@@ -855,7 +855,7 @@
 # XVP log file (string value)
 #console_xvp_log=/var/log/xvp.log
 
-# port for XVP to multiplex VNC connections on (integer value)
+# Port for XVP to multiplex VNC connections on (integer value)
 #console_xvp_multiplex_port=5900
 
 
@@ -863,7 +863,7 @@
 # Options defined in nova.consoleauth
 #
 
-# the topic console auth proxy nodes listen on (string value)
+# The topic console auth proxy nodes listen on (string value)
 #consoleauth_topic=consoleauth
 
 
@@ -899,7 +899,7 @@
 # Options defined in nova.db.base
 #
 
-# driver to use for database access (string value)
+# The driver to use for database access (string value)
 #db_driver=nova.db
 
 
@@ -917,10 +917,10 @@
 # Options defined in nova.image.glance
 #
 
-# default glance hostname or ip (string value)
+# Default glance hostname or IP address (string value)
 #glance_host=$my_ip
 
-# default glance port (integer value)
+# Default glance port (integer value)
 #glance_port=9292
 
 # Default protocol to use when connecting to glance. Set to
@@ -936,7 +936,7 @@
 # (boolean value)
 #glance_api_insecure=false
 
-# Number retries when downloading an image from glance
+# Number of retries when downloading an image from glance
 # (integer value)
 #glance_num_retries=0
 
@@ -950,28 +950,28 @@
 # Options defined in nova.image.s3
 #
 
-# parent dir for tempdir used for image decryption (string
-# value)
+# Parent directory for tempdir used for image decryption
+# (string value)
 #image_decryption_dir=/tmp
 
-# hostname or ip for OpenStack to use when accessing the s3
+# Hostname or IP for OpenStack to use when accessing the S3
 # api (string value)
 #s3_host=$my_ip
 
-# port used when accessing the s3 api (integer value)
+# Port used when accessing the S3 api (integer value)
 #s3_port=3333
 
-# access key to use for s3 server for images (string value)
+# Access key to use for S3 server for images (string value)
 #s3_access_key=notchecked
 
-# secret key to use for s3 server for images (string value)
+# Secret key to use for S3 server for images (string value)
 #s3_secret_key=notchecked
 
-# whether to use ssl when talking to s3 (boolean value)
+# Whether to use SSL when talking to S3 (boolean value)
 #s3_use_ssl=false
 
-# whether to affix the tenant id to the access key when
-# downloading from s3 (boolean value)
+# Whether to affix the tenant id to the access key when
+# downloading from S3 (boolean value)
 #s3_affix_tenant=false
 
 
@@ -1004,21 +1004,21 @@
 # Options defined in nova.network.floating_ips
 #
 
-# Default pool for floating ips (string value)
+# Default pool for floating IPs (string value)
 #default_floating_pool=nova
 
-# Autoassigning floating ip to VM (boolean value)
+# Autoassigning floating IP to VM (boolean value)
 #auto_assign_floating_ip=false
 
-# full class name for the DNS Manager for floating IPs (string
+# Full class name for the DNS Manager for floating IPs (string
 # value)
 #floating_ip_dns_manager=nova.network.noop_dns_driver.NoopDNSDriver
 
-# full class name for the DNS Manager for instance IPs (string
+# Full class name for the DNS Manager for instance IPs (string
 # value)
 #instance_dns_manager=nova.network.noop_dns_driver.NoopDNSDriver
 
-# full class name for the DNS Zone for instance IPs (string
+# Full class name for the DNS Zone for instance IPs (string
 # value)
 #instance_dns_domain=
 
@@ -1027,39 +1027,39 @@
 # Options defined in nova.network.ldapdns
 #
 
-# URL for ldap server which will store dns entries (string
+# URL for LDAP server which will store DNS entries (string
 # value)
 #ldap_dns_url=ldap://ldap.example.com:389
 
-# user for ldap DNS (string value)
+# User for LDAP DNS (string value)
 #ldap_dns_user=uid=admin,ou=people,dc=example,dc=org
 
-# password for ldap DNS (string value)
+# Password for LDAP DNS (string value)
 #ldap_dns_password=password
 
-# Hostmaster for ldap dns driver Statement of Authority
+# Hostmaster for LDAP DNS driver Statement of Authority
 # (string value)
 #ldap_dns_soa_hostmaster=hostmaster@example.org
 
-# DNS Servers for ldap dns driver (multi valued)
+# DNS Servers for LDAP DNS driver (multi valued)
 #ldap_dns_servers=dns.example.org
 
-# Base DN for DNS entries in ldap (string value)
+# Base DN for DNS entries in LDAP (string value)
 #ldap_dns_base_dn=ou=hosts,dc=example,dc=org
 
-# Refresh interval (in seconds) for ldap dns driver Statement
+# Refresh interval (in seconds) for LDAP DNS driver Statement
 # of Authority (string value)
 #ldap_dns_soa_refresh=1800
 
-# Retry interval (in seconds) for ldap dns driver Statement of
+# Retry interval (in seconds) for LDAP DNS driver Statement of
 # Authority (string value)
 #ldap_dns_soa_retry=3600
 
-# Expiry interval (in seconds) for ldap dns driver Statement
+# Expiry interval (in seconds) for LDAP DNS driver Statement
 # of Authority (string value)
 #ldap_dns_soa_expiry=86400
 
-# Minimum interval (in seconds) for ldap dns driver Statement
+# Minimum interval (in seconds) for LDAP DNS driver Statement
 # of Authority (string value)
 #ldap_dns_soa_minimum=7200
 
@@ -1068,7 +1068,7 @@
 # Options defined in nova.network.linux_net
 #
 
-# location of flagfiles for dhcpbridge (multi valued)
+# Location of flagfiles for dhcpbridge (multi valued)
 #dhcpbridge_flagfile=/etc/nova/nova-dhcpbridge.conf
 
 # Location to keep network config files (string value)
@@ -1080,7 +1080,7 @@
 # MTU setting for network interface (integer value)
 #network_device_mtu=<None>
 
-# location of nova-dhcpbridge (string value)
+# Location of nova-dhcpbridge (string value)
 #dhcpbridge=$bindir/nova-dhcpbridge
 
 # Public IP of network host (string value)
@@ -1089,11 +1089,11 @@
 # Lifetime of a DHCP lease in seconds (integer value)
 #dhcp_lease_time=120
 
-# if set, uses specific dns server for dnsmasq. Canbe
+# If set, uses specific DNS server for dnsmasq. Can be
 # specified multiple times. (multi valued)
 #dns_server=
 
-# if set, uses the dns1 and dns2 from the network ref.as dns
+# If set, uses the dns1 and dns2 from the network ref. as dns
 # servers. (boolean value)
 #use_network_dns_servers=false
 
@@ -1116,10 +1116,10 @@
 # value)
 #linuxnet_ovs_integration_bridge=br-int
 
-# send gratuitous ARPs for HA setup (boolean value)
+# Send gratuitous ARPs for HA setup (boolean value)
 #send_arp_for_ha=false
 
-# send this many gratuitous ARPs for HA setup (integer value)
+# Send this many gratuitous ARPs for HA setup (integer value)
 #send_arp_for_ha_count=3
 
 # Use single default gateway. Only first nic of vm will get
@@ -1131,10 +1131,10 @@
 # multiple times. (multi valued)
 #forward_bridge_interface=all
 
-# the ip for the metadata api server (string value)
+# The IP address for the metadata API server (string value)
 #metadata_host=$my_ip
 
-# the port for the metadata api port (integer value)
+# The port for the metadata API port (integer value)
 #metadata_port=8775
 
 # Regular expression to match iptables rule that should always
@@ -1162,7 +1162,7 @@
 # Bridge for simple network instances (string value)
 #flat_network_bridge=<None>
 
-# Dns for simple network (string value)
+# DNS server for simple network (string value)
 #flat_network_dns=8.8.4.4
 
 # Whether to attempt to inject network setup into guest
@@ -1176,7 +1176,7 @@
 # First VLAN for private networks (integer value)
 #vlan_start=100
 
-# vlans will bridge into this interface if set (string value)
+# VLANs will bridge into this interface if set (string value)
 #vlan_interface=<None>
 
 # Number of networks to support (integer value)
@@ -1203,7 +1203,7 @@
 # Number of addresses reserved for vpn clients (integer value)
 #cnt_vpn_clients=0
 
-# Seconds after which a deallocated ip is disassociated
+# Seconds after which a deallocated IP is disassociated
 # (integer value)
 #fixed_ip_disassociate_timeout=600
 
@@ -1243,7 +1243,7 @@
 # entries. (integer value)
 #dns_update_periodic_interval=-1
 
-# domain to use for building the hostnames (string value)
+# Domain to use for building the hostnames (string value)
 #dhcp_domain=novalocal
 
 # Indicates underlying L3 management library (string value)
@@ -1257,35 +1257,35 @@
 # URL for connecting to neutron (string value)
 #neutron_url=http://127.0.0.1:9696
 
-# timeout value for connecting to neutron in seconds (integer
+# Timeout value for connecting to neutron in seconds (integer
 # value)
 #neutron_url_timeout=30
 
-# username for connecting to neutron in admin context (string
+# Username for connecting to neutron in admin context (string
 # value)
 #neutron_admin_username=<None>
 
-# password for connecting to neutron in admin context (string
+# Password for connecting to neutron in admin context (string
 # value)
 #neutron_admin_password=<None>
 
-# tenant name for connecting to neutron in admin context
+# Tenant name for connecting to neutron in admin context
 # (string value)
 #neutron_admin_tenant_name=<None>
 
-# region name for connecting to neutron in admin context
+# Region name for connecting to neutron in admin context
 # (string value)
 #neutron_region_name=<None>
 
-# auth url for connecting to neutron in admin context (string
-# value)
+# Authorization URL for connecting to neutron in admin context
+# (string value)
 #neutron_admin_auth_url=http://localhost:5000/v2.0
 
-# if set, ignore any SSL validation issues (boolean value)
+# If set, ignore any SSL validation issues (boolean value)
 #neutron_api_insecure=false
 
-# auth strategy for connecting to neutron in admin context
-# (string value)
+# Authorization strategy for connecting to neutron in admin
+# context (string value)
 #neutron_auth_strategy=keystone
 
 # Name of Integration Bridge used by Open vSwitch (string
@@ -1296,7 +1296,7 @@
 # (integer value)
 #neutron_extension_sync_interval=600
 
-# Location of ca certificates file to use for neutron client
+# Location of CA certificates file to use for neutron client
 # requests. (string value)
 #neutron_ca_certificates_file=<None>
 
@@ -1305,7 +1305,7 @@
 # Options defined in nova.network.rpcapi
 #
 
-# the topic network nodes listen on (string value)
+# The topic network nodes listen on (string value)
 #network_topic=network
 
 # Default value for multi_host in networks. Also, if set, some
@@ -1326,13 +1326,13 @@
 # Options defined in nova.objectstore.s3server
 #
 
-# path to s3 buckets (string value)
+# Path to S3 buckets (string value)
 #buckets_path=$state_path/buckets
 
 # IP address for S3 API to listen (string value)
 #s3_listen=0.0.0.0
 
-# port for s3 api to listen (integer value)
+# Port for S3 API to listen (integer value)
 #s3_listen_port=3333
 
 
@@ -1768,7 +1768,7 @@
 # Options defined in nova.scheduler.filters.disk_filter
 #
 
-# virtual disk to physical disk allocation ratio (floating
+# Virtual disk to physical disk allocation ratio (floating
 # point value)
 #disk_allocation_ratio=1.0
 
@@ -1848,7 +1848,7 @@
 # Options defined in nova.scheduler.rpcapi
 #
 
-# the topic scheduler nodes listen on (string value)
+# The topic scheduler nodes listen on (string value)
 #scheduler_topic=scheduler
 
 
@@ -1904,8 +1904,8 @@
 # Options defined in nova.virt.cpu
 #
 
-# Which pcpus can be used by vcpus of instance e.g:
-# "4-12,^8,15" (string value)
+# Defines which pcpus that instance vcpus can use. For
+# example, "4-12,^8,15" (string value)
 #vcpu_pin_set=<None>
 
 
@@ -1916,8 +1916,8 @@
 # Template file for injected network (string value)
 #injected_network_template=$pybasedir/nova/virt/interfaces.template
 
-# mkfs commands for ephemeral device. The format is
-# <os_type>=<mkfs command> (multi valued)
+# Name of the mkfs commands for ephemeral device. The format
+# is <os_type>=<mkfs command> (multi valued)
 #virt_mkfs=
 
 # Attempt to resize the filesystem by accessing the image over
@@ -1932,7 +1932,8 @@
 # Options defined in nova.virt.disk.mount.nbd
 #
 
-# time to wait for a NBD device coming up (integer value)
+# Amount of time, in seconds, to wait for NBD device start up.
+# (integer value)
 #timeout_nbd=10
 
 
@@ -2007,11 +2008,11 @@
 # Options defined in nova.vnc
 #
 
-# location of vnc console proxy, in the form
+# Location of VNC console proxy, in the form
 # "http://127.0.0.1:6080/vnc_auto.html" (string value)
 #novncproxy_base_url=http://127.0.0.1:6080/vnc_auto.html
 
-# location of nova xvp vnc console proxy, in the form
+# Location of nova xvp VNC console proxy, in the form
 # "http://127.0.0.1:6081/console" (string value)
 #xvpvncproxy_base_url=http://127.0.0.1:6081/console
 
@@ -2019,14 +2020,14 @@
 # (string value)
 #vncserver_listen=127.0.0.1
 
-# the address to which proxy clients (like nova-xvpvncproxy)
+# The address to which proxy clients (like nova-xvpvncproxy)
 # should connect (string value)
 #vncserver_proxyclient_address=127.0.0.1
 
-# enable vnc related features (boolean value)
+# Enable VNC related features (boolean value)
 #vnc_enabled=true
 
-# keymap for vnc (string value)
+# Keymap for VNC (string value)
 #vnc_keymap=en-us
 
 
@@ -2055,7 +2056,7 @@
 #
 
 # Info to match when looking for cinder in the service
-# catalog. Format is : separated values of the form:
+# catalog. Format is: separated values of the form:
 # <service_type>:<service_name>:<endpoint_type> (string value)
 #cinder_catalog_info=volume:cinder:publicURL
 
@@ -2064,7 +2065,7 @@
 # (string value)
 #cinder_endpoint_template=<None>
 
-# region name of this node (string value)
+# Region name of this node (string value)
 #os_region_name=<None>
 
 # Location of ca certificates file to use for cinder client
@@ -2113,7 +2114,7 @@
 # Baremetal volume driver. (string value)
 #volume_driver=nova.virt.baremetal.volume_driver.LibvirtVolumeDriver
 
-# a list of additional capabilities corresponding to
+# A list of additional capabilities corresponding to
 # flavor_extra_specs for this compute host to advertise. Valid
 # entries are name=value, pairs For example, "key1:val1,
 # key2:val2" (list value)
@@ -2134,17 +2135,17 @@
 # Options defined in nova.virt.baremetal.ipmi
 #
 
-# path to baremetal terminal program (string value)
+# Path to baremetal terminal program (string value)
 #terminal=shellinaboxd
 
-# path to baremetal terminal SSL cert(PEM) (string value)
+# Path to baremetal terminal SSL cert(PEM) (string value)
 #terminal_cert_dir=<None>
 
-# path to directory stores pidfiles of baremetal_terminal
+# Path to directory stores pidfiles of baremetal_terminal
 # (string value)
 #terminal_pid_dir=$state_path/baremetal/console
 
-# maximal number of retries for IPMI operations (integer
+# Maximal number of retries for IPMI operations (integer
 # value)
 #ipmi_power_retry=10
 
@@ -2164,7 +2165,7 @@
 # Template file for injected network config (string value)
 #net_config_template=$pybasedir/nova/virt/baremetal/net-dhcp.ubuntu.template
 
-# additional append parameters for baremetal PXE boot (string
+# Additional append parameters for baremetal PXE boot (string
 # value)
 #pxe_append_params=nofb nomodeset vga=normal
 
@@ -2192,22 +2193,22 @@
 # Options defined in nova.virt.baremetal.tilera_pdu
 #
 
-# ip address of tilera pdu (string value)
+# IP address of tilera pdu (string value)
 #tile_pdu_ip=10.0.100.1
 
-# management script for tilera pdu (string value)
+# Management script for tilera pdu (string value)
 #tile_pdu_mgr=/tftpboot/pdu_mgr
 
-# power status of tilera PDU is OFF (integer value)
+# Power status of tilera PDU is OFF (integer value)
 #tile_pdu_off=2
 
-# power status of tilera PDU is ON (integer value)
+# Power status of tilera PDU is ON (integer value)
 #tile_pdu_on=1
 
-# power status of tilera PDU (integer value)
+# Power status of tilera PDU (integer value)
 #tile_pdu_status=9
 
-# wait time in seconds until check the result after tilera
+# Wait time in seconds until check the result after tilera
 # power operations (integer value)
 #tile_power_wait=9
 
@@ -2216,23 +2217,23 @@
 # Options defined in nova.virt.baremetal.virtual_power_driver
 #
 
-# ip or name to virtual power host (string value)
+# IP or name to virtual power host (string value)
 #virtual_power_ssh_host=
 
 # Port to use for ssh to virtual power host (integer value)
 #virtual_power_ssh_port=22
 
-# base command to use for virtual power(vbox,virsh) (string
+# Base command to use for virtual power(vbox, virsh) (string
 # value)
 #virtual_power_type=virsh
 
-# user to execute virtual power commands as (string value)
+# User to execute virtual power commands as (string value)
 #virtual_power_host_user=
 
-# password for virtual power host_user (string value)
+# Password for virtual power host_user (string value)
 #virtual_power_host_pass=
 
-# ssh key for virtual power host_user (string value)
+# The ssh key for virtual power host_user (string value)
 #virtual_power_host_key=<None>
 
 
@@ -2245,7 +2246,7 @@
 # globally opened ACL (boolean value)
 #use_unsafe_iscsi=false
 
-# iSCSI IQN prefix used in baremetal volume connections.
+# The iSCSI IQN prefix used in baremetal volume connections.
 # (string value)
 #iscsi_iqn_prefix=iqn.2010-10.org.openstack.baremetal
 
@@ -2286,13 +2287,13 @@
 # Enable cell functionality (boolean value)
 #enable=false
 
-# the topic cells nodes listen on (string value)
+# The topic cells nodes listen on (string value)
 #topic=cells
 
 # Manager for cells (string value)
 #manager=nova.cells.manager.CellsManager
 
-# name of this cell (string value)
+# Name of this cell (string value)
 #name=nova
 
 # Key/Multi-value list with the capabilities of the cell (list
@@ -2334,12 +2335,12 @@
 #
 
 # Filter classes the cells scheduler should use.  An entry of
-# "nova.cells.filters.all_filters"maps to all cells filters
+# "nova.cells.filters.all_filters" maps to all cells filters
 # included with nova. (list value)
 #scheduler_filter_classes=nova.cells.filters.all_filters
 
 # Weigher classes the cells scheduler should use.  An entry of
-# "nova.cells.weights.all_weighers"maps to all cell weighers
+# "nova.cells.weights.all_weighers" maps to all cell weighers
 # included with nova. (list value)
 #scheduler_weight_classes=nova.cells.weights.all_weighers
 
@@ -2356,8 +2357,8 @@
 # Options defined in nova.cells.state
 #
 
-# Seconds between getting fresh cell info from db. (integer
-# value)
+# Interval, in seconds, for getting fresh cell information
+# from the database. (integer value)
 #db_check_interval=60
 
 # Configuration file from which to read cells configuration.
@@ -2370,12 +2371,12 @@
 # Options defined in nova.cells.weights.mute_child
 #
 
-# Multiplier used to weigh mute children.  (The value should
-# be negative.) (floating point value)
+# Multiplier used to weigh mute children. (The value should be
+# negative.) (floating point value)
 #mute_weight_multiplier=-10.0
 
-# Weight value assigned to mute children.  (The value should
-# be positive.) (floating point value)
+# Weight value assigned to mute children. (The value should be
+# positive.) (floating point value)
 #mute_weight_value=1000.0
 
 
@@ -2406,10 +2407,10 @@
 # Perform nova-conductor operations locally (boolean value)
 #use_local=false
 
-# the topic conductor nodes listen on (string value)
+# The topic on which conductor nodes listen (string value)
 #topic=conductor
 
-# full class name for the Manager for conductor (string value)
+# Full class name for the Manager for conductor (string value)
 #manager=nova.conductor.manager.ConductorManager
 
 # Number of workers for OpenStack Conductor service (integer
@@ -2557,8 +2558,8 @@
 # value)
 #config_drive_inject_password=false
 
-# qemu-img is used to convert between different image types
-# (string value)
+# Path of qemu-img command which is used to convert between
+# different image types (string value)
 #qemu_img_cmd=qemu-img.exe
 
 # Attaches the Config Drive image as a cdrom drive instead of
@@ -2599,9 +2600,8 @@
 # Options defined in nova.image.download.file
 #
 
-# A list of filesystems that will be configured in this file
-# under the sections image_file_url:<list entry name> (list
-# value)
+# List of file systems that are configured in this file in the
+# image_file_url:<list entry name> sections (list value)
 #filesystems=
 
 
@@ -2860,10 +2860,9 @@
 # Options defined in nova.virt.libvirt.imagebackend
 #
 
-# VM Images format. Acceptable values are: raw, qcow2,
-# lvm,rbd, default. If default is specified, then
-# use_cow_images flag is used instead of this one. (string
-# value)
+# VM Images format. Acceptable values are: raw, qcow2, lvm,
+# rbd, default. If default is specified, then use_cow_images
+# flag is used instead of this one. (string value)
 # Deprecated group/name - [DEFAULT]/libvirt_images_type
 #images_type=default
 
@@ -2881,12 +2880,12 @@
 # snapshot copy-on-write blocks. (integer value)
 #lvm_snapshot_size=1000
 
-# the RADOS pool in which rbd volumes are stored (string
+# The RADOS pool in which rbd volumes are stored (string
 # value)
 # Deprecated group/name - [DEFAULT]/libvirt_images_rbd_pool
 #images_rbd_pool=rbd
 
-# path to the ceph configuration file to use (string value)
+# Path to the ceph configuration file to use (string value)
 # Deprecated group/name - [DEFAULT]/libvirt_images_rbd_ceph_conf
 #images_rbd_ceph_conf=
 
@@ -2940,43 +2939,43 @@
 # Options defined in nova.virt.libvirt.volume
 #
 
-# number of times to rescan iSCSI target to find volume
+# Number of times to rescan iSCSI target to find volume
 # (integer value)
 #num_iscsi_scan_tries=3
 
-# number of times to rescan iSER target to find volume
+# Number of times to rescan iSER target to find volume
 # (integer value)
 #num_iser_scan_tries=3
 
-# the RADOS client name for accessing rbd volumes (string
+# The RADOS client name for accessing rbd volumes (string
 # value)
 #rbd_user=<None>
 
-# the libvirt uuid of the secret for the rbd_uservolumes
+# The libvirt UUID of the secret for the rbd_uservolumes
 # (string value)
 #rbd_secret_uuid=<None>
 
-# Dir where the nfs volume is mounted on the compute node
-# (string value)
+# Directory where the NFS volume is mounted on the compute
+# node (string value)
 #nfs_mount_point_base=$state_path/mnt
 
-# Mount options passed to the nfs client. See section of the
+# Mount options passedf to the NFS client. See section of the
 # nfs man page for details (string value)
 #nfs_mount_options=<None>
 
-# number of times to rediscover AoE target to find volume
+# Number of times to rediscover AoE target to find volume
 # (integer value)
 #num_aoe_discover_tries=3
 
-# Dir where the glusterfs volume is mounted on the compute
-# node (string value)
+# Directory where the glusterfs volume is mounted on the
+# compute node (string value)
 #glusterfs_mount_point_base=$state_path/mnt
 
-# use multipath connection of the iSCSI volume (boolean value)
+# Use multipath connection of the iSCSI volume (boolean value)
 # Deprecated group/name - [DEFAULT]/libvirt_iscsi_use_multipath
 #iscsi_use_multipath=false
 
-# use multipath connection of the iSER volume (boolean value)
+# Use multipath connection of the iSER volume (boolean value)
 # Deprecated group/name - [DEFAULT]/libvirt_iser_use_multipath
 #iser_use_multipath=false
 
@@ -3062,7 +3061,7 @@
 # Options defined in nova.service
 #
 
-# Debug host (ip or name) to connect. Note that using the
+# Debug host (IP or name) to connect. Note that using the
 # remote debug option changes how Nova uses the eventlet
 # library to support async IO. This could result in failures
 # that do not occur under normal operation. Use at your own
@@ -3093,7 +3092,7 @@
 # Options defined in nova.spice
 #
 
-# location of spice html5 console proxy, in the form
+# Location of spice HTML5 console proxy, in the form
 # "http://127.0.0.1:6082/spice_auto.html" (string value)
 #html5proxy_base_url=http://127.0.0.1:6082/spice_auto.html
 
@@ -3101,17 +3100,17 @@
 # (string value)
 #server_listen=127.0.0.1
 
-# the address to which proxy clients (like nova-
+# The address to which proxy clients (like nova-
 # spicehtml5proxy) should connect (string value)
 #server_proxyclient_address=127.0.0.1
 
-# enable spice related features (boolean value)
+# Enable spice related features (boolean value)
 #enabled=false
 
-# enable spice guest agent support (boolean value)
+# Enable spice guest agent support (boolean value)
 #agent_enabled=true
 
-# keymap for spice (string value)
+# Keymap for spice (string value)
 #keymap=en-us
 
 
@@ -3140,20 +3139,20 @@
 # Options defined in nova.scheduler.filters.trusted_filter
 #
 
-# attestation server http (string value)
+# Attestation server HTTP (string value)
 #attestation_server=<None>
 
-# attestation server Cert file for Identity verification
+# Attestation server Cert file for Identity verification
 # (string value)
 #attestation_server_ca_file=<None>
 
-# attestation server port (string value)
+# Attestation server port (string value)
 #attestation_port=8443
 
-# attestation web API URL (string value)
+# Attestation web API URL (string value)
 #attestation_api_url=/OpenAttestationWebServices/V1.0
 
-# attestation authorization blob - must change (string value)
+# Attestation authorization blob - must change (string value)
 #attestation_auth_blob=<None>
 
 # Attestation status cache valid period length (integer value)
@@ -3342,24 +3341,24 @@
 # Options defined in nova.virt.xenapi.agent
 #
 
-# number of seconds to wait for agent reply (integer value)
+# Number of seconds to wait for agent reply (integer value)
 # Deprecated group/name - [DEFAULT]/agent_timeout
 #agent_timeout=30
 
-# number of seconds to wait for agent to be fully operational
+# Number of seconds to wait for agent to be fully operational
 # (integer value)
 # Deprecated group/name - [DEFAULT]/agent_version_timeout
 #agent_version_timeout=300
 
-# number of seconds to wait for agent reply to resetnetwork
+# Number of seconds to wait for agent reply to resetnetwork
 # request (integer value)
 # Deprecated group/name - [DEFAULT]/agent_resetnetwork_timeout
 #agent_resetnetwork_timeout=60
 
-# Specifies the path in which the xenapi guest agent should be
+# Specifies the path in which the XenAPI guest agent should be
 # located. If the agent is present, network configuration is
 # not injected into the image. Used if
-# compute_driver=xenapi.XenAPIDriver and  flat_injected=True
+# compute_driver=xenapi.XenAPIDriver and flat_injected=True
 # (string value)
 # Deprecated group/name - [DEFAULT]/xenapi_agent_path
 #agent_path=usr/sbin/xe-update-networking
@@ -3369,10 +3368,10 @@
 # Deprecated group/name - [DEFAULT]/xenapi_disable_agent
 #disable_agent=false
 
-# Determines if the xenapi agent should be used when the image
+# Determines if the XenAPI agent should be used when the image
 # used does not contain a hint to declare if the agent is
 # present or not. The hint is a glance property
-# "xenapi_use_agent" that has the value "true" or "false".
+# "xenapi_use_agent" that has the value "True" or "False".
 # Note that waiting for the agent when it is not present will
 # significantly increase server boot times. (boolean value)
 # Deprecated group/name - [DEFAULT]/xenapi_use_agent_default
@@ -3435,11 +3434,11 @@
 # Deprecated group/name - [DEFAULT]/xenapi_sr_base_path
 #sr_base_path=/var/run/sr-mount
 
-# iSCSI Target Host (string value)
+# The iSCSI Target Host (string value)
 # Deprecated group/name - [DEFAULT]/target_host
 #target_host=<None>
 
-# iSCSI Target Port, 3260 Default (string value)
+# The iSCSI Target Port, default is port 3260 (string value)
 # Deprecated group/name - [DEFAULT]/target_port
 #target_port=3260
 
@@ -3595,7 +3594,7 @@
 # Options defined in nova.virt.xenapi.vmops
 #
 
-# number of seconds to wait for instance to go to running
+# Number of seconds to wait for instance to go to running
 # state (integer value)
 # Deprecated group/name - [DEFAULT]/xenapi_running_timeout
 #running_timeout=60
@@ -3621,7 +3620,8 @@
 # format of host1:port,host2:port,host3:port (string value)
 #address=<None>
 
-# recv_timeout parameter for the zk session (integer value)
+# The recv_timeout parameter for the zk session (integer
+# value)
 #recv_timeout=4000
 
 # The prefix used in ZooKeeper to store ephemeral nodes

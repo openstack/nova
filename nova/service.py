@@ -43,21 +43,21 @@ LOG = logging.getLogger(__name__)
 service_opts = [
     cfg.IntOpt('report_interval',
                default=10,
-               help='seconds between nodes reporting state to datastore'),
+               help='Seconds between nodes reporting state to datastore'),
     cfg.BoolOpt('periodic_enable',
                default=True,
-               help='enable periodic tasks'),
+               help='Enable periodic tasks'),
     cfg.IntOpt('periodic_fuzzy_delay',
                default=60,
-               help='range of seconds to randomly delay when starting the'
+               help='Range of seconds to randomly delay when starting the'
                     ' periodic task scheduler to reduce stampeding.'
                     ' (Disable by setting to 0)'),
     cfg.ListOpt('enabled_apis',
                 default=['ec2', 'osapi_compute', 'metadata'],
-                help='a list of APIs to enable by default'),
+                help='A list of APIs to enable by default'),
     cfg.ListOpt('enabled_ssl_apis',
                 default=[],
-                help='a list of APIs with enabled SSL'),
+                help='A list of APIs with enabled SSL'),
     cfg.StrOpt('ec2_listen',
                default="0.0.0.0",
                help='The IP address on which the EC2 API will listen.'),
@@ -87,27 +87,27 @@ service_opts = [
                help='Number of workers for metadata service'),
     cfg.StrOpt('compute_manager',
                default='nova.compute.manager.ComputeManager',
-               help='full class name for the Manager for compute'),
+               help='Full class name for the Manager for compute'),
     cfg.StrOpt('console_manager',
                default='nova.console.manager.ConsoleProxyManager',
-               help='full class name for the Manager for console proxy'),
+               help='Full class name for the Manager for console proxy'),
     cfg.StrOpt('cert_manager',
                default='nova.cert.manager.CertManager',
-               help='full class name for the Manager for cert'),
+               help='Full class name for the Manager for cert'),
     cfg.StrOpt('network_manager',
                default='nova.network.manager.VlanManager',
-               help='full class name for the Manager for network'),
+               help='Full class name for the Manager for network'),
     cfg.StrOpt('scheduler_manager',
                default='nova.scheduler.manager.SchedulerManager',
-               help='full class name for the Manager for scheduler'),
+               help='Full class name for the Manager for scheduler'),
     cfg.IntOpt('service_down_time',
                default=60,
-               help='maximum time since last check-in for up service'),
+               help='Maximum time since last check-in for up service'),
     ]
 
 cli_opts = [
         cfg.StrOpt('host',
-                    help='Debug host (ip or name) to connect. Note '
+                    help='Debug host (IP or name) to connect. Note '
                         'that using the remote debug option changes how '
                         'Nova uses the eventlet library to support async IO. '
                         'This could result in failures that do not occur '

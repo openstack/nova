@@ -42,19 +42,19 @@ QUOTAS = quota.QUOTAS
 floating_opts = [
     cfg.StrOpt('default_floating_pool',
                default='nova',
-               help='Default pool for floating ips'),
+               help='Default pool for floating IPs'),
     cfg.BoolOpt('auto_assign_floating_ip',
                 default=False,
-                help='Autoassigning floating ip to VM'),
+                help='Autoassigning floating IP to VM'),
     cfg.StrOpt('floating_ip_dns_manager',
                default='nova.network.noop_dns_driver.NoopDNSDriver',
-               help='full class name for the DNS Manager for floating IPs'),
+               help='Full class name for the DNS Manager for floating IPs'),
     cfg.StrOpt('instance_dns_manager',
                default='nova.network.noop_dns_driver.NoopDNSDriver',
-               help='full class name for the DNS Manager for instance IPs'),
+               help='Full class name for the DNS Manager for instance IPs'),
     cfg.StrOpt('instance_dns_domain',
                default='',
-               help='full class name for the DNS Zone for instance IPs'),
+               help='Full class name for the DNS Zone for instance IPs'),
 ]
 
 CONF = cfg.CONF

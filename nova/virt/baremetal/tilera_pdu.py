@@ -35,22 +35,22 @@ from nova.virt.baremetal import base
 opts = [
     cfg.StrOpt('tile_pdu_ip',
                default='10.0.100.1',
-               help='ip address of tilera pdu'),
+               help='IP address of tilera pdu'),
     cfg.StrOpt('tile_pdu_mgr',
                default='/tftpboot/pdu_mgr',
-               help='management script for tilera pdu'),
+               help='Management script for tilera pdu'),
     cfg.IntOpt('tile_pdu_off',
                default=2,
-               help='power status of tilera PDU is OFF'),
+               help='Power status of tilera PDU is OFF'),
     cfg.IntOpt('tile_pdu_on',
                default=1,
-               help='power status of tilera PDU is ON'),
+               help='Power status of tilera PDU is ON'),
     cfg.IntOpt('tile_pdu_status',
                default=9,
-               help='power status of tilera PDU'),
+               help='Power status of tilera PDU'),
     cfg.IntOpt('tile_power_wait',
                default=9,
-               help='wait time in seconds until check the result '
+               help='Wait time in seconds until check the result '
                     'after tilera power operations'),
     ]
 

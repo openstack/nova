@@ -36,7 +36,7 @@ zk_driver_opts = [
                     'format of host1:port,host2:port,host3:port'),
     cfg.IntOpt('recv_timeout',
                default=4000,
-               help='recv_timeout parameter for the zk session'),
+               help='The recv_timeout parameter for the zk session'),
     cfg.StrOpt('sg_prefix',
                default="/servicegroups",
                help='The prefix used in ZooKeeper to store ephemeral nodes'),

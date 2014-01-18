@@ -43,7 +43,7 @@ from nova import utils
 cloudpipe_opts = [
     cfg.StrOpt('vpn_image_id',
                default='0',
-               help='image id used when starting up a cloudpipe vpn server'),
+               help='Image ID used when starting up a cloudpipe vpn server'),
     cfg.StrOpt('vpn_flavor',
                default='m1.tiny',
                help=_('Flavor for vpn instances')),

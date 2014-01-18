@@ -33,21 +33,21 @@ from nova.virt.baremetal import db
 opts = [
     cfg.StrOpt('virtual_power_ssh_host',
                default='',
-               help='ip or name to virtual power host'),
+               help='IP or name to virtual power host'),
     cfg.IntOpt('virtual_power_ssh_port',
                default=22,
                help='Port to use for ssh to virtual power host'),
     cfg.StrOpt('virtual_power_type',
                default='virsh',
-               help='base command to use for virtual power(vbox,virsh)'),
+               help='Base command to use for virtual power(vbox, virsh)'),
     cfg.StrOpt('virtual_power_host_user',
                default='',
-               help='user to execute virtual power commands as'),
+               help='User to execute virtual power commands as'),
     cfg.StrOpt('virtual_power_host_pass',
                default='',
-               help='password for virtual power host_user'),
+               help='Password for virtual power host_user'),
     cfg.StrOpt('virtual_power_host_key',
-               help='ssh key for virtual power host_user'),
+               help='The ssh key for virtual power host_user'),
 
 ]
 

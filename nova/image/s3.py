@@ -45,27 +45,27 @@ LOG = logging.getLogger(__name__)
 s3_opts = [
     cfg.StrOpt('image_decryption_dir',
                default='/tmp',
-               help='parent dir for tempdir used for image decryption'),
+               help='Parent directory for tempdir used for image decryption'),
     cfg.StrOpt('s3_host',
                default='$my_ip',
-               help='hostname or ip for OpenStack to use when accessing '
-                    'the s3 api'),
+               help='Hostname or IP for OpenStack to use when accessing '
+                    'the S3 api'),
     cfg.IntOpt('s3_port',
                default=3333,
-               help='port used when accessing the s3 api'),
+               help='Port used when accessing the S3 api'),
     cfg.StrOpt('s3_access_key',
                default='notchecked',
-               help='access key to use for s3 server for images'),
+               help='Access key to use for S3 server for images'),
     cfg.StrOpt('s3_secret_key',
                default='notchecked',
-               help='secret key to use for s3 server for images'),
+               help='Secret key to use for S3 server for images'),
     cfg.BoolOpt('s3_use_ssl',
                default=False,
-               help='whether to use ssl when talking to s3'),
+               help='Whether to use SSL when talking to S3'),
     cfg.BoolOpt('s3_affix_tenant',
                default=False,
-               help='whether to affix the tenant id to the access key '
-                    'when downloading from s3'),
+               help='Whether to affix the tenant id to the access key '
+                    'when downloading from S3'),
     ]
 
 CONF = cfg.CONF

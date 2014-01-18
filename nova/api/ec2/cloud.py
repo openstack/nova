@@ -56,23 +56,23 @@ from nova import volume
 ec2_opts = [
     cfg.StrOpt('ec2_host',
                default='$my_ip',
-               help='the ip of the ec2 api server'),
+               help='The IP address of the EC2 API server'),
     cfg.StrOpt('ec2_dmz_host',
                default='$my_ip',
-               help='the internal ip of the ec2 api server'),
+               help='The internal IP address of the EC2 API server'),
     cfg.IntOpt('ec2_port',
                default=8773,
-               help='the port of the ec2 api server'),
+               help='The port of the EC2 API server'),
     cfg.StrOpt('ec2_scheme',
                default='http',
-               help='the protocol to use when connecting to the ec2 api '
+               help='The protocol to use when connecting to the EC2 API '
                     'server (http, https)'),
     cfg.StrOpt('ec2_path',
                default='/services/Cloud',
-               help='the path prefix used to call the ec2 api server'),
+               help='The path prefix used to call the ec2 API server'),
     cfg.ListOpt('region_list',
                 default=[],
-                help='list of region=fqdn pairs separated by commas'),
+                help='List of region=fqdn pairs separated by commas'),
 ]
 
 CONF = cfg.CONF

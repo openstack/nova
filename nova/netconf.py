@@ -48,7 +48,7 @@ def _get_my_ip():
 netconf_opts = [
     cfg.StrOpt('my_ip',
                default=_get_my_ip(),
-               help='ip address of this host'),
+               help='IP address of this host'),
     cfg.StrOpt('host',
                default=socket.gethostname(),
                help='Name of this node.  This can be an opaque identifier.  '
@@ -58,7 +58,7 @@ netconf_opts = [
                     'hostname, FQDN, or IP address'),
     cfg.BoolOpt('use_ipv6',
                 default=False,
-                help='use ipv6'),
+                help='Use IPv6'),
 ]
 
 CONF.register_opts(netconf_opts)

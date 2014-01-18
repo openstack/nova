@@ -44,25 +44,26 @@ neutron_opts = [
                help='URL for connecting to neutron'),
     cfg.IntOpt('neutron_url_timeout',
                default=30,
-               help='timeout value for connecting to neutron in seconds'),
+               help='Timeout value for connecting to neutron in seconds'),
     cfg.StrOpt('neutron_admin_username',
-               help='username for connecting to neutron in admin context'),
+               help='Username for connecting to neutron in admin context'),
     cfg.StrOpt('neutron_admin_password',
-               help='password for connecting to neutron in admin context',
+               help='Password for connecting to neutron in admin context',
                secret=True),
     cfg.StrOpt('neutron_admin_tenant_name',
-               help='tenant name for connecting to neutron in admin context'),
+               help='Tenant name for connecting to neutron in admin context'),
     cfg.StrOpt('neutron_region_name',
-               help='region name for connecting to neutron in admin context'),
+               help='Region name for connecting to neutron in admin context'),
     cfg.StrOpt('neutron_admin_auth_url',
                default='http://localhost:5000/v2.0',
-               help='auth url for connecting to neutron in admin context'),
+               help='Authorization URL for connecting to neutron in admin '
+               'context'),
     cfg.BoolOpt('neutron_api_insecure',
                 default=False,
-                help='if set, ignore any SSL validation issues'),
+                help='If set, ignore any SSL validation issues'),
     cfg.StrOpt('neutron_auth_strategy',
                default='keystone',
-               help='auth strategy for connecting to '
+               help='Authorization strategy for connecting to '
                     'neutron in admin context'),
     # TODO(berrange) temporary hack until Neutron can pass over the
     # name of the OVS bridge it is configured with
@@ -74,7 +75,7 @@ neutron_opts = [
                 help='Number of seconds before querying neutron for'
                      ' extensions'),
     cfg.StrOpt('neutron_ca_certificates_file',
-                help='Location of ca certificates file to use for '
+                help='Location of CA certificates file to use for '
                      'neutron client requests.'),
    ]
 

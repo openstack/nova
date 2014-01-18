@@ -56,7 +56,7 @@ if CONF.enable_network_quota:
     opts = [
         cfg.IntOpt('quota_networks',
                    default=3,
-                   help='number of private networks allowed per project'),
+                   help='Number of private networks allowed per project'),
         ]
     CONF.register_opts(opts)
 

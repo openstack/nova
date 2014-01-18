@@ -64,7 +64,7 @@ xenapi_vmops_opts = [
                default=60,
                deprecated_name='xenapi_running_timeout',
                deprecated_group='DEFAULT',
-               help='number of seconds to wait for instance '
+               help='Number of seconds to wait for instance '
                     'to go to running state'),
     cfg.StrOpt('vif_driver',
                default='nova.virt.xenapi.vif.XenAPIBridgeDriver',

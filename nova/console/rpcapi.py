@@ -25,7 +25,7 @@ from nova import rpcclient
 rpcapi_opts = [
     cfg.StrOpt('console_topic',
                default='console',
-               help='the topic console proxy nodes listen on'),
+               help='The topic console proxy nodes listen on'),
 ]
 
 CONF = cfg.CONF

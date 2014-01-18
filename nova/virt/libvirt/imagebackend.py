@@ -49,7 +49,7 @@ __imagebackend_opts = [
     cfg.StrOpt('images_type',
                default='default',
                help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
-                    'rbd, default. If default is specified,'
+                    ' rbd, default. If default is specified,'
                     ' then use_cow_images flag is used instead of this one.',
                deprecated_group='DEFAULT',
                deprecated_name='libvirt_images_type'),
@@ -71,12 +71,12 @@ __imagebackend_opts = [
                deprecated_group='DEFAULT'),
     cfg.StrOpt('images_rbd_pool',
                default='rbd',
-               help='the RADOS pool in which rbd volumes are stored',
+               help='The RADOS pool in which rbd volumes are stored',
                deprecated_group='DEFAULT',
                deprecated_name='libvirt_images_rbd_pool'),
     cfg.StrOpt('images_rbd_ceph_conf',
                default='',  # default determined by librados
-               help='path to the ceph configuration file to use',
+               help='Path to the ceph configuration file to use',
                deprecated_group='DEFAULT',
                deprecated_name='libvirt_images_rbd_ceph_conf'),
         ]

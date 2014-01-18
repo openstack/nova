@@ -32,8 +32,8 @@ from nova import wsgi
 auth_opts = [
     cfg.BoolOpt('api_rate_limit',
                 default=False,
-                help=('whether to use per-user rate limiting for the api. '
-                      'This option is only used by v2 api. rate limiting '
+                help=('Whether to use per-user rate limiting for the api. '
+                      'This option is only used by v2 api. Rate limiting '
                       'is removed from v3 api.')),
     cfg.StrOpt('auth_strategy',
                default='noauth',

@@ -47,7 +47,7 @@ LOG = logging.getLogger(__name__)
 linux_net_opts = [
     cfg.MultiStrOpt('dhcpbridge_flagfile',
                     default=['/etc/nova/nova-dhcpbridge.conf'],
-                    help='location of flagfiles for dhcpbridge'),
+                    help='Location of flagfiles for dhcpbridge'),
     cfg.StrOpt('networks_path',
                default=paths.state_path_def('networks'),
                help='Location to keep network config files'),
@@ -58,7 +58,7 @@ linux_net_opts = [
                help='MTU setting for network interface'),
     cfg.StrOpt('dhcpbridge',
                default=paths.bindir_def('nova-dhcpbridge'),
-               help='location of nova-dhcpbridge'),
+               help='Location of nova-dhcpbridge'),
     cfg.StrOpt('routing_source_ip',
                default='$my_ip',
                help='Public IP of network host'),
@@ -67,12 +67,12 @@ linux_net_opts = [
                help='Lifetime of a DHCP lease in seconds'),
     cfg.MultiStrOpt('dns_server',
                     default=[],
-                    help='if set, uses specific dns server for dnsmasq. Can'
-                         'be specified multiple times.'),
+                    help='If set, uses specific DNS server for dnsmasq. Can'
+                         ' be specified multiple times.'),
     cfg.BoolOpt('use_network_dns_servers',
                 default=False,
-                help='if set, uses the dns1 and dns2 from the network ref.'
-                     'as dns servers.'),
+                help='If set, uses the dns1 and dns2 from the network ref.'
+                     ' as dns servers.'),
     cfg.ListOpt('dmz_cidr',
                default=[],
                help='A list of dmz range that should be accepted'),
@@ -92,10 +92,10 @@ linux_net_opts = [
                help='Name of Open vSwitch bridge used with linuxnet'),
     cfg.BoolOpt('send_arp_for_ha',
                 default=False,
-                help='send gratuitous ARPs for HA setup'),
+                help='Send gratuitous ARPs for HA setup'),
     cfg.IntOpt('send_arp_for_ha_count',
                default=3,
-               help='send this many gratuitous ARPs for HA setup'),
+               help='Send this many gratuitous ARPs for HA setup'),
     cfg.BoolOpt('use_single_default_gateway',
                 default=False,
                 help='Use single default gateway. Only first nic of vm will '
@@ -107,10 +107,10 @@ linux_net_opts = [
                          'Can be specified multiple times.'),
     cfg.StrOpt('metadata_host',
                default='$my_ip',
-               help='the ip for the metadata api server'),
+               help='The IP address for the metadata API server'),
     cfg.IntOpt('metadata_port',
                default=8775,
-               help='the port for the metadata api port'),
+               help='The port for the metadata API port'),
     cfg.StrOpt('iptables_top_regex',
                default='',
                help='Regular expression to match iptables rule that should '

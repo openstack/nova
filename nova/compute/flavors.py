@@ -40,7 +40,7 @@ from nova import utils
 flavor_opts = [
     cfg.StrOpt('default_flavor',
                default='m1.small',
-               help='default flavor to use for the EC2 API only. The Nova API '
+               help='Default flavor to use for the EC2 API only. The Nova API '
                'does not support a default flavor.'),
 ]
 

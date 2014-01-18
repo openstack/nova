@@ -90,7 +90,7 @@ compute_opts = [
                 help='Allow migrate machine to the same host. '
                      'Useful when testing in single-host environments.'),
     cfg.StrOpt('default_schedule_zone',
-               help='availability zone to use when user doesn\'t specify one'),
+               help='Availability zone to use when user doesn\'t specify one'),
     cfg.ListOpt('non_inheritable_image_properties',
                 default=['cache_in_nova',
                          'bittorrent'],
@@ -98,7 +98,7 @@ compute_opts = [
                      ' inherit from an instance'),
     cfg.StrOpt('null_kernel',
                default='nokernel',
-               help='kernel image that indicates not to use a kernel, but to '
+               help='Kernel image that indicates not to use a kernel, but to '
                     'use a raw disk image instead'),
     cfg.StrOpt('multi_instance_display_name_template',
                default='%(name)s-%(uuid)s',

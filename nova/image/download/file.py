@@ -29,9 +29,10 @@ CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 opt_group = cfg.ListOpt(name='filesystems', default=[],
-                        help=_('A list of filesystems that will be configured '
-                               'in this file under the sections '
-                               'image_file_url:<list entry name>'))
+                        help=_('List of file systems that are configured '
+                               'in this file in the '
+                               'image_file_url:<list entry name> '
+                               'sections'))
 CONF.register_opt(opt_group, group="image_file_url")
 
 

@@ -53,8 +53,8 @@ hyperv_opts = [
                 help='Sets the admin password in the config drive image'),
     cfg.StrOpt('qemu_img_cmd',
                default="qemu-img.exe",
-               help='qemu-img is used to convert between '
-                    'different image types'),
+               help='Path of qemu-img command which is used to convert '
+                    'between different image types'),
     cfg.BoolOpt('config_drive_cdrom',
                 default=False,
                 help='Attaches the Config Drive image as a cdrom drive '

@@ -53,28 +53,28 @@ xenapi_agent_opts = [
                default=30,
                deprecated_name='agent_timeout',
                deprecated_group='DEFAULT',
-               help='number of seconds to wait for agent reply'),
+               help='Number of seconds to wait for agent reply'),
     cfg.IntOpt('agent_version_timeout',
                default=300,
                deprecated_name='agent_version_timeout',
                deprecated_group='DEFAULT',
-               help='number of seconds to wait for agent '
+               help='Number of seconds to wait for agent '
                     'to be fully operational'),
     cfg.IntOpt('agent_resetnetwork_timeout',
                deprecated_name='agent_resetnetwork_timeout',
                deprecated_group='DEFAULT',
                default=60,
-               help='number of seconds to wait for agent reply '
+               help='Number of seconds to wait for agent reply '
                     'to resetnetwork request'),
     cfg.StrOpt('agent_path',
                default='usr/sbin/xe-update-networking',
                deprecated_name='xenapi_agent_path',
                deprecated_group='DEFAULT',
-               help='Specifies the path in which the xenapi guest agent '
+               help='Specifies the path in which the XenAPI guest agent '
                     'should be located. If the agent is present, network '
                     'configuration is not injected into the image. '
                     'Used if compute_driver=xenapi.XenAPIDriver and '
-                    ' flat_injected=True'),
+                    'flat_injected=True'),
     cfg.BoolOpt('disable_agent',
                 default=False,
                 deprecated_name='xenapi_disable_agent',
@@ -85,11 +85,11 @@ xenapi_agent_opts = [
                 default=False,
                 deprecated_name='xenapi_use_agent_default',
                 deprecated_group='DEFAULT',
-                help='Determines if the xenapi agent should be used when '
+                help='Determines if the XenAPI agent should be used when '
                      'the image used does not contain a hint to declare if '
                      'the agent is present or not. '
                      'The hint is a glance property "' + USE_AGENT_KEY + '" '
-                     'that has the value "true" or "false". '
+                     'that has the value "True" or "False". '
                      'Note that waiting for the agent when it is not present '
                      'will significantly increase server boot times.'),
 ]

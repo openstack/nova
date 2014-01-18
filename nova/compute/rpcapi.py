@@ -29,7 +29,7 @@ from nova import rpcclient
 rpcapi_opts = [
     cfg.StrOpt('compute_topic',
                default='compute',
-               help='the topic compute nodes listen on'),
+               help='The topic compute nodes listen on'),
 ]
 
 CONF = cfg.CONF
