@@ -86,16 +86,6 @@ CONF.import_opt('network_api_class', 'nova.network')
 
 LOG = logging.getLogger(__name__)
 
-# Used for looking up extensions of text
-# to their 'multiplied' byte amount
-BYTE_MULTIPLIERS = {
-    '': 1,
-    't': 1024 ** 4,
-    'g': 1024 ** 3,
-    'm': 1024 ** 2,
-    'k': 1024,
-}
-
 # used in limits
 TIME_UNITS = {
     'SECOND': 1,
