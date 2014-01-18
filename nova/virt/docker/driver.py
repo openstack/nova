@@ -167,13 +167,8 @@ class DockerDriver(driver.ComputeDriver):
         }
         return stats
 
-    def _find_cgroup_devices_path(self):
-        for ln in open('/proc/mounts'):
-            if ln.startswith('cgroup ') and 'devices' in ln:
-                return ln.split(' ')[1]
-
     def _find_container_pid(self, container_id):
-        cgroup_path = self._find_cgroup_devices_path()
+        cgroup_path = hostinfo.get_cgroup_devices_path()
         lxc_path = os.path.join(cgroup_path, 'lxc')
         tasks_path = os.path.join(lxc_path, container_id, 'tasks')
         n = 0
