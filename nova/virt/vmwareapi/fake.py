@@ -544,6 +544,7 @@ class Datastore(ManagedObject):
         self.set("summary.capacity", capacity * unit.Gi)
         self.set("summary.freeSpace", free * unit.Gi)
         self.set("summary.accessible", True)
+        self.set("browser", "")
 
 
 class HostNetworkSystem(ManagedObject):
@@ -1054,6 +1055,23 @@ class FakeVim(object):
         task_mdo = create_task(method, "error")
         return task_mdo.obj
 
+    def _move_file(self, method, *args, **kwargs):
+        source = kwargs.get('sourceName')
+        destination = kwargs.get('destinationName')
+        new_files = []
+        if source != destination:
+            for file in _db_content.get("files"):
+                if source in file:
+                    new_file = file.replace(source, destination)
+                    new_files.append(new_file)
+            # if source is not a file then the children will also
+            # be deleted
+            _remove_file(source)
+        for file in new_files:
+            _add_file(file)
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
+
     def _make_dir(self, method, *args, **kwargs):
         """Creates a directory in the datastore."""
         ds_path = kwargs.get("name")
@@ -1180,6 +1198,9 @@ class FakeVim(object):
             return lambda *args, **kwargs: self._just_return_task(attr_name)
         elif attr_name == "SearchDatastore_Task":
             return lambda *args, **kwargs: self._search_ds(attr_name,
+                                                *args, **kwargs)
+        elif attr_name == "MoveDatastoreFile_Task":
+            return lambda *args, **kwargs: self._move_file(attr_name,
                                                 *args, **kwargs)
         elif attr_name == "MakeDirectory":
             return lambda *args, **kwargs: self._make_dir(attr_name,

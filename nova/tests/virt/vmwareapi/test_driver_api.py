@@ -244,7 +244,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                    host_password='test_pass',
                    cluster_name='test_cluster',
                    use_linked_clone=False, group='vmware')
-        self.flags(vnc_enabled=False)
+        self.flags(vnc_enabled=False,
+                   image_cache_subdirectory_name='vmware_base')
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.node_name = 'test_url'
@@ -404,18 +405,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self._create_vm()
         inst_file_path = '[%s] %s/fake_name.vmdk' % (self.ds, self.uuid)
-        cache_file_path = '[%s] vmware_base/fake_image_uuid.vmdk' % self.ds
+        cache = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.vmdk' %
+                 self.ds)
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
-        self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
+        self.assertTrue(vmwareapi_fake.get_file(cache))
 
     def test_cache_dir_disk_created(self):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
         self._create_vm()
-        cache_file_path = '[%s] vmware_base/fake_image_uuid.vmdk' % self.ds
-        cache_root_path = '[%s] vmware_base/fake_image_uuid.80.vmdk' % self.ds
-        self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
-        self.assertTrue(vmwareapi_fake.get_file(cache_root_path))
+        file = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.vmdk' %
+                self.ds)
+        root = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.80.vmdk' %
+                self.ds)
+        self.assertTrue(vmwareapi_fake.get_file(file))
+        self.assertTrue(vmwareapi_fake.get_file(root))
 
     def test_spawn(self):
         self._create_vm()
@@ -457,8 +461,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.wait_task = self.conn._session._wait_for_task
         self.call_method = self.conn._session._call_method
         self.task_ref = None
-        cached_image = '[%s] vmware_base/fake_image_uuid.80.vmdk' % self.ds
-        tmp_file = '[%s] vmware_base/fake_image_uuid.80-flat.vmdk' % self.ds
+        id = 'fake_image_uuid'
+        cached_image = '[%s] vmware_base/%s/%s.80.vmdk' % (self.ds,
+                                                           id, id)
+        tmp_file = '[%s] vmware_base/%s/%s.80-flat.vmdk' % (self.ds,
+                                                            id, id)
 
         def fake_wait_for_task(instance_uuid, task_ref):
             if task_ref == self.task_ref:
@@ -1164,6 +1171,7 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(VMwareAPIHostTestCase, self).setUp()
+        self.flags(image_cache_subdirectory_name='vmware_base')
         self.flags(host_ip='test_url',
                    host_username='test_username',
                    host_password='test_pass', group='vmware')
@@ -1221,7 +1229,8 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         cluster_name2 = 'test_cluster2'
         self.flags(cluster_name=[cluster_name, cluster_name2],
                    task_poll_interval=10, datastore_regex='.*', group='vmware')
-        self.flags(vnc_enabled=False)
+        self.flags(vnc_enabled=False,
+                   image_cache_subdirectory_name='vmware_base')
         vmwareapi_fake.reset(vc=True)
         self.conn = driver.VMwareVCDriver(None, False)
         self.node_name = self.conn._resources.keys()[0]
@@ -1343,11 +1352,11 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         # Check calls for delete vmdk and -flat.vmdk pair
         self.conn._vmops._delete_datastore_file(
                 mox.IgnoreArg(),
-                "[%s] vmware-tmp/%s-flat.vmdk" % (self.ds, uuid_str),
+                "[%s] vmware_temp/%s-flat.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
         self.conn._vmops._delete_datastore_file(
                 mox.IgnoreArg(),
-                "[%s] vmware-tmp/%s.vmdk" % (self.ds, uuid_str),
+                "[%s] vmware_temp/%s.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
 
         self.mox.ReplayAll()

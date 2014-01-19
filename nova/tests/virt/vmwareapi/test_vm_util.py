@@ -254,10 +254,11 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 'backing': {
                     'datastore': {
                         "summary.type": "VMFS",
-                        "summary.freeSpace": 536870912000,
-                        "summary.capacity": 1099511627776,
                         "summary.accessible":true,
-                        "summary.name": "fake-ds"
+                        "summary.name": "fake-ds",
+                        "summary.capacity": 1099511627776,
+                        "summary.freeSpace": 536870912000,
+                        "browser": ""
                     },
                     'fileName': '/tmp/foo.iso',
                     'obj_name': 'ns0: VirtualCdromIsoBackingInfo'
