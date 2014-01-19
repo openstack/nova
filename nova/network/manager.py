@@ -1851,9 +1851,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
         if not network.vpn_public_address:
-            net = {}
             address = CONF.vpn_ip
-            net['vpn_public_address'] = address
             network.vpn_public_address = address
             network.save()
         else:
