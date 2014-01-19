@@ -1363,6 +1363,7 @@ class VMwareVMOps(object):
                                             self._session._get_vim(),
                                             "ReconfigVM_Task", vm_ref,
                                             spec=vm_resize_spec)
+            self._session._wait_for_task(reconfig_task)
 
         # 4. Start VM
         if power_on:

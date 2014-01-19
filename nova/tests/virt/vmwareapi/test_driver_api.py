@@ -1305,6 +1305,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """Tests the finish_migration method on vmops."""
 
         self.power_on_called = False
+        self.wait_for_task = False
+        self.wait_task = self.conn._session._wait_for_task
 
         def fake_power_on(instance):
             self.assertEqual(self.instance, instance)
@@ -1316,6 +1318,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.assertEqual(self.instance, instance)
             self.assertEqual(4, step)
             self.assertEqual(vmops.RESIZE_TOTAL_STEPS, total_steps)
+
+        if resize_instance:
+            def fake_wait_for_task(task_ref):
+                self.wait_for_task = True
+                return self.wait_task(task_ref)
+
+            self.stubs.Set(self.conn._session, "_wait_for_task",
+                           fake_wait_for_task)
 
         self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
         self.stubs.Set(self.conn._vmops, "_update_instance_progress",
@@ -1333,6 +1343,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    resize_instance=resize_instance,
                                    image_meta=None,
                                    power_on=power_on)
+        if resize_instance:
+            self.assertTrue(self.wait_for_task)
+        else:
+            self.assertFalse(self.wait_for_task)
 
     def test_finish_migration_power_on(self):
         self.assertRaises(NotImplementedError,
