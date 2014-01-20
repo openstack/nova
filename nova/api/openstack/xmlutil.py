@@ -103,6 +103,16 @@ def get_items(obj):
     return list(obj.items())
 
 
+def get_items_without_dict(obj):
+    """Get items in obj but omit any items containing a dict."""
+
+    obj_list = list(obj.items())
+    for item in obj_list:
+        if isinstance(list(item)[1], dict):
+            obj_list.remove(item)
+    return obj_list
+
+
 class EmptyStringSelector(Selector):
     """Returns the empty string if Selector would return None."""
     def __call__(self, obj, do_raise=False):
@@ -895,15 +905,19 @@ def make_links(parent, selector=None):
 
 
 def make_flat_dict(name, selector=None, subselector=None,
-                   ns=None, colon_ns=False):
+                   ns=None, colon_ns=False, root=None,
+                   ignore_sub_dicts=False):
     """
     Utility for simple XML templates that traditionally used
     XMLDictSerializer with no metadata.  Returns a template element
     where the top-level element has the given tag name, and where
     sub-elements have tag names derived from the object's keys and
-    text derived from the object's values.  This only works for flat
-    dictionary objects, not dictionaries containing nested lists or
-    dictionaries.
+    text derived from the object's values.
+
+    :param root: if None, this will create the root.
+    :param ignore_sub_dicts: If True, ignores any dict objects inside the
+                             object. If False, causes an error if there is a
+                             dict object present.
     """
 
     # Set up the names we need...
@@ -916,13 +930,13 @@ def make_flat_dict(name, selector=None, subselector=None,
 
     if selector is None:
         selector = name
-
-    # Build the root element
-    root = TemplateElement(elemname, selector=selector,
-                           subselector=subselector, colon_ns=colon_ns)
-
+    if not root:
+        # Build the root element
+        root = TemplateElement(elemname, selector=selector,
+                               subselector=subselector, colon_ns=colon_ns)
+    choice = get_items if ignore_sub_dicts is False else get_items_without_dict
     # Build an element to represent all the keys and values
-    elem = SubTemplateElement(root, tagname, selector=get_items,
+    elem = SubTemplateElement(root, tagname, selector=choice,
                               colon_ns=colon_ns)
     elem.text = 1
 

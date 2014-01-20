@@ -19,6 +19,7 @@
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
+from nova.openstack.common import jsonutils
 
 
 ALIAS = 'os-pci'
@@ -79,6 +80,57 @@ class PciServerController(wsgi.Controller):
                 self._extend_server(server, instance)
 
 
+def make_hypervisor(elem):
+    pci_stats = xmlutil.TemplateElement('%s:pci_stats' % Pci.alias,
+                                        colon_ns=True)
+    elem.append(pci_stats)
+    pci_stat = xmlutil.make_flat_dict('%s:pci_stat' % Pci.alias,
+                                      selector='%s:pci_stats' % Pci.alias,
+                                      colon_ns=True,
+                                      root=pci_stats,
+                                      ignore_sub_dicts=True)
+    extra = xmlutil.make_flat_dict('extra_info', selector='extra_info')
+    pci_stat.append(extra)
+    pci_stats.append(pci_stat)
+
+
+class PciHypervisorTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('hypervisor', selector='hypervisor')
+        make_hypervisor(root)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={Pci.alias: Pci.namespace})
+
+
+class HypervisorDetailTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('hypervisors')
+        elem = xmlutil.SubTemplateElement(root, 'hypervisor',
+                                          selector='hypervisors')
+        make_hypervisor(elem)
+        return xmlutil.SlaveTemplate(root, 1, nsmap={Pci.alias: Pci.namespace})
+
+
+class PciHypervisorController(wsgi.Controller):
+    def _extend_hypervisor(self, hypervisor, compute_node):
+        hypervisor['%s:pci_stats' % Pci.alias] = jsonutils.loads(
+            compute_node['pci_stats'])
+
+    @wsgi.extends
+    def show(self, req, resp_obj, id):
+        resp_obj.attach(xml=PciHypervisorTemplate())
+        hypervisor = resp_obj.obj['hypervisor']
+        compute_node = req.get_db_compute_node(hypervisor['id'])
+        self._extend_hypervisor(hypervisor, compute_node)
+
+    @wsgi.extends
+    def detail(self, req, resp_obj):
+        resp_obj.attach(xml=HypervisorDetailTemplate())
+        hypervisors = list(resp_obj.obj['hypervisors'])
+        for hypervisor in hypervisors:
+            compute_node = req.get_db_compute_node(hypervisor['id'])
+            self._extend_hypervisor(hypervisor, compute_node)
+
+
 class Pci(extensions.V3APIExtensionBase):
     """Pci access support."""
     name = "PCIAccess"
@@ -92,4 +144,6 @@ class Pci(extensions.V3APIExtensionBase):
     def get_controller_extensions(self):
         server_extension = extensions.ControllerExtension(
             self, 'servers', PciServerController())
-        return [server_extension]
+        compute_extension = extensions.ControllerExtension(
+            self, 'os-hypervisors', PciHypervisorController())
+        return [server_extension, compute_extension]
