@@ -548,10 +548,8 @@ class ServersController(wsgi.Controller):
         limit, marker = common.get_limit_and_marker(req)
         try:
             instance_list = self.compute_api.get_all(context,
-                                                     search_opts=search_opts,
-                                                     limit=limit,
-                                                     marker=marker,
-                                                     want_objects=True)
+                    search_opts=search_opts, limit=limit, marker=marker,
+                    want_objects=True, expected_attrs=['pci_devices'])
         except exception.MarkerNotFound:
             msg = _('marker [%s] not found') % marker
             raise exc.HTTPBadRequest(explanation=msg)

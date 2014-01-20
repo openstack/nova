@@ -1728,7 +1728,8 @@ class API(base.Base):
         return instance
 
     def get_all(self, context, search_opts=None, sort_key='created_at',
-                sort_dir='desc', limit=None, marker=None, want_objects=False):
+                sort_dir='desc', limit=None, marker=None, want_objects=False,
+                expected_attrs=None):
         """Get all instances filtered by one of the given parameters.
 
         If there is no filter and the context is an admin, it will retrieve
@@ -1800,9 +1801,9 @@ class API(base.Base):
                         return []
 
         inst_models = self._get_instances_by_filters(context, filters,
-                                                     sort_key, sort_dir,
-                                                     limit=limit,
-                                                     marker=marker)
+                sort_key, sort_dir, limit=limit, marker=marker,
+                expected_attrs=expected_attrs)
+
         if want_objects:
             return inst_models
 
@@ -1816,7 +1817,7 @@ class API(base.Base):
     def _get_instances_by_filters(self, context, filters,
                                   sort_key, sort_dir,
                                   limit=None,
-                                  marker=None):
+                                  marker=None, expected_attrs=None):
         if 'ip6' in filters or 'ip' in filters:
             res = self.network_api.get_instance_uuids_by_ip_filter(context,
                                                                    filters)
@@ -1827,6 +1828,8 @@ class API(base.Base):
 
         fields = ['metadata', 'system_metadata', 'info_cache',
                   'security_groups']
+        if expected_attrs:
+            fields.extend(expected_attrs)
         return instance_obj.InstanceList.get_by_filters(
             context, filters=filters, sort_key=sort_key, sort_dir=sort_dir,
             limit=limit, marker=marker, expected_attrs=fields)
