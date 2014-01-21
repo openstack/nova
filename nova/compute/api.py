@@ -1704,11 +1704,14 @@ class API(base.Base):
         """Get an instance type by instance type id."""
         return flavors.get_flavor(instance_type_id, ctxt=context)
 
-    def get(self, context, instance_id, want_objects=False):
+    def get(self, context, instance_id, want_objects=False,
+            expected_attrs=None):
         """Get a single instance with the given instance_id."""
+        if not expected_attrs:
+            expected_attrs = []
+        expected_attrs.extend(['metadata', 'system_metadata',
+                               'security_groups', 'info_cache'])
         # NOTE(ameade): we still need to support integer ids for ec2
-        expected_attrs = ['metadata', 'system_metadata',
-                          'security_groups', 'info_cache']
         try:
             if uuidutils.is_uuid_like(instance_id):
                 instance = instance_obj.Instance.get_by_uuid(

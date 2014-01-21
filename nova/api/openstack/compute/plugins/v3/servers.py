@@ -570,7 +570,8 @@ class ServersController(wsgi.Controller):
         """Utility function for looking up an instance by uuid."""
         try:
             instance = self.compute_api.get(context, instance_uuid,
-                                            want_objects=True)
+                                            want_objects=True,
+                                            expected_attrs=['pci_devices'])
         except exception.NotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -683,7 +684,8 @@ class ServersController(wsgi.Controller):
         """Returns server details by server id."""
         try:
             context = req.environ['nova.context']
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = self.compute_api.get(context, id, want_objects=True,
+                    expected_attrs=['pci_devices'])
             req.cache_db_instance(instance)
             return self._view_builder.show(req, instance)
         except exception.NotFound:
@@ -887,7 +889,8 @@ class ServersController(wsgi.Controller):
                                               body['server'], update_dict)
 
         try:
-            instance = self.compute_api.get(ctxt, id, want_objects=True)
+            instance = self.compute_api.get(ctxt, id, want_objects=True,
+                    expected_attrs=['pci_devices'])
             req.cache_db_instance(instance)
             policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)

@@ -124,8 +124,8 @@ class ServerActionsControllerTest(test.TestCase):
         instance = instance_obj.Instance._from_db_object(
             self.context, instance_obj.Instance(), instance)
 
-        self.compute_api.get(self.context, uuid,
-                             want_objects=True).AndReturn(instance)
+        self.compute_api.get(self.context, uuid, want_objects=True,
+                expected_attrs=['pci_devices']).AndReturn(instance)
         return instance
 
     def _test_locked_instance(self, action, method=None, body_map=None,

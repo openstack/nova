@@ -270,6 +270,21 @@ class ServersControllerTest(ControllerTest):
         res_dict = self.controller.show(req, FAKE_UUID)
         self.assertEqual(res_dict['server']['id'], FAKE_UUID)
 
+    def test_get_server_joins_pci_devices(self):
+        self.expected_attrs = None
+
+        def fake_get(_self, *args, **kwargs):
+            self.expected_attrs = kwargs['expected_attrs']
+            ctxt = context.RequestContext('fake', 'fake')
+            return fake_instance.fake_instance_obj(ctxt)
+
+        self.stubs.Set(compute_api.API, 'get', fake_get)
+
+        req = fakes.HTTPRequestV3.blank('/servers/%s' % FAKE_UUID)
+        self.controller.show(req, FAKE_UUID)
+
+        self.assertIn('pci_devices', self.expected_attrs)
+
     def test_unique_host_id(self):
         """Create two servers with the same host and different
         project_ids and check that the host_id's are unique.
@@ -1249,22 +1264,20 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
     def test_get_servers_joins_pci_devices(self):
-        server_uuid = str(uuid.uuid4())
-        self.called = False
+        self.expected_attrs = None
 
         def fake_get_all(compute_self, context, search_opts=None,
                          sort_key=None, sort_dir='desc',
                          limit=None, marker=None, want_objects=False,
                          expected_attrs=[]):
-            self.called = True
-            self.assertTrue('pci_devices' in expected_attrs)
+            self.expected_attrs = expected_attrs
             return []
 
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers', use_admin_context=True)
         servers = self.controller.index(req)['servers']
-        self.assertTrue(self.called)
+        self.assertIn('pci_devices', self.expected_attrs)
 
 
 class ServersControllerDeleteTest(ControllerTest):
