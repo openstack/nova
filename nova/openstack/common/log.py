@@ -391,9 +391,11 @@ class JSONFormatter(logging.Formatter):
 def _create_logging_excepthook(product_name):
     def logging_excepthook(exc_type, value, tb):
         extra = {}
-        if CONF.verbose:
+        if CONF.verbose or CONF.debug:
             extra['exc_info'] = (exc_type, value, tb)
-        getLogger(product_name).critical(str(value), **extra)
+        getLogger(product_name).critical(
+            "".join(traceback.format_exception_only(exc_type, value)),
+            **extra)
     return logging_excepthook
 
 
