@@ -59,8 +59,8 @@ class ServerVirtualInterfaceController(object):
     def _items(self, req, server_id, entity_maker):
         """Returns a list of VIFs, transformed through entity_maker."""
         context = req.environ['nova.context']
+        instance = common.get_instance(self.compute_api, context, server_id)
 
-        instance = self.compute_api.get(context, server_id)
         vifs = self.network_api.get_vifs_by_instance(context, instance)
         limited_list = common.limited(vifs, req)
         res = [entity_maker(context, vif) for vif in limited_list]
