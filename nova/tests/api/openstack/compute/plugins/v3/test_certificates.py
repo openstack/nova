@@ -18,6 +18,8 @@ import mox
 
 from nova.api.openstack.compute.plugins.v3 import certificates
 from nova import context
+from nova import exception
+from nova.openstack.common import policy as common_policy
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -48,6 +50,18 @@ class CertificatesTest(test.NoDBTestCase):
         response = {'certificate': {'data': 'fakeroot', 'private_key': None}}
         self.assertEqual(res_dict, response)
 
+    def test_certificates_show_policy_failed(self):
+        rules = {
+            "compute_extension:v3:os-certificates:show":
+            common_policy.parse_rule("!")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        req = fakes.HTTPRequestV3.blank('/os-certificates/root')
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.show, req, 'root')
+        self.assertIn("compute_extension:v3:os-certificates:show",
+                      exc.format_message())
+
     def test_certificates_create_certificate(self):
         self.mox.StubOutWithMock(self.controller.cert_rpcapi,
                                  'generate_x509_cert')
@@ -56,7 +70,6 @@ class CertificatesTest(test.NoDBTestCase):
             mox.IgnoreArg(),
             user_id='fake_user',
             project_id='fake').AndReturn(('fakepk', 'fakecert'))
-
         self.mox.ReplayAll()
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/')
@@ -68,3 +81,15 @@ class CertificatesTest(test.NoDBTestCase):
         }
         self.assertEqual(res_dict, response)
         self.assertEqual(self.controller.create.wsgi_code, 201)
+
+    def test_certificates_create_policy_failed(self):
+        rules = {
+            "compute_extension:v3:os-certificates:create":
+            common_policy.parse_rule("!")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        req = fakes.HTTPRequestV3.blank('/os-certificates/')
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller.create, req)
+        self.assertIn("compute_extension:v3:os-certificates:create",
+                      exc.format_message())

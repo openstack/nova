@@ -44,7 +44,7 @@ class CertificatesController(object):
     def show(self, req, id):
         """Return certificate information."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='show')
         if id != 'root':
             msg = _("Only root certificate can be retrieved.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
@@ -60,7 +60,7 @@ class CertificatesController(object):
     def create(self, req, body=None):
         """Create a certificate."""
         context = req.environ['nova.context']
-        authorize(context)
+        authorize(context, action='create')
         pk, cert = self.cert_rpcapi.generate_x509_cert(context,
                 user_id=context.user_id, project_id=context.project_id)
         return {'certificate': _translate_certificate_view(cert, pk)}
