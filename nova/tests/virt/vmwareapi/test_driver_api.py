@@ -789,9 +789,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertIsNone(self.conn.destroy(self.context, self.instance,
             self.network_info))
 
-    def _rescue(self):
+    def _rescue(self, config_drive=False):
         def fake_attach_disk_to_vm(*args, **kwargs):
             pass
+
+        if config_drive:
+            def fake_create_config_drive(instance, injected_files, password,
+                                         data_store_name, folder,
+                                         instance_uuid, cookies):
+                self.assertTrue(uuidutils.is_uuid_like(instance['uuid']))
+
+            self.stubs.Set(self.conn._vmops, '_create_config_drive',
+                           fake_create_config_drive)
 
         self._create_vm()
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
@@ -800,7 +809,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                        fake_attach_disk_to_vm)
         self.conn.rescue(self.context, self.instance, self.network_info,
                          self.image, 'fake-password')
-        info = self.conn.get_info({'name-rescue': 1,
+        info = self.conn.get_info({'name': '1-rescue',
                                    'uuid': '%s-rescue' % self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
@@ -811,8 +820,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_rescue(self):
         self._rescue()
 
+    def test_rescue_with_config_drive(self):
+        self.flags(force_config_drive=True)
+        self._rescue(config_drive=True)
+
     def test_unrescue(self):
         self._rescue()
+
+        def fake_detach_disk_from_vm(*args, **kwargs):
+            pass
+
+        self.stubs.Set(self.conn._volumeops, "detach_disk_from_vm",
+                       fake_detach_disk_from_vm)
+
         self.conn.unrescue(self.instance, None)
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
                                    'node': self.instance_node})

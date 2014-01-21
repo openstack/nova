@@ -21,6 +21,7 @@ import re
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import uuidutils
 from nova import test
 from nova import unit
 from nova.virt.vmwareapi import fake
@@ -398,3 +399,32 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
 
     def test_detach_virtual_disk_destroy_spec(self):
         self._test_detach_virtual_disk_spec(destroy_disk=True)
+
+    def test_get_vm_create_spec(self):
+        instance_uuid = uuidutils.generate_uuid()
+        fake_instance = {'id': 7, 'name': 'fake!',
+                         'uuid': instance_uuid,
+                         'vcpus': 2, 'memory_mb': 2048}
+        result = vm_util.get_vm_create_spec(fake.FakeFactory(),
+                                            fake_instance, 'fake-name',
+                                            'fake-datastore', [])
+        expected = """{
+            'files': {'vmPathName': '[fake-datastore]',
+            'obj_name': 'ns0:VirtualMachineFileInfo'},
+            'name': 'fake-name', 'deviceChange': [],
+            'extraConfig': [{'value': '%s',
+                             'key': 'nvp.vm-uuid',
+                             'obj_name': 'ns0:OptionValue'}],
+            'memoryMB': 2048,
+            'obj_name': 'ns0:VirtualMachineConfigSpec',
+            'guestId': 'otherGuest',
+            'tools': {'beforeGuestStandby': True,
+                      'beforeGuestReboot': True,
+                      'beforeGuestShutdown': True,
+                      'afterResume': True,
+                      'afterPowerOn': True,
+            'obj_name': 'ns0:ToolsConfigInfo'},
+            'numCPUs': 2}""" % instance_uuid
+        expected = re.sub(r'\s+', '', expected)
+        result = re.sub(r'\s+', '', repr(result))
+        self.assertEqual(expected, result)
