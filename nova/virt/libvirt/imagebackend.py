@@ -577,7 +577,7 @@ class Rbd(Image):
         return False
 
     def _resize(self, volume_name, size):
-        size = int(size) * 1024
+        size = int(size) * units.Ki
 
         with RBDVolumeProxy(self, volume_name) as vol:
             vol.resize(size)
