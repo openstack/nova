@@ -43,6 +43,7 @@ class DeferredDeleteExtensionTest(test.NoDBTestCase):
         fake_instance = 'fake_instance'
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
+                            expected_attrs=None,
                             want_objects=True).AndReturn(fake_instance)
         compute_api.API.force_delete(self.fake_context, fake_instance)
 
@@ -51,6 +52,21 @@ class DeferredDeleteExtensionTest(test.NoDBTestCase):
                                            self.fake_input_dict)
         self.assertEqual(res.status_int, 202)
 
+    def test_force_delete_instance_not_found(self):
+        self.mox.StubOutWithMock(compute_api.API, 'get')
+
+        compute_api.API.get(self.fake_context, self.fake_uuid,
+                            expected_attrs=None,
+                            want_objects=True).AndRaise(
+            exception.InstanceNotFound(instance_id='instance-0000'))
+
+        self.mox.ReplayAll()
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.extension._force_delete,
+                          self.fake_req,
+                          self.fake_uuid,
+                          self.fake_input_dict)
+
     def test_force_delete_raises_conflict_on_invalid_state(self):
         self.mox.StubOutWithMock(compute_api.API, 'get')
         self.mox.StubOutWithMock(compute_api.API, 'force_delete')
@@ -58,6 +74,7 @@ class DeferredDeleteExtensionTest(test.NoDBTestCase):
         fake_instance = 'fake_instance'
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
+                            expected_attrs=None,
                             want_objects=True).AndReturn(fake_instance)
 
         exc = exception.InstanceInvalidState(attr='fake_attr',
@@ -79,6 +96,7 @@ class DeferredDeleteExtensionTest(test.NoDBTestCase):
         fake_instance = 'fake_instance'
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
+                            expected_attrs=None,
                             want_objects=True).AndReturn(fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance)
 
@@ -97,6 +115,7 @@ class DeferredDeleteExtensionTest(test.NoDBTestCase):
                 instance_uuid='fake')
 
         compute_api.API.get(self.fake_context, self.fake_uuid,
+                            expected_attrs=None,
                             want_objects=True).AndReturn(fake_instance)
         compute_api.API.restore(self.fake_context, fake_instance).AndRaise(
                 exc)
