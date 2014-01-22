@@ -508,8 +508,10 @@ class Rbd(Image):
 
     def _ceph_args(self):
         args = []
-        args.extend(['--id', self.rbd_user])
-        args.extend(['--conf', self.ceph_conf])
+        if self.rbd_user:
+            args.extend(['--id', self.rbd_user])
+        if self.ceph_conf:
+            args.extend(['--conf', self.ceph_conf])
         return args
 
     def _get_mon_addrs(self):

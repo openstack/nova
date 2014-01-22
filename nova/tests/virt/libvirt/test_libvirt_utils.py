@@ -53,3 +53,45 @@ blah BLAH: bb
         size = libvirt_utils.logical_volume_size('/dev/foo')
         self.assertEqual(expected_commands, executes)
         self.assertEqual(size, 123456789)
+
+    def test_list_rbd_volumes(self):
+        conf = '/etc/ceph/fake_ceph.conf'
+        pool = 'fake_pool'
+        user = 'user'
+        self.flags(images_rbd_ceph_conf=conf, group='libvirt')
+        self.flags(rbd_user=user, group='libvirt')
+        fn = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(libvirt_utils.utils,
+                                 'execute')
+        libvirt_utils.utils.execute('rbd', '-p', pool, 'ls', '--id',
+                                    user,
+                                    '--conf', conf).AndReturn(("Out", "Error"))
+        self.mox.ReplayAll()
+
+        libvirt_utils.list_rbd_volumes(pool)
+
+        self.mox.VerifyAll()
+
+    def test_remove_rbd_volumes(self):
+        conf = '/etc/ceph/fake_ceph.conf'
+        pool = 'fake_pool'
+        user = 'user'
+        names = ['volume1', 'volume2', 'volume3']
+        self.flags(images_rbd_ceph_conf=conf, group='libvirt')
+        self.flags(rbd_user=user, group='libvirt')
+        fn = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(libvirt_utils.utils, 'execute')
+        libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume1',
+                                    '--id', user, '--conf', conf, attempts=3,
+                                    run_as_root=True)
+        libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume2',
+                                    '--id', user, '--conf', conf, attempts=3,
+                                    run_as_root=True)
+        libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume3',
+                                    '--id', user, '--conf', conf, attempts=3,
+                                    run_as_root=True)
+        self.mox.ReplayAll()
+
+        libvirt_utils.remove_rbd_volumes(pool, *names)
+
+        self.mox.VerifyAll()
