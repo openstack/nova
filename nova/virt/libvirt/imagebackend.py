@@ -25,23 +25,14 @@ from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import rbd_utils
 from nova.virt.libvirt import utils as libvirt_utils
-
-
-try:
-    import rados
-    import rbd
-except ImportError:
-    rados = None
-    rbd = None
-
 
 __imagebackend_opts = [
     cfg.StrOpt('images_type',
@@ -85,6 +76,8 @@ CONF = cfg.CONF
 CONF.register_opts(__imagebackend_opts, 'libvirt')
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('preallocate_images', 'nova.virt.driver')
+CONF.import_opt('rbd_user', 'nova.virt.libvirt.volume', group='libvirt')
+CONF.import_opt('rbd_secret_uuid', 'nova.virt.libvirt.volume', group='libvirt')
 
 LOG = logging.getLogger(__name__)
 
@@ -423,51 +416,6 @@ class Lvm(Image):
                              run_as_root=True)
 
 
-class RBDVolumeProxy(object):
-    """Context manager for dealing with an existing rbd volume.
-
-    This handles connecting to rados and opening an ioctx automatically, and
-    otherwise acts like a librbd Image object.
-
-    The underlying librados client and ioctx can be accessed as the attributes
-    'client' and 'ioctx'.
-    """
-    def __init__(self, driver, name, pool=None):
-        client, ioctx = driver._connect_to_rados(pool)
-        try:
-            self.volume = driver.rbd.Image(ioctx, str(name), snapshot=None)
-        except driver.rbd.Error:
-            LOG.exception(_("error opening rbd image %s"), name)
-            driver._disconnect_from_rados(client, ioctx)
-            raise
-        self.driver = driver
-        self.client = client
-        self.ioctx = ioctx
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, type_, value, traceback):
-        try:
-            self.volume.close()
-        finally:
-            self.driver._disconnect_from_rados(self.client, self.ioctx)
-
-    def __getattr__(self, attrib):
-        return getattr(self.volume, attrib)
-
-
-def ascii_str(s):
-    """Convert a string to ascii, or return None if the input is None.
-
-    This is useful when a parameter is None by default, or a string. LibRBD
-    only accepts ascii, hence the need for conversion.
-    """
-    if s is None:
-        return s
-    return str(s)
-
-
 class Rbd(Image):
     def __init__(self, instance=None, disk_name=None, path=None, **kwargs):
         super(Rbd, self).__init__("block", "rbd", is_block_dev=True)
@@ -484,62 +432,21 @@ class Rbd(Image):
                                  ' images_rbd_pool'
                                  ' flag to use rbd images.'))
         self.pool = CONF.libvirt.images_rbd_pool
-        self.ceph_conf = ascii_str(CONF.libvirt.images_rbd_ceph_conf)
-        self.rbd_user = ascii_str(CONF.libvirt.rbd_user)
-        self.rbd = kwargs.get('rbd', rbd)
-        self.rados = kwargs.get('rados', rados)
+        self.rbd_user = CONF.libvirt.rbd_user
+        self.ceph_conf = CONF.libvirt.images_rbd_ceph_conf
+
+        self.driver = rbd_utils.RBDDriver(
+            pool=self.pool,
+            ceph_conf=self.ceph_conf,
+            rbd_user=self.rbd_user,
+            rbd_lib=kwargs.get('rbd'),
+            rados_lib=kwargs.get('rados'))
 
         self.path = 'rbd:%s/%s' % (self.pool, self.rbd_name)
         if self.rbd_user:
             self.path += ':id=' + self.rbd_user
         if self.ceph_conf:
             self.path += ':conf=' + self.ceph_conf
-
-    def _connect_to_rados(self, pool=None):
-        client = self.rados.Rados(rados_id=self.rbd_user,
-                                  conffile=self.ceph_conf)
-        try:
-            client.connect()
-            pool_to_open = str(pool or self.pool)
-            ioctx = client.open_ioctx(pool_to_open)
-            return client, ioctx
-        except self.rados.Error:
-            # shutdown cannot raise an exception
-            client.shutdown()
-            raise
-
-    def _disconnect_from_rados(self, client, ioctx):
-        # closing an ioctx cannot raise an exception
-        ioctx.close()
-        client.shutdown()
-
-    def _supports_layering(self):
-        return hasattr(self.rbd, 'RBD_FEATURE_LAYERING')
-
-    def _ceph_args(self):
-        args = []
-        if self.rbd_user:
-            args.extend(['--id', self.rbd_user])
-        if self.ceph_conf:
-            args.extend(['--conf', self.ceph_conf])
-        return args
-
-    def _get_mon_addrs(self):
-        args = ['ceph', 'mon', 'dump', '--format=json'] + self._ceph_args()
-        out, _ = utils.execute(*args)
-        lines = out.split('\n')
-        if lines[0].startswith('dumped monmap epoch'):
-            lines = lines[1:]
-        monmap = jsonutils.loads('\n'.join(lines))
-        addrs = [mon['addr'] for mon in monmap['mons']]
-        hosts = []
-        ports = []
-        for addr in addrs:
-            host_port = addr[:addr.rindex('/')]
-            host, port = host_port.rsplit(':', 1)
-            hosts.append(host.strip('[]'))
-            ports.append(port)
-        return hosts, ports
 
     def backend_location(self):
         return self.pool, self.rbd_name
@@ -556,7 +463,7 @@ class Rbd(Image):
         """
         info = vconfig.LibvirtConfigGuestDisk()
 
-        hosts, ports = self._get_mon_addrs()
+        hosts, ports = self.driver.get_mon_addrs()
         info.device_type = device_type
         info.driver_format = 'raw'
         info.driver_cache = cache_mode
@@ -589,16 +496,7 @@ class Rbd(Image):
 
         return False
 
-    def _resize(self, volume_name, size):
-        size = int(size) * units.Ki
-
-        with RBDVolumeProxy(self, volume_name) as vol:
-            vol.resize(size)
-
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-        if self.rbd is None:
-            raise RuntimeError(_('rbd python libraries not found'))
-
         if not os.path.exists(base):
             prepare_template(target=base, max_size=size, *args, **kwargs)
         else:
@@ -607,15 +505,15 @@ class Rbd(Image):
         # keep using the command line import instead of librbd since it
         # detects zeroes to preserve sparseness in the image
         args = ['--pool', self.pool, base, self.rbd_name]
-        if self._supports_layering():
+        if self.driver.supports_layering():
             args += ['--new-format']
-        args += self._ceph_args()
+        args += self.driver.ceph_args()
         libvirt_utils.import_rbd_image(*args)
 
         base_size = disk.get_disk_size(base)
 
         if size and size > base_size:
-            self._resize(self.rbd_name, size)
+            self.driver.resize(self.rbd_name, size)
 
     def snapshot_extract(self, target, out_format):
         images.convert_image(self.path, target, out_format)

@@ -27,6 +27,7 @@ from nova import test
 from nova.tests import fake_processutils
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
+from nova.virt.libvirt import rbd_utils
 
 CONF = cfg.CONF
 
@@ -521,14 +522,8 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
                    group='libvirt')
         self.libvirt_utils = imagebackend.libvirt_utils
         self.utils = imagebackend.utils
-        self.rbd = self.mox.CreateMockAnything()
-        self.rados = self.mox.CreateMockAnything()
-
-    def prepare_mocks(self):
-        fn = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(imagebackend, 'rbd')
-        self.mox.StubOutWithMock(imagebackend, 'rados')
-        return fn
+        self.mox.StubOutWithMock(rbd_utils, 'rbd')
+        self.mox.StubOutWithMock(rbd_utils, 'rados')
 
     def test_cache(self):
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -596,10 +591,10 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.VerifyAll()
 
     def test_create_image(self):
-        fn = self.prepare_mocks()
-        fn(max_size=None, rbd=self.rbd, target=self.TEMPLATE_PATH)
+        fn = self.mox.CreateMockAnything()
+        fn(max_size=None, target=self.TEMPLATE_PATH)
 
-        self.rbd.RBD_FEATURE_LAYERING = 1
+        rbd_utils.rbd.RBD_FEATURE_LAYERING = 1
 
         self.mox.StubOutWithMock(imagebackend.disk, 'get_disk_size')
         imagebackend.disk.get_disk_size(self.TEMPLATE_PATH
@@ -612,7 +607,7 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
-        image.create_image(fn, self.TEMPLATE_PATH, None, rbd=self.rbd)
+        image.create_image(fn, self.TEMPLATE_PATH, None)
 
         self.mox.VerifyAll()
 
@@ -621,8 +616,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         fake_processutils.fake_execute_clear_log()
         fake_processutils.stub_out_processutils_execute(self.stubs)
-        self.mox.StubOutWithMock(imagebackend, 'rbd')
-        self.mox.StubOutWithMock(imagebackend, 'rados')
         image = self.image_class(self.INSTANCE, self.NAME)
 
         def fake_fetch(target, *args, **kwargs):
@@ -696,6 +689,8 @@ class BackendTestCase(test.NoDBTestCase):
         pool = "FakePool"
         self.flags(images_rbd_pool=pool, group='libvirt')
         self.flags(images_rbd_ceph_conf=conf, group='libvirt')
+        self.mox.StubOutWithMock(rbd_utils, 'rbd')
+        self.mox.StubOutWithMock(rbd_utils, 'rados')
         self._test_image('rbd', imagebackend.Rbd, imagebackend.Rbd)
 
     def test_image_default(self):
