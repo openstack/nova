@@ -59,7 +59,10 @@ class AggregateController(object):
                                for a in aggregates]}
 
     def create(self, req, body):
-        """Creates an aggregate, given its name and availability_zone."""
+        """
+        Creates an aggregate, given its name and
+        optional availability zone.
+        """
         context = _get_context(req)
         authorize(context)
 
@@ -68,17 +71,13 @@ class AggregateController(object):
         try:
             host_aggregate = body["aggregate"]
             name = host_aggregate["name"]
-            avail_zone = host_aggregate["availability_zone"]
         except KeyError:
             raise exc.HTTPBadRequest()
-
+        avail_zone = host_aggregate.get("availability_zone")
         try:
             utils.check_string_length(name, "Aggregate name", 1, 255)
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-
-        if len(host_aggregate) != 2:
-            raise exc.HTTPBadRequest()
 
         try:
             aggregate = self.api.create_aggregate(context, name, avail_zone)

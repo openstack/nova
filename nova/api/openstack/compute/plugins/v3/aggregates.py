@@ -73,7 +73,10 @@ class AggregateController(wsgi.Controller):
     @extensions.expected_errors((400, 409))
     @wsgi.response(201)
     def create(self, req, body):
-        """Creates an aggregate, given its name and availability_zone."""
+        """
+        Creates an aggregate, given its name and
+        optional availability zone.
+        """
         context = _get_context(req)
         authorize(context, action='create')
         if not self.is_valid_body(body, 'aggregate'):
@@ -81,10 +84,10 @@ class AggregateController(wsgi.Controller):
         try:
             host_aggregate = body["aggregate"]
             name = host_aggregate["name"]
-            avail_zone = host_aggregate["availability_zone"]
         except KeyError as e:
             msg = _("Could not find %s parameter in the request") % e.args[0]
             raise exc.HTTPBadRequest(explanation=msg)
+        avail_zone = host_aggregate.get("availability_zone")
         try:
             utils.check_string_length(name, "Aggregate name", 1, 255)
         except exception.InvalidInput as e:
