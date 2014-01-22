@@ -790,6 +790,7 @@ class VMwareAPISession(object):
         except Exception as e:
             LOG.warning(_("Unable to validate session %s!"),
                         self._session.key)
+            LOG.debug(_("Exception: %(ex)s"), {'ex': e})
         return active
 
     def _call_method(self, module, method, *args, **kwargs):
@@ -799,8 +800,8 @@ class VMwareAPISession(object):
         """
         args = list(args)
         retry_count = 0
-        exc = None
         while True:
+            exc = None
             try:
                 if not self._is_vim_object(module):
                     # If it is not the first try, then get the latest
@@ -851,6 +852,22 @@ class VMwareAPISession(object):
                 # exceeded, we raise the exception
                 exc = excep
                 break
+
+            LOG.debug(_("_call_method(session=%(key)s) failed. "
+                        "Module: %(module)s. "
+                        "Method: %(method)s. "
+                        "args: %(args)s. "
+                        "kwargs: %(kwargs)s. "
+                        "Iteration: %(n)s. "
+                        "Exception: %(ex)s. "),
+                      {'key': self._session.key,
+                       'module': module,
+                       'method': method,
+                       'args': args,
+                       'kwargs': kwargs,
+                       'n': retry_count,
+                       'ex': exc})
+
             # If retry count has been reached then break and
             # raise the exception
             if retry_count > self._api_retry_count:
