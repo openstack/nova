@@ -264,6 +264,10 @@ class VMwareVMOps(object):
                 setattr(extra_specs.cpu_limits, key, type(value))
         hw_version = flavor.extra_specs.get('vmware:hw_version')
         extra_specs.hw_version = hw_version
+        if CONF.vmware.pbm_enabled:
+            storage_policy = flavor.extra_specs.get('vmware:storage_policy',
+                    CONF.vmware.pbm_default_policy)
+            extra_specs.storage_policy = storage_policy
         return extra_specs
 
     def _fetch_image_as_file(self, context, vi, image_ds_loc):

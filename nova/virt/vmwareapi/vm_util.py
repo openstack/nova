@@ -61,12 +61,14 @@ class CpuLimits(object):
 
 class ExtraSpecs(object):
 
-    def __init__(self, cpu_limits=None, hw_version=None):
+    def __init__(self, cpu_limits=None, hw_version=None,
+                 storage_policy=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         if cpu_limits is None:
             cpu_limits = CpuLimits()
         self.cpu_limits = cpu_limits
         self.hw_version = hw_version
+        self.storage_policy = storage_policy
 
     def has_cpu_limits(self):
         return bool(self.cpu_limits.cpu_limit or
