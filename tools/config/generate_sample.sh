@@ -4,8 +4,8 @@ print_hint() {
     echo "Try \`${0##*/} --help' for more information." >&2
 }
 
-PARSED_OPTIONS=$(getopt -n "${0##*/}" -o hb:p:o: \
-                 --long help,base-dir:,package-name:,output-dir: -- "$@")
+PARSED_OPTIONS=$(getopt -n "${0##*/}" -o hb:p:m:l:o: \
+                 --long help,base-dir:,package-name:,output-dir:,module:,library: -- "$@")
 
 if [ $? != 0 ] ; then print_hint ; exit 1 ; fi
 
@@ -21,6 +21,8 @@ while true; do
             echo "-b, --base-dir=DIR        project base directory"
             echo "-p, --package-name=NAME   project package name"
             echo "-o, --output-dir=DIR      file output directory"
+            echo "-m, --module=MOD          extra python module to interrogate for options"
+            echo "-l, --library=LIB         extra library that registers options for discovery"
             exit 0
             ;;
         -b|--base-dir)
@@ -36,6 +38,16 @@ while true; do
         -o|--output-dir)
             shift
             OUTPUTDIR=`echo $1 | sed -e 's/\/*$//g'`
+            shift
+            ;;
+        -m|--module)
+            shift
+            MODULES="$MODULES -m $1"
+            shift
+            ;;
+        -l|--library)
+            shift
+            LIBRARIES="$LIBRARIES -l $1"
             shift
             ;;
         --)
@@ -77,11 +89,19 @@ find $TARGETDIR -type f -name "*.pyc" -delete
 FILES=$(find $TARGETDIR -type f -name "*.py" ! -path "*/tests/*" \
         -exec grep -l "Opt(" {} + | sed -e "s/^$BASEDIRESC\///g" | sort -u)
 
-EXTRA_MODULES_FILE="`dirname $0`/oslo.config.generator.rc"
-if test -r "$EXTRA_MODULES_FILE"
+RC_FILE="`dirname $0`/oslo.config.generator.rc"
+if test -r "$RC_FILE"
 then
-    source "$EXTRA_MODULES_FILE"
+    source "$RC_FILE"
 fi
+
+for mod in ${NOVA_CONFIG_GENERATOR_EXTRA_MODULES}; do
+    MODULES="$MODULES -m $mod"
+done
+
+for lib in ${NOVA_CONFIG_GENERATOR_EXTRA_LIBRARIES}; do
+    LIBRARIES="$LIBRARIES -l $lib"
+done
 
 export EVENTLET_NO_GREENDNS=yes
 
@@ -90,7 +110,7 @@ OS_VARS=$(set | sed -n '/^OS_/s/=[^=]*$//gp' | xargs)
 DEFAULT_MODULEPATH=nova.openstack.common.config.generator
 MODULEPATH=${MODULEPATH:-$DEFAULT_MODULEPATH}
 OUTPUTFILE=$OUTPUTDIR/$PACKAGENAME.conf.sample
-python -m $MODULEPATH $FILES > $OUTPUTFILE
+python -m $MODULEPATH $MODULES $LIBRARIES $FILES > $OUTPUTFILE
 
 # Hook to allow projects to append custom config file snippets
 CONCAT_FILES=$(ls $BASEDIR/tools/config/*.conf.sample 2>/dev/null)

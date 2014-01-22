@@ -18,6 +18,7 @@
 
 from __future__ import print_function
 
+import argparse
 import imp
 import os
 import re
@@ -27,6 +28,7 @@ import textwrap
 
 from oslo.config import cfg
 import six
+import stevedore.named
 
 from nova.openstack.common import gettextutils
 from nova.openstack.common import importutils
@@ -59,33 +61,54 @@ BASEDIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
 WORDWRAP_WIDTH = 60
 
 
-def generate(srcfiles):
+def generate(argv):
+    parser = argparse.ArgumentParser(
+        description='generate sample configuration file',
+    )
+    parser.add_argument('-m', dest='modules', action='append')
+    parser.add_argument('-l', dest='libraries', action='append')
+    parser.add_argument('srcfiles', nargs='*')
+    parsed_args = parser.parse_args(argv)
+
     mods_by_pkg = dict()
-    for filepath in srcfiles:
+    for filepath in parsed_args.srcfiles:
         pkg_name = filepath.split(os.sep)[1]
         mod_str = '.'.join(['.'.join(filepath.split(os.sep)[:-1]),
                             os.path.basename(filepath).split('.')[0]])
         mods_by_pkg.setdefault(pkg_name, list()).append(mod_str)
     # NOTE(lzyeval): place top level modules before packages
-    pkg_names = filter(lambda x: x.endswith(PY_EXT), mods_by_pkg.keys())
-    pkg_names.sort()
-    ext_names = filter(lambda x: x not in pkg_names, mods_by_pkg.keys())
-    ext_names.sort()
+    pkg_names = sorted(pkg for pkg in mods_by_pkg if pkg.endswith(PY_EXT))
+    ext_names = sorted(pkg for pkg in mods_by_pkg if pkg not in pkg_names)
     pkg_names.extend(ext_names)
 
     # opts_by_group is a mapping of group name to an options list
     # The options list is a list of (module, options) tuples
     opts_by_group = {'DEFAULT': []}
 
-    extra_modules = os.getenv("NOVA_CONFIG_GENERATOR_EXTRA_MODULES", "")
-    if extra_modules:
-        for module_name in extra_modules.split(','):
-            module_name = module_name.strip()
+    if parsed_args.modules:
+        for module_name in parsed_args.modules:
             module = _import_module(module_name)
             if module:
                 for group, opts in _list_opts(module):
                     opts_by_group.setdefault(group, []).append((module_name,
                                                                 opts))
+
+    # Look for entry points defined in libraries (or applications) for
+    # option discovery, and include their return values in the output.
+    #
+    # Each entry point should be a function returning an iterable
+    # of pairs with the group name (or None for the default group)
+    # and the list of Opt instances for that group.
+    if parsed_args.libraries:
+        loader = stevedore.named.NamedExtensionManager(
+            'oslo.config.opts',
+            names=list(set(parsed_args.libraries)),
+            invoke_on_load=False,
+        )
+        for ext in loader:
+            for group, opts in ext.plugin():
+                opt_list = opts_by_group.setdefault(group or 'DEFAULT', [])
+                opt_list.append((ext.name, opts))
 
     for pkg_name in pkg_names:
         mods = mods_by_pkg.get(pkg_name)
@@ -120,7 +143,7 @@ def _import_module(mod_str):
 
 def _is_in_group(opt, group):
     "Check if opt is in group."
-    for key, value in group._opts.items():
+    for value in group._opts.values():
         # NOTE(llu): Temporary workaround for bug #1262148, wait until
         # newly released oslo.config support '==' operator.
         if not(value['opt'] != opt):
@@ -134,7 +157,7 @@ def _guess_groups(opt, mod_obj):
         return 'DEFAULT'
 
     # what other groups is it in?
-    for key, value in cfg.CONF.items():
+    for value in cfg.CONF.values():
         if isinstance(value, cfg.CONF.GroupAttr):
             if _is_in_group(opt, value._group):
                 return value._group.name
