@@ -3277,6 +3277,15 @@ class LibvirtDriver(driver.ComputeDriver):
                 if (video.type not in VALID_VIDEO_DEVICES):
                     raise exception.InvalidVideoMode(model=video.type)
 
+            # Set video memory, only if the flavor's limit is set
+            video_ram = int(img_meta_prop.get('hw_video_ram', 0))
+            max_vram = int(flavor.extra_specs
+                                    .get('hw_video:ram_max_mb', 0))
+            if video_ram > max_vram:
+                raise exception.RequestedVRamTooHigh(req_vram=video_ram,
+                                                     max_vram=max_vram)
+            if max_vram and video_ram:
+                video.vram = video_ram
             guest.add_device(video)
 
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
