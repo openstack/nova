@@ -15,6 +15,8 @@
 
 """Config Drive extension."""
 
+from nova.api.openstack.compute.schemas.v3 import config_drive as \
+                                                  schema_config_drive
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
@@ -68,3 +70,6 @@ class ConfigDrive(extensions.V3APIExtensionBase):
 
     def server_create(self, server_dict, create_kwargs):
         create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
+
+    def get_server_create_schema(self):
+        return schema_config_drive.server_create
