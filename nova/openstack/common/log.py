@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 OpenStack Foundation.
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
@@ -43,7 +41,7 @@ from oslo.config import cfg
 import six
 from six import moves
 
-from nova.openstack.common.gettextutils import _  # noqa
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import local
@@ -151,7 +149,6 @@ log_opts = [
                     'amqp=WARN',
                     'amqplib=WARN',
                     'boto=WARN',
-                    'keystone=INFO',
                     'qpid=WARN',
                     'sqlalchemy=WARN',
                     'suds=INFO',
@@ -238,10 +235,11 @@ def mask_password(message, secret="***"):
     """Replace password with 'secret' in message.
 
     :param message: The string which includes security information.
-    :param secret: value with which to replace passwords, defaults to "***".
+    :param secret: value with which to replace passwords.
     :returns: The unicode value of message with the password fields masked.
 
     For example:
+
     >>> mask_password("'adminPass' : 'aaaaa'")
     "'adminPass' : '***'"
     >>> mask_password("'admin_pass' : 'aaaaa'")
@@ -351,7 +349,7 @@ class JSONFormatter(logging.Formatter):
     def formatException(self, ei, strip_newlines=True):
         lines = traceback.format_exception(*ei)
         if strip_newlines:
-            lines = [itertools.ifilter(
+            lines = [moves.filter(
                 lambda x: x,
                 line.rstrip().splitlines()) for line in lines]
             lines = list(itertools.chain(*lines))
@@ -391,9 +389,11 @@ class JSONFormatter(logging.Formatter):
 def _create_logging_excepthook(product_name):
     def logging_excepthook(exc_type, value, tb):
         extra = {}
-        if CONF.verbose:
+        if CONF.verbose or CONF.debug:
             extra['exc_info'] = (exc_type, value, tb)
-        getLogger(product_name).critical(str(value), **extra)
+        getLogger(product_name).critical(
+            "".join(traceback.format_exception_only(exc_type, value)),
+            **extra)
     return logging_excepthook
 
 
@@ -477,7 +477,7 @@ def _setup_logging_from_conf():
         streamlog = ColorHandler()
         log_root.addHandler(streamlog)
 
-    elif not CONF.log_file:
+    elif not logpath:
         # pass sys.stdout as a positional argument
         # python2.6 calls the argument strm, in 2.7 it's stream
         streamlog = logging.StreamHandler(sys.stdout)
@@ -543,7 +543,7 @@ class WritableLogger(object):
         self.level = level
 
     def write(self, msg):
-        self.logger.log(self.level, msg)
+        self.logger.log(self.level, msg.rstrip())
 
 
 class ContextFormatter(logging.Formatter):
@@ -561,7 +561,7 @@ class ContextFormatter(logging.Formatter):
 
     def format(self, record):
         """Uses contextstring if request_id is set, otherwise default."""
-        # NOTE(sdague): default the fancier formating params
+        # NOTE(sdague): default the fancier formatting params
         # to an empty string so we don't throw an exception if
         # they get used
         for key in ('instance', 'color'):
@@ -577,7 +577,7 @@ class ContextFormatter(logging.Formatter):
                 CONF.logging_debug_format_suffix):
             self._fmt += " " + CONF.logging_debug_format_suffix
 
-        # Cache this on the record, Logger will respect our formated copy
+        # Cache this on the record, Logger will respect our formatted copy
         if record.exc_info:
             record.exc_text = self.formatException(record.exc_info, record)
         return logging.Formatter.format(self, record)
