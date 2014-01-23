@@ -25,6 +25,7 @@ from oslo.config import cfg
 from oslo.utils import excutils
 from oslo.utils import units
 from oslo.vmware import exceptions as vexc
+from oslo.vmware import pbm
 
 from nova import exception
 from nova.i18n import _, _LW
@@ -129,7 +130,8 @@ def _iface_id_option_value(client_factory, iface_id, port_index):
 
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
                        vif_infos, extra_specs,
-                       os_type=constants.DEFAULT_OS_TYPE):
+                       os_type=constants.DEFAULT_OS_TYPE,
+                       profile_spec=None):
     """Builds the VM Create spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = name
@@ -144,6 +146,10 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     # Allow nested ESX instances to host 64 bit VMs.
     if os_type == "vmkernel5Guest":
         config_spec.nestedHVEnabled = "True"
+
+    # Append the profile spec
+    if profile_spec:
+        config_spec.vmProfile = [profile_spec]
 
     vm_file_info = client_factory.create('ns0:VirtualMachineFileInfo')
     vm_file_info.vmPathName = "[" + data_store_name + "]"
@@ -351,6 +357,17 @@ def get_network_detach_config_spec(client_factory, device, port_index):
                                                       'free',
                                                       port_index)]
     return config_spec
+
+
+def get_storage_profile_spec(session, storage_policy):
+    """Gets the vm profile spec configured for storage policy."""
+    profile_id = pbm.get_profile_id_by_name(session, storage_policy)
+    if profile_id:
+        client_factory = session.vim.client.factory
+        storage_profile_spec = client_factory.create(
+            'ns0:VirtualMachineDefinedProfileSpec')
+        storage_profile_spec.profileId = profile_id.uniqueId
+        return storage_profile_spec
 
 
 def get_vmdk_attach_config_spec(client_factory,

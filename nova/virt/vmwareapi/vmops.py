@@ -237,6 +237,11 @@ class VMwareVMOps(object):
                                            image_info.vif_model,
                                            network_info)
 
+        if extra_specs.storage_policy:
+            profile_spec = vm_util.get_storage_profile_spec(
+                self._session, extra_specs.storage_policy)
+        else:
+            profile_spec = None
         # Get the create vm config spec
         client_factory = self._session.vim.client.factory
         config_spec = vm_util.get_vm_create_spec(client_factory,
@@ -245,7 +250,8 @@ class VMwareVMOps(object):
                                                  datastore.name,
                                                  vif_infos,
                                                  extra_specs,
-                                                 image_info.os_type)
+                                                 image_info.os_type,
+                                                 profile_spec=profile_spec)
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
                                    config_spec, res_pool_ref)

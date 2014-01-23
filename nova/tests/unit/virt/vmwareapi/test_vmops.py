@@ -857,7 +857,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                     'fake_ds',
                     [],
                     extra_specs,
-                    'otherGuest')
+                    'otherGuest',
+                    profile_spec=None)
             mock_create_vm.assert_called_once_with(
                     self._session,
                     self._instance,
