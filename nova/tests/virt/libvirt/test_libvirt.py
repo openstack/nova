@@ -6289,7 +6289,6 @@ class IptablesFirewallTestCase(test.TestCase):
         instance_ref = db.instance_get(admin_ctxt, instance_ref['id'])
         src_instance_ref = db.instance_get(admin_ctxt, src_instance_ref['id'])
 
-#        self.fw.add_instance(instance_ref)
         def fake_iptables_execute(*cmd, **kwargs):
             process_input = kwargs.get('process_input', None)
             if cmd == ('ip6tables-save', '-c'):
