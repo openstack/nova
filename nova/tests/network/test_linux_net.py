@@ -987,6 +987,23 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
             device_exists.assert_has_calls(calls['device_exists'])
             _execute.assert_has_calls(calls['_execute'])
 
+    def test_set_device_mtu_configured(self):
+        self.flags(network_device_mtu=10000)
+        calls = [
+                mock.call('ip', 'link', 'set', 'fake-dev', 'mtu',
+                          10000, run_as_root=True,
+                          check_exit_code=[0, 2, 254])
+                ]
+        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
+            linux_net._set_device_mtu('fake-dev')
+            ex.assert_has_calls(calls)
+
+    def test_set_device_mtu_default(self):
+        calls = []
+        with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
+            linux_net._set_device_mtu('fake-dev')
+            ex.assert_has_calls(calls)
+
     def _ovs_vif_port(self, calls):
         with mock.patch.object(utils, 'execute', return_value=('', '')) as ex:
             linux_net.create_ovs_vif_port('fake-bridge', 'fake-dev',
