@@ -228,7 +228,7 @@ class VMwareVMOps(object):
             str(uploaded_iso_path))
 
     def build_virtual_machine(self, instance, instance_name, image_info,
-                              dc_info, datastore, network_info, flavor):
+                              dc_info, datastore, network_info, extra_specs):
         res_pool_ref = vm_util.get_res_pool_ref(self._session,
                                                 self._cluster)
         vif_infos = vmwarevif.get_vif_info(self._session,
@@ -236,8 +236,6 @@ class VMwareVMOps(object):
                                            utils.is_neutron(),
                                            image_info.vif_model,
                                            network_info)
-
-        extra_specs = self._get_extra_specs(flavor)
 
         # Get the create vm config spec
         client_factory = self._session.vim.client.factory
@@ -367,7 +365,8 @@ class VMwareVMOps(object):
                             tmp_image_ds_loc.parent,
                             vi.cache_image_folder)
 
-    def _get_vm_config_info(self, instance, image_info, instance_name=None):
+    def _get_vm_config_info(self, instance, image_info, instance_name=None,
+                            storage_policy=None):
         """Captures all relevant information from the spawn parameters."""
 
         if (instance.root_gb != 0 and
@@ -376,7 +375,8 @@ class VMwareVMOps(object):
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
         datastore = ds_util.get_datastore(
-                self._session, self._cluster, self._datastore_regex)
+                self._session, self._cluster, self._datastore_regex,
+                storage_policy=storage_policy)
         dc_info = self.get_datacenter_ref_and_name(datastore.ref)
 
         return VirtualMachineInstanceConfigInfo(instance,
@@ -432,12 +432,15 @@ class VMwareVMOps(object):
         client_factory = self._session.vim.client.factory
         image_info = images.VMwareImage.from_image(instance.image_ref,
                                                    image_meta)
-        vi = self._get_vm_config_info(instance, image_info, instance_name)
-
         # Read flavors for extra_specs
         flavor = objects.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance.instance_type_id)
+
+        extra_specs = self._get_extra_specs(flavor)
+
+        vi = self._get_vm_config_info(instance, image_info, instance_name,
+                                      extra_specs.storage_policy)
 
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
@@ -447,7 +450,7 @@ class VMwareVMOps(object):
                                             vi.dc_info,
                                             vi.datastore,
                                             network_info,
-                                            flavor)
+                                            extra_specs)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
         # instance_name. This covers all use cases including rescue and resize.

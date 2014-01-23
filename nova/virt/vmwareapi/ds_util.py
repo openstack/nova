@@ -18,9 +18,10 @@ Datastore utility functions
 import posixpath
 
 from oslo.vmware import exceptions as vexc
+from oslo.vmware import pbm
 
 from nova import exception
-from nova.i18n import _
+from nova.i18n import _, _LE
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -189,17 +190,28 @@ def _get_token(results):
     return getattr(results, 'token', None)
 
 
-def _select_datastore(data_stores, best_match, datastore_regex=None):
+def _select_datastore(session, data_stores, best_match, datastore_regex=None,
+                      storage_policy=None):
     """Find the most preferable datastore in a given RetrieveResult object.
 
+    :param session: vmwareapi session
     :param data_stores: a RetrieveResult object from vSphere API call
     :param best_match: the current best match for datastore
     :param datastore_regex: an optional regular expression to match names
+    :param storage_policy: storage policy for the datastore
     :return: datastore_ref, datastore_name, capacity, freespace
     """
 
+    if storage_policy:
+        matching_ds = _filter_datastores_matching_storage_policy(
+            session, data_stores, storage_policy)
+        if not matching_ds:
+            return best_match
+    else:
+        matching_ds = data_stores
+
     # data_stores is actually a RetrieveResult object from vSphere API call
-    for obj_content in data_stores.objects:
+    for obj_content in matching_ds.objects:
         # the propset attribute "need not be set" by returning API
         if not hasattr(obj_content, 'propSet'):
             continue
@@ -242,7 +254,8 @@ def _is_datastore_valid(propdict, datastore_regex):
              datastore_regex.match(propdict['summary.name'])))
 
 
-def get_datastore(session, cluster, datastore_regex=None):
+def get_datastore(session, cluster=None, datastore_regex=None,
+                  storage_policy=None):
     """Get the datastore list and choose the most preferable one."""
     datastore_ret = session._call_method(
                                 vim_util,
@@ -264,8 +277,11 @@ def get_datastore(session, cluster, datastore_regex=None):
 
     best_match = None
     while data_stores:
-        best_match = _select_datastore(data_stores, best_match,
-                                       datastore_regex)
+        best_match = _select_datastore(session,
+                                       data_stores,
+                                       best_match,
+                                       datastore_regex,
+                                       storage_policy)
         token = _get_token(data_stores)
         if not token:
             break
@@ -274,7 +290,12 @@ def get_datastore(session, cluster, datastore_regex=None):
                                            token)
     if best_match:
         return best_match
-    if datastore_regex:
+
+    if storage_policy:
+        raise exception.DatastoreNotFound(
+            _("Storage policy %s did not match any datastores")
+            % storage_policy)
+    elif datastore_regex:
         raise exception.DatastoreNotFound(
             _("Datastore regex %s did not match any datastores")
             % datastore_regex.pattern)
@@ -439,3 +460,29 @@ def get_sub_folders(session, ds_browser, ds_path):
     if hasattr(task_info.result, 'file'):
         return set([file.path for file in task_info.result.file])
     return set()
+
+
+def _filter_datastores_matching_storage_policy(session, data_stores,
+                                               storage_policy):
+    """Get datastores matching the given storage policy.
+
+    :param data_stores: the list of retrieve result wrapped datastore objects
+    :param storage_policy: the storage policy name
+    :return the list of datastores conforming to the given storage policy
+    """
+    profile_id = pbm.get_profile_id_by_name(session, storage_policy)
+    if profile_id:
+        factory = session.pbm.client.factory
+        ds_mors = [oc.obj for oc in data_stores.objects]
+        hubs = pbm.convert_datastores_to_hubs(factory, ds_mors)
+        matching_hubs = pbm.filter_hubs_by_profile(session, hubs,
+                                                   profile_id)
+        if matching_hubs:
+            matching_ds = pbm.filter_datastores_by_hubs(matching_hubs,
+                                                        ds_mors)
+            object_contents = [oc for oc in data_stores.objects
+                               if oc.obj in matching_ds]
+            data_stores.objects = object_contents
+            return data_stores
+    LOG.error(_LE("Unable to retrieve storage policy with name %s"),
+              storage_policy)
