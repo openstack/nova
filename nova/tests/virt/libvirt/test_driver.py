@@ -6193,6 +6193,82 @@ class LibvirtConnTestCase(test.TestCase,
             conn._hard_reboot(self.context, instance, network_info,
                               block_device_info)
 
+    def _test_clean_shutdown(self, seconds_to_shutdown,
+                             timeout, retry_interval,
+                             shutdown_attempts, succeeds):
+        info_tuple = ('fake', 'fake', 'fake', 'also_fake')
+        shutdown_count = []
+
+        def count_shutdowns():
+            shutdown_count.append("shutdown")
+
+        # Mock domain
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+
+        mock_domain.info().AndReturn(
+                (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+        mock_domain.shutdown().WithSideEffects(count_shutdowns)
+
+        retry_countdown = retry_interval
+        for x in xrange(min(seconds_to_shutdown, timeout)):
+            mock_domain.info().AndReturn(
+                (libvirt_driver.VIR_DOMAIN_RUNNING,) + info_tuple)
+            if retry_countdown == 0:
+                mock_domain.shutdown().WithSideEffects(count_shutdowns)
+                retry_countdown = retry_interval
+            else:
+                retry_countdown -= 1
+
+        if seconds_to_shutdown < timeout:
+            mock_domain.info().AndReturn(
+                (libvirt_driver.VIR_DOMAIN_SHUTDOWN,) + info_tuple)
+
+        self.mox.ReplayAll()
+
+        def fake_lookup_by_name(instance_name):
+            return mock_domain
+
+        def fake_create_domain(**kwargs):
+            self.reboot_create_called = True
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = {"name": "instancename", "id": "instanceid",
+                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
+        self.stubs.Set(conn, '_create_domain', fake_create_domain)
+        result = conn._clean_shutdown(instance, timeout, retry_interval)
+
+        self.assertEqual(succeeds, result)
+        self.assertEqual(shutdown_attempts, len(shutdown_count))
+
+    def test_clean_shutdown_first_time(self):
+        self._test_clean_shutdown(seconds_to_shutdown=2,
+                                  timeout=5,
+                                  retry_interval=3,
+                                  shutdown_attempts=1,
+                                  succeeds=True)
+
+    def test_clean_shutdown_with_retry(self):
+        self._test_clean_shutdown(seconds_to_shutdown=4,
+                                  timeout=5,
+                                  retry_interval=3,
+                                  shutdown_attempts=2,
+                                  succeeds=True)
+
+    def test_clean_shutdown_failure(self):
+        self._test_clean_shutdown(seconds_to_shutdown=6,
+                                  timeout=5,
+                                  retry_interval=3,
+                                  shutdown_attempts=2,
+                                  succeeds=False)
+
+    def test_clean_shutdown_no_wait(self):
+        self._test_clean_shutdown(seconds_to_shutdown=6,
+                                  timeout=0,
+                                  retry_interval=3,
+                                  shutdown_attempts=1,
+                                  succeeds=False)
+
     def test_resume(self):
         dummyxml = ("<domain type='kvm'><name>instance-0000000a</name>"
                     "<devices>"

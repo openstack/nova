@@ -2134,7 +2134,8 @@ class ComputeTestCase(BaseTestCase):
 
         called = {'power_off': False}
 
-        def fake_driver_power_off(self, instance):
+        def fake_driver_power_off(self, instance,
+                                  shutdown_timeout, shutdown_attempts):
             called['power_off'] = True
 
         self.stubs.Set(nova.virt.fake.FakeDriver, 'power_off',
