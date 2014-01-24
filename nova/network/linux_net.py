@@ -1262,6 +1262,15 @@ def _ip_bridge_cmd(action, params, device):
     return cmd
 
 
+def _set_device_mtu(dev):
+    """Set the device MTU."""
+
+    if CONF.network_device_mtu:
+        utils.execute('ip', 'link', 'set', dev, 'mtu',
+                      CONF.network_device_mtu, run_as_root=True,
+                      check_exit_code=[0, 2, 254])
+
+
 def _create_veth_pair(dev1_name, dev2_name):
     """Create a pair of veth devices with the specified names,
     deleting any previous devices with those names.
@@ -1275,10 +1284,7 @@ def _create_veth_pair(dev1_name, dev2_name):
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
         utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
                       run_as_root=True)
-        if CONF.network_device_mtu:
-            utils.execute('ip', 'link', 'set', dev, 'mtu',
-                          CONF.network_device_mtu, run_as_root=True,
-                          check_exit_code=[0, 2, 254])
+        _set_device_mtu(dev)
 
 
 def _ovs_vsctl(args):
@@ -1299,10 +1305,7 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
                 'external-ids:iface-status=active',
                 'external-ids:attached-mac=%s' % mac,
                 'external-ids:vm-uuid=%s' % instance_id])
-    if CONF.network_device_mtu:
-        utils.execute('ip', 'link', 'set', dev, 'mtu',
-                      CONF.network_device_mtu, run_as_root=True,
-                      check_exit_code=[0, 2, 254])
+    _set_device_mtu(dev)
 
 
 def delete_ovs_vif_port(bridge, dev):
@@ -1478,10 +1481,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                          check_exit_code=[0, 2, 254])
             _execute('ip', 'link', 'set', interface, 'up', run_as_root=True,
                      check_exit_code=[0, 2, 254])
-            if CONF.network_device_mtu:
-                _execute('ip', 'link', 'set', interface, 'mtu',
-                         CONF.network_device_mtu, run_as_root=True,
-                         check_exit_code=[0, 2, 254])
+            _set_device_mtu(interface)
         return interface
 
     @staticmethod
@@ -1731,10 +1731,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         'external-ids:attached-mac=%s' % mac_address])
             _execute('ip', 'link', 'set', dev, 'address', mac_address,
                      run_as_root=True)
-            if CONF.network_device_mtu:
-                _execute('ip', 'link', 'set', dev, 'mtu',
-                         CONF.network_device_mtu, run_as_root=True,
-                         check_exit_code=[0, 2, 254])
+            _set_device_mtu(dev)
             _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
