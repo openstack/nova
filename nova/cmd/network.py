@@ -22,19 +22,27 @@ import sys
 
 from oslo.config import cfg
 
+from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
+from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
 from nova import service
 from nova import utils
 
 CONF = cfg.CONF
 CONF.import_opt('network_topic', 'nova.network.rpcapi')
+CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 
 
 def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
+
+    if not CONF.conductor.use_local:
+        objects_base.NovaObject.indirection_api = \
+            conductor_rpcapi.ConductorAPI()
+
     server = service.Service.create(binary='nova-network',
                                     topic=CONF.network_topic)
     service.serve(server)
