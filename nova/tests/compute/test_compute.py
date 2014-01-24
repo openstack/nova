@@ -552,7 +552,6 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_poll_volume_usage_with_data(self):
         ctxt = 'MockContext'
         self.compute.host = 'MockHost'
-        curr_time = time.time()
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
@@ -566,7 +565,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         CONF.volume_usage_poll_interval = 10
         self.compute._last_vol_usage_poll = 0
         self.compute._poll_volume_usage(ctxt)
-        self.assertTrue((curr_time < self.compute._last_vol_usage_poll),
+        self.assertTrue(self.compute._last_vol_usage_poll > 0,
                         "_last_vol_usage_poll was not properly updated <%s>" %
                         self.compute._last_vol_usage_poll)
         self.mox.UnsetStubs()
