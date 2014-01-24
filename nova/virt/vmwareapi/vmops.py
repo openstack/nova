@@ -172,7 +172,7 @@ class VMwareVMOps(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
-              instance_name=None):
+              instance_name=None, power_on=True):
         """
         Creates a VM instance.
 
@@ -607,7 +607,9 @@ class VMwareVMOps(object):
                                "PowerOnVM_Task", vm_ref)
             self._session._wait_for_task(instance['uuid'], power_on_task)
             LOG.debug(_("Powered on the VM instance"), instance=instance)
-        _power_on_vm()
+
+        if power_on:
+            _power_on_vm()
 
     def _create_config_drive(self, instance, injected_files, admin_password,
                              data_store_name, dc_name, upload_folder, cookies):
@@ -1088,7 +1090,8 @@ class VMwareVMOps(object):
         instance_name = r_instance['uuid'] + self._rescue_suffix
         self.spawn(context, r_instance, image_meta,
                    None, None, network_info,
-                   instance_name=instance_name)
+                   instance_name=instance_name,
+                   power_on=False)
 
         # Attach vmdk to the rescue VM
         hardware_devices = self._session._call_method(vim_util,
@@ -1105,6 +1108,7 @@ class VMwareVMOps(object):
                                 adapter_type, disk_type, vmdk_path,
                                 controller_key=controller_key,
                                 unit_number=unit_number)
+        self._power_on(instance, vm_ref=rescue_vm_ref)
 
     def unrescue(self, instance):
         """Unrescue the specified instance."""
@@ -1153,9 +1157,10 @@ class VMwareVMOps(object):
             LOG.debug(_("VM was already in powered off state. So returning "
                         "without doing anything"), instance=instance)
 
-    def _power_on(self, instance):
+    def _power_on(self, instance, vm_ref=None):
         """Power on the specified instance."""
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        if not vm_ref:
+            vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         pwr_state = self._session._call_method(vim_util,
                                      "get_dynamic_property", vm_ref,

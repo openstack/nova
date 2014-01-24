@@ -790,8 +790,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.network_info))
 
     def _rescue(self, config_drive=False):
-        def fake_attach_disk_to_vm(*args, **kwargs):
-            pass
+        def fake_attach_disk_to_vm(vm_ref, instance,
+                                   adapter_type, disk_type, vmdk_path=None,
+                                   disk_size=None, linked_clone=False,
+                                   controller_key=None, unit_number=None,
+                                   device_name=None):
+            info = self.conn.get_info(instance)
+            self._check_vm_info(info, power_state.SHUTDOWN)
 
         if config_drive:
             def fake_create_config_drive(instance, injected_files, password,
