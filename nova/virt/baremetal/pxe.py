@@ -1,4 +1,4 @@
-# Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2012,2014 Hewlett-Packard Development Company, L.P.
 # Copyright (c) 2012 NTT DOCOMO, INC.
 # All Rights Reserved.
 #
@@ -282,7 +282,8 @@ class PXE(base.NodeDriver):
                              target=image_path,
                              image_id=image_meta['id'],
                              user_id=instance['user_id'],
-                             project_id=instance['project_id']
+                             project_id=instance['project_id'],
+                             clean=True,
                         )
 
         return [image_meta['id'], image_path]

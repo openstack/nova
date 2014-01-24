@@ -1,4 +1,5 @@
 # Copyright (c) 2012 NTT DOCOMO, INC.
+# Copyright 2014 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -25,7 +26,9 @@ from nova.virt.libvirt import utils as libvirt_utils
 LOG = logging.getLogger(__name__)
 
 
-def cache_image(context, target, image_id, user_id, project_id):
+def cache_image(context, target, image_id, user_id, project_id, clean=False):
+    if clean and os.path.exists(target):
+        os.unlink(target)
     if not os.path.exists(target):
         libvirt_utils.fetch_image(context, target, image_id,
                                   user_id, project_id)
