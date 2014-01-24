@@ -70,11 +70,14 @@ class EvacuateTest(test.NoDBTestCase):
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
 
-    def test_evacuate_with_valid_instance(self):
+    def _get_admin_context(self, user_id='fake', project_id='fake'):
         ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt.user_id = user_id
+        ctxt.project_id = project_id
+        return ctxt
+
+    def test_evacuate_with_valid_instance(self):
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
@@ -112,10 +115,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
 
     def test_evacuate_with_invalid_instance(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % 'BAD_UUID')
         req.method = 'POST'
@@ -131,10 +131,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_evacuate_with_active_service(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
@@ -156,10 +153,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_no_target(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
@@ -192,10 +186,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_instance_with_bad_target(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
         req.method = 'POST'
@@ -211,10 +202,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 404)
 
     def test_evacuate_instance_with_target(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         uuid1 = self.UUID
         req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
@@ -240,10 +228,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual("MyNewPass", resp_json['adminPass'])
 
     def test_evacuate_shared_and_pass(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         uuid1 = self.UUID
         req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
@@ -267,10 +252,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 400)
 
     def test_evacuate_not_shared_pass_generated(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         uuid1 = self.UUID
         req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
@@ -296,10 +278,7 @@ class EvacuateTest(test.NoDBTestCase):
         self.assertEqual(CONF.password_length, len(resp_json['adminPass']))
 
     def test_evacuate_shared(self):
-        ctxt = context.get_admin_context()
-        ctxt.user_id = 'fake'
-        ctxt.project_id = 'fake'
-        ctxt.is_admin = True
+        ctxt = self._get_admin_context()
         app = fakes.wsgi_app(fake_auth_context=ctxt)
         uuid1 = self.UUID
         req = webob.Request.blank('/v2/fake/servers/%s/action' % uuid1)
