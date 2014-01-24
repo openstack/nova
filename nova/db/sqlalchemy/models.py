@@ -1251,6 +1251,8 @@ class InstanceActionEvent(BASE, NovaBase):
     finish_time = Column(DateTime)
     result = Column(String(255))
     traceback = Column(Text)
+    host = Column(String(255))
+    details = Column(Text)
 
 
 class InstanceIdMapping(BASE, NovaBase):
