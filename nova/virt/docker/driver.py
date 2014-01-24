@@ -34,7 +34,7 @@ from nova.image import glance
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log
-from nova import unit
+from nova.openstack.common import units
 from nova import utils
 import nova.virt.docker.client
 from nova.virt.docker import hostinfo
@@ -152,11 +152,11 @@ class DockerDriver(driver.ComputeDriver):
         stats = {
             'vcpus': 1,
             'vcpus_used': 0,
-            'memory_mb': memory['total'] / unit.Mi,
-            'memory_mb_used': memory['used'] / unit.Mi,
-            'local_gb': disk['total'] / unit.Gi,
-            'local_gb_used': disk['used'] / unit.Gi,
-            'disk_available_least': disk['available'] / unit.Gi,
+            'memory_mb': memory['total'] / units.Mi,
+            'memory_mb_used': memory['used'] / units.Mi,
+            'local_gb': disk['total'] / units.Gi,
+            'local_gb_used': disk['used'] / units.Gi,
+            'disk_available_least': disk['available'] / units.Gi,
             'hypervisor_type': 'docker',
             'hypervisor_version': utils.convert_version_to_int('1.0'),
             'hypervisor_hostname': self._nodename,
@@ -252,7 +252,7 @@ class DockerDriver(driver.ComputeDriver):
 
     def _get_memory_limit_bytes(self, instance):
         system_meta = utils.instance_sys_meta(instance)
-        return int(system_meta.get('instance_type_memory_mb', 0)) * unit.Mi
+        return int(system_meta.get('instance_type_memory_mb', 0)) * units.Mi
 
     def _get_image_name(self, context, instance, image):
         fmt = image['container_format']

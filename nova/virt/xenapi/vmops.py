@@ -45,7 +45,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
-from nova import unit
+from nova.openstack.common import units
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
@@ -2055,7 +2055,7 @@ class VMOps(object):
             uuid = _get_uuid(vm_rec)
 
             if _is_active(vm_rec) and uuid is not None:
-                memory_mb = int(vm_rec['memory_static_max']) / unit.Mi
+                memory_mb = int(vm_rec['memory_static_max']) / units.Mi
                 usage[uuid] = {'memory_mb': memory_mb, 'uuid': uuid}
 
         return usage

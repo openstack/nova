@@ -37,6 +37,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
 import nova.tests.image.fake
@@ -44,7 +45,6 @@ from nova.tests import matchers
 from nova.tests import utils
 from nova.tests.virt.vmwareapi import db_fakes
 from nova.tests.virt.vmwareapi import stubs
-from nova import unit
 from nova import utils as nova_utils
 from nova.virt import driver as v_driver
 from nova.virt import fake
@@ -429,7 +429,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_spawn_disk_extend(self):
         self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
-        requested_size = 80 * unit.Mi
+        requested_size = 80 * units.Mi
         self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
                 requested_size, mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
@@ -447,7 +447,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 mox.IgnoreArg(), mox.IgnoreArg(),
                 mox.IgnoreArg()).AndReturn(result)
         self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
-        requested_size = 80 * unit.Mi
+        requested_size = 80 * units.Mi
         self.conn._vmops._extend_virtual_disk(mox.IgnoreArg(),
                 requested_size, mox.IgnoreArg(), mox.IgnoreArg())
         self.mox.ReplayAll()
@@ -492,7 +492,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_spawn_disk_invalid_disk_size(self):
         self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
-        result = [82 * unit.Gi,
+        result = [82 * units.Gi,
                   {"vmware_ostype": "otherGuest",
                    "vmware_adaptertype": "lsiLogic",
                    "vmware_disktype": "sparse"}]

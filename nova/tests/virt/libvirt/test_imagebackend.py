@@ -23,11 +23,11 @@ from oslo.config import cfg
 import inspect
 
 from nova import exception
+from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_processutils
 from nova.tests.virt.libvirt import fake_libvirt_utils
-from nova import unit
 from nova.virt.libvirt import imagebackend
 
 CONF = cfg.CONF
@@ -242,13 +242,13 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
 
 
 class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
-    SIZE = unit.Gi
+    SIZE = units.Gi
 
     def setUp(self):
         self.image_class = imagebackend.Qcow2
         super(Qcow2TestCase, self).setUp()
         self.QCOW2_BASE = (self.TEMPLATE_PATH +
-                           '_%d' % (self.SIZE / unit.Gi))
+                           '_%d' % (self.SIZE / units.Gi))
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()

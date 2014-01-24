@@ -23,11 +23,11 @@ import mock
 from nova import context
 from nova import exception
 from nova.openstack.common import jsonutils
+from nova.openstack.common import units
 from nova import test
 from nova.tests import utils
 import nova.tests.virt.docker.mock_client
 from nova.tests.virt.test_virt_drivers import _VirtDriverTestCase
-from nova import unit
 from nova.virt.docker import hostinfo
 from nova.virt.docker import network
 
@@ -95,14 +95,14 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
 
     def test_get_available_resource(self):
         memory = {
-            'total': 4 * unit.Mi,
-            'free': 3 * unit.Mi,
-            'used': 1 * unit.Mi
+            'total': 4 * units.Mi,
+            'free': 3 * units.Mi,
+            'used': 1 * units.Mi
         }
         disk = {
-            'total': 50 * unit.Gi,
-            'available': 25 * unit.Gi,
-            'used': 25 * unit.Gi
+            'total': 50 * units.Gi,
+            'available': 25 * units.Gi,
+            'used': 25 * units.Gi
         }
         # create the mocks
         with contextlib.nested(
@@ -202,9 +202,9 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
     def test_get_memory_limit_from_sys_meta_in_object(self):
         instance = utils.get_test_instance(obj=True)
         limit = self.connection._get_memory_limit_bytes(instance)
-        self.assertEqual(2048 * unit.Mi, limit)
+        self.assertEqual(2048 * units.Mi, limit)
 
     def test_get_memory_limit_from_sys_meta_in_db_instance(self):
         instance = utils.get_test_instance(obj=False)
         limit = self.connection._get_memory_limit_bytes(instance)
-        self.assertEqual(2048 * unit.Mi, limit)
+        self.assertEqual(2048 * units.Mi, limit)

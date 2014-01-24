@@ -38,8 +38,8 @@ from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
+from nova.openstack.common import units
 from nova.openstack.common import uuidutils
-from nova import unit
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
@@ -247,7 +247,7 @@ class VMwareVMOps(object):
                 vif_model, image_linked_clone)
 
         root_gb = instance['root_gb']
-        root_gb_in_kb = root_gb * unit.Mi
+        root_gb_in_kb = root_gb * units.Mi
 
         (vmdk_file_size_in_kb, os_type, adapter_type, disk_type, vif_model,
             image_linked_clone) = _get_image_properties(root_gb_in_kb)

@@ -21,7 +21,7 @@ Management class for host-related functions (start, reboot, etc).
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova import unit
+from nova.openstack.common import units
 from nova import utils
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -128,10 +128,10 @@ class HostState(object):
                               "sockets": summary.hardware.numCpuPkgs,
                               "threads": summary.hardware.numCpuThreads}
                 }
-        data["disk_total"] = ds[2] / unit.Gi
-        data["disk_available"] = ds[3] / unit.Gi
+        data["disk_total"] = ds[2] / units.Gi
+        data["disk_available"] = ds[3] / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]
-        data["host_memory_total"] = summary.hardware.memorySize / unit.Mi
+        data["host_memory_total"] = summary.hardware.memorySize / units.Mi
         data["host_memory_free"] = data["host_memory_total"] - \
                                    summary.quickStats.overallMemoryUsage
         data["hypervisor_type"] = summary.config.product.name
@@ -183,8 +183,8 @@ class VCState(object):
                             "model": stats['cpu']['model'],
                             "topology": {"cores": stats['cpu']['cores'],
                                          "threads": stats['cpu']['vcpus']}}
-        data["disk_total"] = ds[2] / unit.Gi
-        data["disk_available"] = ds[3] / unit.Gi
+        data["disk_total"] = ds[2] / units.Gi
+        data["disk_available"] = ds[3] / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]
         data["host_memory_total"] = stats['mem']['total']
         data["host_memory_free"] = stats['mem']['free']
