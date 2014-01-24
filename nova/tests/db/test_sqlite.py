@@ -19,23 +19,15 @@
 
 """Test cases for sqlite-specific logic"""
 
-from nova.openstack.common import processutils
 from nova import test
-from nova import utils
-import os
 from sqlalchemy import create_engine
 from sqlalchemy import Column, BigInteger, String
+import sqlalchemy.engine.reflection
 from sqlalchemy.ext.declarative import declarative_base
 
 
 class TestSqlite(test.NoDBTestCase):
     """Tests for sqlite-specific logic."""
-
-    def setUp(self):
-        super(TestSqlite, self).setUp()
-        self.db_file = "test_bigint.sqlite"
-        if os.path.exists(self.db_file):
-            os.remove(self.db_file)
 
     def test_big_int_mapping(self):
         base_class = declarative_base()
@@ -46,22 +38,17 @@ class TestSqlite(test.NoDBTestCase):
             id = Column(BigInteger, primary_key=True)
             name = Column(String)
 
-        get_schema_cmd = "sqlite3 %s '.schema'" % self.db_file
-        engine = create_engine("sqlite:///%s" % self.db_file)
+        engine = create_engine('sqlite://')
         base_class.metadata.create_all(engine)
-        try:
-            output, _ = utils.execute(get_schema_cmd, shell=True)
-        except processutils.ProcessExecutionError as e:
-            # NOTE(alaski): If this check becomes necessary in other tests it
-            # should be moved into setUp.
-            if 'not found' in str(e):
-                self.skipTest(str(e))
-            else:
-                raise
-        self.assertFalse('BIGINT' in output, msg="column type BIGINT "
-                         "not converted to INTEGER in schema")
 
-    def tearDown(self):
-        if os.path.exists(self.db_file):
-            os.remove(self.db_file)
-        super(TestSqlite, self).tearDown()
+        insp = sqlalchemy.engine.reflection.Inspector.from_engine(engine)
+
+        id_type = None
+        for column in insp.get_columns('users'):
+            if column['name'] == 'id':
+                id_type = column['type'].compile()
+
+        # NOTE(russellb) We have a hook in nova.db.sqlalchemy that makes it so
+        # BigInteger() is compiled to INTEGER for sqlite instead of BIGINT.
+
+        self.assertEqual('INTEGER', id_type)
