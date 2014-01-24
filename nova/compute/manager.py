@@ -4051,6 +4051,7 @@ class ComputeManager(manager.Manager):
             raise exception.NotFound(_("Host %s not found") % host)
 
     @wrap_exception()
+    @wrap_instance_fault
     def check_instance_shared_storage(self, ctxt, instance, data):
         """Check if the instance files are shared
 
@@ -4063,6 +4064,7 @@ class ComputeManager(manager.Manager):
         return self.driver.check_instance_shared_storage_remote(ctxt, data)
 
     @wrap_exception()
+    @wrap_instance_fault
     def check_can_live_migrate_destination(self, ctxt, instance,
                                            block_migration, disk_over_commit):
         """Check if it is possible to execute live migration.
@@ -4094,6 +4096,7 @@ class ComputeManager(manager.Manager):
         return migrate_data
 
     @wrap_exception()
+    @wrap_instance_fault
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         """Check if it is possible to execute live migration.
 
@@ -4118,6 +4121,7 @@ class ComputeManager(manager.Manager):
                                                          dest_check_data)
 
     @wrap_exception()
+    @wrap_instance_fault
     def pre_live_migration(self, context, instance, block_migration, disk,
                            migrate_data):
         """Preparations for live migration at dest host.
@@ -4164,6 +4168,7 @@ class ComputeManager(manager.Manager):
         return pre_live_migration_data
 
     @wrap_exception()
+    @wrap_instance_fault
     def live_migration(self, context, dest, instance, block_migration,
                        migrate_data):
         """Executing live migration.
@@ -4204,6 +4209,7 @@ class ComputeManager(manager.Manager):
                                    block_migration, migrate_data)
 
     @wrap_exception()
+    @wrap_instance_fault
     def _post_live_migration(self, ctxt, instance_ref,
                             dest, block_migration=False, migrate_data=None):
         """Post operations for live migration.
@@ -4303,6 +4309,7 @@ class ComputeManager(manager.Manager):
                         instance_ref['uuid'])
 
     @wrap_exception()
+    @wrap_instance_fault
     def post_live_migration_at_destination(self, context, instance,
                                            block_migration):
         """Post operations for live migration .
@@ -4359,6 +4366,7 @@ class ComputeManager(manager.Manager):
                      network_info=network_info)
 
     @wrap_exception()
+    @wrap_instance_fault
     def _rollback_live_migration(self, context, instance,
                                  dest, block_migration, migrate_data=None):
         """Recovers Instance/volume state from migrating -> running.
@@ -4408,6 +4416,7 @@ class ComputeManager(manager.Manager):
                                           "live_migration._rollback.end")
 
     @wrap_exception()
+    @wrap_instance_fault
     def rollback_live_migration_at_destination(self, context, instance):
         """Cleaning up image directory that is created pre_live_migration.
 
