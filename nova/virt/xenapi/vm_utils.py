@@ -1304,7 +1304,7 @@ def _create_cached_image(context, session, instance, name_label,
             session.call_xenapi('VDI.add_to_other_config',
                                 cache_vdi_ref, 'image-id', str(image_id))
 
-        if CONF.use_cow_images and sr_type == 'ext':
+        if CONF.use_cow_images:
             new_vdi_ref = _clone_vdi(session, cache_vdi_ref)
         elif sr_type == 'ext':
             new_vdi_ref = _safe_copy_vdi(session, sr_ref, instance,
