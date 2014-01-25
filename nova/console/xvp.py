@@ -39,7 +39,7 @@ xvp_opts = [
                help='XVP conf template'),
     cfg.StrOpt('console_xvp_conf',
                default='/etc/xvp.conf',
-               help='generated XVP conf file'),
+               help='Generated XVP conf file'),
     cfg.StrOpt('console_xvp_pid',
                default='/var/run/xvp.pid',
                help='XVP master process pid file'),
@@ -48,7 +48,7 @@ xvp_opts = [
                help='XVP log file'),
     cfg.IntOpt('console_xvp_multiplex_port',
                default=5900,
-               help='port for XVP to multiplex VNC connections on'),
+               help='Port for XVP to multiplex VNC connections on'),
     ]
 
 CONF = cfg.CONF

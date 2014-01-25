@@ -30,10 +30,10 @@ conductor_opts = [
                 help='Perform nova-conductor operations locally'),
     cfg.StrOpt('topic',
                default='conductor',
-               help='the topic conductor nodes listen on'),
+               help='The topic on which conductor nodes listen'),
     cfg.StrOpt('manager',
                default='nova.conductor.manager.ConductorManager',
-               help='full class name for the Manager for conductor'),
+               help='Full class name for the Manager for conductor'),
     cfg.IntOpt('workers',
                help='Number of workers for OpenStack Conductor service')
 ]

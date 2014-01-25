@@ -23,24 +23,24 @@ from oslo.config import cfg
 spice_opts = [
     cfg.StrOpt('html5proxy_base_url',
                default='http://127.0.0.1:6082/spice_auto.html',
-               help='location of spice html5 console proxy, in the form '
+               help='Location of spice HTML5 console proxy, in the form '
                     '"http://127.0.0.1:6082/spice_auto.html"'),
     cfg.StrOpt('server_listen',
                default='127.0.0.1',
                help='IP address on which instance spice server should listen'),
     cfg.StrOpt('server_proxyclient_address',
                default='127.0.0.1',
-               help='the address to which proxy clients '
+               help='The address to which proxy clients '
                     '(like nova-spicehtml5proxy) should connect'),
     cfg.BoolOpt('enabled',
                 default=False,
-                help='enable spice related features'),
+                help='Enable spice related features'),
     cfg.BoolOpt('agent_enabled',
                 default=True,
-                help='enable spice guest agent support'),
+                help='Enable spice guest agent support'),
     cfg.StrOpt('keymap',
                default='en-us',
-               help='keymap for spice'),
+               help='Keymap for spice'),
     ]
 
 CONF = cfg.CONF

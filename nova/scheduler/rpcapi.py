@@ -27,7 +27,7 @@ from nova import rpcclient
 rpcapi_opts = [
     cfg.StrOpt('scheduler_topic',
                default='scheduler',
-               help='the topic scheduler nodes listen on'),
+               help='The topic scheduler nodes listen on'),
 ]
 
 CONF = cfg.CONF

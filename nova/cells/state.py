@@ -36,7 +36,8 @@ from nova import utils
 cell_state_manager_opts = [
         cfg.IntOpt('db_check_interval',
                 default=60,
-                help='Seconds between getting fresh cell info from db.'),
+                help='Interval, in seconds, for getting fresh cell '
+                   'information from the database.'),
         cfg.StrOpt('cells_config',
                    help='Configuration file from which to read cells '
                    'configuration.  If given, overrides reading cells '

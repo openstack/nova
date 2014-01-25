@@ -40,7 +40,7 @@ LOG = logging.getLogger(__name__)
 exc_log_opts = [
     cfg.BoolOpt('fatal_exception_format_errors',
                 default=False,
-                help='make exception message format errors fatal'),
+                help='Make exception message format errors fatal'),
 ]
 
 CONF = cfg.CONF

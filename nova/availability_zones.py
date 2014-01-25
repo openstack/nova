@@ -28,10 +28,10 @@ MC = None
 availability_zone_opts = [
     cfg.StrOpt('internal_service_availability_zone',
                default='internal',
-               help='availability_zone to show internal services under'),
+               help='The availability_zone to show internal services under'),
     cfg.StrOpt('default_availability_zone',
                default='nova',
-               help='default compute node availability_zone'),
+               help='Default compute node availability_zone'),
     ]
 
 CONF = cfg.CONF

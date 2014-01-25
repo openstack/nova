@@ -22,7 +22,7 @@ from nova.scheduler import filters
 LOG = logging.getLogger(__name__)
 
 disk_allocation_ratio_opt = cfg.FloatOpt("disk_allocation_ratio", default=1.0,
-                         help="virtual disk to physical disk allocation ratio")
+                         help="Virtual disk to physical disk allocation ratio")
 
 CONF = cfg.CONF
 CONF.register_opt(disk_allocation_ratio_opt)

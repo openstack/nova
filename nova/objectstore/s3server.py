@@ -54,13 +54,13 @@ from nova import wsgi
 s3_opts = [
     cfg.StrOpt('buckets_path',
                default=paths.state_path_def('buckets'),
-               help='path to s3 buckets'),
+               help='Path to S3 buckets'),
     cfg.StrOpt('s3_listen',
                default="0.0.0.0",
                help='IP address for S3 API to listen'),
     cfg.IntOpt('s3_listen_port',
                default=3333,
-               help='port for s3 api to listen'),
+               help='Port for S3 API to listen'),
 ]
 
 CONF = cfg.CONF

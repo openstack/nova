@@ -43,12 +43,12 @@ cell_scheduler_opts = [
         cfg.ListOpt('scheduler_filter_classes',
                 default=['nova.cells.filters.all_filters'],
                 help='Filter classes the cells scheduler should use.  '
-                        'An entry of "nova.cells.filters.all_filters"'
+                        'An entry of "nova.cells.filters.all_filters" '
                         'maps to all cells filters included with nova.'),
         cfg.ListOpt('scheduler_weight_classes',
                 default=['nova.cells.weights.all_weighers'],
                 help='Weigher classes the cells scheduler should use.  '
-                        'An entry of "nova.cells.weights.all_weighers"'
+                        'An entry of "nova.cells.weights.all_weighers" '
                         'maps to all cell weighers included with nova.'),
         cfg.IntOpt('scheduler_retries',
                 default=10,

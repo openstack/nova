@@ -40,15 +40,15 @@ from nova.virt.baremetal import utils as bm_utils
 opts = [
     cfg.StrOpt('terminal',
                default='shellinaboxd',
-               help='path to baremetal terminal program'),
+               help='Path to baremetal terminal program'),
     cfg.StrOpt('terminal_cert_dir',
-               help='path to baremetal terminal SSL cert(PEM)'),
+               help='Path to baremetal terminal SSL cert(PEM)'),
     cfg.StrOpt('terminal_pid_dir',
                default=paths.state_path_def('baremetal/console'),
-               help='path to directory stores pidfiles of baremetal_terminal'),
+               help='Path to directory stores pidfiles of baremetal_terminal'),
     cfg.IntOpt('ipmi_power_retry',
                default=10,
-               help='maximal number of retries for IPMI operations'),
+               help='Maximal number of retries for IPMI operations'),
     ]
 
 baremetal_group = cfg.OptGroup(name='baremetal',

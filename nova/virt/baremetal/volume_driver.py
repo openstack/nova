@@ -39,7 +39,8 @@ opts = [
                       'volumes are exported with globally opened ACL'),
     cfg.StrOpt('iscsi_iqn_prefix',
                default='iqn.2010-10.org.openstack.baremetal',
-               help='iSCSI IQN prefix used in baremetal volume connections.'),
+               help='The iSCSI IQN prefix used in baremetal volume '
+                    'connections.'),
     ]
 
 baremetal_group = cfg.OptGroup(name='baremetal',

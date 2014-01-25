@@ -64,7 +64,7 @@ disk_opts = [
     #
     cfg.MultiStrOpt('virt_mkfs',
                     default=[],
-                    help='mkfs commands for ephemeral device. '
+                    help='Name of the mkfs commands for ephemeral device. '
                          'The format is <os_type>=<mkfs command>'),
 
     cfg.BoolOpt('resize_fs_using_block_device',

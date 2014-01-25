@@ -32,7 +32,8 @@ LOG = logging.getLogger(__name__)
 nbd_opts = [
     cfg.IntOpt('timeout_nbd',
                default=10,
-               help='time to wait for a NBD device coming up'),
+               help='Amount of time, in seconds, to wait for NBD '
+               'device start up.'),
     ]
 
 CONF = cfg.CONF

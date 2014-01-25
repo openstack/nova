@@ -50,7 +50,7 @@ pxe_opts = [
                help='Template file for injected network config'),
     cfg.StrOpt('pxe_append_params',
                default='nofb nomodeset vga=normal',
-               help='additional append parameters for baremetal PXE boot'),
+               help='Additional append parameters for baremetal PXE boot'),
     cfg.StrOpt('pxe_config_template',
                default='$pybasedir/nova/virt/baremetal/pxe_config.template',
                help='Template file for PXE configuration'),

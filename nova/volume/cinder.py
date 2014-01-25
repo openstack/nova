@@ -37,13 +37,13 @@ cinder_opts = [
     cfg.StrOpt('cinder_catalog_info',
             default='volume:cinder:publicURL',
             help='Info to match when looking for cinder in the service '
-                 'catalog. Format is : separated values of the form: '
+                 'catalog. Format is: separated values of the form: '
                  '<service_type>:<service_name>:<endpoint_type>'),
     cfg.StrOpt('cinder_endpoint_template',
                help='Override service catalog lookup with template for cinder '
                     'endpoint e.g. http://localhost:8776/v1/%(project_id)s'),
     cfg.StrOpt('os_region_name',
-                help='region name of this node'),
+                help='Region name of this node'),
     cfg.StrOpt('cinder_ca_certificates_file',
                 help='Location of ca certificates file to use for cinder '
                      'client requests.'),

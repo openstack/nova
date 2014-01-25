@@ -26,7 +26,7 @@ from nova import rpcclient
 rpcapi_opts = [
     cfg.StrOpt('network_topic',
                default='network',
-               help='the topic network nodes listen on'),
+               help='The topic network nodes listen on'),
     cfg.BoolOpt('multi_host',
                 default=False,
                 help='Default value for multi_host in networks. Also, if set, '

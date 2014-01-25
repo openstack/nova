@@ -25,7 +25,7 @@ from nova import rpcclient
 rpcapi_opts = [
     cfg.StrOpt('cert_topic',
                default='cert',
-               help='the topic cert nodes listen on'),
+               help='The topic cert nodes listen on'),
 ]
 
 CONF = cfg.CONF

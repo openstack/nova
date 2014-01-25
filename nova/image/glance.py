@@ -44,10 +44,10 @@ from nova import utils
 glance_opts = [
     cfg.StrOpt('glance_host',
                default='$my_ip',
-               help='default glance hostname or ip'),
+               help='Default glance hostname or IP address'),
     cfg.IntOpt('glance_port',
                default=9292,
-               help='default glance port'),
+               help='Default glance port'),
     cfg.StrOpt('glance_protocol',
                 default='http',
                 help='Default protocol to use when connecting to glance. '
@@ -63,7 +63,7 @@ glance_opts = [
                      'glance'),
     cfg.IntOpt('glance_num_retries',
                default=0,
-               help='Number retries when downloading an image from glance'),
+               help='Number of retries when downloading an image from glance'),
     cfg.ListOpt('allowed_direct_url_schemes',
                 default=[],
                 help='A list of url scheme that can be downloaded directly '

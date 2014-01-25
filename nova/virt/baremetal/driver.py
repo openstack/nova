@@ -50,7 +50,7 @@ opts = [
                help='Baremetal volume driver.'),
     cfg.ListOpt('flavor_extra_specs',
                default=[],
-               help='a list of additional capabilities corresponding to '
+               help='A list of additional capabilities corresponding to '
                'flavor_extra_specs for this compute '
                'host to advertise. Valid entries are name=value, pairs '
                'For example, "key1:val1, key2:val2"',
