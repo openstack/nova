@@ -16,8 +16,10 @@
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import evacuate
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -38,6 +40,7 @@ class EvacuateController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
+    @validation.schema(evacuate.evacuate)
     def _evacuate(self, req, id, body):
         """
         Permit admins to evacuate a server from a failed host
@@ -46,17 +49,10 @@ class EvacuateController(wsgi.Controller):
         context = req.environ["nova.context"]
         authorize(context)
 
-        if not self.is_valid_body(body, "evacuate"):
-            raise exc.HTTPBadRequest(_("Malformed request body"))
         evacuate_body = body["evacuate"]
-
-        try:
-            host = evacuate_body["host"]
-            on_shared_storage = strutils.bool_from_string(
-                                            evacuate_body["on_shared_storage"])
-        except (TypeError, KeyError):
-            msg = _("host and on_shared_storage must be specified.")
-            raise exc.HTTPBadRequest(explanation=msg)
+        host = evacuate_body["host"]
+        on_shared_storage = strutils.bool_from_string(
+                                        evacuate_body["on_shared_storage"])
 
         password = None
         if 'admin_password' in evacuate_body:
