@@ -280,6 +280,28 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.compute._init_instance('fake-context', instance)
 
+    def test_init_instance_stuck_in_deleting(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'fake-uuid'
+        instance.info_cache = None
+        instance.power_state = power_state.RUNNING
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.DELETING
+
+        self.mox.StubOutWithMock(self.compute, '_get_instance_volume_bdms')
+        self.mox.StubOutWithMock(self.compute, '_delete_instance')
+        self.mox.StubOutWithMock(instance, 'obj_load_attr')
+
+        bdms = []
+        instance.obj_load_attr('metadata')
+        instance.obj_load_attr('system_metadata')
+        self.compute._get_instance_volume_bdms(self.context,
+            instance).AndReturn(bdms)
+        self.compute._delete_instance(self.context, instance, bdms)
+
+        self.mox.ReplayAll()
+        self.compute._init_instance(self.context, instance)
+
     def _test_init_instance_reverts_crashed_migrations(self,
                                                        old_vm_state=None):
         power_on = True if (not old_vm_state or

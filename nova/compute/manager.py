@@ -679,6 +679,23 @@ class ComputeManager(manager.Manager):
             instance = self._instance_update(context, instance.uuid,
                                    task_state=None)
 
+        if instance.task_state == task_states.DELETING:
+            try:
+                LOG.info(_('Service started deleting the instance during '
+                           'the previous run, but did not finish. Restarting '
+                           'the deletion now.'), instance=instance)
+                instance.obj_load_attr('metadata')
+                instance.obj_load_attr('system_metadata')
+                bdms = self._get_instance_volume_bdms(context, instance)
+                self._delete_instance(context, instance, bdms)
+            except Exception:
+                # we don't want that an exception blocks the init_host
+                msg = _('Failed to complete a deletion')
+                LOG.exception(msg, instance=instance)
+                self._set_instance_error_state(context, instance['uuid'])
+            finally:
+                return
+
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
             self.driver.plug_vifs(instance, net_info)
