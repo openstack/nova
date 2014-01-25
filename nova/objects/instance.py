@@ -27,6 +27,7 @@ from nova.objects import pci_device
 from nova.objects import security_group
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova.openstack.common import timeutils
 from nova import utils
 
 from oslo.config import cfg
@@ -572,7 +573,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.2: Instance <= version 1.11
     # Version 1.3: Added use_slave to get_by_filters
     # Version 1.4: Instance <= version 1.12
-    VERSION = '1.4'
+    # Version 1.5: Added method get_active_by_window_joined.
+    VERSION = '1.5'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -582,8 +584,9 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # NOTE(danms): Instance was at 1.9 before we added this
         '1.2': '1.11',
         '1.3': '1.11',
-        '1.4': '1.12'
-        }
+        '1.4': '1.12',
+        '1.5': '1.12',
+    }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
@@ -626,6 +629,45 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                                                              reboot_window)
         return _make_instance_list(context, cls(), db_inst_list,
                                    expected_attrs)
+
+    @base.remotable_classmethod
+    def _get_active_by_window_joined(cls, context, begin, end=None,
+                                    project_id=None, host=None,
+                                    expected_attrs=None):
+        # NOTE(mriedem): We need to convert the begin/end timestamp strings
+        # to timezone-aware datetime objects for the DB API call.
+        begin = timeutils.parse_isotime(begin)
+        end = timeutils.parse_isotime(end) if end else None
+        db_inst_list = db.instance_get_active_by_window_joined(context,
+                                                               begin,
+                                                               end,
+                                                               project_id,
+                                                               host)
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
+
+    @classmethod
+    def get_active_by_window_joined(cls, context, begin, end=None,
+                                    project_id=None, host=None,
+                                    expected_attrs=None):
+        """Get instances and joins active during a certain time window.
+
+        :param context: nova request context
+        :param begin: datetime for the start of the time window
+        :param end: datetime for the end of the time window
+        :param project_id: used to filter instances by project
+        :param host: used to filter instances on a given compute host
+        :param expected_attrs: list of related fields that can be joined
+        in the database layer when querying for instances
+        :returns: InstanceList
+        """
+        # NOTE(mriedem): We have to convert the datetime objects to string
+        # primitives for the remote call.
+        begin = timeutils.isotime(begin)
+        end = timeutils.isotime(end) if end else None
+        return cls._get_active_by_window_joined(context, begin, end,
+                                                project_id, host,
+                                                expected_attrs)
 
     @base.remotable_classmethod
     def get_by_security_group_id(cls, context, security_group_id):
