@@ -53,7 +53,11 @@ class NbdMount(api.Mount):
     def _find_unused(self, devices):
         for device in devices:
             if not os.path.exists(os.path.join('/sys/block/', device, 'pid')):
-                return device
+                if not os.path.exists('/var/lock/qemu-nbd-%s' % device):
+                    return device
+                else:
+                    LOG.error(_('NBD error - previous umount did not cleanup '
+                              '/var/lock/qemu-nbd-%s.'), device)
         LOG.warn(_('No free nbd devices'))
         return None
 
