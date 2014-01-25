@@ -42,6 +42,7 @@ class BareMetalNode(BASE, models.NovaBase):
     cpus = Column(Integer)
     memory_mb = Column(Integer)
     local_gb = Column(Integer)
+    preserve_ephemeral = Column(Boolean)
     pm_address = Column(Text)
     pm_user = Column(Text)
     pm_password = Column(Text)
