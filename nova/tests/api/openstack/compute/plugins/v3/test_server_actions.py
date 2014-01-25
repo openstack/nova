@@ -566,6 +566,43 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(instance_meta['kernel_id'], '1')
         self.assertEqual(instance_meta['ramdisk_id'], '2')
 
+    def _test_rebuild_preserve_ephemeral(self, value=None):
+        return_server = fakes.fake_instance_get(image_ref='2',
+                                                vm_state=vm_states.ACTIVE,
+                                                host='fake_host')
+        self.stubs.Set(db, 'instance_get_by_uuid', return_server)
+
+        body = {
+            "rebuild": {
+                "image_ref": self._image_href,
+            },
+        }
+        if value is not None:
+            body['rebuild']['preserve_ephemeral'] = value
+
+        req = fakes.HTTPRequestV3.blank(self.url)
+        context = req.environ['nova.context']
+
+        self.mox.StubOutWithMock(compute_api.API, 'rebuild')
+        if value is not None:
+            compute_api.API.rebuild(context, mox.IgnoreArg(), self._image_href,
+                                    mox.IgnoreArg(), preserve_ephemeral=value)
+        else:
+            compute_api.API.rebuild(context, mox.IgnoreArg(), self._image_href,
+                                    mox.IgnoreArg())
+        self.mox.ReplayAll()
+
+        self.controller._action_rebuild(req, FAKE_UUID, body)
+
+    def test_rebuild_preserve_ephemeral_true(self):
+        self._test_rebuild_preserve_ephemeral(True)
+
+    def test_rebuild_preserve_ephemeral_false(self):
+        self._test_rebuild_preserve_ephemeral(False)
+
+    def test_rebuild_preserve_ephemeral_default(self):
+        self._test_rebuild_preserve_ephemeral()
+
     def test_resize_server(self):
 
         body = dict(resize=dict(flavor_ref="http://localhost/3"))

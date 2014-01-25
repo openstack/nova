@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import api as compute_api
 from nova.tests.image import fake
 from nova.tests.integrated.v3 import api_sample_base
 
@@ -115,6 +116,35 @@ class ServersActionsJsonTest(ServersSampleBase):
                 }
         self._test_server_action(uuid, 'rebuild', subs,
                                  'server-action-rebuild-resp')
+
+    def _test_server_rebuild_preserve_ephemeral(self, value):
+        uuid = self._post_server()
+        image = fake.get_valid_image_id()
+        subs = {'host': self._get_host(),
+                'uuid': image,
+                'name': 'foobar',
+                'pass': 'seekr3t',
+                'hostid': '[a-f0-9]+',
+                'preserve_ephemeral': str(value).lower(),
+                'action': 'rebuild',
+                'glance_host': self._get_glance_host(),
+                }
+
+        def fake_rebuild(self_, context, instance, image_href, admin_password,
+                         files_to_inject=None, **kwargs):
+            self.assertEqual(kwargs['preserve_ephemeral'], value)
+        self.stubs.Set(compute_api.API, 'rebuild', fake_rebuild)
+
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-action-rebuild-preserve-ephemeral',
+                                 subs)
+        self.assertEqual(response.status, 202)
+
+    def test_server_rebuild_preserve_ephemeral_true(self):
+        self._test_server_rebuild_preserve_ephemeral(True)
+
+    def test_server_rebuild_preserve_ephemeral_false(self):
+        self._test_server_rebuild_preserve_ephemeral(False)
 
     def test_server_resize(self):
         self.flags(allow_resize_to_same_host=True)

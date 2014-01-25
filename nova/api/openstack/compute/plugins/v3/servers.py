@@ -250,6 +250,10 @@ class ActionDeserializer(CommonDeserializer):
         if node.hasAttribute("admin_password"):
             rebuild["admin_password"] = node.getAttribute("admin_password")
 
+        if node.hasAttribute("preserve_ephemeral"):
+            rebuild["preserve_ephemeral"] = strutils.bool_from_string(
+                node.getAttribute("preserve_ephemeral"), strict=True)
+
         if self.controller:
             self.controller.server_rebuild_xml_deserialize(node, rebuild)
         return rebuild
@@ -1111,10 +1115,15 @@ class ServersController(wsgi.Controller):
             'metadata': 'metadata',
         }
 
+        rebuild_kwargs = {}
+
         if 'name' in rebuild_dict:
             self._validate_server_name(rebuild_dict['name'])
 
-        rebuild_kwargs = {}
+        if 'preserve_ephemeral' in rebuild_dict:
+            rebuild_kwargs['preserve_ephemeral'] = strutils.bool_from_string(
+                rebuild_dict['preserve_ephemeral'], strict=True)
+
         if list(self.rebuild_extension_manager):
             self.rebuild_extension_manager.map(self._rebuild_extension_point,
                                                rebuild_dict, rebuild_kwargs)

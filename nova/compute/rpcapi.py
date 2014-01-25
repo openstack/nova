@@ -216,6 +216,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         3.2 - Update get_vnc_console() to take an instance object
         3.3 - Update validate_console_port() to take an instance object
         3.4 - Update rebuild_instance() to take an instance object
+        3.5 - Pass preserve_ephemeral flag to rebuild_instance()
     '''
 
     #
@@ -560,15 +561,20 @@ class ComputeAPI(rpcclient.RpcProxy):
     def rebuild_instance(self, ctxt, instance, new_pass, injected_files,
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate=False, on_shared_storage=False, host=None,
-            kwargs=None):
+            preserve_ephemeral=False, kwargs=None):
         # NOTE(danms): kwargs is only here for cells compatibility, don't
         # actually send it to compute
-        if self.can_send_version('3.4'):
+        extra = {}
+        if self.can_send_version('3.5'):
+            version = '3.5'
+            extra['preserve_ephemeral'] = preserve_ephemeral
+        elif self.can_send_version('3.4'):
             version = '3.4'
         else:
             # NOTE(russellb) Havana compat
             version = self._get_compat_version('3.0', '2.22')
             instance = jsonutils.to_primitive(instance)
+
         bdms_p = jsonutils.to_primitive(bdms)
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
@@ -577,7 +583,8 @@ class ComputeAPI(rpcclient.RpcProxy):
                    injected_files=injected_files, image_ref=image_ref,
                    orig_image_ref=orig_image_ref,
                    orig_sys_metadata=orig_sys_metadata, bdms=bdms_p,
-                   recreate=recreate, on_shared_storage=on_shared_storage)
+                   recreate=recreate, on_shared_storage=on_shared_storage,
+                   **extra)
 
     def refresh_provider_fw_rules(self, ctxt, host):
         # NOTE(russellb) Havana compat

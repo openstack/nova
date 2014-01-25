@@ -416,7 +416,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.4'
+    RPC_API_VERSION = '3.5'
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2132,7 +2132,13 @@ class ComputeManager(manager.Manager):
                               injected_files, admin_password, bdms,
                               detach_block_devices, attach_block_devices,
                               network_info=None,
-                              recreate=False, block_device_info=None):
+                              recreate=False, block_device_info=None,
+                              preserve_ephemeral=False):
+        if preserve_ephemeral:
+            # The default code path does not support preserving ephemeral
+            # partitions.
+            raise exception.PreserveEphemeralNotSupported()
+
         detach_block_devices(context, bdms)
 
         if not recreate:
@@ -2152,6 +2158,7 @@ class ComputeManager(manager.Manager):
                           admin_password, network_info=network_info,
                           block_device_info=new_block_device_info)
 
+    @rpc_common.client_exceptions(exception.PreserveEphemeralNotSupported)
     @object_compat
     @wrap_exception()
     @reverts_task_state
@@ -2159,7 +2166,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
-                         bdms, recreate, on_shared_storage):
+                         bdms, recreate, on_shared_storage,
+                         preserve_ephemeral=False):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -2177,6 +2185,8 @@ class ComputeManager(manager.Manager):
             hypervisor it was on failed) - cleanup of old state will be
             skipped.
         :param on_shared_storage: True if instance files on shared storage
+        :param preserve_ephemeral: True if the default ephemeral storage
+                                   partition must be preserved on rebuild
         """
         context = context.elevated()
 
@@ -2275,7 +2285,8 @@ class ComputeManager(manager.Manager):
                 detach_block_devices=detach_block_devices,
                 attach_block_devices=self._prep_block_device,
                 block_device_info=block_device_info,
-                network_info=network_info)
+                network_info=network_info,
+                preserve_ephemeral=preserve_ephemeral)
             try:
                 self.driver.rebuild(**kwargs)
             except NotImplementedError:

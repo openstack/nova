@@ -413,6 +413,10 @@ class ActionDeserializer(CommonDeserializer):
         if node.hasAttribute("accessIPv6"):
             rebuild["accessIPv6"] = node.getAttribute("accessIPv6")
 
+        if node.hasAttribute("preserve_ephemeral"):
+            rebuild["preserve_ephemeral"] = strutils.bool_from_string(
+                node.getAttribute("preserve_ephemeral"), strict=True)
+
         return rebuild
 
     def _action_resize(self, node):
@@ -1319,6 +1323,15 @@ class Controller(wsgi.Controller):
             'auto_disk_config': 'auto_disk_config',
         }
 
+        kwargs = {}
+
+        # take the preserve_ephemeral value into account only when the
+        # corresponding extension is active
+        if (self.ext_mgr.is_loaded('os-preserve-ephemeral-rebuild')
+                and 'preserve_ephemeral' in body):
+            kwargs['preserve_ephemeral'] = strutils.bool_from_string(
+                body['preserve_ephemeral'], strict=True)
+
         if 'accessIPv4' in body:
             self._validate_access_ipv4(body['accessIPv4'])
 
@@ -1327,8 +1340,6 @@ class Controller(wsgi.Controller):
 
         if 'name' in body:
             self._validate_server_name(body['name'])
-
-        kwargs = {}
 
         for request_attribute, instance_attribute in attr_map.items():
             try:

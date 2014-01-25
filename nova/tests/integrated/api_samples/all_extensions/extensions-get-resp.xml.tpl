@@ -230,4 +230,7 @@
   </extension>
   <extension alias="os-baremetal-ext-status" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/baremetal_ext_status/api/v2" name="BareMetalExtStatus">    <description>%(text)s</description>
   </extension>
+  <extension alias="os-preserve-ephemeral-rebuild" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2" name="PreserveEphemeralOnRebuild">
+    <description>%(text)s</description>
+  </extension>
 </extensions>

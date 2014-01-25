@@ -465,6 +465,14 @@
             "updated": "2012-11-19T00:00:00+00:00"
         },
         {
+            "alias": "os-preserve-ephemeral-rebuild",
+            "description": "Allow preservation of the ephemeral partition on rebuild.",
+            "links": [],
+            "name": "PreserveEphemeralOnRebuild",
+            "namespace": "http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2",
+            "updated": "2013-12-17T00:00:00+00:00"
+        },
+        {
             "alias": "os-quota-class-sets",
             "description": "Quota classes management support.",
             "links": [],
