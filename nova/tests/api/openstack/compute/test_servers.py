@@ -48,6 +48,7 @@ from nova.image import glance
 from nova.network import manager
 from nova.network.neutronv2 import api as neutron_api
 from nova.objects import instance as instance_obj
+from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import policy as common_policy
@@ -1411,6 +1412,47 @@ class ServersControllerDeleteTest(ControllerTest):
         request = self._create_delete_request(FAKE_UUID)
         self.controller.delete(request, FAKE_UUID)
 
+        self.assertTrue(self.server_delete_called)
+
+    def test_delete_server_instance_while_deleting_host_up(self):
+        req = self._create_delete_request(FAKE_UUID)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+            fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                    task_state=task_states.DELETING,
+                                    host='fake_host'))
+        self.stubs.Set(instance_obj.Instance, 'save',
+                       lambda *args, **kwargs: None)
+
+        @classmethod
+        def fake_get_by_compute_host(cls, context, host):
+            return {'updated_at': timeutils.utcnow()}
+        self.stubs.Set(service_obj.Service, 'get_by_compute_host',
+                       fake_get_by_compute_host)
+
+        self.controller.delete(req, FAKE_UUID)
+        # Delete request can be ignored, because it's been accepted and
+        # forwarded to the compute service already.
+        self.assertFalse(self.server_delete_called)
+
+    def test_delete_server_instance_while_deleting_host_down(self):
+        fake_network.stub_out_network_cleanup(self.stubs)
+        req = self._create_delete_request(FAKE_UUID)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+            fakes.fake_instance_get(vm_state=vm_states.ACTIVE,
+                                    task_state=task_states.DELETING,
+                                    host='fake_host'))
+        self.stubs.Set(instance_obj.Instance, 'save',
+                       lambda *args, **kwargs: None)
+
+        @classmethod
+        def fake_get_by_compute_host(cls, context, host):
+            return {'updated_at': datetime.datetime.min}
+        self.stubs.Set(service_obj.Service, 'get_by_compute_host',
+                       fake_get_by_compute_host)
+
+        self.controller.delete(req, FAKE_UUID)
+        # Delete request would be ignored, because it's been accepted before
+        # but since the host is down, api should remove the instance anyway.
         self.assertTrue(self.server_delete_called)
 
     def test_delete_server_instance_while_resize(self):

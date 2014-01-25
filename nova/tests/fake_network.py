@@ -392,6 +392,11 @@ def stub_out_nw_api_get_instance_nw_info(stubs, func=None,
     stubs.Set(network_api.API, 'get_instance_nw_info', func)
 
 
+def stub_out_network_cleanup(stubs):
+    stubs.Set(network_api.API, 'deallocate_for_instance',
+              lambda *args, **kwargs: None)
+
+
 _real_functions = {}
 
 
