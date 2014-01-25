@@ -29,7 +29,7 @@ CONF = cfg.CONF
 CONF.import_opt('use_ipv6', 'nova.netconf')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('scheduler_driver', 'nova.scheduler.manager')
-CONF.import_opt('fake_network', 'nova.network.manager')
+CONF.import_opt('fake_network', 'nova.network.linux_net')
 CONF.import_opt('network_size', 'nova.network.manager')
 CONF.import_opt('num_networks', 'nova.network.manager')
 CONF.import_opt('floating_ip_dns_manager', 'nova.network.floating_ips')
