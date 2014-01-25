@@ -193,7 +193,8 @@ class Server(object):
             'protocol': self._protocol,
             'custom_pool': self._pool,
             'log': self._wsgi_logger,
-            'log_format': CONF.wsgi_log_format
+            'log_format': CONF.wsgi_log_format,
+            'debug': False
             }
 
         if self._max_url_len:
