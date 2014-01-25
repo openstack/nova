@@ -628,9 +628,15 @@ class ComputeManager(manager.Manager):
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
 
-        # instance was supposed to shut down - don't attempt
-        # recovery in any case
-        if instance.vm_state == vm_states.SOFT_DELETED:
+        # Instances that are shut down, or in an error state can not be
+        # initialized and are not attempted to be recovered. The exception
+        # to this are instances that are in RESIZE_MIGRATING, which are
+        # attempted recovery further down.
+        if (instance.vm_state == vm_states.SOFT_DELETED or
+            (instance.vm_state == vm_states.ERROR and
+            instance.task_state != task_states.RESIZE_MIGRATING)):
+            LOG.debug(_("Instance is in %s state."),
+                      instance.vm_state, instance=instance)
             return
 
         if instance.vm_state == vm_states.DELETED:
