@@ -154,10 +154,6 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self._test_network_api('get_instance_id_by_floating_address',
                 rpc_method='call', address='w.x.y.z')
 
-    def test_get_vif_by_mac_address(self):
-        self._test_network_api('get_vif_by_mac_address',
-                rpc_method='call', mac_address='fake_mac_addr')
-
     def test_allocate_floating_ip(self):
         self._test_network_api('allocate_floating_ip', rpc_method='call',
                 project_id='fake_id', pool='fake_pool', auto_assigned=False)
