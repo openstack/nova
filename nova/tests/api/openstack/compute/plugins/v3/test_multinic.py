@@ -68,6 +68,24 @@ class FixedIpTest(test.NoDBTestCase):
         self.assertEqual(resp.status_int, 202)
         self.assertEqual(last_add_fixed_ip, (UUID, 'test_net'))
 
+    def test_add_fixed_ip_empty_network_id(self):
+        body = {'add_fixed_ip': {'network_id': ''}}
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
+
+    def test_add_fixed_ip_network_id_bigger_than_36(self):
+        body = {'add_fixed_ip': {'network_id': 'a' * 37}}
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
+
     def test_add_fixed_ip_no_network(self):
         global last_add_fixed_ip
         last_add_fixed_ip = (None, None)
@@ -95,6 +113,15 @@ class FixedIpTest(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 202)
         self.assertEqual(last_remove_fixed_ip, (UUID, '10.10.10.1'))
+
+    def test_remove_fixed_ip_invalid_address(self):
+        body = {'remove_fixed_ip': {'address': ''}}
+        req = webob.Request.blank('/v3/servers/%s/action' % UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps(body)
+        req.headers['content-type'] = 'application/json'
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
 
     def test_remove_fixed_ip_no_address(self):
         global last_remove_fixed_ip
