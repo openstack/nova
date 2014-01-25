@@ -30,6 +30,7 @@ from nova.network import rpcapi as network_rpcapi
 from nova.objects import base as obj_base
 from nova.objects import instance_info_cache
 from nova.objects import pci_device
+from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import jsonutils
 from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_pci_device
@@ -92,16 +93,31 @@ class FakeNetworkManager(network_manager.NetworkManager):
 
     class FakeDB:
         vifs = [{'id': 0,
+                 'created_at': None,
+                 'updated_at': None,
+                 'deleted_at': None,
+                 'deleted': 0,
                  'instance_uuid': '00000000-0000-0000-0000-000000000010',
                  'network_id': 1,
+                 'uuid': 'fake-uuid',
                  'address': 'DC:AD:BE:FF:EF:01'},
                 {'id': 1,
+                 'created_at': None,
+                 'updated_at': None,
+                 'deleted_at': None,
+                 'deleted': 0,
                  'instance_uuid': '00000000-0000-0000-0000-000000000020',
                  'network_id': 21,
+                 'uuid': 'fake-uuid2',
                  'address': 'DC:AD:BE:FF:EF:02'},
                 {'id': 2,
+                 'created_at': None,
+                 'updated_at': None,
+                 'deleted_at': None,
+                 'deleted': 0,
                  'instance_uuid': '00000000-0000-0000-0000-000000000030',
                  'network_id': 31,
+                 'uuid': 'fake-uuid3',
                  'address': 'DC:AD:BE:FF:EF:03'}]
 
         floating_ips = [dict(address='172.16.1.1',
@@ -158,8 +174,10 @@ class FakeNetworkManager(network_manager.NetworkManager):
         def fixed_ip_disassociate(self, context, address):
             return True
 
-    def __init__(self):
+    def __init__(self, stubs=None):
         self.db = self.FakeDB()
+        if stubs:
+            stubs.Set(vif_obj, 'db', self.db)
         self.deallocate_called = None
         self.deallocate_fixed_ip_calls = []
         self.network_rpcapi = network_rpcapi.NetworkAPI()
@@ -216,10 +234,14 @@ def fake_network(network_id, ipv6=None):
 def vifs(n):
     for x in xrange(1, n + 1):
         yield {'id': x,
+               'created_at': None,
+               'updated_at': None,
+               'deleted_at': None,
+               'deleted': 0,
                'address': 'DE:AD:BE:EF:00:%02x' % x,
                'uuid': '00000000-0000-0000-0000-00000000000000%02d' % x,
                'network_id': x,
-               'instance_id': 0}
+               'instance_uuid': 'fake-uuid'}
 
 
 def floating_ip_ids():
@@ -314,7 +336,7 @@ def fake_get_instance_nw_info(stubs, num_networks=1, ips_per_vif=2,
                'uuid': uuid,
                'network_id': 1,
                'network': None,
-               'instance_uuid': 0}
+               'instance_uuid': 'fake-uuid'}
 
     def network_get_fake(context, network_id, project_only='allow_none'):
         nets = [n for n in networks if n['id'] == network_id]

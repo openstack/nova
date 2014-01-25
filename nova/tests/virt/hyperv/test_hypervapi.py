@@ -470,8 +470,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
             else:
                 vswitch_conn_data = fake_vswitch_path
 
-            vmutils.VMUtils.set_nic_connection(mox.IsA(str), mox.IsA(str),
-                                               vswitch_conn_data)
+            vmutils.VMUtils.set_nic_connection(mox.IsA(str),
+                    mox.IsA(str), vswitch_conn_data)
 
         self._test_spawn_instance(setup_vif_mocks_func=setup_vif_mocks)
 
@@ -927,8 +927,8 @@ class HyperVAPITestCase(test.NoDBTestCase):
             self._mock_attach_volume(mox.Func(self._check_vm_name), target_iqn,
                                      target_lun, target_portal, True)
 
-        vmutils.VMUtils.create_nic(mox.Func(self._check_vm_name), mox.IsA(str),
-                                   mox.IsA(str)).InAnyOrder()
+        vmutils.VMUtils.create_nic(mox.Func(self._check_vm_name),
+                mox.IsA(str), mox.IsA(unicode)).InAnyOrder()
 
         if setup_vif_mocks_func:
             setup_vif_mocks_func()

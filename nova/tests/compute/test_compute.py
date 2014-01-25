@@ -6999,7 +6999,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_get_all_by_multiple_options_at_once(self):
         # Test searching by multiple options at once.
         c = context.get_admin_context()
-        network_manager = fake_network.FakeNetworkManager()
+        network_manager = fake_network.FakeNetworkManager(self.stubs)
         self.stubs.Set(self.compute_api.network_api,
                        'get_instance_uuids_by_ip_filter',
                        network_manager.get_instance_uuids_by_ip_filter)

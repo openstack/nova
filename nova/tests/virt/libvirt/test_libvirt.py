@@ -6661,7 +6661,7 @@ class NWFilterTestCase(test.TestCase):
 
         def _ensure_all_called(mac, allow_dhcp):
             instance_filter = 'nova-instance-%s-%s' % (instance_ref['name'],
-                                                   mac.translate(None, ':'))
+                    mac.translate({ord(':'): None}))
             requiredlist = ['no-arp-spoofing', 'no-ip-spoofing',
                              'no-mac-spoofing']
             required_not_list = []
