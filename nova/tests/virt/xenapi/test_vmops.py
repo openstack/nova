@@ -523,12 +523,13 @@ class SpawnTestCase(VMOpsTestBase):
         instance = {"uuid": "uuid"}
         vm_ref = "vm_ref"
 
-        self.mox.StubOutWithMock(self.vmops, 'get_info')
+        self.mox.StubOutWithMock(vm_utils, 'get_power_state')
         self.mox.StubOutWithMock(greenthread, 'sleep')
-        self.vmops.get_info(instance, vm_ref).AndReturn({"state": "asdf"})
+        vm_utils.get_power_state(self._session, vm_ref).AndReturn(
+                                             power_state.SHUTDOWN)
         greenthread.sleep(0.5)
-        self.vmops.get_info(instance, vm_ref).AndReturn({
-                                            "state": power_state.RUNNING})
+        vm_utils.get_power_state(self._session, vm_ref).AndReturn(
+                                            power_state.RUNNING)
 
         self.mox.ReplayAll()
         self.vmops._wait_for_instance_to_start(instance, vm_ref)
