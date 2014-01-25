@@ -246,7 +246,10 @@ class CacheConcurrencyTestCase(test.TestCase):
         sig2.wait()
 
         wait2.send()
-        eventlet.sleep(0)
+        tries = 0
+        while not done2.ready() and tries < 10:
+            eventlet.sleep(0)
+            tries += 1
         try:
             self.assertTrue(done2.ready())
         finally:
