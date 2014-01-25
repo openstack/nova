@@ -9272,6 +9272,38 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
                     self.compute._reschedule_or_error, self.context,
                     self.instance, exc_info, None, None, None, False, None, {})
 
+    def test_shutdown_instance_fail_instance_info_cache_not_found(self):
+        # Covers the case that _shutdown_instance fails with an
+        # InstanceInfoCacheNotFound exception when getting instance network
+        # information prior to calling driver.destroy.
+        elevated_context = self.context.elevated()
+        error = exception.InstanceInfoCacheNotFound(
+                                        instance_uuid=self.instance['uuid'])
+        with contextlib.nested(
+            mock.patch.object(self.context, 'elevated',
+                              return_value=elevated_context),
+            mock.patch.object(self.compute, '_get_instance_nw_info',
+                              side_effect=error),
+            mock.patch.object(self.compute,
+                              '_get_instance_volume_block_device_info'),
+            mock.patch.object(self.compute.driver, 'destroy'),
+            mock.patch.object(self.compute, '_try_deallocate_network')
+        ) as (
+            elevated_mock,
+            _get_instance_nw_info_mock,
+            _get_instance_volume_block_device_info_mock,
+            destroy_mock,
+            _try_deallocate_network_mock
+        ):
+            self.compute._shutdown_instance(self.context, self.instance,
+                                            bdms=[], notify=False)
+            # By asserting that _try_deallocate_network_mock was called
+            # exactly once, we know that _get_instance_nw_info raising
+            # InstanceInfoCacheNotFound did not make _shutdown_instance error
+            # out and driver.destroy was still called.
+            _try_deallocate_network_mock.assert_called_once_with(
+                elevated_context, self.instance, None)
+
     def test_reschedule_fail(self):
         # Test handling of exception from _reschedule.
         try:
