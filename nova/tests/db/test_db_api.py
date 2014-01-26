@@ -6074,6 +6074,14 @@ class DnsdomainTestCase(test.TestCase):
         domain = db.dnsdomain_get(self.ctxt, self.domain)
         self.assertIsNone(domain)
 
+    def test_dnsdomain_get_all(self):
+        d_list = ['test.domain.one', 'test.domain.two']
+        db.dnsdomain_register_for_zone(self.ctxt, d_list[0], 'zone')
+        db.dnsdomain_register_for_zone(self.ctxt, d_list[1], 'zone')
+        db_list = db.dnsdomain_get_all(self.ctxt)
+        db_domain_list = [d.domain for d in db_list]
+        self.assertEqual(sorted(d_list), sorted(db_domain_list))
+
 
 class BwUsageTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
