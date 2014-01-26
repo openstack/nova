@@ -17,6 +17,7 @@
 
 from nova import db
 from nova import ipv6
+from nova.objects import virtual_interface as vif_obj
 
 
 def get_ipam_lib(net_man):
@@ -73,11 +74,11 @@ class NeutronNovaIPAMLib(object):
            the specified virtual interface, based on the fixed_ips table.
         """
         # TODO(tr3buchet): link fixed_ips to vif by uuid so only 1 db call
-        vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
-        if not vif_rec or not vif_rec['id']:
+        vif_rec = vif_obj.VirtualInterface.get_by_uuid(context, vif_id)
+        if not vif_rec:
             return []
         fixed_ips = db.fixed_ips_by_virtual_interface(context,
-                                                      vif_rec['id'])
+                                                      vif_rec.id)
         return [fixed_ip['address'] for fixed_ip in fixed_ips]
 
     def get_v6_ips_by_interface(self, context, net_id, vif_id, project_id):
@@ -86,10 +87,10 @@ class NeutronNovaIPAMLib(object):
         """
         admin_context = context.elevated()
         network = db.network_get_by_uuid(admin_context, net_id)
-        vif_rec = db.virtual_interface_get_by_uuid(context, vif_id)
-        if network['cidr_v6'] and vif_rec and vif_rec['address']:
+        vif_rec = vif_obj.VirtualInterface.get_by_uuid(context, vif_id)
+        if network['cidr_v6'] and vif_rec and vif_rec.address:
             ip = ipv6.to_global(network['cidr_v6'],
-                                vif_rec['address'],
+                                vif_rec.address,
                                 project_id)
             return [ip]
         return []
