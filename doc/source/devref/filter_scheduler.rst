@@ -89,6 +89,23 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   fall back to the global default ``ram_allocation_ratio``. If more than one value
   is found for a host (meaning the host is in two differenet aggregate with
   different ratio settings), the minimum value will be used.
+* |DiskFilter| - filters hosts by their disk allocation. Only hosts with sufficient
+  disk space to host the instance are passed.
+  ``disk_allocation_ration`` setting. It's virtual disk to physical disk
+  allocation ratio and it's 1.0 by default. The total allow allocated disk size will
+  be physical disk multiplied this ratio.
+* |NumInstancesFilter| - filters hosts by number of running instances on it.
+  hosts with too many instances will be filtered.
+  ``max_instances_per_host`` setting. Maximum number of instances allowed to run on
+  this host, the host will be ignored by scheduler if more than ``max_instances_per_host``
+  are already existing on the host.
+* |IoOpsFilter| - filters hosts by concurrent I/O operations on it.
+  hosts with too many concurrent I/O operations will be filtered.
+  ``max_io_ops_per_host`` setting. Maximum number of I/O intensive instances allowed to
+  run on this host, the host will be ignored by scheduler if more than ``max_io_ops_per_host``
+  instances such as build/resize/snapshot etc are running on it.
+* |PciPassthroughFilter| - Filter that schedules instances on a host if the host
+  has devices to meet the device requests in the 'extra_specs' for the flavor.
 * |SimpleCIDRAffinityFilter| - allows to put a new instance on a host within
   the same IP block.
 * |DifferentHostFilter| - allows to put the instance on a different host from a
@@ -323,6 +340,10 @@ in :mod:``nova.tests.scheduler``.
 .. |JsonFilter| replace:: :class:`JsonFilter <nova.scheduler.filters.json_filter.JsonFilter>`
 .. |RamFilter| replace:: :class:`RamFilter <nova.scheduler.filters.ram_filter.RamFilter>`
 .. |AggregateRamFilter| replace:: :class:`AggregateRamFilter <nova.scheduler.filters.ram_filter.AggregateRamFilter>`
+.. |DiskFilter| replace:: :class:`DiskFilter <nova.scheduler.filters.disk_filter.DiskFilter>`
+.. |NumInstancesFilter| replace:: :class:`NumInstancesFilter <nova.scheduler.filters.num_instances_filter.NumInstancesFilter>`
+.. |IoOpsFilter| replace:: :class:`IoOpsFilter <nova.scheduler.filters.io_ops_filter.IoOpsFilter>`
+.. |PciPassthroughFilter| replace:: :class:`PciPassthroughFilter <nova.scheduler.filters.pci_passthrough_filter.PciPassthroughFilter>`
 .. |SimpleCIDRAffinityFilter| replace:: :class:`SimpleCIDRAffinityFilter <nova.scheduler.filters.affinity_filter.SimpleCIDRAffinityFilter>`
 .. |GroupAntiAffinityFilter| replace:: :class:`GroupAntiAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAntiAffinityFilter>`
 .. |GroupAffinityFilter| replace:: :class:`GroupAffinityFilter <nova.scheduler.filters.affinity_filter.GroupAffinityFilter>`
