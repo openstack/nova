@@ -134,3 +134,36 @@ def _add_retry_host(filter_properties, host, node):
         return
     hosts = retry['hosts']
     hosts.append([host, node])
+
+
+def parse_options(opts, sep='=', converter=str, name=""):
+    """Parse a list of options, each in the format of <key><sep><value>. Also
+    use the converter to convert the value into desired type.
+
+    :params opts: list of options, e.g. from oslo.config.cfg.ListOpt
+    :params sep: the separator
+    :params converter: callable object to convert the value, should raise
+                       ValueError for conversion failure
+    :params name: name of the option
+
+    :returns: a lists of tuple of values (key, converted_value)
+    """
+    good = []
+    bad = []
+    for opt in opts:
+        try:
+            key, seen_sep, value = opt.partition(sep)
+            value = converter(value)
+        except ValueError:
+            key = None
+            value = None
+        if key and seen_sep and value is not None:
+            good.append((key, value))
+        else:
+            bad.append(opt)
+    if bad:
+        LOG.warn(_("Ignoring the invalid elements of the option "
+                   "%(name)s: %(options)s"),
+                {'name': name,
+                 'options': ", ".join(bad)})
+    return good

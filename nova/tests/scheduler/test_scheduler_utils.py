@@ -189,3 +189,32 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
     def test_populate_filter_props_force_nodes_no_retry(self):
         self._test_populate_filter_props(force_nodes=['force-node'])
+
+    def _check_parse_options(self, opts, sep, converter, expected):
+        good = scheduler_utils.parse_options(opts,
+                                             sep=sep,
+                                             converter=converter)
+        for item in expected:
+            self.assertIn(item, good)
+
+    def test_parse_options(self):
+        # check normal
+        self._check_parse_options(['foo=1', 'bar=-2.1'],
+                                  '=',
+                                  float,
+                                  [('foo', 1.0), ('bar', -2.1)])
+        # check convert error
+        self._check_parse_options(['foo=a1', 'bar=-2.1'],
+                                  '=',
+                                  float,
+                                  [('bar', -2.1)])
+        # check seperator missing
+        self._check_parse_options(['foo', 'bar=-2.1'],
+                                  '=',
+                                  float,
+                                  [('bar', -2.1)])
+        # check key missing
+        self._check_parse_options(['=5', 'bar=-2.1'],
+                                  '=',
+                                  float,
+                                  [('bar', -2.1)])
