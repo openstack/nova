@@ -387,7 +387,8 @@ class API(base.Base):
         LOG.debug(_('deallocate_for_instance() for %s'),
                   instance['display_name'])
         search_opts = {'device_id': instance['uuid']}
-        data = neutronv2.get_client(context).list_ports(**search_opts)
+        neutron = neutronv2.get_client(context)
+        data = neutron.list_ports(**search_opts)
         ports = [port['id'] for port in data.get('ports', [])]
 
         requested_networks = kwargs.get('requested_networks') or {}
@@ -396,10 +397,14 @@ class API(base.Base):
 
         for port in ports:
             try:
-                neutronv2.get_client(context).delete_port(port)
-            except Exception:
-                LOG.exception(_("Failed to delete neutron port %(portid)s")
-                              % {'portid': port})
+                neutron.delete_port(port)
+            except neutronv2.exceptions.NeutronClientException as e:
+                if e.status_code == 404:
+                    LOG.warning(_("Port %s does not exist"), port)
+                else:
+                    with excutils.save_and_reraise_exception():
+                        LOG.exception(_("Failed to delete neutron port %s"),
+                                      port)
 
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None):
@@ -947,12 +952,18 @@ class API(base.Base):
         return subnets
 
     def _nw_info_build_network(self, port, networks, subnets):
-        # NOTE(danms): This loop can't fail to find a network since we
-        # filtered ports to only the ones matching networks in our parent
+        network_name = None
         for net in networks:
             if port['network_id'] == net['id']:
                 network_name = net['name']
+                tenant_id = net['tenant_id']
                 break
+        else:
+            tenant_id = port['tenant_id']
+            LOG.warning(_("Network %(id)s not matched with the tenants "
+                          "network! The ports tenant %(tenant_id)s will be "
+                          "used."),
+                        {'id': port['network_id'], 'tenant_id': tenant_id})
 
         bridge = None
         ovs_interfaceid = None
@@ -976,7 +987,7 @@ class API(base.Base):
             bridge=bridge,
             injected=CONF.flat_injected,
             label=network_name,
-            tenant_id=net['tenant_id']
+            tenant_id=tenant_id
             )
         network['subnets'] = subnets
         port_profile = port.get('binding:profile')
@@ -1009,7 +1020,8 @@ class API(base.Base):
         if networks is None:
             net_ids = [iface['network']['id'] for iface in ifaces]
             networks = self._get_available_networks(context,
-                                                    instance['project_id'])
+                                                    instance['project_id'],
+                                                    net_ids)
 
         # ensure ports are in preferred network order, and filter out
         # those not attached to one of the provided list of networks
