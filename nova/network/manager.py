@@ -63,6 +63,7 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.network.security_group import openstack_driver
+from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.objects import service as service_obj
@@ -797,7 +798,8 @@ class NetworkManager(manager.Manager):
             return True
         instance_domain = self.instance_dns_domain
 
-        domainref = self.db.dnsdomain_get(context, instance_domain)
+        domainref = dns_domain_obj.DNSDomain.get_by_domain(context,
+                instance_domain)
         if domainref is None:
             LOG.warn(_('instance-dns-zone not found |%s|.'),
                      instance_domain, instance=instance)

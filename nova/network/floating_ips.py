@@ -24,6 +24,7 @@ from nova.db import base
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
 from nova import notifier
+from nova.objects import dns_domain as dns_domain_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -602,40 +603,37 @@ class FloatingIP(object):
                                           interface,
                                           fixed_ip['network'])
 
-    def _prepare_domain_entry(self, context, domain):
-        domainref = self.db.dnsdomain_get(context, domain)
-        scope = domainref['scope']
+    def _prepare_domain_entry(self, context, domainref):
+        scope = domainref.scope
         if scope == 'private':
-            av_zone = domainref['availability_zone']
-            this_domain = {'domain': domain,
+            this_domain = {'domain': domainref.domain,
                          'scope': scope,
-                         'availability_zone': av_zone}
+                         'availability_zone': domainref.availability_zone}
         else:
-            project = domainref['project_id']
-            this_domain = {'domain': domain,
+            this_domain = {'domain': domainref.domain,
                          'scope': scope,
-                         'project': project}
+                         'project': domainref.project_id}
         return this_domain
 
     def get_dns_domains(self, context):
         domains = []
 
-        db_domain_list = self.db.dnsdomain_list(context)
+        domain_list = dns_domain_obj.DNSDomainList.get_all(context)
         floating_driver_domain_list = self.floating_dns_manager.get_domains()
         instance_driver_domain_list = self.instance_dns_manager.get_domains()
 
-        for db_domain in db_domain_list:
-            if (db_domain in floating_driver_domain_list or
-                    db_domain in instance_driver_domain_list):
+        for dns_domain in domain_list:
+            if (dns_domain.domain in floating_driver_domain_list or
+                    dns_domain.domain in instance_driver_domain_list):
                     domain_entry = self._prepare_domain_entry(context,
-                                                              db_domain)
+                                                              dns_domain)
                     if domain_entry:
                         domains.append(domain_entry)
             else:
                 LOG.warn(_('Database inconsistency: DNS domain |%s| is '
                          'registered in the Nova db but not visible to '
                          'either the floating or instance DNS driver. It '
-                         'will be ignored.'), db_domain)
+                         'will be ignored.'), dns_domain.domain)
 
         return domains
 
@@ -668,7 +666,7 @@ class FloatingIP(object):
                                                              domain)
 
     def create_private_dns_domain(self, context, domain, av_zone):
-        self.db.dnsdomain_register_for_zone(context, domain, av_zone)
+        dns_domain_obj.DNSDomain.register_for_zone(context, domain, av_zone)
         try:
             self.instance_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
@@ -677,7 +675,7 @@ class FloatingIP(object):
                      {'domain': domain, 'av_zone': av_zone})
 
     def create_public_dns_domain(self, context, domain, project):
-        self.db.dnsdomain_register_for_project(context, domain, project)
+        dns_domain_obj.DNSDomain.register_for_project(context, domain, project)
         try:
             self.floating_dns_manager.create_domain(domain)
         except exception.FloatingIpDNSExists:
@@ -686,7 +684,7 @@ class FloatingIP(object):
                      {'domain': domain, 'project': project})
 
     def delete_dns_domain(self, context, domain):
-        self.db.dnsdomain_unregister(context, domain)
+        dns_domain_obj.DNSDomain.delete_by_domain(context, domain)
         self.floating_dns_manager.delete_domain(domain)
 
 
