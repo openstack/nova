@@ -17,6 +17,7 @@ def register_all():
     # NOTE(danms): You must make sure your object gets imported in this
     # function in order for it to be registered by services that may
     # need to receive it via RPC.
+    __import__('nova.objects.dns_domain')
     __import__('nova.objects.instance')
     __import__('nova.objects.instance_info_cache')
     __import__('nova.objects.security_group')
