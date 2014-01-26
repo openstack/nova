@@ -480,6 +480,9 @@ class ObjectListBase(object):
         """List index of value."""
         return self.objects.index(value)
 
+    def sort(self, cmp=None, key=None, reverse=False):
+        self.objects.sort(cmp=cmp, key=key, reverse=reverse)
+
     def _attr_objects_to_primitive(self):
         """Serialization of object list."""
         return [x.obj_to_primitive() for x in self.objects]
