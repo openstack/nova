@@ -63,5 +63,5 @@ SEE ALSO
 BUGS
 ====
 
-* Nova is maintained in Launchpad so you can view current bugs at `OpenStack Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
 
