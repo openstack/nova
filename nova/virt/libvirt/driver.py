@@ -323,7 +323,6 @@ MIN_LIBVIRT_VERSION = (0, 9, 6)
 # When the above version matches/exceeds this version
 # delete it & corresponding code using it
 MIN_LIBVIRT_HOST_CPU_VERSION = (0, 9, 10)
-MIN_LIBVIRT_CLOSE_CALLBACK_VERSION = (1, 0, 1)
 MIN_LIBVIRT_DEVICE_CALLBACK_VERSION = (1, 1, 1)
 # Live snapshot requirements
 REQ_HYPERVISOR_LIVESNAPSHOT = "QEMU"
@@ -634,7 +633,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._wrapped_conn = wrapped_conn
 
         try:
-            LOG.debug(_("Registering for lifecycle events %s") % str(self))
+            LOG.debug(_("Registering for lifecycle events %s"), self)
             wrapped_conn.domainEventRegisterAny(
                 None,
                 libvirt.VIR_DOMAIN_EVENT_ID_LIFECYCLE,
@@ -644,17 +643,23 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warn(_("URI %(uri)s does not support events: %(error)s"),
                      {'uri': self.uri(), 'error': e})
 
-        if self._has_min_version(wrapped_conn,
-                                 MIN_LIBVIRT_CLOSE_CALLBACK_VERSION):
-            try:
-                LOG.debug(_("Registering for connection events: %s") %
-                          str(self))
-                wrapped_conn.registerCloseCallback(
-                        self._close_callback, None)
-            except libvirt.libvirtError as e:
-                LOG.warn(_("URI %(uri)s does not support connection"
-                         " events: %(error)s"),
-                         {'uri': self.uri(), 'error': e})
+        try:
+            LOG.debug(_("Registering for connection events: %s") %
+                      str(self))
+            wrapped_conn.registerCloseCallback(self._close_callback, None)
+        except (TypeError, AttributeError) as e:
+            # NOTE: The registerCloseCallback of python-libvirt 1.0.1+
+            # is defined with 3 arguments, and the above registerClose-
+            # Callback succeeds. However, the one of python-libvirt 1.0.0
+            # is defined with 4 arguments and TypeError happens here.
+            # Then python-libvirt 0.9 does not define a method register-
+            # CloseCallback.
+            LOG.debug(_("The version of python-libvirt does not support "
+                        "registerCloseCallback or is too old: %s"), e)
+        except libvirt.libvirtError as e:
+            LOG.warn(_("URI %(uri)s does not support connection"
+                       " events: %(error)s"),
+                     {'uri': self.uri(), 'error': e})
 
         return wrapped_conn
 

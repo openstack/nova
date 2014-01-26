@@ -642,6 +642,9 @@ class Connection(object):
     def domainEventRegisterAny(self, dom, eventid, callback, opaque):
         self._event_callbacks[eventid] = [callback, opaque]
 
+    def registerCloseCallback(self, cb, opaque):
+        pass
+
     def getCapabilities(self):
         """Return spoofed capabilities."""
         return '''<capabilities>
