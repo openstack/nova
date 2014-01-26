@@ -70,6 +70,7 @@ class NetworkAPI(rpcclient.RpcProxy):
 
         NOTE: remove unused method get_vifs_by_instance()
         NOTE: remove unused method get_vif_by_mac_address()
+        NOTE: remove unused method get_network()
     '''
 
     #
@@ -99,10 +100,6 @@ class NetworkAPI(rpcclient.RpcProxy):
 
     def get_all_networks(self, ctxt):
         return self.client.call(ctxt, 'get_all_networks')
-
-    def get_network(self, ctxt, network_uuid):
-        return self.client.call(ctxt, 'get_network',
-                                network_uuid=network_uuid)
 
     # TODO(russellb): Convert this to named arguments.  It's a pretty large
     # list, so unwinding it all is probably best done in its own patch so it's
