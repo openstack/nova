@@ -2805,6 +2805,7 @@ class API(base.Base):
                 self.volume_api.unreserve_volume(context, new_volume['id'])
 
     @wrap_check_policy
+    @check_instance_lock
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip):
         """Use hotplug to add an network adapter to an instance."""
@@ -2813,6 +2814,7 @@ class API(base.Base):
             requested_ip=requested_ip)
 
     @wrap_check_policy
+    @check_instance_lock
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
         self.compute_rpcapi.detach_interface(context, instance=instance,
