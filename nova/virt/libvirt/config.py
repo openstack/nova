@@ -951,6 +951,29 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestController,
+              self).__init__(root_name="controller", **kwargs)
+
+        self.type = None
+        self.index = None
+        self.model = None
+
+    def format_dom(self):
+        controller = super(LibvirtConfigGuestController, self).format_dom()
+        controller.set("type", self.type)
+
+        if self.index is not None:
+            controller.set("index", str(self.index))
+
+        if self.model:
+            controller.set("model", str(self.model))
+
+        return controller
+
+
 class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestHostdev, self).\
