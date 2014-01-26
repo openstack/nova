@@ -456,6 +456,13 @@ def inject_data_into_fs(fs, key, net, metadata, admin_password, files,
 
 def _inject_files_into_fs(files, fs):
     for (path, contents) in files:
+        # NOTE(wangpan): Ensure the parent dir of injecting file exists
+        parent_dir = os.path.dirname(path)
+        if (len(parent_dir) > 0 and parent_dir != "/"
+                and not fs.has_file(parent_dir)):
+            fs.make_path(parent_dir)
+            fs.set_ownership(parent_dir, "root", "root")
+            fs.set_permissions(parent_dir, 0o744)
         _inject_file_into_fs(fs, path, contents)
 
 

@@ -233,3 +233,70 @@ class VirtDiskTest(test.NoDBTestCase):
                               'mode': 0o700,
                               'uid': 100})
         vfs.teardown()
+
+    def test_inject_files_into_fs(self):
+        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs.setup()
+
+        diskapi._inject_files_into_fs([("/path/to/not/exists/file",
+                                        "inject-file-contents")],
+                                      vfs)
+
+        self.assertIn("/path/to/not/exists", vfs.handle.files)
+        shadow_dir = vfs.handle.files["/path/to/not/exists"]
+        self.assertEqual(shadow_dir,
+                         {"isdir": True,
+                          "gid": 0,
+                          "uid": 0,
+                          "mode": 0o744})
+
+        shadow_file = vfs.handle.files["/path/to/not/exists/file"]
+        self.assertEqual(shadow_file,
+                         {"isdir": False,
+                          "content": "inject-file-contents",
+                          "gid": 100,
+                          "uid": 100,
+                          "mode": 0o700})
+        vfs.teardown()
+
+    def test_inject_files_into_fs_dir_exists(self):
+        vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
+        vfs.setup()
+
+        called = {'make_path': False}
+
+        def fake_has_file(*args, **kwargs):
+            return True
+
+        def fake_make_path(*args, **kwargs):
+            called['make_path'] = True
+
+        self.stubs.Set(vfs, 'has_file', fake_has_file)
+        self.stubs.Set(vfs, 'make_path', fake_make_path)
+
+        # test for already exists dir
+        diskapi._inject_files_into_fs([("/path/to/exists/file",
+                                        "inject-file-contents")],
+                                      vfs)
+
+        self.assertIn("/path/to/exists/file", vfs.handle.files)
+        self.assertFalse(called['make_path'])
+
+        # test for root dir
+        diskapi._inject_files_into_fs([("/inject-file",
+                                        "inject-file-contents")],
+                                      vfs)
+
+        self.assertIn("/inject-file", vfs.handle.files)
+        self.assertFalse(called['make_path'])
+
+        # test for null dir
+        vfs.handle.files.pop("/inject-file")
+        diskapi._inject_files_into_fs([("inject-file",
+                                        "inject-file-contents")],
+                                      vfs)
+
+        self.assertIn("/inject-file", vfs.handle.files)
+        self.assertFalse(called['make_path'])
+
+        vfs.teardown()
