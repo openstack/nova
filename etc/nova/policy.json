@@ -121,8 +121,6 @@
     "compute_extension:v3:flavor-access:remove_tenant_access": "rule:admin_api",
     "compute_extension:v3:flavor-access:add_tenant_access": "rule:admin_api",
     "compute_extension:flavor_disabled": "",
-    "compute_extension:v3:os-flavor-disabled": "",
-    "compute_extension:v3:os-flavor-disabled:discoverable": "",
     "compute_extension:flavor_rxtx": "",
     "compute_extension:v3:os-flavor-rxtx": "",
     "compute_extension:v3:os-flavor-rxtx:discoverable": "",
