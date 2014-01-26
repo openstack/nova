@@ -1635,16 +1635,6 @@ class VMwareVMOps(object):
         client_factory = self._session._get_vim().client.factory
         self._set_machine_id(client_factory, instance, network_info)
 
-    def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks."""
-        msg = _("VIF plugging is not supported by the VMware driver.")
-        raise NotImplementedError(msg)
-
-    def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks."""
-        msg = _("VIF unplugging is not supported by the VMware driver.")
-        raise NotImplementedError(msg)
-
 
 class VMwareVCVMOps(VMwareVMOps):
     """Management class for VM-related tasks.
