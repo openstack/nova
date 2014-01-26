@@ -689,9 +689,6 @@ class FloatingIP(object):
         self.db.dnsdomain_unregister(context, domain)
         self.floating_dns_manager.delete_domain(domain)
 
-    def _get_project_for_domain(self, context, domain):
-        return self.db.dnsdomain_project(context, domain)
-
 
 class LocalManager(base.Base, FloatingIP):
     def __init__(self):
