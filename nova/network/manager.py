@@ -1896,7 +1896,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 network['multi_host'] and vpn_address != CONF.vpn_ip and
                 not self.db.network_in_use_on_host(context, network['id'],
                                                    self.host)):
-                LOG.debug("Remove unused gateway %s", network['bridge'])
+                LOG.debug(_("Remove unused gateway %s"), network['bridge'])
                 self.driver.kill_dhcp(dev)
                 self.l3driver.remove_gateway(network)
                 if not CONF.share_dhcp_address:
