@@ -15,6 +15,7 @@
 
 import uuid
 
+import mock
 from oslo.config import cfg
 import six
 import webob
@@ -575,3 +576,18 @@ class BadStateServerMetaDataTest(BaseTest):
                'name': 'fake',
                'locked': False,
                'vm_state': vm_states.BUILDING})
+
+    @mock.patch.object(nova.compute.api.API, 'update_instance_metadata',
+                       side_effect=exception.InstanceIsLocked(instance_uuid=0))
+    def test_instance_lock_update_metadata(self, mock_update):
+        req = fakes.HTTPRequest.blank(self.url)
+        req.method = 'POST'
+        req.content_type = 'application/json'
+        expected = {
+            'metadata': {
+                'keydummy': 'newkey',
+            }
+        }
+        req.body = jsonutils.dumps(expected)
+        self.assertRaises(webob.exc.HTTPConflict, self.controller.update_all,
+                req, self.uuid, expected)

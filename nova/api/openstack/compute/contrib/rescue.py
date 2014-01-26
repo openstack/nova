@@ -59,6 +59,8 @@ class RescueController(wsgi.Controller):
         try:
             self.compute_api.rescue(context, instance,
                                     rescue_password=password)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'rescue')
@@ -78,6 +80,8 @@ class RescueController(wsgi.Controller):
         instance = self._get_instance(context, id, want_objects=True)
         try:
             self.compute_api.unrescue(context, instance)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                                                                   'unrescue')
