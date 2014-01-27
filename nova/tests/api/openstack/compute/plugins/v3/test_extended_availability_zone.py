@@ -73,12 +73,12 @@ def fake_get_no_host_availability_zone(context, host):
     return None
 
 
-class ExtendedServerAttributesTest(test.TestCase):
+class ExtendedAvailabilityZoneTest(test.TestCase):
     content_type = 'application/json'
     prefix = '%s:' % extended_availability_zone.ExtendedAvailabilityZone.alias
 
     def setUp(self):
-        super(ExtendedServerAttributesTest, self).setUp()
+        super(ExtendedAvailabilityZoneTest, self).setUp()
         availability_zones.reset_cache()
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
@@ -102,7 +102,7 @@ class ExtendedServerAttributesTest(test.TestCase):
     def _get_servers(self, body):
         return jsonutils.loads(body).get('servers')
 
-    def assertServerAttributes(self, server, az):
+    def assertAvailabilityZone(self, server, az):
         self.assertEqual(server.get('%savailability_zone' % self.prefix),
                          az)
 
@@ -115,7 +115,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        self.assertServerAttributes(self._get_server(res.body), 'fakeaz')
+        self.assertAvailabilityZone(self._get_server(res.body), 'fakeaz')
 
     def test_show_empty_host_az(self):
         self.stubs.Set(compute.api.API, 'get', fake_compute_get_empty)
@@ -126,14 +126,14 @@ class ExtendedServerAttributesTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        self.assertServerAttributes(self._get_server(res.body), 'fakeaz')
+        self.assertAvailabilityZone(self._get_server(res.body), 'fakeaz')
 
     def test_show(self):
         url = '/v3/servers/%s' % UUID3
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 200)
-        self.assertServerAttributes(self._get_server(res.body), 'get-host')
+        self.assertAvailabilityZone(self._get_server(res.body), 'get-host')
 
     def test_detail(self):
         url = '/v3/servers/detail'
@@ -141,7 +141,7 @@ class ExtendedServerAttributesTest(test.TestCase):
 
         self.assertEqual(res.status_int, 200)
         for i, server in enumerate(self._get_servers(res.body)):
-            self.assertServerAttributes(server, 'all-host')
+            self.assertAvailabilityZone(server, 'all-host')
 
     def test_no_instance_passthrough_404(self):
 
@@ -155,7 +155,7 @@ class ExtendedServerAttributesTest(test.TestCase):
         self.assertEqual(res.status_int, 404)
 
 
-class ExtendedServerAttributesXmlTest(ExtendedServerAttributesTest):
+class ExtendedAvailabilityZoneXmlTest(ExtendedAvailabilityZoneTest):
     content_type = 'application/xml'
     prefix = ('{%s}' %
               extended_availability_zone.ExtendedAvailabilityZone.namespace)
