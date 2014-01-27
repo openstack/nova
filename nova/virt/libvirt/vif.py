@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (C) 2011 Midokura KK
 # Copyright (C) 2011 Nicira, Inc
 # Copyright 2011 OpenStack Foundation

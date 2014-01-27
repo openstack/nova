@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2011-2013 University of Southern California / ISI
 # All Rights Reserved.
 #

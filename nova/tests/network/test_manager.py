@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 Rackspace
 # Copyright (c) 2011 X.commerce, a business unit of eBay Inc.
 # Copyright 2013 IBM Corp.

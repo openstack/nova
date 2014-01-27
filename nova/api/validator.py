@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2011 Cloudscaling, Inc.
 # Author: Matthew Hooker <matt@cloudscaling.com>
 # All Rights Reserved.

@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # encoding=UTF8
 
 # Copyright 2010 United States Government as represented by the

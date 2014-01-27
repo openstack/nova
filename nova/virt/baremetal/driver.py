@@ -1,4 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
 # coding=utf-8
 #
 # Copyright (c) 2012 NTT DOCOMO, INC
