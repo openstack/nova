@@ -53,7 +53,7 @@ class MockEntryPoint(object):
 
 class HookTestCase(test.TestCase):
 
-    def _mock_load_plugins(self, iload, iargs, ikwargs):
+    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
         return [
             stevedore.extension.Extension('test_hook',
                 MockEntryPoint(SampleHookA), SampleHookA, SampleHookA()),
