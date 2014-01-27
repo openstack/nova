@@ -175,6 +175,40 @@ class ServiceTestCase(test.TestCase):
                                'nova.tests.test_service.FakeManager')
         serv.start()
 
+    def test_service_check_create_race(self):
+        self.manager_mock = self.mox.CreateMock(FakeManager)
+        self.mox.StubOutWithMock(sys.modules[__name__], 'FakeManager',
+                                 use_mock_anything=True)
+        self.mox.StubOutWithMock(self.manager_mock, 'init_host')
+        self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
+        self.mox.StubOutWithMock(self.manager_mock, 'create_rpc_dispatcher')
+        self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
+
+        FakeManager(host=self.host).AndReturn(self.manager_mock)
+
+        # init_host is called before any service record is created
+        self.manager_mock.init_host()
+
+        db.service_get_by_args(mox.IgnoreArg(), self.host, self.binary
+                               ).AndRaise(exception.NotFound)
+        ex = exception.ServiceTopicExists(host='foo', topic='bar')
+        db.service_create(mox.IgnoreArg(), mox.IgnoreArg()
+                          ).AndRaise(ex)
+
+        class TestException(Exception):
+            pass
+
+        db.service_get_by_args(mox.IgnoreArg(), self.host, self.binary
+                               ).AndRaise(TestException)
+
+        self.mox.ReplayAll()
+
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.test_service.FakeManager')
+        self.assertRaises(TestException, serv.start)
+
     def test_parent_graceful_shutdown(self):
         self.manager_mock = self.mox.CreateMock(FakeManager)
         self.mox.StubOutWithMock(sys.modules[__name__],
