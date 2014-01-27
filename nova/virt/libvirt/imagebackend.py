@@ -64,11 +64,6 @@ __imagebackend_opts = [
                      ' if this flag is set to True.',
                 deprecated_group='DEFAULT',
                 deprecated_name='libvirt_sparse_logical_volumes'),
-    cfg.IntOpt('lvm_snapshot_size',
-               default=1000,
-               help='The amount of storage (in megabytes) to allocate for LVM'
-                    ' snapshot copy-on-write blocks.',
-               deprecated_group='DEFAULT'),
     cfg.StrOpt('images_rbd_pool',
                default='rbd',
                help='The RADOS pool in which rbd volumes are stored',

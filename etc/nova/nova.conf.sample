@@ -701,10 +701,6 @@
 # updates (integer value)
 #heal_instance_info_cache_interval=60
 
-# Interval in seconds for querying the host status (integer
-# value)
-#host_state_interval=120
-
 # Interval in seconds for reclaiming deleted instances
 # (integer value)
 #reclaim_instance_interval=0
@@ -2875,10 +2871,6 @@
 # flag is set to True. (boolean value)
 # Deprecated group/name - [DEFAULT]/libvirt_sparse_logical_volumes
 #sparse_logical_volumes=false
-
-# The amount of storage (in megabytes) to allocate for LVM
-# snapshot copy-on-write blocks. (integer value)
-#lvm_snapshot_size=1000
 
 # The RADOS pool in which rbd volumes are stored (string
 # value)
