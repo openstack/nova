@@ -3303,19 +3303,32 @@ class LibvirtDriver(driver.ComputeDriver):
             elif info['backing_file']:
                 # Creating backing file follows same way as spawning instances.
                 cache_name = os.path.basename(info['backing_file'])
-                # Remove any size tags which the cache manages
-                cache_name = cache_name.split('_')[0]
 
                 image = self.image_backend.image(instance,
                                                  instance_disk,
                                                  CONF.libvirt_images_type)
-                image.cache(fetch_func=libvirt_utils.fetch_image,
-                            context=ctxt,
-                            filename=cache_name,
-                            image_id=instance['image_ref'],
-                            user_id=instance['user_id'],
-                            project_id=instance['project_id'],
-                            size=info['virt_disk_size'])
+                if cache_name.startswith('ephemeral'):
+                    image.cache(fetch_func=self._create_ephemeral,
+                                fs_label=cache_name,
+                                os_type=instance["os_type"],
+                                filename=cache_name,
+                                size=info['virt_disk_size'],
+                                ephemeral_size=instance['ephemeral_gb'])
+                elif cache_name.startswith('swap'):
+                    inst_type = instance_types.extract_instance_type(instance)
+                    swap_mb = inst_type['swap']
+                    image.cache(fetch_func=self._create_swap,
+                                filename="swap_%s" % swap_mb,
+                                size=swap_mb * (1024 ** 2),
+                                swap_mb=swap_mb)
+                else:
+                    image.cache(fetch_func=libvirt_utils.fetch_image,
+                                context=ctxt,
+                                filename=cache_name,
+                                image_id=instance['image_ref'],
+                                user_id=instance['user_id'],
+                                project_id=instance['project_id'],
+                                size=info['virt_disk_size'])
 
         # if image has kernel and ramdisk, just download
         # following normal way.

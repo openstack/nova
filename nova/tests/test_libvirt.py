@@ -2349,6 +2349,69 @@ class LibvirtConnTestCase(test.TestCase):
 
         db.instance_destroy(self.context, instance_ref['uuid'])
 
+    def test_create_images_and_backing(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
+        self.mox.StubOutWithMock(libvirt_driver.libvirt_utils, 'create_image')
+
+        libvirt_driver.libvirt_utils.create_image(mox.IgnoreArg(),
+                                                  mox.IgnoreArg(),
+                                                  mox.IgnoreArg())
+        conn._fetch_instance_kernel_ramdisk(self.context, self.test_instance)
+        self.mox.ReplayAll()
+
+        self.stubs.Set(os.path, 'exists', lambda *args: False)
+        disk_info_json = jsonutils.dumps([{'path': 'foo', 'type': None,
+                                           'disk_size': 0,
+                                           'backing_file': None}])
+        conn._create_images_and_backing(self.context, self.test_instance,
+                                        "/fake/instance/dir", disk_info_json)
+
+    def test_create_images_and_backing_ephemeral_gets_created(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info_json = jsonutils.dumps(
+            [{u'backing_file': u'fake_image_backing_file',
+              u'disk_size': 10747904,
+              u'path': u'disk_path',
+              u'type': u'qcow2',
+              u'virt_disk_size': 25165824},
+             {u'backing_file': u'ephemeral_1_default',
+              u'disk_size': 393216,
+              u'over_committed_disk_size': 1073348608,
+              u'path': u'disk_eph_path',
+              u'type': u'qcow2',
+              u'virt_disk_size': 1073741824}])
+
+        base_dir = os.path.join(CONF.instances_path, '_base')
+        ephemeral_target = os.path.join(base_dir, 'ephemeral_1_default')
+        image_target = os.path.join(base_dir, 'fake_image_backing_file')
+        self.test_instance.update({'name': 'fake_instance',
+                                   'user_id': 'fake-user',
+                                   'os_type': None,
+                                   'project_id': 'fake-project'})
+
+        self.mox.StubOutWithMock(libvirt_driver.libvirt_utils, 'fetch_image')
+        self.mox.StubOutWithMock(conn, '_create_ephemeral')
+        self.mox.StubOutWithMock(conn, '_fetch_instance_kernel_ramdisk')
+
+        conn._create_ephemeral(
+                target=ephemeral_target,
+                ephemeral_size=self.test_instance['ephemeral_gb'],
+                max_size=mox.IgnoreArg(), os_type=mox.IgnoreArg(),
+                fs_label=mox.IgnoreArg())
+        libvirt_driver.libvirt_utils.fetch_image(context=self.context,
+                image_id=mox.IgnoreArg(),
+                user_id=mox.IgnoreArg(), project_id=mox.IgnoreArg(),
+                max_size=mox.IgnoreArg(), target=image_target)
+        conn._fetch_instance_kernel_ramdisk(
+                self.context, self.test_instance).AndReturn(None)
+
+        self.mox.ReplayAll()
+
+        conn._create_images_and_backing(self.context, self.test_instance,
+                                        "/fake/instance/dir",
+                                        disk_info_json)
+
     def test_pre_live_migration_works_correctly_mocked(self):
         # Creating testdata
         vol = {'block_device_mapping': [
