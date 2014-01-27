@@ -431,24 +431,6 @@ class HostManager(object):
         return self.weight_handler.get_weighed_objects(self.weight_classes,
                 hosts, weight_properties)
 
-    def update_service_capabilities(self, service_name, host, capabilities):
-        """Update the per-service capabilities based on this notification."""
-
-        if service_name != 'compute':
-            LOG.debug(_('Ignoring %(service_name)s service update '
-                        'from %(host)s'), {'service_name': service_name,
-                                           'host': host})
-            return
-
-        state_key = (host, capabilities.get('hypervisor_hostname'))
-        LOG.debug(_("Received %(service_name)s service update from "
-                    "%(state_key)s."), {'service_name': service_name,
-                                        'state_key': state_key})
-        # Copy the capabilities, so we don't modify the original dict
-        capab_copy = dict(capabilities)
-        capab_copy["timestamp"] = timeutils.utcnow()  # Reported time
-        self.service_states[state_key] = capab_copy
-
     def get_all_host_states(self, context):
         """Returns a list of HostStates that represents all the hosts
         the HostManager knows about. Also, each of the consumable resources

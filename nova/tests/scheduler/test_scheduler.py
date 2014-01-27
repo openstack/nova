@@ -72,53 +72,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         manager = self.manager
         self.assertIsInstance(manager.driver, self.driver_cls)
 
-    def test_update_service_capabilities(self):
-        service_name = 'fake_service'
-        host = 'fake_host'
-
-        self.mox.StubOutWithMock(self.manager.driver,
-                'update_service_capabilities')
-
-        # Test no capabilities passes empty dictionary
-        self.manager.driver.update_service_capabilities(service_name,
-                host, {})
-        self.mox.ReplayAll()
-        self.manager.update_service_capabilities(self.context,
-                service_name=service_name, host=host, capabilities={})
-        self.mox.VerifyAll()
-
-        self.mox.ResetAll()
-        # Test capabilities passes correctly
-        capabilities = {'fake_capability': 'fake_value'}
-        self.manager.driver.update_service_capabilities(
-                service_name, host, capabilities)
-        self.mox.ReplayAll()
-        self.manager.update_service_capabilities(self.context,
-                service_name=service_name, host=host,
-                capabilities=capabilities)
-
-    def test_update_service_multiple_capabilities(self):
-        service_name = 'fake_service'
-        host = 'fake_host'
-
-        self.mox.StubOutWithMock(self.manager.driver,
-                                 'update_service_capabilities')
-
-        capab1 = {'fake_capability': 'fake_value1'},
-        capab2 = {'fake_capability': 'fake_value2'},
-        capab3 = None
-        self.manager.driver.update_service_capabilities(
-                service_name, host, capab1)
-        self.manager.driver.update_service_capabilities(
-                service_name, host, capab2)
-        # None is converted to {}
-        self.manager.driver.update_service_capabilities(
-                service_name, host, {})
-        self.mox.ReplayAll()
-        self.manager.update_service_capabilities(self.context,
-                service_name=service_name, host=host,
-                capabilities=[capab1, capab2, capab3])
-
     def test_show_host_resources(self):
         host = 'fake_host'
 
@@ -526,20 +479,6 @@ class SchedulerTestCase(test.NoDBTestCase):
         self.context = context.RequestContext('fake_user', 'fake_project')
         self.topic = 'fake_topic'
         self.servicegroup_api = servicegroup.API()
-
-    def test_update_service_capabilities(self):
-        service_name = 'fake_service'
-        host = 'fake_host'
-
-        self.mox.StubOutWithMock(self.driver.host_manager,
-                'update_service_capabilities')
-
-        capabilities = {'fake_capability': 'fake_value'}
-        self.driver.host_manager.update_service_capabilities(
-                service_name, host, capabilities)
-        self.mox.ReplayAll()
-        self.driver.update_service_capabilities(service_name,
-                host, capabilities)
 
     def test_hosts_up(self):
         service1 = {'host': 'host1'}

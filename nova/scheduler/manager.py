@@ -67,20 +67,6 @@ class SchedulerManager(manager.Manager):
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
 
-    def update_service_capabilities(self, context, service_name,
-                                    host, capabilities):
-        """Process a capability update from a service node."""
-        #NOTE(jogo) This is deprecated, but is used by the deprecated
-        # publish_service_capabilities call. So this can begin its removal
-        # process once publish_service_capabilities is removed.
-        if not isinstance(capabilities, list):
-            capabilities = [capabilities]
-        for capability in capabilities:
-            if capability is None:
-                capability = {}
-            self.driver.update_service_capabilities(service_name, host,
-                                                    capability)
-
     def create_volume(self, context, volume_id, snapshot_id,
                       reservations=None, image_id=None):
         #function removed in RPC API 2.3
