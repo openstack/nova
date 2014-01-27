@@ -63,7 +63,7 @@ class MockEntryPoint(object):
 
 class HookTestCase(test.NoDBTestCase):
 
-    def _mock_load_plugins(self, iload, iargs, ikwargs):
+    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
         return [
             stevedore.extension.Extension('test_hook',
                 MockEntryPoint(SampleHookA), SampleHookA, SampleHookA()),
@@ -98,7 +98,7 @@ class HookTestCase(test.NoDBTestCase):
 
 
 class HookTestCaseWithFunction(HookTestCase):
-    def _mock_load_plugins(self, iload, iargs, ikwargs):
+    def _mock_load_plugins(self, iload, *iargs, **ikwargs):
         return [
             stevedore.extension.Extension('function_hook',
                 MockEntryPoint(SampleHookC), SampleHookC, SampleHookC()),
