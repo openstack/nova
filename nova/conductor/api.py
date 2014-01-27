@@ -35,7 +35,8 @@ conductor_opts = [
                default='nova.conductor.manager.ConductorManager',
                help='Full class name for the Manager for conductor'),
     cfg.IntOpt('workers',
-               help='Number of workers for OpenStack Conductor service')
+               help='Number of workers for OpenStack Conductor service. '
+                    'The default will be the number of CPUs available.')
 ]
 conductor_group = cfg.OptGroup(name='conductor',
                                title='Conductor Options')

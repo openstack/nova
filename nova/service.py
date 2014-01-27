@@ -65,7 +65,8 @@ service_opts = [
                default=8773,
                help='The port on which the EC2 API will listen.'),
     cfg.IntOpt('ec2_workers',
-               help='Number of workers for EC2 API service'),
+               help='Number of workers for EC2 API service. The default will '
+                    'be equal to the number of CPUs available.'),
     cfg.StrOpt('osapi_compute_listen',
                default="0.0.0.0",
                help='The IP address on which the OpenStack API will listen.'),
@@ -73,7 +74,8 @@ service_opts = [
                default=8774,
                help='The port on which the OpenStack API will listen.'),
     cfg.IntOpt('osapi_compute_workers',
-               help='Number of workers for OpenStack API service'),
+               help='Number of workers for OpenStack API service. The default '
+                    'will be the number of CPUs available.'),
     cfg.StrOpt('metadata_manager',
                default='nova.api.manager.MetadataManager',
                help='OpenStack metadata service manager'),
@@ -84,7 +86,8 @@ service_opts = [
                default=8775,
                help='The port on which the metadata API will listen.'),
     cfg.IntOpt('metadata_workers',
-               help='Number of workers for metadata service'),
+               help='Number of workers for metadata service. The default will '
+                    'be the number of CPUs available.'),
     cfg.StrOpt('compute_manager',
                default='nova.compute.manager.ComputeManager',
                help='Full class name for the Manager for compute'),
@@ -341,7 +344,8 @@ class WSGIService(object):
         self.app = self.loader.load_app(name)
         self.host = getattr(CONF, '%s_listen' % name, "0.0.0.0")
         self.port = getattr(CONF, '%s_listen_port' % name, 0)
-        self.workers = getattr(CONF, '%s_workers' % name, None)
+        self.workers = (getattr(CONF, '%s_workers' % name, None) or
+                        utils.cpu_count())
         self.use_ssl = use_ssl
         self.server = wsgi.Server(name,
                                   self.app,
