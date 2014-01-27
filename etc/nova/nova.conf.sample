@@ -2933,11 +2933,11 @@
 
 # Number of times to rescan iSCSI target to find volume
 # (integer value)
-#num_iscsi_scan_tries=3
+#num_iscsi_scan_tries=5
 
 # Number of times to rescan iSER target to find volume
 # (integer value)
-#num_iser_scan_tries=3
+#num_iser_scan_tries=5
 
 # The RADOS client name for accessing rbd volumes (string
 # value)
