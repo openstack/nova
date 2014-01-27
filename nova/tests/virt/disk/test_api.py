@@ -19,7 +19,9 @@ import tempfile
 
 import fixtures
 
+from nova.openstack.common import processutils
 from nova import test
+from nova import utils
 from nova.virt.disk import api
 
 
@@ -58,3 +60,33 @@ class APITestCase(test.NoDBTestCase):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
         self.assertFalse(api.is_image_partitionless(imgfile, use_cow=True))
+
+    def test_resize2fs_success(self):
+        imgfile = tempfile.NamedTemporaryFile()
+
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('e2fsck',
+                      '-fp',
+                      imgfile,
+                      check_exit_code=[0, 1, 2],
+                      run_as_root=False)
+        utils.execute('resize2fs',
+                      imgfile,
+                      check_exit_code=False,
+                      run_as_root=False)
+
+        self.mox.ReplayAll()
+        api.resize2fs(imgfile)
+
+    def test_resize2fs_e2fsck_fails(self):
+        imgfile = tempfile.NamedTemporaryFile()
+
+        self.mox.StubOutWithMock(utils, 'execute')
+        utils.execute('e2fsck',
+                      '-fp',
+                      imgfile,
+                      check_exit_code=[0, 1, 2],
+                      run_as_root=False).AndRaise(
+                          processutils.ProcessExecutionError("fs error"))
+        self.mox.ReplayAll()
+        api.resize2fs(imgfile)

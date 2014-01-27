@@ -120,12 +120,20 @@ def mkfs(os_type, fs_label, target, run_as_root=True):
 
 
 def resize2fs(image, check_exit_code=False, run_as_root=False):
-    utils.execute('e2fsck', '-fp', image,
-                  check_exit_code=check_exit_code,
-                  run_as_root=run_as_root)
-    utils.execute('resize2fs', image,
-                  check_exit_code=check_exit_code,
-                  run_as_root=run_as_root)
+    try:
+        utils.execute('e2fsck',
+                      '-fp',
+                      image,
+                      check_exit_code=[0, 1, 2],
+                      run_as_root=run_as_root)
+    except processutils.ProcessExecutionError as exc:
+        LOG.debug(_("Checking the file sytem with e2fsck has failed, "
+                    "the resize will be aborted. (%s)"), exc)
+    else:
+        utils.execute('resize2fs',
+                      image,
+                      check_exit_code=check_exit_code,
+                      run_as_root=run_as_root)
 
 
 def get_disk_size(path):
