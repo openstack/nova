@@ -447,7 +447,7 @@ class BaseTrackerTestCase(BaseTestCase):
 
     def _fake_migration_get_in_progress_by_host_and_node(self, ctxt, host,
                                                          node):
-        status = ['confirmed', 'reverted']
+        status = ['confirmed', 'reverted', 'error']
         migrations = []
 
         for migration in self._migrations.values():
