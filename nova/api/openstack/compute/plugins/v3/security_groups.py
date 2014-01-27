@@ -18,6 +18,8 @@
 
 import json
 
+from nova.api.openstack.compute.schemas.v3 import security_groups as \
+                                                  schema_security_groups
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -127,6 +129,9 @@ class SecurityGroups(extensions.V3APIExtensionBase):
                 sg['name'] for sg in security_groups if sg.get('name')]
             create_kwargs['security_group'] = list(
                 set(create_kwargs['security_group']))
+
+    def get_server_create_schema(self):
+        return schema_security_groups.server_create
 
 
 class NativeSecurityGroupExceptions(object):

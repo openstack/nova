@@ -332,3 +332,18 @@ class ServersControllerCreateTest(test.TestCase):
         self.stubs.Set(compute_api.API, 'create', create)
         self._test_create_extra(params,
             override_controller=self.no_security_groups_controller)
+
+    def test_create_with_invalid_key_security_group(self):
+        param = {security_groups.ATTRIBUTE_NAME: [{'invalid': 'group'}]}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create_extra, param)
+
+    def test_create_with_no_string_value_security_group(self):
+        param = {security_groups.ATTRIBUTE_NAME: [{'name': 12345}]}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create_extra, param)
+
+    def test_create_with_too_long_value_security_group(self):
+        param = {security_groups.ATTRIBUTE_NAME: [{'name': ('a' * 260)}]}
+        self.assertRaises(exception.ValidationError,
+                          self._test_create_extra, param)
