@@ -42,7 +42,7 @@ class CertificatesTest(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/root')
+        req = fakes.HTTPRequestV3.blank('/os-certificates/root')
         res_dict = self.controller.show(req, 'root')
 
         response = {'certificate': {'data': 'fakeroot', 'private_key': None}}
@@ -59,7 +59,7 @@ class CertificatesTest(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        req = fakes.HTTPRequest.blank('/v2/fake/os-certificates/')
+        req = fakes.HTTPRequestV3.blank('/os-certificates/')
         res_dict = self.controller.create(req)
 
         response = {
