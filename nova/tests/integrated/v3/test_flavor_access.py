@@ -88,7 +88,3 @@ class FlavorAccessSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
         }
         self._verify_response('flavor-access-remove-tenant-resp',
                               exp_subs, response, 200)
-
-
-class FlavorAccessSampleXmlTests(FlavorAccessSampleJsonTests):
-    ctype = 'xml'

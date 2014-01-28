@@ -1,1 +1,0 @@
-<admin_password>%(password)s</admin_password>

@@ -1,4 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<agents>
-  <agent url="xxxxxxxxxxxx" hypervisor="hypervisor" md5hash="add6bb58e139be103324d04d82d8f545" version="8.0" architecture="x86" os="os" agent_id="1"/>
-</agents>

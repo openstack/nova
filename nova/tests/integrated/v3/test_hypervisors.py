@@ -68,7 +68,3 @@ class HypervisorsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
             'hypervisor_id': hypervisor_id,
         }
         self._verify_response('hypervisors-uptime-resp', subs, response, 200)
-
-
-class HypervisorsSampleXmlTests(HypervisorsSampleJsonTests):
-    ctype = "xml"

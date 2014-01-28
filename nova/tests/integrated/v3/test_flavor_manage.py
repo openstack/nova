@@ -42,7 +42,3 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_delete("flavors/10")
         self.assertEqual(response.status, 204)
         self.assertEqual(response.read(), '')
-
-
-class FlavorManageSampleXmlTests(FlavorManageSampleJsonTests):
-    ctype = "xml"

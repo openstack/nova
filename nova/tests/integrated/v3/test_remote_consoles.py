@@ -45,7 +45,3 @@ class ConsolesSampleJsonTests(test_servers.ServersSampleBase):
             "((https?):((//)|(\\\\))+([\w\d:#@%/;$()~_?\+-=\\\.&](#!)?)*)"
         self._verify_response('get-spice-console-post-resp', subs,
                               response, 200)
-
-
-class ConsolesSampleXmlTests(ConsolesSampleJsonTests):
-        ctype = 'xml'

@@ -54,7 +54,3 @@ class ConsolesSamplesJsonTest(test_servers.ServersSampleBase):
         self._create_consoles(uuid)
         response = self._do_delete('servers/%s/consoles/1' % uuid)
         self.assertEqual(response.status, 202)
-
-
-class ConsolesSamplesXmlTest(ConsolesSamplesJsonTest):
-    ctype = 'xml'

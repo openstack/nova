@@ -50,7 +50,3 @@ class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_get('os-hosts')
         subs = self._get_regexes()
         self._verify_response('hosts-list-resp', subs, response, 200)
-
-
-class HostsSampleXmlTest(HostsSampleJsonTest):
-    ctype = 'xml'

@@ -83,7 +83,3 @@ class InstanceActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
                               '-[0-9a-f]{4}-[0-9a-f]{12}')
         self._verify_response('instance-actions-list-resp', subs,
                               response, 200)
-
-
-class InstanceActionsSampleXmlTest(InstanceActionsSampleJsonTest):
-        ctype = 'xml'

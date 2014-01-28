@@ -41,7 +41,3 @@ class ExtendedServerAttributesJsonTest(test_servers.ServersSampleBase):
         subs['instance_name'] = 'instance-\d{8}'
         subs['hypervisor_hostname'] = r'[\w\.\-]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-class ExtendedServerAttributesXmlTest(ExtendedServerAttributesJsonTest):
-    ctype = 'xml'

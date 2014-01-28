@@ -29,7 +29,3 @@ class ExtensionInfoSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_get('extensions/flavors')
         subs = self._get_regexes()
         self._verify_response('extensions-get-resp', subs, response, 200)
-
-
-class ExtensionInfoSamplesXmlTest(ExtensionInfoSamplesJsonTest):
-    ctype = 'xml'

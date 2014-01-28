@@ -38,7 +38,3 @@ class ServerUsageSampleJsonTest(test_servers.ServersSampleBase):
         subs['id'] = self.uuid
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-class ServerUsageSampleXmlTest(ServerUsageSampleJsonTest):
-    ctype = 'xml'

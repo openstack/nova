@@ -28,7 +28,3 @@ class AdminPasswordJsonTest(test_servers.ServersSampleBase):
                                  subs)
         self.assertEqual(response.status, 204)
         self.assertEqual(response.read(), "")
-
-
-class AdminPasswordXmlTest(AdminPasswordJsonTest):
-    ctype = 'xml'

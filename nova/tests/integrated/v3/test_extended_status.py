@@ -34,7 +34,3 @@ class ExtendedStatusSampleJsonTests(test_servers.ServersSampleBase):
         subs['id'] = uuid
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-class ExtendedStatusSampleXmlTests(ExtendedStatusSampleJsonTests):
-    ctype = 'xml'

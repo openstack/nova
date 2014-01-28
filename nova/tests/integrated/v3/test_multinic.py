@@ -48,7 +48,3 @@ class MultinicSampleJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-remove-fixed-ip-req', subs)
         self.assertEqual(response.status, 202)
-
-
-class MultinicSampleXmlTest(MultinicSampleJsonTest):
-    ctype = "xml"

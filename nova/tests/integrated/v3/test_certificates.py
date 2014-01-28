@@ -30,7 +30,3 @@ class CertificatesSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_get('os-certificates/root')
         subs = self._get_regexes()
         self._verify_response('certificate-get-root-resp', subs, response, 200)
-
-
-class CertificatesSamplesXmlTest(CertificatesSamplesJsonTest):
-    ctype = 'xml'

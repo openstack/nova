@@ -35,7 +35,3 @@ class QuotaClassesSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
                                 {})
         self._verify_response('quota-classes-update-post-resp',
                               {}, response, 200)
-
-
-class QuotaClassesSampleXmlTests(QuotaClassesSampleJsonTests):
-    ctype = "xml"

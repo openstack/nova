@@ -79,7 +79,3 @@ class ServersMetadataJsonTest(test_servers.ServersSampleBase):
         response = self._do_delete('servers/%s/metadata/foo' % uuid)
         self.assertEqual(response.status, 204)
         self.assertEqual(response.read(), '')
-
-
-class ServersMetadataXmlTest(ServersMetadataJsonTest):
-    ctype = 'xml'

@@ -61,7 +61,3 @@ class RescueJsonTest(test_servers.ServersSampleBase):
         subs['status'] = 'ACTIVE'
 
         self._verify_response('server-get-resp-unrescue', subs, response, 200)
-
-
-class RescueXmlTest(RescueJsonTest):
-    ctype = 'xml'

@@ -46,7 +46,3 @@ class ConfigDriveSampleJsonTest(test_servers.ServersSampleBase):
         subs['cdrive'] = '.*'
         self._verify_response('servers-config-drive-details-resp',
                               subs, response, 200)
-
-
-class ConfigDriveSampleXmlTest(ConfigDriveSampleJsonTest):
-    ctype = 'xml'

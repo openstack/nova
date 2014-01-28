@@ -62,7 +62,3 @@ class SecurityGroupsJsonTest(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         subs['hostid'] = '[a-f0-9]+'
         self._verify_response('servers-detail-resp', subs, response, 200)
-
-
-class SecurityGroupsXmlTest(SecurityGroupsJsonTest):
-    ctype = 'xml'
