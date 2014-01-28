@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack.compute.plugins.v3 import flavor_access
 from nova.api.openstack.compute.plugins.v3 import flavor_manage
+from nova.api.openstack.compute.plugins.v3 import flavor_rxtx
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -103,7 +104,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "ephemeral": 1,
                 "id": unicode('1234'),
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
                 "flavor-access:is_public": True,
             }
         }
@@ -139,7 +140,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "ephemeral": 1,
                 "id": 1234,
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
             }
         }
 
@@ -179,7 +180,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "ephemeral": 1,
                 "id": 1235,
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
                 "flavor-access:is_public": True,
             }
         }
@@ -222,7 +223,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
                 "os-flavor-access:is_public": True,
             }
         }
@@ -245,7 +246,7 @@ class FlavorManageTest(test.NoDBTestCase):
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
                 "os-flavor-access:is_public": True,
             }
         }
@@ -287,7 +288,7 @@ class PrivateFlavorManageTest(test.TestCase):
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
                 "flavor-access:is_public": False
             }
         }
@@ -325,7 +326,7 @@ class PrivateFlavorManageTest(test.TestCase):
                 "disk": 1,
                 "OS-FLV-EXT-DATA:ephemeral": 1,
                 "swap": 512,
-                "rxtx_factor": 1,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
                 "flavor-access:is_public": True
             }
         }

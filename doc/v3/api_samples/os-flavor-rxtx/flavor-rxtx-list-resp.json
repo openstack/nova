@@ -18,7 +18,7 @@
             ],
             "name": "m1.tiny",
             "ram": 512,
-            "rxtx_factor": 1.0,
+            "os-flavor-rxtx:rxtx_factor": 1.0,
             "swap": 0,
             "vcpus": 1
         },
@@ -40,7 +40,7 @@
             ],
             "name": "m1.small",
             "ram": 2048,
-            "rxtx_factor": 1.0,
+            "os-flavor-rxtx:rxtx_factor": 1.0,
             "swap": 0,
             "vcpus": 1
         },
@@ -62,7 +62,7 @@
             ],
             "name": "m1.medium",
             "ram": 4096,
-            "rxtx_factor": 1.0,
+            "os-flavor-rxtx:rxtx_factor": 1.0,
             "swap": 0,
             "vcpus": 2
         },
@@ -84,7 +84,7 @@
             ],
             "name": "m1.large",
             "ram": 8192,
-            "rxtx_factor": 1.0,
+            "os-flavor-rxtx:rxtx_factor": 1.0,
             "swap": 0,
             "vcpus": 4
         },
@@ -106,7 +106,7 @@
             ],
             "name": "m1.xlarge",
             "ram": 16384,
-            "rxtx_factor": 1.0,
+            "os-flavor-rxtx:rxtx_factor": 1.0,
             "swap": 0,
             "vcpus": 8
         }

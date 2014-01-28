@@ -5,6 +5,6 @@
         "vcpus": 2,
         "disk": 10,
         "id": "%(flavor_id)s",
-        "rxtx_factor": 2.0
+        "os-flavor-rxtx:rxtx_factor": 2.0
     }
 }
