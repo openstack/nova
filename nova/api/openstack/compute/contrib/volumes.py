@@ -618,7 +618,7 @@ class SnapshotController(wsgi.Controller):
         try:
             vol = self.volume_api.get_snapshot(context, id)
         except exception.NotFound:
-            return exc.HTTPNotFound()
+            raise exc.HTTPNotFound()
 
         return {'snapshot': _translate_snapshot_detail_view(context, vol)}
 
@@ -632,7 +632,7 @@ class SnapshotController(wsgi.Controller):
         try:
             self.volume_api.delete_snapshot(context, id)
         except exception.NotFound:
-            return exc.HTTPNotFound()
+            raise exc.HTTPNotFound()
         return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=SnapshotsTemplate)

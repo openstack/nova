@@ -817,6 +817,21 @@ class UnprocessableSnapshotTestCase(CommonUnprocessableEntityTestCase,
     controller_cls = volumes.SnapshotController
 
 
+class ShowSnapshotTestCase(test.TestCase):
+    def setUp(self):
+        super(ShowSnapshotTestCase, self).setUp()
+        self.controller = volumes.SnapshotController()
+        self.req = fakes.HTTPRequest.blank('/v2/fake/os-snapshots')
+        self.req.method = 'GET'
+
+    def test_show_snapshot_not_exist(self):
+        def fake_get_snapshot(self, context, id):
+            raise exception.SnapshotNotFound(snapshot_id=id)
+        self.stubs.Set(cinder.API, 'get_snapshot', fake_get_snapshot)
+        self.assertRaises(exc.HTTPNotFound,
+                          self.controller.show, self.req, FAKE_UUID_A)
+
+
 class CreateSnapshotTestCase(test.TestCase):
     def setUp(self):
         super(CreateSnapshotTestCase, self).setUp()
@@ -862,6 +877,20 @@ class DeleteSnapshotTestCase(test.TestCase):
         self.req.method = 'DELETE'
         result = self.controller.delete(self.req, result['snapshot']['id'])
         self.assertEqual(result.status_int, 202)
+
+    def test_delete_snapshot_not_exists(self):
+        def fake_delete_snapshot_not_exist(self, context, snapshot_id):
+            raise exception.SnapshotNotFound(snapshot_id=snapshot_id)
+
+        self.stubs.Set(cinder.API, 'delete_snapshot',
+            fake_delete_snapshot_not_exist)
+        self.req.method = 'POST'
+        self.body = {'snapshot': {'volume_id': 1}}
+        result = self.controller.create(self.req, body=self.body)
+
+        self.req.method = 'DELETE'
+        self.assertRaises(exc.HTTPNotFound, self.controller.delete,
+                self.req, result['snapshot']['id'])
 
 
 class AssistedSnapshotCreateTestCase(test.TestCase):
