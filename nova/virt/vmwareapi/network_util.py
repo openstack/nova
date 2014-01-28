@@ -47,10 +47,11 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
     # in the parent property field rather than a [] in the
     # ManagedObjectReference property field of the parent
     if not vm_networks_ret:
-        return None
+        LOG.debug(_("No networks configured on host!"))
+        return
     vm_networks = vm_networks_ret.ManagedObjectReference
     network_obj = {}
-    LOG.debug(vm_networks)
+    LOG.debug(_("Configured networks: %s"), vm_networks)
     for network in vm_networks:
         # Get network properties
         if network._type == 'DistributedVirtualPortgroup':
@@ -76,6 +77,7 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
                 network_obj['name'] = network_name
     if (len(network_obj) > 0):
         return network_obj
+    LOG.debug(_("Network %s not found on host!"), network_name)
 
 
 def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
