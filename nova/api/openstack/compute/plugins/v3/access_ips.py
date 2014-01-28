@@ -18,7 +18,6 @@ from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
@@ -26,29 +25,6 @@ from nova import utils
 ALIAS = "os-access-ips"
 LOG = logging.getLogger(__name__)
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class AccessIPTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        root.set('{%s}access_ip_v4' % AccessIPs.namespace,
-                 '%s:access_ip_v4' % AccessIPs.alias)
-        root.set('{%s}access_ip_v6' % AccessIPs.namespace,
-                 '%s:access_ip_v6' % AccessIPs.alias)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            AccessIPs.alias: AccessIPs.namespace})
-
-
-class AccessIPsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}access_ip_v4' % AccessIPs.namespace,
-                 '%s:access_ip_v4' % AccessIPs.alias)
-        elem.set('{%s}access_ip_v6' % AccessIPs.namespace,
-                 '%s:access_ip_v6' % AccessIPs.alias)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={
-            AccessIPs.alias: AccessIPs.namespace})
 
 
 class AccessIPsController(wsgi.Controller):
@@ -65,7 +41,6 @@ class AccessIPsController(wsgi.Controller):
     def create(self, req, resp_obj, body):
         context = req.environ['nova.context']
         if authorize(context) and 'server' in resp_obj.obj:
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -73,7 +48,6 @@ class AccessIPsController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -81,7 +55,6 @@ class AccessIPsController(wsgi.Controller):
     def update(self, req, resp_obj, id, body):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -89,7 +62,6 @@ class AccessIPsController(wsgi.Controller):
     def rebuild(self, req, resp_obj, id, body):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPTemplate())
             server = resp_obj.obj['server']
             self._extend_server(req, server)
 
@@ -97,7 +69,6 @@ class AccessIPsController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=AccessIPsTemplate())
             servers = resp_obj.obj['servers']
             for server in servers:
                 self._extend_server(req, server)
@@ -142,23 +113,6 @@ class AccessIPs(extensions.V3APIExtensionBase):
     server_update = server_create
 
     server_rebuild = server_create
-
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        if server_node.hasAttribute(AccessIPs.v4_key):
-            access_ip_v4 = server_node.getAttribute(AccessIPs.v4_key)
-            if access_ip_v4:
-                server_dict[AccessIPs.v4_key] = access_ip_v4
-            else:
-                server_dict[AccessIPs.v4_key] = None
-        if server_node.hasAttribute(AccessIPs.v6_key):
-            access_ip_v6 = server_node.getAttribute(AccessIPs.v6_key)
-            if access_ip_v6:
-                server_dict[AccessIPs.v6_key] = access_ip_v6
-            else:
-                server_dict[AccessIPs.v6_key] = None
-
-    server_xml_extract_rebuild_deserialize = \
-        server_xml_extract_server_deserialize
 
     def _validate_access_ipv4(self, address):
         if not utils.is_valid_ipv4(address):

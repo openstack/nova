@@ -20,7 +20,6 @@ import webob.exc
 from nova.api.openstack.compute.schemas.v3 import agents_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.api import validation
 from nova import db
 from nova import exception
@@ -28,21 +27,6 @@ from nova import exception
 
 ALIAS = "os-agents"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class AgentsIndexTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('agents')
-        elem = xmlutil.SubTemplateElement(root, 'agent', selector='agents')
-        elem.set('hypervisor')
-        elem.set('os')
-        elem.set('architecture')
-        elem.set('version')
-        elem.set('md5hash')
-        elem.set('agent_id')
-        elem.set('url')
-
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class AgentController(object):
@@ -69,7 +53,6 @@ class AgentController(object):
     http://wiki.openstack.org/GuestAgentXenStoreCommunication
     """
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=AgentsIndexTemplate)
     def index(self, req):
         """
         Return a list of all agent builds. Filter by hypervisor.

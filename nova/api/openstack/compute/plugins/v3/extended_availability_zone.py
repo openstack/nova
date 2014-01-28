@@ -19,7 +19,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import availability_zones as avail_zone
 
 ALIAS = "os-extended-availability-zone"
@@ -42,7 +41,6 @@ class ExtendedAZController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=ExtendedAZTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             self._extend_server(context, server, db_instance)
@@ -51,7 +49,6 @@ class ExtendedAZController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            resp_obj.attach(xml=ExtendedAZsTemplate())
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -74,27 +71,3 @@ class ExtendedAvailabilityZone(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         return []
-
-
-def make_server(elem):
-    elem.set('{%s}availability_zone' % ExtendedAvailabilityZone.namespace,
-             '%s:availability_zone' % ExtendedAvailabilityZone.alias)
-
-
-class ExtendedAZTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        alias = ExtendedAvailabilityZone.alias
-        namespace = ExtendedAvailabilityZone.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class ExtendedAZsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        alias = ExtendedAvailabilityZone.alias
-        namespace = ExtendedAvailabilityZone.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
