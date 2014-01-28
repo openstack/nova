@@ -1543,6 +1543,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(connector['initiator'], 'iscsi-name')
         self.assertNotIn('instance', connector)
 
+    def test_refresh_instance_security_rules(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.refresh_instance_security_rules,
+                          instance=None)
+
 
 class VMwareAPIHostTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API host calls."""
