@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_availability_zone
@@ -153,15 +152,3 @@ class ExtendedAvailabilityZoneTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ExtendedAvailabilityZoneXmlTest(ExtendedAvailabilityZoneTest):
-    content_type = 'application/xml'
-    prefix = ('{%s}' %
-              extended_availability_zone.ExtendedAvailabilityZone.namespace)
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

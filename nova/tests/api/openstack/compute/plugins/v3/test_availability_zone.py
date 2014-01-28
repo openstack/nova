@@ -13,7 +13,6 @@
 #    under the License.
 
 import datetime
-from lxml import etree
 from oslo.config import cfg
 import uuid
 import webob
@@ -247,65 +246,6 @@ class AvailabilityZoneApiTest(test.TestCase):
                         matchers.DictMatches(expected_response))
 
 
-class AvailabilityZoneSerializerTest(test.TestCase):
-    def test_availability_zone_index_detail_serializer(self):
-        def _verify_zone(zone_dict, tree):
-            self.assertEqual(tree.tag, 'availability_zone')
-            self.assertEqual(zone_dict['zone_name'], tree.get('name'))
-            self.assertEqual(str(zone_dict['zone_state']['available']),
-                             tree[0].get('available'))
-
-            for _idx, host_child in enumerate(tree[1]):
-                self.assertIn(host_child.get('name'), zone_dict['hosts'])
-                svcs = zone_dict['hosts'][host_child.get('name')]
-                for _idx, svc_child in enumerate(host_child[0]):
-                    self.assertIn(svc_child.get('name'), svcs)
-                    svc = svcs[svc_child.get('name')]
-                    self.assertEqual(len(svc_child), 1)
-
-                    self.assertEqual(str(svc['available']),
-                                     svc_child[0].get('available'))
-                    self.assertEqual(str(svc['active']),
-                                     svc_child[0].get('active'))
-                    self.assertEqual(str(svc['updated_at']),
-                                     svc_child[0].get('updated_at'))
-
-        serializer = availability_zone.AvailabilityZonesTemplate()
-        raw_availability_zones = \
-            [{'zone_name': 'zone-1',
-              'zone_state': {'available': True},
-              'hosts': {'fake_host-1': {
-                            'nova-compute': {'active': True, 'available': True,
-                                'updated_at':
-                                    datetime.datetime(
-                                        2012, 12, 26, 14, 45, 25)}}}},
-             {'zone_name': 'internal',
-              'zone_state': {'available': True},
-              'hosts': {'fake_host-1': {
-                            'nova-sched': {'active': True, 'available': True,
-                                'updated_at':
-                                    datetime.datetime(
-                                        2012, 12, 26, 14, 45, 25)}},
-                        'fake_host-2': {
-                            'nova-network': {'active': True,
-                                             'available': False,
-                                             'updated_at':
-                                    datetime.datetime(
-                                        2012, 12, 26, 14, 45, 24)}}}},
-             {'zone_name': 'zone-2',
-              'zone_state': {'available': False},
-              'hosts': None}]
-
-        text = serializer.serialize(
-                  dict(availability_zone_info=raw_availability_zones))
-        tree = etree.fromstring(text)
-
-        self.assertEqual('availability_zones', tree.tag)
-        self.assertEqual(len(raw_availability_zones), len(tree))
-        for idx, child in enumerate(tree):
-            _verify_zone(raw_availability_zones[idx], child)
-
-
 class ServersControllerCreateTest(test.TestCase):
 
     def setUp(self):
@@ -491,33 +431,3 @@ class ServersControllerCreateTest(test.TestCase):
         res = self.controller.create(req, body).obj
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
-
-
-class TestServerCreateRequestXMLDeserializer(test.TestCase):
-
-    def setUp(self):
-        super(TestServerCreateRequestXMLDeserializer, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
-        controller = servers.ServersController(extension_info=ext_info)
-        self.deserializer = servers.CreateDeserializer(controller)
-
-    def test_request_with_availability_zone(self):
-        serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v3"
-        xmlns:%(alias)s="%(namespace)s"
-        name="availability_zone_test"
-        image_ref="1"
-        flavor_ref="1"
-        %(alias)s:availability_zone="nova"/>""" % {
-            'alias': availability_zone.ALIAS,
-            'namespace': availability_zone.AvailabilityZone.namespace}
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server": {
-            "name": "availability_zone_test",
-            "image_ref": "1",
-            "flavor_ref": "1",
-            availability_zone.ATTRIBUTE_NAME: "nova"
-            },
-        }
-        self.assertEqual(request['body'], expected)

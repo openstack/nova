@@ -233,33 +233,3 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
-
-
-class TestServerCreateRequestXMLDeserializer(test.TestCase):
-
-    def setUp(self):
-        super(TestServerCreateRequestXMLDeserializer, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
-        controller = servers.ServersController(extension_info=ext_info)
-        self.deserializer = servers.CreateDeserializer(controller)
-
-    def test_request_with_user_data(self):
-        serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v3"
-        xmlns:%(alias)s="%(namespace)s"
-        name="user_data_test"
-        image_ref="1"
-        flavor_ref="1"
-        %(alias)s:user_data="IyEvYmluL2Jhc2gKL2Jpbi9"/>""" % {
-            'alias': user_data.ALIAS,
-            'namespace': user_data.UserData.namespace}
-        request = self.deserializer.deserialize(serial_request)
-        expected = {
-            "server": {
-                "name": "user_data_test",
-                "image_ref": "1",
-                "flavor_ref": "1",
-                user_data.ATTRIBUTE_NAME: "IyEvYmluL2Jhc2gKL2Jpbi9"
-            },
-        }
-        self.assertEqual(request['body'], expected)

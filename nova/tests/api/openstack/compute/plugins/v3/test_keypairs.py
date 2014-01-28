@@ -15,11 +15,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import keypairs
-from nova.api.openstack import wsgi
 from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -473,61 +471,3 @@ class KeypairPolicyTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v3/keypairs/FAKE')
         req.method = 'DELETE'
         self.assertIsNone(self.KeyPairController.delete(req, 'FAKE'))
-
-
-class KeypairsXMLSerializerTest(test.TestCase):
-    def setUp(self):
-        super(KeypairsXMLSerializerTest, self).setUp()
-        self.deserializer = wsgi.XMLDeserializer()
-
-    def test_default_serializer(self):
-        exemplar = dict(keypair=dict(
-                public_key='fake_public_key',
-                private_key='fake_private_key',
-                fingerprint='fake_fingerprint',
-                user_id='fake_user_id',
-                name='fake_key_name'))
-        serializer = keypairs.KeypairTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('keypair', tree.tag)
-        for child in tree:
-            self.assertIn(child.tag, exemplar['keypair'])
-            self.assertEqual(child.text, exemplar['keypair'][child.tag])
-
-    def test_index_serializer(self):
-        exemplar = dict(keypairs=[
-                dict(keypair=dict(
-                        name='key1_name',
-                        public_key='key1_key',
-                        fingerprint='key1_fingerprint')),
-                dict(keypair=dict(
-                        name='key2_name',
-                        public_key='key2_key',
-                        fingerprint='key2_fingerprint'))])
-        serializer = keypairs.KeypairsTemplate()
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('keypairs', tree.tag)
-        self.assertEqual(len(exemplar['keypairs']), len(tree))
-        for idx, keypair in enumerate(tree):
-            self.assertEqual('keypair', keypair.tag)
-            kp_data = exemplar['keypairs'][idx]['keypair']
-            for child in keypair:
-                self.assertIn(child.tag, kp_data)
-                self.assertEqual(child.text, kp_data[child.tag])
-
-    def test_deserializer(self):
-        exemplar = dict(keypair=dict(
-                name='key_name',
-                public_key='public_key'))
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                  '<keypair><name>key_name</name>'
-                  '<public_key>public_key</public_key></keypair>')
-
-        result = self.deserializer.deserialize(intext)['body']
-        self.assertEqual(result, exemplar)

@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 from oslo.config import cfg
 import webob
 
@@ -72,11 +71,3 @@ class ServerPasswordTest(test.TestCase):
         res = self._make_request(url)
         self.assertEqual(res.status_int, 200)
         self.assertEqual(self._get_pass(res.body), '')
-
-
-class ServerPasswordXmlTest(ServerPasswordTest):
-    content_type = 'application/xml'
-
-    def _get_pass(self, body):
-        # NOTE(vish): first element is password
-        return etree.XML(body).text or ''

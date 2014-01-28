@@ -15,10 +15,8 @@
 
 import itertools
 
-from lxml import etree
 import webob
 
-from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import vm_states
 from nova import db
@@ -135,22 +133,3 @@ class HideServerAddressesTest(test.TestCase):
         res = self._make_request('/v3/servers/' + fakes.get_fake_uuid())
 
         self.assertEqual(res.status_int, 404)
-
-
-class HideAddressesXmlTest(HideServerAddressesTest):
-    content_type = 'application/xml'
-
-    @staticmethod
-    def _get_server(body):
-        return etree.XML(body)
-
-    @staticmethod
-    def _get_servers(body):
-        return etree.XML(body).getchildren()
-
-    @staticmethod
-    def _get_addresses(server):
-        addresses = server.find('{%s}addresses' % wsgi.XMLNS_V11)
-        if addresses is None:
-            return SENTINEL
-        return addresses
