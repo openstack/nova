@@ -13,11 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
-import functools
-
 from nova import db
-from nova import exception
 from nova.objects import base
 from nova.objects import fields
 from nova.openstack.common import jsonutils
@@ -25,28 +21,6 @@ from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
-
-
-def check_device_status(dev_status=None):
-    """Decorator to check device status before changing it."""
-
-    if dev_status is not None and not isinstance(dev_status, set):
-        dev_status = set(dev_status)
-
-    def outer(f):
-        @functools.wraps(f)
-        def inner(self, instance=None):
-            if self['status'] not in dev_status:
-                raise exception.PciDeviceInvalidStatus(
-                    compute_node_id=self.compute_node_id,
-                    address=self.address, status=self.status,
-                    hopestatus=dev_status)
-            if instance:
-                return f(self, instance)
-            else:
-                return f(self)
-        return inner
-    return outer
 
 
 class PciDevice(base.NovaPersistentObject, base.NovaObject):
@@ -171,56 +145,6 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         pci_device.update_device(dev_dict)
         pci_device.status = 'available'
         return pci_device
-
-    @check_device_status(dev_status=['available'])
-    def claim(self, instance):
-        self.status = 'claimed'
-        self.instance_uuid = instance['uuid']
-
-    @check_device_status(dev_status=['available', 'claimed'])
-    def allocate(self, instance):
-        if self.status == 'claimed' and self.instance_uuid != instance['uuid']:
-            raise exception.PciDeviceInvalidOwner(
-                compute_node_id=self.compute_node_id,
-                address=self.address, owner=self.instance_uuid,
-                hopeowner=instance['uuid'])
-
-        self.status = 'allocated'
-        self.instance_uuid = instance['uuid']
-
-        # Notes(yjiang5): remove this check when instance object for
-        # compute manager is finished
-        if isinstance(instance, dict):
-            if 'pci_devices' not in instance:
-                instance['pci_devices'] = []
-            instance['pci_devices'].append(copy.copy(self))
-        else:
-            instance.pci_devices.objects.append(copy.copy(self))
-
-    @check_device_status(dev_status=['available'])
-    def remove(self):
-        self.status = 'removed'
-        self.instance_uuid = None
-
-    @check_device_status(dev_status=['claimed', 'allocated'])
-    def free(self, instance=None):
-        if instance and self.instance_uuid != instance['uuid']:
-            raise exception.PciDeviceInvalidOwner(
-                compute_node_id=self.compute_node_id,
-                address=self.address, owner=self.instance_uuid,
-                hopeowner=instance['uuid'])
-        old_status = self.status
-        self.status = 'available'
-        self.instance_uuid = None
-        if old_status == 'allocated' and instance:
-            # Notes(yjiang5): remove this check when instance object for
-            # compute manager is finished
-            existed = next((dev for dev in instance['pci_devices']
-                if dev.id == self.id))
-            if isinstance(instance, dict):
-                instance['pci_devices'].remove(existed)
-            else:
-                instance.pci_devices.objects.remove(existed)
 
     @base.remotable
     def save(self, context):

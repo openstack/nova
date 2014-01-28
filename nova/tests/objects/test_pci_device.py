@@ -17,7 +17,6 @@ import copy
 
 from nova import context
 from nova import db
-from nova import exception
 from nova.objects import instance
 from nova.objects import pci_device
 from nova.tests.objects import test_objects
@@ -138,88 +137,6 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.product_id, 'p')
         self.assertEqual(self.pci_device.obj_what_changed(), set())
         self.assertRemotes()
-
-    def test_claim_device(self):
-        self._create_fake_instance()
-        self.pci_device = pci_device.PciDevice.create(dev_dict)
-        self.pci_device.claim(self.inst)
-        self.assertEqual(self.pci_device.status, 'claimed')
-        self.assertEqual(self.pci_device.instance_uuid,
-                         'fake-inst-uuid')
-        self.assertEqual(len(self.inst.pci_devices), 0)
-
-    def test_claim_device_fail(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        self.pci_device.status = 'allocated'
-        self.assertRaises(exception.PciDeviceInvalidStatus,
-                          self.pci_device.claim, self.inst)
-
-    def test_allocate_device(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
-        self.pci_device.allocate(self.inst)
-        self.assertEqual(self.pci_device.status, 'allocated')
-        self.assertEqual(self.pci_device.instance_uuid, 'fake-inst-uuid')
-        self.assertEqual(len(self.inst.pci_devices), 1)
-        self.assertEqual(self.inst.pci_devices[0]['vendor_id'], 'v')
-        self.assertEqual(self.inst.pci_devices[0]['status'], 'allocated')
-
-    def test_allocacte_device_fail_status(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        self.pci_device.status = 'removed'
-        self.assertRaises(exception.PciDeviceInvalidStatus,
-                          self.pci_device.allocate,
-                          self.inst)
-
-    def test_allocacte_device_fail_owner(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        inst_2 = instance.Instance()
-        inst_2.uuid = 'fake-inst-uuid-2'
-        self.pci_device.claim(self.inst)
-        self.assertRaises(exception.PciDeviceInvalidOwner,
-                          self.pci_device.allocate, inst_2)
-
-    def test_free_claimed_device(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
-        self.pci_device.free(self.inst)
-        self.assertEqual(self.pci_device.status, 'available')
-        self.assertIsNone(self.pci_device.instance_uuid)
-
-    def test_free_allocated_device(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
-        self.pci_device.allocate(self.inst)
-        self.assertEqual(len(self.inst.pci_devices), 1)
-        self.pci_device.free(self.inst)
-        self.assertEqual(len(self.inst.pci_devices), 0)
-        self.assertEqual(self.pci_device.status, 'available')
-        self.assertIsNone(self.pci_device.instance_uuid)
-
-    def test_free_device_fail(self):
-        self._create_fake_pci_device()
-        self.pci_device.status = 'removed'
-        self.assertRaises(exception.PciDeviceInvalidStatus,
-                          self.pci_device.free)
-
-    def test_remove_device(self):
-        self._create_fake_pci_device()
-        self.pci_device.remove()
-        self.assertEqual(self.pci_device.status, 'removed')
-        self.assertIsNone(self.pci_device.instance_uuid)
-
-    def test_remove_device_fail(self):
-        self._create_fake_instance()
-        self._create_fake_pci_device()
-        self.pci_device.claim(self.inst)
-        self.assertRaises(exception.PciDeviceInvalidStatus,
-                          self.pci_device.remove)
 
     def test_save(self):
         ctxt = context.get_admin_context()
