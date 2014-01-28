@@ -286,11 +286,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         }
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.vnc_host = 'test_url'
+        self._set_exception_vars()
 
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
+
+    def _set_exception_vars(self):
+        self.wait_task = self.conn._session._wait_for_task
+        self.call_method = self.conn._session._call_method
+        self.task_ref = None
+        self.exception = False
 
     def test_login_retries(self):
         self.attempts = 0
@@ -473,6 +480,46 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
 
+    def _spawn_with_delete_exception(self, fault=None):
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "DeleteDatastoreFile_Task":
+                self.exception = True
+                task_mdo = vmwareapi_fake.create_task(method, "error",
+                        error_fault=fault)
+                return task_mdo.obj
+            return task_ref
+
+        with (
+            mock.patch.object(self.conn._session, '_call_method',
+                              fake_call_method)
+        ):
+            if fault:
+                self._create_vm()
+                info = self.conn.get_info({'uuid': self.uuid,
+                                           'node': self.instance_node})
+                self._check_vm_info(info, power_state.RUNNING)
+            else:
+                self.assertRaises(error_util.VMwareDriverException,
+                                  self._create_vm)
+            self.assertTrue(self.exception)
+
+    def test_spawn_with_delete_exception_not_found(self):
+        self._spawn_with_delete_exception(vmwareapi_fake.FileNotFound())
+
+    def test_spawn_with_delete_exception_file_fault(self):
+        self._spawn_with_delete_exception(vmwareapi_fake.FileFault())
+
+    def test_spawn_with_delete_exception_cannot_delete_file(self):
+        self._spawn_with_delete_exception(vmwareapi_fake.CannotDeleteFile())
+
+    def test_spawn_with_delete_exception_file_locked(self):
+        self._spawn_with_delete_exception(vmwareapi_fake.FileLocked())
+
+    def test_spawn_with_delete_exception_general(self):
+        self._spawn_with_delete_exception()
+
     def test_spawn_disk_extend(self):
         self.mox.StubOutWithMock(self.conn._vmops, '_extend_virtual_disk')
         requested_size = 80 * units.Mi
@@ -549,24 +596,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceUnacceptable,
                           self._create_vm)
 
-    def _set_move_exception_vars(self):
-        self.wait_task = self.conn._session._wait_for_task
-        self.call_method = self.conn._session._call_method
-        self.task_ref = None
-        self.move_exception = False
-
     def test_spawn_with_move_file_exists_exception(self):
         # The test will validate that the spawn completes
         # successfully. The "MoveDatastoreFile_Task" will
         # raise an file exists exception. The flag
-        # self.move_exception will be checked to see that
+        # self.exception will be checked to see that
         # the exception has indeed been raised.
-        self._set_move_exception_vars()
 
         def fake_wait_for_task(instance_uuid, task_ref):
             if task_ref == self.task_ref:
                 self.task_ref = None
-                self.move_exception = True
+                self.exception = True
                 raise error_util.FileAlreadyExistsException()
             return self.wait_task(instance_uuid, task_ref)
 
@@ -586,20 +626,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             info = self.conn.get_info({'uuid': self.uuid,
                                        'node': self.instance_node})
             self._check_vm_info(info, power_state.RUNNING)
-            self.assertTrue(self.move_exception)
+            self.assertTrue(self.exception)
 
     def test_spawn_with_move_general_exception(self):
         # The test will validate that the spawn completes
         # successfully. The "MoveDatastoreFile_Task" will
-        # raise a general exception. The flag self.move_exception
+        # raise a general exception. The flag self.exception
         # will be checked to see that the exception has
         # indeed been raised.
-        self._set_move_exception_vars()
 
         def fake_wait_for_task(instance_uuid, task_ref):
             if task_ref == self.task_ref:
                 self.task_ref = None
-                self.move_exception = True
+                self.exception = True
                 raise error_util.VMwareDriverException('Exception!')
             return self.wait_task(instance_uuid, task_ref)
 
@@ -617,7 +656,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         ) as (_wait_for_task, _call_method):
             self.assertRaises(error_util.VMwareDriverException,
                               self._create_vm)
-            self.assertTrue(self.move_exception)
+            self.assertTrue(self.exception)
 
     def test_spawn_with_move_poll_exception(self):
         self.call_method = self.conn._session._call_method
@@ -639,15 +678,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_spawn_with_move_file_exists_poll_exception(self):
         # The test will validate that the spawn completes
         # successfully. The "MoveDatastoreFile_Task" will
-        # raise a file exists exception. The flag self.move_exception
+        # raise a file exists exception. The flag self.exception
         # will be checked to see that the exception has
         # indeed been raised.
-        self._set_move_exception_vars()
 
         def fake_call_method(module, method, *args, **kwargs):
             task_ref = self.call_method(module, method, *args, **kwargs)
             if method == "MoveDatastoreFile_Task":
-                self.move_exception = True
+                self.exception = True
                 task_mdo = vmwareapi_fake.create_task(method, "error",
                         error_fault=vmwareapi_fake.FileAlreadyExists())
                 return task_mdo.obj
@@ -661,7 +699,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             info = self.conn.get_info({'uuid': self.uuid,
                                        'node': self.instance_node})
             self._check_vm_info(info, power_state.RUNNING)
-            self.assertTrue(self.move_exception)
+            self.assertTrue(self.exception)
 
     def _spawn_attach_volume_vmdk(self, set_image_ref=True):
         self._create_instance_in_the_db(set_image_ref=set_image_ref)
