@@ -222,6 +222,19 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         self.assertEqual(output,
             {u'console': {u'url': u'http://fake', u'type': u'spice-html5'}})
 
+    def test_get_spice_console_not_implemented(self):
+        self.stubs.Set(compute_api.API, 'get_spice_console',
+                       fakes.fake_not_implemented)
+
+        body = {'get_spice_console': {'type': 'spice-html5'}}
+        req = webob.Request.blank('/v3/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 501)
+
     def test_get_spice_console_not_ready(self):
         self.stubs.Set(compute_api.API, 'get_spice_console',
                        fake_get_spice_console_not_ready)

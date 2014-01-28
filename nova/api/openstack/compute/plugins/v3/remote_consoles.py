@@ -61,7 +61,7 @@ class RemoteConsolesController(wsgi.Controller):
 
         return {'console': {'type': console_type, 'url': output['url']}}
 
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((400, 404, 409, 501))
     @wsgi.action('get_spice_console')
     def get_spice_console(self, req, id, body):
         """Get text console output."""
@@ -85,6 +85,10 @@ class RemoteConsolesController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
+        except NotImplementedError:
+            msg = _("Unable to get spice console, "
+                    "functionality not implemented")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
 
         return {'console': {'type': console_type, 'url': output['url']}}
 

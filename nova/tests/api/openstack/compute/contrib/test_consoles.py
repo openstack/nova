@@ -257,6 +257,18 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
 
+    def test_get_spice_console_not_implemented(self):
+        body = {'os-getSPICEConsole': {'type': 'spice-html5'}}
+        self.stubs.Set(compute_api.API, 'get_spice_console',
+                       fakes.fake_not_implemented)
+        req = webob.Request.blank('/v2/fake/servers/1/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 501)
+
     def test_get_rdp_console(self):
         body = {'os-getRDPConsole': {'type': 'rdp-html5'}}
         req = webob.Request.blank('/v2/fake/servers/1/action')
