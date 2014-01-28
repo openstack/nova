@@ -42,11 +42,11 @@ LOG = logging.getLogger(__name__)
 
 volume_opts = [
     cfg.IntOpt('num_iscsi_scan_tries',
-               default=3,
+               default=5,
                help='Number of times to rescan iSCSI target to find volume',
                deprecated_group='DEFAULT'),
     cfg.IntOpt('num_iser_scan_tries',
-               default=3,
+               default=5,
                help='Number of times to rescan iSER target to find volume',
                deprecated_group='DEFAULT'),
     cfg.StrOpt('rbd_user',
