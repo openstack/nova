@@ -390,6 +390,9 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
 
+        self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
+                       imagebackend.Image._get_driver_format)
+
         class FakeConn():
             def getCapabilities(self):
                 """Ensure standard capabilities being returned."""
