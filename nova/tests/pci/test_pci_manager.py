@@ -244,7 +244,7 @@ class PciDevTrackerTestCase(test.TestCase):
         self.destroy_called = 0
         ctxt = context.get_admin_context()
         self.assertEqual(len(self.tracker.pci_devs), 3)
-        dev = self.tracker.pci_devs.objects[0]
+        dev = self.tracker.pci_devs[0]
         self.update_called = 0
         dev.remove()
         self.tracker.save(ctxt)
