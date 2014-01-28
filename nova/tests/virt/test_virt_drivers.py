@@ -32,6 +32,7 @@ from nova.tests import utils as test_utils
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.virt import event as virtevent
 from nova.virt import fake
+from nova.virt.libvirt import imagebackend
 
 LOG = logging.getLogger(__name__)
 
@@ -204,6 +205,12 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                                     fake.FakeVirtAPI())
         self.ctxt = test_utils.get_test_admin_context()
         self.image_service = fake_image.FakeImageService()
+        # NOTE(dripton): resolve_driver_format does some file reading and
+        # writing and chowning that complicate testing too much by requiring
+        # using real directories with proper permissions.  Just stub it out
+        # here; we test it in test_imagebackend.py
+        self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
+                       imagebackend.Image._get_driver_format)
 
     def _get_running_instance(self, obj=False):
         instance_ref = test_utils.get_test_instance(obj=obj)

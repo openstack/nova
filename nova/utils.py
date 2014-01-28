@@ -761,6 +761,20 @@ def temporary_chown(path, owner_uid=None):
             execute('chown', orig_uid, path, run_as_root=True)
 
 
+def chown(path, owner_uid=None):
+    """chown a path.
+
+    :param owner_uid: UID of owner (defaults to current user)
+    """
+    if owner_uid is None:
+        owner_uid = os.getuid()
+
+    orig_uid = os.stat(path).st_uid
+
+    if orig_uid != owner_uid:
+        execute('chown', owner_uid, path, run_as_root=True)
+
+
 @contextlib.contextmanager
 def tempdir(**kwargs):
     argdict = kwargs.copy()

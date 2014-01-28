@@ -104,6 +104,11 @@ class Image(object):
         self.is_block_dev = is_block_dev
         self.preallocate = False
 
+        # NOTE(dripton): We store lines of json (path, disk_format) in this
+        # file, for some image types, to prevent attacks based on changing the
+        # disk_format.
+        self.disk_info_path = None
+
         # NOTE(mikal): We need a lock directory which is shared along with
         # instance files, to cover the scenario where multiple compute nodes
         # are trying to create a base file at the same time
@@ -240,6 +245,65 @@ class Image(object):
     def snapshot_extract(self, target, out_format):
         raise NotImplementedError()
 
+    def _get_driver_format(self):
+        return self.driver_format
+
+    def resolve_driver_format(self):
+        """Return the driver format for self.path.
+
+        First checks self.disk_info_path for an entry.
+        If it's not there, calls self._get_driver_format(), and then
+        stores the result in self.disk_info_path
+
+        See https://bugs.launchpad.net/nova/+bug/1221190
+        """
+        def _dict_from_line(line):
+            if not line:
+                return {}
+            try:
+                return jsonutils.loads(line)
+            except (TypeError, ValueError) as e:
+                msg = (_("Could not load line %(line)s, got error "
+                        "%(error)s") %
+                        {'line': line, 'error': unicode(e)})
+                raise exception.InvalidDiskInfo(reason=msg)
+
+        @utils.synchronized(self.disk_info_path, external=False,
+                            lock_path=self.lock_path)
+        def write_to_disk_info_file():
+            # Use os.open to create it without group or world write permission.
+            fd = os.open(self.disk_info_path, os.O_RDWR | os.O_CREAT, 0o644)
+            with os.fdopen(fd, "r+") as disk_info_file:
+                line = disk_info_file.read().rstrip()
+                dct = _dict_from_line(line)
+                if self.path in dct:
+                    msg = _("Attempted overwrite of an existing value.")
+                    raise exception.InvalidDiskInfo(reason=msg)
+                dct.update({self.path: driver_format})
+                disk_info_file.seek(0)
+                disk_info_file.truncate()
+                disk_info_file.write('%s\n' % jsonutils.dumps(dct))
+            # Ensure the file is always owned by the nova user so qemu can't
+            # write it.
+            utils.chown(self.disk_info_path, owner_uid=os.getuid())
+
+        try:
+            if (self.disk_info_path is not None and
+                        os.path.exists(self.disk_info_path)):
+                with open(self.disk_info_path) as disk_info_file:
+                    line = disk_info_file.read().rstrip()
+                    dct = _dict_from_line(line)
+                    for path, driver_format in dct.iteritems():
+                        if path == self.path:
+                            return driver_format
+            driver_format = self._get_driver_format()
+            if self.disk_info_path is not None:
+                fileutils.ensure_tree(os.path.dirname(self.disk_info_path))
+                write_to_disk_info_file()
+        except OSError as e:
+            raise exception.DiskInfoReadWriteFail(reason=unicode(e))
+        return driver_format
+
 
 class Raw(Image):
     def __init__(self, instance=None, disk_name=None, path=None):
@@ -249,12 +313,17 @@ class Raw(Image):
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
         self.preallocate = CONF.preallocate_images != 'none'
+        self.disk_info_path = os.path.join(os.path.dirname(self.path),
+                                           'disk.info')
         self.correct_format()
+
+    def _get_driver_format(self):
+        data = images.qemu_img_info(self.path)
+        return data.file_format or 'raw'
 
     def correct_format(self):
         if os.path.exists(self.path):
-            data = images.qemu_img_info(self.path)
-            self.driver_format = data.file_format or 'raw'
+            self.driver_format = self.resolve_driver_format()
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         filename = os.path.split(base)[-1]
@@ -293,6 +362,9 @@ class Qcow2(Image):
                      os.path.join(libvirt_utils.get_instance_path(instance),
                                   disk_name))
         self.preallocate = CONF.preallocate_images != 'none'
+        self.disk_info_path = os.path.join(os.path.dirname(self.path),
+                                           'disk.info')
+        self.resolve_driver_format()
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
         filename = os.path.split(base)[-1]
