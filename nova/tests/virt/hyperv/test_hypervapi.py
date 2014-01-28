@@ -1616,6 +1616,11 @@ class HyperVAPITestCase(test.NoDBTestCase):
     def test_finish_revert_migration_with_ephemeral_storage(self):
         self._test_finish_revert_migration(False, ephemeral_storage=True)
 
+    def test_refresh_instance_security_rules(self):
+        self.assertRaises(NotImplementedError,
+                          self._conn.refresh_instance_security_rules,
+                          instance=None)
+
 
 class VolumeOpsTestCase(HyperVAPITestCase):
     """Unit tests for VolumeOps class."""

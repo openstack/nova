@@ -860,7 +860,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         """
         @utils.synchronized(instance['uuid'])
         def _sync_refresh():
-            return self.driver.refresh_instance_security_rules(instance)
+            try:
+                return self.driver.refresh_instance_security_rules(instance)
+            except NotImplementedError:
+                LOG.warning(_('Hypervisor driver does not support '
+                              'security groups.'), instance=instance)
+
         return _sync_refresh()
 
     @wrap_exception()
