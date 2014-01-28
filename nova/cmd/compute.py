@@ -67,6 +67,6 @@ def main():
 
     server = service.Service.create(binary='nova-compute',
                                     topic=CONF.compute_topic,
-                                    db_allowed=False)
+                                    db_allowed=CONF.conductor.use_local)
     service.serve(server)
     service.wait()
