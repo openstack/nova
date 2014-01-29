@@ -2000,59 +2000,59 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
                           neutronv2.get_client,
                           my_context)
 
-    def test_get_client_for_admin(self):
+    def _test_get_client_for_admin(self, use_id=False, admin_context=False):
 
         self.flags(neutron_auth_strategy=None)
         self.flags(neutron_url='http://anyhost/')
         self.flags(neutron_url_timeout=30)
-        my_context = context.RequestContext('userid', 'my_tenantid',
+        if use_id:
+            self.flags(neutron_admin_tenant_id='admin_tenant_id')
+
+        if admin_context:
+            my_context = context.get_admin_context()
+        else:
+            my_context = context.RequestContext('userid', 'my_tenantid',
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
-        client.Client.__init__(
-            auth_url=CONF.neutron_admin_auth_url,
-            password=CONF.neutron_admin_password,
-            tenant_name=CONF.neutron_admin_tenant_name,
-            username=CONF.neutron_admin_username,
-            endpoint_url=CONF.neutron_url,
-            auth_strategy=None,
-            timeout=CONF.neutron_url_timeout,
-            insecure=False,
-            ca_cert=None).AndReturn(None)
+        kwargs = {
+            'auth_url': CONF.neutron_admin_auth_url,
+            'password': CONF.neutron_admin_password,
+            'username': CONF.neutron_admin_username,
+            'endpoint_url': CONF.neutron_url,
+            'auth_strategy': None,
+            'timeout': CONF.neutron_url_timeout,
+            'insecure': False,
+            'ca_cert': None}
+        if use_id:
+            kwargs['tenant_id'] = CONF.neutron_admin_tenant_id
+        else:
+            kwargs['tenant_name'] = CONF.neutron_admin_tenant_name
+        client.Client.__init__(**kwargs).AndReturn(None)
         self.mox.ReplayAll()
 
         # clear the cache
         if hasattr(local.strong_store, 'neutron_client'):
             delattr(local.strong_store, 'neutron_client')
 
-        # Note that the context is not elevated, but the True is passed in
-        # which will force an elevation to admin credentials even though
-        # the context has an auth_token.
-        neutronv2.get_client(my_context, True)
+        if admin_context:
+            # Note that the context does not contain a token but is
+            # an admin context  which will force an elevation to admin
+            # credentials.
+            neutronv2.get_client(my_context)
+        else:
+            # Note that the context is not elevated, but the True is passed in
+            # which will force an elevation to admin credentials even though
+            # the context has an auth_token.
+            neutronv2.get_client(my_context, True)
+
+    def test_get_client_for_admin(self):
+        self._test_get_client_for_admin()
+
+    def test_get_client_for_admin_with_id(self):
+        self._test_get_client_for_admin(use_id=True)
 
     def test_get_client_for_admin_context(self):
+        self._test_get_client_for_admin(admin_context=True)
 
-        self.flags(neutron_auth_strategy=None)
-        self.flags(neutron_url='http://anyhost/')
-        self.flags(neutron_url_timeout=30)
-        my_context = context.get_admin_context()
-        self.mox.StubOutWithMock(client.Client, "__init__")
-        client.Client.__init__(
-            auth_url=CONF.neutron_admin_auth_url,
-            password=CONF.neutron_admin_password,
-            tenant_name=CONF.neutron_admin_tenant_name,
-            username=CONF.neutron_admin_username,
-            endpoint_url=CONF.neutron_url,
-            auth_strategy=None,
-            timeout=CONF.neutron_url_timeout,
-            insecure=False,
-            ca_cert=None).AndReturn(None)
-        self.mox.ReplayAll()
-
-        # clear the cache
-        if hasattr(local.strong_store, 'neutron_client'):
-            delattr(local.strong_store, 'neutron_client')
-
-        # Note that the context does not contain a token but is
-        # an admin context  which will force an elevation to admin
-        # credentials.
-        neutronv2.get_client(my_context)
+    def test_get_client_for_admin_context_with_id(self):
+        self._test_get_client_for_admin(use_id=True, admin_context=True)
