@@ -38,5 +38,6 @@ def main():
     server = service.Service.create(binary='nova-conductor',
                                     topic=CONF.conductor.topic,
                                     manager=CONF.conductor.manager)
-    service.serve(server, workers=CONF.conductor.workers)
+    workers = CONF.conductor.workers or utils.cpu_count()
+    service.serve(server, workers=workers)
     service.wait()
