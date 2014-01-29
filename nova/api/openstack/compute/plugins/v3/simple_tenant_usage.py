@@ -21,8 +21,6 @@ import urlparse
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.compute import api
 from nova.compute import flavors
 from nova import exception
@@ -36,39 +34,6 @@ authorize_list = extensions.extension_authorizer('compute',
                                                  'v3:' + ALIAS + ':list')
 VALID_DATETIME_FORMAT = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f",
                          "%Y-%m-%d %H:%M:%S.%f"]
-
-
-def make_usage(elem):
-    for subelem_tag in ('tenant_id', 'total_local_gb_usage',
-                        'total_vcpus_usage', 'total_memory_mb_usage',
-                        'total_hours', 'start', 'stop'):
-        subelem = xmlutil.SubTemplateElement(elem, subelem_tag)
-        subelem.text = subelem_tag
-
-    server_usages = xmlutil.SubTemplateElement(elem, 'server_usages')
-    server_usage = xmlutil.SubTemplateElement(server_usages, 'server_usage',
-                                              selector='server_usages')
-    for subelem_tag in ('instance_id', 'name', 'hours', 'memory_mb',
-                        'local_gb', 'vcpus', 'tenant_id', 'flavor',
-                        'started_at', 'ended_at', 'state', 'uptime'):
-        subelem = xmlutil.SubTemplateElement(server_usage, subelem_tag)
-        subelem.text = subelem_tag
-
-
-class SimpleTenantUsageTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('tenant_usage', selector='tenant_usage')
-        make_usage(root)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class SimpleTenantUsagesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('tenant_usages')
-        elem = xmlutil.SubTemplateElement(root, 'tenant_usage',
-                                          selector='tenant_usages')
-        make_usage(elem)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class SimpleTenantUsageController(object):
@@ -242,7 +207,6 @@ class SimpleTenantUsageController(object):
         return (period_start, period_stop, detailed)
 
     @extensions.expected_errors(400)
-    @wsgi.serializers(xml=SimpleTenantUsagesTemplate)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
         context = req.environ['nova.context']
@@ -260,7 +224,6 @@ class SimpleTenantUsageController(object):
         return {'tenant_usages': usages}
 
     @extensions.expected_errors(400)
-    @wsgi.serializers(xml=SimpleTenantUsageTemplate)
     def show(self, req, id):
         """Retrieve tenant_usage for a specified tenant."""
         tenant_id = id
