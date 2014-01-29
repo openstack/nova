@@ -22,7 +22,6 @@ import webob
 from nova.api.metadata import password
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import db
 from nova import exception
@@ -30,13 +29,6 @@ from nova import exception
 
 ALIAS = 'os-server-password'
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class ServerPasswordTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('password', selector='password')
-        root.text = unicode
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class ServerPasswordController(object):
@@ -51,7 +43,6 @@ class ServerPasswordController(object):
             raise webob.exc.HTTPNotFound(explanation=exp.format_message())
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=ServerPasswordTemplate)
     def index(self, req, server_id):
         context = req.environ['nova.context']
         authorize(context)
