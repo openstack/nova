@@ -23,13 +23,23 @@ and storage repositories
 import re
 import string
 
+from eventlet import greenthread
 from oslo.config import cfg
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 
+xenapi_volume_utils_opts = [
+    cfg.IntOpt('introduce_vdi_retry_wait',
+               default=20,
+               help='Number of seconds to wait for an SR to settle '
+                    'if the VDI does not exist when first introduced '),
+    ]
+
 CONF = cfg.CONF
+CONF.register_opts(xenapi_volume_utils_opts, 'xenserver')
+
 LOG = logging.getLogger(__name__)
 
 
@@ -132,27 +142,41 @@ def unplug_pbds(session, sr_ref):
                        ' PBD %(pbd)s'), {'exc': exc, 'pbd': pbd})
 
 
+def _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun):
+    if vdi_uuid:
+        LOG.debug("vdi_uuid: %s" % vdi_uuid)
+        return session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
+    elif target_lun:
+        vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
+        for curr_ref in vdi_refs:
+            curr_rec = session.call_xenapi("VDI.get_record", curr_ref)
+            if ('sm_config' in curr_rec and
+                'LUNid' in curr_rec['sm_config'] and
+                curr_rec['sm_config']['LUNid'] == str(target_lun)):
+                return curr_ref
+    else:
+        return (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
+
+    return None
+
+
 def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
     """Introduce VDI in the host."""
     try:
-        session.call_xenapi("SR.scan", sr_ref)
-        if vdi_uuid:
-            LOG.debug("vdi_uuid: %s" % vdi_uuid)
-            vdi_ref = session.call_xenapi("VDI.get_by_uuid", vdi_uuid)
-        elif target_lun:
-            vdi_refs = session.call_xenapi("SR.get_VDIs", sr_ref)
-            for curr_ref in vdi_refs:
-                curr_rec = session.call_xenapi("VDI.get_record", curr_ref)
-                if ('sm_config' in curr_rec and
-                        'LUNid' in curr_rec['sm_config'] and
-                        curr_rec['sm_config']['LUNid'] == str(target_lun)):
-                    vdi_ref = curr_ref
-                    break
-        else:
-            vdi_ref = (session.call_xenapi("SR.get_VDIs", sr_ref))[0]
+        vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
+        if vdi_ref is None:
+            greenthread.sleep(CONF.xenserver.introduce_vdi_retry_wait)
+            session.call_xenapi("SR.scan", sr_ref)
+            vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
         raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
+
+    if not vdi_ref:
+        raise StorageError(_('VDI not found on SR %(sr)s (vdi_uuid '
+                             '%(vdi_uuid)s, target_lun %(target_lun)s)') %
+                           {'sr': sr_ref, 'vdi_uuid': vdi_uuid,
+                            'target_lun': target_lun})
 
     try:
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
