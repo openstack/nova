@@ -238,33 +238,10 @@ def write_stored_checksum(target):
     write_stored_info(target, field='sha1', value=_hash_file(target))
 
 
-def _get_lock_path():
-    return os.path.join(CONF.instances_path, 'locks')
-
-
-def _lock_for_refresh(base_file):
-    lock_name = 'refresh-%s' % os.path.split(base_file)[-1]
-    return utils.synchronized(lock_name, external=True,
-                              lock_path=_get_lock_path())
-
-
-def refresh_timestamp(base_file):
-    """Update age of a file not to removed from the cache."""
-
-    @_lock_for_refresh(base_file)
-    def inner_refresh_timestamp():
-        if os.path.exists(base_file):
-            virtutils.chown(base_file, os.getuid())
-            os.utime(base_file, None)
-
-    if os.path.exists(base_file):
-        inner_refresh_timestamp()
-
-
 class ImageCacheManager(imagecache.ImageCacheManager):
     def __init__(self):
         super(ImageCacheManager, self).__init__()
-        self.lock_path = _get_lock_path()
+        self.lock_path = os.path.join(CONF.instances_path, 'locks')
         self._reset_state()
 
     def _reset_state(self):
@@ -449,50 +426,33 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         Returns nothing.
         """
-
-        # TODO(arata): If the lock is already owned by other process
-        # (or thread), it means the process is refreshing or removing
-        # the base file. Then, this process has nothing to do after
-        # the lock is acquired, because the base file is already
-        # refreshed (and should not be removed) or removed.
-        # So, unless the lock is immediately acquired, this method
-        # should return immediately instead of blocking meaninglessly.
-
-        @_lock_for_refresh(base_file)
-        def inner_remove_base_file():
-            if not os.path.exists(base_file):
-                LOG.debug(_('Cannot remove %(base_file)s, it does not exist'),
-                          base_file)
-                return
-
-            mtime = os.path.getmtime(base_file)
-            age = time.time() - mtime
-
-            maxage = CONF.libvirt.remove_unused_resized_minimum_age_seconds
-            if base_file in self.originals:
-                maxage = CONF.remove_unused_original_minimum_age_seconds
-
-            if age < maxage:
-                LOG.info(_('Base file too young to remove: %s'),
-                         base_file)
-            else:
-                LOG.info(_('Removing base file: %s'), base_file)
-                try:
-                    os.remove(base_file)
-                    signature = get_info_filename(base_file)
-                    if os.path.exists(signature):
-                        os.remove(signature)
-                except OSError as e:
-                    LOG.error(_('Failed to remove %(base_file)s, '
-                                'error was %(error)s'),
-                              {'base_file': base_file,
-                               'error': e})
-
         if not os.path.exists(base_file):
             LOG.debug(_('Cannot remove %(base_file)s, it does not exist'),
                       base_file)
             return
-        inner_remove_base_file()
+
+        mtime = os.path.getmtime(base_file)
+        age = time.time() - mtime
+
+        maxage = CONF.libvirt.remove_unused_resized_minimum_age_seconds
+        if base_file in self.originals:
+            maxage = CONF.remove_unused_original_minimum_age_seconds
+
+        if age < maxage:
+            LOG.info(_('Base file too young to remove: %s'),
+                     base_file)
+        else:
+            LOG.info(_('Removing base file: %s'), base_file)
+            try:
+                os.remove(base_file)
+                signature = get_info_filename(base_file)
+                if os.path.exists(signature):
+                    os.remove(signature)
+            except OSError as e:
+                LOG.error(_('Failed to remove %(base_file)s, '
+                            'error was %(error)s'),
+                          {'base_file': base_file,
+                           'error': e})
 
     def _handle_base_image(self, img_id, base_file):
         """Handle the checks for a single base image."""
@@ -559,9 +519,9 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                             'use'),
                           {'id': img_id,
                            'base_file': base_file})
-                # TODO(arata): Should not block to acquire the lock here
-                # as well in _remove_base_file()
-                refresh_timestamp(base_file)
+                if os.path.exists(base_file):
+                    virtutils.chown(base_file, os.getuid())
+                    os.utime(base_file, None)
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
         LOG.debug(_('Verify base images'))

@@ -29,7 +29,6 @@ from nova import test
 from nova.tests import fake_processutils
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova.virt.libvirt import imagebackend
-from nova.virt.libvirt import imagecache
 
 CONF = cfg.CONF
 
@@ -66,7 +65,6 @@ class _ImageTestCase(object):
             fake_libvirt_utils))
 
     def test_cache(self):
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         self.mox.StubOutWithMock(os.path, 'exists')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
@@ -76,7 +74,6 @@ class _ImageTestCase(object):
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
         imagebackend.fileutils.ensure_tree(self.TEMPLATE_DIR)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -86,14 +83,12 @@ class _ImageTestCase(object):
         self.mox.VerifyAll()
 
     def test_cache_image_exists(self):
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         self.mox.StubOutWithMock(os.path, 'exists')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         self.mox.ReplayAll()
 
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -102,13 +97,11 @@ class _ImageTestCase(object):
         self.mox.VerifyAll()
 
     def test_cache_base_dir_exists(self):
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         self.mox.StubOutWithMock(os.path, 'exists')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(False)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
@@ -121,13 +114,11 @@ class _ImageTestCase(object):
         self.mox.VerifyAll()
 
     def test_cache_template_exists(self):
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         self.mox.StubOutWithMock(os.path, 'exists')
         if self.OLD_STYLE_INSTANCE_PATH:
             os.path.exists(self.OLD_STYLE_INSTANCE_PATH).AndReturn(False)
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         os.path.exists(self.PATH).AndReturn(False)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
         self.mox.ReplayAll()
@@ -150,7 +141,6 @@ class _ImageTestCase(object):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(os, 'access', lambda p, w: True)
-        self.stubs.Set(imagecache, 'refresh_timestamp', lambda _: None)
 
         # Call twice to verify testing fallocate is only called once.
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -175,7 +165,6 @@ class _ImageTestCase(object):
         self.stubs.Set(image, '_can_fallocate', lambda: True)
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(os, 'access', lambda p, w: False)
-        self.stubs.Set(imagecache, 'refresh_timestamp', lambda _: None)
 
         # Testing fallocate is only called when user has write access.
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
@@ -513,7 +502,6 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
-        self.stubs.Set(imagecache, 'refresh_timestamp', lambda _: None)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
@@ -549,10 +537,8 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(image, 'check_image_exists')
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(False)
         image.check_image_exists().AndReturn(False)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
@@ -569,10 +555,8 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(image, 'check_image_exists')
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         image.check_image_exists().AndReturn(False)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
         self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
@@ -588,11 +572,9 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(image, 'check_image_exists')
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         image.check_image_exists().AndReturn(True)
         os.path.exists(self.TEMPLATE_PATH).AndReturn(True)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         self.mox.ReplayAll()
 
         image.cache(None, self.TEMPLATE)
@@ -604,10 +586,8 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(image, 'check_image_exists')
-        self.mox.StubOutWithMock(imagecache, 'refresh_timestamp')
         os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
         image.check_image_exists().AndReturn(False)
-        imagecache.refresh_timestamp(self.TEMPLATE_PATH)
         fn = self.mox.CreateMockAnything()
         fn(target=self.TEMPLATE_PATH)
         self.mox.ReplayAll()
@@ -655,7 +635,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'exists', lambda _: True)
         self.stubs.Set(image, 'check_image_exists', lambda: True)
-        self.stubs.Set(imagecache, 'refresh_timestamp', lambda _: None)
 
         image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
 
