@@ -397,8 +397,9 @@ class VMUtils(object):
         rasds = vmsettings[0].associators(
             wmi_result_class=self._STORAGE_ALLOC_SETTING_DATA_CLASS)
         disk_resources = [r for r in rasds
-                          if r.ResourceSubType ==
-                          self._IDE_DISK_RES_SUB_TYPE]
+                          if r.ResourceSubType in
+                          [self._IDE_DISK_RES_SUB_TYPE,
+                          self._IDE_DVD_RES_SUB_TYPE]]
         volume_resources = [r for r in rasds
                             if r.ResourceSubType ==
                             self._PHYS_DISK_RES_SUB_TYPE]
