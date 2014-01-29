@@ -655,12 +655,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         self.stubs.Set(os.path, 'getmtime', lambda x: getmtime(x))
 
-        # Fake decorator for lock
-        def passthru(f):
-            return f
-
-        self.stubs.Set(imagecache, '_lock_for_refresh', lambda _: passthru)
-
         # Make sure we don't accidentally remove a real file
         orig_remove = os.remove
 

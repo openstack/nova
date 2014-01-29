@@ -34,7 +34,6 @@ from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
-from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 
 
@@ -177,7 +176,7 @@ class Image(object):
         if not os.path.exists(base_dir):
             fileutils.ensure_tree(base_dir)
         base = os.path.join(base_dir, filename)
-        imagecache.refresh_timestamp(base)
+
         if not self.check_image_exists() or not os.path.exists(base):
             self.create_image(fetch_func_sync, base, size,
                               *args, **kwargs)
