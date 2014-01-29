@@ -20,7 +20,6 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.context
 from nova import db
 from nova import exception
@@ -44,35 +43,6 @@ authorize_delete = extensions.extension_authorizer('compute',
                                                    'v3:%s:delete' % ALIAS)
 authorize_detail = extensions.extension_authorizer('compute',
                                                    'v3:%s:detail' % ALIAS)
-
-
-class QuotaTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
-        root.set('id')
-
-        for resource in QUOTAS.resources:
-            if resource not in FILTERED_QUOTAS:
-                elem = xmlutil.SubTemplateElement(root, resource)
-                elem.text = resource
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class QuotaDetailTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
-        root.set('id')
-
-        for resource in QUOTAS.resources:
-            if resource not in FILTERED_QUOTAS:
-                elem = xmlutil.SubTemplateElement(root, resource,
-                                                  selector=resource)
-                elem.set('in_use')
-                elem.set('reserved')
-                elem.set('limit')
-
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class QuotaSetsController(wsgi.Controller):
@@ -110,7 +80,6 @@ class QuotaSetsController(wsgi.Controller):
             return dict((k, v['limit']) for k, v in values.items())
 
     @extensions.expected_errors(403)
-    @wsgi.serializers(xml=QuotaTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
@@ -124,7 +93,6 @@ class QuotaSetsController(wsgi.Controller):
             raise webob.exc.HTTPForbidden()
 
     @extensions.expected_errors(403)
-    @wsgi.serializers(xml=QuotaDetailTemplate)
     def detail(self, req, id):
         context = req.environ['nova.context']
         authorize_detail(context)
@@ -138,7 +106,6 @@ class QuotaSetsController(wsgi.Controller):
             raise webob.exc.HTTPForbidden()
 
     @extensions.expected_errors((400, 403))
-    @wsgi.serializers(xml=QuotaTemplate)
     def update(self, req, id, body):
         context = req.environ['nova.context']
         authorize_update(context)
@@ -227,7 +194,6 @@ class QuotaSetsController(wsgi.Controller):
                                                            user_id=user_id))
 
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=QuotaTemplate)
     def defaults(self, req, id):
         context = req.environ['nova.context']
         authorize_show(context)
