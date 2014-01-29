@@ -22,6 +22,7 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova.compute import resource_tracker
+from nova.compute import resources
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
@@ -47,6 +48,7 @@ FAKE_VIRT_LOCAL_GB = ROOT_GB + EPHEMERAL_GB
 FAKE_VIRT_VCPUS = 1
 FAKE_VIRT_STATS = {'virt_stat': 10}
 FAKE_VIRT_STATS_JSON = jsonutils.dumps(FAKE_VIRT_STATS)
+RESOURCE_NAMES = ['vcpu']
 CONF = cfg.CONF
 
 
@@ -165,8 +167,10 @@ class BaseTestCase(test.TestCase):
             "current_workload": 1,
             "running_vms": 0,
             "cpu_info": None,
-            "stats": [{"key": "num_instances", "value": "1"}],
-           "hypervisor_hostname": "fakenode",
+            "stats": {
+                "num_instances": "1",
+            },
+            "hypervisor_hostname": "fakenode",
         }
         if values:
             compute.update(values)
@@ -319,6 +323,8 @@ class BaseTestCase(test.TestCase):
         driver = self._driver()
 
         tracker = resource_tracker.ResourceTracker(host, driver, node)
+        tracker.ext_resources_handler = \
+            resources.ResourceHandler(RESOURCE_NAMES, True)
         return tracker
 
 
@@ -572,6 +578,38 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
 
     def _driver(self):
         return FakeVirtDriver(pci_support=True)
+
+
+class TrackerExtraResourcesTestCase(BaseTrackerTestCase):
+
+    def setUp(self):
+        super(TrackerExtraResourcesTestCase, self).setUp()
+        self.driver = self._driver()
+
+    def _driver(self):
+        return FakeVirtDriver()
+
+    def test_set_empty_ext_resources(self):
+        resources = self.driver.get_available_resource(self.tracker.nodename)
+        self.assertNotIn('stats', resources)
+        self.tracker._write_ext_resources(resources)
+        self.assertIn('stats', resources)
+
+    def test_set_extra_resources(self):
+        def fake_write_resources(resources):
+            resources['stats']['resA'] = '123'
+            resources['stats']['resB'] = 12
+
+        self.stubs.Set(self.tracker.ext_resources_handler,
+                       'write_resources',
+                       fake_write_resources)
+
+        resources = self.driver.get_available_resource(self.tracker.nodename)
+        self.tracker._write_ext_resources(resources)
+
+        expected = {"resA": "123", "resB": 12}
+        self.assertEqual(sorted(expected),
+                         sorted(resources['stats']))
 
 
 class InstanceClaimTestCase(BaseTrackerTestCase):
