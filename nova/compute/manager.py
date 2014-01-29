@@ -1558,16 +1558,13 @@ class ComputeManager(manager.Manager):
                 return bdm
 
     def _get_instance_volume_block_device_info(self, context, instance,
-                                               refresh_conn_info=False):
+                                               refresh_conn_info=False,
+                                               bdms=None):
         """Transform volumes to the driver block_device format."""
 
-        # TODO(ndipanov): This method will always hit the database
-        #                 even though we could pass it bdms if we have
-        #                 them already. this is so that we are sure we
-        #                 always get the new-style format for now and
-        #                 it will be changed in the future.
-        bdms = self._get_instance_volume_bdms(context, instance,
-                                              legacy=False)
+        if not bdms:
+            bdms = (block_device_obj.BlockDeviceMappingList.
+                    get_by_instance_uuid(context, instance['uuid']))
         block_device_mapping = (
             driver_block_device.convert_volumes(bdms) +
             driver_block_device.convert_snapshots(bdms) +

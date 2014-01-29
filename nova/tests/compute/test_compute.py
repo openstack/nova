@@ -2445,23 +2445,24 @@ class ComputeTestCase(BaseTestCase):
                           fail_running=True)
 
     def test_get_instance_volume_block_device_info_source_image(self):
-        def _fake_get_instance_volume_bdms(context, instance, legacy=True):
-            bdms = [{
+        bdms = block_device_obj.block_device_make_list(self.context,
+                [fake_block_device.FakeDbBlockDeviceDict({
                 'id': 3,
-                'volume_id': u'4cbc9e62-6ba0-45dd-b647-934942ead7d6',
-                'instance_uuid': 'fake-instance',
-                'device_name': '/dev/vda',
-                'connection_info': '{"driver_volume_type": "rbd"}',
-                'source_type': 'image',
-                'destination_type': 'volume',
-                'image_id': 'fake-image-id-1',
-                'boot_index': 0
-            }]
+                    'volume_id': u'4cbc9e62-6ba0-45dd-b647-934942ead7d6',
+                    'instance_uuid': 'fake-instance',
+                    'device_name': '/dev/vda',
+                    'connection_info': '{"driver_volume_type": "rbd"}',
+                    'source_type': 'image',
+                    'destination_type': 'volume',
+                    'image_id': 'fake-image-id-1',
+                    'boot_index': 0
+        })])
 
-            return bdms
-
-        with mock.patch.object(self.compute, '_get_instance_volume_bdms',
-                               _fake_get_instance_volume_bdms):
+        with (mock.patch.object(
+                block_device_obj.BlockDeviceMappingList,
+                'get_by_instance_uuid',
+                return_value=bdms)
+        ) as mock_get_by_instance:
             block_device_info = (
                 self.compute._get_instance_volume_block_device_info(
                     self.context, self._create_fake_instance())
@@ -2475,6 +2476,36 @@ class ComputeTestCase(BaseTestCase):
                     'delete_on_termination': False
                 }]
             }
+            self.assertTrue(mock_get_by_instance.called)
+            self.assertEqual(block_device_info, expected)
+
+    def test_get_instance_volume_block_device_info_passed_bdms(self):
+        bdms = block_device_obj.block_device_make_list(self.context,
+                [fake_block_device.FakeDbBlockDeviceDict({
+                    'id': 3,
+                    'volume_id': u'4cbc9e62-6ba0-45dd-b647-934942ead7d6',
+                    'device_name': '/dev/vdd',
+                    'connection_info': '{"driver_volume_type": "rbd"}',
+                    'source_type': 'volume',
+                    'destination_type': 'volume'})
+               ])
+        with (mock.patch.object(
+                block_device_obj.BlockDeviceMappingList,
+                'get_by_instance_uuid')) as mock_get_by_instance:
+            block_device_info = (
+                self.compute._get_instance_volume_block_device_info(
+                    self.context, self._create_fake_instance(), bdms=bdms)
+            )
+            expected = {
+                'block_device_mapping': [{
+                    'connection_info': {
+                        'driver_volume_type': 'rbd'
+                    },
+                    'mount_device': '/dev/vdd',
+                    'delete_on_termination': False
+                }]
+            }
+            self.assertFalse(mock_get_by_instance.called)
             self.assertEqual(block_device_info, expected)
 
     def test_set_admin_password(self):
@@ -7123,22 +7154,19 @@ class ComputeAPITestCase(BaseTestCase):
         volume = {'id': 'bf0b6b00-a20c-11e2-9e96-0800200c9a66',
                   'state': 'active', 'instance_uuid': instance['uuid']}
 
-        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
-                   'get_by_instance_uuid')
-        self.mox.StubOutWithMock(cinder.API, 'get')
+        return fake_bdms, volume
 
-        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
-                self.context, instance['uuid']).AndReturn(fake_bdms)
-        cinder.API.get(self.context, volume['id']).AndReturn(
-            {'id': volume['id'], 'status': status})
-
-    def test_rescue_volume_backed_no_image(self):
+    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    @mock.patch.object(cinder.API, 'get')
+    def test_rescue_volume_backed_no_image(self, mock_get_vol, mock_get_bdms):
         # Instance started without an image
         volume_backed_inst_1 = jsonutils.to_primitive(
             self._create_fake_instance({'image_ref': ''}))
+        bdms, volume = self._fake_rescue_block_devices(volume_backed_inst_1)
 
-        self._fake_rescue_block_devices(volume_backed_inst_1)
-        self.mox.ReplayAll()
+        mock_get_vol.return_value = {'id': volume['id'], 'status': "in-use"}
+        mock_get_bdms.return_value = bdms
 
         self.compute.run_instance(self.context,
                                   volume_backed_inst_1, {}, {}, None, None,
@@ -7151,16 +7179,22 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(volume_backed_inst_1), [], [])
 
-    def test_rescue_volume_backed_placeholder_image(self):
+    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    @mock.patch.object(cinder.API, 'get')
+    def test_rescue_volume_backed_placeholder_image(self,
+                                                    mock_get_vol,
+                                                    mock_get_bdms):
         # Instance started with a placeholder image (for metadata)
         volume_backed_inst_2 = jsonutils.to_primitive(
             self._create_fake_instance(
                 {'image_ref': 'my_placeholder_img',
                  'root_device_name': '/dev/vda'})
             )
+        bdms, volume = self._fake_rescue_block_devices(volume_backed_inst_2)
 
-        self._fake_rescue_block_devices(volume_backed_inst_2)
-        self.mox.ReplayAll()
+        mock_get_vol.return_value = {'id': volume['id'], 'status': "in-use"}
+        mock_get_bdms.return_value = bdms
 
         self.compute.run_instance(self.context,
                                   volume_backed_inst_2, {}, {}, None, None,
@@ -8183,12 +8217,19 @@ class ComputeAPITestCase(BaseTestCase):
                 self.compute_api.detach_volume,
                 self.context, instance, volume)
 
-    def test_no_rescue_in_volume_state_attaching(self):
+    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    @mock.patch.object(cinder.API, 'get')
+    def test_no_rescue_in_volume_state_attaching(self,
+                                                 mock_get_vol,
+                                                 mock_get_bdms):
         # Make sure a VM cannot be rescued while volume is being attached
         instance = self._create_fake_instance()
+        bdms, volume = self._fake_rescue_block_devices(instance)
 
-        self._fake_rescue_block_devices(instance, status="attaching")
-        self.mox.ReplayAll()
+        mock_get_vol.return_value = {'id': volume['id'],
+                                     'status': "attaching"}
+        mock_get_bdms.return_value = bdms
 
         self.assertRaises(exception.InvalidVolume,
                 self.compute_api.rescue, self.context, instance)
