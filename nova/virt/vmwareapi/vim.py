@@ -21,6 +21,7 @@ Classes for making VMware VI SOAP calls.
 """
 
 import httplib
+import urllib2
 
 from oslo.config import cfg
 import suds
@@ -178,6 +179,10 @@ class Vim:
                     httplib.CannotSendHeader) as excep:
                 raise error_util.SessionOverLoadException(_("httplib "
                                 "error in %s: ") % (attr_name), excep)
+            except (urllib2.URLError,
+                    urllib2.HTTPError) as excep:
+                raise error_util.SessionConnectionException(_("urllib2 "
+                            "error in  %s: ") % (attr_name), excep)
             except Exception as excep:
                 # Socket errors which need special handling for they
                 # might be caused by ESX API call overload
