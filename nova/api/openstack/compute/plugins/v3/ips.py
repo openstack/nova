@@ -22,37 +22,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.openstack.common.gettextutils import _
-
-
-def make_network(elem):
-    elem.set('id', 0)
-
-    ip = xmlutil.SubTemplateElement(elem, 'ip', selector=1)
-    ip.set('version')
-    ip.set('addr')
-    ip.set('type')
-    ip.set('mac_addr')
-
-network_nsmap = {None: xmlutil.XMLNS_V11}
-
-
-class NetworkTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector(xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('network', selector=sel)
-        make_network(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
-
-
-class AddressesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('addresses', selector='addresses')
-        elem = xmlutil.SubTemplateElement(root, 'network',
-                                          selector=xmlutil.get_items)
-        make_network(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=network_nsmap)
 
 
 class IPsController(wsgi.Controller):
@@ -78,14 +48,12 @@ class IPsController(wsgi.Controller):
     def delete(self, req, server_id, id):
         raise exc.HTTPNotImplemented()
 
-    @wsgi.serializers(xml=AddressesTemplate)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
-    @wsgi.serializers(xml=NetworkTemplate)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         instance = self._get_instance(context, server_id)

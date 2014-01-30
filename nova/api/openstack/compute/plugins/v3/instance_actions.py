@@ -17,7 +17,6 @@ from webob import exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -31,37 +30,6 @@ authorize_events = extensions.soft_extension_authorizer('compute',
 ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
                'project_id', 'start_time', 'message']
 EVENT_KEYS = ['event', 'start_time', 'finish_time', 'result', 'traceback']
-
-
-def make_actions(elem):
-    for key in ACTION_KEYS:
-        elem.set(key)
-
-
-def make_action(elem):
-    for key in ACTION_KEYS:
-        elem.set(key)
-    event = xmlutil.TemplateElement('events', selector='events')
-    for key in EVENT_KEYS:
-        event.set(key)
-    elem.append(event)
-
-
-class InstanceActionsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('instance_actions')
-        elem = xmlutil.SubTemplateElement(root, 'instance_action',
-                                          selector='instance_actions')
-        make_actions(elem)
-        return xmlutil.MasterTemplate(root, 1)
-
-
-class InstanceActionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('instance_action',
-                                       selector='instance_action')
-        make_action(root)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class InstanceActionsController(wsgi.Controller):
@@ -84,7 +52,6 @@ class InstanceActionsController(wsgi.Controller):
         return event
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=InstanceActionsTemplate)
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
@@ -98,7 +65,6 @@ class InstanceActionsController(wsgi.Controller):
         return {'instance_actions': actions}
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=InstanceActionTemplate)
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
