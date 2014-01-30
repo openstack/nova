@@ -20,7 +20,6 @@ import json
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import api as compute_api
 from nova import exception
@@ -106,7 +105,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
         if not softauth(req.environ['nova.context']):
             return
         if 'server' in resp_obj.obj:
-            resp_obj.attach(xml=SecurityGroupServerTemplate())
             self._extend_servers(req, [resp_obj.obj['server']])
 
     @wsgi.extends
@@ -121,36 +119,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
     def detail(self, req, resp_obj):
         if not softauth(req.environ['nova.context']):
             return
-        resp_obj.attach(xml=SecurityGroupServersTemplate())
         self._extend_servers(req, list(resp_obj.obj['servers']))
-
-
-class SecurityGroupsTemplateElement(xmlutil.TemplateElement):
-    def will_render(self, datum):
-        return "security_groups" in datum
-
-
-def make_server(elem):
-    secgrps = SecurityGroupsTemplateElement('security_groups')
-    elem.append(secgrps)
-    secgrp = xmlutil.SubTemplateElement(secgrps, 'security_group',
-                                        selector="security_groups")
-    secgrp.set('name')
-
-
-class SecurityGroupServerTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        make_server(root)
-        return xmlutil.SlaveTemplate(root, 1)
-
-
-class SecurityGroupServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        return xmlutil.SlaveTemplate(root, 1)
 
 
 class SecurityGroups(extensions.V3APIExtensionBase):
@@ -159,10 +128,6 @@ class SecurityGroups(extensions.V3APIExtensionBase):
     alias = ALIAS
     namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v3"
     version = 1
-
-    def __init__(self, extension_info):
-        super(SecurityGroups, self).__init__(extension_info)
-        self.xml_deserializer = wsgi.XMLDeserializer()
 
     def get_controller_extensions(self):
         controller = SecurityGroupsOutputController()
@@ -179,29 +144,6 @@ class SecurityGroups(extensions.V3APIExtensionBase):
                 sg['name'] for sg in security_groups if sg.get('name')]
             create_kwargs['security_group'] = list(
                 set(create_kwargs['security_group']))
-
-    def _extract_security_groups(self, server_node):
-        """Marshal the security_groups attribute of a parsed request."""
-        node = self.xml_deserializer.find_first_child_named_in_namespace(
-            server_node, self.namespace, 'security_groups')
-        if node is not None:
-            security_groups = []
-            for sg_node in self.xml_deserializer.find_children_named(
-                    node, "security_group"):
-                item = {}
-                name = self.xml_deserializer.find_attribute_or_element(
-                    sg_node, 'name')
-                if name:
-                    item["name"] = name
-                    security_groups.append(item)
-            return security_groups
-        else:
-            return None
-
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        security_groups = self._extract_security_groups(server_node)
-        if security_groups is not None:
-            server_dict[ATTRIBUTE_NAME] = security_groups
 
 
 class NativeSecurityGroupExceptions(object):
