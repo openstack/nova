@@ -27,7 +27,7 @@ from nova import exception
 from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common.gettextutils import _
 
-INIT_VERSION = 199
+INIT_VERSION = 209
 _REPOSITORY = None
 
 get_engine = db_session.get_engine
