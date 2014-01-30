@@ -179,6 +179,28 @@ class VMwareSessionTestCase(test.NoDBTestCase):
                               stubs, 'fake_temp_session_exception',
                               *args, **kwargs)
 
+    def test_call_method_session_file_exists_exception(self):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+        ) as (_fake_vim, _fake_create):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.FileAlreadyExistsException,
+                              api_session._call_method,
+                              stubs, 'fake_session_file_exception',
+                              *args, **kwargs)
+
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):
     """Unit tests for VMWare API configurations."""
@@ -526,6 +548,120 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         self.assertRaises(exception.InstanceUnacceptable,
                           self._create_vm)
+
+    def _set_move_exception_vars(self):
+        self.wait_task = self.conn._session._wait_for_task
+        self.call_method = self.conn._session._call_method
+        self.task_ref = None
+        self.move_exception = False
+
+    def test_spawn_with_move_file_exists_exception(self):
+        # The test will validate that the spawn completes
+        # successfully. The "MoveDatastoreFile_Task" will
+        # raise an file exists exception. The flag
+        # self.move_exception will be checked to see that
+        # the exception has indeed been raised.
+        self._set_move_exception_vars()
+
+        def fake_wait_for_task(instance_uuid, task_ref):
+            if task_ref == self.task_ref:
+                self.task_ref = None
+                self.move_exception = True
+                raise error_util.FileAlreadyExistsException()
+            return self.wait_task(instance_uuid, task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "MoveDatastoreFile_Task":
+                self.task_ref = task_ref
+            return task_ref
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              fake_wait_for_task),
+            mock.patch.object(self.conn._session, '_call_method',
+                              fake_call_method)
+        ) as (_wait_for_task, _call_method):
+            self._create_vm()
+            info = self.conn.get_info({'uuid': self.uuid,
+                                       'node': self.instance_node})
+            self._check_vm_info(info, power_state.RUNNING)
+            self.assertTrue(self.move_exception)
+
+    def test_spawn_with_move_general_exception(self):
+        # The test will validate that the spawn completes
+        # successfully. The "MoveDatastoreFile_Task" will
+        # raise a general exception. The flag self.move_exception
+        # will be checked to see that the exception has
+        # indeed been raised.
+        self._set_move_exception_vars()
+
+        def fake_wait_for_task(instance_uuid, task_ref):
+            if task_ref == self.task_ref:
+                self.task_ref = None
+                self.move_exception = True
+                raise error_util.VMwareDriverException('Exception!')
+            return self.wait_task(instance_uuid, task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "MoveDatastoreFile_Task":
+                self.task_ref = task_ref
+            return task_ref
+
+        with contextlib.nested(
+            mock.patch.object(self.conn._session, '_wait_for_task',
+                              fake_wait_for_task),
+            mock.patch.object(self.conn._session, '_call_method',
+                              fake_call_method)
+        ) as (_wait_for_task, _call_method):
+            self.assertRaises(error_util.VMwareDriverException,
+                              self._create_vm)
+            self.assertTrue(self.move_exception)
+
+    def test_spawn_with_move_poll_exception(self):
+        self.call_method = self.conn._session._call_method
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "MoveDatastoreFile_Task":
+                task_mdo = vmwareapi_fake.create_task(method, "error")
+                return task_mdo.obj
+            return task_ref
+
+        with (
+            mock.patch.object(self.conn._session, '_call_method',
+                              fake_call_method)
+        ):
+            self.assertRaises(error_util.VMwareDriverException,
+                              self._create_vm)
+
+    def test_spawn_with_move_file_exists_poll_exception(self):
+        # The test will validate that the spawn completes
+        # successfully. The "MoveDatastoreFile_Task" will
+        # raise a file exists exception. The flag self.move_exception
+        # will be checked to see that the exception has
+        # indeed been raised.
+        self._set_move_exception_vars()
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "MoveDatastoreFile_Task":
+                self.move_exception = True
+                task_mdo = vmwareapi_fake.create_task(method, "error",
+                        error_fault=vmwareapi_fake.FileAlreadyExists())
+                return task_mdo.obj
+            return task_ref
+
+        with (
+            mock.patch.object(self.conn._session, '_call_method',
+                              fake_call_method)
+        ):
+            self._create_vm()
+            info = self.conn.get_info({'uuid': self.uuid,
+                                       'node': self.instance_node})
+            self._check_vm_info(info, power_state.RUNNING)
+            self.assertTrue(self.move_exception)
 
     def _spawn_attach_volume_vmdk(self, set_image_ref=True):
         self._create_instance_in_the_db(set_image_ref=set_image_ref)

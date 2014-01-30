@@ -19,10 +19,14 @@ Exception classes and SOAP response error checking module.
 from nova import exception
 
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 
+LOG = logging.getLogger(__name__)
 
-FAULT_NOT_AUTHENTICATED = "NotAuthenticated"
-FAULT_ALREADY_EXISTS = "AlreadyExists"
+ALREADY_EXISTS = 'AlreadyExists'
+FILE_ALREADY_EXISTS = 'FileAlreadyExists'
+INVALID_PROPERTY = 'InvalidProperty'
+NOT_AUTHENTICATED = 'NotAuthenticated'
 
 
 class VimException(Exception):
@@ -86,7 +90,7 @@ class FaultCheckers(object):
             # not the case with a timed out idle session. It is as bad as a
             # terminated session for we cannot use the session. So setting
             # fault to NotAuthenticated fault.
-            fault_list = ["NotAuthenticated"]
+            fault_list = [NOT_AUTHENTICATED]
         else:
             for obj_cont in resp_obj.objects:
                 if hasattr(obj_cont, "missingSet"):
@@ -122,3 +126,43 @@ class VMwareDriverConfigurationException(VMwareDriverException):
 
 class UseLinkedCloneConfigurationFault(VMwareDriverConfigurationException):
     msg_fmt = _("No default value for use_linked_clone found.")
+
+
+class AlreadyExistsException(VMwareDriverException):
+    msg_fmt = _("Resource already exists.")
+    code = 409
+
+
+class FileAlreadyExistsException(VMwareDriverException):
+    msg_fmt = _("File already exists.")
+    code = 409
+
+
+class InvalidPropertyException(VMwareDriverException):
+    msg_fmt = _("Invalid property.")
+    code = 400
+
+
+class NotAuthenticatedException(VMwareDriverException):
+    msg_fmt = _("Not Authenticated.")
+    code = 403
+
+
+# Populate the fault registry with the exceptions that have
+# special treatment.
+_fault_classes_registry = {
+    ALREADY_EXISTS: AlreadyExistsException,
+    FILE_ALREADY_EXISTS: FileAlreadyExistsException,
+    INVALID_PROPERTY: InvalidPropertyException,
+    NOT_AUTHENTICATED: NotAuthenticatedException,
+}
+
+
+def get_fault_class(name):
+    """Get a named subclass of VMwareDriverException."""
+    name = str(name)
+    fault_class = _fault_classes_registry.get(name)
+    if not fault_class:
+        LOG.warning(_('Fault %s not matched.'), name)
+        fault_class = VMwareDriverException
+    return fault_class

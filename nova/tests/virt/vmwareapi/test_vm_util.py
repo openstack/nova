@@ -35,6 +35,13 @@ class fake_session(object):
     def _call_method(self, *args):
         return self.ret
 
+    def _get_vim(self):
+        fake_vim = fake.DataObject()
+        client = fake.DataObject()
+        client.factory = 'fake_factory'
+        fake_vim.client = client
+        return fake_vim
+
 
 class partialObject(object):
     def __init__(self, path='fake-path'):

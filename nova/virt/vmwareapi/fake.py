@@ -268,6 +268,14 @@ class HostInternetScsiHba(DataObject):
         self.key = 'key-vmhba33'
 
 
+class FileAlreadyExists(DataObject):
+    """File already exists class."""
+
+    def __init__(self):
+        super(FileAlreadyExists, self).__init__()
+        self.__name__ = error_util.FILE_ALREADY_EXISTS
+
+
 class VirtualDisk(DataObject):
     """
     Virtual Disk class.
@@ -743,11 +751,20 @@ class Datacenter(ManagedObject):
 class Task(ManagedObject):
     """Task class."""
 
-    def __init__(self, task_name, state="running", result=None):
+    def __init__(self, task_name, state="running", result=None,
+                 error_fault=None):
         super(Task, self).__init__("Task")
         info = DataObject()
         info.name = task_name
         info.state = state
+        if state == 'error':
+            error = DataObject()
+            error.localizedMessage = "Error message"
+            if not error_fault:
+                error.fault = DataObject()
+            else:
+                error.fault = error_fault
+            info.error = error
         info.result = result
         self.set("info", info)
 
@@ -797,8 +814,8 @@ def create_cluster(name, ds_ref):
     _create_object('ClusterComputeResource', cluster)
 
 
-def create_task(task_name, state="running", result=None):
-    task = Task(task_name, state, result)
+def create_task(task_name, state="running", result=None, error_fault=None):
+    task = Task(task_name, state, result, error_fault)
     _create_object("Task", task)
     return task
 
@@ -955,7 +972,7 @@ class FakeVim(object):
                  _db_content['session']):
             LOG.debug(_("Session is faulty"))
             raise error_util.VimFaultException(
-                               [error_util.FAULT_NOT_AUTHENTICATED],
+                               [error_util.NOT_AUTHENTICATED],
                                _("Session Invalid"))
 
     def _session_is_active(self, *args, **kwargs):
