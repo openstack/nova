@@ -268,6 +268,15 @@ class TestUtils(test.TestCase):
         self.assertEqual([{'foo': 0}, {'foo': 1}],
                          base.obj_to_primitive(mylist))
 
+    def test_obj_to_primitive_with_ip_addr(self):
+        class TestObject(base.NovaObject):
+            fields = {'addr': fields.IPAddressField(),
+                      'cidr': fields.IPNetworkField()}
+
+        obj = TestObject(addr='1.2.3.4', cidr='1.1.1.1/16')
+        self.assertEqual({'addr': '1.2.3.4', 'cidr': '1.1.1.1/16'},
+                         base.obj_to_primitive(obj))
+
     def test_obj_make_list(self):
         class MyList(base.ObjectListBase, base.NovaObject):
             pass

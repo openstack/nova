@@ -18,6 +18,7 @@ import collections
 import copy
 import functools
 
+import netaddr
 import six
 
 from nova import context
@@ -576,6 +577,10 @@ def obj_to_primitive(obj):
         for key, value in obj.iteritems():
             result[key] = obj_to_primitive(value)
         return result
+    elif isinstance(obj, netaddr.IPAddress):
+        return str(obj)
+    elif isinstance(obj, netaddr.IPNetwork):
+        return str(obj)
     else:
         return obj
 
