@@ -789,15 +789,18 @@ def get_stats_from_cluster(session, cluster):
             host_mors = host_ret.ManagedObjectReference
             result = session._call_method(vim_util,
                          "get_properties_for_a_collection_of_objects",
-                         "HostSystem", host_mors, ["summary.hardware"])
+                         "HostSystem", host_mors,
+                         ["summary.hardware", "summary.runtime"])
             for obj in result.objects:
                 hardware_summary = obj.propSet[0].val
-                # Total vcpus is the sum of all pCPUs of individual hosts
-                # The overcommitment ratio is factored in by the scheduler
-                cpu_info['vcpus'] += hardware_summary.numCpuThreads
-                cpu_info['cores'] += hardware_summary.numCpuCores
-                cpu_info['vendor'].append(hardware_summary.vendor)
-                cpu_info['model'].append(hardware_summary.cpuModel)
+                runtime_summary = obj.propSet[1].val
+                if runtime_summary.connectionState == "connected":
+                    # Total vcpus is the sum of all pCPUs of individual hosts
+                    # The overcommitment ratio is factored in by the scheduler
+                    cpu_info['vcpus'] += hardware_summary.numCpuThreads
+                    cpu_info['cores'] += hardware_summary.numCpuCores
+                    cpu_info['vendor'].append(hardware_summary.vendor)
+                    cpu_info['model'].append(hardware_summary.cpuModel)
 
         res_mor = prop_dict.get('resourcePool')
         if res_mor:

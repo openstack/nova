@@ -19,6 +19,8 @@
 import collections
 import re
 
+import mock
+
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import units
@@ -71,6 +73,64 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = vm_util.get_datastore_ref_and_name(
             fake_session(fake_objects), None, None, datastore_valid_regex)
         self.assertEqual("openstack-ds0", result[1])
+
+    def test_get_stats_from_cluster(self):
+        ManagedObjectRefs = [fake.ManagedObjectReference("host1",
+                                                         "HostSystem"),
+                             fake.ManagedObjectReference("host2",
+                                                         "HostSystem")]
+        hosts = fake._convert_to_array_of_mor(ManagedObjectRefs)
+        respool = fake.ManagedObjectReference("resgroup-11", "ResourcePool")
+        prop_dict = {'host': hosts, 'resourcePool': respool}
+
+        hardware = fake.DataObject()
+        hardware.numCpuCores = 8
+        hardware.numCpuThreads = 16
+        hardware.vendor = "Intel"
+        hardware.cpuModel = "Intel(R) Xeon(R)"
+
+        runtime_host_1 = fake.DataObject()
+        runtime_host_1.connectionState = "connected"
+        runtime_host_2 = fake.DataObject()
+        runtime_host_2.connectionState = "disconnected"
+
+        prop_list_host_1 = [fake.Prop(name="hardware_summary", val=hardware),
+                            fake.Prop(name="runtime_summary",
+                                      val=runtime_host_1)]
+        prop_list_host_2 = [fake.Prop(name="hardware_summary", val=hardware),
+                            fake.Prop(name="runtime_summary",
+                                      val=runtime_host_2)]
+        fake_objects = fake.FakeRetrieveResult()
+        fake_objects.add_object(fake.ObjectContent("prop_list_host1",
+                                                   prop_list_host_1))
+        fake_objects.add_object(fake.ObjectContent("prop_list_host1",
+                                                   prop_list_host_2))
+
+        respool_resource_usage = fake.DataObject()
+        respool_resource_usage.maxUsage = 5368709120
+        respool_resource_usage.overallUsage = 2147483648
+        session = fake_session()
+
+        def fake_call_method(*args):
+            if "get_dynamic_properties" in args:
+                return prop_dict
+            elif "get_properties_for_a_collection_of_objects" in args:
+                return fake_objects
+            else:
+                return respool_resource_usage
+        with mock.patch.object(fake_session, '_call_method',
+                               fake_call_method):
+            result = vm_util.get_stats_from_cluster(session, "cluster1")
+            cpu_info = {}
+            mem_info = {}
+            cpu_info['vcpus'] = 16
+            cpu_info['cores'] = 8
+            cpu_info['vendor'] = ["Intel"]
+            cpu_info['model'] = ["Intel(R) Xeon(R)"]
+            mem_info['total'] = 5120
+            mem_info['free'] = 3072
+            expected_stats = {'cpu': cpu_info, 'mem': mem_info}
+            self.assertEqual(expected_stats, result)
 
     def test_get_datastore_ref_and_name_with_list(self):
         # Test with a regex containing whitelist of datastores
