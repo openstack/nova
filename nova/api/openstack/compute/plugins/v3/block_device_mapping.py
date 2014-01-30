@@ -20,7 +20,6 @@
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 from nova import block_device
 from nova import exception
 
@@ -36,10 +35,6 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "blockdevicemapping/api/v3")
     version = 1
-
-    def __init__(self, extension_info):
-        super(BlockDeviceMapping, self).__init__(extension_info)
-        self.xml_deserializer = wsgi.XMLDeserializer()
 
     def get_resources(self):
         return []
@@ -64,19 +59,3 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
         # Unset the legacy_bdm flag if we got a block device mapping.
         if block_device_mapping:
             create_kwargs['legacy_bdm'] = False
-
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        """Marshal the block_device_mapping node of a parsed request."""
-        node = self.xml_deserializer.find_first_child_named_in_namespace(
-            server_node, self.namespace, 'block_device_mapping')
-
-        if node:
-            block_device_mapping = []
-            for child in self.xml_deserializer.extract_elements(node):
-                if child.nodeName != "mapping":
-                    continue
-                block_device_mapping.append(
-                    dict((attr, child.getAttribute(attr))
-                        for attr in block_device.bdm_new_api_fields
-                        if child.getAttribute(attr)))
-            server_dict[ATTRIBUTE_NAME] = block_device_mapping
