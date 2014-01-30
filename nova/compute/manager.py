@@ -5258,8 +5258,8 @@ class ComputeManager(manager.Manager):
         filters = {'deleted': False,
                    'soft_deleted': True,
                    'host': nodes}
-        filtered_instances = self.conductor_api.instance_get_all_by_filters(
-            context, filters, columns_to_join=[])
+        filtered_instances = instance_obj.InstanceList.get_by_filters(context,
+                                 filters, expected_attrs=[], use_slave=True)
 
         self.driver.manage_image_cache(context, filtered_instances)
 
