@@ -4473,9 +4473,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # In case of block migration, destination does not have
             # libvirt.xml
             disk_info = blockinfo.get_disk_info(
-                CONF.libvirt.virt_type, instance)
+                CONF.libvirt.virt_type, instance, block_device_info)
             self.to_xml(context, instance, network_info, disk_info,
-                        block_device_info, write_to_disk=True)
+                        block_device_info=block_device_info,
+                        write_to_disk=True)
             # libvirt.xml should be made by to_xml(), but libvirt
             # does not accept to_xml() result, since uuid is not
             # included in to_xml() result.
