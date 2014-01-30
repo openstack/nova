@@ -416,7 +416,7 @@ def info_from_instance(context, instance_ref, network_info,
     instance_info["image_meta"] = image_meta_props
 
     # add instance metadata
-    instance_info['metadata'] = instance_ref['metadata']
+    instance_info['metadata'] = utils.instance_meta(instance_ref)
 
     instance_info.update(kw)
     return instance_info
