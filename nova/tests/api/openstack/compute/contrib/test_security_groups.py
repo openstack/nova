@@ -422,10 +422,11 @@ class TestSecurityGroups(test.TestCase):
             self.assertEquals(sg['id'], group_id)
             return security_group_db(sg)
 
-        def return_update_security_group(context, group_id, values):
-            self.assertEquals(sg_update['id'], group_id)
-            self.assertEquals(sg_update['name'], values['name'])
-            self.assertEquals(sg_update['description'], values['description'])
+        def return_update_security_group(context, group_id, values,
+                                         columns_to_join=None):
+            self.assertEqual(sg_update['id'], group_id)
+            self.assertEqual(sg_update['name'], values['name'])
+            self.assertEqual(sg_update['description'], values['description'])
             return security_group_db(sg_update)
 
         self.stubs.Set(nova.db, 'security_group_update',

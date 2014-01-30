@@ -3694,13 +3694,16 @@ def security_group_create(context, values):
 
 
 @require_context
-def security_group_update(context, security_group_id, values):
+def security_group_update(context, security_group_id, values,
+                          columns_to_join=None):
     session = get_session()
     with session.begin():
-        security_group_ref = model_query(context, models.SecurityGroup,
-                                         session=session).\
-                                filter_by(id=security_group_id).\
-                                first()
+        query = model_query(context, models.SecurityGroup,
+                         session=session).filter_by(id=security_group_id)
+        if columns_to_join:
+            for column in columns_to_join:
+                query = query.options(joinedload_all(column))
+        security_group_ref = query.first()
 
         if not security_group_ref:
             raise exception.SecurityGroupNotFound(

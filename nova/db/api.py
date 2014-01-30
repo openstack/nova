@@ -1231,9 +1231,11 @@ def security_group_create(context, values):
     return IMPL.security_group_create(context, values)
 
 
-def security_group_update(context, security_group_id, values):
+def security_group_update(context, security_group_id, values,
+                          columns_to_join=None):
     """Update a security group."""
-    return IMPL.security_group_update(context, security_group_id, values)
+    return IMPL.security_group_update(context, security_group_id, values,
+                                      columns_to_join=columns_to_join)
 
 
 def security_group_ensure_default(context):
