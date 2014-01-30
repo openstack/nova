@@ -140,12 +140,12 @@ libvirt_opts = [
                 deprecated_name='libvirt_inject_password',
                 deprecated_group='DEFAULT'),
     cfg.BoolOpt('inject_key',
-                default=True,
+                default=False,
                 help='Inject the ssh public key at boot time',
                 deprecated_name='libvirt_inject_key',
                 deprecated_group='DEFAULT'),
     cfg.IntOpt('inject_partition',
-                default=1,
+                default=-2,
                 help='The partition to inject to : '
                      '-2 => disable, -1 => inspect (libguestfs only), '
                      '0 => not partitioned, >0 => partition number',

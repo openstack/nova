@@ -2775,13 +2775,13 @@
 
 # Inject the ssh public key at boot time (boolean value)
 # Deprecated group/name - [DEFAULT]/libvirt_inject_key
-#inject_key=true
+#inject_key=false
 
 # The partition to inject to : -2 => disable, -1 => inspect
 # (libguestfs only), 0 => not partitioned, >0 => partition
 # number (integer value)
 # Deprecated group/name - [DEFAULT]/libvirt_inject_partition
-#inject_partition=1
+#inject_partition=-2
 
 # Sync virtual and real mouse cursors in Windows VMs (boolean
 # value)
