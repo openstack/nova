@@ -16,7 +16,7 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
+
 
 ALIAS = "os-extended-server-attributes"
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
@@ -39,8 +39,6 @@ class ExtendedServerAttributesController(wsgi.Controller):
     def show(self, req, resp_obj, id):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedServerAttributeTemplate())
             server = resp_obj.obj['server']
             db_instance = req.get_db_instance(server['id'])
             # server['id'] is guaranteed to be in the cache due to
@@ -51,9 +49,6 @@ class ExtendedServerAttributesController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if authorize(context):
-            # Attach our slave template to the response object
-            resp_obj.attach(xml=ExtendedServerAttributesTemplate())
-
             servers = list(resp_obj.obj['servers'])
             for server in servers:
                 db_instance = req.get_db_instance(server['id'])
@@ -78,31 +73,3 @@ class ExtendedServerAttributes(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         return []
-
-
-def make_server(elem):
-    elem.set('{%s}instance_name' % ExtendedServerAttributes.namespace,
-             '%s:instance_name' % ExtendedServerAttributes.alias)
-    elem.set('{%s}host' % ExtendedServerAttributes.namespace,
-             '%s:host' % ExtendedServerAttributes.alias)
-    elem.set('{%s}hypervisor_hostname' % ExtendedServerAttributes.namespace,
-             '%s:hypervisor_hostname' % ExtendedServerAttributes.alias)
-
-
-class ExtendedServerAttributeTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root)
-        alias = ExtendedServerAttributes.alias
-        namespace = ExtendedServerAttributes.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})
-
-
-class ExtendedServerAttributesTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        alias = ExtendedServerAttributes.alias
-        namespace = ExtendedServerAttributes.namespace
-        return xmlutil.SlaveTemplate(root, 1, nsmap={alias: namespace})

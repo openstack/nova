@@ -17,42 +17,11 @@
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 
 LOG = logging.getLogger(__name__)
-
-
-def make_ext(elem):
-    elem.set('name')
-    elem.set('namespace')
-    elem.set('alias')
-    elem.set('version')
-
-    desc = xmlutil.SubTemplateElement(elem, 'description')
-    desc.text = 'description'
-
-
-ext_nsmap = {None: xmlutil.XMLNS_COMMON_V10, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ExtensionTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('extension', selector='extension')
-        make_ext(root)
-        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
-
-
-class ExtensionsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('extensions')
-        elem = xmlutil.SubTemplateElement(root, 'extension',
-                                          selector='extensions')
-        make_ext(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
 
 
 class ExtensionInfoController(object):
@@ -84,7 +53,6 @@ class ExtensionInfoController(object):
         return discoverable_extensions
 
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=ExtensionsTemplate)
     def index(self, req):
         context = req.environ['nova.context']
 
@@ -97,7 +65,6 @@ class ExtensionInfoController(object):
         return dict(extensions=extensions)
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=ExtensionTemplate)
     def show(self, req, id):
         context = req.environ['nova.context']
         try:
