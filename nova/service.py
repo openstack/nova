@@ -180,7 +180,13 @@ class Service(service.Service):
                     self.host, self.binary)
             self.service_id = self.service_ref['id']
         except exception.NotFound:
-            self.service_ref = self._create_service_ref(ctxt)
+            try:
+                self.service_ref = self._create_service_ref(ctxt)
+            except exception.ServiceTopicExists:
+                # NOTE(danms): If we race to create a record with a sibling
+                # worker, don't fail here.
+                self.service_ref = self.conductor_api.service_get_by_args(ctxt,
+                    self.host, self.binary)
 
         self.manager.pre_start_hook()
 
