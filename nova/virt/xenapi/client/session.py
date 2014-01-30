@@ -273,9 +273,4 @@ class XenAPISession(object):
         the `get_all` call and the `get_record` call.
         """
 
-        for ref in self.call_xenapi('%s.get_all' % record_type):
-            rec = self.get_rec(record_type, ref)
-            # Check to make sure the record still exists. It may have
-            # been deleted between the get_all call and get_record call
-            if rec:
-                yield ref, rec
+        return self.call_xenapi('%s.get_all_records' % record_type).items()

@@ -1988,6 +1988,31 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
 
         session.call_xenapi.assert_called_with('VM.create', expected_vm_rec)
 
+    def test_list_vms(self):
+        self.flags(disable_process_locking=True,
+                   instance_name_template='%d',
+                   firewall_driver='nova.virt.xenapi.firewall.'
+                                   'Dom0IptablesFirewallDriver')
+        self.flags(connection_url='test_url',
+                   connection_password='test_pass',
+                   group='xenserver')
+
+        fake.create_vm("foo1", "Halted")
+        vm_ref = fake.create_vm("foo2", "Running")
+
+        stubs.stubout_session(self.stubs, fake.SessionBase)
+        driver = xenapi_conn.XenAPIDriver(False)
+
+        result = list(vm_utils.list_vms(driver._session))
+
+        # Will have 3 VMs - but one is Dom0 and one is not running on the host
+        self.assertEqual(len(driver._session.call_xenapi('VM.get_all')), 3)
+        self.assertEqual(len(result), 1)
+
+        result_keys = [key for (key, value) in result]
+
+        self.assertIn(vm_ref, result_keys)
+
 
 class ResizeFunctionTestCase(test.NoDBTestCase):
     def _call_get_resize_func_name(self, brand, version):

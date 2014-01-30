@@ -90,10 +90,12 @@ def find_sr_by_uuid(session, sr_uuid):
     """
     Return the storage repository given a uuid.
     """
-    for sr_ref, sr_rec in session.get_all_refs_and_recs('SR'):
-        if sr_rec['uuid'] == sr_uuid:
-            return sr_ref
-    return None
+    try:
+        return session.call_xenapi("SR.get_by_uuid", sr_uuid)
+    except session.XenAPI.Failure as exc:
+        if exc.details[0] == 'UUID_INVALID':
+            return None
+        raise
 
 
 def find_sr_from_vbd(session, vbd_ref):

@@ -1689,12 +1689,12 @@ def set_vm_name_label(session, vm_ref, name_label):
 
 
 def list_vms(session):
-    for vm_ref, vm_rec in session.get_all_refs_and_recs('VM'):
-        if (vm_rec["resident_on"] != session.host_ref or
-                vm_rec["is_a_template"] or vm_rec["is_control_domain"]):
-            continue
-        else:
-            yield vm_ref, vm_rec
+    vms = session.call_xenapi("VM.get_all_records_where",
+                              'field "is_control_domain"="false" and '
+                              'field "is_a_template"="false" and '
+                              'field "resident_on"="%s"' % session.host_ref)
+    for vm_ref in vms.keys():
+        yield vm_ref, vms[vm_ref]
 
 
 def lookup_vm_vdis(session, vm_ref):
