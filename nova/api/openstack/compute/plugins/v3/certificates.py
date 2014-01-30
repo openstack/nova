@@ -18,7 +18,6 @@ import webob.exc
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 import nova.cert.rpcapi
 from nova import exception
 from nova import network
@@ -26,19 +25,6 @@ from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-certificates"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-def make_certificate(elem):
-    elem.set('data')
-    elem.set('private_key')
-
-
-class CertificateTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('certificate',
-                                       selector='certificate')
-        make_certificate(root)
-        return xmlutil.MasterTemplate(root, 1)
 
 
 def _translate_certificate_view(certificate, private_key=None):
@@ -57,7 +43,6 @@ class CertificatesController(object):
         super(CertificatesController, self).__init__()
 
     @extensions.expected_errors((404, 501))
-    @wsgi.serializers(xml=CertificateTemplate)
     def show(self, req, id):
         """Return certificate information."""
         context = req.environ['nova.context']
@@ -73,7 +58,6 @@ class CertificatesController(object):
         return {'certificate': _translate_certificate_view(cert)}
 
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=CertificateTemplate)
     @wsgi.response(201)
     def create(self, req, body=None):
         """Create a certificate."""
