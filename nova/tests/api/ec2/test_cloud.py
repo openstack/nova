@@ -56,6 +56,7 @@ from nova import test
 from nova.tests.api.openstack.compute.contrib import (
     test_neutron_security_groups as test_neutron)
 from nova.tests import cast_as_call
+from nova.tests import fake_block_device
 from nova.tests import fake_network
 from nova.tests import fake_utils
 from nova.tests.image import fake
@@ -2283,18 +2284,17 @@ class CloudTestCase(test.TestCase):
         self.stubs.Set(fake._FakeImageService, 'show', fake_show)
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
-            return [dict(id=1,
-                         source_type='snapshot',
-                         destination_type='volume',
-                         instance_uuid=inst_id,
-                         snapshot_id=snapshots[0],
-                         volume_id=volumes[0],
-                         volume_size=1,
-                         device_name='sda1',
-                         delete_on_termination=False,
-                         no_device=None,
-                         boot_index=0,
-                         connection_info='{"foo":"bar"}')]
+            return [fake_block_device.FakeDbBlockDeviceDict(
+                        {'volume_id': volumes[0],
+                         'snapshot_id': snapshots[0],
+                         'source_type': 'snapshot',
+                         'destination_type': 'volume',
+                         'volume_size': 1,
+                         'device_name': 'sda1',
+                         'boot_index': 0,
+                         'delete_on_termination': False,
+                         'connection_info': '{"foo":"bar"}',
+                         'no_device': None})]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
@@ -2359,14 +2359,15 @@ class CloudTestCase(test.TestCase):
         ec2_instance_id = self._run_instance(**kwargs)
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
-            return [dict(snapshot_id=snapshots[0],
-                         volume_id=volumes[0],
-                         source_type='snapshot',
-                         destination_type='volume',
-                         volume_size=1,
-                         device_name='vda',
-                         delete_on_termination=False,
-                         no_device=None)]
+            return [fake_block_device.FakeDbBlockDeviceDict(
+                        {'volume_id': volumes[0],
+                         'snapshot_id': snapshots[0],
+                         'source_type': 'snapshot',
+                         'destination_type': 'volume',
+                         'volume_size': 1,
+                         'device_name': 'vda',
+                         'delete_on_termination': False,
+                         'no_device': None})]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)

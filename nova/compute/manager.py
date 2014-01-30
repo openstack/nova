@@ -4137,14 +4137,8 @@ class ComputeManager(manager.Manager):
         :param dest_check_data: result of check_can_live_migrate_destination
         :returns: a dict containing migration info
         """
-        capi = self.conductor_api
-        instance_p = obj_base.obj_to_primitive(instance)
-        bdms = capi.block_device_mapping_get_all_by_instance(ctxt, instance_p,
-                                                             legacy=False)
-
         is_volume_backed = self.compute_api.is_volume_backed_instance(ctxt,
-                                                                      instance,
-                                                                      bdms)
+                                                                      instance)
         dest_check_data['is_volume_backed'] = is_volume_backed
         return self.driver.check_can_live_migrate_source(ctxt, instance,
                                                          dest_check_data)

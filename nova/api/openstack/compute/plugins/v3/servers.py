@@ -31,6 +31,7 @@ from nova import compute
 from nova.compute import flavors
 from nova import exception
 from nova.image import glance
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -904,21 +905,18 @@ class ServersController(wsgi.Controller):
 
         instance = self._get_server(context, req, id)
 
-        bdms = self.compute_api.get_instance_bdms(context, instance,
-                                                  legacy=False)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                    context, instance.uuid)
 
         try:
             if self.compute_api.is_volume_backed_instance(context, instance,
                                                           bdms):
                 img = instance['image_ref']
                 if not img:
-                    # NOTE(Vincent Hou) The private method
-                    # _get_bdm_image_metadata only works, when boot
-                    # device is set to 'vda'. It needs to be fixed later,
-                    # but tentatively we use it here.
-                    image_meta = {'properties': self.compute_api.
-                                    _get_bdm_image_metadata(context, bdms,
-                                                            legacy_bdm=False)}
+                    props = bdms.root_metadata(
+                            context, self.compute_api.image_service,
+                            self.compute_api.volume_api)
+                    image_meta = {'properties': props}
                 else:
                     src_image = self.compute_api.\
                         image_service.show(context, img)

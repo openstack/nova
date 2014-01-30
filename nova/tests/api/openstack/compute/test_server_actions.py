@@ -34,6 +34,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests.image import fake
 from nova.tests import matchers
@@ -1021,15 +1022,16 @@ class ServerActionsControllerTest(test.TestCase):
         image_service.create(None, original_image)
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
-            return [dict(volume_id=_fake_id('a'),
-                         source_type='snapshot',
-                         destination_type='volume',
-                         volume_size=1,
-                         device_name='vda',
-                         snapshot_id=1,
-                         boot_index=0,
-                         delete_on_termination=False,
-                         no_device=None)]
+            return [fake_block_device.FakeDbBlockDeviceDict(
+                        {'volume_id': _fake_id('a'),
+                         'source_type': 'snapshot',
+                         'destination_type': 'volume',
+                         'volume_size': 1,
+                         'device_name': 'vda',
+                         'snapshot_id': 1,
+                         'boot_index': 0,
+                         'delete_on_termination': False,
+                         'no_device': None})]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
@@ -1088,15 +1090,16 @@ class ServerActionsControllerTest(test.TestCase):
         image_service = glance.get_default_image_service()
 
         def fake_block_device_mapping_get_all_by_instance(context, inst_id):
-            return [dict(volume_id=_fake_id('a'),
-                         source_type='snapshot',
-                         destination_type='volume',
-                         volume_size=1,
-                         device_name='vda',
-                         snapshot_id=1,
-                         boot_index=0,
-                         delete_on_termination=False,
-                         no_device=None)]
+            return [fake_block_device.FakeDbBlockDeviceDict(
+                        {'volume_id': _fake_id('a'),
+                         'source_type': 'snapshot',
+                         'destination_type': 'volume',
+                         'volume_size': 1,
+                         'device_name': 'vda',
+                         'snapshot_id': 1,
+                         'boot_index': 0,
+                         'delete_on_termination': False,
+                         'no_device': None})]
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_block_device_mapping_get_all_by_instance)
@@ -1106,23 +1109,22 @@ class ServerActionsControllerTest(test.TestCase):
                                            root_device_name='/dev/vda')
         self.stubs.Set(db, 'instance_get_by_uuid', instance)
 
+        fake_metadata = {'test_key1': 'test_value1',
+                         'test_key2': 'test_value2'}
         volume = dict(id=_fake_id('a'),
                       size=1,
                       host='fake',
-                      display_description='fake')
+                      display_description='fake',
+                      volume_image_metadata=fake_metadata)
         snapshot = dict(id=_fake_id('d'))
         self.mox.StubOutWithMock(self.controller.compute_api, 'volume_api')
         volume_api = self.controller.compute_api.volume_api
         volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
+        volume_api.get(mox.IgnoreArg(), volume['id']).AndReturn(volume)
         volume_api.create_snapshot_force(mox.IgnoreArg(), volume['id'],
                mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(snapshot)
 
-        def fake_bdm_image_metadata(fd, context, bdms, legacy_bdm):
-            return {'test_key1': 'test_value1',
-                    'test_key2': 'test_value2'}
         req = fakes.HTTPRequest.blank(self.url)
-        self.stubs.Set(compute_api.API, '_get_bdm_image_metadata',
-                       fake_bdm_image_metadata)
 
         self.mox.ReplayAll()
         response = self.controller._action_create_image(req, FAKE_UUID, body)
