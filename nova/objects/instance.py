@@ -73,7 +73,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.9: Make uuid a non-None real string
     # Version 1.10: Added use_slave to refresh and get_by_uuid
     # Version 1.11: Update instance from database during destroy
-    VERSION = '1.11'
+    # Version 1.12: Added ephemeral_key_uuid
+    VERSION = '1.12'
 
     fields = {
         'id': fields.IntegerField(),
@@ -98,6 +99,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'vcpus': fields.IntegerField(nullable=True),
         'root_gb': fields.IntegerField(nullable=True),
         'ephemeral_gb': fields.IntegerField(nullable=True),
+        'ephemeral_key_uuid': fields.UUIDField(nullable=True),
 
         'host': fields.StringField(nullable=True),
         'node': fields.StringField(nullable=True),
@@ -569,7 +571,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     #              Instance <= version 1.9
     # Version 1.2: Instance <= version 1.11
     # Version 1.3: Added use_slave to get_by_filters
-    VERSION = '1.3'
+    # Version 1.4: Instance <= version 1.12
+    VERSION = '1.4'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -579,6 +582,7 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         # NOTE(danms): Instance was at 1.9 before we added this
         '1.2': '1.11',
         '1.3': '1.11',
+        '1.4': '1.12'
         }
 
     @base.remotable_classmethod

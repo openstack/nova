@@ -2476,6 +2476,18 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
             self.assertColumnNotExists(engine, table_name, 'host')
             self.assertColumnNotExists(engine, table_name, 'details')
 
+    def _check_231(self, engine, data):
+        self.assertColumnExists(engine, 'instances', 'ephemeral_key_uuid')
+
+        instances = db_utils.get_table(engine, 'instances')
+        self.assertTrue(isinstance(instances.c.ephemeral_key_uuid.type,
+            sqlalchemy.types.String))
+        self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
+
+    def _post_downgrade_231(self, engine):
+        self.assertColumnNotExists(engine, 'instances', 'ephemeral_key_uuid')
+        self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
