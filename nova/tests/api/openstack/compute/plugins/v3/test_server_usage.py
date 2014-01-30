@@ -15,9 +15,6 @@
 
 import datetime
 
-from lxml import etree
-
-from nova.api.openstack.compute.plugins.v3 import server_usage
 from nova import compute
 from nova import db
 from nova import exception
@@ -125,14 +122,3 @@ class ServerUsageTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ServerUsageXmlTest(ServerUsageTest):
-    content_type = 'application/xml'
-    prefix = '{%s}' % server_usage.ServerUsage.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

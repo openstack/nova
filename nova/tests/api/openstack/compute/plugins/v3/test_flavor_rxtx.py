@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import flavor_rxtx
@@ -106,14 +105,3 @@ class FlavorRxtxTest(test.NoDBTestCase):
         flavors = self._get_flavors(res.body)
         self.assertFlavorRxtx(flavors[0], '1.0')
         self.assertFlavorRxtx(flavors[1], '')
-
-
-class FlavorRxtxXmlTest(FlavorRxtxTest):
-    content_type = 'application/xml'
-    prefix = '{%s}' % flavor_rxtx.FlavorRxtx.namespace
-
-    def _get_flavor(self, body):
-        return etree.XML(body)
-
-    def _get_flavors(self, body):
-        return etree.XML(body).getchildren()

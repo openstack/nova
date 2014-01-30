@@ -39,36 +39,6 @@ class FakeResponse(wsgi.ResponseObject):
     pass
 
 
-class PciServerTemplateTest(test.NoDBTestCase):
-    def test_pci_server_serializer(self):
-        fake_server = {"server": {'os-pci:pci_devices': [{"id": 1}]}}
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<server xmlns:os-pci="http://docs.openstack.org/compute'
-                    '/ext/os-pci/api/v3"><os-pci:pci_devices xmlns:'
-                    'os-pci="os-pci"><os-pci:pci_device id="1"/>'
-                    '</os-pci:pci_devices></server>'
-                    )
-        serializer = pci.PciServerTemplate()
-        text = serializer.serialize(fake_server)
-        self.assertEqual(expected, text)
-
-    def test_pci_servers_serializer(self):
-        fake_servers = {"servers": [{'os-pci:pci_devices': [{"id": 1}]},
-                                    {'os-pci:pci_devices': [{"id": 2}]}]}
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<servers xmlns:os-pci="http://docs.openstack.org/'
-                    'compute/ext/os-pci/api/v3"><server><os-pci:pci_devices'
-                    ' xmlns:os-pci="os-pci"><os-pci:pci_device id="1"/>'
-                    '</os-pci:pci_devices></server><server>'
-                    '<os-pci:pci_devices xmlns:os-pci="os-pci">'
-                    '<os-pci:pci_device id="2"/></os-pci:pci_devices>'
-                    '</server></servers>'
-                   )
-        serializer = pci.PciServersTemplate()
-        text = serializer.serialize(fake_servers)
-        self.assertEqual(expected, text)
-
-
 class PciServerControllerTest(test.NoDBTestCase):
     def setUp(self):
         super(PciServerControllerTest, self).setUp()
@@ -128,54 +98,6 @@ class PciServerControllerTest(test.NoDBTestCase):
         self.controller.detail(req, resp)
         self.assertEqual([{'id': 1}],
                          resp.obj['servers'][0]['os-pci:pci_devices'])
-
-
-class PciHypervisorTemplateTest(test.NoDBTestCase):
-    def test_pci_hypervisor_serializer(self):
-        exemplar = {"hypervisor": {'os-pci:pci_stats': [
-            {"count": 3,
-             "vendor_id": "8086",
-             "product_id": "1520",
-             "extra_info": {"phys_function": '[["0x0000", "0x04", '
-                                             '"0x00", "0x2"]]'}
-             }]}}
-
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<hypervisor xmlns:os-pci="http://docs.openstack.org/'
-                    'compute/ext/os-pci/api/v3"><os-pci:pci_stats xmlns:'
-                    'os-pci="os-pci"><os-pci:pci_stat><count>3</count>'
-                    '<vendor_id>8086</vendor_id><product_id>1520</product_id>'
-                    '<extra_info><phys_function>'
-                    '[["0x0000", "0x04", "0x00", "0x2"]]</phys_function>'
-                    '</extra_info></os-pci:pci_stat></os-pci:pci_stats>'
-                    '</hypervisor>'
-                    )
-        serializer = pci.PciHypervisorTemplate()
-        text = serializer.serialize(exemplar)
-        self.assertEqual(expected, text)
-
-    def test_pci_hypervisors_serializer(self):
-        exemplar = {"hypervisors": [{'os-pci:pci_stats': [
-            {"count": 3,
-             "vendor_id": "8086",
-             "product_id": "1520",
-             "extra_info": {"phys_function": '[["0x0000", "0x04", '
-                                             '"0x00", "0x2"]]'}
-                                                       }]}]}
-
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<hypervisors xmlns:os-pci="http://docs.openstack.org/'
-                    'compute/ext/os-pci/api/v3"><hypervisor><os-pci:pci_stats'
-                    ' xmlns:os-pci="os-pci"><os-pci:pci_stat><count>3'
-                    '</count><vendor_id>8086</vendor_id><product_id>1520'
-                    '</product_id><extra_info><phys_function>'
-                    '[["0x0000", "0x04", "0x00", "0x2"]]</phys_function>'
-                    '</extra_info></os-pci:pci_stat></os-pci:pci_stats>'
-                    '</hypervisor></hypervisors>'
-                    )
-        serializer = pci.HypervisorDetailTemplate()
-        text = serializer.serialize(exemplar)
-        self.assertEqual(expected, text)
 
 
 class PciHypervisorControllerTest(test.NoDBTestCase):

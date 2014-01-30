@@ -15,7 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_volumes
@@ -157,9 +156,6 @@ class ExtendedVolumesTest(test.TestCase):
         exp_volumes = [{'id': UUID1}, {'id': UUID2}]
         if self.content_type == 'application/json':
             actual = server.get('%svolumes_attached' % self.prefix)
-        elif self.content_type == 'application/xml':
-            actual = [dict(elem.items()) for elem in
-                      server.findall('%svolume_attached' % self.prefix)]
         self.assertEqual(exp_volumes, actual)
 
     def test_detail(self):
@@ -171,9 +167,6 @@ class ExtendedVolumesTest(test.TestCase):
         for i, server in enumerate(self._get_servers(res.body)):
             if self.content_type == 'application/json':
                 actual = server.get('%svolumes_attached' % self.prefix)
-            elif self.content_type == 'application/xml':
-                actual = [dict(elem.items()) for elem in
-                          server.findall('%svolume_attached' % self.prefix)]
             self.assertEqual(exp_volumes, actual)
 
     def test_detach(self):
@@ -359,14 +352,3 @@ class ExtendedVolumesTest(test.TestCase):
         self.stubs.Set(compute.api.API, 'swap_volume', fake_swap_volume)
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get_not_found)
         self.assertRaises(webob.exc.HTTPNotFound, self._test_swap)
-
-
-class ExtendedVolumesXmlTest(ExtendedVolumesTest):
-    content_type = 'application/xml'
-    prefix = '{%s}' % extended_volumes.ExtendedVolumes.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

@@ -16,7 +16,6 @@
 import copy
 import uuid
 
-from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import instance_actions
@@ -219,73 +218,3 @@ class InstanceActionsTest(test.NoDBTestCase):
         req = fakes.HTTPRequestV3.blank('/servers/12/os-instance-actions/1')
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req,
                           FAKE_UUID, FAKE_REQUEST_ID)
-
-
-class InstanceActionsSerializerTest(test.NoDBTestCase):
-    def setUp(self):
-        super(InstanceActionsSerializerTest, self).setUp()
-        self.fake_actions = copy.deepcopy(fake_instance_actions.FAKE_ACTIONS)
-        self.fake_events = copy.deepcopy(fake_instance_actions.FAKE_EVENTS)
-
-    def _verify_instance_action_attachment(self, attach, tree):
-        for key in attach.keys():
-            if key != 'events':
-                self.assertEqual(attach[key], tree.get(key),
-                                 '%s did not match' % key)
-
-    def _verify_instance_action_event_attachment(self, attach, tree):
-        for key in attach.keys():
-            self.assertEqual(attach[key], tree.get(key),
-                             '%s did not match' % key)
-
-    def test_instance_action_serializer(self):
-        serializer = instance_actions.InstanceActionTemplate()
-        action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
-        text = serializer.serialize({'instance_action': action})
-        tree = etree.fromstring(text)
-
-        action = format_action(action)
-        self.assertEqual('instance_action', tree.tag)
-        self._verify_instance_action_attachment(action, tree)
-        found_events = False
-        for child in tree:
-            if child.tag == 'events':
-                found_events = True
-        self.assertFalse(found_events)
-
-    def test_instance_action_events_serializer(self):
-        serializer = instance_actions.InstanceActionTemplate()
-        action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
-        event = self.fake_events[action['id']][0]
-        action['events'] = [dict(event), dict(event)]
-        text = serializer.serialize({'instance_action': action})
-        tree = etree.fromstring(text)
-
-        action = format_action(action)
-        self.assertEqual('instance_action', tree.tag)
-        self._verify_instance_action_attachment(action, tree)
-
-        event = format_event(event)
-        found_events = False
-        for child in tree:
-            if child.tag == 'events':
-                found_events = True
-                for key in event:
-                    self.assertEqual(event[key], child.get(key))
-        self.assertTrue(found_events)
-
-    def test_instance_actions_serializer(self):
-        serializer = instance_actions.InstanceActionsTemplate()
-        action_list = self.fake_actions[FAKE_UUID].values()
-        text = serializer.serialize({'instance_actions': action_list})
-        tree = etree.fromstring(text)
-
-        action_list = [format_action(action) for action in action_list]
-        self.assertEqual('instance_actions', tree.tag)
-        self.assertEqual(len(action_list), len(tree))
-        for idx, child in enumerate(tree):
-            self.assertEqual('instance_action', child.tag)
-            request_id = child.get('request_id')
-            self._verify_instance_action_attachment(
-                                    self.fake_actions[FAKE_UUID][request_id],
-                                    child)

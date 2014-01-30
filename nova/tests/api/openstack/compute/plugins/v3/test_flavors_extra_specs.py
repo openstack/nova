@@ -259,29 +259,3 @@ class FlavorsExtraSpecsTest(test.TestCase):
                                      use_admin_context=True)
         self.assertRaises(webob.exc.HTTPConflict, self.controller.update,
                           req, 1, 'key1', body)
-
-
-class FlavorsExtraSpecsXMLSerializerTest(test.TestCase):
-    def test_serializer(self):
-        serializer = flavors_extraspecs.ExtraSpecsTemplate()
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<extra_specs><key1>value1</key1></extra_specs>')
-        text = serializer.serialize(dict(extra_specs={"key1": "value1"}))
-        self.assertEqual(text, expected)
-
-    def test_show_update_serializer(self):
-        serializer = flavors_extraspecs.ExtraSpecTemplate()
-        expected = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<extra_spec key="key1">value1</extra_spec>')
-        text = serializer.serialize(dict({"key1": "value1"}))
-        self.assertEqual(text, expected)
-
-    def test_serializer_with_colon_tagname(self):
-        # Our test object to serialize
-        obj = {'extra_specs': {'foo:bar': '999'}}
-        serializer = flavors_extraspecs.ExtraSpecsTemplate()
-        expected_xml = (("<?xml version='1.0' encoding='UTF-8'?>\n"
-                    '<extra_specs><foo:bar xmlns:foo="foo">999</foo:bar>'
-                    '</extra_specs>'))
-        result = serializer.serialize(obj)
-        self.assertEqual(expected_xml, result)

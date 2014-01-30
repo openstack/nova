@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_server_attributes
@@ -116,15 +115,3 @@ class ExtendedServerAttributesTest(test.TestCase):
         res = self._make_request(url)
 
         self.assertEqual(res.status_int, 404)
-
-
-class ExtendedServerAttributesXmlTest(ExtendedServerAttributesTest):
-    content_type = 'application/xml'
-    ext = extended_server_attributes
-    prefix = '{%s}' % ext.ExtendedServerAttributes.namespace
-
-    def _get_server(self, body):
-        return etree.XML(body)
-
-    def _get_servers(self, body):
-        return etree.XML(body).getchildren()

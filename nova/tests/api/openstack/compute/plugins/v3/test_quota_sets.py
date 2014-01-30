@@ -16,11 +16,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import quota_sets as quotas
-from nova.api.openstack import wsgi
 from nova import context as context_maker
 from nova import quota
 from nova import test
@@ -185,17 +183,6 @@ class QuotaSetsTest(test.TestCase):
         res_dict = self.controller.update(req, id, body)
         self.assertEqual(res_dict, expected_resp)
 
-    def test_quotas_update_invalid_value_xml_fromat_empty_string(self):
-        id = 'update_me'
-        expected_resp = self._generate_quota_set(id=id)
-
-        # when PUT XML format with empty string for quota
-        body = self._generate_quota_set(ram={})
-        req = fakes.HTTPRequestV3.blank('/os-quota-sets/' + id,
-                                      use_admin_context=True)
-        res_dict = self.controller.update(req, id, body)
-        self.assertEqual(res_dict, expected_resp)
-
     def test_quotas_update_invalid_value_non_int(self):
         # when PUT non integer value
         body = self._generate_quota_set(ram={}, instances=test)
@@ -339,90 +326,6 @@ class QuotaSetsTest(test.TestCase):
         self.mox.ReplayAll()
         self.controller.delete(self.req, '1234')
         self.mox.VerifyAll()
-
-
-class QuotaXMLSerializerTest(test.TestCase):
-    def setUp(self):
-        super(QuotaXMLSerializerTest, self).setUp()
-        self.serializer = quotas.QuotaTemplate()
-        self.deserializer = wsgi.XMLDeserializer()
-        self.detail_serializer = quotas.QuotaDetailTemplate()
-
-    def test_serializer(self):
-        exemplar = dict(quota_set=dict(
-                id='project_id',
-                metadata_items=10,
-                ram=50,
-                floating_ips=60,
-                fixed_ips=-1,
-                instances=70,
-                security_groups=10,
-                security_group_rules=20,
-                key_pairs=100,
-                cores=90))
-        text = self.serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('quota_set', tree.tag)
-        self.assertEqual('project_id', tree.get('id'))
-        self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
-        for child in tree:
-            self.assertIn(child.tag, exemplar['quota_set'])
-            self.assertEqual(int(child.text), exemplar['quota_set'][child.tag])
-
-    def test_detail_serializer(self):
-        exemplar = dict(quota_set=dict(
-            id='project_id',
-            metadata_items=dict(limit=10, in_use=1, reserved=2),
-            ram=dict(limit=30, in_use=10, reserved=3),
-            floating_ips=dict(limit=60, in_use=20, reserved=20),
-            fixed_ips=dict(limit=-1, in_use=20, reserved=0),
-            instances=dict(limit=10, in_use=2, reserved=2),
-            security_groups=dict(limit=10, in_use=4, reserved=6),
-            security_group_rules=dict(limit=20, in_use=10, reserved=8),
-            key_pairs=dict(limit=20, in_use=10, reserved=11),
-            cores=dict(limit=20, in_use=10, reserved=2),
-        ))
-        text = self.detail_serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('quota_set', tree.tag)
-        self.assertEqual('project_id', tree.get('id'))
-        self.assertEqual(len(exemplar['quota_set']) - 1, len(tree))
-        for child in tree:
-            self.assertIn(child.tag, exemplar['quota_set'])
-            for k in child.attrib.keys():
-                self.assertEqual(int(child.attrib[k]),
-                                 exemplar['quota_set'][child.tag][k])
-
-    def test_deserializer(self):
-        exemplar = dict(quota_set=dict(
-                metadata_items='10',
-                ram='50',
-                floating_ips='60',
-                fixed_ips='-1',
-                instances='70',
-                security_groups='10',
-                security_group_rules='20',
-                key_pairs='100',
-                cores='90'))
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                  '<quota_set>'
-                  '<metadata_items>10</metadata_items>'
-                  '<ram>50</ram>'
-                  '<floating_ips>60</floating_ips>'
-                  '<fixed_ips>-1</fixed_ips>'
-                  '<instances>70</instances>'
-                  '<security_groups>10</security_groups>'
-                  '<security_group_rules>20</security_group_rules>'
-                  '<key_pairs>100</key_pairs>'
-                  '<cores>90</cores>'
-                  '</quota_set>')
-
-        result = self.deserializer.deserialize(intext)['body']
-        self.assertEqual(result, exemplar)
 
 
 fake_quotas = {'ram': {'limit': 51200,

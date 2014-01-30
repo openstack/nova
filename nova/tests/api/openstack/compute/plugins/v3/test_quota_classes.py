@@ -13,11 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import quota_classes
-from nova.api.openstack import wsgi
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -136,61 +134,3 @@ class QuotaClassSetsTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank('/os-quota-class-sets/test_class')
         self.assertRaises(webob.exc.HTTPForbidden, self.controller.update,
                           req, 'test_class', body)
-
-
-class QuotaTemplateXMLSerializerTest(test.TestCase):
-    def setUp(self):
-        super(QuotaTemplateXMLSerializerTest, self).setUp()
-        self.serializer = quota_classes.QuotaClassTemplate()
-        self.deserializer = wsgi.XMLDeserializer()
-
-    def test_serializer(self):
-        exemplar = dict(quota_class_set=dict(
-                id='test_class',
-                metadata_items=10,
-                ram=50,
-                floating_ips=60,
-                fixed_ips=-1,
-                instances=70,
-                security_groups=10,
-                security_group_rules=20,
-                key_pairs=100,
-                cores=90))
-        text = self.serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('quota_class_set', tree.tag)
-        self.assertEqual('test_class', tree.get('id'))
-        self.assertEqual(len(exemplar['quota_class_set']) - 1, len(tree))
-        for child in tree:
-            self.assertIn(child.tag, exemplar['quota_class_set'])
-            self.assertEqual(int(child.text),
-                             exemplar['quota_class_set'][child.tag])
-
-    def test_deserializer(self):
-        exemplar = dict(quota_class_set=dict(
-                metadata_items='10',
-                ram='50',
-                floating_ips='60',
-                fixed_ips='-1',
-                instances='70',
-                security_groups='10',
-                security_group_rules='20',
-                key_pairs='100',
-                cores='90'))
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                  '<quota_class_set>'
-                  '<metadata_items>10</metadata_items>'
-                  '<ram>50</ram>'
-                  '<floating_ips>60</floating_ips>'
-                  '<fixed_ips>-1</fixed_ips>'
-                  '<instances>70</instances>'
-                  '<cores>90</cores>'
-                  '<security_groups>10</security_groups>'
-                  '<security_group_rules>20</security_group_rules>'
-                  '<key_pairs>100</key_pairs>'
-                  '</quota_class_set>')
-
-        result = self.deserializer.deserialize(intext)['body']
-        self.assertEqual(result, exemplar)

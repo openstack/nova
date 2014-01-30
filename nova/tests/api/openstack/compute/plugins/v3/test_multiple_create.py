@@ -499,33 +499,3 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, body)
-
-
-class TestServerCreateRequestXMLDeserializer(test.TestCase):
-
-    def setUp(self):
-        super(TestServerCreateRequestXMLDeserializer, self).setUp()
-        ext_info = plugins.LoadedExtensionInfo()
-        controller = servers.ServersController(extension_info=ext_info)
-        self.deserializer = servers.CreateDeserializer(controller)
-
-    def test_request_with_multiple_create_args(self):
-        serial_request = """
-    <server xmlns="http://docs.openstack.org/compute/api/v2"
-    xmlns:%(alias)s="%(namespace)s"
-     name="new-server-test" image_ref="1" flavor_ref="1"
-     %(alias)s:min_count="1" %(alias)s:max_count="3"
-     %(alias)s:return_reservation_id="True">
-    </server>""" % {
-        'alias': multiple_create.ALIAS,
-        'namespace': multiple_create.MultipleCreate.namespace}
-        request = self.deserializer.deserialize(serial_request)
-        expected = {"server": {
-                "name": "new-server-test",
-                "image_ref": "1",
-                "flavor_ref": "1",
-                multiple_create.MIN_ATTRIBUTE_NAME: "1",
-                multiple_create.MAX_ATTRIBUTE_NAME: "3",
-                multiple_create.RRID_ATTRIBUTE_NAME: True,
-                }}
-        self.assertEqual(request['body'], expected)

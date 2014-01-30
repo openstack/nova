@@ -15,11 +15,9 @@
 
 import copy
 
-from lxml import etree
 from webob import exc
 
 from nova.api.openstack.compute.plugins.v3 import cells as cells_ext
-from nova.api.openstack import xmlutil
 from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
@@ -27,7 +25,6 @@ from nova import exception
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
-from nova.tests import utils
 
 
 class BaseCellsTest(test.NoDBTestCase):
@@ -446,88 +443,3 @@ class CellsTest(BaseCellsTest):
         body = {'foo': 'meow'}
         self.assertRaises(exc.HTTPBadRequest,
                 self.controller.sync_instances, req, body=body)
-
-
-class TestCellsXMLSerializer(BaseCellsTest):
-    def test_multiple_cells(self):
-        fixture = {'cells': self._get_all_cell_info()}
-
-        serializer = cells_ext.CellsTemplate()
-        output = serializer.serialize(fixture)
-        res_tree = etree.XML(output)
-
-        self.assertEqual(res_tree.tag, '{%s}cells' % xmlutil.XMLNS_V10)
-        self.assertEqual(len(res_tree), 2)
-        self.assertEqual(res_tree[0].tag, '{%s}cell' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree[1].tag, '{%s}cell' % xmlutil.XMLNS_V10)
-
-    def test_single_cell_with_caps(self):
-        cell = {'id': 1,
-                'name': 'darksecret',
-                'username': 'meow',
-                'capabilities': {'cap1': 'a;b',
-                                 'cap2': 'c;d'}}
-        fixture = {'cell': cell}
-
-        serializer = cells_ext.CellTemplate()
-        output = serializer.serialize(fixture)
-        res_tree = etree.XML(output)
-
-        self.assertEqual(res_tree.tag, '{%s}cell' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree.get('name'), 'darksecret')
-        self.assertEqual(res_tree.get('username'), 'meow')
-        self.assertIsNone(res_tree.get('password'))
-        self.assertEqual(len(res_tree), 1)
-
-        child = res_tree[0]
-        self.assertEqual(child.tag,
-                '{%s}capabilities' % xmlutil.XMLNS_V10)
-        for elem in child:
-            self.assertIn(elem.tag, ('{%s}cap1' % xmlutil.XMLNS_V10,
-                                      '{%s}cap2' % xmlutil.XMLNS_V10))
-            if elem.tag == '{%s}cap1' % xmlutil.XMLNS_V10:
-                self.assertEqual(elem.text, 'a;b')
-            elif elem.tag == '{%s}cap2' % xmlutil.XMLNS_V10:
-                self.assertEqual(elem.text, 'c;d')
-
-    def test_single_cell_without_caps(self):
-        cell = {'id': 1,
-                'username': 'woof',
-                'name': 'darksecret'}
-        fixture = {'cell': cell}
-
-        serializer = cells_ext.CellTemplate()
-        output = serializer.serialize(fixture)
-        res_tree = etree.XML(output)
-
-        self.assertEqual(res_tree.tag, '{%s}cell' % xmlutil.XMLNS_V10)
-        self.assertEqual(res_tree.get('name'), 'darksecret')
-        self.assertEqual(res_tree.get('username'), 'woof')
-        self.assertIsNone(res_tree.get('password'))
-        self.assertEqual(len(res_tree), 0)
-
-
-class TestCellsXMLDeserializer(test.NoDBTestCase):
-    def test_cell_deserializer(self):
-        caps_dict = {'cap1': 'a;b',
-                             'cap2': 'c;d'}
-        caps_xml = ("<capabilities><cap1>a;b</cap1>"
-                "<cap2>c;d</cap2></capabilities>")
-        expected = {'cell': {'name': 'testcell1',
-                             'type': 'child',
-                             'rpc_host': 'localhost',
-                             'capabilities': caps_dict}}
-        intext = ("<?xml version='1.0' encoding='UTF-8'?>\n"
-                "<cell><name>testcell1</name><type>child</type>"
-                        "<rpc_host>localhost</rpc_host>"
-                        "%s</cell>") % caps_xml
-        deserializer = cells_ext.CellDeserializer()
-        result = deserializer.deserialize(intext)
-        self.assertEqual(dict(body=expected), result)
-
-    def test_with_corrupt_xml(self):
-        deserializer = cells_ext.CellDeserializer()
-        self.assertRaises(
-                exception.MalformedRequestBody,
-                deserializer.deserialize,
-                utils.killer_xml_body())

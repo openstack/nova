@@ -13,11 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from lxml import etree
-
 from nova.api.openstack import compute
-from nova.api.openstack.compute.plugins.v3 import server_diagnostics
-from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -67,29 +63,3 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
                        fake_instance_get_instance_not_found)
         res = req.get_response(self.router)
         self.assertEqual(res.status_int, 404)
-
-
-class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
-    namespace = wsgi.XMLNS_V11
-
-    def _tag(self, elem):
-        tagname = elem.tag
-        self.assertEqual(tagname[0], '{')
-        tmp = tagname.partition('}')
-        namespace = tmp[0][1:]
-        self.assertEqual(namespace, self.namespace)
-        return tmp[2]
-
-    def test_index_serializer(self):
-        serializer = server_diagnostics.ServerDiagnosticsTemplate()
-        exemplar = dict(diag1='foo', diag2='bar')
-        text = serializer.serialize(exemplar)
-
-        tree = etree.fromstring(text)
-
-        self.assertEqual('diagnostics', self._tag(tree))
-        self.assertEqual(len(tree), len(exemplar))
-        for child in tree:
-            tag = self._tag(child)
-            self.assertIn(tag, exemplar)
-            self.assertEqual(child.text, exemplar[tag])
