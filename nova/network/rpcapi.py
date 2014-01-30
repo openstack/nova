@@ -20,6 +20,7 @@ Client side of the network RPC API.
 
 from oslo.config import cfg
 
+from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
 from nova import rpcclient
 
@@ -96,6 +97,7 @@ class NetworkAPI(rpcclient.RpcProxy):
         super(NetworkAPI, self).__init__(
                 topic=topic,
                 default_version=self.BASE_RPC_API_VERSION,
+                serializer=objects_base.NovaObjectSerializer(),
                 version_cap=version_cap)
         self.client = self.get_client()
 

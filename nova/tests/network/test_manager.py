@@ -43,6 +43,7 @@ from nova.tests import fake_instance
 from nova.tests import fake_ldap
 from nova.tests import fake_network
 from nova.tests import matchers
+from nova.tests.objects import test_network
 from nova import utils
 
 CONF = cfg.CONF
@@ -1462,7 +1463,8 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_validate_cidrs(self):
         manager = fake_network.FakeNetworkManager()
-        nets = manager.create_networks(None, 'fake', '192.168.0.0/24',
+        nets = manager.create_networks(self.context.elevated(), 'fake',
+                                       '192.168.0.0/24',
                                        False, 1, 256, None, None, None,
                                        None, None)
         self.assertEqual(1, len(nets))
@@ -1471,7 +1473,8 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_validate_cidrs_split_exact_in_half(self):
         manager = fake_network.FakeNetworkManager()
-        nets = manager.create_networks(None, 'fake', '192.168.0.0/24',
+        nets = manager.create_networks(self.context.elevated(), 'fake',
+                                       '192.168.0.0/24',
                                        False, 2, 128, None, None, None,
                                        None, None)
         self.assertEqual(2, len(nets))
@@ -1479,14 +1482,13 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertIn('192.168.0.0/25', cidrs)
         self.assertIn('192.168.0.128/25', cidrs)
 
-    def test_validate_cidrs_split_cidr_in_use_middle_of_range(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_split_cidr_in_use_middle_of_range(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([FakeNetwork(id=1,
-                                     cidr='192.168.2.0/24')])
-        self.mox.ReplayAll()
-        nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
+        get_all.return_value = [dict(test_network.fake_network,
+                                     id=1, cidr='192.168.2.0/24')]
+        nets = manager.create_networks(self.context.elevated(), 'fake',
+                                       '192.168.0.0/16',
                                        False, 4, 256, None, None, None,
                                        None, None)
         self.assertEqual(4, len(nets))
@@ -1497,28 +1499,25 @@ class CommonNetworkTestCase(test.TestCase):
             self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/24', cidrs)
 
-    def test_validate_cidrs_smaller_subnet_in_use(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_smaller_subnet_in_use(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
-                                     'cidr': '192.168.2.9/25'}])
-        self.mox.ReplayAll()
+        get_all.return_value = [dict(test_network.fake_network,
+                                     id=1, cidr='192.168.2.9/25')]
         # CidrConflict: requested cidr (192.168.2.0/24) conflicts with
         #               existing smaller cidr
-        args = (None, 'fake', '192.168.2.0/24', False, 1, 256, None, None,
-                None, None, None)
+        args = (self.context.elevated(), 'fake', '192.168.2.0/24', False,
+                1, 256, None, None, None, None, None)
         self.assertRaises(exception.CidrConflict,
                           manager.create_networks, *args)
 
-    def test_validate_cidrs_split_smaller_cidr_in_use(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_split_smaller_cidr_in_use(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([FakeNetwork(id=1,
-                                     cidr='192.168.2.0/25')])
-        self.mox.ReplayAll()
-        nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
+        get_all.return_value = [dict(test_network.fake_network,
+                                     id=1, cidr='192.168.2.0/25')]
+        nets = manager.create_networks(self.context.elevated(), 'fake',
+                                       '192.168.0.0/16',
                                        False, 4, 256, None, None, None, None,
                                        None)
         self.assertEqual(4, len(nets))
@@ -1529,14 +1528,14 @@ class CommonNetworkTestCase(test.TestCase):
             self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/24', cidrs)
 
-    def test_validate_cidrs_split_smaller_cidr_in_use2(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_split_smaller_cidr_in_use2(self, get_all):
         manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([FakeNetwork(id=1,
-                                     cidr='192.168.2.9/29')])
-        self.mox.ReplayAll()
-        nets = manager.create_networks(None, 'fake', '192.168.2.0/24',
+        get_all.return_value = [dict(test_network.fake_network, id=1,
+                                     cidr='192.168.2.9/29')]
+        nets = manager.create_networks(self.context.elevated(), 'fake',
+                                       '192.168.2.0/24',
                                        False, 3, 32, None, None, None, None,
                                        None)
         self.assertEqual(3, len(nets))
@@ -1546,17 +1545,16 @@ class CommonNetworkTestCase(test.TestCase):
             self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/27', cidrs)
 
-    def test_validate_cidrs_split_all_in_use(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_split_all_in_use(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        in_use = [{'id': 1, 'cidr': '192.168.2.9/29'},
-                  {'id': 2, 'cidr': '192.168.2.64/26'},
-                  {'id': 3, 'cidr': '192.168.2.128/26'}]
-        manager.db.network_get_all(ctxt).AndReturn(in_use)
-        self.mox.ReplayAll()
-        args = (None, 'fake', '192.168.2.0/24', False, 3, 64, None, None,
-                None, None, None)
+        in_use = [dict(test_network.fake_network, **values) for values in
+                  [{'id': 1, 'cidr': '192.168.2.9/29'},
+                   {'id': 2, 'cidr': '192.168.2.64/26'},
+                   {'id': 3, 'cidr': '192.168.2.128/26'}]]
+        get_all.return_value = in_use
+        args = (self.context.elevated(), 'fake', '192.168.2.0/24', False,
+                3, 64, None, None, None, None, None)
         # CidrConflict: Not enough subnets avail to satisfy requested num_
         #               networks - some subnets in requested range already
         #               in use
@@ -1570,16 +1568,14 @@ class CommonNetworkTestCase(test.TestCase):
         # ValueError: network_size * num_networks exceeds cidr size
         self.assertRaises(ValueError, manager.create_networks, *args)
 
-    def test_validate_cidrs_already_used(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_already_used(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        manager.db.network_get_all(ctxt).AndReturn([{'id': 1,
-                                     'cidr': '192.168.0.0/24'}])
-        self.mox.ReplayAll()
+        get_all.return_value = [dict(test_network.fake_network,
+                                     cidr='192.168.0.0/24')]
         # CidrConflict: cidr already in use
-        args = (None, 'fake', '192.168.0.0/24', False, 1, 256, None, None,
-                None, None, None)
+        args = (self.context.elevated(), 'fake', '192.168.0.0/24', False,
+                1, 256, None, None, None, None, None)
         self.assertRaises(exception.CidrConflict,
                           manager.create_networks, *args)
 
@@ -1593,22 +1589,21 @@ class CommonNetworkTestCase(test.TestCase):
 
     def test_validate_cidrs_split_partial(self):
         manager = fake_network.FakeNetworkManager()
-        nets = manager.create_networks(None, 'fake', '192.168.0.0/16',
+        nets = manager.create_networks(self.context.elevated(), 'fake',
+                                       '192.168.0.0/16',
                                        False, 2, 256, None, None, None, None,
                                        None)
         returned_cidrs = [str(net['cidr']) for net in nets]
         self.assertIn('192.168.0.0/24', returned_cidrs)
         self.assertIn('192.168.1.0/24', returned_cidrs)
 
-    def test_validate_cidrs_conflict_existing_supernet(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_validate_cidrs_conflict_existing_supernet(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        fakecidr = [{'id': 1, 'cidr': '192.168.0.0/8'}]
-        manager.db.network_get_all(ctxt).AndReturn(fakecidr)
-        self.mox.ReplayAll()
-        args = (None, 'fake', '192.168.0.0/24', False, 1, 256, None, None,
-                None, None, None)
+        get_all.return_value = [dict(test_network.fake_network,
+                                     id=1, cidr='192.168.0.0/8')]
+        args = (self.context.elevated(), 'fake', '192.168.0.0/24', False,
+                1, 256, None, None, None, None, None)
         # CidrConflict: requested cidr (192.168.0.0/24) conflicts
         #               with existing supernet
         self.assertRaises(exception.CidrConflict,
@@ -1619,18 +1614,16 @@ class CommonNetworkTestCase(test.TestCase):
         manager = fake_network.FakeNetworkManager()
         self.stubs.Set(manager, '_create_fixed_ips',
                                 self.fake_create_fixed_ips)
-        args = [None, 'foo', cidr, None, 1, 256, 'fd00::/48', None, None,
-                None, None, None]
+        args = [self.context.elevated(), 'foo', cidr, None, 1, 256,
+                'fd00::/48', None, None, None, None, None]
         self.assertTrue(manager.create_networks(*args))
 
-    def test_create_networks_cidr_already_used(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_create_networks_cidr_already_used(self, get_all):
         manager = fake_network.FakeNetworkManager()
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        ctxt = mox.IgnoreArg()
-        fakecidr = [{'id': 1, 'cidr': '192.168.0.0/24'}]
-        manager.db.network_get_all(ctxt).AndReturn(fakecidr)
-        self.mox.ReplayAll()
-        args = [None, 'foo', '192.168.0.0/24', None, 1, 256,
+        get_all.return_value = [dict(test_network.fake_network,
+                                     id=1, cidr='192.168.0.0/24')]
+        args = [self.context.elevated(), 'foo', '192.168.0.0/24', None, 1, 256,
                  'fd00::/48', None, None, None, None, None]
         self.assertRaises(exception.CidrConflict,
                           manager.create_networks, *args)
@@ -1640,8 +1633,8 @@ class CommonNetworkTestCase(test.TestCase):
         manager = fake_network.FakeNetworkManager()
         self.stubs.Set(manager, '_create_fixed_ips',
                                 self.fake_create_fixed_ips)
-        args = [None, 'foo', cidr, None, 10, 256, 'fd00::/48', None, None,
-                None, None, None]
+        args = [self.context.elevated(), 'foo', cidr, None, 10, 256,
+                'fd00::/48', None, None, None, None, None]
         self.assertTrue(manager.create_networks(*args))
 
     def test_get_instance_uuids_by_ip_regex(self):
