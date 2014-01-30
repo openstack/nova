@@ -1440,6 +1440,38 @@ class LibvirtConnTestCase(test.TestCase):
                                     image_meta, disk_info)
         self.assertEqual(cfg.os_cmdline, "fake_os_command_line")
 
+    def _test_get_guest_config_ppc64(self, device_index):
+        """Test for nova.virt.libvirt.driver.LibvirtDriver.get_guest_config.
+        """
+        self.flags(virt_type='kvm', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {}
+        expected = ('ppc64', 'ppc')
+        for arch in expected:
+            with mock.patch.object(libvirt_driver.libvirt_utils,
+                                   'get_arch',
+                                   return_value=arch):
+                cfg = conn.get_guest_config(instance_ref, [],
+                                            image_meta,
+                                            disk_info)
+                self.assertEqual(type(cfg.devices[device_index]),
+                                 vconfig.LibvirtConfigGuestVideo)
+                self.assertEqual(cfg.devices[device_index].type, 'vga')
+
+    def test_get_guest_config_ppc64_through_image_meta_vnc_enabled(self):
+        self.flags(vnc_enabled=True)
+        self._test_get_guest_config_ppc64(6)
+
+    def test_get_guest_config_ppc64_through_image_meta_spice_enabled(self):
+        self.flags(enabled=True,
+                   agent_enabled=True,
+                   group='spice')
+        self._test_get_guest_config_ppc64(8)
+
     def test_get_guest_cpu_config_none(self):
         self.flags(cpu_mode="none", group='libvirt')
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

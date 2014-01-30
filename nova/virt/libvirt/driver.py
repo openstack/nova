@@ -3230,17 +3230,27 @@ class LibvirtDriver(driver.ComputeDriver):
         if add_video_driver:
             VALID_VIDEO_DEVICES = ("vga", "cirrus", "vmvga", "xen", "qxl")
             video = vconfig.LibvirtConfigGuestVideo()
-            meta_prop = image_meta.get('properties', {}) if image_meta else {}
+            # NOTE(ldbragst): The following logic sets the video.type
+            # depending on supported defaults given the architecture,
+            # virtualization type, and features. The video.type attribute can
+            # be overridden by the user with image_meta['properties'], which
+            # is carried out in the next if statement below this one.
+            arch = libvirt_utils.get_arch(image_meta)
+            if guest.os_type == vm_mode.XEN:
+                video.type = 'xen'
+            elif arch in ('ppc', 'ppc64'):
+                # NOTE(ldbragst): PowerKVM doesn't support 'cirrus' be default
+                # so use 'vga' instead when running on Power hardware.
+                video.type = 'vga'
+            elif CONF.spice.enabled:
+                video.type = 'qxl'
 
+            meta_prop = image_meta.get('properties', {}) if image_meta else {}
             if meta_prop.get('hw_video_model'):
                 video.type = meta_prop.get('hw_video_model')
                 if (video.type not in VALID_VIDEO_DEVICES):
                     raise exception.InvalidVideoMode(model=video.type)
 
-            elif CONF.spice.enabled:
-                video.type = 'qxl'
-            if guest.os_type == vm_mode.XEN:
-                video.type = 'xen'
             guest.add_device(video)
 
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
