@@ -79,7 +79,3 @@ class AggregatesSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs = self._get_regexes()
         self._verify_response('aggregate-update-post-resp',
                               subs, response, 200)
-
-
-class AggregatesSampleXmlTest(AggregatesSampleJsonTest):
-    ctype = 'xml'

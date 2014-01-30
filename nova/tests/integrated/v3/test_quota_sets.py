@@ -69,7 +69,3 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV3):
                                 {})
         return self._verify_response('user-quotas-update-post-resp', {},
                                      response, 200)
-
-
-class QuotaSetsSampleXmlTests(QuotaSetsSampleJsonTests):
-    ctype = "xml"

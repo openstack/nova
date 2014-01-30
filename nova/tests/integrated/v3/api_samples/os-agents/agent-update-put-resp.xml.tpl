@@ -1,7 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<agent>
-  <url>xxx://xxxx/xxx/xxx</url>
-  <version>7.0</version>
-  <agent_id>1</agent_id>
-  <md5hash>add6bb58e139be103324d04d82d8f545</md5hash>
-</agent>

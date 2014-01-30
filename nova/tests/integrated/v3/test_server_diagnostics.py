@@ -26,7 +26,3 @@ class ServerDiagnosticsSamplesJsonTest(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         self._verify_response('server-diagnostics-get-resp', subs,
                               response, 200)
-
-
-class ServerDiagnosticsSamplesXmlTest(ServerDiagnosticsSamplesJsonTest):
-    ctype = "xml"

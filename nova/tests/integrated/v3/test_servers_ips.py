@@ -34,7 +34,3 @@ class ServersIpsJsonTest(test_servers.ServersSampleBase):
         response = self._do_get('servers/%s/ips/private' % uuid)
         subs = self._get_regexes()
         self._verify_response('server-ips-network-resp', subs, response, 200)
-
-
-class ServersIpsXmlTest(ServersIpsJsonTest):
-    ctype = 'xml'

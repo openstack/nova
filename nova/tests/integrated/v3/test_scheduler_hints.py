@@ -31,7 +31,3 @@ class SchedulerHintsJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_post('servers', 'scheduler-hints-post-req',
                                  subs)
         self._verify_response('scheduler-hints-post-resp', subs, response, 202)
-
-
-class SchedulerHintsXmlTest(SchedulerHintsJsonTest):
-    ctype = 'xml'

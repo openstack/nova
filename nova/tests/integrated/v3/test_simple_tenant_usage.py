@@ -60,7 +60,3 @@ class SimpleTenantUsageSampleJsonTest(test_servers.ServersSampleBase):
         subs = self._get_regexes()
         self._verify_response('simple-tenant-usage-get-specific', subs,
                               response, 200)
-
-
-class SimpleTenantUsageSampleXmlTest(SimpleTenantUsageSampleJsonTest):
-    ctype = "xml"

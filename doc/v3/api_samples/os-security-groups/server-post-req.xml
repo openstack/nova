@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<server xmlns:os-security-groups="http://docs.openstack.org/compute/ext/securitygroups/api/v3" xmlns="http://docs.openstack.org/compute/api/v1.1" image_ref="http://glance.openstack.example.com/openstack/images/70a599e0-31e7-49b7-b260-868f441e862b" flavor_ref="http://openstack.example.com/openstack/flavors/1" name="new-server-test">
-  <metadata>
-    <meta key="My Server Name">Apache1</meta>
-  </metadata>
-  <os-security-groups:security_groups>
-    <security_group name="test" />
-  </os-security-groups:security_groups>
-</server>

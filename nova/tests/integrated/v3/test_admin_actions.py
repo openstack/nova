@@ -137,7 +137,3 @@ class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-reset-server-state', {})
         self.assertEqual(response.status, 202)
-
-
-class AdminActionsSamplesXmlTest(AdminActionsSamplesJsonTest):
-    ctype = 'xml'

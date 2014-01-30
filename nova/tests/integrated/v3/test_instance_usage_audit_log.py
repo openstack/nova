@@ -37,7 +37,3 @@ class InstanceUsageAuditLogJsonTest(api_sample_base.ApiSampleTestBaseV3):
         self._verify_response(
             'inst-usage-audit-log-index-with-before-get-resp',
             subs, response, 200)
-
-
-class InstanceUsageAuditLogXmlTest(InstanceUsageAuditLogJsonTest):
-    ctype = "xml"

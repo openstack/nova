@@ -41,7 +41,3 @@ class DeferredDeleteSampleJsonTests(test_servers.ServersSampleBase):
                                  'force-delete-post-req', {})
         self.assertEqual(response.status, 202)
         self.assertEqual(response.read(), '')
-
-
-class DeferredDeleteSampleXmlTests(DeferredDeleteSampleJsonTests):
-        ctype = 'xml'

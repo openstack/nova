@@ -47,7 +47,3 @@ class AvailabilityZoneJsonTest(test_servers.ServersSampleBase):
 
     def test_availability_zone_post(self):
         self._post_server()
-
-
-class AvailabilityZoneXmlTest(AvailabilityZoneJsonTest):
-    ctype = "xml"

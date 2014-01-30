@@ -1,6 +1,0 @@
-<?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" id="81a6e93a-eeeb-4169-b562-bbe42bffea27" admin_password="3XURfmU9HAE5">
-  <metadata/>
-  <atom:link href="http://openstack.example.com/v3/servers/81a6e93a-eeeb-4169-b562-bbe42bffea27" rel="self"/>
-  <atom:link href="http://openstack.example.com/servers/81a6e93a-eeeb-4169-b562-bbe42bffea27" rel="bookmark"/>
-</server>

@@ -108,7 +108,3 @@ class AgentsJsonTest(api_sample_base.ApiSampleTestBaseV3):
         agent_id = 1
         response = self._do_delete('os-agents/%s' % agent_id)
         self.assertEqual(response.status, 204)
-
-
-class AgentsXmlTest(AgentsJsonTest):
-    ctype = "xml"

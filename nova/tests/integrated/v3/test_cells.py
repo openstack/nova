@@ -106,7 +106,3 @@ class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         self.cells.manager.state_manager.get_our_capacities(). \
             AndReturn(response)
         self.mox.ReplayAll()
-
-
-class CellsSampleXmlTest(CellsSampleJsonTest):
-    ctype = 'xml'

@@ -137,7 +137,3 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
                                  'swap-volume-req', subs)
         self.assertEqual(response.status, 202)
         self.assertEqual(response.read(), '')
-
-
-class ExtendedVolumesSampleXmlTests(ExtendedVolumesSampleJsonTests):
-    ctype = 'xml'

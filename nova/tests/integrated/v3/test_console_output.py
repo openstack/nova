@@ -26,7 +26,3 @@ class ConsoleOutputSampleJsonTest(test_servers.ServersSampleBase):
                                  'console-output-post-req', {})
         subs = self._get_regexes()
         self._verify_response('console-output-post-resp', subs, response, 200)
-
-
-class ConsoleOutputSampleXmlTest(ConsoleOutputSampleJsonTest):
-    ctype = 'xml'
