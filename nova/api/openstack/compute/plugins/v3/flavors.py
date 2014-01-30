@@ -20,52 +20,11 @@ import webob
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.compute import flavors
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import strutils
 from nova import utils
-
-
-def make_flavor(elem, detailed=False):
-    elem.set('name')
-    elem.set('id')
-    if detailed:
-        elem.set('ram')
-        elem.set('disk')
-        elem.set('vcpus')
-        elem.set('swap')
-        elem.set('ephemeral')
-        elem.set('disabled')
-
-    xmlutil.make_links(elem, 'links')
-
-
-flavor_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class FlavorTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavor', selector='flavor')
-        make_flavor(root, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
-
-
-class MinimalFlavorsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavors')
-        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
-        make_flavor(elem)
-        return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
-
-
-class FlavorsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavors')
-        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
-        make_flavor(elem, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=flavor_nsmap)
 
 
 class FlavorsController(wsgi.Controller):
@@ -74,14 +33,12 @@ class FlavorsController(wsgi.Controller):
     _view_builder_class = flavors_view.V3ViewBuilder
 
     @extensions.expected_errors(400)
-    @wsgi.serializers(xml=MinimalFlavorsTemplate)
     def index(self, req):
         """Return all flavors in brief."""
         limited_flavors = self._get_flavors(req)
         return self._view_builder.index(req, limited_flavors)
 
     @extensions.expected_errors(400)
-    @wsgi.serializers(xml=FlavorsTemplate)
     def detail(self, req):
         """Return all flavors in detail."""
         limited_flavors = self._get_flavors(req)
@@ -89,7 +46,6 @@ class FlavorsController(wsgi.Controller):
         return self._view_builder.detail(req, limited_flavors)
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=FlavorTemplate)
     def show(self, req, id):
         """Return data about the given flavor id."""
         context = req.environ['nova.context']

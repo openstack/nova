@@ -19,26 +19,10 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import db
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.gettextutils import _
-
-
-class ExtraSpecsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        extra_specs_dict = xmlutil.make_flat_dict('extra_specs', colon_ns=True)
-        return xmlutil.MasterTemplate(extra_specs_dict, 1)
-
-
-class ExtraSpecTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        sel = xmlutil.Selector(xmlutil.get_items, 0)
-        root = xmlutil.TemplateElement('extra_spec', selector=sel)
-        root.set('key', 0)
-        root.text = 1
-        return xmlutil.MasterTemplate(root, 1)
 
 
 class FlavorExtraSpecsController(object):
@@ -60,7 +44,6 @@ class FlavorExtraSpecsController(object):
             raise webob.exc.HTTPBadRequest(explanation=expl)
 
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
@@ -68,7 +51,6 @@ class FlavorExtraSpecsController(object):
         return self._get_extra_specs(context, flavor_id)
 
     @extensions.expected_errors((400, 404, 409))
-    @wsgi.serializers(xml=ExtraSpecsTemplate)
     @wsgi.response(201)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
@@ -88,7 +70,6 @@ class FlavorExtraSpecsController(object):
         return body
 
     @extensions.expected_errors((400, 404, 409))
-    @wsgi.serializers(xml=ExtraSpecTemplate)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
         self.authorize(context, action='update')
@@ -110,7 +91,6 @@ class FlavorExtraSpecsController(object):
         return body
 
     @extensions.expected_errors(404)
-    @wsgi.serializers(xml=ExtraSpecTemplate)
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']

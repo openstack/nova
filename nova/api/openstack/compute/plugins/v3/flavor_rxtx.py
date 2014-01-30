@@ -16,7 +16,6 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 ALIAS = 'os-flavor-rxtx'
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
@@ -33,7 +32,6 @@ class FlavorRxtxController(wsgi.Controller):
         if not authorize(req.environ['nova.context']):
             return
         if 'flavor' in resp_obj.obj:
-            resp_obj.attach(xml=FlavorRxtxTemplate())
             self._extend_flavors(req, [resp_obj.obj['flavor']])
 
     @wsgi.extends
@@ -48,7 +46,6 @@ class FlavorRxtxController(wsgi.Controller):
     def detail(self, req, resp_obj):
         if not authorize(req.environ['nova.context']):
             return
-        resp_obj.attach(xml=FlavorsRxtxTemplate())
         self._extend_flavors(req, list(resp_obj.obj['flavors']))
 
 
@@ -67,25 +64,3 @@ class FlavorRxtx(extensions.V3APIExtensionBase):
 
     def get_resources(self):
         return []
-
-
-def make_flavor(elem):
-    elem.set('{%s}rxtx_factor' % FlavorRxtx.namespace,
-             xmlutil.EmptyStringSelector('%s:rxtx_factor' % FlavorRxtx.alias))
-
-
-class FlavorRxtxTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavor', selector='flavor')
-        make_flavor(root)
-        return xmlutil.SlaveTemplate(
-            root, 1, nsmap={FlavorRxtx.alias: FlavorRxtx.namespace})
-
-
-class FlavorsRxtxTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('flavors')
-        elem = xmlutil.SubTemplateElement(root, 'flavor', selector='flavors')
-        make_flavor(elem)
-        return xmlutil.SlaveTemplate(
-            root, 1, nsmap={FlavorRxtx.alias: FlavorRxtx.namespace})

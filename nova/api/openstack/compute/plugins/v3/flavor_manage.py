@@ -14,7 +14,6 @@
 
 import webob
 
-from nova.api.openstack.compute.plugins.v3 import flavors as flavors_api
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -54,7 +53,6 @@ class FlavorManageController(wsgi.Controller):
     @wsgi.response(201)
     @wsgi.action("create")
     @extensions.expected_errors((400, 409))
-    @wsgi.serializers(xml=flavors_api.FlavorTemplate)
     def _create(self, req, body):
         context = req.environ['nova.context']
         authorize(context)
