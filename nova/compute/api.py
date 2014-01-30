@@ -1372,6 +1372,25 @@ class API(base.Base):
         else:
             user_id = context.user_id
 
+        # At these states an instance has a snapshot associate.
+        if instance['vm_state'] in (vm_states.SHELVED,
+                                    vm_states.SHELVED_OFFLOADED):
+            snapshot_id = instance.system_metadata.get('shelved_image_id')
+            LOG.info(_("Working on deleting snapshot %s "
+                       "from shelved instance..."),
+                     snapshot_id, instance=instance)
+            try:
+                self.image_service.delete(context, snapshot_id)
+            except (exception.ImageNotFound,
+                    exception.ImageNotAuthorized) as exc:
+                LOG.warning(_("Failed to delete snapshot "
+                              "from shelved instance (%s)."),
+                            exc.format_message(), instance=instance)
+            except Exception as exc:
+                LOG.exception(_("Something wrong happened when trying to "
+                                "delete snapshot from shelved instance."),
+                              instance=instance)
+
         original_task_state = instance.task_state
 
         try:
