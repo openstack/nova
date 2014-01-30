@@ -25,6 +25,7 @@ import nova.virt.docker.client
 class MockClient(object):
     def __init__(self, endpoint=None):
         self._containers = {}
+        self.name = None
 
     def _fake_id(self):
         return uuid.uuid4().hex + uuid.uuid4().hex
@@ -46,7 +47,8 @@ class MockClient(object):
             })
         return containers
 
-    def create_container(self, args):
+    def create_container(self, args, name):
+        self.name = name
         data = {
             'Hostname': '',
             'User': '',
