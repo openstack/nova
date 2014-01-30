@@ -38,8 +38,3 @@ class UserData(extensions.V3APIExtensionBase):
 
     def server_create(self, server_dict, create_kwargs):
         create_kwargs['user_data'] = server_dict.get(ATTRIBUTE_NAME)
-
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        user_data = server_node.getAttribute(ATTRIBUTE_NAME)
-        if user_data:
-            server_dict[ATTRIBUTE_NAME] = user_data

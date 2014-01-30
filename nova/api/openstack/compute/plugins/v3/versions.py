@@ -18,7 +18,6 @@
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute.views import versions as views_versions
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
 
 
 ALIAS = "versions"
@@ -26,8 +25,6 @@ ALIAS = "versions"
 
 class VersionsController(object):
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=versions.VersionTemplate,
-                      atom=versions.VersionAtomSerializer)
     def show(self, req):
         builder = views_versions.get_view_builder(req)
         return builder.build_version(versions.VERSIONS['v3.0'])

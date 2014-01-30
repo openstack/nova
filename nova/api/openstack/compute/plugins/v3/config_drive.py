@@ -19,28 +19,10 @@
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 
 ALIAS = "os-config-drive"
 ATTRIBUTE_NAME = "%s:config_drive" % ALIAS
 authorize = extensions.soft_extension_authorizer('compute', 'v3:' + ALIAS)
-
-
-class ServerConfigDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('{%s}config_drive' % ConfigDrive.namespace, ATTRIBUTE_NAME)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ConfigDrive.alias:
-                                                     ConfigDrive.namespace})
-
-
-class ServersConfigDriveTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        elem.set('{%s}config_drive' % ConfigDrive.namespace, ATTRIBUTE_NAME)
-        return xmlutil.SlaveTemplate(root, 1, nsmap={ConfigDrive.alias:
-                                                     ConfigDrive.namespace})
 
 
 class ConfigDriveController(wsgi.Controller):
@@ -54,7 +36,6 @@ class ConfigDriveController(wsgi.Controller):
 
     def _show(self, req, resp_obj):
         if 'server' in resp_obj.obj:
-            resp_obj.attach(xml=ServerConfigDriveTemplate())
             server = resp_obj.obj['server']
             self._add_config_drive(req, [server])
 
@@ -68,7 +49,6 @@ class ConfigDriveController(wsgi.Controller):
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']
         if 'servers' in resp_obj.obj and authorize(context):
-            resp_obj.attach(xml=ServersConfigDriveTemplate())
             servers = resp_obj.obj['servers']
             self._add_config_drive(req, servers)
 
@@ -91,8 +71,3 @@ class ConfigDrive(extensions.V3APIExtensionBase):
 
     def server_create(self, server_dict, create_kwargs):
         create_kwargs['config_drive'] = server_dict.get(ATTRIBUTE_NAME)
-
-    def server_xml_extract_server_deserialize(self, server_node, server_dict):
-        config_drive = server_node.getAttribute(ATTRIBUTE_NAME)
-        if config_drive:
-            server_dict[ATTRIBUTE_NAME] = config_drive
