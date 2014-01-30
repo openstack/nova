@@ -1066,10 +1066,16 @@ class ServerActionsControllerTest(test.TestCase):
         self.assertEqual(properties['kernel_id'], _fake_id('b'))
         self.assertEqual(properties['ramdisk_id'], _fake_id('c'))
         self.assertEqual(properties['root_device_name'], '/dev/vda')
+        self.assertEqual(properties['bdm_v2'], True)
         bdms = properties['block_device_mapping']
         self.assertEqual(len(bdms), 1)
-        self.assertEqual(bdms[0]['device_name'], 'vda')
+        self.assertEqual(bdms[0]['boot_index'], 0)
+        self.assertEqual(bdms[0]['source_type'], 'snapshot')
+        self.assertEqual(bdms[0]['destination_type'], 'volume')
         self.assertEqual(bdms[0]['snapshot_id'], snapshot['id'])
+        for fld in ('connection_info', 'id',
+                    'instance_uuid', 'device_name'):
+            self.assertTrue(fld not in bdms[0])
         for k in extra_properties.keys():
             self.assertEqual(properties[k], extra_properties[k])
 

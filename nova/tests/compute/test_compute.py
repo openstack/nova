@@ -7560,7 +7560,106 @@ class ComputeAPITestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
-    def test_check_and_transform_bdm(self):
+    def _test_check_and_transform_bdm(self, bdms, expected_bdms,
+                                      image_bdms=None, base_options=None,
+                                      legacy_bdms=False,
+                                      legacy_image_bdms=False):
+        image_bdms = image_bdms or []
+        image_meta = {}
+        if image_bdms:
+            image_meta = {'properties': {'block_device_mapping': image_bdms}}
+            if not legacy_image_bdms:
+                image_meta['properties']['bdm_v2'] = True
+        base_options = base_options or {'root_device_name': 'vda',
+                                        'image_ref': FAKE_IMAGE_REF}
+        transformed_bdm = self.compute_api._check_and_transform_bdm(
+                base_options, image_meta, 1, 1, bdms, legacy_bdms)
+        self.assertThat(expected_bdms,
+                            matchers.DictListMatches(transformed_bdm))
+
+    def test_check_and_transform_legacy_bdm_no_image_bdms(self):
+        legacy_bdms = [
+            {'device_name': '/dev/vda',
+             'volume_id': '33333333-aaaa-bbbb-cccc-333333333333',
+             'delete_on_termination': False}]
+        expected_bdms = [block_device.BlockDeviceDict.from_legacy(
+            legacy_bdms[0])]
+        expected_bdms[0]['boot_index'] = 0
+        self._test_check_and_transform_bdm(legacy_bdms, expected_bdms,
+                                           legacy_bdms=True)
+
+    def test_check_and_transform_legacy_bdm_legacy_image_bdms(self):
+        image_bdms = [
+            {'device_name': '/dev/vda',
+             'volume_id': '33333333-aaaa-bbbb-cccc-333333333333',
+             'delete_on_termination': False}]
+        legacy_bdms = [
+            {'device_name': '/dev/vdb',
+             'volume_id': '33333333-aaaa-bbbb-cccc-444444444444',
+             'delete_on_termination': False}]
+        expected_bdms = [
+                block_device.BlockDeviceDict.from_legacy(legacy_bdms[0]),
+                block_device.BlockDeviceDict.from_legacy(image_bdms[0])]
+        expected_bdms[0]['boot_index'] = -1
+        expected_bdms[1]['boot_index'] = 0
+        self._test_check_and_transform_bdm(legacy_bdms, expected_bdms,
+                                           image_bdms=image_bdms,
+                                           legacy_bdms=True,
+                                           legacy_image_bdms=True)
+
+    def test_check_and_transform_legacy_bdm_image_bdms(self):
+        legacy_bdms = [
+            {'device_name': '/dev/vdb',
+             'volume_id': '33333333-aaaa-bbbb-cccc-444444444444',
+             'delete_on_termination': False}]
+        image_bdms = [block_device.BlockDeviceDict(
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': '33333333-aaaa-bbbb-cccc-444444444444',
+             'boot_index': 0})]
+        expected_bdms = [
+                block_device.BlockDeviceDict.from_legacy(legacy_bdms[0]),
+                image_bdms[0]]
+        expected_bdms[0]['boot_index'] = -1
+        self._test_check_and_transform_bdm(legacy_bdms, expected_bdms,
+                                           image_bdms=image_bdms,
+                                           legacy_bdms=True)
+
+    def test_check_and_transform_bdm_no_image_bdms(self):
+        bdms = [block_device.BlockDeviceDict({'source_type': 'image',
+                                              'destination_type': 'local',
+                                              'image_id': FAKE_IMAGE_REF,
+                                              'boot_index': 0})]
+        expected_bdms = bdms
+        self._test_check_and_transform_bdm(bdms, expected_bdms)
+
+    def test_check_and_transform_bdm_image_bdms(self):
+        bdms = [block_device.BlockDeviceDict({'source_type': 'image',
+                                              'destination_type': 'local',
+                                              'image_id': FAKE_IMAGE_REF,
+                                              'boot_index': 0})]
+        image_bdms = [block_device.BlockDeviceDict(
+            {'source_type': 'volume', 'destination_type': 'volume',
+             'volume_id': '33333333-aaaa-bbbb-cccc-444444444444'})]
+        expected_bdms = bdms + image_bdms
+        self._test_check_and_transform_bdm(bdms, expected_bdms,
+                                           image_bdms=image_bdms)
+
+    def test_check_and_transform_bdm_legacy_image_bdms(self):
+        bdms = [block_device.BlockDeviceDict({'source_type': 'image',
+                                              'destination_type': 'local',
+                                              'image_id': FAKE_IMAGE_REF,
+                                              'boot_index': 0})]
+        image_bdms = [{'device_name': '/dev/vda',
+                       'volume_id': '33333333-aaaa-bbbb-cccc-333333333333',
+                       'delete_on_termination': False}]
+        expected_bdms = [block_device.BlockDeviceDict.from_legacy(
+            image_bdms[0])]
+        expected_bdms[0]['boot_index'] = 0
+        self._test_check_and_transform_bdm(bdms, expected_bdms,
+                                           image_bdms=image_bdms,
+                                           legacy_image_bdms=True)
+
+    def test_check_and_transform_image(self):
         base_options = {'root_device_name': 'vdb',
                         'image_ref': FAKE_IMAGE_REF}
         fake_legacy_bdms = [

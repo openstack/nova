@@ -21,7 +21,9 @@ Tests for Block Device utility functions.
 
 from nova import block_device
 from nova import exception
+from nova.objects import block_device as block_device_obj
 from nova import test
+from nova.tests import fake_block_device
 from nova.tests import matchers
 
 
@@ -383,6 +385,11 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         self.assertEqual(boot_bdms[0]['boot_index'], 0)
         self.assertEqual(boot_bdms[0]['source_type'], 'volume')
 
+        new_no_root = block_device.from_legacy_mapping(
+            self.legacy_mapping, 'fake_image_ref', 'sda1', no_root=True)
+        self.assertEqual(len(_get_image_bdms(new_no_root)), 0)
+        self.assertEqual(len(_get_bootable_bdms(new_no_root)), 0)
+
     def test_from_api(self):
         for api, new in zip(self.api_mapping, self.new_mapping):
             new['connection_info'] = None
@@ -417,3 +424,33 @@ class TestBlockDeviceDict(test.NoDBTestCase):
 
         for legacy, expected in zip(got_legacy, self.legacy_mapping):
             self.assertThat(expected, matchers.IsSubDictOf(legacy))
+
+    def test_image_mapping(self):
+        removed_fields = ['id', 'instance_uuid', 'connection_info',
+                          'device_name', 'created_at', 'updated_at',
+                          'deleted_at', 'deleted']
+        for bdm in self.new_mapping:
+            mapping_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                    bdm).get_image_mapping()
+            for fld in removed_fields:
+                self.assertTrue(fld not in mapping_bdm)
+
+    def _test_snapshot_from_bdm(self, template):
+        snapshot = block_device.snapshot_from_bdm('new-snapshot-id', template)
+        self.assertEqual(snapshot['snapshot_id'], 'new-snapshot-id')
+        self.assertEqual(snapshot['source_type'], 'snapshot')
+        self.assertEqual(snapshot['destination_type'], 'volume')
+        for key in ['disk_bus', 'device_type', 'boot_index']:
+            self.assertEqual(snapshot[key], template[key])
+
+    def test_snapshot_from_bdm(self):
+        for bdm in self.new_mapping:
+            self._test_snapshot_from_bdm(bdm)
+
+    def test_snapshot_from_object(self):
+        for bdm in self.new_mapping[:-1]:
+            obj = block_device_obj.BlockDeviceMapping()
+            obj = block_device_obj.BlockDeviceMapping._from_db_object(
+                   None, obj, fake_block_device.FakeDbBlockDeviceDict(
+                       bdm))
+            self._test_snapshot_from_bdm(obj)
