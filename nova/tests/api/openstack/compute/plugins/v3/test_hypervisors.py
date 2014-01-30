@@ -412,36 +412,3 @@ class HypervisorsTest(test.NoDBTestCase):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/statistics')
         self.assertRaises(exception.PolicyNotAuthorized,
                           self.controller.statistics, req)
-
-
-class HypervisorsSerializersTest(test.NoDBTestCase):
-    def compare_to_exemplar(self, exemplar, hyper):
-        # Check attributes
-        for key, value in exemplar.items():
-            if key in ('service', 'servers'):
-                # These turn into child elements and get tested
-                # separately below...
-                continue
-
-            self.assertEqual(str(value), hyper.get(key))
-
-        # Check child elements
-        required_children = set([child for child in ('service', 'servers')
-                                 if child in exemplar])
-        for child in hyper:
-            self.assertIn(child.tag, required_children)
-            required_children.remove(child.tag)
-
-            # Check the node...
-            if child.tag == 'service':
-                for key, value in exemplar['service'].items():
-                    self.assertEqual(str(value), child.get(key))
-            elif child.tag == 'servers':
-                self.assertEqual(len(child), len(exemplar['servers']))
-                for idx, grandchild in enumerate(child):
-                    self.assertEqual('server', grandchild.tag)
-                    for key, value in exemplar['servers'][idx].items():
-                        self.assertEqual(str(value), grandchild.get(key))
-
-        # Are they all accounted for?
-        self.assertEqual(len(required_children), 0)

@@ -272,39 +272,6 @@ class SimpleTenantUsageTest(test.TestCase):
         self.assertEqual(res.status_int, 400)
 
 
-class SimpleTenantUsageSerializerTest(test.TestCase):
-    def _verify_server_usage(self, raw_usage, tree):
-        self.assertEqual('server_usage', tree.tag)
-
-        # Figure out what fields we expect
-        not_seen = set(raw_usage.keys())
-
-        for child in tree:
-            self.assertIn(child.tag, not_seen)
-            not_seen.remove(child.tag)
-            self.assertEqual(str(raw_usage[child.tag]), child.text)
-
-        self.assertEqual(len(not_seen), 0)
-
-    def _verify_tenant_usage(self, raw_usage, tree):
-        self.assertEqual('tenant_usage', tree.tag)
-
-        # Figure out what fields we expect
-        not_seen = set(raw_usage.keys())
-
-        for child in tree:
-            self.assertIn(child.tag, not_seen)
-            not_seen.remove(child.tag)
-            if child.tag == 'server_usages':
-                for idx, gr_child in enumerate(child):
-                    self._verify_server_usage(raw_usage['server_usages'][idx],
-                                              gr_child)
-            else:
-                self.assertEqual(str(raw_usage[child.tag]), child.text)
-
-        self.assertEqual(len(not_seen), 0)
-
-
 class SimpleTenantUsageControllerTest(test.TestCase):
     def setUp(self):
         super(SimpleTenantUsageControllerTest, self).setUp()
