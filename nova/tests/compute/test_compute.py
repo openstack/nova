@@ -5544,12 +5544,13 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(self.compute.network_api,
                               'setup_networks_on_host'),
             mock.patch.object(self.compute.instance_events,
-                              'clear_events_for_instance')
+                              'clear_events_for_instance'),
+            mock.patch.object(self.compute, 'update_available_resource')
         ) as (
             post_live_migration, unfilter_instance,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
-            clear_events
+            clear_events, update_available_resource
         ):
             self.compute._post_live_migration(c, instance, dest)
 
@@ -5568,6 +5569,7 @@ class ComputeTestCase(BaseTestCase):
             setup_networks_on_host.assert_has_calls([
                 mock.call(c, instance, self.compute.host, teardown=True)])
             clear_events.assert_called_once_with(instance)
+            update_available_resource.assert_has_calls([mock.call(c)])
 
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()

@@ -4916,6 +4916,10 @@ class ComputeManager(manager.Manager):
                                                 self.host, teardown=True)
         self.instance_events.clear_events_for_instance(instance)
 
+        # NOTE(timello): make sure we update available resources on source
+        # host even before next periodic task.
+        self.update_available_resource(ctxt)
+
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
                                           network_info=network_info)
