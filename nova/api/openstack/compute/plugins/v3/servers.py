@@ -24,11 +24,9 @@ import webob
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack.compute.plugins.v3 import ips
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import flavors
 from nova import exception
@@ -53,253 +51,6 @@ CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
 CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
 
 LOG = logging.getLogger(__name__)
-
-
-def make_fault(elem):
-    fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
-    fault.set('code')
-    fault.set('created')
-    msg = xmlutil.SubTemplateElement(fault, 'message')
-    msg.text = 'message'
-    det = xmlutil.SubTemplateElement(fault, 'details')
-    det.text = 'details'
-
-
-def make_server(elem, detailed=False):
-    elem.set('name')
-    elem.set('id')
-
-    if detailed:
-        elem.set('user_id')
-        elem.set('tenant_id')
-        elem.set('updated')
-        elem.set('created')
-        elem.set('host_id')
-        elem.set('status')
-        elem.set('progress')
-        elem.set('reservation_id')
-
-        # Attach image node
-        image = xmlutil.SubTemplateElement(elem, 'image', selector='image')
-        image.set('id')
-        xmlutil.make_links(image, 'links')
-
-        # Attach flavor node
-        flavor = xmlutil.SubTemplateElement(elem, 'flavor', selector='flavor')
-        flavor.set('id')
-        xmlutil.make_links(flavor, 'links')
-
-        # Attach fault node
-        make_fault(elem)
-
-        # Attach metadata node
-        elem.append(common.MetadataTemplate())
-
-        # Attach addresses node
-        elem.append(ips.AddressesTemplate())
-
-    xmlutil.make_links(elem, 'links')
-
-
-server_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
-
-
-class ServerTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server', selector='server')
-        make_server(root, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
-class MinimalServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem)
-        xmlutil.make_links(root, 'servers_links')
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
-class ServersTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('servers')
-        elem = xmlutil.SubTemplateElement(root, 'server', selector='servers')
-        make_server(elem, detailed=True)
-        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
-
-
-class ServerAdminPassTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('server')
-        root.set('admin_password')
-        return xmlutil.SlaveTemplate(root, 1, nsmap=server_nsmap)
-
-
-def FullServerTemplate():
-    master = ServerTemplate()
-    master.attach(ServerAdminPassTemplate())
-    return master
-
-
-class CommonDeserializer(wsgi.MetadataXMLDeserializer):
-    """Common deserializer to handle xml-formatted server create requests.
-
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    metadata_deserializer = common.MetadataXMLDeserializer()
-    want_controller = True
-
-    def __init__(self, controller):
-        self.controller = controller
-
-    def _extract_server(self, node):
-        """Marshal the server attribute of a parsed request."""
-        server = {}
-        server_node = self.find_first_child_named(node, 'server')
-
-        attributes = ["name", "image_ref", "flavor_ref", "admin_password",
-                      "key_name"]
-        for attr in attributes:
-            if server_node.getAttribute(attr):
-                server[attr] = server_node.getAttribute(attr)
-
-        metadata_node = self.find_first_child_named(server_node, "metadata")
-        if metadata_node is not None:
-            server["metadata"] = self.extract_metadata(metadata_node)
-
-        networks = self._extract_networks(server_node)
-        if networks is not None:
-            server["networks"] = networks
-
-        if self.controller:
-            self.controller.server_create_xml_deserialize(server_node, server)
-
-        return server
-
-    def _extract_networks(self, server_node):
-        """Marshal the networks attribute of a parsed request."""
-        node = self.find_first_child_named(server_node, "networks")
-        if node is not None:
-            networks = []
-            for network_node in self.find_children_named(node,
-                                                         "network"):
-                item = {}
-                if network_node.hasAttribute("uuid"):
-                    item["uuid"] = network_node.getAttribute("uuid")
-                if network_node.hasAttribute("fixed_ip"):
-                    item["fixed_ip"] = network_node.getAttribute("fixed_ip")
-                if network_node.hasAttribute("port"):
-                    item["port"] = network_node.getAttribute("port")
-                networks.append(item)
-            return networks
-        else:
-            return None
-
-
-class ActionDeserializer(CommonDeserializer):
-    """Deserializer to handle xml-formatted server action requests.
-
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    def default(self, string):
-        dom = xmlutil.safe_minidom_parse_string(string)
-        action_node = dom.childNodes[0]
-        action_name = action_node.tagName
-
-        action_deserializer = {
-            'create_image': self._action_create_image,
-            'reboot': self._action_reboot,
-            'rebuild': self._action_rebuild,
-            'resize': self._action_resize,
-            'confirm_resize': self._action_confirm_resize,
-            'revert_resize': self._action_revert_resize,
-        }.get(action_name, super(ActionDeserializer, self).default)
-
-        action_data = action_deserializer(action_node)
-
-        return {'body': {action_name: action_data}}
-
-    def _action_create_image(self, node):
-        return self._deserialize_image_action(node, ('name',))
-
-    def _action_reboot(self, node):
-        if not node.hasAttribute("type"):
-            raise AttributeError("No reboot type was specified in request")
-        return {"type": node.getAttribute("type")}
-
-    def _action_rebuild(self, node):
-        rebuild = {}
-        if node.hasAttribute("name"):
-            name = node.getAttribute("name")
-            if not name:
-                raise AttributeError("Name cannot be blank")
-            rebuild['name'] = name
-
-        metadata_node = self.find_first_child_named(node, "metadata")
-        if metadata_node is not None:
-            rebuild["metadata"] = self.extract_metadata(metadata_node)
-
-        if not node.hasAttribute("image_ref"):
-            raise AttributeError("No image_ref was specified in request")
-        rebuild["image_ref"] = node.getAttribute("image_ref")
-
-        if node.hasAttribute("admin_password"):
-            rebuild["admin_password"] = node.getAttribute("admin_password")
-
-        if node.hasAttribute("preserve_ephemeral"):
-            rebuild["preserve_ephemeral"] = strutils.bool_from_string(
-                node.getAttribute("preserve_ephemeral"), strict=True)
-
-        if self.controller:
-            self.controller.server_rebuild_xml_deserialize(node, rebuild)
-        return rebuild
-
-    def _action_resize(self, node):
-        resize = {}
-
-        if node.hasAttribute("flavor_ref"):
-            resize["flavor_ref"] = node.getAttribute("flavor_ref")
-        else:
-            raise AttributeError("No flavor_ref was specified in request")
-
-        return resize
-
-    def _action_confirm_resize(self, node):
-        return None
-
-    def _action_revert_resize(self, node):
-        return None
-
-    def _deserialize_image_action(self, node, allowed_attributes):
-        data = {}
-        for attribute in allowed_attributes:
-            value = node.getAttribute(attribute)
-            if value:
-                data[attribute] = value
-        metadata_node = self.find_first_child_named(node, 'metadata')
-        if metadata_node is not None:
-            metadata = self.metadata_deserializer.extract_metadata(
-                                                        metadata_node)
-            data['metadata'] = metadata
-        return data
-
-
-class CreateDeserializer(CommonDeserializer):
-    """Deserializer to handle xml-formatted server create requests.
-
-    Handles standard server attributes as well as optional metadata
-    and personality attributes
-    """
-
-    def default(self, string):
-        """Deserialize an xml-formatted server create request."""
-        dom = xmlutil.safe_minidom_parse_string(string)
-        server = self._extract_server(dom)
-        return {'body': {'server': server}}
 
 
 class ServersController(wsgi.Controller):
@@ -392,20 +143,6 @@ class ServersController(wsgi.Controller):
         if not list(self.create_extension_manager):
             LOG.debug(_("Did not find any server create extensions"))
 
-        # Look for implementation of extension point of server create
-        # XML deserialization
-        self.create_xml_deserialize_manager = \
-          stevedore.enabled.EnabledExtensionManager(
-              namespace=self.EXTENSION_DESERIALIZE_EXTRACT_SERVER_NAMESPACE,
-              check_func=_check_load_extension(
-                  'server_xml_extract_server_deserialize'),
-              invoke_on_load=True,
-              invoke_kwds={"extension_info": self.extension_info},
-              propagate_map_exceptions=True)
-        if not list(self.create_xml_deserialize_manager):
-            LOG.debug(_("Did not find any server create xml deserializer"
-                        " extensions"))
-
         # Look for implementation of extension point of server rebuild
         self.rebuild_extension_manager = \
             stevedore.enabled.EnabledExtensionManager(
@@ -416,20 +153,6 @@ class ServersController(wsgi.Controller):
                 propagate_map_exceptions=True)
         if not list(self.rebuild_extension_manager):
             LOG.debug(_("Did not find any server rebuild extensions"))
-
-        # Look for implementation of extension point of server rebuild
-        # XML deserialization
-        self.rebuild_xml_deserialize_manager = \
-            stevedore.enabled.EnabledExtensionManager(
-                namespace=self.EXTENSION_DESERIALIZE_EXTRACT_REBUILD_NAMESPACE,
-                check_func=_check_load_extension(
-                    'server_xml_extract_rebuild_deserialize'),
-                invoke_on_load=True,
-                invoke_kwds={"extension_info": self.extension_info},
-                propagate_map_exceptions=True)
-        if not list(self.rebuild_xml_deserialize_manager):
-            LOG.debug(_("Did not find any server rebuild xml deserializer"
-                        " extensions"))
 
         # Look for implementation of extension point of server update
         self.update_extension_manager = \
@@ -442,7 +165,6 @@ class ServersController(wsgi.Controller):
         if not list(self.update_extension_manager):
             LOG.debug(_("Did not find any server update extensions"))
 
-    @wsgi.serializers(xml=MinimalServersTemplate)
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
         try:
@@ -451,7 +173,6 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
-    @wsgi.serializers(xml=ServersTemplate)
     def detail(self, req):
         """Returns a list of server details for a given user."""
         try:
@@ -683,7 +404,6 @@ class ServersController(wsgi.Controller):
         except TypeError:
             return None
 
-    @wsgi.serializers(xml=ServerTemplate)
     def show(self, req, id):
         """Returns server details by server id."""
         try:
@@ -697,8 +417,6 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=CreateDeserializer)
     def create(self, req, body):
         """Creates a new server for a given user."""
         if not self.is_valid_body(body, 'server'):
@@ -821,8 +539,7 @@ class ServersController(wsgi.Controller):
         # If the caller wanted a reservation_id, return it
         if return_reservation_id:
             return wsgi.ResponseObject(
-                {'servers_reservation': {'reservation_id': resv_id}},
-                xml=wsgi.XMLDictSerializer)
+                {'servers_reservation': {'reservation_id': resv_id}})
 
         req.cache_db_instances(instances)
         server = self._view_builder.create(req, instances[0])
@@ -870,7 +587,6 @@ class ServersController(wsgi.Controller):
         else:
             self.compute_api.delete(context, instance)
 
-    @wsgi.serializers(xml=ServerTemplate)
     def update(self, req, id, body):
         """Update server then pass on to version-specific controller."""
         if not self.is_valid_body(body, 'server'):
@@ -906,8 +622,6 @@ class ServersController(wsgi.Controller):
         return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('confirm_resize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
@@ -924,8 +638,6 @@ class ServersController(wsgi.Controller):
                     'confirm_resize')
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('revert_resize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
@@ -946,8 +658,6 @@ class ServersController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('reboot')
     def _action_reboot(self, req, id, body):
         if 'reboot' in body and 'type' in body['reboot']:
@@ -1066,8 +776,6 @@ class ServersController(wsgi.Controller):
         return common.get_id_from_href(flavor_ref)
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('resize')
     def _action_resize(self, req, id, body):
         """Resizes a given instance to the flavor size requested."""
@@ -1086,8 +794,6 @@ class ServersController(wsgi.Controller):
         return self._resize(req, id, flavor_ref, **resize_kwargs)
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('rebuild')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
@@ -1174,8 +880,6 @@ class ServersController(wsgi.Controller):
         return self._add_location(robj)
 
     @wsgi.response(202)
-    @wsgi.serializers(xml=FullServerTemplate)
-    @wsgi.deserializers(xml=ActionDeserializer)
     @wsgi.action('create_image')
     @common.check_snapshots_enabled
     def _action_create_image(self, req, id, body):
@@ -1265,48 +969,6 @@ class ServersController(wsgi.Controller):
         """Return server search options allowed by non-admin."""
         return ('reservation_id', 'name', 'status', 'image', 'flavor',
                 'ip', 'changes_since', 'all_tenants')
-
-    def _server_create_xml_deserialize_extension_point(self, ext, server_node,
-                                                       server_dict):
-        handler = ext.obj
-        LOG.debug(_("Running create xml deserialize ep for %s"),
-                  handler.alias)
-        handler.server_xml_extract_server_deserialize(server_node,
-                                                      server_dict)
-
-    def server_create_xml_deserialize(self, server_node, server):
-        if list(self.create_xml_deserialize_manager):
-            self.create_xml_deserialize_manager.map(
-                self._server_create_xml_deserialize_extension_point,
-                server_node, server)
-
-    def _server_rebuild_xml_deserialize_extension_point(self, ext,
-                                                        rebuild_node,
-                                                        rebuild_dict):
-        handler = ext.obj
-        LOG.debug(_("Running rebuild xml deserialize ep for %s"),
-                  handler.alias)
-        handler.server_xml_extract_rebuild_deserialize(rebuild_node,
-                                                       rebuild_dict)
-
-    def server_rebuild_xml_deserialize(self, rebuild_node, rebuild_dict):
-        if list(self.rebuild_xml_deserialize_manager):
-            self.rebuild_xml_deserialize_manager.map(
-                self._server_rebuild_xml_deserialize_extension_point,
-                rebuild_node, rebuild_dict)
-
-    def _server_resize_xml_deserialize_extension_point(self, ext, resize_node,
-                                                       resize_dict):
-        handler = ext.obj
-        LOG.debug(_("Running rebuild xml deserialize ep for %s"),
-                  handler.alias)
-        handler.server_xml_extract_resize_deserialize(resize_node, resize_dict)
-
-    def server_resize_xml_deserialize(self, resize_node, resize_dict):
-        if list(self.resize_xml_deserialize_manager):
-            self.resize_xml_deserialize_manager.map(
-                self._server_resize_xml_deserialize_extension_point,
-                resize_node, resize_dict)
 
     def _get_instance(self, context, instance_uuid):
         try:
