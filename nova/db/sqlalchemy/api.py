@@ -3287,6 +3287,7 @@ def _quota_reservations_query(session, context, reservations):
 
 
 @require_context
+@_retry_on_deadlock
 def reservation_commit(context, reservations, project_id=None, user_id=None):
     session = get_session()
     with session.begin():
@@ -3302,6 +3303,7 @@ def reservation_commit(context, reservations, project_id=None, user_id=None):
 
 
 @require_context
+@_retry_on_deadlock
 def reservation_rollback(context, reservations, project_id=None, user_id=None):
     session = get_session()
     with session.begin():
