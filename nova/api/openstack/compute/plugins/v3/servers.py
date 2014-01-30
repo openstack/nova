@@ -77,7 +77,7 @@ class ServersController(wsgi.Controller):
         link = filter(lambda l: l['rel'] == 'self',
                       robj.obj['server']['links'])
         if link:
-            robj['Location'] = link[0]['href'].encode('utf-8')
+            robj['Location'] = utils.utf8(link[0]['href'])
 
         # Convenience return
         return robj
