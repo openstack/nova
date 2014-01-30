@@ -411,7 +411,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.20')
+    target = messaging.Target(version='3.21')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2192,6 +2192,14 @@ class ComputeManager(manager.Manager):
                                    partition must be preserved on rebuild
         """
         context = context.elevated()
+        # NOTE (ndipanov): If we get non-object BDMs, just get them from the
+        # db again, as this means they are sent in the old format and we want
+        # to avoid converting them back when we can just get them.
+        # Remove this on the next major RPC version bump
+        if (bdms and
+            any(not isinstance(bdm, block_device_obj.BlockDeviceMapping)
+                for bdm in bdms)):
+            bdms = None
 
         orig_vm_state = instance.vm_state
         with self._error_out_instance_on_exception(context, instance.uuid):
@@ -2265,16 +2273,17 @@ class ComputeManager(manager.Manager):
             network_info = self._get_instance_nw_info(context, instance)
 
             if bdms is None:
-                bdms = self.conductor_api.\
-                        block_device_mapping_get_all_by_instance(
-                                context, obj_base.obj_to_primitive(instance))
+                bdms = (block_device_obj.BlockDeviceMappingList.
+                        get_by_instance_uuid(context, instance.uuid))
 
             block_device_info = \
-                self._get_instance_volume_block_device_info(context, instance)
+                self._get_instance_volume_block_device_info(
+                        context, instance, bdms=bdms)
 
             def detach_block_devices(context, bdms):
-                for bdm in self._get_volume_bdms(bdms):
-                    self.volume_api.detach(context, bdm['volume_id'])
+                for bdm in bdms:
+                    if bdm.is_volume:
+                        self.volume_api.detach(context, bdm.volume_id)
 
             files = self._decode_files(injected_files)
 

@@ -469,12 +469,11 @@ class ComputeRpcAPITestCase(test.TestCase):
                 reboot_type='type', version='2.32')
 
     def test_rebuild_instance(self):
-        self.flags(compute='3.4', group='upgrade_levels')
         self._test_compute_api('rebuild_instance', 'cast', new_pass='None',
                 injected_files='None', image_ref='None', orig_image_ref='None',
                 bdms=[], instance=self.fake_instance, host='new_host',
                 orig_sys_metadata=None, recreate=True, on_shared_storage=True,
-                version='3.4')
+                preserve_ephemeral=True, version='3.21')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

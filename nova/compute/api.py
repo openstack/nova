@@ -2141,10 +2141,8 @@ class API(base.Base):
         # system metadata... and copy in the properties for the new image.
         orig_sys_metadata = _reset_image_metadata()
 
-        bdms = block_device.legacy_mapping(
-            self.db.block_device_mapping_get_all_by_instance(
-                context,
-                instance.uuid))
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
 
         self._record_action_start(context, instance, instance_actions.REBUILD)
 

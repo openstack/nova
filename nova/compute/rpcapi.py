@@ -19,6 +19,7 @@ Client side of the compute RPC API.
 from oslo.config import cfg
 from oslo import messaging
 
+from nova import block_device
 from nova import exception
 from nova.objects import base as objects_base
 from nova.openstack.common.gettextutils import _
@@ -237,6 +238,7 @@ class ComputeAPI(object):
         ...  - Removed inject_file(), as it was unused.
         3.19 - Update pre_live_migration to take instance object
         3.20 - Make restore_instance take an instance object
+        3.21 - Made rebuild take new-world BDM objects
     '''
 
     VERSION_ALIASES = {
@@ -605,25 +607,30 @@ class ComputeAPI(object):
             preserve_ephemeral=False, kwargs=None):
         # NOTE(danms): kwargs is only here for cells compatibility, don't
         # actually send it to compute
-        extra = {}
-        if self.client.can_send_version('3.5'):
-            version = '3.5'
-            extra['preserve_ephemeral'] = preserve_ephemeral
-        elif self.client.can_send_version('3.4'):
-            version = '3.4'
+        extra = {'preserve_ephemeral': preserve_ephemeral}
+        if self.client.can_send_version('3.21'):
+            version = '3.21'
         else:
-            # NOTE(russellb) Havana compat
-            version = self._get_compat_version('3.0', '2.22')
-            instance = jsonutils.to_primitive(instance)
+            bdms = block_device.legacy_mapping(bdms)
+            bdms = jsonutils.to_primitive(objects_base.obj_to_primitive(bdms))
+            if self.client.can_send_version('3.5'):
+                version = '3.5'
+            elif self.client.can_send_version('3.4'):
+                version = '3.4'
+                extra = {}
+            else:
+                # NOTE(russellb) Havana compat
+                version = self._get_compat_version('3.0', '2.22')
+                instance = jsonutils.to_primitive(instance)
+                extra = {}
 
-        bdms_p = jsonutils.to_primitive(bdms)
         cctxt = self.client.prepare(server=_compute_host(host, instance),
                 version=version)
         cctxt.cast(ctxt, 'rebuild_instance',
                    instance=instance, new_pass=new_pass,
                    injected_files=injected_files, image_ref=image_ref,
                    orig_image_ref=orig_image_ref,
-                   orig_sys_metadata=orig_sys_metadata, bdms=bdms_p,
+                   orig_sys_metadata=orig_sys_metadata, bdms=bdms,
                    recreate=recreate, on_shared_storage=on_shared_storage,
                    **extra)
 
