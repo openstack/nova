@@ -26,6 +26,7 @@ import six
 from nova.compute import manager
 from nova import exception
 from nova.openstack.common import importutils
+from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova import test
 from nova.tests.image import fake as fake_image
@@ -567,7 +568,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
     def _check_available_resource_fields(self, host_status):
         keys = ['vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
                 'memory_mb_used', 'hypervisor_type', 'hypervisor_version',
-                'hypervisor_hostname', 'cpu_info', 'disk_available_least']
+                'hypervisor_hostname', 'cpu_info', 'disk_available_least',
+                'supported_instances']
         for key in keys:
             self.assertIn(key, host_status)
 
@@ -706,6 +708,19 @@ class FakeConnectionTestCase(_VirtDriverTestCase, test.TestCase):
         self.driver_module = 'nova.virt.fake.FakeDriver'
         fake.set_nodes(['myhostname'])
         super(FakeConnectionTestCase, self).setUp()
+
+    def _check_available_resource_fields(self, host_status):
+        super(FakeConnectionTestCase, self)._check_available_resource_fields(
+            host_status)
+
+        hypervisor_type = host_status['hypervisor_type']
+        supported_instances = host_status['supported_instances']
+        try:
+            # supported_instances could be JSON wrapped
+            supported_instances = jsonutils.loads(supported_instances)
+        except TypeError:
+            pass
+        self.assertTrue(any(hypervisor_type in x for x in supported_instances))
 
 
 class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):

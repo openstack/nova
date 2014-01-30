@@ -143,7 +143,7 @@ basis by running::
      $ tools/with_venv.sh <your command>
 
 Using a remote debugger
-----------------------
+-----------------------
 
 Some modern IDE such as pycharm (commercial) or Eclipse (open source) support remote debugging.  In order to run nova with remote debugging, start the nova process
 with the following parameters
@@ -155,6 +155,26 @@ For pycharm - http://blog.jetbrains.com/pycharm/2010/12/python-remote-debug-with
 For Eclipse - http://pydev.org/manual_adv_remote_debugger.html
 
 More detailed instructions are located here - http://novaremotedebug.blogspot.com
+
+Using fake computes for tests
+-----------------------------
+
+The number of instances supported by fake computes is not limited by physical
+constraints. It allows to perform stress tests on a deployment with few
+resources (typically a laptop). But you must avoid using scheduler filters
+limiting the number of instances per compute (like RamFilter, DiskFilter,
+AggregateCoreFilter), otherwise they will limit the number of instances per
+compute.
+
+
+Fake computes can also be used in multi hypervisor-type deployments in order to
+take advantage of fake and "real" computes during tests:
+
+* create many fake instances for stress tests
+* create some "real" instances for functional tests
+
+Fake computes can be used for testing Nova itself but also applications on top
+of it.
 
 Contributing Your Work
 ----------------------
