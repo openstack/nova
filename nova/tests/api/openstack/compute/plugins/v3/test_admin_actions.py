@@ -157,8 +157,7 @@ class CommonMixin(object):
 class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
-                   'reset_network', 'inject_network_info', 'lock',
-                   'unlock']
+                   'reset_network', 'inject_network_info']
         method_translations = {'migrate': 'resize'}
 
         for action in actions:
@@ -190,8 +189,8 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
 
     def test_actions_with_non_existed_instance(self):
         actions = ['pause', 'unpause', 'suspend', 'resume', 'migrate',
-                   'reset_network', 'inject_network_info', 'lock',
-                   'unlock', 'reset_state', 'migrate_live']
+                   'reset_network', 'inject_network_info',
+                   'reset_state', 'migrate_live']
         body_map = {'reset_state': {'state': 'active'},
                     'migrate_live': {'host': 'hostname',
                                      'block_migration': False,
@@ -331,20 +330,6 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_migrate_live_pre_check_error(self):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationPreCheckError(reason=''))
-
-    def test_unlock_not_authorized(self):
-        self.mox.StubOutWithMock(self.compute_api, 'unlock')
-
-        instance = self._stub_instance_get()
-
-        self.compute_api.unlock(self.context, instance).AndRaise(
-                exception.PolicyNotAuthorized(action='unlock'))
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {'unlock': None})
-        self.assertEqual(403, res.status_int)
 
 
 class CreateBackupTests(CommonMixin, test.NoDBTestCase):
