@@ -20,7 +20,6 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import admin_password_schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova.api import validation
 from nova import compute
 from nova import exception
@@ -29,18 +28,6 @@ from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-admin-password"
 authorize = extensions.extension_authorizer('compute', 'v3:%s' % ALIAS)
-
-
-class ChangePasswordDeserializer(wsgi.XMLDeserializer):
-    def default(self, string):
-        dom = xmlutil.safe_minidom_parse_string(string)
-        action_node = dom.childNodes[0]
-        action_name = action_node.tagName
-        action_data = None
-        if action_node.hasAttribute("admin_password"):
-            action_data = {'admin_password':
-                           action_node.getAttribute("admin_password")}
-        return {'body': {action_name: action_data}}
 
 
 class AdminPasswordController(wsgi.Controller):
@@ -52,7 +39,6 @@ class AdminPasswordController(wsgi.Controller):
     @wsgi.action('change_password')
     @wsgi.response(204)
     @extensions.expected_errors((400, 404, 409, 501))
-    @wsgi.deserializers(xml=ChangePasswordDeserializer)
     @validation.schema(request_body_schema=
                        admin_password_schema.change_password)
     def change_password(self, req, id, body):
