@@ -1748,7 +1748,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                create_info):
         """Create snapshots of a Cinder volume via libvirt.
 
-        :param instance: VM instance reference
+        :param instance: VM instance object reference
         :param volume_id: id of volume being snapshotted
         :param create_info: dict of information used to create snapshots
                      - snapshot_id : ID of snapshot
@@ -1762,9 +1762,9 @@ class LibvirtDriver(driver.ComputeDriver):
                   {'c_info': create_info}, instance=instance)
 
         try:
-            virt_dom = self._lookup_by_name(instance['name'])
+            virt_dom = self._lookup_by_name(instance.name)
         except exception.InstanceNotFound:
-            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+            raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
         if create_info['type'] != 'qcow2':
             raise exception.NovaException(_('Unknown type: %s') %
@@ -1800,7 +1800,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 do a blockCommit operation
             Files must be adjacent in snap chain.
 
-        :param instance: instance reference
+        :param instance: instance object reference
         :param volume_id: volume UUID
         :param snapshot_id: snapshot UUID (unused currently)
         :param delete_info: {
@@ -1831,9 +1831,9 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.NovaException(msg)
 
         try:
-            virt_dom = self._lookup_by_name(instance['name'])
+            virt_dom = self._lookup_by_name(instance.name)
         except exception.InstanceNotFound:
-            raise exception.InstanceNotRunning(instance_id=instance['uuid'])
+            raise exception.InstanceNotRunning(instance_id=instance.uuid)
 
         ##### Find dev name
         my_dev = None

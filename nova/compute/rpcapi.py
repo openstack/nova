@@ -217,6 +217,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         3.3 - Update validate_console_port() to take an instance object
         3.4 - Update rebuild_instance() to take an instance object
         3.5 - Pass preserve_ephemeral flag to rebuild_instance()
+        3.6 - Make volume_snapshot_{create,delete} use new-world objects
     '''
 
     #
@@ -853,22 +854,28 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.44')
-        instance_p = jsonutils.to_primitive(instance)
+        version = '3.6'
+        if not self.client.can_send_version(version):
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.44')
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance_p,
+        cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance,
                    volume_id=volume_id, create_info=create_info)
 
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.44')
-        instance_p = jsonutils.to_primitive(instance)
+        version = '3.6'
+        if not self.client.can_send_version(version):
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.44')
+            instance = jsonutils.to_primitive(
+                    objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance_p,
+        cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
                    volume_id=volume_id, snapshot_id=snapshot_id,
                    delete_info=delete_info)
 

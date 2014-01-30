@@ -789,7 +789,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_volume_snapshot_create(self):
         self._test_compute_api('volume_snapshot_create', 'cast',
                 instance=self.fake_instance, volume_id='fake_id',
-                create_info={})
+                create_info={}, version='3.6')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -800,7 +800,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_volume_snapshot_delete(self):
         self._test_compute_api('volume_snapshot_delete', 'cast',
                 instance=self.fake_instance, volume_id='fake_id',
-                snapshot_id='fake_id2', delete_info={})
+                snapshot_id='fake_id2', delete_info={}, version='3.6')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
