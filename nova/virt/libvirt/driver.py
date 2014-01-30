@@ -603,7 +603,27 @@ class LibvirtDriver(driver.ComputeDriver):
         LOG.debug(_("Starting green dispatch thread"))
         eventlet.spawn(self._dispatch_thread)
 
+    def _do_quality_warnings(self):
+        """Warn about untested driver configurations.
+
+        This will log a warning message about untested driver or host arch
+        configurations to indicate to administrators that the quality is
+        unknown. Currently, only qemu or kvm on intel 32- or 64-bit systems
+        is tested upstream.
+        """
+        caps = self.get_host_capabilities()
+        arch = caps.host.cpu.arch
+        if (CONF.libvirt.virt_type not in ('qemu', 'kvm') or
+                arch not in ('i686', 'x86_64')):
+            LOG.warning(_('The libvirt driver is not tested on '
+                          '%(type)s/%(arch)s by the OpenStack project and '
+                          'thus its quality can not be ensured. For more '
+                          'information, see: https://wiki.openstack.org/wiki/'
+                          'HypervisorSupportMatrix'),
+                        {'type': CONF.libvirt.virt_type, 'arch': arch})
+
     def init_host(self, host):
+        self._do_quality_warnings()
         libvirt.registerErrorHandler(libvirt_error_handler, None)
         libvirt.virEventRegisterDefaultImpl()
 
