@@ -2152,7 +2152,7 @@
 
 # If True, enable file injection for network info, files and
 # admin password (boolean value)
-#use_file_injection=true
+#use_file_injection=false
 
 # Timeout for PXE deployments. Default: 0 (unlimited) (integer
 # value)
