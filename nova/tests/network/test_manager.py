@@ -374,9 +374,11 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
+        fixed = models.FixedIp()
+        fixed.address = '192.168.0.101'
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
-                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+                                   mox.IgnoreArg()).AndReturn(fixed)
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
@@ -422,9 +424,11 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
+        fixed = models.FixedIp()
+        fixed.address = '192.168.0.101'
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
-                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+                                   mox.IgnoreArg()).AndReturn(fixed)
 
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
@@ -503,7 +507,8 @@ class FlatNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
-        fixedip = '192.168.0.101'
+        fixedip = models.FixedIp()
+        fixedip.address = '192.168.0.101'
         self.mox.StubOutWithMock(db, 'network_get_by_uuid')
         self.mox.StubOutWithMock(db, 'network_update')
         self.mox.StubOutWithMock(db, 'fixed_ip_associate_pool')
@@ -551,11 +556,11 @@ class FlatNetworkTestCase(test.TestCase):
         addresses = instance_manager.get_entries_by_name(HOST,
                                              self.network.instance_dns_domain)
         self.assertEqual(len(addresses), 1)
-        self.assertEqual(addresses[0], fixedip)
+        self.assertEqual(addresses[0], fixedip.address)
         addresses = instance_manager.get_entries_by_name(FAKEUUID,
                                               self.network.instance_dns_domain)
         self.assertEqual(len(addresses), 1)
-        self.assertEqual(addresses[0], fixedip)
+        self.assertEqual(addresses[0], fixedip.address)
 
     def test_allocate_floating_ip(self):
         self.assertIsNone(self.network.allocate_floating_ip(self.context,
@@ -613,11 +618,13 @@ class VlanNetworkTestCase(test.TestCase):
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
 
+        fixed = models.FixedIp()
+        fixed.address = '192.168.0.1'
         db.fixed_ip_associate(mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
                               mox.IgnoreArg(),
-                              reserved=True).AndReturn('192.168.0.1')
+                              reserved=True).AndReturn(fixed)
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
@@ -660,9 +667,11 @@ class VlanNetworkTestCase(test.TestCase):
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
 
+        fixed = models.FixedIp()
+        fixed.address = '192.168.0.1'
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
-                                   mox.IgnoreArg()).AndReturn('192.168.0.1')
+                                   mox.IgnoreArg()).AndReturn(fixed)
         db.fixed_ip_update(mox.IgnoreArg(),
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
@@ -1185,9 +1194,11 @@ class VlanNetworkTestCase(test.TestCase):
         db.virtual_interface_get_by_instance_and_network(mox.IgnoreArg(),
                 mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(vifs[0])
 
+        fixed = models.FixedIp()
+        fixed.address = '192.168.0.101'
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
-                                   mox.IgnoreArg()).AndReturn('192.168.0.101')
+                                   mox.IgnoreArg()).AndReturn(fixed)
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
                        project_only=mox.IgnoreArg()
@@ -1228,7 +1239,7 @@ class VlanNetworkTestCase(test.TestCase):
                                       {'project_id': 'project1'})
 
         fix_addr = db.fixed_ip_associate_pool(context1.elevated(),
-                                              1, instance['uuid'])
+                                              1, instance['uuid']).address
 
         # Associate the IP with non-admin user context
         self.assertRaises(exception.NotAuthorized,
@@ -1280,7 +1291,8 @@ class VlanNetworkTestCase(test.TestCase):
                 {'project_id': 'project1'})
 
         elevated = context1.elevated()
-        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        _fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        fix_addr = _fix_addr.address
         values = {'allocated': True,
                   'virtual_interface_id': 3}
         db.fixed_ip_update(elevated, fix_addr, values)
@@ -1316,7 +1328,8 @@ class VlanNetworkTestCase(test.TestCase):
                 {'project_id': 'project1'})
 
         elevated = context1.elevated()
-        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        _fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        fix_addr = _fix_addr.address
         db.fixed_ip_update(elevated, fix_addr, {'deleted': 1})
         elevated.read_deleted = 'yes'
         delfixed = db.fixed_ip_get_by_address(elevated, fix_addr)
@@ -1355,10 +1368,10 @@ class VlanNetworkTestCase(test.TestCase):
         fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
         values = {'allocated': True,
                  'virtual_interface_id': 3}
-        db.fixed_ip_update(elevated, fix_addr, values)
+        db.fixed_ip_update(elevated, fix_addr.address, values)
 
         self.flags(force_dhcp_release=True)
-        self.network.deallocate_fixed_ip(context1, fix_addr, 'fake')
+        self.network.deallocate_fixed_ip(context1, fix_addr.address, 'fake')
 
     def test_fixed_ip_cleanup_fail(self):
         # Verify IP is not deallocated if the security group refresh fails.
@@ -1373,7 +1386,8 @@ class VlanNetworkTestCase(test.TestCase):
                 {'project_id': 'project1'})
 
         elevated = context1.elevated()
-        fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        _fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
+        fix_addr = _fix_addr.address
         values = {'allocated': True,
                   'virtual_interface_id': 3}
         db.fixed_ip_update(elevated, fix_addr, values)

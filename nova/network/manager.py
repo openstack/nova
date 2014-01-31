@@ -333,7 +333,7 @@ class NetworkManager(manager.Manager):
             elevated = context.elevated()
             return self.db.fixed_ip_associate_pool(elevated,
                                                    network_id,
-                                                   host=host)
+                                                   host=host).address
 
     def get_dhcp_leases(self, ctxt, network_ref):
         """Broker the request to the driver to fetch the dhcp leases."""
@@ -849,10 +849,10 @@ class NetworkManager(manager.Manager):
                     address = self.db.fixed_ip_associate(context,
                                                          address,
                                                          instance_id,
-                                                         network['id'])
+                                                         network['id']).address
                 else:
                     address = self.db.fixed_ip_associate_pool(
-                        context.elevated(), network['id'], instance_id)
+                        context.elevated(), network['id'], instance_id).address
                 vif = vif_obj.VirtualInterface.get_by_instance_and_network(
                         context, instance_id, network['id'])
                 values = {'allocated': True,
@@ -1732,11 +1732,11 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             if address:
                 address = self.db.fixed_ip_associate(context, address,
                                                      instance_id,
-                                                     network['id'])
+                                                     network['id']).address
             else:
                 address = self.db.fixed_ip_associate_pool(context,
                                                           network['id'],
-                                                          instance_id)
+                                                          instance_id).address
 
         vif = vif_obj.VirtualInterface.get_by_instance_and_network(
             context, instance_id, network['id'])
