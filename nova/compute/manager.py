@@ -2019,7 +2019,6 @@ class ComputeManager(manager.Manager):
                                 system_meta)
 
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms, reservations):
@@ -2030,12 +2029,16 @@ class ComputeManager(manager.Manager):
             try:
                 self._delete_instance(context, instance, bdms,
                                       reservations=reservations)
-            except exception.InstanceTerminationFailure as error:
-                LOG.exception(_('Setting instance vm_state to ERROR'),
-                              instance=instance)
-                self._set_instance_error_state(context, instance['uuid'])
-            except exception.InstanceNotFound as e:
-                LOG.warn(e, instance=instance)
+            except exception.InstanceNotFound:
+                LOG.info(_("Instance disappeared during terminate"),
+                         instance=instance)
+            except Exception as error:
+                # As we're trying to delete always go to Error if something
+                # goes wrong that _delete_instance can't handle.
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_('Setting instance vm_state to ERROR'),
+                                  instance=instance)
+                    self._set_instance_error_state(context, instance['uuid'])
 
         do_terminate_instance(instance, bdms)
 
