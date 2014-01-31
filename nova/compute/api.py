@@ -4252,13 +4252,16 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Security group id should be integer")
             self.raise_invalid_property(msg)
 
-    def trigger_rules_refresh(self, context, id):
-        """Called when a rule is added to or removed from a security_group."""
-        instances = objects.InstanceList.get_by_security_group_id(context, id)
+    def _refresh_instance_security_rules(self, context, instances):
         for instance in instances:
             if instance.host is not None:
                 self.compute_rpcapi.refresh_instance_security_rules(
                         context, instance.host, instance)
+
+    def trigger_rules_refresh(self, context, id):
+        """Called when a rule is added to or removed from a security_group."""
+        instances = objects.InstanceList.get_by_security_group_id(context, id)
+        self._refresh_instance_security_rules(context, instances)
 
     def trigger_members_refresh(self, context, group_ids):
         """Called when a security group gains a new or loses a member.
@@ -4266,29 +4269,9 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         Sends an update request to each compute node for each instance for
         which this is relevant.
         """
-        # First, we get the security group rules that reference these groups as
-        # the grantee..
-        security_group_rules = set()
-        for group_id in group_ids:
-            security_group_rules.update(
-                self.db.security_group_rule_get_by_security_group_grantee(
-                                                                     context,
-                                                                     group_id))
-
-        # ..then we distill the rules into the groups to which they belong..
-        instances = {}
-        for rule in security_group_rules:
-            sg_instances = objects.InstanceList.get_by_security_group_id(
-                    context, rule['parent_group_id'])
-            for instance in sg_instances:
-                if instance.uuid not in instances:
-                    instances[instance.uuid] = instance
-
-        # ..then we send a request to refresh the rules for each instance.
-        for instance in instances.values():
-            if instance.host:
-                self.compute_rpcapi.refresh_instance_security_rules(
-                        context, instance.host, instance)
+        instances = objects.InstanceList.get_by_grantee_security_group_ids(
+            context, group_ids)
+        self._refresh_instance_security_rules(context, instances)
 
     def get_instance_security_groups(self, context, instance_uuid,
                                      detailed=False):
