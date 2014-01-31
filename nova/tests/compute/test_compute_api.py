@@ -481,8 +481,8 @@ class _ComputeAPIUnitTestMixIn(object):
         if delete_type == 'soft_delete':
             updates['deleted_at'] = delete_time
         self.mox.StubOutWithMock(inst, 'save')
-        self.mox.StubOutWithMock(db,
-                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
@@ -513,7 +513,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(rpcapi, 'terminate_instance')
         self.mox.StubOutWithMock(rpcapi, 'soft_delete_instance')
 
-        db.block_device_mapping_get_all_by_instance(
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
             self.context, inst.uuid).AndReturn([])
         inst.save()
         self.compute_api._create_reservations(
@@ -667,8 +667,10 @@ class _ComputeAPIUnitTestMixIn(object):
                                               ).AndReturn(None)
 
         if self.cell_type == 'api':
-            rpcapi.terminate_instance(self.context, inst, [],
-                                      reservations=None)
+            rpcapi.terminate_instance(
+                    self.context, inst,
+                    mox.IsA(block_device_obj.BlockDeviceMappingList),
+                    reservations=None)
         else:
             compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
@@ -693,8 +695,11 @@ class _ComputeAPIUnitTestMixIn(object):
             self.assertEqual(inst[k], v)
 
     def test_local_delete_with_deleted_volume(self):
-        bdms = [{'id': 'bmd_id', 'volume_id': 'volume_id',
-                 'delete_on_termiantion': False}]
+        bdms = [block_device_obj.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 42, 'volume_id': 'volume_id',
+                 'source_type': 'volume', 'destination_type': 'volume',
+                 'delete_on_termination': False}))]
 
         def _fake_do_delete(context, instance, bdms,
                            rservations=None, local=False):
@@ -713,7 +718,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                  'notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute_api.volume_api,
                                  'terminate_connection')
-        self.mox.StubOutWithMock(db, 'block_device_mapping_destroy')
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+                                 'destroy')
 
         inst.info_cache.delete()
         compute_utils.notify_about_instance_usage(
@@ -727,7 +733,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api.volume_api.terminate_connection(
             mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg()).\
                AndRaise(exception.  VolumeNotFound('volume_id'))
-        db.block_device_mapping_destroy(self.context, mox.IgnoreArg())
+        bdms[0].destroy(self.context)
 
         inst.destroy()
         compute_utils.notify_about_instance_usage(

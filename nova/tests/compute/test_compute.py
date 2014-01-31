@@ -1638,6 +1638,14 @@ class ComputeTestCase(BaseTestCase):
         def fake_volume_get(self, context, volume_id):
             return {'id': volume_id}
 
+        def fake_terminate_connection(self, context, volume_id, connector):
+            pass
+
+        def fake_detach(self, context, volume_id):
+            pass
+
+        bdms = []
+
         def fake_rpc_reserve_block_device_name(self, context, **kwargs):
             bdm = block_device_obj.BlockDeviceMapping(
                         **{'source_type': 'volume',
@@ -1646,11 +1654,15 @@ class ComputeTestCase(BaseTestCase):
                            'instance_uuid': instance['uuid'],
                            'device_name': '/dev/vdc'})
             bdm.create(context)
+            bdms.append(bdm)
 
         self.stubs.Set(cinder.API, 'get', fake_volume_get)
         self.stubs.Set(cinder.API, 'check_attach', fake_check_attach)
         self.stubs.Set(cinder.API, 'reserve_volume',
                        fake_reserve_volume)
+        self.stubs.Set(cinder.API, 'terminate_connection',
+                       fake_terminate_connection)
+        self.stubs.Set(cinder.API, 'detach', fake_detach)
         self.stubs.Set(compute_rpcapi.ComputeAPI,
                        'reserve_block_device_name',
                        fake_rpc_reserve_block_device_name)
@@ -1659,7 +1671,7 @@ class ComputeTestCase(BaseTestCase):
                                        '/dev/vdc')
 
         self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+                self._objectify(instance), bdms, [])
 
         instances = db.instance_get_all(self.context)
         LOG.info(_("After terminating instances: %s"), instances)
@@ -5456,14 +5468,19 @@ class ComputeTestCase(BaseTestCase):
                 self.assertIn("Unrecognized value", six.text_type(e))
 
     def test_cleanup_running_deleted_instances_reap(self):
-        bdms = []
-
         ctxt, inst1, inst2 = self._test_cleanup_running('reap')
+        bdms = block_device_obj.block_device_make_list(ctxt, [])
 
         self.mox.StubOutWithMock(self.compute, "_shutdown_instance")
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 "get_by_instance_uuid")
         # Simulate an error and make sure cleanup proceeds with next instance.
         self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False).\
                                         AndRaise(test.TestingException)
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
+                inst1.uuid).AndReturn(bdms)
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
+                inst2.uuid).AndReturn(bdms)
         self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False).\
                                         AndReturn(None)
 
@@ -6061,6 +6078,7 @@ class ComputeTestCase(BaseTestCase):
         admin_context = context.get_admin_context()
         instance = instance_obj.Instance()
         instance.id = 1
+        instance.uuid = 'fake-uuid'
         instance.vm_state = vm_states.DELETED
         instance.task_state = None
         instance.system_metadata = {'fake_key': 'fake_value'}
@@ -6075,8 +6093,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.stubs.Set(instance, 'destroy', fake_destroy)
 
-        self.stubs.Set(self.compute,
-                       '_get_instance_volume_bdms',
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        lambda *a, **k: None)
 
         self.stubs.Set(self.compute,
@@ -6216,8 +6233,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(instance_obj.InstanceList,
                                  'get_by_filters')
         self.mox.StubOutWithMock(self.compute, '_deleted_old_enough')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'block_device_mapping_get_all_by_instance')
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
 
         instance_obj.InstanceList.get_by_filters(
@@ -6228,15 +6245,15 @@ class ComputeTestCase(BaseTestCase):
 
         # The first instance delete fails.
         self.compute._deleted_old_enough(instance1, 3600).AndReturn(True)
-        self.compute.conductor_api.block_device_mapping_get_all_by_instance(
-                ctxt, instance1).AndReturn(None)
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, instance1.uuid).AndReturn([])
         self.compute._delete_instance(ctxt, instance1,
                                       None).AndRaise(test.TestingException)
 
         # The second instance delete that follows.
         self.compute._deleted_old_enough(instance2, 3600).AndReturn(True)
-        self.compute.conductor_api.block_device_mapping_get_all_by_instance(
-                ctxt, instance2).AndReturn(None)
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, instance2.uuid).AndReturn([])
         self.compute._delete_instance(ctxt, instance2,
                                       None)
 
@@ -8609,20 +8626,23 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
 
         img_bdm = {'instance_uuid': instance['uuid'],
-                   'device_name': '/dev/vda',
-                   'source_type': 'image',
-                   'destination_type': 'local',
-                   'delete_on_termination': False,
-                   'boot_index': 0,
-                   'image_id': 'fake_image'}
+                     'device_name': '/dev/vda',
+                     'source_type': 'image',
+                     'destination_type': 'local',
+                     'delete_on_termination': False,
+                     'boot_index': 0,
+                     'image_id': 'fake_image'}
         vol_bdm = {'instance_uuid': instance['uuid'],
-                   'device_name': '/dev/vdc',
-                   'source_type': 'volume',
-                   'destination_type': 'volume',
-                   'delete_on_termination': False,
-                   'volume_id': 'fake_vol'}
+                     'device_name': '/dev/vdc',
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'delete_on_termination': False,
+                     'volume_id': 'fake_vol'}
+        bdms = []
         for bdm in img_bdm, vol_bdm:
-            db.block_device_mapping_create(admin, bdm, legacy=False)
+            bdm_obj = block_device_obj.BlockDeviceMapping(**bdm)
+            bdm_obj.create(admin)
+            bdms.append(bdm_obj)
 
         self.stubs.Set(self.compute, 'volume_api', mox.MockAnything())
         self.stubs.Set(self.compute, '_prep_block_device', mox.MockAnything())
@@ -8630,7 +8650,7 @@ class ComputeAPITestCase(BaseTestCase):
                 None, True, None, False)
 
         self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+                self._objectify(instance), bdms, [])
 
         bdms = db.block_device_mapping_get_all_by_instance(admin,
                                                            instance['uuid'])

@@ -730,7 +730,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_terminate_instance(self):
         self._test_compute_api('terminate_instance', 'cast',
                 instance=self.fake_instance, bdms=[],
-                reservations=['uuid1', 'uuid2'])
+                reservations=['uuid1', 'uuid2'], version='3.22')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

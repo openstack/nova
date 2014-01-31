@@ -411,7 +411,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.21')
+    target = messaging.Target(version='3.22')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -589,7 +589,8 @@ class ComputeManager(manager.Manager):
         deleted in the DB
         """
         instance.destroy()
-        bdms = self._get_instance_volume_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         quotas = quotas_obj.Quotas()
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
         quotas.reserve(context, project_id=project_id, user_id=user_id,
@@ -603,21 +604,12 @@ class ComputeManager(manager.Manager):
 
     def _complete_deletion(self, context, instance, bdms,
                            quotas, system_meta):
-
         if quotas:
             quotas.commit()
-        # ensure block device mappings are not leaked
-        self.conductor_api.block_device_mapping_destroy(context, bdms)
 
-        # NOTE(ndipanov): Delete the dummy image BDM as well. This will not
-        #                 be needed once the manager code is using the image
-        if instance.image_ref:
-            # Do not convert to legacy here - we want them all
-            leftover_bdm = \
-                self.conductor_api.block_device_mapping_get_all_by_instance(
-                    context, obj_base.obj_to_primitive(instance), legacy=False)
-            self.conductor_api.block_device_mapping_destroy(context,
-                                                            leftover_bdm)
+        # ensure block device mappings are not leaked
+        for bdm in bdms:
+            bdm.destroy()
 
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
@@ -688,7 +680,8 @@ class ComputeManager(manager.Manager):
                            'the deletion now.'), instance=instance)
                 instance.obj_load_attr('metadata')
                 instance.obj_load_attr('system_metadata')
-                bdms = self._get_instance_volume_bdms(context, instance)
+                bdms = (block_device_obj.BlockDeviceMappingList.
+                        get_by_instance_uuid(context, instance.uuid))
                 self._delete_instance(context, instance, bdms)
             except Exception:
                 # we don't want that an exception blocks the init_host
@@ -1862,6 +1855,15 @@ class ComputeManager(manager.Manager):
     def _shutdown_instance(self, context, instance,
                            bdms, requested_networks=None, notify=True):
         """Shutdown an instance on this host."""
+        # TODO(ndipanov): Remove this once all code using this method is
+        # converted to BDM objects. Currently this means only
+        # _reschedule_or_error
+        if (bdms and
+            any(not isinstance(bdm, block_device_obj.BlockDeviceMapping)
+                for bdm in bdms)):
+            bdms = (block_device_obj.BlockDeviceMappingList.
+                    get_by_instance_uuid(context, instance.uuid))
+
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
                   context=context, instance=instance)
@@ -1878,9 +1880,9 @@ class ComputeManager(manager.Manager):
             network_info = network_model.NetworkInfo()
 
         # NOTE(vish) get bdms before destroying the instance
-        vol_bdms = self._get_volume_bdms(bdms)
+        vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
         block_device_info = self._get_instance_volume_block_device_info(
-            context, instance)
+            context, instance, bdms=bdms)
 
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
@@ -1903,12 +1905,12 @@ class ComputeManager(manager.Manager):
         for bdm in vol_bdms:
             try:
                 # NOTE(vish): actual driver detach done in driver.destroy, so
-                #             just tell nova-volume that we are done with it.
+                #             just tell cinder that we are done with it.
                 connector = self.driver.get_volume_connector(instance)
                 self.volume_api.terminate_connection(context,
-                                                     bdm['volume_id'],
+                                                     bdm.volume_id,
                                                      connector)
-                self.volume_api.detach(context, bdm['volume_id'])
+                self.volume_api.detach(context, bdm.volume_id)
             except exception.DiskNotFound as exc:
                 LOG.warn(_('Ignoring DiskNotFound: %s') % exc,
                          instance=instance)
@@ -2009,6 +2011,15 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms, reservations):
         """Terminate an instance on this host."""
+        # NOTE (ndipanov): If we get non-object BDMs, just get them from the
+        # db again, as this means they are sent in the old format and we want
+        # to avoid converting them back when we can just get them.
+        # Remove this when we bump the RPC major version to 4.0
+        if (bdms and
+            any(not isinstance(bdm, block_device_obj.BlockDeviceMapping)
+                for bdm in bdms)):
+            bdms = (block_device_obj.BlockDeviceMappingList.
+                    get_by_instance_uuid(context, instance.uuid))
 
         @utils.synchronized(instance['uuid'])
         def do_terminate_instance(instance, bdms):
@@ -5080,9 +5091,8 @@ class ComputeManager(manager.Manager):
             use_slave=True)
         for instance in instances:
             if self._deleted_old_enough(instance, interval):
-                capi = self.conductor_api
-                bdms = capi.block_device_mapping_get_all_by_instance(
-                    context, instance)
+                bdms = (block_device_obj.BlockDeviceMappingList.
+                        get_by_instance_uuid(context, instance.uuid))
                 LOG.info(_('Reclaiming deleted instance'), instance=instance)
                 # NOTE(comstud): Quotas were already accounted for when
                 # the instance was soft deleted, so there's no need to
@@ -5162,9 +5172,8 @@ class ComputeManager(manager.Manager):
         # NOTE(sirp): admin contexts don't ordinarily return deleted records
         with utils.temporary_mutation(context, read_deleted="yes"):
             for instance in self._running_deleted_instances(context):
-                capi = self.conductor_api
-                bdms = capi.block_device_mapping_get_all_by_instance(
-                    context, instance)
+                bdms = (block_device_obj.BlockDeviceMappingList.
+                        get_by_instance_uuid(context, instance.uuid))
 
                 if action == "log":
                     LOG.warning(_("Detected instance with name label "

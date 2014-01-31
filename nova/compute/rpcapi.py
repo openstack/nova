@@ -239,6 +239,7 @@ class ComputeAPI(object):
         3.19 - Update pre_live_migration to take instance object
         3.20 - Make restore_instance take an instance object
         3.21 - Made rebuild take new-world BDM objects
+        3.22 - Made terminate_instance take new-world BDM objects
     '''
 
     VERSION_ALIASES = {
@@ -855,12 +856,16 @@ class ComputeAPI(object):
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
         # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.35')
-        bdms_p = jsonutils.to_primitive(bdms)
+        if self.client.can_send_version('3.22'):
+            version = '3.22'
+        else:
+            version = self._get_compat_version('3.0', '2.35')
+            bdms = block_device.legacy_mapping(bdms)
+            bdms = jsonutils.to_primitive(objects_base.obj_to_primitive(bdms))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'terminate_instance',
-                   instance=instance, bdms=bdms_p,
+                   instance=instance, bdms=bdms,
                    reservations=reservations)
 
     def unpause_instance(self, ctxt, instance):

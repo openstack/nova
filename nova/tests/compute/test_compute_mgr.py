@@ -29,6 +29,7 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
@@ -288,15 +289,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.DELETING
 
-        self.mox.StubOutWithMock(self.compute, '_get_instance_volume_bdms')
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
         self.mox.StubOutWithMock(instance, 'obj_load_attr')
 
         bdms = []
         instance.obj_load_attr('metadata')
         instance.obj_load_attr('system_metadata')
-        self.compute._get_instance_volume_bdms(self.context,
-            instance).AndReturn(bdms)
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, instance.uuid).AndReturn(bdms)
         self.compute._delete_instance(self.context, instance, bdms)
 
         self.mox.ReplayAll()

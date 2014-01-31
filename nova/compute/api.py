@@ -1355,9 +1355,8 @@ class API(base.Base):
             return
 
         host = instance['host']
-        bdms = block_device.legacy_mapping(
-                    self.db.block_device_mapping_get_all_by_instance(
-                    context, instance.uuid))
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         reservations = None
 
         if context.is_admin and context.project_id != instance.project_id:
@@ -1593,7 +1592,7 @@ class API(base.Base):
 
         # cleanup volumes
         for bdm in bdms:
-            if bdm['volume_id']:
+            if bdm.is_volume:
                 # NOTE(vish): We don't have access to correct volume
                 #             connector info, so just pass a fake
                 #             connector. This can be improved when we
@@ -1601,15 +1600,15 @@ class API(base.Base):
                 connector = {'ip': '127.0.0.1', 'initiator': 'iqn.fake'}
                 try:
                     self.volume_api.terminate_connection(context,
-                                                         bdm['volume_id'],
+                                                         bdm.volume_id,
                                                          connector)
-                    self.volume_api.detach(elevated, bdm['volume_id'])
-                    if bdm['delete_on_termination']:
-                        self.volume_api.delete(context, bdm['volume_id'])
+                    self.volume_api.detach(elevated, bdm.volume_id)
+                    if bdm.delete_on_termination:
+                        self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
                     err_str = _("Ignoring volume cleanup failure due to %s")
                     LOG.warn(err_str % exc, instance=instance)
-            self.db.block_device_mapping_destroy(context, bdm['id'])
+            bdm.destroy(context)
         cb(context, instance, bdms, local=True)
         sys_meta = instance.system_metadata
         instance.destroy()
