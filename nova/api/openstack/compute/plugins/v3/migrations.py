@@ -13,12 +13,9 @@
 #    under the License.
 
 from nova.api.openstack import extensions
-from nova.api.openstack import wsgi
-from nova.api.openstack import xmlutil
 from nova import compute
 
 
-XMLNS = "http://docs.openstack.org/compute/ext/migrations/api/v3"
 ALIAS = "os-migrations"
 
 
@@ -27,34 +24,12 @@ def authorize(context, action_name):
     extensions.extension_authorizer('compute', action)(context)
 
 
-class MigrationsTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('migrations')
-        elem = xmlutil.SubTemplateElement(root, 'migration',
-                                          selector='migrations')
-        elem.set('id')
-        elem.set('source_node')
-        elem.set('dest_node')
-        elem.set('source_compute')
-        elem.set('dest_compute')
-        elem.set('dest_host')
-        elem.set('status')
-        elem.set('instance_uuid')
-        elem.set('old_instance_type_id')
-        elem.set('new_instance_type_id')
-        elem.set('created_at')
-        elem.set('updated_at')
-
-        return xmlutil.MasterTemplate(root, 1)
-
-
 class MigrationsController(object):
     """Controller for accessing migrations in OpenStack API."""
     def __init__(self):
         self.compute_api = compute.API()
 
     @extensions.expected_errors(())
-    @wsgi.serializers(xml=MigrationsTemplate)
     def index(self, req):
         """Return all migrations in progress."""
         context = req.environ['nova.context']
@@ -67,7 +42,7 @@ class Migrations(extensions.V3APIExtensionBase):
     """Provide data on migrations."""
     name = "Migrations"
     alias = ALIAS
-    namespace = XMLNS
+    namespace = "http://docs.openstack.org/compute/ext/migrations/api/v3"
     version = 1
 
     def get_resources(self):
