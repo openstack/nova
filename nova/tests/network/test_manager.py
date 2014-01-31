@@ -264,7 +264,9 @@ class FlatNetworkTestCase(test.TestCase):
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
 
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
@@ -312,7 +314,9 @@ class FlatNetworkTestCase(test.TestCase):
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100.1')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -327,7 +331,9 @@ class FlatNetworkTestCase(test.TestCase):
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -342,7 +348,9 @@ class FlatNetworkTestCase(test.TestCase):
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                None)]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
         self.mox.ReplayAll()
 
         self.network.validate_networks(self.context, requested_networks)
@@ -560,7 +568,9 @@ class FlatNetworkTestCase(test.TestCase):
         requested_networks = ['bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                               'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa']
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
 
         self.mox.ReplayAll()
         res = self.network._get_networks_by_uuids(self.context,
@@ -716,7 +726,9 @@ class VlanNetworkTestCase(test.TestCase):
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
 
         fixed_ips[1]['network_id'] = networks[1]['id']
         fixed_ips[1]['instance_uuid'] = None
@@ -746,7 +758,9 @@ class VlanNetworkTestCase(test.TestCase):
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
                                '192.168.0.100.1')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -759,7 +773,9 @@ class VlanNetworkTestCase(test.TestCase):
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', ''),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', '')]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
         self.mox.ReplayAll()
 
         self.assertRaises(exception.FixedIpInvalid,
@@ -772,7 +788,9 @@ class VlanNetworkTestCase(test.TestCase):
         requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', None),
                               ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', None)]
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
         self.mox.ReplayAll()
         self.network.validate_networks(self.context, requested_networks)
 
@@ -1359,7 +1377,9 @@ class VlanNetworkTestCase(test.TestCase):
         requested_networks = ['bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                               'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa']
         db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
-                project_only=mox.IgnoreArg()).AndReturn(networks[:])
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **net)
+                     for net in networks])
 
         self.mox.ReplayAll()
         res = self.network._get_networks_by_uuids(self.context,
@@ -1786,12 +1806,12 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(exception.NetworkNotFound,
                           manager.get_network, fake_context, uuid)
 
-    def test_get_all_networks(self):
+    @mock.patch('nova.db.network_get_all')
+    def test_get_all_networks(self, get_all):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
-        self.mox.StubOutWithMock(manager.db, 'network_get_all')
-        manager.db.network_get_all(mox.IgnoreArg()).AndReturn(networks)
-        self.mox.ReplayAll()
+        get_all.return_value = [dict(test_network.fake_network, **net)
+                                for net in networks]
         output = manager.get_all_networks(fake_context)
         self.assertEqual(len(networks), 2)
         self.assertEqual(output[0]['uuid'],

@@ -203,7 +203,9 @@ class RPCAllocateFixedIP(object):
                 host = network['host']
             # NOTE(vish): if there is no network host, set one
             if host is None:
-                host = self.network_rpcapi.set_network_host(context, network)
+                network_p = obj_base.obj_to_primitive(network)
+                host = self.network_rpcapi.set_network_host(context,
+                                                            network_p)
             if host != self.host:
                 # need to call allocate_fixed_ip to correct network host
                 green_threads.append(eventlet.spawn(
@@ -464,12 +466,11 @@ class NetworkManager(manager.Manager):
             networks = self._get_networks_by_uuids(context, network_uuids)
         else:
             try:
-                networks = self.db.network_get_all(context)
+                networks = network_obj.NetworkList.get_all(context)
             except exception.NoNetworksFound:
                 return []
         # return only networks which are not vlan networks
-        return [network for network in networks if
-                not network['vlan']]
+        return [network for network in networks if not network.vlan]
 
     def allocate_for_instance(self, context, **kwargs):
         """Handles allocating the various network resources for an instance.
@@ -1354,9 +1355,9 @@ class NetworkManager(manager.Manager):
                                    project_only="allow_none")
 
     def _get_networks_by_uuids(self, context, network_uuids):
-        networks = self.db.network_get_all_by_uuids(context, network_uuids,
-                                                    project_only="allow_none")
-        networks.sort(key=lambda x: network_uuids.index(x['uuid']))
+        networks = network_obj.NetworkList.get_by_uuids(
+            context, network_uuids, project_only="allow_none")
+        networks.sort(key=lambda x: network_uuids.index(x.uuid))
         return networks
 
     def get_vifs_by_instance(self, context, instance_id):
@@ -1394,10 +1395,10 @@ class NetworkManager(manager.Manager):
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
         try:
-            networks = self.db.network_get_all(context)
+            return obj_base.obj_to_primitive(
+                network_obj.NetworkList.get_all(context))
         except exception.NoNetworksFound:
             return []
-        return [jsonutils.to_primitive(network) for network in networks]
 
     def disassociate_network(self, context, network_uuid):
         # NOTE(vish): This is no longer used but can't be removed until
@@ -1802,9 +1803,9 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         # NOTE(vish): Don't allow access to networks with project_id=None as
         #             these are networks that haven't been allocated to a
         #             project yet.
-        networks = self.db.network_get_all_by_uuids(context, network_uuids,
-                                                    project_only=True)
-        networks.sort(key=lambda x: network_uuids.index(x['uuid']))
+        networks = network_obj.NetworkList.get_by_uuids(
+            context, network_uuids, project_only=True)
+        networks.sort(key=lambda x: network_uuids.index(x.uuid))
         return networks
 
     def _get_networks_for_instance(self, context, instance_id, project_id,
