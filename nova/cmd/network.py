@@ -44,6 +44,7 @@ def main():
             conductor_rpcapi.ConductorAPI()
 
     server = service.Service.create(binary='nova-network',
-                                    topic=CONF.network_topic)
+                                    topic=CONF.network_topic,
+                                    db_allowed=CONF.conductor.use_local)
     service.serve(server)
     service.wait()
