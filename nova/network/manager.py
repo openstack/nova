@@ -1514,9 +1514,8 @@ class FlatManager(NetworkManager):
         # NOTE(tr3buchet): this does not need to happen on every ip
         # allocation, this functionality makes more sense in create_network
         # but we'd have to move the flat_injected flag to compute
-        net = {}
-        net['injected'] = CONF.flat_injected
-        self.db.network_update(context, network['id'], net)
+        network.injected = CONF.flat_injected
+        network.save()
 
     def _teardown_network_on_host(self, context, network):
         """Tear down network on this host."""
@@ -1649,8 +1648,8 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
             if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
-                self.db.network_update(context, network['id'],
-                                       {'gateway_v6': gateway})
+                network.gateway_v6 = gateway
+                network.save()
 
     def _teardown_network_on_host(self, context, network):
         if not CONF.fake_network:
@@ -1850,14 +1849,15 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
     @utils.synchronized('setup_network', external=True)
     def _setup_network_on_host(self, context, network):
         """Sets up network on this host."""
-        if not network['vpn_public_address']:
+        if not network.vpn_public_address:
             net = {}
             address = CONF.vpn_ip
             net['vpn_public_address'] = address
-            network = self.db.network_update(context, network['id'], net)
+            network.vpn_public_address = address
+            network.save()
         else:
-            address = network['vpn_public_address']
-        network['dhcp_server'] = self._get_dhcp_ip(context, network)
+            address = network.vpn_public_address
+        network.dhcp_server = self._get_dhcp_ip(context, network)
 
         self.l3driver.initialize_network(network.get('cidr'))
         self.l3driver.initialize_gateway(network)
@@ -1867,8 +1867,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         if address == CONF.vpn_ip and hasattr(self.driver,
                                                "ensure_vpn_forward"):
             self.l3driver.add_vpn(CONF.vpn_ip,
-                    network['vpn_public_port'],
-                    network['vpn_private_address'])
+                    network.vpn_public_port,
+                    network.vpn_private_address)
         if not CONF.fake_network:
             dev = self.driver.get_dev(network)
             # NOTE(dprince): dhcp DB queries require elevated context
@@ -1877,8 +1877,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
                 gateway = utils.get_my_linklocal(dev)
-                self.db.network_update(context, network['id'],
-                                       {'gateway_v6': gateway})
+                network.gateway_v6 = gateway
+                network.save()
 
     @utils.synchronized('setup_network', external=True)
     def _teardown_network_on_host(self, context, network):
