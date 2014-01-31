@@ -42,7 +42,6 @@ class Migrations(extensions.V3APIExtensionBase):
     """Provide data on migrations."""
     name = "Migrations"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/migrations/api/v3"
     version = 1
 
     def get_resources(self):

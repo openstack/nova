@@ -127,8 +127,6 @@ class AvailabilityZone(extensions.V3APIExtensionBase):
 
     name = "AvailabilityZone"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "availabilityzone/api/v3")
     version = 1
 
     def get_resources(self):

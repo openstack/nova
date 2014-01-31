@@ -151,7 +151,6 @@ class Services(extensions.V3APIExtensionBase):
 
     name = "Services"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/services/api/v3"
     version = 1
 
     def get_resources(self):

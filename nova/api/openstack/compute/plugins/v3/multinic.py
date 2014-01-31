@@ -80,7 +80,6 @@ class Multinic(extensions.V3APIExtensionBase):
 
     name = "Multinic"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/multinic/api/v3"
     version = 1
 
     def get_controller_extensions(self):

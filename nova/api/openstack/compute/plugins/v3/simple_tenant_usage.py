@@ -252,8 +252,6 @@ class SimpleTenantUsage(extensions.V3APIExtensionBase):
 
     name = "SimpleTenantUsage"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-simple-tenant-usage/api/v3")
     version = 1
 
     def get_resources(self):

@@ -33,8 +33,6 @@ class MultipleCreate(extensions.V3APIExtensionBase):
 
     name = "MultipleCreate"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "multiplecreate/api/v3")
     version = 1
 
     def get_resources(self):

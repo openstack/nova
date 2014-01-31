@@ -93,8 +93,6 @@ class InstanceActions(extensions.V3APIExtensionBase):
 
     name = "InstanceActions"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "instance-actions/api/v3")
     version = 1
 
     def get_resources(self):

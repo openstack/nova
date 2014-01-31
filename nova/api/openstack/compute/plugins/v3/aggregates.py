@@ -227,7 +227,6 @@ class Aggregates(extensions.V3APIExtensionBase):
 
     name = "Aggregates"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/aggregates/api/v3"
     version = 1
 
     def get_resources(self):

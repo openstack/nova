@@ -54,8 +54,6 @@ class SchedulerHints(extensions.V3APIExtensionBase):
 
     name = "SchedulerHints"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "scheduler-hints/api/v3")
     version = 1
 
     def get_controller_extensions(self):

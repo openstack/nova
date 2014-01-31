@@ -74,8 +74,6 @@ class Certificates(extensions.V3APIExtensionBase):
 
     name = "Certificates"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "certificates/api/v3")
     version = 1
 
     def get_resources(self):

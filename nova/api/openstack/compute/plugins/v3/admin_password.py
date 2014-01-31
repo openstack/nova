@@ -67,8 +67,6 @@ class AdminPassword(extensions.V3APIExtensionBase):
 
     name = "AdminPassword"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-admin-password/api/v3")
     version = 1
 
     def get_resources(self):

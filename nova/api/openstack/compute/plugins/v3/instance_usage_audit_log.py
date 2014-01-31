@@ -125,7 +125,6 @@ class InstanceUsageAuditLog(extensions.V3APIExtensionBase):
     """Admin-only Task Log Monitoring."""
     name = "InstanceUsageAuditLog"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/ext/services/api/v3"
     version = 1
 
     def get_resources(self):

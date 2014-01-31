@@ -60,8 +60,6 @@ class ExtendedAvailabilityZone(extensions.V3APIExtensionBase):
 
     name = "ExtendedAvailabilityZone"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "extended_availability_zone/api/v3")
     version = 1
 
     def get_controller_extensions(self):

@@ -98,7 +98,6 @@ class Rescue(extensions.V3APIExtensionBase):
 
     name = "Rescue"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/rescue/api/v3"
     version = 1
 
     def get_resources(self):

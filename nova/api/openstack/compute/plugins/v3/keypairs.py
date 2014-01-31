@@ -170,7 +170,6 @@ class Keypairs(extensions.V3APIExtensionBase):
 
     name = "Keypairs"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/core/keypairs/api/v3"
     version = 1
 
     def get_resources(self):

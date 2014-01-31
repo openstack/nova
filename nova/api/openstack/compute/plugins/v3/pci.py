@@ -74,7 +74,6 @@ class Pci(extensions.V3APIExtensionBase):
     """Pci access support."""
     name = "PCIAccess"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
     version = 1
 
     def get_resources(self):

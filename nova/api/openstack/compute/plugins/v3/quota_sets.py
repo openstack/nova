@@ -225,7 +225,6 @@ class QuotaSets(extensions.V3APIExtensionBase):
 
     name = "Quotas"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/os-quotas-sets/api/v3"
     version = 1
 
     def get_resources(self):

@@ -70,7 +70,6 @@ class IPs(extensions.V3APIExtensionBase):
 
     name = "ips"
     alias = "ips"
-    namespace = "http://docs.openstack.org/compute/core/ips/v3"
     version = 1
 
     def get_resources(self):

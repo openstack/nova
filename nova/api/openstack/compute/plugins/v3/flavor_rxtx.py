@@ -54,7 +54,6 @@ class FlavorRxtx(extensions.V3APIExtensionBase):
 
     name = "FlavorRxtx"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/%s/api/v3" % ALIAS
     version = 1
 
     def get_controller_extensions(self):

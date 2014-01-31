@@ -92,7 +92,6 @@ class Evacuate(extensions.V3APIExtensionBase):
 
     name = "Evacuate"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/evacuate/api/v3"
     version = 1
 
     def get_resources(self):

@@ -58,7 +58,6 @@ class ConfigDrive(extensions.V3APIExtensionBase):
 
     name = "ConfigDrive"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/config_drive/api/v3"
     version = 1
 
     def get_controller_extensions(self):

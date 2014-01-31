@@ -87,8 +87,6 @@ class QuotaClasses(extensions.V3APIExtensionBase):
 
     name = "QuotaClasses"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "quota-class-sets/api/v3")
     version = 1
 
     def get_resources(self):

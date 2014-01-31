@@ -145,7 +145,6 @@ class Agents(extensions.V3APIExtensionBase):
 
     name = "Agents"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/agents/api/v3"
     version = 1
 
     def get_resources(self):

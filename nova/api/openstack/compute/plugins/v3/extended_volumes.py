@@ -223,8 +223,6 @@ class ExtendedVolumes(extensions.V3APIExtensionBase):
 
     name = "ExtendedVolumes"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "extended_volumes/api/v3")
     version = 1
 
     def get_controller_extensions(self):

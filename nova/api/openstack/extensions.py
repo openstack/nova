@@ -446,11 +446,6 @@ class V3APIExtensionBase(object):
         pass
 
     @abc.abstractproperty
-    def namespace(self):
-        """Namespace for the extension."""
-        pass
-
-    @abc.abstractproperty
     def version(self):
         """Version of the extension."""
         pass

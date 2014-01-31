@@ -310,7 +310,6 @@ class Hosts(extensions.V3APIExtensionBase):
 
     name = "Hosts"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/hosts/api/v3"
     version = 1
 
     def get_resources(self):

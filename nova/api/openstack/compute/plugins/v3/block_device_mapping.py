@@ -32,8 +32,6 @@ class BlockDeviceMapping(extensions.V3APIExtensionBase):
 
     name = "BlockDeviceMapping"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "blockdevicemapping/api/v3")
     version = 1
 
     def get_resources(self):
