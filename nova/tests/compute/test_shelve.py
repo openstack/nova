@@ -210,7 +210,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 columns_to_join=['metadata', 'system_metadata'],
                 ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
-                []).AndReturn('fake_bdm')
+                mox.IgnoreArg()).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
@@ -276,7 +276,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 columns_to_join=['metadata', 'system_metadata']
                 ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
-                []).AndReturn('fake_bdm')
+                mox.IgnoreArg()).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
         self.rt.instance_claim(self.context, instance, limits).AndReturn(

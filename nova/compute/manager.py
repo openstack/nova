@@ -3612,8 +3612,8 @@ class ComputeManager(manager.Manager):
         instance.save()
 
         network_info = self._get_instance_nw_info(context, instance)
-        bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
-                context, instance, legacy=False)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
 
