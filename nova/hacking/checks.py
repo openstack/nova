@@ -39,13 +39,13 @@ def no_db_session_in_public_api(logical_line, filename):
 
 
 def use_timeutils_utcnow(logical_line):
-    msg = "N310: timeutils.%s() must be used instead of datetime.%s()"
+    msg = "N310: timeutils.utcnow() must be used instead of datetime.%s()"
 
     datetime_funcs = ['now', 'utcnow']
     for f in datetime_funcs:
         pos = logical_line.find('datetime.%s' % f)
         if pos != -1:
-            yield (pos, msg % (f, f))
+            yield (pos, msg % f)
 
 
 def capital_cfg_help(logical_line, tokens):
