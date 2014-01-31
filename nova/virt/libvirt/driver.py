@@ -3453,8 +3453,8 @@ class LibvirtDriver(driver.ComputeDriver):
             if (not reboot and 'data' in connection_info and
                     'volume_id' in connection_info['data']):
                 connection_info['data']['device_path'] = conf.source_path
-                self.virtapi.block_device_mapping_update(context, vol.id,
-                        {'connection_info': jsonutils.dumps(connection_info)})
+                vol['connection_info'] = connection_info
+                vol.save(context)
 
                 volume_id = connection_info['data']['volume_id']
                 encryption = encryptors.get_encryption_metadata(
@@ -4987,15 +4987,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                           *block_device_lists):
         ephemerals, swap, block_device_mapping = block_device_lists[:3]
 
-        def _update_func(bdm):
-            bdm_id = bdm.get('id')
-            self.virtapi.block_device_mapping_update(
-                nova_context.get_admin_context(),
-                bdm_id, bdm)
-
         blockinfo.default_device_names(CONF.libvirt.virt_type,
+                                       nova_context.get_admin_context(),
                                        instance, root_device_name,
-                                       _update_func,
                                        ephemerals, swap,
                                        block_device_mapping)
 

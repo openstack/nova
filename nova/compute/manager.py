@@ -405,10 +405,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         return capi.block_device_mapping_get_all_by_instance(context, instance,
                                                              legacy=legacy)
 
-    def block_device_mapping_update(self, context, bdm_id, values):
-        return self._compute.conductor_api.block_device_mapping_update(
-                context, bdm_id, values)
-
 
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
@@ -1430,17 +1426,15 @@ class ComputeManager(manager.Manager):
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_volumes(bdms),
                         context, instance, self.volume_api,
-                        self.driver, self.conductor_api) +
+                        self.driver) +
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_snapshots(bdms),
                         context, instance, self.volume_api,
-                        self.driver, self.conductor_api,
-                        self._await_block_device_map_created) +
+                        self.driver, self._await_block_device_map_created) +
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_images(bdms),
                         context, instance, self.volume_api,
-                        self.driver, self.conductor_api,
-                        self._await_block_device_map_created))
+                        self.driver, self._await_block_device_map_created))
             }
 
             if self.use_legacy_block_device_info:
@@ -1580,7 +1574,7 @@ class ComputeManager(manager.Manager):
         else:
             block_device_mapping = driver_block_device.refresh_conn_infos(
                 block_device_mapping, context, instance, self.volume_api,
-                self.driver, self.conductor_api)
+                self.driver)
 
         if self.use_legacy_block_device_info:
             block_device_mapping = driver_block_device.legacy_block_devices(
