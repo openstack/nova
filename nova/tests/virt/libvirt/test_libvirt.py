@@ -5182,7 +5182,7 @@ class LibvirtConnTestCase(test.TestCase):
             "vendor_id": '8086',
             "label": 'label_8086_1520',
             "dev_type": 'type-VF',
-            "phys_function": [('0x0000', '0x04', '0x00', '0x3')],
+            "phys_function": '0000:04:00.3',
             }
 
         self.assertEqual(actualvf, expect_vf)
