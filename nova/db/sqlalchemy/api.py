@@ -1282,19 +1282,24 @@ def fixed_ip_get_all(context):
 
 
 @require_context
-def fixed_ip_get_by_address(context, address):
-    return _fixed_ip_get_by_address(context, address)
+def fixed_ip_get_by_address(context, address, columns_to_join=None):
+    return _fixed_ip_get_by_address(context, address,
+                                    columns_to_join=columns_to_join)
 
 
-def _fixed_ip_get_by_address(context, address, session=None):
+def _fixed_ip_get_by_address(context, address, session=None,
+                             columns_to_join=None):
     if session is None:
         session = get_session()
+    if columns_to_join is None:
+        columns_to_join = []
 
     with session.begin(subtransactions=True):
         try:
-            result = model_query(context, models.FixedIp, session=session).\
-                                 filter_by(address=address).\
-                                 first()
+            result = model_query(context, models.FixedIp, session=session)
+            for column in columns_to_join:
+                result = result.options(joinedload_all(column))
+            result = result.filter_by(address=address).first()
             if not result:
                 raise exception.FixedIpNotFoundForAddress(address=address)
         except DataError:
