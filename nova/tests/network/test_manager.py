@@ -1843,8 +1843,10 @@ class CommonNetworkTestCase(test.TestCase):
                          'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb')
 
     @mock.patch('nova.db.network_get_by_uuid')
-    def test_disassociate_network(self, get):
+    @mock.patch('nova.db.network_disassociate')
+    def test_disassociate_network(self, disassociate, get):
         manager = fake_network.FakeNetworkManager()
+        disassociate.return_value = True
         fake_context = context.RequestContext('user', 'project')
         get.return_value = dict(test_network.fake_network,
                                 **networks[0])
