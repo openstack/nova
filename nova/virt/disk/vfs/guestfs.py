@@ -108,7 +108,16 @@ class VFSGuestFS(vfs.VFS):
     def setup(self):
         LOG.debug(_("Setting up appliance for %(imgfile)s %(imgfmt)s") %
                   {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
-        self.handle = tpool.Proxy(guestfs.GuestFS(close_on_exit=False))
+        try:
+            self.handle = tpool.Proxy(guestfs.GuestFS(close_on_exit=False))
+        except TypeError as e:
+            if 'close_on_exit' in str(e):
+                # NOTE(russellb) In case we're not using a version of
+                # libguestfs new enough to support the close_on_exit paramater,
+                # which was added in libguestfs 1.20.
+                self.handle = tpool.Proxy(guestfs.GuestFS())
+            else:
+                raise
 
         try:
             self.handle.add_drive_opts(self.imgfile, format=self.imgfmt)
