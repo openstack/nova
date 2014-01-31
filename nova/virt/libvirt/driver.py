@@ -3030,7 +3030,8 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.virt_type = CONF.libvirt.virt_type
         guest.name = instance['name']
         guest.uuid = instance['uuid']
-        guest.memory = inst_type['memory_mb'] * 1024
+        # We are using default unit for memory: KiB
+        guest.memory = inst_type['memory_mb'] * units.Ki
         guest.vcpus = inst_type['vcpus']
         guest.cpuset = CONF.vcpu_pin_set
 
@@ -3665,11 +3666,11 @@ class LibvirtDriver(driver.ComputeDriver):
                               int(m[idx2 + 1]) +
                               int(m[idx3 + 1])))
             # Convert it to MB
-            return used / 1024
+            return used / units.Ki
         else:
             avail = (int(m[idx1 + 1]) + int(m[idx2 + 1]) + int(m[idx3 + 1]))
             # Convert it to MB
-            return self.get_memory_mb_total() - avail / 1024
+            return self.get_memory_mb_total() - avail / units.Ki
 
     def get_hypervisor_type(self):
         """Get hypervisor type.
@@ -3988,7 +3989,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if block_migration:
             disk_available_gb = dst_compute_info['disk_available_least']
             disk_available_mb = \
-                    (disk_available_gb * 1024) - CONF.reserved_host_disk_mb
+                    (disk_available_gb * units.Ki) - CONF.reserved_host_disk_mb
 
         # Compare CPU
         source_cpu_info = src_compute_info['cpu_info']

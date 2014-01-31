@@ -390,7 +390,7 @@ def clear_logical_volume(path):
         if zero_blocks:
             utils.execute(*zero_cmd, run_as_root=True)
         remaining_bytes %= bs
-        bs /= 1024  # Limit to 3 iterations
+        bs /= units.Ki  # Limit to 3 iterations
         # Use O_DIRECT with initial block size and fdatasync otherwise
         direct_flags = ()
         sync_flags = ('conv=fdatasync',)
