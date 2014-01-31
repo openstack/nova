@@ -36,7 +36,10 @@ CONF = cfg.CONF
 CONF.register_opts(rpcapi_opts)
 
 rpcapi_cap_opt = cfg.StrOpt('compute',
-        help='Set a version cap for messages sent to compute services')
+        help='Set a version cap for messages sent to compute services. If you '
+             'plan to do a live upgrade from havana to icehouse, you should '
+             'set this option to "icehouse-compat" before beginning the live '
+             'upgrade procedure.')
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
@@ -233,6 +236,10 @@ class ComputeAPI(rpcclient.RpcProxy):
     VERSION_ALIASES = {
         'grizzly': '2.27',
         'havana': '2.47',
+        # NOTE(russellb) 'icehouse-compat' is the version that is supported by
+        # both havana and icehouse.  Later, 'icehouse' will be added that lists
+        # the maximum version supported by icehouse.
+        'icehouse-compat': '3.0',
     }
 
     def __init__(self):
