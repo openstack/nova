@@ -366,11 +366,13 @@ class NetworkManager(manager.Manager):
 
     def set_network_host(self, context, network_ref):
         """Safely sets the host of the network."""
+        if not isinstance(network_ref, network_obj.Network):
+            network_ref = network_obj.Network._from_db_object(
+                context, network_obj.Network(), network_ref)
         LOG.debug(_('setting network host'), context=context)
-        host = self.db.network_set_host(context,
-                                        network_ref['id'],
-                                        self.host)
-        return host
+        network_ref.host = self.host
+        network_ref.save()
+        return self.host
 
     def _do_trigger_security_group_members_refresh_for_instance(self,
                                                                 instance_id):
@@ -1774,7 +1776,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
         """Associate or disassociate host or project to network."""
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        network_id = self.get_network(context, network_uuid)['id']
+        network = self.get_network(context, network_uuid)
+        network_id = network.id
         if 'host' in associations:
             host = associations['host']
             if host is None:
@@ -1782,7 +1785,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                                              disassociate_host=True,
                                              disassociate_project=False)
             else:
-                self.db.network_set_host(context, network_id, host)
+                network.host = self.host
+                network.save()
         if 'project' in associations:
             project = associations['project']
             if project is None:

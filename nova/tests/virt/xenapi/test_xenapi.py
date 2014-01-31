@@ -993,8 +993,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         ctxt = self.context.elevated()
         instance = self._create_instance(2, False)
         networks = self.network.db.network_get_all(ctxt)
-        for network in networks:
-            self.network.set_network_host(ctxt, network)
+        with mock.patch('nova.objects.network.Network._from_db_object'):
+            for network in networks:
+                self.network.set_network_host(ctxt, network)
 
         self.network.allocate_for_instance(ctxt,
                           instance_id=2,
