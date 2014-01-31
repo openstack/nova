@@ -411,14 +411,10 @@ class ComputeCellsAPI(compute_api.API):
         super(ComputeCellsAPI, self).lock(context, instance)
         self._cast_to_cells(context, instance, 'unlock')
 
-    @wrap_check_policy
     @check_instance_cell
-    def attach_volume(self, context, instance, volume_id, device=None,
-                      disk_bus=None, device_type=None):
+    def _attach_volume(self, context, instance, volume_id, device,
+                       disk_bus, device_type):
         """Attach an existing volume to an existing instance."""
-        if device and not block_device.match_device(device):
-            raise exception.InvalidDevicePath(path=device)
-
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_attach(context, volume, instance=instance)
 

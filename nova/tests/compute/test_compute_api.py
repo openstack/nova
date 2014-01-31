@@ -1268,6 +1268,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.swap_volume, self.context, instance,
                           volumes[old_volume_id], volumes[new_volume_id])
         instance['vm_state'] = vm_states.ACTIVE
+        instance['task_state'] = None
 
         # Should fail if old volume is not attached
         volumes[old_volume_id]['attach_status'] = 'detached'
@@ -1733,6 +1734,25 @@ class _ComputeAPIUnitTestMixIn(object):
         method.assert_any_call(self.context, instances[0:2], events[0:2])
         method.assert_any_call(self.context, instances[2:], events[2:])
         self.assertEqual(2, method.call_count)
+
+    def test_volume_ops_invalid_task_state(self):
+        instance = self._create_instance_obj()
+        self.assertEqual(instance.vm_state, vm_states.ACTIVE)
+        instance.task_state = 'Any'
+        volume_id = uuidutils.generate_uuid()
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.attach_volume,
+                          self.context, instance, volume_id)
+
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.detach_volume,
+                          self.context, instance, volume_id)
+
+        new_volume_id = uuidutils.generate_uuid()
+        self.assertRaises(exception.InstanceInvalidState,
+                          self.compute_api.swap_volume,
+                          self.context, instance,
+                          volume_id, new_volume_id)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

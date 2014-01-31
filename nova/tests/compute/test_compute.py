@@ -8254,6 +8254,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.compute_api.attach_volume,
                 self.context,
                 {'locked': False, 'vm_state': vm_states.ACTIVE,
+                 'task_state': None,
                  'launched_at': timeutils.utcnow()},
                 None,
                 '/invalid')
@@ -8610,7 +8611,8 @@ class ComputeAPITestCase(BaseTestCase):
         instance = {'uuid': 'uuid1',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
-                    'vm_state': vm_states.ACTIVE}
+                    'vm_state': vm_states.ACTIVE,
+                    'task_state': None}
         volume = {'id': 1, 'attach_status': 'detached'}
 
         self.assertRaises(exception.InvalidVolume,
@@ -8623,7 +8625,8 @@ class ComputeAPITestCase(BaseTestCase):
         instance = {'uuid': 'uuid1',
                     'locked': False,
                     'launched_at': timeutils.utcnow(),
-                    'vm_state': vm_states.ACTIVE}
+                    'vm_state': vm_states.ACTIVE,
+                    'task_state': None}
         volume = {'id': 1, 'attach_status': 'in-use',
                   'instance_uuid': 'uuid2'}
 
