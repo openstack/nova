@@ -26,6 +26,7 @@ from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova import test
 from nova.tests.db import fakes as db_fakes
+from nova.tests.objects import test_network
 
 
 class FixedIpCommandsTestCase(test.TestCase):
@@ -143,12 +144,14 @@ class NetworkCommandsTestCase(test.TestCase):
         def fake_network_get_by_cidr(context, cidr):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(cidr, self.fake_net['cidr'])
-            return db_fakes.FakeModel(self.fake_net)
+            return db_fakes.FakeModel(dict(test_network.fake_network,
+                                           **self.fake_net))
 
         def fake_network_get_by_uuid(context, uuid):
             self.assertTrue(context.to_dict()['is_admin'])
             self.assertEqual(uuid, self.fake_net['uuid'])
-            return db_fakes.FakeModel(self.fake_net)
+            return db_fakes.FakeModel(dict(test_network.fake_network,
+                                           **self.fake_net))
 
         def fake_network_update(context, network_id, values):
             self.assertTrue(context.to_dict()['is_admin'])
