@@ -45,6 +45,6 @@ class ComputeFilter(filters.BaseHostFilter):
         else:
             if not self.servicegroup_api.service_is_up(service):
                 LOG.warn(_("%(host_state)s has not been heard from in a "
-                           " while"), {'host_state': host_state})
+                           "while"), {'host_state': host_state})
                 return False
         return True
