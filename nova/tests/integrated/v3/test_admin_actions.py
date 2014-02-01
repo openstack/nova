@@ -31,19 +31,6 @@ class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
         super(AdminActionsSamplesJsonTest, self).setUp()
         self.uuid = self._post_server()
 
-    def test_post_suspend(self):
-        # Get api samples to suspend server request.
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-suspend', {})
-        self.assertEqual(response.status, 202)
-
-    def test_post_resume(self):
-        # Get api samples to server resume request.
-        self.test_post_suspend()
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-resume', {})
-        self.assertEqual(response.status, 202)
-
     def test_post_migrate(self):
         # Get api samples to migrate server request.
         response = self._do_post('servers/%s/action' % self.uuid,

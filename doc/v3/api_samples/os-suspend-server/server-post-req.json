@@ -1,0 +1,10 @@
+{
+    "server" : {
+        "name" : "new-server-test",
+        "image_ref" : "http://glance.openstack.example.com/images/70a599e0-31e7-49b7-b260-868f441e862b",
+        "flavor_ref" : "http://openstack.example.com/flavors/1",
+        "metadata" : {
+            "My Server Name" : "Apache1"
+        }
+    }
+}
