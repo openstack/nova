@@ -79,8 +79,6 @@ class AccessIPs(extensions.V3APIExtensionBase):
 
     name = "AccessIPs"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-access-ips/api/v3")
     version = 1
     v4_key = '%s:access_ip_v4' % ALIAS
     v6_key = '%s:access_ip_v6' % ALIAS

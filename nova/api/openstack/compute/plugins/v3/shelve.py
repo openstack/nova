@@ -101,7 +101,6 @@ class Shelve(exts.V3APIExtensionBase):
 
     name = "Shelve"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/shelve/api/v3"
     version = 1
 
     def get_controller_extensions(self):

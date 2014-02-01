@@ -35,7 +35,6 @@ class Versions(extensions.V3APIExtensionBase):
 
     name = "Versions"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/core/versions/v3"
     version = 1
 
     def get_resources(self):

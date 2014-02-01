@@ -174,7 +174,6 @@ class AttachInterfaces(extensions.V3APIExtensionBase):
 
     name = "AttachInterfaces"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/interfaces/api/v3"
     version = 1
 
     def get_resources(self):

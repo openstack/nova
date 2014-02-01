@@ -77,8 +77,6 @@ class DeferredDelete(extensions.V3APIExtensionBase):
 
     name = "DeferredDelete"
     alias = "os-deferred-delete"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "deferred-delete/api/v3")
     version = 1
 
     def get_controller_extensions(self):

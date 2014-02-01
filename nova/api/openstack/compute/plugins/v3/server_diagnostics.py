@@ -43,8 +43,6 @@ class ServerDiagnostics(extensions.V3APIExtensionBase):
 
     name = "ServerDiagnostics"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "server-diagnostics/api/v3")
     version = 1
 
     def get_resources(self):

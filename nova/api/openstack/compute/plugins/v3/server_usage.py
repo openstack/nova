@@ -65,8 +65,6 @@ class ServerUsage(extensions.V3APIExtensionBase):
 
     name = "ServerUsage"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "os-server-usage/api/v3")
     version = 1
 
     def get_controller_extensions(self):

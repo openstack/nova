@@ -79,8 +79,6 @@ class HideServerAddresses(extensions.V3APIExtensionBase):
 
     name = 'HideServerAddresses'
     alias = ALIAS
-    namespace = ('http://docs.openstack.org/compute/ext/'
-                 'hide_server_addresses/api/v3')
     version = 1
 
     def get_controller_extensions(self):

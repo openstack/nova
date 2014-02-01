@@ -173,7 +173,6 @@ class ServerMetadata(extensions.V3APIExtensionBase):
     """Server Metadata API."""
     name = "Server Metadata"
     alias = "server-metadata"
-    namespace = "http://docs.openstack.org/compute/core/server_metadata/v3"
     version = 1
 
     def get_resources(self):

@@ -34,7 +34,6 @@ class ExtensionInfoController(object):
         ext_data['name'] = ext.name
         ext_data['alias'] = ext.alias
         ext_data['description'] = ext.__doc__
-        ext_data['namespace'] = ext.namespace
         ext_data['version'] = ext.version
         return ext_data
 
@@ -81,7 +80,6 @@ class ExtensionInfo(extensions.V3APIExtensionBase):
 
     name = "extensions"
     alias = "extensions"
-    namespace = "http://docs.openstack.org/compute/core/extension_info/api/v3"
     version = 1
 
     def get_resources(self):

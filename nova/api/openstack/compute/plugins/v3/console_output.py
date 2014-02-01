@@ -85,8 +85,6 @@ class ConsoleOutput(extensions.V3APIExtensionBase):
 
     name = "ConsoleOutput"
     alias = ALIAS
-    namespace = ("http://docs.openstack.org/compute/core/"
-                 "console-output/api/v3")
     version = 1
 
     def get_controller_extensions(self):

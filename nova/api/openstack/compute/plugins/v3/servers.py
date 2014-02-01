@@ -1022,7 +1022,6 @@ class Servers(extensions.V3APIExtensionBase):
 
     name = "Servers"
     alias = "servers"
-    namespace = "http://docs.openstack.org/compute/core/servers/v3"
     version = 1
 
     def get_resources(self):

@@ -23,21 +23,17 @@ from nova.tests.api.openstack import fakes
 
 
 class fake_extension(object):
-    def __init__(self, name, alias, description, namespace, version):
+    def __init__(self, name, alias, description, version):
         self.name = name
         self.alias = alias
         self.__doc__ = description
-        self.namespace = namespace
         self.version = version
 
 
 fake_extensions = {
-    'ext1-alias': fake_extension('ext1', 'ext1-alias', 'ext1 description',
-                           'ext1 namespace', 1),
-    'ext2-alias': fake_extension('ext2', 'ext2-alias', 'ext2 description',
-                           'ext2 namespace', 2),
-    'ext3-alias': fake_extension('ext3', 'ext3-alias', 'ext3 description',
-                           'ext3 namespace', 1)
+    'ext1-alias': fake_extension('ext1', 'ext1-alias', 'ext1 description', 1),
+    'ext2-alias': fake_extension('ext2', 'ext2-alias', 'ext2 description', 2),
+    'ext3-alias': fake_extension('ext3', 'ext3-alias', 'ext3 description', 1)
 }
 
 
@@ -71,8 +67,6 @@ class ExtensionInfoTest(test.NoDBTestCase):
             self.assertEqual(e['alias'], fake_extensions[e['alias']].alias)
             self.assertEqual(e['description'],
                              fake_extensions[e['alias']].__doc__)
-            self.assertEqual(e['namespace'],
-                             fake_extensions[e['alias']].namespace)
             self.assertEqual(e['version'],
                              fake_extensions[e['alias']].version)
 
@@ -87,8 +81,6 @@ class ExtensionInfoTest(test.NoDBTestCase):
                          fake_extensions['ext1-alias'].alias)
         self.assertEqual(res_dict['extension']['description'],
                          fake_extensions['ext1-alias'].__doc__)
-        self.assertEqual(res_dict['extension']['namespace'],
-                         fake_extensions['ext1-alias'].namespace)
         self.assertEqual(res_dict['extension']['version'],
                          fake_extensions['ext1-alias'].version)
 
@@ -104,7 +96,5 @@ class ExtensionInfoTest(test.NoDBTestCase):
             self.assertEqual(e['alias'], fake_extensions[e['alias']].alias)
             self.assertEqual(e['description'],
                              fake_extensions[e['alias']].__doc__)
-            self.assertEqual(e['namespace'],
-                             fake_extensions[e['alias']].namespace)
             self.assertEqual(e['version'],
                              fake_extensions[e['alias']].version)

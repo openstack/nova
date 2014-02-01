@@ -156,7 +156,6 @@ class FlavorAccess(extensions.V3APIExtensionBase):
 
     name = "FlavorAccess"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/core/%s/api/v3" % ALIAS
     version = 1
 
     def get_resources(self):

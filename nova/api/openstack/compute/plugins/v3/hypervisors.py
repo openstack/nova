@@ -156,7 +156,6 @@ class Hypervisors(extensions.V3APIExtensionBase):
 
     name = "Hypervisors"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/hypervisors/api/v3"
     version = 1
 
     def get_resources(self):

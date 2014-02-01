@@ -26,8 +26,6 @@ class UserData(extensions.V3APIExtensionBase):
 
     name = "UserData"
     alias = "os-user-data"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "userdata/api/v3")
     version = 1
 
     def get_controller_extensions(self):

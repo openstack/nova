@@ -331,7 +331,6 @@ class Cells(extensions.V3APIExtensionBase):
 
     name = "Cells"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/cells/api/v3"
     version = 1
 
     def get_resources(self):

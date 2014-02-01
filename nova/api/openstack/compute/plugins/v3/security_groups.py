@@ -126,7 +126,6 @@ class SecurityGroups(extensions.V3APIExtensionBase):
     """Security group support."""
     name = "SecurityGroups"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v3"
     version = 1
 
     def get_controller_extensions(self):

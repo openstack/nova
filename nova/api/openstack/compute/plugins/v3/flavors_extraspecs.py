@@ -118,7 +118,6 @@ class FlavorsExtraSpecs(extensions.V3APIExtensionBase):
     """Flavors Extension."""
     name = 'FlavorsExtraSpecs'
     alias = FlavorExtraSpecsController.ALIAS
-    namespace = "http://docs.openstack.org/compute/core/%s/v3" % alias
     version = 1
 
     def get_resources(self):

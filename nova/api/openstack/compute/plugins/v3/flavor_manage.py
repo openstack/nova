@@ -98,7 +98,6 @@ class FlavorManage(extensions.V3APIExtensionBase):
 
     name = "FlavorManage"
     alias = ALIAS
-    namespace = "http://docs.openstack.org/compute/core/%s/api/v3" % ALIAS
     version = 1
 
     def get_controller_extensions(self):
