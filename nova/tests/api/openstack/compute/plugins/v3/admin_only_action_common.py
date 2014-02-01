@@ -78,9 +78,57 @@ class CommonMixin(object):
 
         self.mox.ReplayAll()
 
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
+        res = self._make_request('/servers/%s/action' % instance.uuid,
                                  {action: None})
         self.assertEqual(202, res.status_int)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
+    def _test_invalid_state(self, action, method=None, body_map=None,
+                            compute_api_args_map=None):
+        if method is None:
+            method = action
+        if body_map is None:
+            body_map = {}
+        if compute_api_args_map is None:
+            compute_api_args_map = {}
+
+        instance = self._stub_instance_get()
+
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+
+        getattr(self.compute_api, method)(self.context, instance,
+                                          *args, **kwargs).AndRaise(
+                exception.InstanceInvalidState(
+                    attr='vm_state', instance_uuid=instance.uuid,
+                    state='foo', method=method))
+
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance.uuid,
+                                 {action: body_map.get(action)})
+        self.assertEqual(409, res.status_int)
+        self.assertIn("Cannot \'%s\' while instance" % action, res.body)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
+    def _test_locked_instance(self, action, method=None):
+        if method is None:
+            method = action
+
+        instance = self._stub_instance_get()
+        getattr(self.compute_api, method)(self.context, instance).AndRaise(
+                exception.InstanceIsLocked(instance_uuid=instance.uuid))
+
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance.uuid,
+                                 {action: None})
+        self.assertEqual(409, res.status_int)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
         self.mox.VerifyAll()
@@ -100,5 +148,25 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
         for action in actions:
             self._test_non_existing_instance(action,
                                              body_map=body_map)
+            # Re-mock this.
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+
+    def _test_actions_raise_conflict_on_invalid_state(
+            self, actions, method_translations={}, body_map={}, args_map={}):
+        for action in actions:
+            method = method_translations.get(action)
+            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self._test_invalid_state(action, method=method,
+                                     body_map=body_map,
+                                     compute_api_args_map=args_map)
+            # Re-mock this.
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+
+    def _test_actions_with_locked_instance(self, actions,
+                                           method_translations={}):
+        for action in actions:
+            method = method_translations.get(action)
+            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self._test_locked_instance(action, method=method)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
