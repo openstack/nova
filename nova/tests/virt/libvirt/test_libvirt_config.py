@@ -1567,3 +1567,24 @@ class LibvirtConfigGuestVideoTest(LibvirtConfigBaseTest):
                 <video>
                     <model type='qxl' vram='9216' heads='1'/>
                 </video>""")
+
+
+class LibvirtConfigGuestSeclabel(LibvirtConfigBaseTest):
+
+    def test_config_seclabel_config(self):
+        obj = config.LibvirtConfigSeclabel()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+              <seclabel type='dynamic'/>""")
+
+    def test_config_seclabel_baselabel(self):
+        obj = config.LibvirtConfigSeclabel()
+        obj.type = 'dynamic'
+        obj.baselabel = 'system_u:system_r:my_svirt_t:s0'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+              <seclabel type='dynamic'>
+                <baselabel>system_u:system_r:my_svirt_t:s0</baselabel>
+              </seclabel>""")
