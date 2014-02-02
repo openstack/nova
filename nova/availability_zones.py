@@ -74,10 +74,8 @@ def set_availability_zones(context, services):
             else:
                 az = CONF.default_availability_zone
                 # update the cache
-                cache = _get_cache()
-                cache_key = _make_cache_key(service['host'])
-                cache.delete(cache_key)
-                cache.set(cache_key, az, AZ_CACHE_SECONDS)
+                update_host_availability_zone_cache(context,
+                                                    service['host'], az)
         service['availability_zone'] = az
     return services
 
@@ -94,6 +92,15 @@ def get_host_availability_zone(context, host, conductor_api=None):
     else:
         az = CONF.default_availability_zone
     return az
+
+
+def update_host_availability_zone_cache(context, host, availability_zone=None):
+    if not availability_zone:
+        availability_zone = get_host_availability_zone(context, host)
+    cache = _get_cache()
+    cache_key = _make_cache_key(host)
+    cache.delete(cache_key)
+    cache.set(cache_key, availability_zone, AZ_CACHE_SECONDS)
 
 
 def get_availability_zones(context, get_only_available=False):

@@ -3239,7 +3239,6 @@ class AggregateAPI(base.Base):
         if values:
             aggregate.metadata = values
         aggregate.save()
-
         # If updated values include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
         if values.get('availability_zone'):
@@ -3251,6 +3250,10 @@ class AggregateAPI(base.Base):
         """Updates the aggregate metadata."""
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
         aggregate.update_metadata(metadata)
+        # If updated metadata include availability_zones, then the cache
+        # which stored availability_zones and host need to be reset
+        if metadata and metadata.get('availability_zone'):
+            availability_zones.reset_cache()
         return aggregate
 
     @wrap_exception()
@@ -3288,6 +3291,14 @@ class AggregateAPI(base.Base):
                     action=action_name, aggregate_id=aggregate_id,
                     reason=msg)
 
+    def _update_az_cache_for_host(self, context, host_name, aggregate_meta):
+        # Update the availability_zone cache to avoid getting wrong
+        # availability_zone in cache retention time when add/remove
+        # host to/from aggregate.
+        if aggregate_meta and aggregate_meta.get('availability_zone'):
+            availability_zones.update_host_availability_zone_cache(context,
+                                                                   host_name)
+
     @wrap_exception()
     def add_host_to_aggregate(self, context, aggregate_id, host_name):
         """Adds the host to an aggregate."""
@@ -3307,6 +3318,7 @@ class AggregateAPI(base.Base):
                 self._check_az_for_host(aggregate_meta, host_az, aggregate_id)
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
         aggregate.add_host(context, host_name)
+        self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         #NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
@@ -3328,6 +3340,7 @@ class AggregateAPI(base.Base):
         service_obj.Service.get_by_compute_host(context, host_name)
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
         aggregate.delete_host(host_name)
+        self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         self.compute_rpcapi.remove_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)
         compute_utils.notify_about_aggregate_update(context,
