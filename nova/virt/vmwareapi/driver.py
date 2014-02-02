@@ -473,7 +473,7 @@ class VMwareVCDriver(VMwareESXDriver):
         # In specific, vCenter does not actually run the VNC service
         # itself. You must talk to the VNC host underneath vCenter.
         _vmops = self._get_vmops_for_compute_node(instance['node'])
-        return _vmops.get_vnc_console_vcenter(instance)
+        return _vmops.get_vnc_console(instance)
 
     def _update_resources(self):
         """This method creates a dictionary of VMOps, VolumeOps and VCState.
