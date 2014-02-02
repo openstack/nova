@@ -42,6 +42,13 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         'network': fields.ObjectField('Network', nullable=True),
         }
 
+    @property
+    def floating_ips(self):
+        # NOTE(danms): avoid circular import
+        from nova.objects import floating_ip
+        return floating_ip.FloatingIPList.get_by_fixed_ip_id(self._context,
+                                                             self.id)
+
     @staticmethod
     def _from_db_object(context, fixedip, db_fixedip, expected_attrs=None):
         if expected_attrs is None:
