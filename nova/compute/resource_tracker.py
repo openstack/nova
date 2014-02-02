@@ -36,8 +36,8 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
-from nova.openstack.common.notifier import api as notifier
 from nova.pci import pci_manager
+from nova import rpc
 from nova import utils
 
 resource_tracker_opts = [
@@ -76,6 +76,7 @@ class ResourceTracker(object):
         self.conductor_api = conductor.API()
         monitor_handler = monitors.ResourceMonitorHandler()
         self.monitors = monitor_handler.choose_monitors(self)
+        self.notifier = rpc.get_notifier()
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance_ref, limits=None):
@@ -282,9 +283,8 @@ class ResourceTracker(object):
             metrics_info['metrics'] = metrics
             metrics_info['host'] = self.host
             metrics_info['host_ip'] = CONF.my_ip
-            notifier.notify(context, 'compute.%s' % nodename,
-                            'compute.metrics.update', notifier.INFO,
-                            metrics_info)
+            notifier = rpc.get_notifier(service='compute', host=nodename)
+            notifier.info(context, 'compute.metrics.update', metrics_info)
         return metrics
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)

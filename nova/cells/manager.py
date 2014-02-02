@@ -20,6 +20,7 @@ import datetime
 import time
 
 from oslo.config import cfg
+from oslo import messaging as oslo_messaging
 
 from nova.cells import messaging
 from nova.cells import state as cells_state
@@ -56,8 +57,8 @@ class CellsManager(manager.Manager):
     messages coming from other cells.  That communication is
     driver-specific.
 
-    Communication to other cells happens via the messaging module.  The
-    MessageRunner from that module will handle routing the message to
+    Communication to other cells happens via the nova.cells.messaging module.
+    The MessageRunner from that module will handle routing the message to
     the correct cell via the communications driver.  Most methods below
     create 'targeted' (where we want to route a message to a specific cell)
     or 'broadcast' (where we want a message to go to multiple cells)
@@ -65,7 +66,8 @@ class CellsManager(manager.Manager):
 
     Scheduling requests get passed to the scheduler class.
     """
-    RPC_API_VERSION = '1.25'
+
+    target = oslo_messaging.Target(version='1.25')
 
     def __init__(self, *args, **kwargs):
         # Mostly for tests.
@@ -82,7 +84,7 @@ class CellsManager(manager.Manager):
         self.instances_to_heal = iter([])
 
     def post_start_hook(self):
-        """Have the driver start its consumers for inter-cell communication.
+        """Have the driver start its servers for inter-cell communication.
         Also ask our child cells for their capacities and capabilities so
         we get them more quickly than just waiting for the next periodic
         update.  Receiving the updates from the children will cause us to
@@ -90,8 +92,8 @@ class CellsManager(manager.Manager):
         our parents immediately.
         """
         # FIXME(comstud): There's currently no hooks when services are
-        # stopping, so we have no way to stop consumers cleanly.
-        self.driver.start_consumers(self.msg_runner)
+        # stopping, so we have no way to stop servers cleanly.
+        self.driver.start_servers(self.msg_runner)
         ctxt = context.get_admin_context()
         if self.state_manager.get_child_cells():
             self.msg_runner.ask_children_for_capabilities(ctxt)

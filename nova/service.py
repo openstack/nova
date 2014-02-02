@@ -24,15 +24,18 @@ import random
 import sys
 
 from oslo.config import cfg
+from oslo import messaging
 
+from nova import baserpc
 from nova import conductor
 from nova import context
 from nova import exception
+from nova.objects import base as objects_base
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
-from nova.openstack.common import rpc
 from nova.openstack.common import service
+from nova import rpc
 from nova import servicegroup
 from nova import utils
 from nova import version
@@ -158,6 +161,7 @@ class Service(service.Service):
         self.servicegroup_api = servicegroup.API(db_allowed=db_allowed)
         manager_class = importutils.import_class(self.manager_class_name)
         self.manager = manager_class(host=self.host, *args, **kwargs)
+        self.rpcserver = None
         self.report_interval = report_interval
         self.periodic_enable = periodic_enable
         self.periodic_fuzzy_delay = periodic_fuzzy_delay
@@ -193,22 +197,20 @@ class Service(service.Service):
         if self.backdoor_port is not None:
             self.manager.backdoor_port = self.backdoor_port
 
-        self.conn = rpc.create_connection(new=True)
-        LOG.debug(_("Creating Consumer connection for Service %s") %
-                  self.topic)
+        LOG.debug(_("Creating RPC server for service %s") % self.topic)
 
-        rpc_dispatcher = self.manager.create_rpc_dispatcher(self.backdoor_port)
+        target = messaging.Target(topic=self.topic, server=self.host)
 
-        # Share this same connection for these Consumers
-        self.conn.create_consumer(self.topic, rpc_dispatcher, fanout=False)
+        endpoints = [
+            self.manager,
+            baserpc.BaseRPCAPI(self.manager.service_name, self.backdoor_port)
+        ]
+        endpoints.extend(self.manager.additional_endpoints)
 
-        node_topic = '%s.%s' % (self.topic, self.host)
-        self.conn.create_consumer(node_topic, rpc_dispatcher, fanout=False)
+        serializer = objects_base.NovaObjectSerializer()
 
-        self.conn.create_consumer(self.topic, rpc_dispatcher, fanout=True)
-
-        # Consume from all consumers in a thread
-        self.conn.consume_in_thread()
+        self.rpcserver = rpc.get_server(target, endpoints, serializer)
+        self.rpcserver.start()
 
         self.manager.post_start_hook()
 
@@ -311,7 +313,7 @@ class Service(service.Service):
 
     def stop(self):
         try:
-            self.conn.close()
+            self.rpcserver.stop()
         except Exception:
             pass
 

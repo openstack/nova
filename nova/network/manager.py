@@ -52,6 +52,7 @@ import uuid
 import eventlet
 import netaddr
 from oslo.config import cfg
+from oslo import messaging
 
 from nova import context
 from nova import exception
@@ -77,7 +78,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -272,7 +272,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    RPC_API_VERSION = '1.10'
+    target = messaging.Target(version='1.10')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -560,7 +560,7 @@ class NetworkManager(manager.Manager):
         vif_obj.VirtualInterface.delete_by_instance_uuid(read_deleted_context,
                 instance_uuid)
 
-    @rpc_common.client_exceptions(exception.InstanceNotFound)
+    @messaging.expected_exceptions(exception.InstanceNotFound)
     def get_instance_nw_info(self, context, instance_id, rxtx_factor,
                              host, instance_uuid=None, **kwargs):
         """Creates network info list for instance.

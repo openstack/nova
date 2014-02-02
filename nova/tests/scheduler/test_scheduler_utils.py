@@ -24,7 +24,7 @@ from nova.compute import utils as compute_utils
 from nova.conductor import api as conductor_api
 from nova import db
 from nova import notifications
-from nova import notifier as notify
+from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import fake_instance
@@ -79,10 +79,10 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(notifications, 'send_update')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
 
-        self.mox.StubOutWithMock(notify, 'get_notifier')
+        self.mox.StubOutWithMock(rpc, 'get_notifier')
         notifier = self.mox.CreateMockAnything()
-        notify.get_notifier('conductor', CONF.host).AndReturn(notifier)
-        notify.get_notifier(service).AndReturn(notifier)
+        rpc.get_notifier('conductor', CONF.host).AndReturn(notifier)
+        rpc.get_notifier(service).AndReturn(notifier)
 
         old_ref = 'old_ref'
         new_ref = 'new_ref'

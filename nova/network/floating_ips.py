@@ -18,21 +18,21 @@
 #    under the License.
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova import context
 from nova.db import base
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
-from nova import notifier
 from nova.objects import dns_domain as dns_domain_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import uuidutils
 from nova import quota
+from nova import rpc
 from nova import servicegroup
 from nova import utils
 
@@ -240,7 +240,7 @@ class FloatingIP(object):
 
         return floating_ip
 
-    @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
+    @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def deallocate_floating_ip(self, context, address,
                                affect_auto_assigned=False):
         """Returns a floating ip to the pool."""
@@ -286,7 +286,7 @@ class FloatingIP(object):
         if reservations:
             QUOTAS.commit(context, reservations, project_id=project_id)
 
-    @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
+    @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def associate_floating_ip(self, context, floating_address, fixed_address,
                               affect_auto_assigned=False):
         """Associates a floating ip with a fixed ip.
@@ -390,7 +390,7 @@ class FloatingIP(object):
                                'network.floating_ip.associate', payload)
         do_associate()
 
-    @rpc_common.client_exceptions(exception.FloatingIpNotFoundForAddress)
+    @messaging.expected_exceptions(exception.FloatingIpNotFoundForAddress)
     def disassociate_floating_ip(self, context, address,
                                  affect_auto_assigned=False):
         """Disassociates a floating ip from its fixed ip.
@@ -474,7 +474,7 @@ class FloatingIP(object):
                                'network.floating_ip.disassociate', payload)
         do_disassociate()
 
-    @rpc_common.client_exceptions(exception.FloatingIpNotFound)
+    @messaging.expected_exceptions(exception.FloatingIpNotFound)
     def get_floating_ip(self, context, id):
         """Returns a floating IP as a dict."""
         # NOTE(vish): This is no longer used but can't be removed until
@@ -700,4 +700,4 @@ class LocalManager(base.Base, FloatingIP):
                 CONF.floating_ip_dns_manager)
         self.instance_dns_manager = importutils.import_object(
                 CONF.instance_dns_manager)
-        self.notifier = notifier.get_notifier('network', CONF.host)
+        self.notifier = rpc.get_notifier('network', CONF.host)

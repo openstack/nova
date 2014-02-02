@@ -29,6 +29,8 @@ from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
 from nova.openstack.common import timeutils
 from nova import quota
+from nova.scheduler import driver as scheduler_driver
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
 import nova.tests.image.fake
 
@@ -57,6 +59,17 @@ class QuotaIntegrationTestCase(test.TestCase):
 
         nova.tests.image.fake.stub_out_image_service(self.stubs)
 
+        self.compute_api = compute.API()
+
+        def fake_run_instance(self, ctxt, request_spec, *args):
+            """Stub out the scheduler creating the instance entry."""
+            instance = scheduler_driver.Scheduler().create_instance_db_entry(
+                context, request_spec, None)
+            return [scheduler_driver.encode_instance(instance)]
+
+        self.stubs.Set(scheduler_rpcapi.SchedulerAPI, 'run_instance',
+                       fake_run_instance)
+
     def tearDown(self):
         super(QuotaIntegrationTestCase, self).tearDown()
         nova.tests.image.fake.FakeImageService_reset()
@@ -80,8 +93,9 @@ class QuotaIntegrationTestCase(test.TestCase):
         inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
-            compute.API().create(self.context, min_count=1, max_count=1,
-                             instance_type=inst_type, image_href=image_uuid)
+            self.compute_api.create(self.context, min_count=1, max_count=1,
+                                    instance_type=inst_type,
+                                    image_href=image_uuid)
         except exception.QuotaError as e:
             expected_kwargs = {'code': 413, 'resource': 'cores', 'req': 1,
                           'used': 4, 'allowed': 4, 'overs': 'cores,instances'}
@@ -96,8 +110,9 @@ class QuotaIntegrationTestCase(test.TestCase):
         inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         try:
-            compute.API().create(self.context, min_count=1, max_count=1,
-                             instance_type=inst_type, image_href=image_uuid)
+            self.compute_api.create(self.context, min_count=1, max_count=1,
+                                    instance_type=inst_type,
+                                    image_href=image_uuid)
         except exception.QuotaError as e:
             expected_kwargs = {'code': 413, 'resource': 'cores', 'req': 1,
                           'used': 4, 'allowed': 4, 'overs': 'cores'}
@@ -144,7 +159,7 @@ class QuotaIntegrationTestCase(test.TestCase):
             metadata['key%s' % i] = 'value%s' % i
         inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
-        self.assertRaises(exception.QuotaError, compute.API().create,
+        self.assertRaises(exception.QuotaError, self.compute_api.create,
                                             self.context,
                                             min_count=1,
                                             max_count=1,
@@ -153,7 +168,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                                             metadata=metadata)
 
     def _create_with_injected_files(self, files):
-        api = compute.API()
+        api = self.compute_api
         inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context, min_count=1, max_count=1,
@@ -161,7 +176,7 @@ class QuotaIntegrationTestCase(test.TestCase):
                 injected_files=files)
 
     def test_no_injected_files(self):
-        api = compute.API()
+        api = self.compute_api
         inst_type = flavors.get_flavor_by_name('m1.small')
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         api.create(self.context,

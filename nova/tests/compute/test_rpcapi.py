@@ -18,13 +18,15 @@
 Unit Tests for nova.compute.rpcapi
 """
 
+import contextlib
+
+import mock
 from oslo.config import cfg
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova import db
 from nova.openstack.common import jsonutils
-from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
@@ -45,25 +47,19 @@ class ComputeRpcAPITestCase(test.TestCase):
     def _test_compute_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
 
-        if 'rpcapi_class' in kwargs:
-            rpcapi_class = kwargs['rpcapi_class']
-            del kwargs['rpcapi_class']
-        else:
-            rpcapi_class = compute_rpcapi.ComputeAPI
-        rpcapi = rpcapi_class()
-        expected_retval = 'foo' if method == 'call' else None
+        rpcapi = kwargs.pop('rpcapi_class', compute_rpcapi.ComputeAPI)()
+        self.assertIsNotNone(rpcapi.client)
+        self.assertEqual(rpcapi.client.target.topic, CONF.compute_topic)
 
-        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
-        expected_msg = rpcapi.make_msg(method, **kwargs)
-        if 'host_param' in expected_msg['args']:
-            host_param = expected_msg['args']['host_param']
-            del expected_msg['args']['host_param']
-            expected_msg['args']['host'] = host_param
-        elif 'host' in expected_msg['args']:
-            del expected_msg['args']['host']
-        if 'destination' in expected_msg['args']:
-            del expected_msg['args']['destination']
-        expected_msg['version'] = expected_version
+        orig_prepare = rpcapi.client.prepare
+        expected_version = kwargs.pop('version', rpcapi.client.target.version)
+
+        expected_kwargs = kwargs.copy()
+        if 'host_param' in expected_kwargs:
+            expected_kwargs['host'] = expected_kwargs.pop('host_param')
+        else:
+            expected_kwargs.pop('host', None)
+        expected_kwargs.pop('destination', None)
 
         cast_and_call = ['confirm_resize', 'stop_instance']
         if rpc_method == 'call' and method in cast_and_call:
@@ -77,25 +73,25 @@ class ComputeRpcAPITestCase(test.TestCase):
             host = kwargs['destination']
         else:
             host = kwargs['instance']['host']
-        expected_topic = '%s.%s' % (CONF.compute_topic, host)
 
-        self.fake_args = None
-        self.fake_kwargs = None
+        with contextlib.nested(
+            mock.patch.object(rpcapi.client, rpc_method),
+            mock.patch.object(rpcapi.client, 'prepare'),
+            mock.patch.object(rpcapi.client, 'can_send_version'),
+        ) as (
+            rpc_mock, prepare_mock, csv_mock
+        ):
+            prepare_mock.return_value = rpcapi.client
+            rpc_mock.return_value = 'foo' if rpc_method == 'call' else None
+            csv_mock.side_effect = (
+                lambda v: orig_prepare(version=v).can_send_version())
 
-        def _fake_rpc_method(*args, **kwargs):
-            self.fake_args = args
-            self.fake_kwargs = kwargs
-            if expected_retval:
-                return expected_retval
+            retval = getattr(rpcapi, method)(ctxt, **kwargs)
+            self.assertEqual(retval, rpc_mock.return_value)
 
-        self.stubs.Set(rpc, rpc_method, _fake_rpc_method)
-
-        retval = getattr(rpcapi, method)(ctxt, **kwargs)
-
-        self.assertEqual(retval, expected_retval)
-        expected_args = [ctxt, expected_topic, expected_msg]
-        for arg, expected_arg in zip(self.fake_args, expected_args):
-            self.assertEqual(arg, expected_arg)
+            prepare_mock.assert_called_once_with(version=expected_version,
+                                                 server=host)
+            rpc_mock.assert_called_once_with(ctxt, method, **expected_kwargs)
 
     def test_add_aggregate_host(self):
         self._test_compute_api('add_aggregate_host', 'cast',
@@ -384,7 +380,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
-        self._test_compute_api('post_live_migration_at_destination', 'call',
+        self._test_compute_api('post_live_migration_at_destination', 'cast',
                 instance=self.fake_instance, block_migration='block_migration',
                 host='host', version='2.0')
 

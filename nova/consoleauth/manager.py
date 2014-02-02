@@ -21,6 +21,7 @@
 import time
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import rpcapi as compute_rpcapi
@@ -50,7 +51,7 @@ CONF.import_opt('enable', 'nova.cells.opts', group='cells')
 class ConsoleAuthManager(manager.Manager):
     """Manages token based authentication."""
 
-    RPC_API_VERSION = '2.0'
+    target = messaging.Target(version='2.0')
 
     def __init__(self, scheduler_driver=None, *args, **kwargs):
         super(ConsoleAuthManager, self).__init__(service_name='consoleauth',

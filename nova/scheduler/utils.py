@@ -20,12 +20,12 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import db
 from nova import notifications
-from nova import notifier as notify
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova import rpc
 
 LOG = logging.getLogger(__name__)
 
@@ -74,7 +74,7 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
     uuids = [properties.get('uuid')]
     from nova.conductor import api as conductor_api
     conductor = conductor_api.LocalAPI()
-    notifier = notify.get_notifier(service)
+    notifier = rpc.get_notifier(service)
     for instance_uuid in request_spec.get('instance_uuids') or uuids:
         if instance_uuid:
             state = vm_state.upper()

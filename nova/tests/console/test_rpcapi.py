@@ -18,11 +18,13 @@
 Unit Tests for nova.console.rpcapi
 """
 
+import contextlib
+
+import mock
 from oslo.config import cfg
 
 from nova.console import rpcapi as console_rpcapi
 from nova import context
-from nova.openstack.common import rpc
 from nova import test
 
 CONF = cfg.CONF
@@ -31,29 +33,31 @@ CONF = cfg.CONF
 class ConsoleRpcAPITestCase(test.NoDBTestCase):
     def _test_console_api(self, method, rpc_method, **kwargs):
         ctxt = context.RequestContext('fake_user', 'fake_project')
+
         rpcapi = console_rpcapi.ConsoleAPI()
-        expected_retval = 'foo' if method == 'call' else None
-        expected_version = kwargs.pop('version', rpcapi.BASE_RPC_API_VERSION)
-        expected_msg = rpcapi.make_msg(method, **kwargs)
-        expected_msg['version'] = expected_version
+        self.assertIsNotNone(rpcapi.client)
+        self.assertEqual(rpcapi.client.target.topic, CONF.console_topic)
 
-        self.fake_args = None
-        self.fake_kwargs = None
+        orig_prepare = rpcapi.client.prepare
+        expected_version = kwargs.pop('version', rpcapi.client.target.version)
 
-        def _fake_rpc_method(*args, **kwargs):
-            self.fake_args = args
-            self.fake_kwargs = kwargs
-            if expected_retval:
-                return expected_retval
+        with contextlib.nested(
+            mock.patch.object(rpcapi.client, rpc_method),
+            mock.patch.object(rpcapi.client, 'prepare'),
+            mock.patch.object(rpcapi.client, 'can_send_version'),
+        ) as (
+            rpc_mock, prepare_mock, csv_mock
+        ):
+            prepare_mock.return_value = rpcapi.client
+            rpc_mock.return_value = 'foo' if rpc_method == 'call' else None
+            csv_mock.side_effect = (
+                lambda v: orig_prepare(version=v).can_send_version())
 
-        self.stubs.Set(rpc, rpc_method, _fake_rpc_method)
+            retval = getattr(rpcapi, method)(ctxt, **kwargs)
+            self.assertEqual(retval, rpc_mock.return_value)
 
-        retval = getattr(rpcapi, method)(ctxt, **kwargs)
-
-        self.assertEqual(retval, expected_retval)
-        expected_args = [ctxt, CONF.console_topic, expected_msg]
-        for arg, expected_arg in zip(self.fake_args, expected_args):
-            self.assertEqual(arg, expected_arg)
+            prepare_mock.assert_called_once_with(version=expected_version)
+            rpc_mock.assert_called_once_with(ctxt, method, **kwargs)
 
     def test_add_console(self):
         self._test_console_api('add_console', instance_id='i',

@@ -51,7 +51,6 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.network.security_group import security_group_base
 from nova import notifications
-from nova import notifier
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -71,13 +70,14 @@ from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
 import nova.policy
 from nova import quota
+from nova import rpc
 from nova import servicegroup
 from nova import utils
 from nova import volume
 
 LOG = logging.getLogger(__name__)
 
-get_notifier = functools.partial(notifier.get_notifier, service='compute')
+get_notifier = functools.partial(rpc.get_notifier, service='compute')
 wrap_exception = functools.partial(exception.wrap_exception,
                                    get_notifier=get_notifier)
 
@@ -253,7 +253,7 @@ class API(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self._compute_task_api = None
         self.servicegroup_api = servicegroup.API()
-        self.notifier = notifier.get_notifier('compute', CONF.host)
+        self.notifier = rpc.get_notifier('compute', CONF.host)
 
         super(API, self).__init__(**kwargs)
 
@@ -3356,13 +3356,17 @@ class AggregateAPI(base.Base):
 class KeypairAPI(base.Base):
     """Subset of the Compute Manager API for managing key pairs."""
 
+    get_notifier = functools.partial(rpc.get_notifier, service='api')
+    wrap_exception = functools.partial(exception.wrap_exception,
+                                       get_notifier=get_notifier)
+
     def _notify(self, context, event_suffix, keypair_name):
         payload = {
             'tenant_id': context.project_id,
             'user_id': context.user_id,
             'key_name': keypair_name,
         }
-        notify = notifier.get_notifier(service='api')
+        notify = self.get_notifier()
         notify.info(context, 'keypair.%s' % event_suffix, payload)
 
     def _validate_new_key_pair(self, context, user_id, key_name):
@@ -3383,7 +3387,7 @@ class KeypairAPI(base.Base):
         except exception.OverQuota:
             raise exception.KeypairLimitExceeded()
 
-    @exception.wrap_exception(notifier=notifier.get_notifier(service='api'))
+    @wrap_exception()
     def import_key_pair(self, context, user_id, key_name, public_key):
         """Import a key pair using an existing public key."""
         self._validate_new_key_pair(context, user_id, key_name)
@@ -3403,7 +3407,7 @@ class KeypairAPI(base.Base):
 
         return keypair
 
-    @exception.wrap_exception(notifier=notifier.get_notifier(service='api'))
+    @wrap_exception()
     def create_key_pair(self, context, user_id, key_name):
         """Create a new key pair."""
         self._validate_new_key_pair(context, user_id, key_name)
@@ -3423,7 +3427,7 @@ class KeypairAPI(base.Base):
 
         return keypair, private_key
 
-    @exception.wrap_exception(notifier=notifier.get_notifier(service='api'))
+    @wrap_exception()
     def delete_key_pair(self, context, user_id, key_name):
         """Delete a keypair by name."""
         self._notify(context, 'delete.start', key_name)

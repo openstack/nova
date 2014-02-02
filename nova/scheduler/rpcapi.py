@@ -1,6 +1,6 @@
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright 2012, Red Hat, Inc.
+# Copyright 2013, Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,10 +19,11 @@ Client side of the scheduler manager RPC API.
 """
 
 from oslo.config import cfg
+from oslo import messaging
 
 from nova.objects import base as objects_base
 from nova.openstack.common import jsonutils
-from nova import rpcclient
+from nova import rpc
 
 rpcapi_opts = [
     cfg.StrOpt('scheduler_topic',
@@ -38,7 +39,7 @@ rpcapi_cap_opt = cfg.StrOpt('scheduler',
 CONF.register_opt(rpcapi_cap_opt, 'upgrade_levels')
 
 
-class SchedulerAPI(rpcclient.RpcProxy):
+class SchedulerAPI(object):
     '''Client side of the scheduler rpc API.
 
     API version history:
@@ -81,29 +82,19 @@ class SchedulerAPI(rpcclient.RpcProxy):
         ... - Deprecated select_hosts()
     '''
 
-    #
-    # NOTE(russellb): This is the default minimum version that the server
-    # (manager) side must implement unless otherwise specified using a version
-    # argument to self.call()/cast()/etc. here.  It should be left as X.0 where
-    # X is the current major API version (1.0, 2.0, ...).  For more information
-    # about rpc API versioning, see the docs in
-    # openstack/common/rpc/dispatcher.py.
-    #
-    BASE_RPC_API_VERSION = '2.0'
-
     VERSION_ALIASES = {
         'grizzly': '2.6',
         'havana': '2.9',
     }
 
     def __init__(self):
+        super(SchedulerAPI, self).__init__()
+        target = messaging.Target(topic=CONF.scheduler_topic, version='2.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.scheduler,
                                                CONF.upgrade_levels.scheduler)
-        super(SchedulerAPI, self).__init__(topic=CONF.scheduler_topic,
-                default_version=self.BASE_RPC_API_VERSION,
-                serializer=objects_base.NovaObjectSerializer(),
-                version_cap=version_cap)
-        self.client = self.get_client()
+        serializer = objects_base.NovaObjectSerializer()
+        self.client = rpc.get_client(target, version_cap=version_cap,
+                                     serializer=serializer)
 
     def select_destinations(self, ctxt, request_spec, filter_properties):
         cctxt = self.client.prepare(version='2.7')

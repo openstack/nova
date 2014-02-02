@@ -2,6 +2,7 @@
 
 # Copyright 2011-2012 OpenStack Foundation
 # All Rights Reserved.
+# Copyright 2013 Red Hat, Inc.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -18,6 +19,7 @@
 """The cells extension."""
 
 from oslo.config import cfg
+from oslo import messaging
 import six
 from webob import exc
 
@@ -25,7 +27,6 @@ from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
-from nova.cells import rpc_driver
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import exception
@@ -33,6 +34,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
+from nova import rpc
 
 
 LOG = logging.getLogger(__name__)
@@ -153,12 +155,17 @@ def _fixup_cell_info(cell_info, keys):
     # Disassemble the transport URL
     transport_url = cell_info.pop('transport_url')
     try:
-        transport = rpc_driver.parse_transport_url(transport_url)
-    except ValueError:
+        transport_url = rpc.get_transport_url(transport_url)
+    except messaging.InvalidTransportURL:
         # Just go with None's
         for key in keys:
             cell_info.setdefault(key, None)
-        return cell_info
+        return
+
+    if not transport_url.hosts:
+        return
+
+    transport_host = transport_url.hosts[0]
 
     transport_field_map = {'rpc_host': 'hostname', 'rpc_port': 'port'}
     for key in keys:
@@ -166,7 +173,7 @@ def _fixup_cell_info(cell_info, keys):
             continue
 
         transport_field = transport_field_map.get(key, key)
-        cell_info[key] = transport[transport_field]
+        cell_info[key] = getattr(transport_host, transport_field)
 
 
 def _scrub_cell(cell, detail=False):
@@ -308,10 +315,15 @@ class Controller(object):
             cell['is_parent'] = False
 
         # Now we disassemble the existing transport URL...
-        transport = {}
-        if existing and 'transport_url' in existing:
-            transport = rpc_driver.parse_transport_url(
-                existing['transport_url'])
+        transport_url = existing.get('transport_url') if existing else None
+        transport_url = rpc.get_transport_url(transport_url)
+
+        if 'rpc_virtual_host' in cell:
+            transport_url.virtual_host = cell.pop('rpc_virtual_host')
+
+        if not transport_url.hosts:
+            transport_url.hosts.append(messaging.TransportHost())
+        transport_host = transport_url.hosts[0]
 
         # Copy over the input fields
         transport_field_map = {
@@ -319,19 +331,14 @@ class Controller(object):
             'password': 'password',
             'hostname': 'rpc_host',
             'port': 'rpc_port',
-            'virtual_host': 'rpc_virtual_host',
         }
         for key, input_field in transport_field_map.items():
-            # Set the default value of the field; using setdefault()
-            # lets us avoid overriding the existing transport URL
-            transport.setdefault(key, None)
-
             # Only override the value if we're given an override
             if input_field in cell:
-                transport[key] = cell.pop(input_field)
+                setattr(transport_host, key, cell.pop(input_field))
 
         # Now set the transport URL
-        cell['transport_url'] = rpc_driver.unparse_transport_url(transport)
+        cell['transport_url'] = str(transport_url)
 
     @wsgi.serializers(xml=CellTemplate)
     @wsgi.deserializers(xml=CellDeserializer)

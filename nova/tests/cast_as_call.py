@@ -15,8 +15,7 @@
 #    under the License.
 
 import fixtures
-
-from nova.openstack.common import rpc
+from oslo import messaging
 
 
 class CastAsCall(fixtures.Fixture):
@@ -35,6 +34,18 @@ class CastAsCall(fixtures.Fixture):
         super(CastAsCall, self).__init__()
         self.stubs = stubs
 
+    @staticmethod
+    def _stub_out(stubs, obj):
+        orig_prepare = obj.prepare
+
+        def prepare(self, *args, **kwargs):
+            cctxt = orig_prepare(self, *args, **kwargs)
+            CastAsCall._stub_out(stubs, cctxt)  # woo, recurse!
+            return cctxt
+
+        stubs.Set(obj, 'prepare', prepare)
+        stubs.Set(obj, 'cast', obj.call)
+
     def setUp(self):
         super(CastAsCall, self).setUp()
-        self.stubs.Set(rpc, 'cast', rpc.call)
+        self._stub_out(self.stubs, messaging.RPCClient)

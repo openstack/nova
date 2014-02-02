@@ -19,6 +19,7 @@ import copy
 import functools
 
 import netaddr
+from oslo import messaging
 import six
 
 from nova import context
@@ -26,8 +27,6 @@ from nova import exception
 from nova.objects import fields
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.openstack.common.rpc import common as rpc_common
-import nova.openstack.common.rpc.serializer
 from nova.openstack.common import versionutils
 
 
@@ -128,8 +127,7 @@ def remotable(fn):
     def wrapper(self, *args, **kwargs):
         ctxt = self._context
         try:
-            if isinstance(args[0], (context.RequestContext,
-                                    rpc_common.CommonRpcContext)):
+            if isinstance(args[0], (context.RequestContext)):
                 ctxt = args[0]
                 args = args[1:]
         except IndexError:
@@ -506,13 +504,13 @@ class ObjectListBase(object):
             primitives[index]['nova_object.version'] = child_target_version
 
 
-class NovaObjectSerializer(nova.openstack.common.rpc.serializer.Serializer):
+class NovaObjectSerializer(messaging.NoOpSerializer):
     """A NovaObject-aware Serializer.
 
     This implements the Oslo Serializer interface and provides the
     ability to serialize and deserialize NovaObject entities. Any service
     that needs to accept or return NovaObjects as arguments or result values
-    should pass this to its RpcProxy and RpcDispatcher objects.
+    should pass this to its RPCClient and RPCServer objects.
     """
 
     @property

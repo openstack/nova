@@ -55,10 +55,6 @@ class ConfFixture(config_fixture.Config):
                               'nova.tests.utils.dns_manager')
         self.conf.set_default('network_size', 8)
         self.conf.set_default('num_networks', 2)
-        self.conf.set_default('rpc_backend',
-                              'nova.openstack.common.rpc.impl_fake')
-        self.conf.set_default('rpc_cast_timeout', 5)
-        self.conf.set_default('rpc_response_timeout', 5)
         self.conf.set_default('connection', "sqlite://", group='database')
         self.conf.set_default('sqlite_synchronous', False)
         self.conf.set_default('use_ipv6', True)

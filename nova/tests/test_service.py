@@ -152,10 +152,12 @@ class ServiceTestCase(test.TestCase):
                 'FakeManager', use_mock_anything=True)
         self.mox.StubOutWithMock(self.manager_mock, 'init_host')
         self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
-        self.mox.StubOutWithMock(self.manager_mock, 'create_rpc_dispatcher')
         self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
 
         FakeManager(host=self.host).AndReturn(self.manager_mock)
+
+        self.manager_mock.service_name = self.topic
+        self.manager_mock.additional_endpoints = []
 
         # init_host is called before any service record is created
         self.manager_mock.init_host()
@@ -163,7 +165,6 @@ class ServiceTestCase(test.TestCase):
         # pre_start_hook is called after service record is created,
         # but before RPC consumer is created
         self.manager_mock.pre_start_hook()
-        self.manager_mock.create_rpc_dispatcher(None)
         # post_start_hook is called after RPC consumer is created.
         self.manager_mock.post_start_hook()
 
@@ -181,7 +182,6 @@ class ServiceTestCase(test.TestCase):
                                  use_mock_anything=True)
         self.mox.StubOutWithMock(self.manager_mock, 'init_host')
         self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
-        self.mox.StubOutWithMock(self.manager_mock, 'create_rpc_dispatcher')
         self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
 
         FakeManager(host=self.host).AndReturn(self.manager_mock)
@@ -215,12 +215,14 @@ class ServiceTestCase(test.TestCase):
                 'FakeManager', use_mock_anything=True)
         self.mox.StubOutWithMock(self.manager_mock, 'init_host')
         self.mox.StubOutWithMock(self.manager_mock, 'pre_start_hook')
-        self.mox.StubOutWithMock(self.manager_mock, 'create_rpc_dispatcher')
         self.mox.StubOutWithMock(self.manager_mock, 'post_start_hook')
 
         self.mox.StubOutWithMock(_service.Service, 'stop')
 
         FakeManager(host=self.host).AndReturn(self.manager_mock)
+
+        self.manager_mock.service_name = self.topic
+        self.manager_mock.additional_endpoints = []
 
         # init_host is called before any service record is created
         self.manager_mock.init_host()
@@ -228,7 +230,6 @@ class ServiceTestCase(test.TestCase):
         # pre_start_hook is called after service record is created,
         # but before RPC consumer is created
         self.manager_mock.pre_start_hook()
-        self.manager_mock.create_rpc_dispatcher(None)
         # post_start_hook is called after RPC consumer is created.
         self.manager_mock.post_start_hook()
 

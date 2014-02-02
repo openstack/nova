@@ -1,6 +1,193 @@
 [DEFAULT]
 
 #
+# Options defined in oslo.messaging
+#
+
+# Use durable queues in amqp. (boolean value)
+# Deprecated group/name - [DEFAULT]/rabbit_durable_queues
+#amqp_durable_queues=false
+
+# Auto-delete queues in amqp. (boolean value)
+#amqp_auto_delete=false
+
+# Size of RPC connection pool (integer value)
+#rpc_conn_pool_size=30
+
+# Modules of exceptions that are permitted to be recreatedupon
+# receiving exception data from an rpc call. (list value)
+#allowed_rpc_exception_modules=oslo.messaging.exceptions,nova.exception,cinder.exception,exceptions
+
+# Qpid broker hostname (string value)
+#qpid_hostname=localhost
+
+# Qpid broker port (integer value)
+#qpid_port=5672
+
+# Qpid HA cluster host:port pairs (list value)
+#qpid_hosts=$qpid_hostname:$qpid_port
+
+# Username for Qpid connection (string value)
+#qpid_username=
+
+# Password for Qpid connection (string value)
+#qpid_password=
+
+# Space separated list of SASL mechanisms to use for auth
+# (string value)
+#qpid_sasl_mechanisms=
+
+# Seconds between connection keepalive heartbeats (integer
+# value)
+#qpid_heartbeat=60
+
+# Transport to use, either 'tcp' or 'ssl' (string value)
+#qpid_protocol=tcp
+
+# Disable Nagle algorithm (boolean value)
+#qpid_tcp_nodelay=true
+
+# The qpid topology version to use.  Version 1 is what was
+# originally used by impl_qpid.  Version 2 includes some
+# backwards-incompatible changes that allow broker federation
+# to work.  Users should update to version 2 when they are
+# able to take everything down, as it requires a clean break.
+# (integer value)
+#qpid_topology_version=1
+
+# SSL version to use (valid only if SSL enabled). valid values
+# are TLSv1, SSLv23 and SSLv3. SSLv2 may be available on some
+# distributions (string value)
+#kombu_ssl_version=
+
+# SSL key file (valid only if SSL enabled) (string value)
+#kombu_ssl_keyfile=
+
+# SSL cert file (valid only if SSL enabled) (string value)
+#kombu_ssl_certfile=
+
+# SSL certification authority file (valid only if SSL enabled)
+# (string value)
+#kombu_ssl_ca_certs=
+
+# The RabbitMQ broker address where a single node is used
+# (string value)
+#rabbit_host=localhost
+
+# The RabbitMQ broker port where a single node is used
+# (integer value)
+#rabbit_port=5672
+
+# RabbitMQ HA cluster host:port pairs (list value)
+#rabbit_hosts=$rabbit_host:$rabbit_port
+
+# Connect over SSL for RabbitMQ (boolean value)
+#rabbit_use_ssl=false
+
+# The RabbitMQ userid (string value)
+#rabbit_userid=guest
+
+# The RabbitMQ password (string value)
+#rabbit_password=guest
+
+# The RabbitMQ virtual host (string value)
+#rabbit_virtual_host=/
+
+# How frequently to retry connecting with RabbitMQ (integer
+# value)
+#rabbit_retry_interval=1
+
+# How long to backoff for between retries when connecting to
+# RabbitMQ (integer value)
+#rabbit_retry_backoff=2
+
+# Maximum number of RabbitMQ connection retries. Default is 0
+# (infinite retry count) (integer value)
+#rabbit_max_retries=0
+
+# Use HA queues in RabbitMQ (x-ha-policy: all). If you change
+# this option, you must wipe the RabbitMQ database. (boolean
+# value)
+#rabbit_ha_queues=false
+
+# If passed, use a fake RabbitMQ provider (boolean value)
+#fake_rabbit=false
+
+# ZeroMQ bind address. Should be a wildcard (*), an ethernet
+# interface, or IP. The "host" option should point or resolve
+# to this address. (string value)
+#rpc_zmq_bind_address=*
+
+# MatchMaker driver (string value)
+#rpc_zmq_matchmaker=oslo.messaging._drivers.matchmaker.MatchMakerLocalhost
+
+# ZeroMQ receiver listening port (integer value)
+#rpc_zmq_port=9501
+
+# Number of ZeroMQ contexts, defaults to 1 (integer value)
+#rpc_zmq_contexts=1
+
+# Maximum number of ingress messages to locally buffer per
+# topic. Default is unlimited. (integer value)
+#rpc_zmq_topic_backlog=<None>
+
+# Directory for holding IPC sockets (string value)
+#rpc_zmq_ipc_dir=/var/run/openstack
+
+# Name of this node. Must be a valid hostname, FQDN, or IP
+# address. Must match "host" option, if running Nova. (string
+# value)
+#rpc_zmq_host=nova
+
+# Seconds to wait before a cast expires (TTL). Only supported
+# by impl_zmq. (integer value)
+#rpc_cast_timeout=30
+
+# Heartbeat frequency (integer value)
+#matchmaker_heartbeat_freq=300
+
+# Heartbeat time-to-live. (integer value)
+#matchmaker_heartbeat_ttl=600
+
+# Host to locate redis (string value)
+#host=127.0.0.1
+
+# Use this port to connect to redis host. (integer value)
+#port=6379
+
+# Password for Redis server. (optional) (string value)
+#password=<None>
+
+# Size of RPC greenthread pool (integer value)
+#rpc_thread_pool_size=64
+
+# Driver or drivers to handle sending notifications (multi
+# valued)
+#notification_driver=
+
+# AMQP topic used for OpenStack notifications (list value)
+# Deprecated group/name - [rpc_notifier2]/topics
+#notification_topics=notifications
+
+# Seconds to wait for a response from a call (integer value)
+#rpc_response_timeout=60
+
+# A URL representing the messaging driver to use and its full
+# configuration. If not set, we fall back to the rpc_backend
+# option and driver specific configuration. (string value)
+#transport_url=<None>
+
+# The messaging driver to use, defaults to rabbit. Other
+# drivers include qpid and zmq. (string value)
+#rpc_backend=rabbit
+
+# The default exchange under which topics are scoped. May be
+# overridden by an exchange name specified in the
+# transport_url option. (string value)
+#control_exchange=openstack
+
+
+#
 # Options defined in nova.availability_zones
 #
 
@@ -82,6 +269,14 @@
 # If set, send api.fault notifications on caught exceptions in
 # the API service. (boolean value)
 #notify_api_faults=false
+
+# Default notification level for outgoing notifications
+# (string value)
+#default_notification_level=INFO
+
+# Default publisher_id for outgoing notifications (string
+# value)
+#default_publisher_id=<None>
 
 
 #
@@ -1465,228 +1660,12 @@
 
 
 #
-# Options defined in nova.openstack.common.notifier.api
-#
-
-# Driver or drivers to handle sending notifications (multi
-# valued)
-#notification_driver=
-
-# Default notification level for outgoing notifications
-# (string value)
-#default_notification_level=INFO
-
-# Default publisher_id for outgoing notifications (string
-# value)
-#default_publisher_id=<None>
-
-
-#
-# Options defined in nova.openstack.common.notifier.rpc_notifier
-#
-
-# AMQP topic used for OpenStack notifications (list value)
-#notification_topics=notifications
-
-
-#
 # Options defined in nova.openstack.common.periodic_task
 #
 
 # Some periodic tasks can be run in a separate process. Should
 # we run them here? (boolean value)
 #run_external_periodic_tasks=true
-
-
-#
-# Options defined in nova.openstack.common.rpc
-#
-
-# The messaging module to use, defaults to kombu. (string
-# value)
-#rpc_backend=nova.openstack.common.rpc.impl_kombu
-
-# Size of RPC thread pool (integer value)
-#rpc_thread_pool_size=64
-
-# Size of RPC connection pool (integer value)
-#rpc_conn_pool_size=30
-
-# Seconds to wait for a response from call or multicall
-# (integer value)
-#rpc_response_timeout=60
-
-# Seconds to wait before a cast expires (TTL). Only supported
-# by impl_zmq. (integer value)
-#rpc_cast_timeout=30
-
-# Modules of exceptions that are permitted to be recreatedupon
-# receiving exception data from an rpc call. (list value)
-#allowed_rpc_exception_modules=nova.exception,cinder.exception,exceptions
-
-# If passed, use a fake RabbitMQ provider (boolean value)
-#fake_rabbit=false
-
-# AMQP exchange to connect to if using RabbitMQ or Qpid
-# (string value)
-#control_exchange=openstack
-
-
-#
-# Options defined in nova.openstack.common.rpc.amqp
-#
-
-# Use durable queues in amqp. (boolean value)
-# Deprecated group/name - [DEFAULT]/rabbit_durable_queues
-#amqp_durable_queues=false
-
-# Auto-delete queues in amqp. (boolean value)
-#amqp_auto_delete=false
-
-
-#
-# Options defined in nova.openstack.common.rpc.impl_kombu
-#
-
-# SSL version to use (valid only if SSL enabled). valid values
-# are TLSv1, SSLv23 and SSLv3. SSLv2 may be available on some
-# distributions (string value)
-#kombu_ssl_version=
-
-# SSL key file (valid only if SSL enabled) (string value)
-#kombu_ssl_keyfile=
-
-# SSL cert file (valid only if SSL enabled) (string value)
-#kombu_ssl_certfile=
-
-# SSL certification authority file (valid only if SSL enabled)
-# (string value)
-#kombu_ssl_ca_certs=
-
-# The RabbitMQ broker address where a single node is used
-# (string value)
-#rabbit_host=localhost
-
-# The RabbitMQ broker port where a single node is used
-# (integer value)
-#rabbit_port=5672
-
-# RabbitMQ HA cluster host:port pairs (list value)
-#rabbit_hosts=$rabbit_host:$rabbit_port
-
-# connect over SSL for RabbitMQ (boolean value)
-#rabbit_use_ssl=false
-
-# the RabbitMQ userid (string value)
-#rabbit_userid=guest
-
-# the RabbitMQ password (string value)
-#rabbit_password=guest
-
-# the RabbitMQ virtual host (string value)
-#rabbit_virtual_host=/
-
-# how frequently to retry connecting with RabbitMQ (integer
-# value)
-#rabbit_retry_interval=1
-
-# how long to backoff for between retries when connecting to
-# RabbitMQ (integer value)
-#rabbit_retry_backoff=2
-
-# maximum retries with trying to connect to RabbitMQ (the
-# default of 0 implies an infinite retry count) (integer
-# value)
-#rabbit_max_retries=0
-
-# use H/A queues in RabbitMQ (x-ha-policy: all).You need to
-# wipe RabbitMQ database when changing this option. (boolean
-# value)
-#rabbit_ha_queues=false
-
-
-#
-# Options defined in nova.openstack.common.rpc.impl_qpid
-#
-
-# Qpid broker hostname (string value)
-#qpid_hostname=localhost
-
-# Qpid broker port (integer value)
-#qpid_port=5672
-
-# Qpid HA cluster host:port pairs (list value)
-#qpid_hosts=$qpid_hostname:$qpid_port
-
-# Username for qpid connection (string value)
-#qpid_username=
-
-# Password for qpid connection (string value)
-#qpid_password=
-
-# Space separated list of SASL mechanisms to use for auth
-# (string value)
-#qpid_sasl_mechanisms=
-
-# Seconds between connection keepalive heartbeats (integer
-# value)
-#qpid_heartbeat=60
-
-# Transport to use, either 'tcp' or 'ssl' (string value)
-#qpid_protocol=tcp
-
-# Disable Nagle algorithm (boolean value)
-#qpid_tcp_nodelay=true
-
-# The qpid topology version to use.  Version 1 is what was
-# originally used by impl_qpid.  Version 2 includes some
-# backwards-incompatible changes that allow broker federation
-# to work.  Users should update to version 2 when they are
-# able to take everything down, as it requires a clean break.
-# (integer value)
-#qpid_topology_version=1
-
-
-#
-# Options defined in nova.openstack.common.rpc.impl_zmq
-#
-
-# ZeroMQ bind address. Should be a wildcard (*), an ethernet
-# interface, or IP. The "host" option should point or resolve
-# to this address. (string value)
-#rpc_zmq_bind_address=*
-
-# MatchMaker driver (string value)
-#rpc_zmq_matchmaker=nova.openstack.common.rpc.matchmaker.MatchMakerLocalhost
-
-# ZeroMQ receiver listening port (integer value)
-#rpc_zmq_port=9501
-
-# Number of ZeroMQ contexts, defaults to 1 (integer value)
-#rpc_zmq_contexts=1
-
-# Maximum number of ingress messages to locally buffer per
-# topic. Default is unlimited. (integer value)
-#rpc_zmq_topic_backlog=<None>
-
-# Directory for holding IPC sockets (string value)
-#rpc_zmq_ipc_dir=/var/run/openstack
-
-# Name of this node. Must be a valid hostname, FQDN, or IP
-# address. Must match "host" option, if running Nova. (string
-# value)
-#rpc_zmq_host=nova
-
-
-#
-# Options defined in nova.openstack.common.rpc.matchmaker
-#
-
-# Heartbeat frequency (integer value)
-#matchmaker_heartbeat_freq=300
-
-# Heartbeat time-to-live. (integer value)
-#matchmaker_heartbeat_ttl=600
 
 
 #
@@ -2995,26 +2974,10 @@
 #qemu_allowed_storage_drivers=
 
 
-[matchmaker_redis]
-
-#
-# Options defined in nova.openstack.common.rpc.matchmaker_redis
-#
-
-# Host to locate redis (string value)
-#host=127.0.0.1
-
-# Use this port to connect to redis host. (integer value)
-#port=6379
-
-# Password for Redis server. (optional) (string value)
-#password=<None>
-
-
 [matchmaker_ring]
 
 #
-# Options defined in nova.openstack.common.rpc.matchmaker_ring
+# Options defined in oslo.messaging
 #
 
 # Matchmaker ring file (JSON) (string value)
@@ -3078,16 +3041,6 @@
 # under normal operation. Use at your own risk. (integer
 # value)
 #port=<None>
-
-
-[rpc_notifier2]
-
-#
-# Options defined in nova.openstack.common.notifier.rpc_notifier2
-#
-
-# AMQP topic(s) used for OpenStack notifications (list value)
-#topics=notifications
 
 
 [spice]

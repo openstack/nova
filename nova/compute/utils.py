@@ -28,11 +28,11 @@ from nova.compute import flavors
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
-from nova import notifier as notify
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova.openstack.common import timeutils
+from nova import rpc
 from nova import utils
 from nova.virt import driver
 
@@ -337,8 +337,8 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
                         "notification and it will be ignored"))
             return
 
-    notifier = notify.get_notifier(service='aggregate',
-                                   host=aggregate_identifier)
+    notifier = rpc.get_notifier(service='aggregate',
+                                host=aggregate_identifier)
 
     notifier.info(context, 'aggregate.%s' % event_suffix, aggregate_payload)
 
@@ -358,8 +358,7 @@ def notify_about_host_update(context, event_suffix, host_payload):
                    "HostAPI.%s and it will be ignored"), event_suffix)
         return
 
-    notifier = notify.get_notifier(service='api',
-                                   host=host_identifier)
+    notifier = rpc.get_notifier(service='api', host=host_identifier)
 
     notifier.info(context, 'HostAPI.%s' % event_suffix, host_payload)
 

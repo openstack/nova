@@ -38,6 +38,7 @@ import uuid
 
 from eventlet import greenthread
 from oslo.config import cfg
+from oslo import messaging
 
 from nova import block_device
 from nova.cells import rpcapi as cells_rpcapi
@@ -60,7 +61,6 @@ from nova import manager
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
-from nova import notifier
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import instance as instance_obj
@@ -71,11 +71,10 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
-from nova.openstack.common import rpc
-from nova.openstack.common.rpc import common as rpc_common
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova import paths
+from nova import rpc
 from nova import safe_utils
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import utils
@@ -213,7 +212,7 @@ CONF.import_opt('image_cache_manager_interval', 'nova.virt.imagecache')
 
 LOG = logging.getLogger(__name__)
 
-get_notifier = functools.partial(notifier.get_notifier, service='compute')
+get_notifier = functools.partial(rpc.get_notifier, service='compute')
 wrap_exception = functools.partial(exception.wrap_exception,
                                    get_notifier=get_notifier)
 
@@ -409,7 +408,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    RPC_API_VERSION = '3.6'
+    target = messaging.Target(version='3.6')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -839,9 +838,7 @@ class ComputeManager(manager.Manager):
 
         """
         #TODO(mdragon): perhaps make this variable by console_type?
-        return rpc.queue_get_for(context,
-                                 CONF.console_topic,
-                                 CONF.console_host)
+        return '%s.%s' % (CONF.console_topic, CONF.console_host)
 
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
@@ -2171,7 +2168,7 @@ class ComputeManager(manager.Manager):
                           admin_password, network_info=network_info,
                           block_device_info=new_block_device_info)
 
-    @rpc_common.client_exceptions(exception.PreserveEphemeralNotSupported)
+    @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @object_compat
     @wrap_exception()
     @reverts_task_state
@@ -2532,14 +2529,14 @@ class ComputeManager(manager.Manager):
             LOG.warn(msg, instance=instance)
 
     @object_compat
-    @rpc_common.client_exceptions(NotImplementedError)
+    @messaging.expected_exceptions(NotImplementedError)
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
         self.driver.volume_snapshot_create(context, instance, volume_id,
                                            create_info)
 
     @object_compat
-    @rpc_common.client_exceptions(NotImplementedError)
+    @messaging.expected_exceptions(NotImplementedError)
     def volume_snapshot_delete(self, context, instance, volume_id,
                                snapshot_id, delete_info):
         self.driver.volume_snapshot_delete(context, instance, volume_id,
@@ -3656,7 +3653,7 @@ class ComputeManager(manager.Manager):
         """Inject network info, but don't return the info."""
         self._inject_network_info(context, instance)
 
-    @rpc_common.client_exceptions(NotImplementedError)
+    @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length):
@@ -3684,9 +3681,10 @@ class ComputeManager(manager.Manager):
         else:
             return '\n'.join(log.split('\n')[-int(length):])
 
-    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
-            exception.InstanceNotReady, exception.InstanceNotFound,
-            NotImplementedError)
+    @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
+                                   exception.InstanceNotReady,
+                                   exception.InstanceNotFound,
+                                   NotImplementedError)
     @wrap_exception()
     @wrap_instance_fault
     @object_compat
@@ -3721,8 +3719,9 @@ class ComputeManager(manager.Manager):
 
         return connect_info
 
-    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
-            exception.InstanceNotReady, exception.InstanceNotFound)
+    @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
+                                   exception.InstanceNotReady,
+                                   exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
     @object_compat
@@ -3756,8 +3755,9 @@ class ComputeManager(manager.Manager):
 
         return connect_info
 
-    @rpc_common.client_exceptions(exception.ConsoleTypeInvalid,
-            exception.InstanceNotReady, exception.InstanceNotFound)
+    @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
+                                   exception.InstanceNotReady,
+                                   exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
     @object_compat

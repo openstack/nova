@@ -2856,6 +2856,7 @@ class CloudTestCase(test.TestCase):
 
 class CloudTestCaseNeutronProxy(test.TestCase):
     def setUp(self):
+        super(CloudTestCaseNeutronProxy, self).setUp()
         cfg.CONF.set_override('security_group_api', 'neutron')
         self.cloud = cloud.CloudController()
         self.original_client = neutronv2.get_client
@@ -2865,7 +2866,6 @@ class CloudTestCaseNeutronProxy(test.TestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id,
                                               is_admin=True)
-        super(CloudTestCaseNeutronProxy, self).setUp()
 
     def tearDown(self):
         neutronv2.get_client = self.original_client

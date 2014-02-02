@@ -30,10 +30,10 @@ from nova import db
 from nova import exception
 from nova.image import glance
 from nova.network import api as network_api
-from nova import notifier as notify
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova import rpc
 from nova import test
 from nova.tests import fake_instance
 from nova.tests import fake_instance_actions
@@ -424,7 +424,7 @@ class UsageInfoTestCase(test.TestCase):
         instance.system_metadata.update(sys_metadata)
         instance.save()
         compute_utils.notify_usage_exists(
-            notify.get_notifier('compute'), self.context, instance)
+            rpc.get_notifier('compute'), self.context, instance)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.priority, 'INFO')
@@ -466,7 +466,7 @@ class UsageInfoTestCase(test.TestCase):
                 self.context.elevated(read_deleted='yes'), instance_id,
                 expected_attrs=['system_metadata'])
         compute_utils.notify_usage_exists(
-            notify.get_notifier('compute'), self.context, instance)
+            rpc.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')
@@ -497,7 +497,7 @@ class UsageInfoTestCase(test.TestCase):
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.compute.terminate_instance(self.context, instance, [], [])
         compute_utils.notify_usage_exists(
-            notify.get_notifier('compute'), self.context, instance)
+            rpc.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')
@@ -532,7 +532,7 @@ class UsageInfoTestCase(test.TestCase):
         instance.save()
         extra_usage_info = {'image_name': 'fake_name'}
         compute_utils.notify_about_instance_usage(
-            notify.get_notifier('compute'),
+            rpc.get_notifier('compute'),
             self.context, instance, 'create.start',
             extra_usage_info=extra_usage_info)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
