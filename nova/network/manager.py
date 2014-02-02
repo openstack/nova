@@ -65,6 +65,7 @@ from nova.network import rpcapi as network_rpcapi
 from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import dns_domain as dns_domain_obj
+from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.objects import network as network_obj
@@ -233,19 +234,20 @@ class RPCAllocateFixedIP(object):
         """Call the superclass deallocate_fixed_ip if i'm the correct host
         otherwise call to the correct host
         """
-        fixed_ip = self.db.fixed_ip_get_by_address(context, address)
-        network = self._get_network_by_id(context, fixed_ip['network_id'])
+        fixed_ip = fixed_ip_obj.FixedIP.get_by_address(
+            context, address, expected_attrs=['network'])
+        network = fixed_ip.network
 
         # NOTE(vish): if we are not multi_host pass to the network host
         # NOTE(tr3buchet): but if we are, host came from instance['host']
-        if not network['multi_host']:
-            host = network['host']
+        if not network.multi_host:
+            host = network.host
         if host == self.host:
             # NOTE(vish): deallocate the fixed ip locally
             return super(RPCAllocateFixedIP, self).deallocate_fixed_ip(context,
                     address)
 
-        if network['multi_host']:
+        if network.multi_host:
             service = service_obj.Service.get_by_host_and_topic(
                 context, host, CONF.network_topic)
             if not service or not self.servicegroup_api.service_is_up(service):
@@ -882,12 +884,16 @@ class NetworkManager(manager.Manager):
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True):
         """Returns a fixed ip to the pool."""
-        fixed_ip_ref = self.db.fixed_ip_get_by_address(context, address)
-        instance_uuid = fixed_ip_ref['instance_uuid']
-        vif_id = fixed_ip_ref['virtual_interface_id']
+        fixed_ip_ref = fixed_ip_obj.FixedIP.get_by_address(
+            context, address, expected_attrs=['network'])
+        instance_uuid = fixed_ip_ref.instance_uuid
+        vif_id = fixed_ip_ref.virtual_interface_id
 
         # NOTE(vish) This db query could be removed if we pass az and name
         #            (or the whole instance object).
+        # NOTE(danms) We can't use fixed_ip_ref.instance because
+        #             instance may be deleted and the relationship
+        #             doesn't extend to deleted instances
         instance = instance_obj.Instance.get_by_uuid(
             context.elevated(read_deleted='yes'), instance_uuid)
         project_id = instance.project_id
@@ -914,8 +920,7 @@ class NetworkManager(manager.Manager):
                                  'virtual_interface_id': None})
 
         if teardown:
-            network = self._get_network_by_id(context,
-                                              fixed_ip_ref['network_id'])
+            network = fixed_ip_ref.network
 
             if CONF.force_dhcp_release:
                 dev = self.driver.get_dev(network)
@@ -944,10 +949,10 @@ class NetworkManager(manager.Manager):
                 # DHCPRELEASE packet sent to dnsmasq would not trigger
                 # dhcp-bridge to run. Thus it is better to disassociate such
                 # fixed ip here.
-                fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
-                                                               address)
-                if (instance_uuid == fixed_ip_ref['instance_uuid'] and
-                        not fixed_ip_ref.get('leased')):
+                fixed_ip_ref = fixed_ip_obj.FixedIP.get_by_address(
+                    context, address)
+                if (instance_uuid == fixed_ip_ref.instance_uuid and
+                        not fixed_ip_ref.leased):
                     self.db.fixed_ip_disassociate(context, address)
 
             else:
@@ -961,37 +966,37 @@ class NetworkManager(manager.Manager):
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
         LOG.debug(_('Leased IP |%s|'), address, context=context)
-        fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+        fixed_ip = fixed_ip_obj.FixedIP.get_by_address(context, address)
 
-        if fixed_ip['instance_uuid'] is None:
+        if fixed_ip.instance_uuid is None:
             LOG.warn(_('IP %s leased that is not associated'), address,
                        context=context)
             return
         now = timeutils.utcnow()
         self.db.fixed_ip_update(context,
-                                fixed_ip['address'],
+                                fixed_ip.address,
                                 {'leased': True,
                                  'updated_at': now})
-        if not fixed_ip['allocated']:
+        if not fixed_ip.allocated:
             LOG.warn(_('IP |%s| leased that isn\'t allocated'), address,
                      context=context)
 
     def release_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is released."""
         LOG.debug(_('Released IP |%s|'), address, context=context)
-        fixed_ip = self.db.fixed_ip_get_by_address(context, address)
+        fixed_ip = fixed_ip_obj.FixedIP.get_by_address(context, address)
 
-        if fixed_ip['instance_uuid'] is None:
+        if fixed_ip.instance_uuid is None:
             LOG.warn(_('IP %s released that is not associated'), address,
                        context=context)
             return
-        if not fixed_ip['leased']:
+        if not fixed_ip.leased:
             LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)
         self.db.fixed_ip_update(context,
-                                fixed_ip['address'],
+                                fixed_ip.address,
                                 {'leased': False})
-        if not fixed_ip['allocated']:
+        if not fixed_ip.allocated:
             self.db.fixed_ip_disassociate(context, address)
 
     @staticmethod
@@ -1338,17 +1343,16 @@ class NetworkManager(manager.Manager):
                 if not utils.is_valid_ipv4(address):
                     raise exception.FixedIpInvalid(address=address)
 
-                fixed_ip_ref = self.db.fixed_ip_get_by_address(context,
-                                                               address)
-                network = self._get_network_by_id(context,
-                                                  fixed_ip_ref['network_id'])
-                if network['uuid'] != network_uuid:
+                fixed_ip_ref = fixed_ip_obj.FixedIP.get_by_address(
+                    context, address, expected_attrs=['network'])
+                network = fixed_ip_ref.network
+                if network.uuid != network_uuid:
                     raise exception.FixedIpNotFoundForNetwork(
                         address=address, network_uuid=network_uuid)
-                if fixed_ip_ref['instance_uuid'] is not None:
+                if fixed_ip_ref.instance_uuid is not None:
                     raise exception.FixedIpAlreadyInUse(
                         address=address,
-                        instance_uuid=fixed_ip_ref['instance_uuid'])
+                        instance_uuid=fixed_ip_ref.instance_uuid)
 
     def _get_network_by_id(self, context, network_id):
         return network_obj.Network.get_by_id(context, network_id,
@@ -1416,8 +1420,7 @@ class NetworkManager(manager.Manager):
     def get_fixed_ip_by_address(self, context, address):
         # NOTE(vish): This is no longer used but can't be removed until
         #             we major version the network_rpcapi to 2.0.
-        fixed = self.db.fixed_ip_get_by_address(context, address)
-        return jsonutils.to_primitive(fixed)
+        return fixed_ip_obj.FixedIP.get_by_address(context, address)
 
     def get_vif_by_mac_address(self, context, mac_address):
         """Returns the vifs record for the mac_address."""
