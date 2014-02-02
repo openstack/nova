@@ -113,6 +113,7 @@ class BareMetalDriver(driver.ComputeDriver):
 
     capabilities = {
         "has_imagecache": True,
+        "supports_recreate": False,
         }
 
     def __init__(self, virtapi, read_only=False):
