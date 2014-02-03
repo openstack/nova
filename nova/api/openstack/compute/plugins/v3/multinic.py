@@ -18,6 +18,7 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import multinic
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -37,12 +38,6 @@ class MultinicController(wsgi.Controller):
         super(MultinicController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, instance_id):
-        try:
-            return self.compute_api.get(context, instance_id)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
     @wsgi.action('add_fixed_ip')
     @validation.schema(multinic.add_fixed_ip)
     def _add_fixed_ip(self, req, id, body):
@@ -50,7 +45,7 @@ class MultinicController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id)
         network_id = body['add_fixed_ip']['network_id']
         self.compute_api.add_fixed_ip(context, instance, network_id)
         return webob.Response(status_int=202)
@@ -62,7 +57,7 @@ class MultinicController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id)
         address = body['remove_fixed_ip']['address']
 
         try:

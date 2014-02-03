@@ -61,14 +61,14 @@ class CommonMixin(object):
                 task_state=None, launched_at=timeutils.utcnow())
         instance = instance_obj.Instance._from_db_object(
                 self.context, instance_obj.Instance(), instance)
-        self.compute_api.get(self.context, uuid,
+        self.compute_api.get(self.context, uuid, expected_attrs=None,
                              want_objects=True).AndReturn(instance)
         return instance
 
     def _stub_instance_get_failure(self, exc_info, uuid=None):
         if uuid is None:
             uuid = uuidutils.generate_uuid()
-        self.compute_api.get(self.context, uuid,
+        self.compute_api.get(self.context, uuid, expected_attrs=None,
                              want_objects=True).AndRaise(exc_info)
         return uuid
 
@@ -535,7 +535,7 @@ class ResetStateTests(test.NoDBTestCase):
     def test_no_instance(self):
         self.mox.StubOutWithMock(self.compute_api, 'get')
         exc = exception.InstanceNotFound(instance_id='inst_ud')
-        self.compute_api.get(self.context, self.uuid,
+        self.compute_api.get(self.context, self.uuid, expected_attrs=None,
                              want_objects=True).AndRaise(exc)
 
         self.mox.ReplayAll()
@@ -563,7 +563,7 @@ class ResetStateTests(test.NoDBTestCase):
                                  "Instance.%s doesn't match" % k)
             instance.obj_reset_changes()
 
-        self.compute_api.get(self.context, instance.uuid,
+        self.compute_api.get(self.context, instance.uuid, expected_attrs=None,
                              want_objects=True).AndReturn(instance)
         instance.save(admin_state_reset=True).WithSideEffects(check_state)
 

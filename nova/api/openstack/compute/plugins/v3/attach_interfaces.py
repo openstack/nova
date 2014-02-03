@@ -18,6 +18,7 @@
 import webob
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova import compute
 from nova import exception
@@ -62,10 +63,7 @@ class InterfaceAttachmentController(object):
         authorize(context)
 
         port_id = id
-        try:
-            self.compute_api.get(context, server_id)
-        except exception.InstanceNotFound as err:
-            raise exc.HTTPNotFound(explanation=err.format_message())
+        common.get_instance(self.compute_api, context, server_id)
 
         try:
             port_info = self.network_api.show_port(context, port_id)
@@ -100,13 +98,13 @@ class InterfaceAttachmentController(object):
         if req_ip and not network_id:
             raise exc.HTTPBadRequest()
 
+        instance = common.get_instance(self.compute_api, context,
+                                       server_id)
+        LOG.audit(_("Attach interface to %s"), instance=instance)
+
         try:
-            instance = self.compute_api.get(context, server_id)
-            LOG.audit(_("Attach interface to %s"), instance=instance)
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
-        except exception.InstanceNotFound as err:
-            raise exc.HTTPNotFound(explanation=err.format_message())
         except NotImplementedError as e:
             raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
         except exception.InterfaceAttachFailed as e:
@@ -127,11 +125,8 @@ class InterfaceAttachmentController(object):
         authorize(context)
         port_id = id
 
-        try:
-            instance = self.compute_api.get(context, server_id)
-            LOG.audit(_("Detach interface %s"), port_id, instance=instance)
-        except exception.InstanceNotFound as err:
-            raise exc.HTTPNotFound(explanation=err.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id)
+        LOG.audit(_("Detach interface %s"), port_id, instance=instance)
         try:
             self.compute_api.detach_interface(context,
                 instance, port_id=port_id)
@@ -147,11 +142,7 @@ class InterfaceAttachmentController(object):
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
+        instance = common.get_instance(self.compute_api, context, server_id)
         results = []
         search_opts = {'device_id': instance['uuid']}
 

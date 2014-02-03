@@ -31,13 +31,15 @@ class ServerMetadataController(wsgi.Controller):
         super(ServerMetadataController, self).__init__()
 
     def _get_metadata(self, context, server_id):
+        server = common.get_instance(self.compute_api, context, server_id)
         try:
-            server = self.compute_api.get(context, server_id)
+            # NOTE(mikal): get_instanc_metadata sometimes returns
+            # InstanceNotFound in unit tests, even though the instance is
+            # fetched on the line above. I blame mocking.
             meta = self.compute_api.get_instance_metadata(context, server)
         except exception.InstanceNotFound:
             msg = _('Server does not exist')
             raise exc.HTTPNotFound(explanation=msg)
-
         meta_dict = {}
         for key, value in meta.iteritems():
             meta_dict[key] = value
@@ -104,16 +106,12 @@ class ServerMetadataController(wsgi.Controller):
     def _update_instance_metadata(self, context, server_id, metadata,
                                   delete=False):
         try:
-            server = self.compute_api.get(context, server_id,
-                                          want_objects=True)
+            server = common.get_instance(self.compute_api, context, server_id,
+                                         want_objects=True)
             return self.compute_api.update_instance_metadata(context,
                                                              server,
                                                              metadata,
                                                              delete)
-
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
 
         except exception.InvalidMetadata as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
@@ -155,15 +153,10 @@ class ServerMetadataController(wsgi.Controller):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
+        server = common.get_instance(self.compute_api, context, server_id,
+                                     want_objects=True)
         try:
-            server = self.compute_api.get(context, server_id,
-                                          want_objects=True)
             self.compute_api.delete_instance_metadata(context, server, id)
-
-        except exception.InstanceNotFound:
-            msg = _('Server does not exist')
-            raise exc.HTTPNotFound(explanation=msg)
-
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'delete metadata')

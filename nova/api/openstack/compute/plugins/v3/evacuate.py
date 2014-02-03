@@ -72,15 +72,13 @@ class EvacuateController(wsgi.Controller):
             msg = _("Compute host %s not found.") % host
             raise exc.HTTPNotFound(explanation=msg)
 
+        instance = common.get_instance(self.compute_api, context, id)
         try:
-            instance = self.compute_api.get(context, id)
             self.compute_api.evacuate(context, instance, host,
                                       on_shared_storage, password)
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'evacuate')
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 

@@ -43,10 +43,8 @@ class AdminPasswordController(wsgi.Controller):
         authorize(context)
 
         password = body['change_password']['admin_password']
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.set_admin_password(context, instance, password)
         except exception.InstancePasswordSetFailed as e:

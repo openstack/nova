@@ -38,7 +38,8 @@ def compute_api_remove_fixed_ip(self, context, instance, address):
     last_remove_fixed_ip = (instance['uuid'], address)
 
 
-def compute_api_get(self, context, instance_id):
+def compute_api_get(self, context, instance_id, expected_attrs=None,
+                    want_objects=False):
     return {'id': 1, 'uuid': instance_id}
 
 

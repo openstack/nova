@@ -66,12 +66,8 @@ class ExtendedVolumesController(wsgi.Controller):
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        try:
-            instance = self.compute_api.get(context, id,
-                                            want_objects=True)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         bdms = self.compute_api.get_instance_bdms(context, instance)
         found = False
         try:
@@ -141,11 +137,11 @@ class ExtendedVolumesController(wsgi.Controller):
                    'server_id': server_id},
                   context=context)
 
+        instance = common.get_instance(self.compute_api, context, server_id)
         try:
-            instance = self.compute_api.get(context, server_id)
             self.compute_api.attach_volume(context, instance,
                                            volume_id, device)
-        except (exception.InstanceNotFound, exception.VolumeNotFound) as e:
+        except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
@@ -173,11 +169,7 @@ class ExtendedVolumesController(wsgi.Controller):
                   {"volume_id": volume_id,
                    "server_id": id,
                    "context": context})
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
+        instance = common.get_instance(self.compute_api, context, server_id)
         try:
             volume = self.volume_api.get(context, volume_id)
         except exception.VolumeNotFound as e:

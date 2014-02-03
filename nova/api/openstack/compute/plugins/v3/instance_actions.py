@@ -15,10 +15,10 @@
 
 from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
-from nova import exception
 from nova.openstack.common.gettextutils import _
 
 ALIAS = "os-instance-actions"
@@ -55,10 +55,7 @@ class InstanceActionsController(wsgi.Controller):
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.InstanceNotFound as err:
-            raise exc.HTTPNotFound(explanation=err.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id)
         authorize_actions(context, target=instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
@@ -68,10 +65,7 @@ class InstanceActionsController(wsgi.Controller):
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']
-        try:
-            instance = self.compute_api.get(context, server_id)
-        except exception.InstanceNotFound as err:
-            raise exc.HTTPNotFound(explanation=err.format_message())
+        instance = common.get_instance(self.compute_api, context, server_id)
         authorize_actions(context, target=instance)
         action = self.action_api.action_get_by_request_id(context, instance,
                                                           id)

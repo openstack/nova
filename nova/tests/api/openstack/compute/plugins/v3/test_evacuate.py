@@ -33,7 +33,8 @@ def fake_compute_api(*args, **kwargs):
     return True
 
 
-def fake_compute_api_get(self, context, instance_id):
+def fake_compute_api_get(self, context, instance_id, expected_attrs=None,
+                         want_objects=False):
     return {
         'id': 1,
         'uuid': instance_id,

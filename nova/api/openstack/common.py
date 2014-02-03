@@ -21,6 +21,7 @@ import urlparse
 
 from oslo.config import cfg
 import webob
+from webob import exc
 
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -562,3 +563,14 @@ class ViewBuilder(object):
     def _update_compute_link_prefix(self, orig_url):
         return self._update_link_prefix(orig_url,
                                         CONF.osapi_compute_link_prefix)
+
+
+def get_instance(compute_api, context, instance_id, want_objects=False,
+                 expected_attrs=None):
+    """Fetch an instance from the compute API, handling error checking."""
+    try:
+        return compute_api.get(context, instance_id,
+                               want_objects=want_objects,
+                               expected_attrs=expected_attrs)
+    except exception.InstanceNotFound as e:
+        raise exc.HTTPNotFound(explanation=e.format_message())

@@ -17,6 +17,7 @@
 import re
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack.compute.schemas.v3 import console_output
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
@@ -42,11 +43,7 @@ class ConsoleOutputController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context)
 
-        try:
-            instance = self.compute_api.get(context, id)
-        except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(explanation=e.format_message())
-
+        instance = common.get_instance(self.compute_api, context, id)
         length = body['get_console_output'].get('length')
 
         try:

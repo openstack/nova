@@ -44,7 +44,8 @@ def fake_get_console_output_all_characters(self, _ctx, _instance, _tail_len):
     return string.printable
 
 
-def fake_get(self, context, instance_uuid):
+def fake_get(self, context, instance_uuid, expected_attrs=None,
+             want_objects=False):
     return {'uuid': instance_uuid}
 
 
