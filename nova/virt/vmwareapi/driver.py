@@ -101,8 +101,16 @@ class VMwareESXDriver(driver.ComputeDriver):
     # valid vCenter calls. There are some small edge-case
     # exceptions regarding VNC, CIM, User management & SSO.
 
+    def _do_quality_warnings(self):
+        LOG.warning(_('The VMware ESX driver is not tested by the OpenStack '
+                      'project and thus its quality can not be ensured. For '
+                      'more information, see: https://wiki.openstack.org/wiki/'
+                      'HypervisorSupportMatrix'))
+
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareESXDriver, self).__init__(virtapi)
+
+        self._do_quality_warnings()
 
         self._host_ip = CONF.vmware.host_ip
         if not (self._host_ip or CONF.vmware.host_username is None or
@@ -353,6 +361,9 @@ class VMwareVCDriver(VMwareESXDriver):
     # vCenter is not a hypervisor itself, it works with multiple
     # hypervisor host machines and their guests. This fact can
     # subtly alter how vSphere and OpenStack interoperate.
+
+    def _do_quality_warnings(self):
+        pass
 
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareVCDriver, self).__init__(virtapi)
