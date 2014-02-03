@@ -17,6 +17,7 @@ import re
 
 session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(".*\scfg\.")
+vi_header_re = re.compile("^#\s+vim?:.+")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -59,8 +60,23 @@ def capital_cfg_help(logical_line, tokens):
                     yield(0, msg)
 
 
+def no_vi_headers(physical_line, line_number, lines):
+    """Check for vi editor configuration in source files.
+
+    By default vi modelines can only appear in the first or
+    last 5 lines of a source file.
+
+    N123
+    """
+    # NOTE(gilliard): line_number is 1-indexed
+    if line_number <= 5 or line_number > len(lines) - 5:
+        if vi_header_re.match(physical_line):
+            return 0, "N123: Don't put vi configuration in source files"
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
     register(use_timeutils_utcnow)
     register(capital_cfg_help)
+    register(no_vi_headers)
