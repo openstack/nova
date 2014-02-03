@@ -142,7 +142,8 @@ class NovaExceptionTestCase(test.NoDBTestCase):
 
     def test_format_message_gettext_msg_returned(self):
         class FakeNovaException(exception.NovaException):
-            msg_fmt = gettextutils.Message("Some message %(param)s", 'nova')
+            msg_fmt = gettextutils.Message("Some message %(param)s",
+                                           domain='nova')
 
         exc = FakeNovaException(param='blah')
         msg = exc.format_message()

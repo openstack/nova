@@ -33,9 +33,9 @@ from nova import test
 class TestFaultWrapper(test.NoDBTestCase):
     """Tests covering `nova.api.openstack:FaultWrapper` class."""
 
-    @mock.patch('nova.openstack.common.gettextutils.get_localized_message')
-    def test_safe_exception_translated(self, mock_get_localized):
-        msg = gettextutils.Message('Should be translated.', 'nova')
+    @mock.patch('nova.openstack.common.gettextutils.translate')
+    def test_safe_exception_translated(self, mock_translate):
+        msg = gettextutils.Message('Should be translated.', domain='nova')
         safe_exception = exception.NotFound()
         safe_exception.msg_fmt = msg
         safe_exception.safe = True
@@ -44,11 +44,11 @@ class TestFaultWrapper(test.NoDBTestCase):
         req = webob.Request.blank('/')
 
         def fake_translate(mesg, locale):
-            if str(mesg) == "Should be translated.":
+            if mesg == "Should be translated.":
                 return "I've been translated!"
             return mesg
 
-        mock_get_localized.side_effect = fake_translate
+        mock_translate.side_effect = fake_translate
 
         def raiser(*args, **kwargs):
             raise safe_exception
@@ -57,7 +57,7 @@ class TestFaultWrapper(test.NoDBTestCase):
         response = req.get_response(wrapper)
 
         self.assertIn("I've been translated!", unicode(response.body))
-        mock_get_localized.assert_any_call(
+        mock_translate.assert_any_call(
                 u'Should be translated.', None)
 
 

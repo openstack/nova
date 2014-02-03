@@ -1222,7 +1222,7 @@ class Fault(webob.exc.HTTPException):
         LOG.debug(_("Returning %(code)s to user: %(explanation)s"),
                   {'code': code, 'explanation': explanation})
 
-        explanation = gettextutils.get_localized_message(explanation,
+        explanation = gettextutils.translate(explanation,
                                                          user_locale)
         fault_data = {
             fault_name: {
@@ -1292,11 +1292,11 @@ class RateLimitFault(webob.exc.HTTPException):
         metadata = {"attributes": {"overLimit": ["code", "retryAfter"]}}
 
         self.content['overLimit']['message'] = \
-                gettextutils.get_localized_message(
+                gettextutils.translate(
                         self.content['overLimit']['message'],
                         user_locale)
         self.content['overLimit']['details'] = \
-                gettextutils.get_localized_message(
+                gettextutils.translate(
                         self.content['overLimit']['details'],
                         user_locale)
 

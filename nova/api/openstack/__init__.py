@@ -103,7 +103,7 @@ class FaultWrapper(base_wsgi.Middleware):
         if safe:
             if isinstance(inner.msg_fmt, gettextutils.Message):
                 user_locale = req.best_match_language()
-                inner_msg = gettextutils.get_localized_message(
+                inner_msg = gettextutils.translate(
                         inner.msg_fmt, user_locale)
             else:
                 inner_msg = unicode(inner)
