@@ -265,10 +265,11 @@ class API(base.Base):
             for user_security_group in user_security_groups:
                 if user_security_group['name'] == security_group:
                     if name_match:
-                        msg = (_("Multiple security groups found matching"
-                                 " '%s'. Use an ID to be more specific."),
-                                 security_group)
-                        raise exception.NoUniqueMatch(msg)
+                        raise exception.NoUniqueMatch(
+                            _("Multiple security groups found matching"
+                              " '%s'. Use an ID to be more specific.") %
+                               security_group)
+
                     name_match = user_security_group['id']
                 if user_security_group['id'] == security_group:
                     uuid_match = user_security_group['id']
