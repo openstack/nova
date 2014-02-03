@@ -423,7 +423,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                              mox.IsA(str))
         m.WithSideEffects(self._add_ide_disk)
 
-    def _test_spawn_config_drive(self, use_cdrom):
+    def _test_spawn_config_drive(self, use_cdrom, format_error=False):
         self.flags(force_config_drive=True)
         self.flags(config_drive_cdrom=use_cdrom, group='hyperv')
         self.flags(mkisofs_cmd='mkisofs.exe')
@@ -435,13 +435,24 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             expected_ide_disks = 2
             expected_ide_dvds = 0
 
-        self._test_spawn_instance(expected_ide_disks=expected_ide_disks,
-                                  expected_ide_dvds=expected_ide_dvds,
-                                  config_drive=True,
-                                  use_cdrom=use_cdrom)
+        if format_error:
+            self.assertRaises(vmutils.UnsupportedConfigDriveFormatException,
+                              self._test_spawn_instance,
+                              with_exception=True,
+                              config_drive=True,
+                              use_cdrom=use_cdrom)
+        else:
+            self._test_spawn_instance(expected_ide_disks=expected_ide_disks,
+                                      expected_ide_dvds=expected_ide_dvds,
+                                      config_drive=True,
+                                      use_cdrom=use_cdrom)
 
     def test_spawn_config_drive(self):
         self._test_spawn_config_drive(False)
+
+    def test_spawn_config_drive_format_error(self):
+        CONF.set_override('config_drive_format', 'wrong_format')
+        self._test_spawn_config_drive(True, True)
 
     def test_spawn_config_drive_cdrom(self):
         self._test_spawn_config_drive(True)
@@ -1042,7 +1053,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
                                           block_device_info,
                                           ephemeral_storage=ephemeral_storage)
 
-        if config_drive:
+        if config_drive and not with_exception:
             self._setup_spawn_config_drive_mocks(use_cdrom)
 
         # TODO(alexpilotti) Based on where the exception is thrown
