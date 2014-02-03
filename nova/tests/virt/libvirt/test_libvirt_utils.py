@@ -14,7 +14,11 @@
 #    under the License.
 
 import os
+import tempfile
 
+import fixtures
+
+from nova.openstack.common import processutils
 from nova import test
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
@@ -93,3 +97,30 @@ blah BLAH: bb
         libvirt_utils.remove_rbd_volumes(pool, *names)
 
         self.mox.VerifyAll()
+
+    def _test_copy_image(self, fake_execute, host):
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.utils.execute', fake_execute))
+        src = tempfile.NamedTemporaryFile()
+        dst = tempfile.NamedTemporaryFile()
+        libvirt_utils.copy_image(src.name, dst.name, host)
+
+    def test_copy_image_local_cp(self):
+        def fake_execute(*args, **kwargs):
+            self.assertTrue(args[0] == 'cp')
+
+        self._test_copy_image(fake_execute, host=None)
+
+    def test_copy_image_local_rsync(self):
+        def fake_execute(*args, **kwargs):
+            self.assertTrue(args[0] == 'rsync')
+
+        self._test_copy_image(fake_execute, host='fake-host')
+
+    def test_copy_image_local_scp(self):
+        def fake_execute(*args, **kwargs):
+            if args[0] == 'rsync':
+                raise processutils.ProcessExecutionError("Bad result")
+            self.assertTrue(args[0] == 'scp')
+
+        self._test_copy_image(fake_execute, host='fake-host')
