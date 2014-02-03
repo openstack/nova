@@ -15,6 +15,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import flavors_extraspecs
@@ -177,6 +178,33 @@ class FlavorsExtraSpecsTest(test.TestCase):
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPConflict, self.controller.create,
                           req, 1, body)
+
+    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
+    def test_create_invalid_specs_key(self, mock_flavor_extra_specs):
+        invalid_keys = ("key1/", "<key>", "$$akey$", "!akey", "")
+        mock_flavor_extra_specs.side_effects = return_create_flavor_extra_specs
+
+        for key in invalid_keys:
+            body = {"extra_specs": {key: "value1"}}
+
+            req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs',
+                                       use_admin_context=True)
+            self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, 1, body)
+
+    @mock.patch('nova.db.flavor_extra_specs_update_or_create')
+    def test_create_valid_specs_key(self, mock_flavor_extra_specs):
+        valid_keys = ("key1", "month.price", "I_am-a Key", "finance:g2")
+        mock_flavor_extra_specs.side_effects = return_create_flavor_extra_specs
+
+        for key in valid_keys:
+            body = {"extra_specs": {key: "value1"}}
+
+            req = fakes.HTTPRequest.blank('/v3/flavors/1/extra-specs',
+                                       use_admin_context=True)
+            res_dict = self.controller.create(req, 1, body)
+            self.assertEqual('value1', res_dict['extra_specs'][key])
+            self.assertEqual(self.controller.create.wsgi_code, 201)
 
     def test_update_item(self):
         self.stubs.Set(nova.db,
