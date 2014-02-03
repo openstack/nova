@@ -379,6 +379,27 @@ class OpenStackMetadataTestCase(test.TestCase):
         listing = mdinst.lookup("/openstack/2012-08-10")
         self.assertIn("meta_data.json", listing)
 
+    def test_returns_apis_supported_in_havana_version(self):
+        mdinst = fake_InstanceMetadata(self.stubs, self.instance)
+        havana_supported_apis = mdinst.lookup("/openstack/2013-10-17")
+
+        self.assertEqual([base.MD_JSON_NAME, base.UD_NAME, base.PASS_NAME,
+                          base.VD_JSON_NAME], havana_supported_apis)
+
+    def test_returns_apis_supported_in_folsom_version(self):
+        mdinst = fake_InstanceMetadata(self.stubs, self.instance)
+        folsom_supported_apis = mdinst.lookup("/openstack/2012-08-10")
+
+        self.assertEqual([base.MD_JSON_NAME, base.UD_NAME],
+                         folsom_supported_apis)
+
+    def test_returns_apis_supported_in_grizzly_version(self):
+        mdinst = fake_InstanceMetadata(self.stubs, self.instance)
+        grizzly_supported_apis = mdinst.lookup("/openstack/2013-04-04")
+
+        self.assertEqual([base.MD_JSON_NAME, base.UD_NAME, base.PASS_NAME],
+                         grizzly_supported_apis)
+
     def test_metadata_json(self):
         inst = self.instance.obj_clone()
         content = [
