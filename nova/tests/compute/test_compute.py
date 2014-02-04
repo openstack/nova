@@ -639,22 +639,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._poll_volume_usage(ctxt)
         self.mox.UnsetStubs()
 
-    def test_poll_volume_usage_interval_not_elapsed(self):
-        ctxt = 'MockContext'
-        self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
-        self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
-        self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
-        self.mox.StubOutWithMock(time, 'time')
-        # Following methods will be called.
-        utils.last_completed_audit_period().AndReturn((0, 0))
-        time.time().AndReturn(10)
-        self.mox.ReplayAll()
-
-        CONF.volume_usage_poll_interval = 2
-        self.compute._last_vol_usage_poll = 9
-        self.compute._poll_volume_usage(ctxt)
-        self.mox.UnsetStubs()
-
     def test_poll_volume_usage_returns_no_vols(self):
         ctxt = 'MockContext'
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
@@ -666,7 +650,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.ReplayAll()
 
         CONF.volume_usage_poll_interval = 10
-        self.compute._last_vol_usage_poll = 0
         self.compute._poll_volume_usage(ctxt)
         self.mox.UnsetStubs()
 
@@ -683,11 +666,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._update_volume_usage_cache(ctxt, [3, 4])
         self.mox.ReplayAll()
         CONF.volume_usage_poll_interval = 10
-        self.compute._last_vol_usage_poll = 0
         self.compute._poll_volume_usage(ctxt)
-        self.assertTrue(self.compute._last_vol_usage_poll > 0,
-                        "_last_vol_usage_poll was not properly updated <%s>" %
-                        self.compute._last_vol_usage_poll)
         self.mox.UnsetStubs()
 
     def test_detach_volume_usage(self):
