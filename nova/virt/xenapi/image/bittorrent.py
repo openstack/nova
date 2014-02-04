@@ -82,25 +82,24 @@ class BittorrentStore(object):
         """Load a "fetcher" func to get the right torrent URL via
         entrypoints.
         """
+
+        if CONF.xenserver.torrent_base_url:
+            def _default_torrent_url_fn(instance, image_id):
+                return urlparse.urljoin(CONF.xenserver.torrent_base_url,
+                                        "%s.torrent" % image_id)
+
+            return _default_torrent_url_fn
+
         matches = [ep for ep in
                    pkg_resources.iter_entry_points('nova.virt.xenapi.vm_utils')
                    if ep.name == 'torrent_url']
 
         if not matches:
-            LOG.debug(_("No torrent URL fetcher extension found, using"
-                        " default."))
-
-            if not CONF.xenserver.torrent_base_url:
-                raise RuntimeError(_('Cannot create default bittorrent URL'
-                                     ' without torrent_base_url set'))
-
-            def _default_torrent_url_fn(instance, image_id):
-                return urlparse.urljoin(CONF.xenserver.torrent_base_url,
-                                        "%s.torrent" % image_id)
-
-            fn = _default_torrent_url_fn
+            raise RuntimeError(_('Cannot create default bittorrent URL'
+                                 ' without torrent_base_url set or'
+                                 ' torrent URL fetcher extension'))
         elif len(matches) > 1:
-            raise RuntimeError(_("Multiple torrent URL fetcher extension"
+            raise RuntimeError(_("Multiple torrent URL fetcher extensions"
                                  " found. Failing."))
         else:
             ep = matches[0]
