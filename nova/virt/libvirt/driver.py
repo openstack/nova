@@ -3283,12 +3283,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                             context, instance['image_ref'])
             image_meta = compute_utils.get_image_metadata(
                                 context, image_service, image_id, instance)
+        # NOTE(danms): Stringifying a NetworkInfo will take a lock. Do
+        # this ahead of time so that we don't acquire it while also
+        # holding the logging lock.
+        network_info_str = str(network_info)
         LOG.debug(_('Start to_xml '
                     'network_info=%(network_info)s '
                     'disk_info=%(disk_info)s '
                     'image_meta=%(image_meta)s rescue=%(rescue)s'
                     'block_device_info=%(block_device_info)s'),
-                  {'network_info': network_info, 'disk_info': disk_info,
+                  {'network_info': network_info_str, 'disk_info': disk_info,
                    'image_meta': image_meta, 'rescue': rescue,
                    'block_device_info': block_device_info},
                   instance=instance)
