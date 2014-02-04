@@ -1733,6 +1733,12 @@ class ComputeManager(manager.Manager):
                 block_device_info['swap'])
             return block_device_info
 
+        except exception.OverQuota:
+            msg = ('Failed to create block device for instance due to being '
+                   'over volume resource quota')
+            LOG.debug(msg, instance=instance)
+            raise exception.InvalidBDM()
+
         except Exception:
             LOG.exception(_('Instance failed block device setup'),
                           instance=instance)

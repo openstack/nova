@@ -301,6 +301,8 @@ class API(object):
         try:
             item = cinderclient(context).volumes.create(size, **kwargs)
             return _untranslate_volume_summary_view(context, item)
+        except cinder_exception.OverLimit:
+            raise exception.OverQuota(overs='volumes')
         except cinder_exception.BadRequest as e:
             raise exception.InvalidInput(reason=unicode(e))
 
