@@ -4056,9 +4056,72 @@ class LibvirtConnTestCase(test.TestCase):
                           conn.check_can_live_migrate_source,
                           self.context, instance_ref, dest_check_data)
 
-    def test_live_migration_raises_exception(self):
-        # Confirms recover method is called when exceptions are raised.
-        # Preparing data
+    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', 8675, create=True)
+    def test_live_migration_changes_listen_addresses(self):
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_dict = {'host': 'fake',
+                         'power_state': power_state.RUNNING,
+                         'vm_state': vm_states.ACTIVE}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref = db.instance_update(self.context, instance_ref['uuid'],
+                                          instance_dict)
+
+        xml_tmpl = ("<domain type='kvm'>"
+                    "<devices>"
+                    "<graphics type='vnc' listen='{vnc}'>"
+                    "<listen address='{vnc}'/>"
+                    "</graphics>"
+                    "<graphics type='spice' listen='{spice}'>"
+                    "<listen address='{spice}'/>"
+                    "</graphics>"
+                    "</devices>"
+                    "</domain>")
+
+        initial_xml = xml_tmpl.format(vnc='1.2.3.4',
+                                      spice='5.6.7.8')
+
+        target_xml = xml_tmpl.format(vnc='10.0.0.1',
+                                     spice='10.0.0.2')
+        target_xml = etree.tostring(etree.fromstring(target_xml))
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "migrateToURI2")
+        _bandwidth = CONF.libvirt.live_migration_bandwidth
+        vdmock.XMLDesc(libvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+                initial_xml)
+        vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
+                             None,
+                             target_xml,
+                             mox.IgnoreArg(),
+                             None,
+                             _bandwidth).AndRaise(libvirt.libvirtError("ERR"))
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.mox.StubOutWithMock(self.compute, "_rollback_live_migration")
+        self.compute._rollback_live_migration(self.context, instance_ref,
+                                              'dest', False)
+
+        #start test
+        migrate_data = {'pre_live_migration_result':
+                {'graphics_listen_addrs':
+                    {'vnc': '10.0.0.1', 'spice': '10.0.0.2'}}}
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(libvirt.libvirtError,
+                      conn._live_migration,
+                      self.context, instance_ref, 'dest', False,
+                      self.compute._rollback_live_migration,
+                      migrate_data=migrate_data)
+
+        db.instance_destroy(self.context, instance_ref['uuid'])
+
+    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None, create=True)
+    def test_live_migration_uses_migrateToURI_without_migratable_flag(self):
         self.compute = importutils.import_object(CONF.compute_manager)
         instance_dict = {'host': 'fake',
                          'power_state': power_state.RUNNING,
@@ -4074,7 +4137,7 @@ class LibvirtConnTestCase(test.TestCase):
         vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
                             mox.IgnoreArg(),
                             None,
-                            _bandwidth).AndRaise(libvirt.libvirtError('ERR'))
+                            _bandwidth).AndRaise(libvirt.libvirtError("ERR"))
 
         def fake_lookup(instance_name):
             if instance_name == instance_ref['name']:
@@ -4086,12 +4149,148 @@ class LibvirtConnTestCase(test.TestCase):
                                               'dest', False)
 
         #start test
+        migrate_data = {'pre_live_migration_result':
+                {'graphics_listen_addrs':
+                    {'vnc': '0.0.0.0', 'spice': '0.0.0.0'}}}
         self.mox.ReplayAll()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(libvirt.libvirtError,
                       conn._live_migration,
                       self.context, instance_ref, 'dest', False,
-                      self.compute._rollback_live_migration)
+                      self.compute._rollback_live_migration,
+                      migrate_data=migrate_data)
+
+        db.instance_destroy(self.context, instance_ref['uuid'])
+
+    def test_live_migration_uses_migrateToURI_without_dest_listen_addrs(self):
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_dict = {'host': 'fake',
+                         'power_state': power_state.RUNNING,
+                         'vm_state': vm_states.ACTIVE}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref = db.instance_update(self.context, instance_ref['uuid'],
+                                          instance_dict)
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "migrateToURI")
+        _bandwidth = CONF.libvirt.live_migration_bandwidth
+        vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+                            mox.IgnoreArg(),
+                            None,
+                            _bandwidth).AndRaise(libvirt.libvirtError("ERR"))
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.mox.StubOutWithMock(self.compute, "_rollback_live_migration")
+        self.compute._rollback_live_migration(self.context, instance_ref,
+                                              'dest', False)
+
+        #start test
+        migrate_data = {}
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(libvirt.libvirtError,
+                      conn._live_migration,
+                      self.context, instance_ref, 'dest', False,
+                      self.compute._rollback_live_migration,
+                      migrate_data=migrate_data)
+
+        db.instance_destroy(self.context, instance_ref['uuid'])
+
+    @mock.patch.object(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None, create=True)
+    def test_live_migration_fails_without_migratable_flag_or_0_addr(self):
+        self.flags(vnc_enabled=True, vncserver_listen='1.2.3.4')
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_dict = {'host': 'fake',
+                         'power_state': power_state.RUNNING,
+                         'vm_state': vm_states.ACTIVE}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref = db.instance_update(self.context, instance_ref['uuid'],
+                                          instance_dict)
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "migrateToURI")
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.mox.StubOutWithMock(self.compute, "_rollback_live_migration")
+        self.compute._rollback_live_migration(self.context, instance_ref,
+                                              'dest', False)
+
+        #start test
+        migrate_data = {'pre_live_migration_result':
+                {'graphics_listen_addrs':
+                    {'vnc': '1.2.3.4', 'spice': '1.2.3.4'}}}
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.MigrationError,
+                      conn._live_migration,
+                      self.context, instance_ref, 'dest', False,
+                      self.compute._rollback_live_migration,
+                      migrate_data=migrate_data)
+
+        db.instance_destroy(self.context, instance_ref['uuid'])
+
+    def test_live_migration_raises_exception(self):
+        # Confirms recover method is called when exceptions are raised.
+        # Preparing data
+        self.compute = importutils.import_object(CONF.compute_manager)
+        instance_dict = {'host': 'fake',
+                         'power_state': power_state.RUNNING,
+                         'vm_state': vm_states.ACTIVE}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        instance_ref = db.instance_update(self.context, instance_ref['uuid'],
+                                          instance_dict)
+
+        # Preparing mocks
+        vdmock = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(vdmock, "migrateToURI2")
+        _bandwidth = CONF.libvirt.live_migration_bandwidth
+        if getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE', None) is None:
+            vdmock.migrateToURI(CONF.libvirt.live_migration_uri % 'dest',
+                                mox.IgnoreArg(),
+                                None,
+                                _bandwidth).AndRaise(
+                                        libvirt.libvirtError('ERR'))
+        else:
+            vdmock.XMLDesc(libvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
+                    FakeVirtDomain().XMLDesc(0))
+            vdmock.migrateToURI2(CONF.libvirt.live_migration_uri % 'dest',
+                                 None,
+                                 mox.IgnoreArg(),
+                                 mox.IgnoreArg(),
+                                 None,
+                                 _bandwidth).AndRaise(
+                                         libvirt.libvirtError('ERR'))
+
+        def fake_lookup(instance_name):
+            if instance_name == instance_ref['name']:
+                return vdmock
+
+        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.mox.StubOutWithMock(self.compute, "_rollback_live_migration")
+        self.compute._rollback_live_migration(self.context, instance_ref,
+                                              'dest', False)
+
+        #start test
+        migrate_data = {'pre_live_migration_result':
+                {'graphics_listen_addrs':
+                    {'vnc': '127.0.0.1', 'spice': '127.0.0.1'}}}
+        self.mox.ReplayAll()
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(libvirt.libvirtError,
+                      conn._live_migration,
+                      self.context, instance_ref, 'dest', False,
+                      self.compute._rollback_live_migration,
+                      migrate_data=migrate_data)
 
         instance_ref = db.instance_get(self.context, instance_ref['id'])
         self.assertTrue(instance_ref['vm_state'] == vm_states.ACTIVE)
@@ -4224,7 +4423,10 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.mox.ReplayAll()
         result = conn.pre_live_migration(c, inst_ref, vol, nw_info, None)
-        self.assertIsNone(result)
+
+        target_res = {'graphics_listen_addrs': {'spice': '127.0.0.1',
+                                                'vnc': '127.0.0.1'}}
+        self.assertEqual(result, target_res)
 
     def test_pre_live_migration_block_with_config_drive_mocked(self):
         # Creating testdata
@@ -4286,7 +4488,9 @@ class LibvirtConnTestCase(test.TestCase):
                             }
             ret = conn.pre_live_migration(c, inst_ref, vol, nw_info, None,
                                           migrate_data)
-            self.assertIsNone(ret)
+            target_ret = {'graphics_listen_addrs': {'spice': '127.0.0.1',
+                                                    'vnc': '127.0.0.1'}}
+            self.assertEqual(ret, target_ret)
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
                                                        inst_ref['name'])))
         db.instance_destroy(self.context, inst_ref['uuid'])

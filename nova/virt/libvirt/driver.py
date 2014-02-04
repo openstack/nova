@@ -4479,6 +4479,64 @@ class LibvirtDriver(driver.ComputeDriver):
                           post_method, recover_method, block_migration,
                           migrate_data)
 
+    def _correct_listen_addr(self, old_xml_str, listen_addrs):
+        # NB(sross): can't just use LibvirtConfigGuest#parse_str
+        #            here b/c it doesn't capture the entire XML
+        #            description
+        xml_doc = etree.fromstring(old_xml_str)
+
+        # change over listen addresses
+        for dev in xml_doc.findall('./devices/graphics'):
+            gr_type = dev.get('type')
+            listen_tag = dev.find('listen')
+            if gr_type in ('vnc', 'spice'):
+                if listen_tag is not None:
+                    listen_tag.set('address', listen_addrs[gr_type])
+                if dev.get('listen') is not None:
+                    dev.set('listen', listen_addrs[gr_type])
+
+        return etree.tostring(xml_doc)
+
+    def _check_graphics_addresses_can_live_migrate(self, listen_addrs):
+        LOCAL_ADDRS = ('0.0.0.0', '127.0.0.1', '::', '::1')
+
+        local_vnc = CONF.vncserver_listen in LOCAL_ADDRS
+        local_spice = CONF.spice.server_listen in LOCAL_ADDRS
+
+        if ((CONF.vnc_enabled and not local_vnc) or
+            (CONF.spice.enabled and not local_spice)):
+
+            raise exception.MigrationError(
+                    _('Your libvirt version does not support the'
+                      ' VIR_DOMAIN_XML_MIGRATABLE flag or your'
+                      ' destination node does not support'
+                      ' retrieving listen addresses.  In order'
+                      ' for live migration to work properly, you'
+                      ' must configure the graphics (VNC and/or'
+                      ' SPICE) listen addresses to be either'
+                      ' the catch-all address (0.0.0.0 or ::) or'
+                      ' the local address (127.0.0.1 or ::1).'))
+
+        if listen_addrs is not None:
+            dest_local_vnc = listen_addrs['vnc'] in LOCAL_ADDRS
+            dest_local_spice = listen_addrs['spice'] in LOCAL_ADDRS
+
+            if ((CONF.vnc_enabled and not dest_local_vnc) or
+                (CONF.spice.enabled and not dest_local_spice)):
+
+                LOG.warn(_('Your libvirt version does not support the'
+                           ' VIR_DOMAIN_XML_MIGRATABLE flag, and the '
+                           ' graphics (VNC and/or SPICE) listen'
+                           ' addresses on the destination node do not'
+                           ' match the addresses on the source node.'
+                           ' Since the source node has listen'
+                           ' addresses set to either the catch-all'
+                           ' address (0.0.0.0 or ::) or the local'
+                           ' address (127.0.0.1 or ::1), the live'
+                           ' migration will succeed, but the VM will'
+                           ' continue to listen on the current'
+                           ' addresses.'))
+
     def _live_migration(self, context, instance, dest, post_method,
                         recover_method, block_migration=False,
                         migrate_data=None):
@@ -4509,10 +4567,31 @@ class LibvirtDriver(driver.ComputeDriver):
             logical_sum = reduce(lambda x, y: x | y, flagvals)
 
             dom = self._lookup_by_name(instance["name"])
-            dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
-                             logical_sum,
-                             None,
-                             CONF.libvirt.live_migration_bandwidth)
+
+            pre_live_migrate_data = (migrate_data or {}).get(
+                                        'pre_live_migration_result', {})
+            listen_addrs = pre_live_migrate_data.get('graphics_listen_addrs')
+
+            migratable_flag = getattr(libvirt, 'VIR_DOMAIN_XML_MIGRATABLE',
+                                      None)
+
+            if migratable_flag is None or listen_addrs is None:
+                self._check_graphics_addresses_can_live_migrate(listen_addrs)
+                dom.migrateToURI(CONF.libvirt.live_migration_uri % dest,
+                                 logical_sum,
+                                 None,
+                                 CONF.libvirt.live_migration_bandwidth)
+            else:
+                old_xml_str = dom.XMLDesc(migratable_flag)
+                new_xml_str = self._correct_listen_addr(old_xml_str,
+                                                        listen_addrs)
+
+                dom.migrateToURI2(CONF.libvirt.live_migration_uri % dest,
+                                  None,
+                                  new_xml_str,
+                                  logical_sum,
+                                  None,
+                                  CONF.libvirt.live_migration_bandwidth)
 
         except Exception as e:
             with excutils.save_and_reraise_exception():
@@ -4635,6 +4714,12 @@ class LibvirtDriver(driver.ComputeDriver):
                               'max_retry': max_retry},
                              instance=instance)
                     greenthread.sleep(1)
+
+        res_data = {'graphics_listen_addrs': {}}
+        res_data['graphics_listen_addrs']['vnc'] = CONF.vncserver_listen
+        res_data['graphics_listen_addrs']['spice'] = CONF.spice.server_listen
+
+        return res_data
 
     def _create_images_and_backing(self, context, instance, instance_dir,
                                    disk_info_json):
