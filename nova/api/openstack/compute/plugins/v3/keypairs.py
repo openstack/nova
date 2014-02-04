@@ -18,7 +18,7 @@
 import webob
 import webob.exc
 
-from nova.api.openstack.compute.schemas.v3 import keypairs_schema
+from nova.api.openstack.compute.schemas.v3 import keypairs
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -50,7 +50,7 @@ class KeypairController(object):
 
     @extensions.expected_errors((400, 409, 413))
     @wsgi.response(201)
-    @validation.schema(request_body_schema=keypairs_schema.create)
+    @validation.schema(keypairs.create)
     def create(self, req, body):
         """
         Create or import keypair.

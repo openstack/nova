@@ -15,7 +15,7 @@
 
 import webob.exc
 
-from nova.api.openstack.compute.schemas.v3 import agents_schema
+from nova.api.openstack.compute.schemas.v3 import agents as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -74,7 +74,7 @@ class AgentController(object):
         return {'agents': agents}
 
     @extensions.expected_errors((400, 404))
-    @validation.schema(request_body_schema=agents_schema.update)
+    @validation.schema(schema.update)
     def update(self, req, id, body):
         """Update an existing agent build."""
         context = req.environ['nova.context']
@@ -110,7 +110,7 @@ class AgentController(object):
 
     @extensions.expected_errors((400, 409))
     @wsgi.response(201)
-    @validation.schema(request_body_schema=agents_schema.create)
+    @validation.schema(schema.create)
     def create(self, req, body):
         """Creates a new agent build."""
         context = req.environ['nova.context']
