@@ -1537,15 +1537,6 @@ class ComputeManager(manager.Manager):
             self.conductor_api.block_device_mapping_get_all_by_instance(
                 context, instance, legacy), legacy)
 
-    def _get_instance_volume_bdm(self, context, instance, volume_id):
-        bdms = self._get_instance_volume_bdms(context, instance)
-        for bdm in bdms:
-            # NOTE(vish): Comparing as strings because the os_api doesn't
-            #             convert to integer and we may wish to support uuids
-            #             in the future.
-            if str(bdm['volume_id']) == str(volume_id):
-                return bdm
-
     def _get_instance_volume_block_device_info(self, context, instance,
                                                refresh_conn_info=False,
                                                bdms=None):
@@ -4052,7 +4043,8 @@ class ComputeManager(manager.Manager):
         """Swap volume for an instance."""
         context = context.elevated()
 
-        bdm = self._get_instance_volume_bdm(context, instance, old_volume_id)
+        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                context, old_volume_id, instance_uuid=instance.uuid)
         connector = self.driver.get_volume_connector(instance)
         comp_ret, new_cinfo = self._swap_volume(context, instance,
                                                          bdm,
@@ -4064,17 +4056,16 @@ class ComputeManager(manager.Manager):
 
         # Update bdm
         values = {
-            'instance_uuid': instance['uuid'],
             'connection_info': jsonutils.dumps(new_cinfo),
-            'device_name': bdm['device_name'],
             'delete_on_termination': False,
-            'virtual_name': None,
+            'source_type': 'volume',
+            'destination_type': 'volume',
             'snapshot_id': None,
             'volume_id': save_volume_id,
             'volume_size': None,
             'no_device': None}
-        self.conductor_api.block_device_mapping_update_or_create(context,
-                                                                 values)
+        bdm.update(values)
+        bdm.save()
 
     @wrap_exception()
     def remove_volume_connection(self, context, volume_id, instance):

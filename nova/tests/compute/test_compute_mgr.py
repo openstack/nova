@@ -35,6 +35,7 @@ from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.compute import fake_resource_tracker
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests.objects import test_instance_info_cache
 
@@ -671,6 +672,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             if volumes[volume_id]['status'] == 'detaching':
                 volumes[volume_id]['status'] = 'in-use'
 
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                   {'device_name': '/dev/vdb', 'source_type': 'volume',
+                    'destination_type': 'volume', 'instance_uuid': 'fake',
+                    'connection_info': '{"foo": "bar"}'})
+
         def fake_vol_api_func(context, volume, *args):
             self.assertTrue(uuidutils.is_uuid_like(volume))
             return {}
@@ -723,25 +729,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.stubs.Set(self.compute.volume_api, 'terminate_connection',
                        fake_vol_api_func)
         self.stubs.Set(self.compute.volume_api, 'detach', fake_vol_detach)
-        self.stubs.Set(self.compute, '_get_instance_volume_bdm',
-                       lambda x, y, z: {'device_name': '/dev/vdb',
-                                        'connection_info': '{"foo": "bar"}'})
+        self.stubs.Set(db, 'block_device_mapping_get_by_volume_id',
+                       lambda x, y, z: fake_bdm)
         self.stubs.Set(self.compute.driver, 'get_volume_connector',
                        lambda x: {})
         self.stubs.Set(self.compute.driver, 'swap_volume',
                        lambda w, x, y, z: None)
         self.stubs.Set(self.compute.volume_api, 'migrate_volume_completion',
                       fake_vol_migrate_volume_completion)
-        self.stubs.Set(self.compute.conductor_api,
-                       'block_device_mapping_update_or_create',
-                       lambda x, y: None)
+        self.stubs.Set(db, 'block_device_mapping_update',
+                       lambda *a, **k: fake_bdm)
         self.stubs.Set(self.compute.conductor_api,
                        'instance_fault_create',
                        lambda x, y: None)
 
         # Good path
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
-                                 {'uuid': 'fake'})
+                fake_instance.fake_instance_obj(
+                    self.context, **{'uuid': 'fake'}))
         self.assertEqual(volumes[old_volume_id]['status'], 'available')
         self.assertEqual(volumes[new_volume_id]['status'], 'in-use')
 
@@ -751,7 +756,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.stubs.Set(self.compute.driver, 'swap_volume', fake_func_exc)
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
-                          {'uuid': 'fake'})
+                          fake_instance.fake_instance_obj(
+                                self.context, **{'uuid': 'fake'}))
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
@@ -761,7 +767,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        fake_func_exc)
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
-                          {'uuid': 'fake'})
+                          fake_instance.fake_instance_obj(
+                                self.context, **{'uuid': 'fake'}))
         self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
