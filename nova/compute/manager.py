@@ -1687,22 +1687,6 @@ class ComputeManager(manager.Manager):
         self.network_api.deallocate_for_instance(
             context, instance, requested_networks=requested_networks)
 
-    def _get_volume_bdms(self, bdms, legacy=True):
-        """Return only bdms that have a volume_id."""
-        if legacy:
-            return [bdm for bdm in bdms if bdm['volume_id']]
-        else:
-            return [bdm for bdm in bdms
-                    if bdm['destination_type'] == 'volume']
-
-    # NOTE(danms): Legacy interface for digging up volumes in the database
-    def _get_instance_volume_bdms(self, context, instance, legacy=True):
-        if isinstance(instance, instance_obj.Instance):
-            instance = obj_base.obj_to_primitive(instance)
-        return self._get_volume_bdms(
-            self.conductor_api.block_device_mapping_get_all_by_instance(
-                context, instance, legacy), legacy)
-
     def _get_instance_volume_block_device_info(self, context, instance,
                                                refresh_conn_info=False,
                                                bdms=None):
@@ -4476,23 +4460,27 @@ class ComputeManager(manager.Manager):
         LOG.info(_('_post_live_migration() is started..'),
                  instance=instance_ref)
 
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                ctxt, instance_ref['uuid'])
+
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_volume_block_device_info(
-                            ctxt, instance_ref)
+                            ctxt, instance_ref, bdms)
         self.driver.post_live_migration(ctxt, instance_ref, block_device_info,
                                         migrate_data)
 
         # Detaching volumes.
         connector = self.driver.get_volume_connector(instance_ref)
-        for bdm in self._get_instance_volume_bdms(ctxt, instance_ref):
+        for bdm in bdms:
             # NOTE(vish): We don't want to actually mark the volume
             #             detached, or delete the bdm, just remove the
             #             connection from this host.
 
             # remove the volume connection without detaching from hypervisor
             # because the instance is not running anymore on the current host
-            self.volume_api.terminate_connection(ctxt, bdm['volume_id'],
-                                                 connector)
+            if bdm.is_volume:
+                self.volume_api.terminate_connection(ctxt, bdm.volume_id,
+                                                     connector)
 
         # Releasing vlan.
         # (not necessary in current implementation?)
@@ -4640,10 +4628,11 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
         self.network_api.setup_networks_on_host(context, instance, self.host)
 
-        for bdm in self._get_instance_volume_bdms(context, instance):
-            volume_id = bdm['volume_id']
-            self.compute_rpcapi.remove_volume_connection(context, instance,
-                    volume_id, dest)
+        for bdm in (block_device_obj.BlockDeviceMappingList.
+                    get_by_instance_uuid(context, instance['uuid'])):
+            if bdm.is_volume:
+                self.compute_rpcapi.remove_volume_connection(context, instance,
+                        bdm.volume_id, dest)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.start")

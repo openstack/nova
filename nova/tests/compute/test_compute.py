@@ -5016,7 +5016,16 @@ class ComputeTestCase(BaseTestCase):
         updated_instance = self._create_fake_instance_obj(
                                                {'host': 'fake-dest-host'})
         dest_host = updated_instance['host']
-        fake_bdms = [dict(volume_id='vol1-id'), dict(volume_id='vol2-id')]
+        fake_bdms = [
+                block_device_obj.BlockDeviceMapping(
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                        {'volume_id': 'vol1-id', 'source_type': 'volume',
+                         'destination_type': 'volume'})),
+                block_device_obj.BlockDeviceMapping(
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                        {'volume_id': 'vol2-id', 'source_type': 'volume',
+                         'destination_type': 'volume'}))
+        ]
 
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver,
@@ -5024,7 +5033,8 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
         self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.mox.StubOutWithMock(self.compute, '_get_instance_volume_bdms')
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
@@ -5045,8 +5055,8 @@ class ComputeTestCase(BaseTestCase):
                         updated_instance)
         self.compute.network_api.setup_networks_on_host(c,
                 updated_instance, self.compute.host)
-        self.compute._get_instance_volume_bdms(c,
-                updated_instance).AndReturn(fake_bdms)
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(c,
+                updated_instance['uuid']).AndReturn(fake_bdms)
         self.compute.compute_rpcapi.remove_volume_connection(
                 c, updated_instance, 'vol1-id', dest_host)
         self.compute.compute_rpcapi.remove_volume_connection(
@@ -5221,6 +5231,54 @@ class ComputeTestCase(BaseTestCase):
             setup_networks_on_host.assert_has_calls([
                 mock.call(c, inst_ref, self.compute.host, teardown=True)])
             clear_events.assert_called_once_with(inst_ref)
+
+    def test_post_live_migration_terminate_volume_connections(self):
+        c = context.get_admin_context()
+        inst_ref = jsonutils.to_primitive(self._create_fake_instance({
+                                'host': self.compute.host,
+                                'state_description': 'migrating',
+                                'state': power_state.PAUSED}))
+        db.instance_update(c, inst_ref['uuid'],
+                           {'task_state': task_states.MIGRATING,
+                            'power_state': power_state.PAUSED})
+
+        bdms = block_device_obj.block_device_make_list(c,
+                [fake_block_device.FakeDbBlockDeviceDict({
+                    'source_type': 'blank', 'guest_format': None,
+                    'destination_type': 'local'}),
+                 fake_block_device.FakeDbBlockDeviceDict({
+                    'source_type': 'volume', 'destination_type': 'volume',
+                    'volume_id': 'fake-volume-id'}),
+                 ])
+
+        with contextlib.nested(
+            mock.patch.object(self.compute.conductor_api,
+                              'network_migrate_instance_start'),
+            mock.patch.object(self.compute.compute_rpcapi,
+                              'post_live_migration_at_destination'),
+            mock.patch.object(self.compute.network_api,
+                              'setup_networks_on_host'),
+            mock.patch.object(self.compute.instance_events,
+                              'clear_events_for_instance'),
+            mock.patch.object(self.compute,
+                              '_get_instance_volume_block_device_info'),
+            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                              'get_by_instance_uuid'),
+            mock.patch.object(self.compute.driver, 'get_volume_connector'),
+            mock.patch.object(cinder.API, 'terminate_connection')
+        ) as (
+            network_migrate_instance_start, post_live_migration_at_destination,
+            setup_networks_on_host, clear_events_for_instance,
+            get_instance_volume_block_device_info, get_by_instance_uuid,
+            get_volume_connector, terminate_connection
+        ):
+            get_by_instance_uuid.return_value = bdms
+            get_volume_connector.return_value = 'fake-connector'
+
+            self.compute._post_live_migration(c, inst_ref, 'dest_host')
+
+            terminate_connection.assert_called_once_with(
+                    c, 'fake-volume-id', 'fake-connector')
 
     def _begin_post_live_migration_at_destination(self):
         self.mox.StubOutWithMock(self.compute.network_api,
