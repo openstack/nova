@@ -53,6 +53,9 @@ LOG = logging.getLogger(__name__)
 VALID_ID_REGEX = re.compile("^[\w\.\- ]*$")
 VALID_NAME_REGEX = re.compile("^[\w\.\- ]*$", re.UNICODE)
 
+# Validate extra specs key names.
+VALID_EXTRASPEC_NAME_REGEX = re.compile(r"[\w\.\- :]+$", re.UNICODE)
+
 
 def _int_or_none(val):
     if val is not None:
@@ -307,3 +310,11 @@ def delete_flavor_info(metadata, *prefixes):
             del metadata[to_key]
     pci_request.delete_flavor_pci_info(metadata, *prefixes)
     return metadata
+
+
+def validate_extra_spec_keys(key_names_list):
+    for key_name in key_names_list:
+        if not VALID_EXTRASPEC_NAME_REGEX.match(key_name):
+            expl = _('Key Names can only contain alphanumeric characters, '
+                     'periods, dashes, underscores, colons and spaces.')
+            raise exception.InvalidInput(message=expl)

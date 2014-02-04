@@ -17,6 +17,7 @@ import webob
 
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
@@ -41,6 +42,12 @@ class FlavorExtraSpecsController(object):
             expl = _('No Request Body')
             raise webob.exc.HTTPBadRequest(explanation=expl)
 
+    def _check_key_names(self, keys):
+        try:
+            flavors.validate_extra_spec_keys(keys)
+        except exception.InvalidInput as error:
+            raise webob.exc.HTTPBadRequest(explanation=error.format_message())
+
     @extensions.expected_errors(())
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
@@ -57,6 +64,7 @@ class FlavorExtraSpecsController(object):
         specs = body.get('extra_specs', {})
         if not specs or type(specs) is not dict:
             raise webob.exc.HTTPBadRequest(_('No or bad extra_specs provided'))
+        self._check_key_names(specs.keys())
         try:
             db.flavor_extra_specs_update_or_create(context, flavor_id,
                                                           specs)
