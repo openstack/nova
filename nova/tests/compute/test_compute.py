@@ -686,7 +686,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(self.compute.driver, 'block_stats')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
-        self.mox.StubOutWithMock(self.compute, '_get_instance_volume_bdm')
 
         # The following methods will be called
         db.block_device_mapping_get_by_volume_id(self.context, 1, []).\
@@ -702,8 +701,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                         'wr_req': 1,
                         'wr_bytes': 5,
                         'instance': instance}])
-        self.compute._get_instance_volume_bdm(
-                self.context, instance, 1).AndReturn(legacy_bdm)
+        db.block_device_mapping_get_by_volume_id(self.context, 1, []).\
+            AndReturn(bdm)
 
         self.mox.ReplayAll()
 
@@ -8556,9 +8555,10 @@ class ComputeAPITestCase(BaseTestCase):
         called = {}
         instance = self._create_fake_instance()
 
-        def fake_get_instance_volume_bdm(*args, **kwargs):
-            return {'device_name': '/dev/vdb', 'volume_id': 1,
-                    'connection_info': '{"test": "test"}'}
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'device_name': '/dev/vdb', 'volume_id': 1,
+                 'source_type': 'snapshot', 'destination_type': 'volume',
+                 'connection_info': '{"test": "test"}'})
 
         def fake_libvirt_driver_instance_exists(*args, **kwargs):
             called['fake_libvirt_driver_instance_exists'] = True
@@ -8572,12 +8572,17 @@ class ComputeAPITestCase(BaseTestCase):
             called['fake_roll_detaching'] = True
 
         self.stubs.Set(cinder.API, 'roll_detaching', fake_roll_detaching)
-        self.stubs.Set(self.compute, "_get_instance_volume_bdm",
-                       fake_get_instance_volume_bdm)
         self.stubs.Set(self.compute.driver, "instance_exists",
                        fake_libvirt_driver_instance_exists)
         self.stubs.Set(self.compute.driver, "detach_volume",
                        fake_libvirt_driver_detach_volume_fails)
+
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping,
+                                 'get_by_volume_id')
+        block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                self.context, 1).AndReturn(block_device_obj.BlockDeviceMapping(
+                    **fake_bdm))
+        self.mox.ReplayAll()
 
         self.assertRaises(AttributeError, self.compute.detach_volume,
                           self.context, 1, instance)

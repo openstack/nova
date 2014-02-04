@@ -3910,14 +3910,14 @@ class ComputeManager(manager.Manager):
 
     def _detach_volume(self, context, instance, bdm):
         """Do the actual driver detach using block device mapping."""
-        mp = bdm['device_name']
-        volume_id = bdm['volume_id']
+        mp = bdm.device_name
+        volume_id = bdm.volume_id
 
         LOG.audit(_('Detach volume %(volume_id)s from mountpoint %(mp)s'),
                   {'volume_id': volume_id, 'mp': mp},
                   context=context, instance=instance)
 
-        connection_info = jsonutils.loads(bdm['connection_info'])
+        connection_info = jsonutils.loads(bdm.connection_info)
         # NOTE(vish): We currently don't use the serial when disconnecting,
         #             but added for completeness in case we ever do.
         if connection_info and 'serial' not in connection_info:
@@ -3947,10 +3947,11 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance):
         """Detach a volume from an instance."""
-        bdm = self._get_instance_volume_bdm(context, instance, volume_id)
+        bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                context, volume_id)
         if CONF.volume_usage_poll_interval > 0:
             vol_stats = []
-            mp = bdm['device_name']
+            mp = bdm.device_name
             # Handle bootable volumes which will not contain /dev/
             if '/dev/' in mp:
                 mp = mp[5:]
@@ -3972,8 +3973,7 @@ class ComputeManager(manager.Manager):
         connector = self.driver.get_volume_connector(instance)
         self.volume_api.terminate_connection(context, volume_id, connector)
         self.volume_api.detach(context.elevated(), volume_id)
-        self.conductor_api.block_device_mapping_destroy_by_instance_and_volume(
-            context, instance, volume_id)
+        bdm.destroy()
         info = dict(volume_id=volume_id)
         self._notify_about_instance_usage(
             context, instance, "volume.detach", extra_usage_info=info)
@@ -4083,7 +4083,8 @@ class ComputeManager(manager.Manager):
         #             detached, or delete the bdm, just remove the
         #             connection from this host.
         try:
-            bdm = self._get_instance_volume_bdm(context, instance, volume_id)
+            bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
+                    context, volume_id)
             self._detach_volume(context, instance, bdm)
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
