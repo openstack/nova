@@ -483,55 +483,141 @@ class LibvirtVifTestCase(test.TestCase):
             delete.side_effect = processutils.ProcessExecutionError
             d.unplug_ivs_ethernet(None, self.vif_ovs)
 
-    def test_unplug_ovs_hybrid(self):
+    def test_plug_ovs_hybrid(self):
         calls = {
             'device_exists': [mock.call('qbrvif-xxx-yyy'),
                               mock.call('qvovif-xxx-yyy')],
-            'execute': [mock.call('brctl', 'delif', 'qbrvif-xxx-yyy',
-                                  'qvbvif-xxx-yyy', run_as_root=True),
-                        mock.call('ip', 'link', 'set',
-                                  'qbrvif-xxx-yyy', 'down', run_as_root=True),
-                        mock.call('brctl', 'delbr',
-                                  'qbrvif-xxx-yyy', run_as_root=True),
-                        mock.call('ovs-vsctl', '--timeout=120', 'del-port',
-                                  'br0', 'qvovif-xxx-yyy', run_as_root=True),
-                        mock.call('ip', 'link', 'delete',
-                                  'qvovif-xxx-yyy', run_as_root=True,
-                                  check_exit_code=[0, 2, 254])]
-        }
-        with contextlib.nested(
-                mock.patch.object(linux_net, 'device_exists',
-                                  return_value=True),
-                mock.patch.object(utils, 'execute'),
-                mock.patch.object(linux_net, 'delete_ivs_vif_port')
-        ) as (device_exists, execute, delete_ivs_vif_port):
-            d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
-            d.unplug_ovs_hybrid(None, self.vif_ovs)
-            device_exists.assert_has_calls(calls['device_exists'])
-            execute.assert_has_calls(calls['execute'])
-            delete_ivs_vif_port.assert_has_calls([])
-
-    def test_unplug_ovs_hybrid_bridge_does_not_exist(self):
-        calls = {
-            'device_exists': [mock.call('qbrvif-xxx-yyy'),
-                              mock.call('qvovif-xxx-yyy')],
-            'execute': [mock.call('ovs-vsctl', '--timeout=120',
-                                  'del-port', 'br0',
-                                  'qvovif-xxx-yyy', run_as_root=True)]
+            '_create_veth_pair': [mock.call('qvbvif-xxx-yyy',
+                                            'qvovif-xxx-yyy')],
+            'execute': [mock.call('brctl', 'addbr', 'qbrvif-xxx-yyy',
+                                  run_as_root=True),
+                        mock.call('brctl', 'setfd', 'qbrvif-xxx-yyy', 0,
+                                  run_as_root=True),
+                        mock.call('brctl', 'stp', 'qbrvif-xxx-yyy', 'off',
+                                  run_as_root=True),
+                        mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
+                                          '/bridge/multicast_snooping'),
+                                  process_input='0', run_as_root=True,
+                                  check_exit_code=[0, 1]),
+                        mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
+                                  run_as_root=True),
+                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
+                                  'qvbvif-xxx-yyy', run_as_root=True)],
+            'create_ovs_vif_port': [mock.call('br0',
+                                              'qvovif-xxx-yyy', 'aaa-bbb-ccc',
+                                              'ca:fe:de:ad:be:ef',
+                                              'instance-uuid')]
         }
         with contextlib.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
                 mock.patch.object(utils, 'execute'),
-                mock.patch.object(linux_net, 'delete_ivs_vif_port')
-        ) as (device_exists, execute, delete_ivs_vif_port):
+                mock.patch.object(linux_net, '_create_veth_pair'),
+                mock.patch.object(linux_net, 'create_ovs_vif_port')
+        ) as (device_exists, execute, _create_veth_pair, create_ovs_vif_port):
+            d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+            d.plug_ovs_hybrid(self.instance, self.vif_ovs)
+            device_exists.assert_has_calls(calls['device_exists'])
+            _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
+            execute.assert_has_calls(calls['execute'])
+            create_ovs_vif_port.assert_has_calls(calls['create_ovs_vif_port'])
+
+    def test_unplug_ovs_hybrid(self):
+        calls = {
+            'device_exists': [mock.call('qbrvif-xxx-yyy')],
+            'execute': [mock.call('brctl', 'delif', 'qbrvif-xxx-yyy',
+                                  'qvbvif-xxx-yyy', run_as_root=True),
+                        mock.call('ip', 'link', 'set',
+                                  'qbrvif-xxx-yyy', 'down', run_as_root=True),
+                        mock.call('brctl', 'delbr',
+                                  'qbrvif-xxx-yyy', run_as_root=True)],
+            'delete_ovs_vif_port': [mock.call('br0', 'qvovif-xxx-yyy')]
+        }
+        with contextlib.nested(
+                mock.patch.object(linux_net, 'device_exists',
+                                  return_value=True),
+                mock.patch.object(utils, 'execute'),
+                mock.patch.object(linux_net, 'delete_ovs_vif_port')
+        ) as (device_exists, execute, delete_ovs_vif_port):
             d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
             d.unplug_ovs_hybrid(None, self.vif_ovs)
             device_exists.assert_has_calls(calls['device_exists'])
             execute.assert_has_calls(calls['execute'])
-            delete_ivs_vif_port.assert_has_calls([])
+            delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
+
+    def test_unplug_ovs_hybrid_bridge_does_not_exist(self):
+        calls = {
+            'device_exists': [mock.call('qbrvif-xxx-yyy')],
+            'delete_ovs_vif_port': [mock.call('br0', 'qvovif-xxx-yyy')]
+        }
+        with contextlib.nested(
+                mock.patch.object(linux_net, 'device_exists',
+                                  return_value=False),
+                mock.patch.object(linux_net, 'delete_ovs_vif_port')
+        ) as (device_exists, delete_ovs_vif_port):
+            d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+            d.unplug_ovs_hybrid(None, self.vif_ovs)
+            device_exists.assert_has_calls(calls['device_exists'])
+            delete_ovs_vif_port.assert_has_calls(calls['delete_ovs_vif_port'])
+
+    def test_plug_ivs_hybrid(self):
+        calls = {
+            'device_exists': [mock.call('qbrvif-xxx-yyy'),
+                              mock.call('qvovif-xxx-yyy')],
+            '_create_veth_pair': [mock.call('qvbvif-xxx-yyy',
+                                            'qvovif-xxx-yyy')],
+            'execute': [mock.call('brctl', 'addbr', 'qbrvif-xxx-yyy',
+                                  run_as_root=True),
+                        mock.call('brctl', 'setfd', 'qbrvif-xxx-yyy', 0,
+                                  run_as_root=True),
+                        mock.call('brctl', 'stp', 'qbrvif-xxx-yyy', 'off',
+                                  run_as_root=True),
+                        mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
+                                          '/bridge/multicast_snooping'),
+                                  process_input='0', run_as_root=True,
+                                  check_exit_code=[0, 1]),
+                        mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
+                                  run_as_root=True),
+                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
+                                  'qvbvif-xxx-yyy', run_as_root=True)],
+            'create_ivs_vif_port': [mock.call('qvovif-xxx-yyy', 'aaa-bbb-ccc',
+                                              'ca:fe:de:ad:be:ef',
+                                              'instance-uuid')]
+        }
+        with contextlib.nested(
+                mock.patch.object(linux_net, 'device_exists',
+                                  return_value=False),
+                mock.patch.object(utils, 'execute'),
+                mock.patch.object(linux_net, '_create_veth_pair'),
+                mock.patch.object(linux_net, 'create_ivs_vif_port')
+        ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port):
+            d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+            d.plug_ivs_hybrid(self.instance, self.vif_ivs)
+            device_exists.assert_has_calls(calls['device_exists'])
+            _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
+            execute.assert_has_calls(calls['execute'])
+            create_ivs_vif_port.assert_has_calls(calls['create_ivs_vif_port'])
 
     def test_unplug_ivs_hybrid(self):
+        calls = {
+            'execute': [mock.call('brctl', 'delif', 'qbrvif-xxx-yyy',
+                                  'qvbvif-xxx-yyy', run_as_root=True),
+                        mock.call('ip', 'link', 'set',
+                                  'qbrvif-xxx-yyy', 'down', run_as_root=True),
+                        mock.call('brctl', 'delbr',
+                                  'qbrvif-xxx-yyy', run_as_root=True)],
+            'delete_ivs_vif_port': [mock.call('qvovif-xxx-yyy')]
+        }
+        with contextlib.nested(
+                mock.patch.object(utils, 'execute'),
+                mock.patch.object(linux_net, 'delete_ivs_vif_port')
+        ) as (execute, delete_ivs_vif_port):
+            d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+            d.unplug_ivs_hybrid(None, self.vif_ivs)
+            execute.assert_has_calls(calls['execute'])
+            delete_ivs_vif_port.assert_has_calls(calls['delete_ivs_vif_port'])
+
+    def test_unplug_ivs_hybrid_bridge_does_not_exist(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
         with mock.patch.object(utils, 'execute') as execute:
             execute.side_effect = processutils.ProcessExecutionError
