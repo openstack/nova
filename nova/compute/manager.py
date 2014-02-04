@@ -2932,13 +2932,15 @@ class ComputeManager(manager.Manager):
                                                               migration_p)
 
             network_info = self._get_instance_nw_info(context, instance)
+            bdms = (block_device_obj.BlockDeviceMappingList.
+                    get_by_instance_uuid(context, instance.uuid))
             block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance)
+                                context, instance, bdms=bdms)
 
             self.driver.destroy(context, instance, network_info,
                                 block_device_info)
 
-            self._terminate_volume_connections(context, instance)
+            self._terminate_volume_connections(context, instance, bdms)
 
             migration.status = 'reverted'
             migration.save(context.elevated())
@@ -3185,15 +3187,17 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                 context, instance, "resize.start", network_info=network_info)
 
+            bdms = (block_device_obj.BlockDeviceMappingList.
+                    get_by_instance_uuid(context, instance.uuid))
             block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance)
+                                context, instance, bdms=bdms)
 
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration.dest_host,
                     instance_type, network_info,
                     block_device_info)
 
-            self._terminate_volume_connections(context, instance)
+            self._terminate_volume_connections(context, instance, bdms)
 
             migration_p = obj_base.obj_to_primitive(migration)
             instance_p = obj_base.obj_to_primitive(instance)
@@ -3216,12 +3220,11 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
 
-    def _terminate_volume_connections(self, context, instance):
-        bdms = self._get_instance_volume_bdms(context, instance)
-        if bdms:
-            connector = self.driver.get_volume_connector(instance)
-            for bdm in bdms:
-                self.volume_api.terminate_connection(context, bdm['volume_id'],
+    def _terminate_volume_connections(self, context, instance, bdms):
+        connector = self.driver.get_volume_connector(instance)
+        for bdm in bdms:
+            if bdm.is_volume:
+                self.volume_api.terminate_connection(context, bdm.volume_id,
                                                      connector)
 
     def _finish_resize(self, context, instance, migration, disk_info,
