@@ -1,6 +1,6 @@
 # coding=utf-8
 
-# Copyright 2012 Hewlett-Packard Development Company, L.P.
+# Copyright 2012,2014 Hewlett-Packard Development Company, L.P.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,9 +19,11 @@
 
 import errno
 import os
+import tempfile
 
 from nova import test
 from nova.virt.baremetal import utils
+from nova.virt.libvirt import utils as libvirt_utils
 
 
 class BareMetalUtilsTestCase(test.NoDBTestCase):
@@ -64,3 +66,12 @@ class BareMetalUtilsTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
         utils.create_link_without_raise("/fake/source", "/fake/link")
         self.mox.VerifyAll()
+
+    def test_cache_image_with_clean(self):
+        self.mox.StubOutWithMock(libvirt_utils, "fetch_image")
+        temp_f, temp_file = tempfile.mkstemp()
+        libvirt_utils.fetch_image(None, temp_file, None, None, None)
+        self.mox.ReplayAll()
+        utils.cache_image(None, temp_file, None, None, None, clean=True)
+        self.mox.VerifyAll()
+        self.assertFalse(os.path.exists(temp_file))

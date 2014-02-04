@@ -216,9 +216,13 @@ class TileraPrivateMethodsTestCase(BareMetalTileraTestCase):
 
     def test_cache_image(self):
         self.mox.StubOutWithMock(os, 'makedirs')
+        self.mox.StubOutWithMock(os, 'unlink')
         self.mox.StubOutWithMock(os.path, 'exists')
-        os.makedirs(tilera.get_image_dir_path(self.instance)).\
-                AndReturn(True)
+        os.makedirs(tilera.get_image_dir_path(self.instance)).AndReturn(True)
+        disk_path = os.path.join(
+            tilera.get_image_dir_path(self.instance), 'disk')
+        os.path.exists(disk_path).AndReturn(True)
+        os.unlink(disk_path).AndReturn(None)
         os.path.exists(tilera.get_image_file_path(self.instance)).\
                 AndReturn(True)
         self.mox.ReplayAll()
