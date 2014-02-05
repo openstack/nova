@@ -433,6 +433,9 @@
 # value)
 #console_manager=nova.console.manager.ConsoleProxyManager
 
+# Manager for console auth (string value)
+#consoleauth_manager=nova.consoleauth.manager.ConsoleAuthManager
+
 # Full class name for the Manager for cert (string value)
 #cert_manager=nova.cert.manager.CertManager
 
@@ -1074,9 +1077,6 @@
 
 # How many seconds before deleting tokens (integer value)
 #console_token_ttl=600
-
-# Manager for console auth (string value)
-#consoleauth_manager=nova.consoleauth.manager.ConsoleAuthManager
 
 
 #

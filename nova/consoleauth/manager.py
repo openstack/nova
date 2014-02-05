@@ -36,10 +36,7 @@ LOG = logging.getLogger(__name__)
 consoleauth_opts = [
     cfg.IntOpt('console_token_ttl',
                default=600,
-               help='How many seconds before deleting tokens'),
-    cfg.StrOpt('consoleauth_manager',
-               default='nova.consoleauth.manager.ConsoleAuthManager',
-               help='Manager for console auth'),
+               help='How many seconds before deleting tokens')
     ]
 
 CONF = cfg.CONF
