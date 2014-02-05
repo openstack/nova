@@ -827,6 +827,15 @@ class _TestInstanceObject(object):
         self.assertEqual({}, inst.obj_get_changes())
         db_delete.assert_called_once_with(self.context, inst.uuid, 'foo')
 
+    def test_reset_changes(self):
+        inst = instance.Instance()
+        inst.metadata = {'1985': 'present'}
+        inst.system_metadata = {'1955': 'past'}
+        self.assertEqual({}, inst._orig_metadata)
+        inst.obj_reset_changes(['metadata'])
+        self.assertEqual({'1985': 'present'}, inst._orig_metadata)
+        self.assertEqual({}, inst._orig_system_metadata)
+
 
 class TestInstanceObject(test_objects._LocalTest,
                          _TestInstanceObject):
