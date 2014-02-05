@@ -40,6 +40,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import pci_device as pci_device_obj
 from nova.openstack.common import fileutils
@@ -6006,14 +6007,15 @@ class LibvirtConnTestCase(test.TestCase):
         else:
             raise ValueError("Unhandled method %" % method_name)
 
-        virtapi = fake.FakeVirtAPI()
-        fake_flavor_id = test_instance['instance_type_id']
-        fake_flavor = virtapi.flavor_get(self.context, fake_flavor_id)
+        fake_flavor = flavor_obj.Flavor.get_by_id(
+            self.context, test_instance['instance_type_id'])
         expected = conn.vif_driver.get_config(test_instance, network_info[0],
-                                              fake_image_meta, fake_flavor)
+                                              fake_image_meta,
+                                              fake_flavor)
         self.mox.StubOutWithMock(conn.vif_driver, 'get_config')
         conn.vif_driver.get_config(test_instance, network_info[0],
-                                   fake_image_meta, fake_flavor).\
+                                   fake_image_meta,
+                                   mox.IsA(flavor_obj.Flavor)).\
                                    AndReturn(expected)
 
         self.mox.ReplayAll()

@@ -70,6 +70,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
@@ -1350,13 +1351,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        inst_type = self.virtapi.flavor_get(
+        flavor = flavor_obj.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
-                                         inst_type)
+                                         flavor)
         try:
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
             state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
@@ -1371,10 +1372,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        inst_type = self.virtapi.flavor_get(
+        flavor = flavor_obj.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
-        cfg = self.vif_driver.get_config(instance, vif, None, inst_type)
+        cfg = self.vif_driver.get_config(instance, vif, None, flavor)
         try:
             self.vif_driver.unplug(instance, vif)
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
@@ -3016,7 +3017,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
 
-        inst_type = self.virtapi.flavor_get(
+        flavor = flavor_obj.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)
@@ -3029,12 +3030,12 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.name = instance['name']
         guest.uuid = instance['uuid']
         # We are using default unit for memory: KiB
-        guest.memory = inst_type['memory_mb'] * units.Ki
-        guest.vcpus = inst_type['vcpus']
+        guest.memory = flavor.memory_mb * units.Ki
+        guest.vcpus = flavor.vcpus
         guest.cpuset = CONF.vcpu_pin_set
 
         quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
-        for key, value in inst_type['extra_specs'].iteritems():
+        for key, value in flavor.extra_specs.iteritems():
             scope = key.split(':')
             if len(scope) > 1 and scope[0] == 'quota':
                 if scope[1] in quota_items:
@@ -3152,14 +3153,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  disk_info,
                                                  rescue,
                                                  block_device_info,
-                                                 inst_type):
+                                                 flavor):
             guest.add_device(cfg)
 
         for vif in network_info:
             cfg = self.vif_driver.get_config(instance,
                                              vif,
                                              image_meta,
-                                             inst_type)
+                                             flavor)
             guest.add_device(cfg)
 
         if ((CONF.libvirt.virt_type == "qemu" or
