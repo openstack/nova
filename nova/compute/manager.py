@@ -62,6 +62,7 @@ from nova.network.security_group import openstack_driver
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
@@ -3165,8 +3166,8 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance.uuid,
                                                    reservations):
             if not instance_type:
-                instance_type = self.conductor_api.instance_type_get(context,
-                        migration['new_instance_type_id'])
+                instance_type = flavor_obj.Flavor.get_by_id(
+                    context, migration['new_instance_type_id'])
 
             network_info = self._get_instance_nw_info(context, instance)
 
