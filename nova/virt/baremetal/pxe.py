@@ -26,6 +26,7 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova import exception
+from nova.objects import flavor as flavor_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import fileutils
 from nova.openstack.common.gettextutils import _
@@ -333,7 +334,8 @@ class PXE(base.NodeDriver):
     def cache_images(self, context, node, instance,
             admin_password, image_meta, injected_files, network_info):
         """Prepare all the images for this instance."""
-        flavor = self.virtapi.flavor_get(context, instance['instance_type_id'])
+        flavor = flavor_obj.Flavor.get_by_id(context,
+                                             instance['instance_type_id'])
         tftp_image_info = get_tftp_image_info(instance, flavor)
         self._cache_tftp_images(context, instance, tftp_image_info)
 
@@ -377,7 +379,8 @@ class PXE(base.NodeDriver):
             ./pxelinux.cfg/
                  {mac} -> ../{uuid}/config
         """
-        flavor = self.virtapi.flavor_get(context, instance['instance_type_id'])
+        flavor = flavor_obj.Flavor.get_by_id(context,
+                                             instance['instance_type_id'])
         image_info = get_tftp_image_info(instance, flavor)
         (root_mb, swap_mb, ephemeral_mb) = get_partition_sizes(instance)
         pxe_config_file_path = get_pxe_config_file_path(instance)

@@ -26,6 +26,7 @@ from oslo.config import cfg
 from testtools import matchers
 
 from nova import exception
+from nova.objects import flavor as flavor_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
@@ -437,14 +438,15 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_cache_images(self):
         self._create_node()
-        self.mox.StubOutWithMock(self.driver.virtapi, 'flavor_get')
+        self.mox.StubOutWithMock(flavor_obj.Flavor, 'get_by_id')
         self.mox.StubOutWithMock(pxe, "get_tftp_image_info")
         self.mox.StubOutWithMock(self.driver, "_cache_tftp_images")
         self.mox.StubOutWithMock(self.driver, "_cache_image")
         self.mox.StubOutWithMock(self.driver, "_inject_into_image")
 
-        self.driver.virtapi.flavor_get(
-            self.context, self.instance['instance_type_id']).AndReturn({})
+        flavor_obj.Flavor.get_by_id(self.context,
+                                    self.instance['instance_type_id']
+                                    ).AndReturn({})
         pxe.get_tftp_image_info(self.instance, {}).AndReturn([])
         self.driver._cache_tftp_images(self.context, self.instance, [])
         self.driver._cache_image(self.context, self.instance, [])
@@ -500,7 +502,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         pxe_path = pxe.get_pxe_config_file_path(self.instance)
         image_path = pxe.get_image_file_path(self.instance)
 
-        self.mox.StubOutWithMock(self.driver.virtapi, 'flavor_get')
+        self.mox.StubOutWithMock(flavor_obj.Flavor, 'get_by_id')
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')
         self.mox.StubOutWithMock(pxe, 'get_partition_sizes')
         self.mox.StubOutWithMock(bm_utils, 'random_alnum')
@@ -508,8 +510,9 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         self.mox.StubOutWithMock(bm_utils, 'write_to_file')
         self.mox.StubOutWithMock(bm_utils, 'create_link_without_raise')
 
-        self.driver.virtapi.flavor_get(
-            self.context, self.instance['instance_type_id']).AndReturn({})
+        flavor_obj.Flavor.get_by_id(self.context,
+                                    self.instance['instance_type_id']
+                                    ).AndReturn({})
         pxe.get_tftp_image_info(self.instance, {}).AndReturn(image_info)
         pxe.get_partition_sizes(self.instance).AndReturn((0, 0, 0))
         bm_utils.random_alnum(32).AndReturn('alnum')
@@ -531,21 +534,21 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
 
     def test_activate_and_deactivate_bootloader(self):
         self._create_node()
-        flavor = {
-            'extra_specs': {
+        flavor = flavor_obj.Flavor(
+            context=self.context,
+            extra_specs={
                 'baremetal:deploy_kernel_id': 'eeee',
                 'baremetal:deploy_ramdisk_id': 'ffff',
-                }
-            }
+                })
         self.instance['uuid'] = 'fake-uuid'
 
-        self.mox.StubOutWithMock(self.driver.virtapi, 'flavor_get')
+        self.mox.StubOutWithMock(flavor_obj.Flavor, 'get_by_id')
         self.mox.StubOutWithMock(bm_utils, 'write_to_file')
         self.mox.StubOutWithMock(bm_utils, 'create_link_without_raise')
         self.mox.StubOutWithMock(bm_utils, 'unlink_without_raise')
         self.mox.StubOutWithMock(bm_utils, 'rmtree_without_raise')
 
-        self.driver.virtapi.flavor_get(
+        flavor_obj.Flavor.get_by_id(
             self.context, self.instance['instance_type_id']).AndReturn(
                 flavor)
 
