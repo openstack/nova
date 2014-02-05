@@ -287,13 +287,6 @@ class _BaseTestCase(object):
         self.conductor.instance_info_cache_delete(self.context,
                                                   {'uuid': 'fake-uuid'})
 
-    def test_flavor_get(self):
-        self.mox.StubOutWithMock(db, 'flavor_get')
-        db.flavor_get(self.context, 'fake-id').AndReturn('fake-type')
-        self.mox.ReplayAll()
-        result = self.conductor.instance_type_get(self.context, 'fake-id')
-        self.assertEqual(result, 'fake-type')
-
     def test_vol_get_usage_by_time(self):
         self.mox.StubOutWithMock(db, 'vol_get_usage_by_time')
         db.vol_get_usage_by_time(self.context, 'fake-time').AndReturn(

@@ -401,10 +401,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         return self._compute.conductor_api.agent_build_get_by_triple(
             context, hypervisor, os, architecture)
 
-    def flavor_get(self, context, flavor_id):
-        return self._compute.conductor_api.instance_type_get(context,
-                                                             flavor_id)
-
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):
         capi = self._compute.conductor_api

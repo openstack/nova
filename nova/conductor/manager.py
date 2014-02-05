@@ -380,6 +380,8 @@ class ConductorManager(manager.Manager):
         self.db.instance_info_cache_update(context, instance['uuid'],
                                            values)
 
+    # NOTE(danms): This method is now deprecated and can be removed in
+    # version v2.0 of the RPC API.
     def instance_type_get(self, context, instance_type_id):
         result = self.db.flavor_get(context, instance_type_id)
         return jsonutils.to_primitive(result)

@@ -125,6 +125,7 @@ class ConductorAPI(object):
     1.63 - Changed the format of values['stats'] from a dict to a JSON string
            in compute_node_update()
     1.64 - Added use_slave to instance_get_all_filters()
+    ...  - Remove instance_type_get()
     """
 
     VERSION_ALIASES = {
@@ -305,11 +306,6 @@ class ConductorAPI(object):
         instance_p = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(version='1.17')
         cctxt.call(context, 'instance_info_cache_delete', instance=instance_p)
-
-    def instance_type_get(self, context, instance_type_id):
-        cctxt = self.client.prepare(version='1.18')
-        return cctxt.call(context, 'instance_type_get',
-                          instance_type_id=instance_type_id)
 
     def vol_get_usage_by_time(self, context, start_time):
         start_time_p = jsonutils.to_primitive(start_time)
