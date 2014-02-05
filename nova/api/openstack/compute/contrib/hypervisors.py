@@ -46,6 +46,7 @@ def make_hypervisor(elem, detail):
         elem.set('running_vms')
         elem.set('cpu_info')
         elem.set('disk_available_least')
+        elem.set('host_ip')
 
         service = xmlutil.SubTemplateElement(elem, 'service',
                                              selector='service')
@@ -125,9 +126,10 @@ class HypervisorStatisticsTemplate(xmlutil.TemplateBuilder):
 class HypervisorsController(object):
     """The Hypervisors API controller for the OpenStack API."""
 
-    def __init__(self):
+    def __init__(self, ext_mgr):
         self.host_api = compute.HostAPI()
         super(HypervisorsController, self).__init__()
+        self.ext_mgr = ext_mgr
 
     def _view_hypervisor(self, hypervisor, detail, servers=None, **kwargs):
         hyp_dict = {
@@ -136,11 +138,15 @@ class HypervisorsController(object):
             }
 
         if detail and not servers:
-            for field in ('vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
-                          'memory_mb_used', 'local_gb_used',
-                          'hypervisor_type', 'hypervisor_version',
-                          'free_ram_mb', 'free_disk_gb', 'current_workload',
-                          'running_vms', 'cpu_info', 'disk_available_least'):
+            fields = ('vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
+                      'memory_mb_used', 'local_gb_used',
+                      'hypervisor_type', 'hypervisor_version',
+                      'free_ram_mb', 'free_disk_gb', 'current_workload',
+                      'running_vms', 'cpu_info', 'disk_available_least')
+            ext_loaded = self.ext_mgr.is_loaded('os-extended-hypervisors')
+            if ext_loaded:
+                fields += ('host_ip',)
+            for field in fields:
                 hyp_dict[field] = hypervisor[field]
 
             hyp_dict['service'] = {
@@ -258,7 +264,7 @@ class Hypervisors(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hypervisors',
-                HypervisorsController(),
+                HypervisorsController(self.ext_mgr),
                 collection_actions={'detail': 'GET',
                                     'statistics': 'GET'},
                 member_actions={'uptime': 'GET',

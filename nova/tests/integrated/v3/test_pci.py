@@ -45,6 +45,7 @@ class ExtendedHyervisorPciSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         self.fake_compute_node = {"cpu_info": "?",
                                   "current_workload": 0,
                                   "disk_available_least": 0,
+                                  "host_ip": "1.1.1.1",
                                   "free_disk_gb": 1028,
                                   "free_ram_mb": 7680,
                                   "hypervisor_hostname": "fake-mini",

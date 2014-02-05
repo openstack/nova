@@ -401,6 +401,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-extended-hypervisors",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedHypervisors",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_hypervisors/api/v1.1",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-instance_usage_audit_log",
             "description": "%(text)s",
             "links": [],

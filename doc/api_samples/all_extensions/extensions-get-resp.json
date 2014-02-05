@@ -281,6 +281,14 @@
             "updated": "2013-06-09T00:00:00+00:00"
         },
         {
+            "alias": "os-extended-hypervisors",
+            "description": "Extended hypervisors support.",
+            "links": [],
+            "name": "ExtendedHypervisors",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_hypervisors/api/v1.1",
+            "updated": "2013-10-21T00:00:00-00:00"
+        },
+        {
             "alias": "os-extended-services",
             "description": "Extended services support.",
             "links": [],
