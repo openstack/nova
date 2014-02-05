@@ -990,6 +990,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(len(instances), 0)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
 
+    def test_destroy_no_datastore(self):
+        self._create_vm()
+        info = self.conn.get_info({'uuid': self.uuid,
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+        instances = self.conn.list_instances()
+        self.assertEqual(len(instances), 1)
+        # Overwrite the vmPathName
+        vms = vmwareapi_fake._get_objects("VirtualMachine")
+        vm = vms.objects[0]
+        vm.set("config.files.vmPathName", None)
+        self.conn.destroy(self.context, self.instance, self.network_info)
+        instances = self.conn.list_instances()
+        self.assertEqual(len(instances), 0)
+
     def test_destroy_non_existent(self):
         self._create_instance_in_the_db()
         self.assertIsNone(self.conn.destroy(self.context, self.instance,

@@ -1004,6 +1004,7 @@ class VMwareVMOps(object):
             self._get_values_from_object_properties(props, query)
             pwr_state = query['runtime.powerState']
             vm_config_pathname = query['config.files.vmPathName']
+            datastore_name = None
             if vm_config_pathname:
                 _ds_path = vm_util.split_datastore_path(vm_config_pathname)
                 datastore_name, vmx_file_path = _ds_path
@@ -1027,7 +1028,7 @@ class VMwareVMOps(object):
                            " while un-registering the VM: %s") % str(excep))
             # Delete the folder holding the VM related content on
             # the datastore.
-            if destroy_disks:
+            if destroy_disks and datastore_name:
                 try:
                     dir_ds_compliant_path = vm_util.build_datastore_path(
                                      datastore_name,
