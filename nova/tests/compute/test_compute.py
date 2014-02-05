@@ -3461,11 +3461,11 @@ class ComputeTestCase(BaseTestCase):
                                     mox.IgnoreArg()).AndRaise(exp)
         # mox will detect if _deallocate_network gets called unexpectedly
         self.mox.ReplayAll()
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.assertRaises(exception.InstancePowerOffFailure,
                           self.compute._delete_instance,
                           self.context,
-                          instance=jsonutils.to_primitive(instance),
+                          instance=instance,
                           bdms={})
 
     def test_delete_instance_loses_net_on_other_fail(self):
@@ -3480,11 +3480,11 @@ class ComputeTestCase(BaseTestCase):
                                          mox.IgnoreArg(),
                                          mox.IgnoreArg())
         self.mox.ReplayAll()
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         self.assertRaises(test.TestingException,
                           self.compute._delete_instance,
                           self.context,
-                          instance=jsonutils.to_primitive(instance),
+                          instance=instance,
                           bdms={})
 
     def test_delete_instance_deletes_console_auth_tokens(self):
