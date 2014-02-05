@@ -18,6 +18,9 @@ import re
 session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(".*\scfg\.")
 vi_header_re = re.compile("^#\s+vim?:.+")
+virt_file_re = re.compile("\./nova/(?:tests/)?virt/(\w+)/")
+virt_import_re = re.compile("from nova\.(?:tests\.)?virt\.(\w+) import")
+virt_config_re = re.compile("CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -49,6 +52,59 @@ def use_timeutils_utcnow(logical_line):
             yield (pos, msg % f)
 
 
+def _get_virt_name(regex, data):
+    m = regex.match(data)
+    if m is None:
+        return None
+    driver = m.group(1)
+    # Ignore things we mis-detect as virt drivers in the regex
+    if driver in ["test_virt_drivers", "driver",
+                  "disk", "api", "imagecache", "cpu"]:
+        return None
+    # TODO(berrange): remove once bugs 1261826 and 126182 are
+    # fixed, or baremetal driver is removed, which is first.
+    if driver == "baremetal":
+        return None
+    return driver
+
+
+def import_no_virt_driver_import_deps(physical_line, filename):
+    """Check virt drivers' modules aren't imported by other drivers
+
+    Modules under each virt driver's directory are
+    considered private to that virt driver. Other drivers
+    in Nova must not access those drivers. Any code that
+    is to be shared should be refactored into a common
+    module
+
+    N311
+    """
+    thisdriver = _get_virt_name(virt_file_re, filename)
+    thatdriver = _get_virt_name(virt_import_re, physical_line)
+    if (thatdriver is not None and
+        thisdriver is not None and
+        thisdriver != thatdriver):
+        return (0, "N312: importing code from other virt drivers forbidden")
+
+
+def import_no_virt_driver_config_deps(physical_line, filename):
+    """Check virt drivers' config vars aren't used by other drivers
+
+    Modules under each virt driver's directory are
+    considered private to that virt driver. Other drivers
+    in Nova must not use their config vars. Any config vars
+    that are to be shared should be moved into a common module
+
+    N312
+    """
+    thisdriver = _get_virt_name(virt_file_re, filename)
+    thatdriver = _get_virt_name(virt_config_re, physical_line)
+    if (thatdriver is not None and
+        thisdriver is not None and
+        thisdriver != thatdriver):
+        return (0, "N313: using config vars from other virt drivers forbidden")
+
+
 def capital_cfg_help(logical_line, tokens):
     msg = "N500: capitalize help string"
 
@@ -78,5 +134,7 @@ def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
     register(use_timeutils_utcnow)
+    register(import_no_virt_driver_import_deps)
+    register(import_no_virt_driver_config_deps)
     register(capital_cfg_help)
     register(no_vi_headers)
