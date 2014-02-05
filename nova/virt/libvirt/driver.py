@@ -983,7 +983,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     retry = False
                     errcode = e.get_error_code()
-                    LOG.error(_('Error from libvirt during unfilter. '
+                    LOG.exception(_('Error from libvirt during unfilter. '
                                 'Code=%(errcode)s Error=%(e)s') %
                               {'errcode': errcode, 'e': e},
                               instance=instance)
