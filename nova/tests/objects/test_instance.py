@@ -947,6 +947,30 @@ class _TestInstanceListObject(object):
             self.assertEqual(inst_list.objects[i].uuid, fakes[i]['uuid'])
         self.assertRemotes()
 
+    def test_get_active_by_window_joined(self):
+        fakes = [self.fake_instance(1), self.fake_instance(2)]
+        # NOTE(mriedem): Send in a timezone-naive datetime since the
+        # InstanceList.get_active_by_window_joined method should convert it
+        # to tz-aware for the DB API call, which we'll assert with our stub.
+        dt = timeutils.utcnow()
+
+        def fake_instance_get_active_by_window_joined(context, begin, end,
+                                                      project_id, host):
+            # make sure begin is tz-aware
+            self.assertIsNotNone(begin.utcoffset())
+            self.assertIsNone(end)
+            return fakes
+
+        with mock.patch.object(db, 'instance_get_active_by_window_joined',
+                               fake_instance_get_active_by_window_joined):
+            inst_list = instance.InstanceList.get_active_by_window_joined(
+                            self.context, dt)
+
+        for fake, obj in zip(fakes, inst_list.objects):
+            self.assertIsInstance(obj, instance.Instance)
+            self.assertEqual(obj.uuid, fake['uuid'])
+        self.assertRemotes()
+
     def test_with_fault(self):
         fake_insts = [
             fake_instance.fake_db_instance(uuid='fake-uuid', host='host'),
