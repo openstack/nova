@@ -152,8 +152,8 @@ class VirtualInterfaceCreateException(NovaException):
 
 
 class VirtualInterfaceMacAddressException(NovaException):
-    msg_fmt = _("5 attempts to create virtual interface"
-                "with unique mac address failed")
+    msg_fmt = _("Creation of virtual interface with "
+                "unique mac address failed")
 
 
 class GlanceConnectionFailed(NovaException):
