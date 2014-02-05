@@ -248,6 +248,10 @@ libvirt_opts = [
                  help='Specific cachemodes to use for different disk types '
                       'e.g: file=directsync,block=none',
                 deprecated_group='DEFAULT'),
+    cfg.StrOpt('rng_dev_path',
+                help='A path to a device that will be used as source of '
+                     'entropy on the host. Permitted options are: '
+                     '/dev/random or /dev/hwrng'),
     ]
 
 CONF = cfg.CONF
@@ -3306,6 +3310,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 if rate_bytes:
                     rng_device.rate_bytes = int(rate_bytes)
                     rng_device.rate_period = int(period)
+                if (CONF.libvirt.rng_dev_path and
+                    not os.path.exists(CONF.libvirt.rng_dev_path)):
+                    raise exception.RngDeviceNotExist(
+                                    path=CONF.libvirt.rng_dev_path)
+                rng_device.backend = CONF.libvirt.rng_dev_path
                 guest.add_device(rng_device)
 
         if CONF.libvirt.virt_type in ('xen', 'qemu', 'kvm'):
