@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -20,10 +18,12 @@
 
 Initializing:
 
-* Call set_defaults with the minimal of the following kwargs:
-    sql_connection, sqlite_db
+* Call `set_defaults()` with the minimal of the following kwargs:
+  ``sql_connection``, ``sqlite_db``
 
   Example:
+
+  .. code:: python
 
     session.set_defaults(
         sql_connection="sqlite:///var/lib/nova/sqlite.db",
@@ -31,30 +31,32 @@ Initializing:
 
 Recommended ways to use sessions within this framework:
 
-* Don't use them explicitly; this is like running with AUTOCOMMIT=1.
-  model_query() will implicitly use a session when called without one
+* Don't use them explicitly; this is like running with ``AUTOCOMMIT=1``.
+  `model_query()` will implicitly use a session when called without one
   supplied. This is the ideal situation because it will allow queries
   to be automatically retried if the database connection is interrupted.
 
-    Note: Automatic retry will be enabled in a future patch.
+  .. note:: Automatic retry will be enabled in a future patch.
 
   It is generally fine to issue several queries in a row like this. Even though
   they may be run in separate transactions and/or separate sessions, each one
   will see the data from the prior calls. If needed, undo- or rollback-like
   functionality should be handled at a logical level. For an example, look at
-  the code around quotas and reservation_rollback().
+  the code around quotas and `reservation_rollback()`.
 
   Examples:
 
+  .. code:: python
+
     def get_foo(context, foo):
-        return model_query(context, models.Foo).\
-                filter_by(foo=foo).\
-                first()
+        return (model_query(context, models.Foo).
+                filter_by(foo=foo).
+                first())
 
     def update_foo(context, id, newfoo):
-        model_query(context, models.Foo).\
-                filter_by(id=id).\
-                update({'foo': newfoo})
+        (model_query(context, models.Foo).
+                filter_by(id=id).
+                update({'foo': newfoo}))
 
     def create_foo(context, values):
         foo_ref = models.Foo()
@@ -63,18 +65,26 @@ Recommended ways to use sessions within this framework:
         return foo_ref
 
 
-* Within the scope of a single method, keeping all the reads and writes within
-  the context managed by a single session. In this way, the session's __exit__
-  handler will take care of calling flush() and commit() for you.
-  If using this approach, you should not explicitly call flush() or commit().
-  Any error within the context of the session will cause the session to emit
-  a ROLLBACK. If the connection is dropped before this is possible, the
-  database will implicitly rollback the transaction.
+* Within the scope of a single method, keep all the reads and writes within
+  the context managed by a single session. In this way, the session's
+  `__exit__` handler will take care of calling `flush()` and `commit()` for
+  you. If using this approach, you should not explicitly call `flush()` or
+  `commit()`. Any error within the context of the session will cause the
+  session to emit a `ROLLBACK`. Database errors like `IntegrityError` will be
+  raised in `session`'s `__exit__` handler, and any try/except within the
+  context managed by `session` will not be triggered. And catching other
+  non-database errors in the session will not trigger the ROLLBACK, so
+  exception handlers should  always be outside the session, unless the
+  developer wants to do a partial commit on purpose. If the connection is
+  dropped before this is possible, the database will implicitly roll back the
+  transaction.
 
-     Note: statements in the session scope will not be automatically retried.
+  .. note:: Statements in the session scope will not be automatically retried.
 
   If you create models within the session, they need to be added, but you
-  do not need to call model.save()
+  do not need to call `model.save()`:
+
+  .. code:: python
 
     def create_many_foo(context, foos):
         session = get_session()
@@ -87,36 +97,60 @@ Recommended ways to use sessions within this framework:
     def update_bar(context, foo_id, newbar):
         session = get_session()
         with session.begin():
-            foo_ref = model_query(context, models.Foo, session).\
-                        filter_by(id=foo_id).\
-                        first()
-            model_query(context, models.Bar, session).\
-                        filter_by(id=foo_ref['bar_id']).\
-                        update({'bar': newbar})
+            foo_ref = (model_query(context, models.Foo, session).
+                        filter_by(id=foo_id).
+                        first())
+            (model_query(context, models.Bar, session).
+                        filter_by(id=foo_ref['bar_id']).
+                        update({'bar': newbar}))
 
-  Note: update_bar is a trivially simple example of using "with session.begin".
-  Whereas create_many_foo is a good example of when a transaction is needed,
-  it is always best to use as few queries as possible. The two queries in
-  update_bar can be better expressed using a single query which avoids
-  the need for an explicit transaction. It can be expressed like so:
+  .. note:: `update_bar` is a trivially simple example of using
+     ``with session.begin``. Whereas `create_many_foo` is a good example of
+     when a transaction is needed, it is always best to use as few queries as
+     possible.
+
+  The two queries in `update_bar` can be better expressed using a single query
+  which avoids the need for an explicit transaction. It can be expressed like
+  so:
+
+  .. code:: python
 
     def update_bar(context, foo_id, newbar):
-        subq = model_query(context, models.Foo.id).\
-                filter_by(id=foo_id).\
-                limit(1).\
-                subquery()
-        model_query(context, models.Bar).\
-                filter_by(id=subq.as_scalar()).\
-                update({'bar': newbar})
+        subq = (model_query(context, models.Foo.id).
+                filter_by(id=foo_id).
+                limit(1).
+                subquery())
+        (model_query(context, models.Bar).
+                filter_by(id=subq.as_scalar()).
+                update({'bar': newbar}))
 
-  For reference, this emits approximagely the following SQL statement:
+  For reference, this emits approximately the following SQL statement::
 
     UPDATE bar SET bar = ${newbar}
         WHERE id=(SELECT bar_id FROM foo WHERE id = ${foo_id} LIMIT 1);
 
+  .. note:: `create_duplicate_foo` is a trivially simple example of catching an
+     exception while using ``with session.begin``. Here create two duplicate
+     instances with same primary key, must catch the exception out of context
+     managed by a single session:
+
+  .. code:: python
+
+    def create_duplicate_foo(context):
+        foo1 = models.Foo()
+        foo2 = models.Foo()
+        foo1.id = foo2.id = 1
+        session = get_session()
+        try:
+            with session.begin():
+                session.add(foo1)
+                session.add(foo2)
+        except exception.DBDuplicateEntry as e:
+            handle_error(e)
+
 * Passing an active session between methods. Sessions should only be passed
   to private methods. The private method must use a subtransaction; otherwise
-  SQLAlchemy will throw an error when you call session.begin() on an existing
+  SQLAlchemy will throw an error when you call `session.begin()` on an existing
   transaction. Public methods should not accept a session parameter and should
   not be involved in sessions within the caller's scope.
 
@@ -128,6 +162,8 @@ Recommended ways to use sessions within this framework:
   single database transaction spans more than one method. Error handling
   becomes less clear in this situation. When this is needed for code clarity,
   it should be clearly documented.
+
+  .. code:: python
 
     def myfunc(foo):
         session = get_session()
@@ -148,13 +184,13 @@ There are some things which it is best to avoid:
 
 * Don't keep a transaction open any longer than necessary.
 
-  This means that your "with session.begin()" block should be as short
+  This means that your ``with session.begin()`` block should be as short
   as possible, while still containing all the related calls for that
   transaction.
 
-* Avoid "with_lockmode('UPDATE')" when possible.
+* Avoid ``with_lockmode('UPDATE')`` when possible.
 
-  In MySQL/InnoDB, when a "SELECT ... FOR UPDATE" query does not match
+  In MySQL/InnoDB, when a ``SELECT ... FOR UPDATE`` query does not match
   any rows, it will take a gap-lock. This is a form of write-lock on the
   "gap" where no rows exist, and prevents any other writes to that space.
   This can effectively prevent any INSERT into a table by locking the gap
@@ -165,15 +201,18 @@ There are some things which it is best to avoid:
   number of rows matching a query, and if only one row is returned,
   then issue the SELECT FOR UPDATE.
 
-  The better long-term solution is to use INSERT .. ON DUPLICATE KEY UPDATE.
+  The better long-term solution is to use
+  ``INSERT .. ON DUPLICATE KEY UPDATE``.
   However, this can not be done until the "deleted" columns are removed and
   proper UNIQUE constraints are added to the tables.
 
 
 Enabling soft deletes:
 
-* To use/enable soft-deletes, the SoftDeleteMixin must be added
+* To use/enable soft-deletes, the `SoftDeleteMixin` must be added
   to your model class. For example:
+
+  .. code:: python
 
       class NovaBase(models.SoftDeleteMixin, models.ModelBase):
           pass
@@ -182,13 +221,15 @@ Enabling soft deletes:
 Efficient use of soft deletes:
 
 * There are two possible ways to mark a record as deleted:
-    model.soft_delete() and query.soft_delete().
+  `model.soft_delete()` and `query.soft_delete()`.
 
-  model.soft_delete() method works with single already fetched entry.
-  query.soft_delete() makes only one db request for all entries that correspond
-  to query.
+  The `model.soft_delete()` method works with a single already-fetched entry.
+  `query.soft_delete()` makes only one db request for all entries that
+  correspond to the query.
 
-* In almost all cases you should use query.soft_delete(). Some examples:
+* In almost all cases you should use `query.soft_delete()`. Some examples:
+
+  .. code:: python
 
         def soft_delete_bar():
             count = model_query(BarModel).find(some_condition).soft_delete()
@@ -199,17 +240,19 @@ Efficient use of soft deletes:
             if session is None:
                 session = get_session()
             with session.begin(subtransactions=True):
-                count = model_query(BarModel).\
-                            find(some_condition).\
-                            soft_delete(synchronize_session=True)
+                count = (model_query(BarModel).
+                            find(some_condition).
+                            soft_delete(synchronize_session=True))
                             # Here synchronize_session is required, because we
                             # don't know what is going on in outer session.
                 if count == 0:
                     raise Exception("0 entries were soft deleted")
 
-* There is only one situation where model.soft_delete() is appropriate: when
+* There is only one situation where `model.soft_delete()` is appropriate: when
   you fetch a single record, work with it, and mark it as deleted in the same
   transaction.
+
+  .. code:: python
 
         def soft_delete_bar_model():
             session = get_session()
@@ -219,13 +262,15 @@ Efficient use of soft deletes:
                 bar_ref.soft_delete(session=session)
 
   However, if you need to work with all entries that correspond to query and
-  then soft delete them you should use query.soft_delete() method:
+  then soft delete them you should use the `query.soft_delete()` method:
+
+  .. code:: python
 
         def soft_delete_multi_models():
             session = get_session()
             with session.begin():
-                query = model_query(BarModel, session=session).\
-                            find(some_condition)
+                query = (model_query(BarModel, session=session).
+                            find(some_condition))
                 model_refs = query.all()
                 # Work with model_refs
                 query.soft_delete(synchronize_session=False)
@@ -233,19 +278,23 @@ Efficient use of soft deletes:
                 # session and these entries are not used after this.
 
   When working with many rows, it is very important to use query.soft_delete,
-  which issues a single query. Using model.soft_delete(), as in the following
+  which issues a single query. Using `model.soft_delete()`, as in the following
   example, is very inefficient.
+
+  .. code:: python
 
         for bar_ref in bar_refs:
             bar_ref.soft_delete(session=session)
         # This will produce count(bar_refs) db requests.
+
 """
 
+import functools
+import logging
 import os.path
 import re
 import time
 
-from eventlet import greenthread
 from oslo.config import cfg
 import six
 from sqlalchemy import exc as sqla_exc
@@ -255,17 +304,16 @@ from sqlalchemy.pool import NullPool, StaticPool
 from sqlalchemy.sql.expression import literal_column
 
 from nova.openstack.common.db import exception
-from nova.openstack.common.gettextutils import _  # noqa
-from nova.openstack.common import log as logging
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 
 sqlite_db_opts = [
     cfg.StrOpt('sqlite_db',
                default='nova.sqlite',
-               help='the filename to use with sqlite'),
+               help='The file name to use with SQLite'),
     cfg.BoolOpt('sqlite_synchronous',
                 default=True,
-                help='If true, use synchronous mode for sqlite'),
+                help='If True, SQLite uses synchronous mode'),
 ]
 
 database_opts = [
@@ -275,23 +323,27 @@ database_opts = [
                        '../', '$sqlite_db')),
                help='The SQLAlchemy connection string used to connect to the '
                     'database',
+               secret=True,
                deprecated_opts=[cfg.DeprecatedOpt('sql_connection',
                                                   group='DEFAULT'),
                                 cfg.DeprecatedOpt('sql_connection',
-                                                  group='DATABASE')],
-               secret=True),
+                                                  group='DATABASE'),
+                                cfg.DeprecatedOpt('connection',
+                                                  group='sql'), ]),
     cfg.StrOpt('slave_connection',
                default='',
+               secret=True,
                help='The SQLAlchemy connection string used to connect to the '
-                    'slave database',
-               secret=True),
+                    'slave database'),
     cfg.IntOpt('idle_timeout',
                default=3600,
                deprecated_opts=[cfg.DeprecatedOpt('sql_idle_timeout',
                                                   group='DEFAULT'),
                                 cfg.DeprecatedOpt('sql_idle_timeout',
-                                                  group='DATABASE')],
-               help='timeout before idle sql connections are reaped'),
+                                                  group='DATABASE'),
+                                cfg.DeprecatedOpt('idle_timeout',
+                                                  group='sql')],
+               help='Timeout before idle sql connections are reaped'),
     cfg.IntOpt('min_pool_size',
                default=1,
                deprecated_opts=[cfg.DeprecatedOpt('sql_min_pool_size',
@@ -314,7 +366,7 @@ database_opts = [
                                                   group='DEFAULT'),
                                 cfg.DeprecatedOpt('sql_max_retries',
                                                   group='DATABASE')],
-               help='maximum db connection retries during startup. '
+               help='Maximum db connection retries during startup. '
                     '(setting -1 implies an infinite retry count)'),
     cfg.IntOpt('retry_interval',
                default=10,
@@ -322,7 +374,7 @@ database_opts = [
                                                   group='DEFAULT'),
                                 cfg.DeprecatedOpt('reconnect_interval',
                                                   group='DATABASE')],
-               help='interval between retries of opening a sql connection'),
+               help='Interval between retries of opening a sql connection'),
     cfg.IntOpt('max_overflow',
                default=None,
                deprecated_opts=[cfg.DeprecatedOpt('sql_max_overflow',
@@ -408,8 +460,8 @@ class SqliteForeignKeysListener(PoolListener):
         dbapi_con.execute('pragma foreign_keys=ON')
 
 
-def get_session(autocommit=True, expire_on_commit=False,
-                sqlite_fk=False, slave_session=False):
+def get_session(autocommit=True, expire_on_commit=False, sqlite_fk=False,
+                slave_session=False, mysql_traditional_mode=False):
     """Return a SQLAlchemy session."""
     global _MAKER
     global _SLAVE_MAKER
@@ -419,7 +471,8 @@ def get_session(autocommit=True, expire_on_commit=False,
         maker = _SLAVE_MAKER
 
     if maker is None:
-        engine = get_engine(sqlite_fk=sqlite_fk, slave_engine=slave_session)
+        engine = get_engine(sqlite_fk=sqlite_fk, slave_engine=slave_session,
+                            mysql_traditional_mode=mysql_traditional_mode)
         maker = get_maker(engine, autocommit, expire_on_commit)
 
     if slave_session:
@@ -438,6 +491,11 @@ def get_session(autocommit=True, expire_on_commit=False,
 # 1 column - (IntegrityError) column c1 is not unique
 # N columns - (IntegrityError) column c1, c2, ..., N are not unique
 #
+# sqlite since 3.7.16:
+# 1 column - (IntegrityError) UNIQUE constraint failed: tbl.k1
+#
+# N columns - (IntegrityError) UNIQUE constraint failed: tbl.k1, tbl.k2
+#
 # postgres:
 # 1 column - (IntegrityError) duplicate key value violates unique
 #               constraint "users_c1_key"
@@ -450,9 +508,10 @@ def get_session(autocommit=True, expire_on_commit=False,
 # N columns - (IntegrityError) (1062, "Duplicate entry 'values joined
 #               with -' for key 'name_of_our_constraint'")
 _DUP_KEY_RE_DB = {
-    "sqlite": re.compile(r"^.*columns?([^)]+)(is|are)\s+not\s+unique$"),
-    "postgresql": re.compile(r"^.*duplicate\s+key.*\"([^\"]+)\"\s*\n.*$"),
-    "mysql": re.compile(r"^.*\(1062,.*'([^\']+)'\"\)$")
+    "sqlite": (re.compile(r"^.*columns?([^)]+)(is|are)\s+not\s+unique$"),
+               re.compile(r"^.*UNIQUE\s+constraint\s+failed:\s+(.+)$")),
+    "postgresql": (re.compile(r"^.*duplicate\s+key.*\"([^\"]+)\"\s*\n.*$"),),
+    "mysql": (re.compile(r"^.*\(1062,.*'([^\']+)'\"\)$"),)
 }
 
 
@@ -477,13 +536,22 @@ def _raise_if_duplicate_entry_error(integrity_error, engine_name):
     if engine_name not in ["mysql", "sqlite", "postgresql"]:
         return
 
-    m = _DUP_KEY_RE_DB[engine_name].match(integrity_error.message)
-    if not m:
+    # FIXME(johannes): The usage of the .message attribute has been
+    # deprecated since Python 2.6. However, the exceptions raised by
+    # SQLAlchemy can differ when using unicode() and accessing .message.
+    # An audit across all three supported engines will be necessary to
+    # ensure there are no regressions.
+    for pattern in _DUP_KEY_RE_DB[engine_name]:
+        match = pattern.match(integrity_error.message)
+        if match:
+            break
+    else:
         return
-    columns = m.group(1)
+
+    columns = match.group(1)
 
     if engine_name == "sqlite":
-        columns = columns.strip().split(", ")
+        columns = [c.split('.')[-1] for c in columns.strip().split(", ")]
     else:
         columns = get_columns_from_uniq_cons_or_name(columns)
     raise exception.DBDuplicateEntry(columns, integrity_error)
@@ -509,6 +577,11 @@ def _raise_if_deadlock_error(operational_error, engine_name):
     re = _DEADLOCK_RE_DB.get(engine_name)
     if re is None:
         return
+    # FIXME(johannes): The usage of the .message attribute has been
+    # deprecated since Python 2.6. However, the exceptions raised by
+    # SQLAlchemy can differ when using unicode() and accessing .message.
+    # An audit across all three supported engines will be necessary to
+    # ensure there are no regressions.
     m = re.match(operational_error.message)
     if not m:
         return
@@ -516,6 +589,7 @@ def _raise_if_deadlock_error(operational_error, engine_name):
 
 
 def _wrap_db_error(f):
+    @functools.wraps(f)
     def _wrap(*args, **kwargs):
         try:
             return f(*args, **kwargs)
@@ -540,11 +614,11 @@ def _wrap_db_error(f):
         except Exception as e:
             LOG.exception(_('DB exception wrapped.'))
             raise exception.DBError(e)
-    _wrap.func_name = f.func_name
     return _wrap
 
 
-def get_engine(sqlite_fk=False, slave_engine=False):
+def get_engine(sqlite_fk=False, slave_engine=False,
+               mysql_traditional_mode=False):
     """Return a SQLAlchemy engine."""
     global _ENGINE
     global _SLAVE_ENGINE
@@ -556,8 +630,8 @@ def get_engine(sqlite_fk=False, slave_engine=False):
         db_uri = CONF.database.slave_connection
 
     if engine is None:
-        engine = create_engine(db_uri,
-                               sqlite_fk=sqlite_fk)
+        engine = create_engine(db_uri, sqlite_fk=sqlite_fk,
+                               mysql_traditional_mode=mysql_traditional_mode)
     if slave_engine:
         _SLAVE_ENGINE = engine
     else:
@@ -580,30 +654,49 @@ def _add_regexp_listener(dbapi_con, con_record):
     dbapi_con.create_function('regexp', 2, regexp)
 
 
-def _greenthread_yield(dbapi_con, con_record):
+def _thread_yield(dbapi_con, con_record):
     """Ensure other greenthreads get a chance to be executed.
 
+    If we use eventlet.monkey_patch(), eventlet.greenthread.sleep(0) will
+    execute instead of time.sleep(0).
     Force a context switch. With common database backends (eg MySQLdb and
     sqlite), there is no implicit yield caused by network I/O since they are
     implemented by C libraries that eventlet cannot monkey patch.
     """
-    greenthread.sleep(0)
+    time.sleep(0)
 
 
-def _ping_listener(dbapi_conn, connection_rec, connection_proxy):
-    """Ensures that MySQL connections checked out of the pool are alive.
+def _ping_listener(engine, dbapi_conn, connection_rec, connection_proxy):
+    """Ensures that MySQL and DB2 connections are alive.
 
     Borrowed from:
     http://groups.google.com/group/sqlalchemy/msg/a4ce563d802c929f
     """
+    cursor = dbapi_conn.cursor()
     try:
-        dbapi_conn.cursor().execute('select 1')
-    except dbapi_conn.OperationalError as ex:
-        if ex.args[0] in (2006, 2013, 2014, 2045, 2055):
-            LOG.warn(_('Got mysql server has gone away: %s'), ex)
-            raise sqla_exc.DisconnectionError("Database server went away")
+        ping_sql = 'select 1'
+        if engine.name == 'ibm_db_sa':
+            # DB2 requires a table expression
+            ping_sql = 'select 1 from (values (1)) AS t1'
+        cursor.execute(ping_sql)
+    except Exception as ex:
+        if engine.dialect.is_disconnect(ex, dbapi_conn, cursor):
+            msg = _('Database server has gone away: %s') % ex
+            LOG.warning(msg)
+            raise sqla_exc.DisconnectionError(msg)
         else:
             raise
+
+
+def _set_mode_traditional(dbapi_con, connection_rec, connection_proxy):
+    """Set engine mode to 'traditional'.
+
+    Required to prevent silent truncates at insert or update operations
+    under MySQL. By default MySQL truncates inserted string if it longer
+    than a declared field just with warning. That is fraught with data
+    corruption.
+    """
+    dbapi_con.cursor().execute("SET SESSION sql_mode = TRADITIONAL;")
 
 
 def _is_db_connection_error(args):
@@ -611,14 +704,15 @@ def _is_db_connection_error(args):
     # NOTE(adam_g): This is currently MySQL specific and needs to be extended
     #               to support Postgres and others.
     # For the db2, the error code is -30081 since the db2 is still not ready
-    conn_err_codes = ('2002', '2003', '2006', '-30081')
+    conn_err_codes = ('2002', '2003', '2006', '2013', '-30081')
     for err_code in conn_err_codes:
         if args.find(err_code) != -1:
             return True
     return False
 
 
-def create_engine(sql_connection, sqlite_fk=False):
+def create_engine(sql_connection, sqlite_fk=False,
+                  mysql_traditional_mode=False):
     """Return a new SQLAlchemy engine."""
     # NOTE(geekinutah): At this point we could be connecting to the normal
     #                   db handle or the slave db handle. Things like
@@ -657,10 +751,21 @@ def create_engine(sql_connection, sqlite_fk=False):
 
     engine = sqlalchemy.create_engine(sql_connection, **engine_args)
 
-    sqlalchemy.event.listen(engine, 'checkin', _greenthread_yield)
+    sqlalchemy.event.listen(engine, 'checkin', _thread_yield)
 
-    if 'mysql' in connection_dict.drivername:
-        sqlalchemy.event.listen(engine, 'checkout', _ping_listener)
+    if engine.name in ['mysql', 'ibm_db_sa']:
+        callback = functools.partial(_ping_listener, engine)
+        sqlalchemy.event.listen(engine, 'checkout', callback)
+        if engine.name == 'mysql':
+            if mysql_traditional_mode:
+                sqlalchemy.event.listen(engine, 'checkout',
+                                        _set_mode_traditional)
+            else:
+                LOG.warning(_("This application has not enabled MySQL "
+                              "traditional mode, which means silent "
+                              "data corruption may occur. "
+                              "Please encourage the application "
+                              "developers to enable this mode."))
     elif 'sqlite' in connection_dict.drivername:
         if not CONF.sqlite_synchronous:
             sqlalchemy.event.listen(engine, 'connect',
@@ -682,7 +787,7 @@ def create_engine(sql_connection, sqlite_fk=False):
             remaining = 'infinite'
         while True:
             msg = _('SQL connection failed. %s attempts left.')
-            LOG.warn(msg % remaining)
+            LOG.warning(msg % remaining)
             if remaining != 'infinite':
                 remaining -= 1
             time.sleep(CONF.database.retry_interval)
@@ -741,25 +846,25 @@ def _patch_mysqldb_with_stacktrace_comments():
 
     def _do_query(self, q):
         stack = ''
-        for file, line, method, function in traceback.extract_stack():
+        for filename, line, method, function in traceback.extract_stack():
             # exclude various common things from trace
-            if file.endswith('session.py') and method == '_do_query':
+            if filename.endswith('session.py') and method == '_do_query':
                 continue
-            if file.endswith('api.py') and method == 'wrapper':
+            if filename.endswith('api.py') and method == 'wrapper':
                 continue
-            if file.endswith('utils.py') and method == '_inner':
+            if filename.endswith('utils.py') and method == '_inner':
                 continue
-            if file.endswith('exception.py') and method == '_wrap':
+            if filename.endswith('exception.py') and method == '_wrap':
                 continue
             # db/api is just a wrapper around db/sqlalchemy/api
-            if file.endswith('db/api.py'):
+            if filename.endswith('db/api.py'):
                 continue
             # only trace inside nova
-            index = file.rfind('nova')
+            index = filename.rfind('nova')
             if index == -1:
                 continue
             stack += "File:%s:%s Method:%s() Line:%s | " \
-                     % (file[index:], line, method, function)
+                     % (filename[index:], line, method, function)
 
         # strip trailing " | " from stack
         if stack:

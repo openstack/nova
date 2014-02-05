@@ -16,6 +16,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import logging
 import re
 
 from migrate.changeset import UniqueConstraint
@@ -36,9 +37,7 @@ from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy.types import NullType
 
-from nova.openstack.common.gettextutils import _  # noqa
-
-from nova.openstack.common import log as logging
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 
 
@@ -497,3 +496,52 @@ def _change_deleted_column_type_to_id_type_sqlite(migrate_engine, table_name,
         where(new_table.c.deleted == deleted).\
         values(deleted=default_deleted_value).\
         execute()
+
+
+def get_connect_string(backend, database, user=None, passwd=None):
+    """Get database connection
+
+    Try to get a connection with a very specific set of values, if we get
+    these then we'll run the tests, otherwise they are skipped
+    """
+    args = {'backend': backend,
+            'user': user,
+            'passwd': passwd,
+            'database': database}
+    if backend == 'sqlite':
+        template = '%(backend)s:///%(database)s'
+    else:
+        template = "%(backend)s://%(user)s:%(passwd)s@localhost/%(database)s"
+    return template % args
+
+
+def is_backend_avail(backend, database, user=None, passwd=None):
+    try:
+        connect_uri = get_connect_string(backend=backend,
+                                         database=database,
+                                         user=user,
+                                         passwd=passwd)
+        engine = sqlalchemy.create_engine(connect_uri)
+        connection = engine.connect()
+    except Exception:
+        # intentionally catch all to handle exceptions even if we don't
+        # have any backend code loaded.
+        return False
+    else:
+        connection.close()
+        engine.dispose()
+        return True
+
+
+def get_db_connection_info(conn_pieces):
+    database = conn_pieces.path.strip('/')
+    loc_pieces = conn_pieces.netloc.split('@')
+    host = loc_pieces[1]
+
+    auth_pieces = loc_pieces[0].split(':')
+    user = auth_pieces[0]
+    password = ""
+    if len(auth_pieces) > 1:
+        password = auth_pieces[1].strip()
+
+    return (user, password, database, host)
