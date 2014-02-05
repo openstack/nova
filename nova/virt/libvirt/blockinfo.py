@@ -81,7 +81,7 @@ from nova.openstack.common.gettextutils import _
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
 from nova.virt import driver
-
+from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF
 
@@ -217,6 +217,7 @@ def get_disk_bus_for_device_type(virt_type,
        type, return the optimal disk_bus to use for a given
        device type. For example, for a disk on KVM it will
        return 'virtio', while for a CDROM it will return 'ide'
+       on x86_64 and 'scsi' on ppc64.
 
        Returns the disk_bus, or returns None if the device
        type is not supported for this virtualization
@@ -245,7 +246,11 @@ def get_disk_bus_for_device_type(virt_type,
             return "xen"
     elif virt_type in ("qemu", "kvm"):
         if device_type == "cdrom":
-            return "ide"
+            arch = libvirt_utils.get_arch(image_meta)
+            if arch in ("ppc", "ppc64"):
+                return "scsi"
+            else:
+                return "ide"
         elif device_type == "disk":
             return "virtio"
         elif device_type == "floppy":

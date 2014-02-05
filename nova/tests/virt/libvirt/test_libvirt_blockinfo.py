@@ -547,16 +547,22 @@ class LibvirtBlockInfoTest(test.TestCase):
                          block_device_info['block_device_mapping'][0])
 
     def test_get_disk_bus(self):
-        bus = blockinfo.get_disk_bus_for_device_type('kvm')
-        self.assertEqual(bus, 'virtio')
-
-        bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                                                     device_type='cdrom')
-        self.assertEqual(bus, 'ide')
-
-        bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                                                     device_type='floppy')
-        self.assertEqual(bus, 'fdc')
+        expected = (
+                ('x86_64', 'disk', 'virtio'),
+                ('x86_64', 'cdrom', 'ide'),
+                ('x86_64', 'floppy', 'fdc'),
+                ('ppc', 'disk', 'virtio'),
+                ('ppc', 'cdrom', 'scsi'),
+                ('ppc64', 'disk', 'virtio'),
+                ('ppc64', 'cdrom', 'scsi')
+                )
+        for arch, dev, res in expected:
+            with mock.patch.object(blockinfo.libvirt_utils,
+                                   'get_arch',
+                                   return_value=arch):
+                bus = blockinfo.get_disk_bus_for_device_type('kvm',
+                            device_type=dev)
+                self.assertEqual(bus, res)
 
         image_meta = {'properties': {'hw_disk_bus': 'scsi'}}
         bus = blockinfo.get_disk_bus_for_device_type('kvm',

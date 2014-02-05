@@ -20,6 +20,7 @@
 
 import errno
 import os
+import platform
 
 from lxml import etree
 from oslo.config import cfg
@@ -653,3 +654,23 @@ def get_instance_path(instance, forceold=False, relative=False):
     if relative:
         return instance['uuid']
     return os.path.join(CONF.instances_path, instance['uuid'])
+
+
+def get_arch(image_meta):
+    """Determine the architecture of the guest (or host).
+
+    This method determines the CPU architecture that must be supported by
+    the hypervisor. It gets the (guest) arch info from image_meta properties,
+    and it will fallback to the nova-compute (host) arch if no architecture
+    info is provided in image_meta.
+
+    :param image_meta: the metadata associated with the instance image
+
+    :returns: guest (or host) architecture
+    """
+    if image_meta:
+        arch = image_meta.get('properties', {}).get('architecture')
+        if arch is not None:
+            return arch
+
+    return platform.processor()
