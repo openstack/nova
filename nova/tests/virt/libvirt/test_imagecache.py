@@ -131,9 +131,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         for ent in image_cache_manager.unexplained_images:
             sanitized.append(ent.replace(base_dir + '/', ''))
 
-        sanitized = sanitized.sort()
-        images = images.sort()
-        self.assertEqual(sanitized, images)
+        self.assertEqual(sorted(sanitized), sorted(images))
 
         expected = os.path.join(base_dir,
                                 'e97222e91fc4241f49a7f520d1dcf446751129b3')
