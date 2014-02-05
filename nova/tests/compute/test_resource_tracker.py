@@ -260,6 +260,12 @@ class BaseTestCase(test.TestCase):
     def _fake_flavor_create(self, **kwargs):
         instance_type = {
             'id': 1,
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': False,
+            'disabled': False,
+            'is_public': True,
             'name': 'fakeitype',
             'memory_mb': FAKE_VIRT_MEMORY_MB,
             'vcpus': FAKE_VIRT_VCPUS,
@@ -268,7 +274,8 @@ class BaseTestCase(test.TestCase):
             'swap': 0,
             'rxtx_factor': 1.0,
             'vcpu_weight': 1,
-            'flavorid': 'fakeflavor'
+            'flavorid': 'fakeflavor',
+            'extra_specs': {},
         }
         instance_type.update(**kwargs)
 

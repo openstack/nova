@@ -30,6 +30,7 @@ from nova import conductor
 from nova import context
 from nova import exception
 from nova.objects import base as obj_base
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
 from nova.openstack.common.gettextutils import _
@@ -689,7 +690,7 @@ class ResourceTracker(object):
     def _get_instance_type(self, context, instance, prefix,
             instance_type_id=None):
         """Get the instance type from sys metadata if it's stashed.  If not,
-        fall back to fetching it via the conductor API.
+        fall back to fetching it via the object API.
 
         See bug 1164110
         """
@@ -699,5 +700,5 @@ class ResourceTracker(object):
         try:
             return flavors.extract_flavor(instance, prefix)
         except KeyError:
-            return self.conductor_api.instance_type_get(context,
-                    instance_type_id)
+            return flavor_obj.Flavor.get_by_id(context,
+                                               instance_type_id)
