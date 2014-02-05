@@ -12,16 +12,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.validation import parameter_types
+
+
 create = {
     'type': 'object',
     'properties': {
         'keypair': {
             'type': 'object',
             'properties': {
-                'name': {
-                    'type': 'string', 'minLength': 1, 'maxLength': 255,
-                    'pattern': '^[a-zA-Z0-9 _-]+$'
-                },
+                'name': parameter_types.name,
                 'public_key': {'type': 'string'},
             },
             'required': ['name'],

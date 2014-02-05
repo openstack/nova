@@ -41,6 +41,18 @@ hostname_or_ip_address = {
 }
 
 
+name = {
+    # NOTE: Nova v3 API contains some 'name' parameters such
+    # as keypair, server, flavor, aggregate and so on. They are
+    # stored in the DB and Nova specific parameters.
+    # This definition is used for all their parameters.
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+
+    # NOTE: Allow to some spaces in middle of name.
+    'pattern': '^(?! )[a-zA-Z0-9. _-]+(?<! )$',
+}
+
+
 tcp_udp_port = {
     'type': ['integer', 'string'], 'pattern': '^[0-9]*$',
     'minimum': 0, 'maximum': 65535,
