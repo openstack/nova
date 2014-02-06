@@ -16,12 +16,13 @@
 import datetime
 import urlparse
 
+import iso8601
 from webob import exc
 
 from nova.api.openstack import extensions
-from nova.compute import api
-from nova.compute import flavors
 from nova import exception
+from nova.objects import flavor as flavor_obj
+from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import timeutils
 
@@ -36,17 +37,17 @@ VALID_DATETIME_FORMAT = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M:%S.%f",
 
 class SimpleTenantUsageController(object):
     def _hours_for(self, instance, period_start, period_stop):
-        launched_at = instance['launched_at']
-        terminated_at = instance['terminated_at']
+        launched_at = instance.launched_at
+        terminated_at = instance.terminated_at
         if terminated_at is not None:
             if not isinstance(terminated_at, datetime.datetime):
-                terminated_at = timeutils.parse_strtime(terminated_at,
-                                                        "%Y-%m-%d %H:%M:%S.%f")
+                # NOTE(mriedem): Instance object DateTime fields are
+                # timezone-aware so convert using isotime.
+                terminated_at = timeutils.parse_isotime(terminated_at)
 
         if launched_at is not None:
             if not isinstance(launched_at, datetime.datetime):
-                launched_at = timeutils.parse_strtime(launched_at,
-                                                      "%Y-%m-%d %H:%M:%S.%f")
+                launched_at = timeutils.parse_isotime(launched_at)
 
         if terminated_at and terminated_at < period_start:
             return 0
@@ -71,39 +72,37 @@ class SimpleTenantUsageController(object):
             # instance hasn't launched, so no charge
             return 0
 
-    def _get_flavor(self, context, compute_api, instance, flavors_cache):
+    def _get_flavor(self, context, instance, flavors_cache):
         """Get flavor information from the instance's system_metadata,
         allowing a fallback to lookup by-id for deleted instances only.
         """
         try:
-            return flavors.extract_flavor(instance)
+            return instance.get_flavor()
         except KeyError:
-            if not instance['deleted']:
+            if not instance.deleted:
                 # Only support the fallback mechanism for deleted instances
                 # that would have been skipped by migration #153
                 raise
 
-        flavor_type = instance['instance_type_id']
+        flavor_type = instance.instance_type_id
         if flavor_type in flavors_cache:
             return flavors_cache[flavor_type]
 
         try:
-            it_ref = compute_api.get_instance_type(context, flavor_type)
-            flavors_cache[flavor_type] = it_ref
+            flavor_ref = flavor_obj.Flavor.get_by_id(context, flavor_type)
+            flavors_cache[flavor_type] = flavor_ref
         except exception.FlavorNotFound:
-            # can't bill if there is no instance type
-            it_ref = None
+            # can't bill if there is no flavor
+            flavor_ref = None
 
-        return it_ref
+        return flavor_ref
 
     def _tenant_usages_for_period(self, context, period_start,
                                   period_stop, tenant_id=None, detailed=True):
 
-        compute_api = api.API()
-        instances = compute_api.get_active_by_window(context,
-                                                     period_start,
-                                                     period_stop,
-                                                     tenant_id)
+        instances = instance_obj.InstanceList.get_active_by_window_joined(
+                        context, period_start, period_stop, tenant_id,
+                        expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
         rval = {}
         flavors = {}
 
@@ -112,29 +111,34 @@ class SimpleTenantUsageController(object):
             info['hours'] = self._hours_for(instance,
                                             period_start,
                                             period_stop)
-            flavor = self._get_flavor(context, compute_api, instance, flavors)
+            flavor = self._get_flavor(context, instance, flavors)
             if not flavor:
                 continue
 
-            info['instance_id'] = instance['uuid']
-            info['name'] = instance['display_name']
+            info['instance_id'] = instance.uuid
+            info['name'] = instance.display_name
 
-            info['memory_mb'] = flavor['memory_mb']
-            info['local_gb'] = flavor['root_gb'] + flavor['ephemeral_gb']
-            info['vcpus'] = flavor['vcpus']
+            info['memory_mb'] = flavor.memory_mb
+            info['local_gb'] = flavor.root_gb + flavor.ephemeral_gb
+            info['vcpus'] = flavor.vcpus
 
-            info['tenant_id'] = instance['project_id']
+            info['tenant_id'] = instance.project_id
 
-            info['flavor'] = flavor['name']
+            info['flavor'] = flavor.name
 
-            info['started_at'] = instance['launched_at']
+            # NOTE(mriedem): We need to normalize the start/end times back
+            # to timezone-naive so the response doesn't change after the
+            # conversion to objects.
+            info['started_at'] = timeutils.normalize_time(instance.launched_at)
 
-            info['ended_at'] = instance['terminated_at']
+            info['ended_at'] = (
+                timeutils.normalize_time(instance.terminated_at) if
+                    instance.terminated_at else None)
 
             if info['ended_at']:
                 info['state'] = 'terminated'
             else:
-                info['state'] = instance['vm_state']
+                info['state'] = instance.vm_state
 
             now = timeutils.utcnow()
 
@@ -154,8 +158,8 @@ class SimpleTenantUsageController(object):
                 summary['total_vcpus_usage'] = 0
                 summary['total_memory_mb_usage'] = 0
                 summary['total_hours'] = 0
-                summary['start'] = period_start
-                summary['stop'] = period_stop
+                summary['start'] = timeutils.normalize_time(period_start)
+                summary['stop'] = timeutils.normalize_time(period_stop)
                 rval[info['tenant_id']] = summary
 
             summary = rval[info['tenant_id']]
@@ -171,16 +175,25 @@ class SimpleTenantUsageController(object):
         return rval.values()
 
     def _parse_datetime(self, dtstr):
+        value = None
         if not dtstr:
-            return timeutils.utcnow()
+            value = timeutils.utcnow()
         elif isinstance(dtstr, datetime.datetime):
-            return dtstr
+            value = dtstr
         for format in VALID_DATETIME_FORMAT:
             try:
-                return timeutils.parse_strtime(dtstr, format)
+                value = timeutils.parse_strtime(dtstr, format)
+                break
             except ValueError:
                 continue
-        return None
+
+        # NOTE(mriedem): Instance object DateTime fields are timezone-aware
+        # so we have to force UTC timezone for comparing this datetime against
+        # instance object fields and still maintain backwards compatibility
+        # in the API.
+        if value and value.utcoffset() is None:
+            value = value.replace(tzinfo=iso8601.iso8601.Utc())
+        return value
 
     def _get_datetime_range(self, req):
         qs = req.environ.get('QUERY_STRING', '')
@@ -212,7 +225,7 @@ class SimpleTenantUsageController(object):
         authorize_list(context)
 
         (period_start, period_stop, detailed) = self._get_datetime_range(req)
-        now = timeutils.utcnow()
+        now = timeutils.parse_isotime(timeutils.strtime())
         if period_stop > now:
             period_stop = now
         usages = self._tenant_usages_for_period(context,
@@ -230,7 +243,7 @@ class SimpleTenantUsageController(object):
         authorize_show(context, {'project_id': tenant_id})
 
         (period_start, period_stop, ignore) = self._get_datetime_range(req)
-        now = timeutils.utcnow()
+        now = timeutils.parse_isotime(timeutils.strtime())
         if period_stop > now:
             period_stop = now
         usage = self._tenant_usages_for_period(context,
