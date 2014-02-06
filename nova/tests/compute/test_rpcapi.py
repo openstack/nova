@@ -134,7 +134,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_change_instance_metadata(self):
         self._test_compute_api('change_instance_metadata', 'cast',
-                instance=self.fake_instance, diff={})
+                instance=self.fake_instance, diff={}, version='3.7')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

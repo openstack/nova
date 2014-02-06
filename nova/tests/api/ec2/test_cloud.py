@@ -115,6 +115,7 @@ def get_instances_with_cached_ips(orig_func, get_floating,
     if kwargs.get('want_objects', False):
         info_cache = instance_info_cache_obj.InstanceInfoCache()
         info_cache.network_info = get_fake_cache(get_floating)
+        info_cache.obj_reset_changes()
     else:
         info_cache = {'network_info': get_fake_cache(get_floating)}
 

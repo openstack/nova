@@ -2895,19 +2895,17 @@ class API(base.Base):
         `metadata` argument will be deleted.
 
         """
-        orig = self.get_instance_metadata(context, instance)
+        orig = dict(instance.metadata)
         if delete:
             _metadata = metadata
         else:
-            _metadata = orig.copy()
+            _metadata = dict(instance.metadata)
             _metadata.update(metadata)
 
         self._check_metadata_properties_quota(context, _metadata)
-        metadata = self.db.instance_metadata_update(context, instance['uuid'],
-                                         _metadata, True)
-        instance['metadata'] = metadata
-        notifications.send_update(context, instance, instance)
-        diff = _diff_dict(orig, _metadata)
+        instance.metadata = _metadata
+        instance.save()
+        diff = _diff_dict(orig, instance.metadata)
         self.compute_rpcapi.change_instance_metadata(context,
                                                      instance=instance,
                                                      diff=diff)

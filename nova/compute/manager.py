@@ -406,7 +406,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.6')
+    target = messaging.Target(version='3.7')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2766,6 +2766,7 @@ class ComputeManager(manager.Manager):
                                           "unrescue.end",
                                           network_info=network_info)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
