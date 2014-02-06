@@ -26,6 +26,18 @@ class HackingTestCase(test.NoDBTestCase):
             "from nova.virt.libvirt import utils as libvirt_utils",
             "./nova/virt/libvirt/driver.py"))
 
+        self.assertTrue(checks.import_no_virt_driver_import_deps(
+            "import nova.virt.libvirt.utils as libvirt_utils",
+            "./nova/virt/xenapi/driver.py"))
+
+        self.assertTrue(checks.import_no_virt_driver_import_deps(
+            "import nova.virt.libvirt.utils as libvirt_utils",
+            "./nova/virt/xenapi/driver.py"))
+
+        self.assertIsNone(checks.import_no_virt_driver_import_deps(
+            "import nova.virt.firewall",
+            "./nova/virt/libvirt/firewall.py"))
+
     def test_virt_driver_config_vars(self):
         self.assertTrue(checks.import_no_virt_driver_config_deps(
             "CONF.import_opt('volume_drivers', "
