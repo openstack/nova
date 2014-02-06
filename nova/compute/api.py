@@ -1747,18 +1747,6 @@ class API(base.Base):
         #                 availability_zone isn't used by run_instance.
         self.compute_rpcapi.start_instance(context, instance)
 
-    #NOTE(bcwaldon): no policy check here since it should be rolled in to
-    # search_opts in get_all
-    def get_active_by_window(self, context, begin, end=None, project_id=None):
-        """Get instances that were continuously active over a window."""
-        return self.db.instance_get_active_by_window_joined(context, begin,
-                                                     end, project_id)
-
-    #NOTE(bcwaldon): this doesn't really belong in this class
-    def get_instance_type(self, context, instance_type_id):
-        """Get an instance type by instance type id."""
-        return flavors.get_flavor(instance_type_id, ctxt=context)
-
     def get(self, context, instance_id, want_objects=False,
             expected_attrs=None):
         """Get a single instance with the given instance_id."""
