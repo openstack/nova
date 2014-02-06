@@ -745,7 +745,7 @@ class VMwareVMOps(object):
                         "VirtualMachine", "config.hardware.device")
             (vmdk_file_path_before_snapshot, controller_key, adapter_type,
              disk_type, unit_number) = vm_util.get_vmdk_path_and_adapter_type(
-                                        hardware_devices)
+                                    hardware_devices, uuid=instance['uuid'])
             datastore_name = vm_util.split_datastore_path(
                                         vmdk_file_path_before_snapshot)[0]
             os_type = self._session._call_method(vim_util,
@@ -1095,8 +1095,10 @@ class VMwareVMOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-        vmdk_path, controller_key, adapter_type, disk_type, unit_number \
-            = vm_util.get_vmdk_path_and_adapter_type(hardware_devices)
+        (vmdk_path, controller_key, adapter_type, disk_type,
+         unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+                hardware_devices, uuid=instance['uuid'])
+
         # Figure out the correct unit number
         unit_number = unit_number + 1
         rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
@@ -1115,8 +1117,9 @@ class VMwareVMOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-        vmdk_path, controller_key, adapter_type, disk_type, unit_number \
-            = vm_util.get_vmdk_path_and_adapter_type(hardware_devices)
+        (vmdk_path, controller_key, adapter_type, disk_type,
+         unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+                hardware_devices, uuid=instance['uuid'])
 
         r_instance = copy.deepcopy(instance)
         instance_name = r_instance['uuid'] + self._rescue_suffix
