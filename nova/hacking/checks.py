@@ -84,7 +84,7 @@ def import_no_virt_driver_import_deps(physical_line, filename):
     if (thatdriver is not None and
         thisdriver is not None and
         thisdriver != thatdriver):
-        return (0, "N312: importing code from other virt drivers forbidden")
+        return (0, "N311: importing code from other virt drivers forbidden")
 
 
 def import_no_virt_driver_config_deps(physical_line, filename):
@@ -102,7 +102,7 @@ def import_no_virt_driver_config_deps(physical_line, filename):
     if (thatdriver is not None and
         thisdriver is not None and
         thisdriver != thatdriver):
-        return (0, "N313: using config vars from other virt drivers forbidden")
+        return (0, "N312: using config vars from other virt drivers forbidden")
 
 
 def capital_cfg_help(logical_line, tokens):
