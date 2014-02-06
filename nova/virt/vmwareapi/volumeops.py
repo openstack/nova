@@ -217,11 +217,11 @@ class VMwareVolumeOps(object):
 
         unit_number = self._get_unit_number(mountpoint, unit_number)
         # Attach the disk to virtual machine instance
-        volume_device = self.attach_disk_to_vm(vm_ref, instance, adapter_type,
-                                               disk_type,
-                                               vmdk_path=volume_vmdk_path,
-                                               controller_key=controller_key,
-                                               unit_number=unit_number)
+        self.attach_disk_to_vm(vm_ref, instance, adapter_type,
+                               disk_type,
+                               vmdk_path=volume_vmdk_path,
+                               controller_key=controller_key,
+                               unit_number=unit_number)
 
         # Store the uuid of the volume_device
         self._update_volume_details(vm_ref, instance, data['volume_id'])
@@ -368,11 +368,11 @@ class VMwareVolumeOps(object):
         (vmdk_file_path, controller_key, adapter_type, disk_type,
          unit_number) = vm_util.get_vmdk_path_and_adapter_type(hw_devices)
         # Attach the current volume to the volume_ref
-        volume_device = self.attach_disk_to_vm(volume_ref, instance,
-                                               adapter_type, disk_type,
-                                               vmdk_path=current_device_path,
-                                               controller_key=controller_key,
-                                               unit_number=unit_number)
+        self.attach_disk_to_vm(volume_ref, instance,
+                               adapter_type, disk_type,
+                               vmdk_path=current_device_path,
+                               controller_key=controller_key,
+                               unit_number=unit_number)
 
     def _get_vmdk_backed_disk_device(self, vm_ref, connection_info_data):
         # Get the vmdk file name that the VM is pointing to
