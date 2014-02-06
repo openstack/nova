@@ -19,7 +19,9 @@ Nova Specific Commandments
 - [N312] using config vars from other virt drivers forbidden
   Config parameters that need to be shared between virt drivers
   should be moved into a common module
-- [N123] vim configuration should not be kept in source files.
+- [N313] capitalize help string
+  Config parameter help strings should have a capitalized first letter
+- [N314] vim configuration should not be kept in source files.
 
 Creating Unit Tests
 -------------------
