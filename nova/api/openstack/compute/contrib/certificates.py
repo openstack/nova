@@ -69,7 +69,6 @@ class CertificatesController(object):
         authorize(context)
         pk, cert = self.cert_rpcapi.generate_x509_cert(context,
                 user_id=context.user_id, project_id=context.project_id)
-        context = req.environ['nova.context']
         return {'certificate': _translate_certificate_view(cert, pk)}
 
 
