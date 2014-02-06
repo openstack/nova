@@ -168,7 +168,7 @@ class KeypairsTest(test.TestCase):
         res_dict = jsonutils.loads(res.body)
         self.assertEqual(
             "Invalid input for field/attribute name. Value: test/keypair. "
-            "u'test/keypair' does not match '^[a-zA-Z0-9 _-]+$'",
+            "u'test/keypair' does not match '^(?! )[a-zA-Z0-9. _-]+(?<! )$'",
             res_dict['badRequest']['message'])
 
     def test_keypair_import(self):
