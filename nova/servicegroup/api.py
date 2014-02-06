@@ -36,6 +36,9 @@ servicegroup_driver_opt = cfg.StrOpt('servicegroup_driver',
 CONF = cfg.CONF
 CONF.register_opt(servicegroup_driver_opt)
 
+# NOTE(geekinutah): By default drivers wait 5 seconds before reporting
+INITIAL_REPORTING_DELAY = 5
+
 
 class API(object):
 
