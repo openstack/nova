@@ -19,6 +19,7 @@
 import copy
 import string
 
+import mock
 from oslo.config import cfg
 
 from nova.compute import flavors
@@ -231,41 +232,49 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.assertEqual(device, '/dev/xvdd')
 
 
-class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
+class DefaultDeviceNamesForInstanceTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(DefaultDeviceNamesForInstanceTestCase, self).setUp()
-        self.ephemerals = [
-                {'id': 1, 'instance_uuid': 'fake-instance',
-                 'device_name': '/dev/vdb',
-                 'source_type': 'blank',
-                 'destination_type': 'local',
-                 'delete_on_termination': True,
-                 'guest_format': None,
-                 'boot_index': -1}]
+        self.context = context.RequestContext('fake', 'fake')
+        self.ephemerals = block_device_obj.block_device_make_list(
+                self.context,
+                [fake_block_device.FakeDbBlockDeviceDict(
+                 {'id': 1, 'instance_uuid': 'fake-instance',
+                  'device_name': '/dev/vdb',
+                  'source_type': 'blank',
+                  'destination_type': 'local',
+                  'delete_on_termination': True,
+                  'guest_format': None,
+                  'boot_index': -1})])
 
-        self.swap = [
-                {'id': 2, 'instance_uuid': 'fake-instance',
-                 'device_name': '/dev/vdc',
-                 'source_type': 'blank',
-                 'destination_type': 'local',
-                 'delete_on_termination': True,
-                 'guest_format': 'swap',
-                 'boot_index': -1}]
+        self.swap = block_device_obj.block_device_make_list(
+                self.context,
+                [fake_block_device.FakeDbBlockDeviceDict(
+                 {'id': 2, 'instance_uuid': 'fake-instance',
+                  'device_name': '/dev/vdc',
+                  'source_type': 'blank',
+                  'destination_type': 'local',
+                  'delete_on_termination': True,
+                  'guest_format': 'swap',
+                  'boot_index': -1})])
 
-        self.block_device_mapping = [
-                {'id': 3, 'instance_uuid': 'fake-instance',
-                 'device_name': '/dev/vda',
-                 'source_type': 'volume',
-                 'destination_type': 'volume',
-                 'volume_id': 'fake-volume-id-1',
-                 'boot_index': 0},
-                {'id': 4, 'instance_uuid': 'fake-instance',
-                 'device_name': '/dev/vdd',
-                 'source_type': 'snapshot',
-                 'destination_type': 'volume',
-                 'snapshot_id': 'fake-snapshot-id-1',
-                 'boot_index': -1}]
+        self.block_device_mapping = block_device_obj.block_device_make_list(
+                self.context,
+                [fake_block_device.FakeDbBlockDeviceDict(
+                 {'id': 3, 'instance_uuid': 'fake-instance',
+                  'device_name': '/dev/vda',
+                  'source_type': 'volume',
+                  'destination_type': 'volume',
+                  'volume_id': 'fake-volume-id-1',
+                  'boot_index': 0}),
+                 fake_block_device.FakeDbBlockDeviceDict(
+                 {'id': 4, 'instance_uuid': 'fake-instance',
+                  'device_name': '/dev/vdd',
+                  'source_type': 'snapshot',
+                  'destination_type': 'volume',
+                  'snapshot_id': 'fake-snapshot-id-1',
+                  'boot_index': -1})])
         self.flavor = {'swap': 4}
         self.instance = {'uuid': 'fake_instance', 'ephemeral_gb': 2}
         self.is_libvirt = False
@@ -280,39 +289,53 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
                 return self.is_libvirt
             return False
 
-        self.stubs.Set(flavors, 'extract_flavor', fake_extract_flavor)
-        self.stubs.Set(driver, 'compute_driver_matches', fake_driver_matches)
+        self.patchers = []
+        self.patchers.append(
+                mock.patch.object(block_device_obj.BlockDeviceMapping, 'save'))
+        self.patchers.append(
+                mock.patch.object(
+                    flavors, 'extract_flavor',
+                    new=mock.Mock(side_effect=fake_extract_flavor)))
+        self.patchers.append(
+                mock.patch.object(driver,
+                                  'compute_driver_matches',
+                                  new=mock.Mock(
+                                      side_effect=fake_driver_matches)))
+        for patcher in self.patchers:
+            patcher.start()
 
-    def _test_default_device_names(self, update_function, *block_device_lists):
+    def tearDown(self):
+        super(DefaultDeviceNamesForInstanceTestCase, self).tearDown()
+        for patcher in self.patchers:
+            patcher.stop()
+
+    def _test_default_device_names(self, *block_device_lists):
         compute_utils.default_device_names_for_instance(self.instance,
                                                         self.root_device_name,
-                                                        update_function,
                                                         *block_device_lists)
 
     def test_only_block_device_mapping(self):
         # Test no-op
         original_bdm = copy.deepcopy(self.block_device_mapping)
-        self._test_default_device_names(None, [], [],
-                                        self.block_device_mapping)
-        self.assertThat(original_bdm,
-                        matchers.DictListMatches(self.block_device_mapping))
+        self._test_default_device_names([], [], self.block_device_mapping)
+        for original, new in zip(original_bdm, self.block_device_mapping):
+            self.assertEqual(original.device_name, new.device_name)
 
         # Asser it defaults the missing one as expected
         self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, [], [],
-                                        self.block_device_mapping)
+        self._test_default_device_names([], [], self.block_device_mapping)
         self.assertEqual(self.block_device_mapping[1]['device_name'],
                          '/dev/vdb')
 
     def test_with_ephemerals(self):
         # Test ephemeral gets assigned
         self.ephemerals[0]['device_name'] = None
-        self._test_default_device_names(None, self.ephemerals, [],
+        self._test_default_device_names(self.ephemerals, [],
                                         self.block_device_mapping)
         self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
 
         self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, self.ephemerals, [],
+        self._test_default_device_names(self.ephemerals, [],
                                         self.block_device_mapping)
         self.assertEqual(self.block_device_mapping[1]['device_name'],
                          '/dev/vdc')
@@ -320,13 +343,13 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
     def test_with_swap(self):
         # Test swap only
         self.swap[0]['device_name'] = None
-        self._test_default_device_names(None, [], self.swap, [])
+        self._test_default_device_names([], self.swap, [])
         self.assertEqual(self.swap[0]['device_name'], '/dev/vdb')
 
         # Test swap and block_device_mapping
         self.swap[0]['device_name'] = None
         self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, [], self.swap,
+        self._test_default_device_names([], self.swap,
                                         self.block_device_mapping)
         self.assertEqual(self.swap[0]['device_name'], '/dev/vdb')
         self.assertEqual(self.block_device_mapping[1]['device_name'],
@@ -335,14 +358,14 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
     def test_all_together(self):
         # Test swap missing
         self.swap[0]['device_name'] = None
-        self._test_default_device_names(None, self.ephemerals,
+        self._test_default_device_names(self.ephemerals,
                                         self.swap, self.block_device_mapping)
         self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
 
         # Test swap and eph missing
         self.swap[0]['device_name'] = None
         self.ephemerals[0]['device_name'] = None
-        self._test_default_device_names(None, self.ephemerals,
+        self._test_default_device_names(self.ephemerals,
                                         self.swap, self.block_device_mapping)
         self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
         self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
@@ -351,22 +374,12 @@ class DefaultDeviceNamesForInstanceTestCase(test.TestCase):
         self.swap[0]['device_name'] = None
         self.ephemerals[0]['device_name'] = None
         self.block_device_mapping[1]['device_name'] = None
-        self._test_default_device_names(None, self.ephemerals,
+        self._test_default_device_names(self.ephemerals,
                                         self.swap, self.block_device_mapping)
         self.assertEqual(self.ephemerals[0]['device_name'], '/dev/vdb')
         self.assertEqual(self.swap[0]['device_name'], '/dev/vdc')
         self.assertEqual(self.block_device_mapping[1]['device_name'],
                          '/dev/vdd')
-
-    def test_update_fn_gets_called(self):
-        def _update(bdm):
-            self.update_called = True
-
-        self.block_device_mapping[1]['device_name'] = None
-        compute_utils.default_device_names_for_instance(
-            self.instance, self.root_device_name, _update, [], [],
-            self.block_device_mapping)
-        self.assertTrue(self.update_called)
 
 
 class UsageInfoTestCase(test.TestCase):
