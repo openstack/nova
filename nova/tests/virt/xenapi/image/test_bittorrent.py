@@ -119,6 +119,9 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
     def _mock_iter_none(self, namespace):
         return []
 
+    def _mock_iter_single(self, namespace):
+        return [MockEntryPoint()]
+
     def test_default_fetch_url_no_base_url_set(self):
         self.flags(torrent_base_url=None,
                    group='xenserver')
@@ -128,30 +131,32 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
         self.assertEqual(_('Cannot create default bittorrent URL without'
-                           ' torrent_base_url set'),
+                           ' torrent_base_url set'
+                           ' or torrent URL fetcher extension'),
                          str(exc))
 
     def test_default_fetch_url_base_url_is_set(self):
         self.flags(torrent_base_url='http://foo',
                    group='xenserver')
         self.stubs.Set(pkg_resources, 'iter_entry_points',
-                       self._mock_iter_none)
+                       self._mock_iter_single)
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual('http://foo/fakeimageid.torrent',
                          lookup_fn(self.instance, self.image_id))
 
     def test_with_extension(self):
-        def mock_iter_single(namespace):
-            return [MockEntryPoint()]
-
-        self.stubs.Set(pkg_resources, 'iter_entry_points', mock_iter_single)
+        self.stubs.Set(pkg_resources, 'iter_entry_points',
+                       self._mock_iter_single)
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual("http://www.foobar.com/%s" % self.image_id,
                          lookup_fn(self.instance, self.image_id))
 
     def test_multiple_extensions_found(self):
+        self.flags(torrent_base_url=None,
+                   group='xenserver')
+
         def mock_iter_multiple(namespace):
             return [MockEntryPoint(), MockEntryPoint()]
 
@@ -159,6 +164,6 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
 
         exc = self.assertRaises(
                 RuntimeError, self.store._lookup_torrent_url_fn)
-        self.assertEqual(_('Multiple torrent URL fetcher extension found.'
+        self.assertEqual(_('Multiple torrent URL fetcher extensions found.'
                            ' Failing.'),
                          str(exc))
