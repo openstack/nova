@@ -16,7 +16,6 @@
 """Tests for compute resource tracking."""
 
 import mock
-import re
 import uuid
 
 from oslo.config import cfg
@@ -70,6 +69,20 @@ class FakeVirtDriver(driver.ComputeDriver):
         self.memory_mb_used = 0
         self.local_gb_used = 0
         self.pci_support = pci_support
+        self.pci_devices = [{
+            'label': 'forza-napoli',
+            'dev_type': 'foo',
+            'compute_node_id': 1,
+            'address': '0000:00:00.1',
+            'product_id': 'p1',
+            'vendor_id': 'v1',
+            'status': 'available',
+            'extra_k1': 'v1'}] if self.pci_support else []
+        self.pci_stats = [{
+            'count': 1,
+            'vendor_id': 'v1',
+            'product_id': 'p1',
+            'extra_info': {'extra_k1': 'v1'}}] if self.pci_support else []
 
     def get_host_ip_addr(self):
         return '127.0.0.1'
@@ -88,15 +101,8 @@ class FakeVirtDriver(driver.ComputeDriver):
             'cpu_info': '',
         }
         if self.pci_support:
-            d['pci_passthrough_devices'] = jsonutils.dumps([{
-                    'label': 'forza-napoli',
-                    'dev_type': 'foo',
-                    'compute_node_id': 1,
-                    'address': '0000:00:00.1',
-                    'product_id': 'p1',
-                    'vendor_id': 'v1',
-                    'status': 'available',
-                    'extra_k1': 'v1'}])
+            d['pci_passthrough_devices'] = jsonutils.dumps(self.pci_devices)
+
         return d
 
     def estimate_instance_overhead(self, instance_info):
@@ -507,6 +513,7 @@ class TrackerTestCase(BaseTrackerTestCase):
         self.assertTrue(self.updated)
 
     def test_init(self):
+        driver = self._driver()
         self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus')
@@ -518,7 +525,8 @@ class TrackerTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
-        self._assert('{}', 'pci_stats')
+        self.assertEqual(driver.pci_stats,
+            jsonutils.loads(self.tracker.compute_node['pci_stats']))
 
 
 class TrackerPciStatsTestCase(BaseTrackerTestCase):
@@ -528,6 +536,7 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
         self.assertTrue(self.updated)
 
     def test_init(self):
+        driver = self._driver()
         self._assert(FAKE_VIRT_MEMORY_MB, 'memory_mb')
         self._assert(FAKE_VIRT_LOCAL_GB, 'local_gb')
         self._assert(FAKE_VIRT_VCPUS, 'vcpus')
@@ -539,13 +548,8 @@ class TrackerPciStatsTestCase(BaseTrackerTestCase):
         self._assert(FAKE_VIRT_LOCAL_GB, 'free_disk_gb')
         self.assertFalse(self.tracker.disabled)
         self.assertEqual(0, self.tracker.compute_node['current_workload'])
-        expected = """[{"count": 1,
-                        "vendor_id": "v1",
-                        "product_id": "p1",
-                        "extra_info": {"extra_k1": "v1"}}]"""
-        expected = re.sub(r'\s+', '', expected)
-        pci = re.sub(r'\s+', '', self.tracker.compute_node['pci_stats'])
-        self.assertEqual(expected, pci)
+        self.assertEqual(driver.pci_stats,
+            jsonutils.loads(self.tracker.compute_node['pci_stats']))
 
     def _driver(self):
         return FakeVirtDriver(pci_support=True)
