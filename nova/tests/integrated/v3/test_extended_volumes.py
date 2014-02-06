@@ -19,6 +19,8 @@ from nova import context
 from nova import db
 from nova.objects import block_device as block_device_obj
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_block_device
+from nova.tests import fake_instance
 from nova.tests.integrated.v3 import test_servers
 from nova.volume import cinder
 
@@ -28,24 +30,30 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
 
     def _stub_compute_api_get_instance_bdms(self, server_id):
 
-        def fake_compute_api_get_instance_bdms(self, context, instance):
+        def fake_bdms_get_all_by_instance(context, instance_uui):
             bdms = [
-                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
-                'instance_uuid': server_id,
-                'device_name': '/dev/sdd'},
-                {'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
-                'instance_uuid': server_id,
-                'device_name': '/dev/sdc'}
+                fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 1, 'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',
+                'instance_uuid': server_id, 'source_type': 'volume',
+                'destination_type': 'volume', 'device_name': '/dev/sdd'}),
+                fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 2, 'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f804',
+                'instance_uuid': server_id, 'source_type': 'volume',
+                'destination_type': 'volume', 'device_name': '/dev/sdc'})
             ]
             return bdms
 
-        self.stubs.Set(compute_api.API, "get_instance_bdms",
-                       fake_compute_api_get_instance_bdms)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_bdms_get_all_by_instance)
 
     def _stub_compute_api_get(self):
-
         def fake_compute_api_get(self, context, instance_id, **kwargs):
-            return {'uuid': instance_id}
+            want_objects = kwargs.get('want_objects')
+            if want_objects:
+                return fake_instance.fake_instance_obj(
+                        context, **{'uuid': instance_id})
+            else:
+                return {'uuid': instance_id}
 
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)
 

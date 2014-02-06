@@ -28,11 +28,14 @@ from nova.api.openstack import extensions
 from nova.compute import api as compute_api
 from nova.compute import flavors
 from nova import context
+from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_block_device
+from nova.tests import fake_instance
 from nova.volume import cinder
 
 CONF = cfg.CONF
@@ -48,7 +51,7 @@ IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
 
 
 def fake_get_instance(self, context, instance_id, want_objects=False):
-    return {'uuid': instance_id}
+    return fake_instance.fake_instance_obj(context, **{'uuid': instance_id})
 
 
 def fake_get_volume(self, context, id):
@@ -92,23 +95,27 @@ def fake_compute_volume_snapshot_create(self, context, volume_id,
     pass
 
 
-def fake_get_instance_bdms(self, context, instance):
-    return [{'id': 1,
-             'instance_uuid': instance['uuid'],
+def fake_bdms_get_all_by_instance(context, instance_uuid):
+    return [fake_block_device.FakeDbBlockDeviceDict(
+            {'id': 1,
+             'instance_uuid': instance_uuid,
              'device_name': '/dev/fake0',
              'delete_on_termination': 'False',
-             'virtual_name': 'MyNamesVirtual',
+             'source_type': 'volume',
+             'destination_type': 'volume',
              'snapshot_id': None,
              'volume_id': FAKE_UUID_A,
-             'volume_size': 1},
+             'volume_size': 1}),
+            fake_block_device.FakeDbBlockDeviceDict(
             {'id': 2,
-             'instance_uuid': instance['uuid'],
+             'instance_uuid': instance_uuid,
              'device_name': '/dev/fake1',
              'delete_on_termination': 'False',
-             'virtual_name': 'MyNamesVirtual',
+             'source_type': 'volume',
+             'destination_type': 'volume',
              'snapshot_id': None,
              'volume_id': FAKE_UUID_B,
-             'volume_size': 1}]
+             'volume_size': 1})]
 
 
 def fake_volume_actions_to_locked_server(self, context, instance, volume):
@@ -318,9 +325,8 @@ class VolumeApiTest(test.TestCase):
 class VolumeAttachTests(test.TestCase):
     def setUp(self):
         super(VolumeAttachTests, self).setUp()
-        self.stubs.Set(compute_api.API,
-                       'get_instance_bdms',
-                       fake_get_instance_bdms)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_bdms_get_all_by_instance)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
         self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.context = context.get_admin_context()

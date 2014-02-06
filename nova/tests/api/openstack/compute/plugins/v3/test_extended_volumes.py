@@ -24,6 +24,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova import volume
 
@@ -49,8 +50,13 @@ def fake_compute_get_all(*args, **kwargs):
                                             db_list, fields)
 
 
-def fake_compute_get_instance_bdms(*args, **kwargs):
-    return [{'volume_id': UUID1}, {'volume_id': UUID2}]
+def fake_bdms_get_all_by_instance(*args, **kwargs):
+    return [fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': UUID1, 'source_type': 'volume',
+             'destination_type': 'volume', 'id': 1}),
+            fake_block_device.FakeDbBlockDeviceDict(
+            {'volume_id': UUID2, 'source_type': 'volume',
+             'destination_type': 'volume', 'id': 2})]
 
 
 def fake_attach_volume(self, context, instance, volume_id,
@@ -129,8 +135,8 @@ class ExtendedVolumesTest(test.TestCase):
         fakes.stub_out_nw_api(self.stubs)
         self.stubs.Set(compute.api.API, 'get', fake_compute_get)
         self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
-        self.stubs.Set(compute.api.API, 'get_instance_bdms',
-                       fake_compute_get_instance_bdms)
+        self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
+                       fake_bdms_get_all_by_instance)
         self.stubs.Set(volume.cinder.API, 'get', fake_volume_get)
         self.stubs.Set(compute.api.API, 'detach_volume', fake_detach_volume)
         self.stubs.Set(compute.api.API, 'attach_volume', fake_attach_volume)
