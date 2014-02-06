@@ -81,6 +81,16 @@ class ServiceManagerTestCase(test.TestCase):
         serv.start()
         self.assertEqual(serv.test_method(), 'service')
 
+    def test_service_with_min_down_time(self):
+        CONF.set_override('service_down_time', 10)
+        CONF.set_override('report_interval', 10)
+        serv = service.Service('test',
+                               'test',
+                               'test',
+                               'nova.tests.test_service.FakeManager')
+        serv.start()
+        self.assertEqual(CONF.service_down_time, 25)
+
 
 class ServiceFlagsTestCase(test.TestCase):
     def test_service_enabled_on_create_based_on_flag(self):

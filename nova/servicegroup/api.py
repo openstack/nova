@@ -73,6 +73,26 @@ class API(object):
             # check_isinstance does it
         return super(API, cls).__new__(cls)
 
+    def __init__(self, *args, **kwargs):
+        self.basic_config_check()
+        super(API, self).__init__(*args, **kwargs)
+
+    def basic_config_check(self):
+        """Perform basic config check."""
+        # Make sure report interval is less than service down time
+        report_interval = CONF.report_interval
+        if CONF.service_down_time <= report_interval:
+            new_service_down_time = int(report_interval * 2.5)
+            LOG.warn(_("Report interval must be less than service down "
+                       "time. Current config: <service_down_time: "
+                       "%(service_down_time)s, report_interval: "
+                       "%(report_interval)s>. Setting service_down_time to: "
+                       "%(new_service_down_time)s"),
+                       {'service_down_time': CONF.service_down_time,
+                        'report_interval': report_interval,
+                        'new_service_down_time': new_service_down_time})
+            CONF.set_override('service_down_time', new_service_down_time)
+
     def join(self, member_id, group_id, service=None):
         """Add a new member to the ServiceGroup
 
