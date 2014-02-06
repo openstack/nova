@@ -641,7 +641,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         new_volume_id = uuidutils.generate_uuid()
         volumes[new_volume_id] = {'id': new_volume_id,
                                   'display_name': 'new_volume',
-                                  'status': 'attaching'}
+                                  'status': 'available'}
+
+        def fake_vol_api_begin_detaching(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            volumes[volume_id]['status'] = 'detaching'
+
+        def fake_vol_api_roll_detaching(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            if volumes[volume_id]['status'] == 'detaching':
+                volumes[volume_id]['status'] = 'in-use'
 
         def fake_vol_api_func(context, volume, *args):
             self.assertTrue(uuidutils.is_uuid_like(volume))
@@ -656,6 +665,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertIn(volumes[volume_id]['status'],
                           ['available', 'attaching'])
             volumes[volume_id]['status'] = 'in-use'
+
+        def fake_vol_api_reserve(context, volume_id):
+            self.assertTrue(uuidutils.is_uuid_like(volume_id))
+            self.assertEqual(volumes[volume_id]['status'], 'available')
+            volumes[volume_id]['status'] = 'attaching'
 
         def fake_vol_unreserve(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
@@ -675,10 +689,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def fake_func_exc(*args, **kwargs):
             raise AttributeError  # Random exception
 
+        self.stubs.Set(self.compute.volume_api, 'begin_detaching',
+                       fake_vol_api_begin_detaching)
+        self.stubs.Set(self.compute.volume_api, 'roll_detaching',
+                       fake_vol_api_roll_detaching)
         self.stubs.Set(self.compute.volume_api, 'get', fake_vol_get)
         self.stubs.Set(self.compute.volume_api, 'initialize_connection',
                        fake_vol_api_func)
         self.stubs.Set(self.compute.volume_api, 'attach', fake_vol_attach)
+        self.stubs.Set(self.compute.volume_api, 'reserve_volume',
+                       fake_vol_api_reserve)
         self.stubs.Set(self.compute.volume_api, 'unreserve_volume',
                        fake_vol_unreserve)
         self.stubs.Set(self.compute.volume_api, 'terminate_connection',
@@ -713,8 +733,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
                           {'uuid': 'fake'})
-        self.assertEqual(volumes[old_volume_id]['status'], 'detaching')
-        self.assertEqual(volumes[new_volume_id]['status'], 'attaching')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
+        self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
         volumes[old_volume_id]['status'] = 'detaching'
         volumes[new_volume_id]['status'] = 'attaching'
@@ -723,7 +743,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertRaises(AttributeError, self.compute.swap_volume,
                           self.context, old_volume_id, new_volume_id,
                           {'uuid': 'fake'})
-        self.assertEqual(volumes[old_volume_id]['status'], 'detaching')
+        self.assertEqual(volumes[old_volume_id]['status'], 'in-use')
         self.assertEqual(volumes[new_volume_id]['status'], 'available')
 
     def test_check_can_live_migrate_source(self):
