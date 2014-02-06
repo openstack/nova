@@ -2304,7 +2304,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertEqual(FAKE_UUID, server['id'])
 
     def test_create_instance_admin_password(self):
-        self.body['server']['flavor_ref'] = 3,
+        self.body['server']['flavor_ref'] = 3
         self.body['server']['admin_password'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, self.body).obj
@@ -2315,7 +2315,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_admin_password_pass_disabled(self):
         self.flags(enable_instance_password=False)
-        self.body['server']['flavor_ref'] = 3,
+        self.body['server']['flavor_ref'] = 3
         self.body['server']['admin_password'] = 'testpass'
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, self.body).obj
@@ -2324,7 +2324,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertIn('admin_password', self.body['server'])
 
     def test_create_instance_admin_password_empty(self):
-        self.body['server']['flavor_ref'] = 3,
+        self.body['server']['flavor_ref'] = 3
         self.body['server']['admin_password'] = ''
         self.req.body = jsonutils.dumps(self.body)
 
