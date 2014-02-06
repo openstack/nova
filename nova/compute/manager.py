@@ -4538,7 +4538,8 @@ class ComputeManager(manager.Manager):
             filters = {'vm_state': vm_states.RESCUED,
                        'host': self.host}
             rescued_instances = self.conductor_api.instance_get_all_by_filters(
-                context, filters, columns_to_join=[], use_slave=True)
+                context, filters, columns_to_join=["system_metadata"],
+                use_slave=True)
 
             to_unrescue = []
             for instance in rescued_instances:
