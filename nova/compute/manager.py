@@ -2013,7 +2013,7 @@ class ComputeManager(manager.Manager):
     def terminate_instance(self, context, instance, bdms, reservations):
         """Terminate an instance on this host."""
 
-        @utils.synchronized(instance['uuid'] + ".delete")
+        @utils.synchronized(instance['uuid'])
         def do_terminate_instance(instance, bdms):
             try:
                 self._delete_instance(context, instance, bdms,
