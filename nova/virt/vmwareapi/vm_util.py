@@ -891,7 +891,7 @@ def _get_datastore_ref_and_name(data_stores, datastore_regex=None):
         ds_type = propdict['summary.type']
         ds_name = propdict['summary.name']
         if ((ds_type == 'VMFS' or ds_type == 'NFS') and
-                propdict['summary.accessible']):
+                propdict.get('summary.accessible')):
             if datastore_regex is None or datastore_regex.match(ds_name):
                 new_ds = DSRecord(
                     datastore=obj_content.obj,
