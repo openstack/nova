@@ -479,6 +479,12 @@ class FakeDriver(driver.ComputeDriver):
     def instance_on_disk(self, instance):
         return False
 
+    def quiesce(self, context, instance, image_meta):
+        pass
+
+    def unquiesce(self, context, instance, image_meta):
+        pass
+
 
 class FakeVirtAPI(virtapi.VirtAPI):
     def provider_fw_rule_get_all(self, context):
