@@ -90,8 +90,8 @@ class SchedulerHintsTestCase(test.TestCase):
                   'name': 'server_test',
                   'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavor_ref': '1',
+                  'os-scheduler-hints:scheduler_hints': {'a': 'b'},
             },
-            'os-scheduler-hints:scheduler_hints': {'a': 'b'},
         }
 
         req.body = jsonutils.dumps(body)
@@ -107,8 +107,8 @@ class SchedulerHintsTestCase(test.TestCase):
                   'name': 'server_test',
                   'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavor_ref': '1',
+                  'os-scheduler-hints:scheduler_hints': 'non-dict',
             },
-            'os-scheduler-hints:scheduler_hints': 'here',
         }
 
         req.body = jsonutils.dumps(body)
@@ -228,7 +228,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_with_scheduler_hints_disabled(self):
         hints = {'a': 'b'}
-        params = {'scheduler_hints': hints}
+        params = {'os-scheduler-hints:scheduler_hints': hints}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
@@ -242,7 +242,7 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_with_scheduler_hints_enabled(self):
         hints = {'a': 'b'}
-        params = {'scheduler_hints': hints}
+        params = {'os-scheduler-hints:scheduler_hints': hints}
         old_create = compute_api.API.create
 
         def create(*args, **kwargs):
