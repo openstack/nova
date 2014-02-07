@@ -519,6 +519,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIn('tlsPort', spice_console)
 
     @catch_notimplementederror
+    def test_get_rdp_console(self):
+        instance_ref, network_info = self._get_running_instance()
+        rdp_console = self.connection.get_rdp_console(self.ctxt, instance_ref)
+        self.assertIn('internal_access_path', rdp_console)
+        self.assertIn('host', rdp_console)
+        self.assertIn('port', rdp_console)
+
+    @catch_notimplementederror
     def test_get_console_pool_info(self):
         instance_ref, network_info = self._get_running_instance()
         console_pool = self.connection.get_console_pool_info(instance_ref)

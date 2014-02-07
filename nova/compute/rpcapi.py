@@ -223,6 +223,7 @@ class ComputeAPI(object):
         3.7 - Update change_instance_metadata() to take an instance object
         3.8 - Update set_admin_password() to take an instance object
         3.9 - Update rescue_instance() to take an instance object
+        3.10 - Added get_rdp_console method
     '''
 
     VERSION_ALIASES = {
@@ -448,6 +449,13 @@ class ComputeAPI(object):
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'get_spice_console',
+                          instance=instance, console_type=console_type)
+
+    def get_rdp_console(self, ctxt, instance, console_type):
+        version = '3.10'
+        cctxt = self.client.prepare(server=_compute_host(None, instance),
+                version=version)
+        return cctxt.call(ctxt, 'get_rdp_console',
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):

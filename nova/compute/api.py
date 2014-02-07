@@ -2636,6 +2636,26 @@ class API(base.Base):
 
     @wrap_check_policy
     @check_instance_host
+    def get_rdp_console(self, context, instance, console_type):
+        """Get a url to an instance Console."""
+        connect_info = self.compute_rpcapi.get_rdp_console(context,
+                instance=instance, console_type=console_type)
+        self.consoleauth_rpcapi.authorize_console(context,
+                connect_info['token'], console_type,
+                connect_info['host'], connect_info['port'],
+                connect_info['internal_access_path'], instance['uuid'])
+
+        return {'url': connect_info['access_url']}
+
+    @check_instance_host
+    def get_rdp_connect_info(self, context, instance, console_type):
+        """Used in a child cell to get console info."""
+        connect_info = self.compute_rpcapi.get_rdp_console(context,
+                instance=instance, console_type=console_type)
+        return connect_info
+
+    @wrap_check_policy
+    @check_instance_host
     def get_console_output(self, context, instance, tail_length=None):
         """Get console output for an instance."""
         return self.compute_rpcapi.get_console_output(context,

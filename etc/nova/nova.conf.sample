@@ -3033,6 +3033,20 @@
 #extensions_whitelist=
 
 
+[rdp]
+
+#
+# Options defined in nova.rdp
+#
+
+# Location of RDP html5 console proxy, in the form
+# "http://127.0.0.1:6083/" (string value)
+#html5_proxy_base_url=http://127.0.0.1:6083/
+
+# Enable RDP related features (boolean value)
+#enabled=false
+
+
 [remote_debug]
 
 #
