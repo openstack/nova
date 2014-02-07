@@ -38,7 +38,7 @@ FAKE_FLAVORS = {
 }
 
 
-#TOD(jogo) dedup these accross nova.api.openstack.contrib.test_flavor*
+#TOD(jogo) dedup these across nova.api.openstack.contrib.test_flavor*
 def fake_flavor_get_by_flavor_id(flavorid, ctxt=None):
     return FAKE_FLAVORS['flavor %s' % flavorid]
 

@@ -381,7 +381,7 @@ class HostSerializerTest(test.TestCase):
         for key, value in exemplar.items():
             self.assertEqual(value, tree.get(key))
 
-    def test_update_serializer_with_maintainance_mode(self):
+    def test_update_serializer_with_maintenance_mode(self):
         exemplar = dict(host='host_c1', maintenance_mode='enabled')
         serializer = os_hosts.HostUpdateTemplate()
         text = serializer.serialize(exemplar)
@@ -392,7 +392,7 @@ class HostSerializerTest(test.TestCase):
         for key, value in exemplar.items():
             self.assertEqual(value, tree.get(key))
 
-    def test_update_serializer_with_maintainance_mode_and_status(self):
+    def test_update_serializer_with_maintenance_mode_and_status(self):
         exemplar = dict(host='host_c1',
                         maintenance_mode='enabled',
                         status='enabled')

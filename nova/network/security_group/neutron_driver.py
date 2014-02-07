@@ -194,7 +194,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
         Note: the Nova security group API doesn't support adding muliple
         security group rules at once but the EC2 one does. Therefore,
-        this function is writen to support both. Multiple rules are
+        this function is written to support both. Multiple rules are
         installed to a security group in neutron using bulk support.
         """
 
@@ -308,7 +308,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         return ports
 
     def _get_secgroups_from_port_list(self, ports, neutron):
-        """Returns a dict of security groups keyed by thier ids."""
+        """Returns a dict of security groups keyed by their ids."""
 
         def _chunk_by_ids(sg_ids, limit):
             sg_id_list = []

@@ -480,7 +480,7 @@ def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
     status codes are always returned for them.
 
     Unexpected 5xx errors may contain sensitive information,
-    supress their messages for security.
+    suppress their messages for security.
     """
     if not code:
         code = exception_to_ec2code(ex)

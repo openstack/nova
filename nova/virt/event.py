@@ -16,7 +16,7 @@
 Asynchronous event notifications from virtualization drivers.
 
 This module defines a set of classes representing data for
-various asynchronous events that can occurr in a virtualization
+various asynchronous events that can occur in a virtualization
 driver.
 """
 

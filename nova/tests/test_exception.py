@@ -84,9 +84,9 @@ class NovaExceptionTestCase(test.NoDBTestCase):
 
     def test_error_msg_exception_with_kwargs(self):
         class FakeNovaException(exception.NovaException):
-            msg_fmt = "default message: %(mispelled_code)s"
+            msg_fmt = "default message: %(misspelled_code)s"
 
-        exc = FakeNovaException(code=500, mispelled_code='blah')
+        exc = FakeNovaException(code=500, misspelled_code='blah')
         self.assertEqual(unicode(exc), 'default message: blah')
         self.assertEqual(exc.message, 'default message: blah')
 

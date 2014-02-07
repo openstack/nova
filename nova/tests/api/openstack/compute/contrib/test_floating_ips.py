@@ -318,9 +318,9 @@ class FloatingIpTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips')
         ex = self.assertRaises(webob.exc.HTTPNotFound,
-            self.controller.create, req, {'pool': 'non_existant_pool'})
+            self.controller.create, req, {'pool': 'non_existent_pool'})
 
-        self.assertIn('No more floating ips in pool non_existant_pool',
+        self.assertIn('No more floating ips in pool non_existent_pool',
                       ex.explanation)
 
     def test_floating_ip_allocate(self):

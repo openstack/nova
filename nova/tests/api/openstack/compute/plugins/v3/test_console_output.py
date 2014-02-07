@@ -133,7 +133,7 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)
 
-    def test_get_console_output_with_lenght_as_float(self):
+    def test_get_console_output_with_length_as_float(self):
         req = self._create_request(length_dict={'length': 2.5})
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)

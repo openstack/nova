@@ -35,7 +35,7 @@ Virtual environments
 --------------------
 
 Nova development uses a set of shell scripts in DevStack. Virtual
-enviroments with venv are also available with the source code.
+environments with venv are also available with the source code.
 
 The easiest way to build a fully functional development environment is
 with DevStack. Create a machine (such as a VM or Vagrant box) running a

@@ -728,7 +728,7 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _pre_upgrade_006(self, engine):
         nodes = db_utils.get_table(engine, 'bm_nodes')
         ifs = db_utils.get_table(engine, 'bm_interfaces')
-        # node 1 has two diffrent addresses in bm_nodes and bm_interfaces
+        # node 1 has two different addresses in bm_nodes and bm_interfaces
         engine.execute(nodes.insert(),
                        [{'id': 1,
                          'prov_mac_address': 'aa:aa:aa:aa:aa:aa'}])

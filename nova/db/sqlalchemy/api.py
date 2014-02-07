@@ -5591,7 +5591,7 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         column = table.c.id
         column_name = "id"
     # NOTE(guochbo): Use InsertFromSelect and DeleteFromSelect to avoid
-    # database's limit of maximum parameter in one SQL statment.
+    # database's limit of maximum parameter in one SQL statement.
     query_insert = select([table],
                           table.c.deleted != default_deleted_value).\
                           order_by(column).limit(max_rows)
