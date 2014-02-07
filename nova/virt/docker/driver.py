@@ -308,6 +308,8 @@ class DockerDriver(driver.ComputeDriver):
             self._setup_network(instance, network_info)
         except Exception as e:
             msg = _('Cannot setup network: {0}')
+            self.docker.kill_container(container_id)
+            self.docker.destroy_container(container_id)
             raise exception.InstanceDeployFailure(msg.format(e),
                                                   instance_id=instance['name'])
 
