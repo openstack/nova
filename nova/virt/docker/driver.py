@@ -194,12 +194,6 @@ class DockerDriver(driver.ComputeDriver):
             time.sleep(0.5)
             n += 1
 
-    def _find_fixed_ip(self, subnets):
-        for subnet in subnets:
-            for ip in subnet['ips']:
-                if ip['type'] == 'fixed' and ip['address']:
-                    return ip['address']
-
     def _setup_network(self, instance, network_info):
         if not network_info:
             return
@@ -224,9 +218,8 @@ class DockerDriver(driver.ComputeDriver):
         if_local_name = 'pvnetl{0}'.format(rand)
         if_remote_name = 'pvnetr{0}'.format(rand)
         bridge = network_info['bridge']
-        ip = self._find_fixed_ip(network_info['subnets'])
-        if not ip:
-            raise RuntimeError(_('Cannot set fixed ip'))
+        gateway = network.find_gateway(instance, network_info)
+        ip = network.find_fixed_ip(instance, network_info)
         undo_mgr = utils.UndoManager()
         try:
             utils.execute(
@@ -250,6 +243,10 @@ class DockerDriver(driver.ComputeDriver):
                 'ip', 'netns', 'exec', container_id, 'ifconfig',
                 if_remote_name, ip,
                 run_as_root=True)
+            utils.execute(
+                'ip', 'netns', 'exec', container_id,
+                'ip', 'route', 'replace', 'default', 'via', gateway, 'dev',
+                if_remote_name, run_as_root=True)
         except Exception:
             msg = _('Failed to setup the network, rolling back')
             undo_mgr.rollback_and_reraise(msg=msg, instance=instance)

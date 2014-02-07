@@ -13,9 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
 
+from nova import exception
 from nova import test
 from nova import utils
+
+from nova.tests import utils as test_utils
 
 from nova.openstack.common import processutils
 from nova.virt.docker import network
@@ -48,3 +52,36 @@ class NetworkTestCase(test.NoDBTestCase):
         id = "third-id"
         network.teardown_network(id)
         log_mock.warning.assert_called_with(mock.ANY, id)
+
+    def test_find_gateway(self):
+        instance = {'uuid': uuid.uuid4()}
+        network_info = test_utils.get_test_network_info()
+        first_net = network_info[0]['network']
+        first_net['subnets'][0]['gateway']['address'] = '10.0.0.1'
+        self.assertEqual('10.0.0.1', network.find_gateway(instance, first_net))
+
+    def test_cannot_find_gateway(self):
+        instance = {'uuid': uuid.uuid4()}
+        network_info = test_utils.get_test_network_info()
+        first_net = network_info[0]['network']
+        first_net['subnets'] = []
+        self.assertRaises(exception.InstanceDeployFailure,
+                          network.find_gateway, instance, first_net)
+
+    def test_find_fixed_ip(self):
+        instance = {'uuid': uuid.uuid4()}
+        network_info = test_utils.get_test_network_info()
+        first_net = network_info[0]['network']
+        first_net['subnets'][0]['cidr'] = '10.0.0.0/24'
+        first_net['subnets'][0]['ips'][0]['type'] = 'fixed'
+        first_net['subnets'][0]['ips'][0]['address'] = '10.0.1.13'
+        self.assertEqual('10.0.1.13/24', network.find_fixed_ip(instance,
+                                                               first_net))
+
+    def test_cannot_find_fixed_ip(self):
+        instance = {'uuid': uuid.uuid4()}
+        network_info = test_utils.get_test_network_info()
+        first_net = network_info[0]['network']
+        first_net['subnets'] = []
+        self.assertRaises(exception.InstanceDeployFailure,
+                          network.find_fixed_ip, instance, first_net)
