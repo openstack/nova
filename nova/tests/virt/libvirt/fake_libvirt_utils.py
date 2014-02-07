@@ -204,3 +204,7 @@ def list_rbd_volumes(pool):
 
 def remove_rbd_volumes(pool, *names):
     pass
+
+
+def get_arch(image_meta):
+    pass
