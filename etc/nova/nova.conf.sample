@@ -3398,7 +3398,7 @@
 # Max number of times to poll for VHD to coalesce. Used only
 # if compute_driver=xenapi.XenAPIDriver (integer value)
 # Deprecated group/name - [DEFAULT]/xenapi_vhd_coalesce_max_attempts
-#vhd_coalesce_max_attempts=5
+#vhd_coalesce_max_attempts=20
 
 # Base path to the storage repository (string value)
 # Deprecated group/name - [DEFAULT]/xenapi_sr_base_path

@@ -88,7 +88,7 @@ xenapi_opts = [
                 help='Ensure compute service is running on host XenAPI '
                      'connects to.'),
     cfg.IntOpt('vhd_coalesce_max_attempts',
-               default=5,
+               default=20,
                deprecated_name='xenapi_vhd_coalesce_max_attempts',
                deprecated_group='DEFAULT',
                help='Max number of times to poll for VHD to coalesce. '

@@ -695,7 +695,10 @@ class SessionBase(object):
         return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
 
     def _plugin_nova_plugin_version_get_version(self, method, args):
-        return pickle.dumps("1.0")
+        return pickle.dumps("1.1")
+
+    def _plugin_xenhost_query_gc(self, method, args):
+        return pickle.dumps("False")
 
     def host_call_plugin(self, _1, _2, plugin, method, args):
         func = getattr(self, '_plugin_%s_%s' % (plugin, method), None)

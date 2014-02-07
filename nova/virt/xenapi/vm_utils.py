@@ -2046,6 +2046,22 @@ def _child_vhds(session, sr_ref, vdi_uuid):
     return children
 
 
+def _another_child_vhd(session, vdi_ref, sr_ref, original_parent_uuid):
+    # Search for any other vdi which parents to original parent and is not
+    # in the active vm/instance vdi chain.
+    vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
+    vdi_uuid = vdi_rec['uuid']
+    parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref, vdi_rec)
+    for _ref, rec in _get_all_vdis_in_sr(session, sr_ref):
+        if ((rec['uuid'] != vdi_uuid) and
+            (rec['uuid'] != parent_vdi_uuid) and
+            (rec['sm_config'].get('vhd-parent') == original_parent_uuid)):
+            # Found another vhd which too parents to original parent.
+            return True
+    # Found no other vdi with the same parent.
+    return False
+
+
 def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                            original_parent_uuid):
     """Spin until the parent VHD is coalesced into its parent VHD
@@ -2064,34 +2080,24 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     if not original_parent_uuid:
         return
 
-    def _another_child_vhd():
-        # Search for any other vdi which parents to original parent and is not
-        # in the active vm/instance vdi chain.
-        vdi_rec = session.call_xenapi('VDI.get_record', vdi_ref)
-        vdi_uuid = vdi_rec['uuid']
-        parent_vdi_uuid = _get_vhd_parent_uuid(session, vdi_ref, vdi_rec)
-        for _ref, rec in _get_all_vdis_in_sr(session, sr_ref):
-            if ((rec['uuid'] != vdi_uuid) and
-               (rec['uuid'] != parent_vdi_uuid) and
-               (rec['sm_config'].get('vhd-parent') == original_parent_uuid)):
-                # Found another vhd which too parents to original parent.
-                return True
-        # Found no other vdi with the same parent.
-        return False
-
     # Check if original parent has any other child. If so, coalesce will
     # not take place.
-    if _another_child_vhd():
+    if _another_child_vhd(session, vdi_ref, sr_ref, original_parent_uuid):
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
         base_uuid = _get_vhd_parent_uuid(session, parent_ref)
         return parent_uuid, base_uuid
+
+    sr_uuid = session.call_xenapi("SR.get_uuid", sr_ref)
 
     max_attempts = CONF.xenserver.vhd_coalesce_max_attempts
     for i in xrange(max_attempts):
         # NOTE(sirp): This rescan is necessary to ensure the VM's `sm_config`
         # matches the underlying VHDs.
         _scan_sr(session, sr_ref)
+        gc_running = session.call_plugin_serialized('xenhost', 'query_gc',
+                                                    sr_uuid=sr_uuid,
+                                                    vdi_uuid=None)
         parent_uuid = _get_vhd_parent_uuid(session, vdi_ref)
         if parent_uuid and (parent_uuid != original_parent_uuid):
             LOG.debug(_("Parent %(parent_uuid)s doesn't match original parent"
@@ -2099,6 +2105,10 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                       {'parent_uuid': parent_uuid,
                        'original_parent_uuid': original_parent_uuid},
                       instance=instance)
+            if not gc_running:
+                msg = _("VHD coalesce: Garbage collection not running"
+                        ", giving up...")
+                raise exception.NovaException(msg)
         else:
             parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
             base_uuid = _get_vhd_parent_uuid(session, parent_ref)
