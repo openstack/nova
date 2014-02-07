@@ -412,6 +412,27 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_reboot_type_fails('SOFT', vm_state=vm_states.ERROR,
                                      launched_at=None)
 
+    def _test_delete_resizing_part(self, inst, deltas):
+        fake_db_migration = test_migration.fake_db_migration()
+        migration = migration_obj.Migration._from_db_object(
+                self.context, migration_obj.Migration(),
+                fake_db_migration)
+        inst.instance_type_id = migration.new_instance_type_id
+        old_flavor = {'vcpus': 1,
+                      'memory_mb': 512}
+        deltas['cores'] = -old_flavor['vcpus']
+        deltas['ram'] = -old_flavor['memory_mb']
+
+        self.mox.StubOutWithMock(migration_obj.Migration,
+                                 'get_by_instance_and_status')
+        self.mox.StubOutWithMock(flavors, 'get_flavor')
+
+        self.context.elevated().AndReturn(self.context)
+        migration_obj.Migration.get_by_instance_and_status(
+            self.context, inst.uuid, 'post-migrating').AndReturn(migration)
+        flavors.get_flavor(migration.old_instance_type_id).AndReturn(
+            old_flavor)
+
     def _test_delete_resized_part(self, inst):
         migration = migration_obj.Migration._from_db_object(
                 self.context, migration_obj.Migration(),
@@ -482,6 +503,9 @@ class _ComputeAPIUnitTestMixIn(object):
         inst = self._create_instance_obj()
         inst.update(attrs)
         inst._context = self.context
+        deltas = {'instances': -1,
+                  'cores': -inst.vcpus,
+                  'ram': -inst.memory_mb}
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
                                         tzinfo=iso8601.iso8601.Utc())
         timeutils.set_time_override(delete_time)
@@ -493,12 +517,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(inst, 'save')
         self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
-        self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(db, 'service_get_by_compute_host')
         self.mox.StubOutWithMock(self.compute_api.servicegroup_api,
                                  'service_is_up')
-        self.mox.StubOutWithMock(db, 'migration_get_by_instance_and_status')
         self.mox.StubOutWithMock(self.compute_api, '_downsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
@@ -526,9 +549,11 @@ class _ComputeAPIUnitTestMixIn(object):
         block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
             self.context, inst.uuid).AndReturn([])
         inst.save()
-        self.compute_api._create_reservations(
-            self.context, inst, inst.instance_type_id, inst.project_id,
-            inst.user_id).AndReturn(reservations)
+        if inst.task_state == task_states.RESIZE_FINISH:
+            self._test_delete_resizing_part(inst, deltas)
+        quota.QUOTAS.reserve(self.context, project_id=inst.project_id,
+                             user_id=inst.user_id,
+                             **deltas).AndReturn(reservations)
 
         # NOTE(comstud): This is getting messy.  But what we are wanting
         # to test is:
@@ -673,7 +698,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                  use_slave=False).AndReturn([])
         inst.save()
         self.compute_api._create_reservations(self.context,
-                                              inst, inst.instance_type_id,
+                                              inst, inst.task_state,
                                               inst.project_id, inst.user_id
                                               ).AndReturn(None)
 
