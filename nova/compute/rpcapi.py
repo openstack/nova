@@ -221,6 +221,7 @@ class ComputeAPI(object):
         3.5 - Pass preserve_ephemeral flag to rebuild_instance()
         3.6 - Make volume_snapshot_{create,delete} use new-world objects
         3.7 - Update change_instance_metadata() to take an instance object
+        3.8 - Update set_admin_password() to take an instance object
     '''
 
     VERSION_ALIASES = {
@@ -711,13 +712,16 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def set_admin_password(self, ctxt, instance, new_pass):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.8'):
+            version = '3.8'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'set_admin_password',
-                          instance=instance_p, new_pass=new_pass)
+                          instance=instance, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, enabled, host):
         # NOTE(russellb) Havana compat
