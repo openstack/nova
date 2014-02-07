@@ -209,6 +209,7 @@ class Instance(BASE, NovaBase):
                 base_name = self.uuid
         return base_name
 
+    @property
     def _extra_keys(self):
         return ['name']
 
@@ -1097,6 +1098,7 @@ class Aggregate(BASE, NovaBase):
                              'AggregateMetadata.deleted == 0,'
                              'Aggregate.deleted == 0)')
 
+    @property
     def _extra_keys(self):
         return ['hosts', 'metadetails', 'availability_zone']
 

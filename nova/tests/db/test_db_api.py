@@ -4081,13 +4081,8 @@ class VolumeUsageDBApiTestCase(test.TestCase):
     def test_vol_usage_update_no_totals_update(self):
         ctxt = context.get_admin_context()
         now = timeutils.utcnow()
+        timeutils.set_time_override(now)
         start_time = now - datetime.timedelta(seconds=10)
-
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
-        timeutils.utcnow().AndReturn(now)
-        timeutils.utcnow().AndReturn(now)
-        timeutils.utcnow().AndReturn(now)
-        self.mox.ReplayAll()
 
         expected_vol_usages = {
             u'1': {'volume_id': u'1',
@@ -4154,17 +4149,11 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         ctxt = context.get_admin_context()
         now = datetime.datetime(1, 1, 1, 1, 0, 0)
         start_time = now - datetime.timedelta(seconds=10)
-
-        self.mox.StubOutWithMock(timeutils, 'utcnow')
-        timeutils.utcnow().AndReturn(now)
         now1 = now + datetime.timedelta(minutes=1)
-        timeutils.utcnow().AndReturn(now1)
         now2 = now + datetime.timedelta(minutes=2)
-        timeutils.utcnow().AndReturn(now2)
         now3 = now + datetime.timedelta(minutes=3)
-        timeutils.utcnow().AndReturn(now3)
-        self.mox.ReplayAll()
 
+        timeutils.set_time_override(now)
         db.vol_usage_update(ctxt, u'1', rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
                             instance_id='fake-instance-uuid',
@@ -4175,6 +4164,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 0)
         self.assertEqual(current_usage['curr_reads'], 100)
 
+        timeutils.set_time_override(now1)
         db.vol_usage_update(ctxt, u'1', rd_req=200, rd_bytes=300,
                             wr_req=400, wr_bytes=500,
                             instance_id='fake-instance-uuid',
@@ -4186,6 +4176,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 0)
 
+        timeutils.set_time_override(now2)
         db.vol_usage_update(ctxt, u'1', rd_req=300, rd_bytes=400,
                             wr_req=500, wr_bytes=600,
                             instance_id='fake-instance-uuid',
@@ -4196,6 +4187,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
         self.assertEqual(current_usage['tot_reads'], 200)
         self.assertEqual(current_usage['curr_reads'], 300)
 
+        timeutils.set_time_override(now3)
         db.vol_usage_update(ctxt, u'1', rd_req=400, rd_bytes=500,
                             wr_req=600, wr_bytes=700,
                             instance_id='fake-instance-uuid',
