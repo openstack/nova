@@ -317,6 +317,9 @@ def delete_image_on_error(function):
 
 
 # TODO(danms): Remove me after Icehouse
+# NOTE(mikal): if the method being decorated has more than one decorator, then
+# put this one first. Otherwise the various exception handling decorators do
+# not function correctly.
 def object_compat(function):
     """Wraps a method that expects a new-world instance
 
@@ -2172,8 +2175,8 @@ class ComputeManager(manager.Manager):
                           admin_password, network_info=network_info,
                           block_device_info=new_block_device_info)
 
-    @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @object_compat
+    @messaging.expected_exceptions(exception.PreserveEphemeralNotSupported)
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -3691,9 +3694,9 @@ class ComputeManager(manager.Manager):
                                    exception.InstanceNotFound,
                                    exception.ConsoleTypeUnavailable,
                                    NotImplementedError)
+    @object_compat
     @wrap_exception()
     @wrap_instance_fault
-    @object_compat
     def get_vnc_console(self, context, console_type, instance):
         """Return connection information for a vnc console."""
         context = context.elevated()
@@ -3725,13 +3728,13 @@ class ComputeManager(manager.Manager):
 
         return connect_info
 
+    @object_compat
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound,
                                    exception.ConsoleTypeUnavailable)
     @wrap_exception()
     @wrap_instance_fault
-    @object_compat
     def get_spice_console(self, context, console_type, instance):
         """Return connection information for a spice console."""
         context = context.elevated()
@@ -3765,9 +3768,9 @@ class ComputeManager(manager.Manager):
     @messaging.expected_exceptions(exception.ConsoleTypeInvalid,
                                    exception.InstanceNotReady,
                                    exception.InstanceNotFound)
+    @object_compat
     @wrap_exception()
     @wrap_instance_fault
-    @object_compat
     def validate_console_port(self, ctxt, instance, port, console_type):
         if console_type == "spice-html5":
             console_info = self.driver.get_spice_console(ctxt, instance)
