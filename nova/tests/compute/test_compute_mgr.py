@@ -430,6 +430,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.task_state = task_states.IMAGE_SNAPSHOT
         self._test_init_instance_cleans_image_states(instance)
 
+    def test_init_instance_errors_when_not_migrating(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ERROR
+        instance.task_state = task_states.IMAGE_UPLOADING
+        self.mox.StubOutWithMock(compute_utils, 'get_nw_info_for_instance')
+        self.mox.ReplayAll()
+        self.compute._init_instance(self.context, instance)
+        self.mox.VerifyAll()
+
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
 
