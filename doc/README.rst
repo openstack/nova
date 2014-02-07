@@ -12,7 +12,7 @@ environment, such as the virtualenv created by ``run_tests.sh`` or
 ``tools/install_venv.py``.  A leaner but sufficient environment can be
 created by starting with one that is suitable for running Nova (such
 as the one created by DevStack) and then using pip to install
-oslo.sphinx.
+oslosphinx.
 
 Building the docs
 -----------------
