@@ -57,7 +57,7 @@ def _make_interface_elem(elem):
 
 
 def is_valid_mac(address):
-    """Verify the format of a MAC addres."""
+    """Verify the format of a MAC address."""
 
     class mac_dialect(netaddr.mac_eui48):
         word_fmt = '%.02x'

@@ -2470,7 +2470,7 @@ class ComputeManager(manager.Manager):
             instance.save(
                         expected_task_state=task_states.IMAGE_SNAPSHOT_PENDING)
         except exception.InstanceNotFound:
-            # possiblity instance no longer exists, no point in continuing
+            # possibility instance no longer exists, no point in continuing
             LOG.debug(_("Instance not found, could not set state %s "
                         "for instance."),
                       task_states.IMAGE_SNAPSHOT, instance=instance)

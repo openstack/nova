@@ -3591,7 +3591,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.ReplayAll()
         return reservations
 
-    def test_quotas_succesful_delete(self):
+    def test_quotas_successful_delete(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         resvs = self._ensure_quota_reservations_committed(True, True)
         self.compute.terminate_instance(self.context,
@@ -3612,7 +3612,7 @@ class ComputeTestCase(BaseTestCase):
                           self.context, self._objectify(instance),
                           bdms=[], reservations=resvs)
 
-    def test_quotas_succesful_soft_delete(self):
+    def test_quotas_successful_soft_delete(self):
         instance = self._objectify(self._create_fake_instance(
                 params=dict(task_state=task_states.SOFT_DELETING)))
         resvs = self._ensure_quota_reservations_committed(True, True)

@@ -176,7 +176,7 @@
 						x="4" dy="1.2em" class="st3">Network<v:newlineChar/></tspan><tspan x="4" dy="1.2em" class="st3">VPN</tspan></text>		</g>
 		<g id="shape16-56" v:mID="16" v:groupContext="shape" transform="translate(14.4132,-30.9923)">
 			<title>Sheet.16</title>
-			<desc>VM instance Security group Volume Snapshot VM image IP addres...</desc>
+			<desc>VM instance Security group Volume Snapshot VM image IP address...</desc>
 			<v:textBlock v:margins="rect(4,4,4,4)" v:tabSpace="42.5197"/>
 			<v:textRect cx="42.5197" cy="340.209" width="85.04" height="34.0157"/>
 			<rect x="0" y="323.201" width="85.0394" height="34.0157" class="st9"/>

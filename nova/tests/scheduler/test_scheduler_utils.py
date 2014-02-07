@@ -208,7 +208,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                   '=',
                                   float,
                                   [('bar', -2.1)])
-        # check seperator missing
+        # check separator missing
         self._check_parse_options(['foo', 'bar=-2.1'],
                                   '=',
                                   float,
