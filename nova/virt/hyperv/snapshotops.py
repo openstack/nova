@@ -102,7 +102,7 @@ class SnapshotOps(object):
 
             LOG.debug(_("Updating Glance image %(name)s with content from "
                         "merged disk %(image_vhd_path)s"),
-                      {'image_id': name, 'image_vhd_path': image_vhd_path})
+                      {'name': name, 'image_vhd_path': image_vhd_path})
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
             self._save_glance_image(context, name, image_vhd_path)
