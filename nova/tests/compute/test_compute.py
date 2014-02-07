@@ -1766,7 +1766,8 @@ class ComputeTestCase(BaseTestCase):
 
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESCUING})
-        self.compute.rescue_instance(self.context, instance, None)
+        self.compute.rescue_instance(self.context, self._objectify(instance),
+                                     None)
         self.assertTrue(called['rescued'])
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.UNRESCUING})
@@ -1791,7 +1792,8 @@ class ComputeTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.RESCUING})
-        self.compute.rescue_instance(self.context, instance, None)
+        self.compute.rescue_instance(self.context, self._objectify(instance),
+                                     None)
 
         expected_notifications = ['compute.instance.rescue.start',
                                   'compute.instance.exists',
@@ -1863,28 +1865,29 @@ class ComputeTestCase(BaseTestCase):
         # If the driver fails to rescue, instance state should remain the same
         # and the exception should be converted to InstanceNotRescuable
         instance = jsonutils.to_primitive(self._create_fake_instance())
+        inst_obj = self._objectify(instance)
         self.mox.StubOutWithMock(self.compute, '_get_rescue_image')
         self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
 
         self.compute._get_rescue_image(
-            mox.IgnoreArg(), instance).AndReturn({})
+            mox.IgnoreArg(), inst_obj).AndReturn({})
         nova.virt.fake.FakeDriver.rescue(
-            mox.IgnoreArg(), instance, [], mox.IgnoreArg(), 'password'
+            mox.IgnoreArg(), inst_obj, [], mox.IgnoreArg(), 'password'
             ).AndRaise(RuntimeError("Try again later"))
 
         self.mox.ReplayAll()
 
         expected_message = ('Instance %s cannot be rescued: '
-                            'Driver Error: Try again later' % instance['uuid'])
-        instance['vm_state'] = 'some_random_state'
+                            'Driver Error: Try again later' % inst_obj['uuid'])
+        inst_obj['vm_state'] = 'some_random_state'
 
         with testtools.ExpectedException(
                 exception.InstanceNotRescuable, expected_message):
                 self.compute.rescue_instance(
-                    self.context, instance=instance,
+                    self.context, instance=inst_obj,
                     rescue_password='password')
 
-        self.assertEqual('some_random_state', instance['vm_state'])
+        self.assertEqual('some_random_state', inst_obj['vm_state'])
 
     def test_power_on(self):
         # Ensure instance can be powered on.
@@ -6859,7 +6862,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)
         self.assertIsNone(instance['task_state'])
 
-        self.compute_api.rescue(self.context, instance)
+        self.compute_api.rescue(self.context, self._objectify(instance))
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.ACTIVE)

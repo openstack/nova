@@ -222,6 +222,7 @@ class ComputeAPI(object):
         3.6 - Make volume_snapshot_{create,delete} use new-world objects
         3.7 - Update change_instance_metadata() to take an instance object
         3.8 - Update set_admin_password() to take an instance object
+        3.9 - Update rescue_instance() to take an instance object
     '''
 
     VERSION_ALIASES = {
@@ -640,13 +641,15 @@ class ComputeAPI(object):
                           instance=instance_p, volume_id=volume_id)
 
     def rescue_instance(self, ctxt, instance, rescue_password):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.9'):
+            version = '3.9'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.44')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'rescue_instance',
-                   instance=instance_p,
+        cctxt.cast(ctxt, 'rescue_instance', instance=instance,
                    rescue_password=rescue_password)
 
     def reset_network(self, ctxt, instance):

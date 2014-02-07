@@ -563,13 +563,14 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_rescue_instance(self):
         self._test_compute_api('rescue_instance', 'cast',
-                instance=self.fake_instance, rescue_password='pw')
+                instance=self.fake_instance, rescue_password='pw',
+                version='3.9')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
         self._test_compute_api('rescue_instance', 'cast',
                 instance=self.fake_instance, rescue_password='pw',
-                version='2.0')
+                version='2.44')
 
     def test_reset_network(self):
         self._test_compute_api('reset_network', 'cast',
