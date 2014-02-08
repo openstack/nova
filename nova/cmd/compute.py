@@ -34,7 +34,9 @@ from nova import service
 from nova import utils
 
 CONF = cfg.CONF
+CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
+CONF.import_opt('compute_processes', 'nova.compute.simulator')
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 
 
@@ -63,8 +65,15 @@ def main():
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
 
-    server = service.Service.create(binary='nova-compute',
-                                    topic=CONF.compute_topic,
-                                    db_allowed=False)
-    service.serve(server)
+    for i in xrange(CONF.compute_processes):
+        if i > 0:
+            host = '%s-%s' % (CONF.host, str(i))
+        else:
+            host = CONF.host
+
+        server = service.Service.create(binary='nova-compute',
+                                        topic=CONF.compute_topic,
+                                        host=host,
+                                        db_allowed=False)
+        service.serve(server)
     service.wait()
