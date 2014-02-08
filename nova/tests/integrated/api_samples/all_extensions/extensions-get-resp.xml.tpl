@@ -251,4 +251,7 @@
   <extension alias="os-server-groups" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/servergroups/api/v2" name="ServerGroups">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-extended-evacuate-find-host" updated="%(isotime)s" namespace="http://docs.openstack.org/compute/ext/extended_evacuate_find_host/api/v2" name="ExtendedEvacuateFindHost">
+    <description>%(text)s</description>
+  </extension>
 </extensions>

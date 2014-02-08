@@ -273,6 +273,14 @@
             "updated": "2013-01-06T00:00:00Z"
         },
         {
+            "alias": "os-extended-evacuate-find-host",
+            "description": "Enables server evacuation without target host. Scheduler will select\n       one to target.\n    ",
+            "links": [],
+            "name": "ExtendedEvacuateFindHost",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_evacuate_find_host/api/v2",
+            "updated": "2014-02-12T00:00:00Z"
+        },
+        {
             "alias": "os-extended-floating-ips",
             "description": "Adds optional fixed_address to the add floating IP command.",
             "links": [],

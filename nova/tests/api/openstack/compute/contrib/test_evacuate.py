@@ -69,6 +69,11 @@ class EvacuateTest(test.NoDBTestCase):
         for _method in self._methods:
             self.stubs.Set(compute_api.API, _method, fake_compute_api)
 
+        self.flags(
+            osapi_compute_extension=[
+                'nova.api.openstack.compute.contrib.select_extensions'],
+            osapi_compute_ext_list=['Evacuate'])
+
     def _get_admin_context(self, user_id='fake', project_id='fake'):
         ctxt = context.get_admin_context()
         ctxt.user_id = user_id
