@@ -310,6 +310,16 @@ class BucketHandler(BaseRequestHandler):
         self.set_status(204)
         self.finish()
 
+    def head(self, bucket_name):
+        path = os.path.abspath(os.path.join(self.application.directory,
+                                            bucket_name))
+        if (not path.startswith(self.application.directory) or
+                not os.path.isdir(path)):
+            self.set_404()
+            return
+        self.set_status(200)
+        self.finish()
+
 
 class ObjectHandler(BaseRequestHandler):
     def get(self, bucket, object_name):
