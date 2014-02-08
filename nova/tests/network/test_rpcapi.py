@@ -42,7 +42,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self.assertIsNotNone(rpcapi.client)
         self.assertEqual(rpcapi.client.target.topic, CONF.network_topic)
 
-        expected_retval = 'foo' if method == 'call' else None
+        expected_retval = 'foo' if rpc_method == 'call' else None
         expected_version = kwargs.pop('version', None)
         expected_fanout = kwargs.pop('fanout', None)
         expected_kwargs = kwargs.copy()
@@ -86,7 +86,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
             rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
 
         rpc_method = getattr(rpcapi.client, rpc_method)
-        rpc_method(ctxt, method, **expected_kwargs).AndReturn(expected_retval)
+        rpc_method(ctxt, method, **expected_kwargs).AndReturn('foo')
 
         self.mox.ReplayAll()
 

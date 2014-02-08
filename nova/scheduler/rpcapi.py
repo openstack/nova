@@ -113,7 +113,7 @@ class SchedulerAPI(object):
             version = '2.9'
             msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
         cctxt = self.client.prepare(version=version)
-        return cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
+        cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def prep_resize(self, ctxt, instance, instance_type, image,
             request_spec, filter_properties, reservations):

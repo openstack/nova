@@ -284,7 +284,7 @@ class NetworkAPI(object):
 
     def update_dns(self, ctxt, network_ids):
         cctxt = self.client.prepare(fanout=True, version='1.3')
-        return cctxt.cast(ctxt, 'update_dns', network_ids=network_ids)
+        cctxt.cast(ctxt, 'update_dns', network_ids=network_ids)
 
     # NOTE(russellb): Ideally this would not have a prefix of '_' since it is
     # a part of the rpc API. However, this is how it was being called when the
