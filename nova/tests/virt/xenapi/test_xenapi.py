@@ -249,13 +249,13 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
         }
 
         for (input, expected) in cases.iteritems():
-            actual = volume_utils.mountpoint_to_number(input)
+            actual = volume_utils._mountpoint_to_number(input)
             self.assertEqual(actual, expected,
                     '%s yielded %s, not %s' % (input, actual, expected))
 
     def test_parse_volume_info_parsing_auth_details(self):
         conn_info = self._make_connection_info()
-        result = volume_utils.parse_volume_info(conn_info['data'])
+        result = volume_utils._parse_volume_info(conn_info['data'])
 
         self.assertEqual('username', result['chapuser'])
         self.assertEqual('password', result['chappassword'])

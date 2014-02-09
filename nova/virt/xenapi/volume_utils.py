@@ -56,16 +56,6 @@ def _handle_sr_params(params):
     return sr_type, sr_desc
 
 
-def create_sr(session, label, params):
-    LOG.debug(_('Creating SR %s'), label)
-    sr_type, sr_desc = _handle_sr_params(params)
-    sr_ref = session.call_xenapi("SR.create",
-                session.host_ref,
-                params,
-                '0', label, sr_desc, sr_type, '', False, {})
-    return sr_ref
-
-
 def introduce_sr(session, sr_uuid, label, params):
     LOG.debug(_('Introducing SR %s'), label)
 
@@ -87,7 +77,7 @@ def introduce_sr(session, sr_uuid, label, params):
 def forget_sr(session, sr_ref):
     """Forgets the storage repository without destroying the VDIs within."""
     LOG.debug(_('Forgetting SR...'))
-    unplug_pbds(session, sr_ref)
+    _unplug_pbds(session, sr_ref)
     session.call_xenapi("SR.forget", sr_ref)
 
 
@@ -121,7 +111,7 @@ def create_pbd(session, sr_ref, params):
     return pbd_ref
 
 
-def unplug_pbds(session, sr_ref):
+def _unplug_pbds(session, sr_ref):
     try:
         pbds = session.call_xenapi("SR.get_PBDs", sr_ref)
     except session.XenAPI.Failure as exc:
@@ -218,7 +208,7 @@ def purge_sr(session, sr_ref):
 
 
 def get_device_number(mountpoint):
-    device_number = mountpoint_to_number(mountpoint)
+    device_number = _mountpoint_to_number(mountpoint)
     if device_number < 0:
         raise StorageError(_('Unable to obtain target information %s') %
                            mountpoint)
@@ -230,7 +220,7 @@ def parse_sr_info(connection_data, description=''):
                                 'tempSR-%s' % connection_data.get('volume_id'))
     params = {}
     if 'sr_uuid' not in connection_data:
-        params = parse_volume_info(connection_data)
+        params = _parse_volume_info(connection_data)
         # This magic label sounds a lot like 'False Disc' in leet-speak
         uuid = "FA15E-D15C-" + str(params['id'])
     else:
@@ -243,7 +233,7 @@ def parse_sr_info(connection_data, description=''):
     return (uuid, label, params)
 
 
-def parse_volume_info(connection_data):
+def _parse_volume_info(connection_data):
     """Parse device_path and mountpoint as they can be used by XenAPI.
     In particular, the mountpoint (e.g. /dev/sdc) must be translated
     into a numeric literal.
@@ -281,7 +271,7 @@ def parse_volume_info(connection_data):
     return volume_info
 
 
-def mountpoint_to_number(mountpoint):
+def _mountpoint_to_number(mountpoint):
     """Translate a mountpoint like /dev/sdc into a numeric."""
     if mountpoint.startswith('/dev/'):
         mountpoint = mountpoint[5:]
