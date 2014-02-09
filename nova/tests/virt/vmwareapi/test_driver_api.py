@@ -1826,6 +1826,18 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         vcdriver._session.vim.client.service.Logout.assert_called_once()
         mock_logger.debug.assert_called_once()
 
+    def test_host_power_action(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.host_power_action, 'host', 'action')
+
+    def test_host_maintenance_mode(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.host_maintenance_mode, 'host', 'mode')
+
+    def test_set_host_enabled(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.set_host_enabled, 'host', 'state')
+
     def test_datastore_regex_configured(self):
         for node in self.conn._resources.keys():
             self.assertEqual(self.conn._datastore_regex,
