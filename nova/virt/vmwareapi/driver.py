@@ -59,7 +59,7 @@ vmwareapi_opts = [
                     'Used only if compute_driver is '
                     'vmwareapi.VMwareVCDriver.'),
     cfg.FloatOpt('task_poll_interval',
-                 default=5.0,
+                 default=0.5,
                  help='The interval used for polling of remote tasks.'),
     cfg.IntOpt('api_retry_count',
                default=10,

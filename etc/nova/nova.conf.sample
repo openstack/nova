@@ -3264,7 +3264,7 @@
 
 # The interval used for polling of remote tasks. (floating
 # point value)
-#task_poll_interval=5.0
+#task_poll_interval=0.5
 
 # The number of times we retry on failures, e.g., socket
 # error, etc. (integer value)
