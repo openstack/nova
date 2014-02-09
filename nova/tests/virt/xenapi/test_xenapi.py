@@ -232,40 +232,6 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
                          'auth_username': 'username',
                          'auth_password': 'password'}}
 
-    def test_mountpoint_to_number(self):
-        cases = {
-            'sda': 0,
-            'sdp': 15,
-            'hda': 0,
-            'hdp': 15,
-            'vda': 0,
-            'xvda': 0,
-            '0': 0,
-            '10': 10,
-            'vdq': -1,
-            'sdq': -1,
-            'hdq': -1,
-            'xvdq': -1,
-        }
-
-        for (input, expected) in cases.iteritems():
-            actual = volume_utils._mountpoint_to_number(input)
-            self.assertEqual(actual, expected,
-                    '%s yielded %s, not %s' % (input, actual, expected))
-
-    def test_parse_volume_info_parsing_auth_details(self):
-        conn_info = self._make_connection_info()
-        result = volume_utils._parse_volume_info(conn_info['data'])
-
-        self.assertEqual('username', result['chapuser'])
-        self.assertEqual('password', result['chappassword'])
-
-    def test_get_device_number_raise_exception_on_wrong_mountpoint(self):
-        self.assertRaises(
-            volume_utils.StorageError,
-            volume_utils.get_device_number,
-            'dev/sd')
-
     def test_attach_volume(self):
         # This shows how to test Ops classes' methods.
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVolumeTests)
