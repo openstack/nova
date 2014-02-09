@@ -784,6 +784,14 @@
 
 
 #
+#
+# Options defined in nova.compute.simulator
+#
+
+# the number of compute processes to simulate
+#compute_processes=1
+
+
 # Options defined in nova.conductor.tasks.live_migrate
 #
 
