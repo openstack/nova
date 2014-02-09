@@ -57,7 +57,7 @@ class Host(object):
         if not mode:
             return 'off_maintenance'
         host_list = [host_ref for host_ref in
-                     self._session.call_xenapi('host.get_all')
+                     self._session.host.get_all()
                      if host_ref != self._session.host_ref]
         migrations_counter = vm_counter = 0
         ctxt = context.get_admin_context()
@@ -92,9 +92,8 @@ class Host(object):
                     instance.task_state = task_states.MIGRATING
                     instance.save()
 
-                    self._session.call_xenapi('VM.pool_migrate',
-                                              vm_ref, host_ref,
-                                              {"live": "true"})
+                    self._session.VM.pool_migrate(vm_ref, host_ref,
+                                                  {"live": "true"})
                     migrations_counter = migrations_counter + 1
 
                     instance.vm_state = vm_states.ACTIVE
@@ -242,7 +241,7 @@ class HostState(object):
         data = call_xenhost(self._session, "host_data", {})
         if data:
             sr_ref = vm_utils.scan_default_sr(self._session)
-            sr_rec = self._session.call_xenapi("SR.get_record", sr_ref)
+            sr_rec = self._session.SR.get_record(sr_ref)
             total = int(sr_rec["physical_size"])
             used = int(sr_rec["physical_utilisation"])
             data["disk_total"] = total
@@ -319,19 +318,19 @@ def _uuid_find(context, host, name_label):
     return None
 
 
-def _host_find(context, session, src_aggregate, dst):
+def _host_find(context, session, src_aggregate, host_ref):
     """Return the host from the xenapi host reference.
 
     :param src_aggregate: the aggregate that the compute host being put in
                           maintenance (source of VMs) belongs to
-    :param dst: the hypervisor host reference (destination of VMs)
+    :param host_ref: the hypervisor host reference (destination of VMs)
 
-    :return: the compute host that manages dst
+    :return: the compute host that manages host_ref
     """
     # NOTE: this would be a lot simpler if nova-compute stored
     # CONF.host in the XenServer host's other-config map.
     # TODO(armando-migliaccio): improve according the note above
-    uuid = session.call_xenapi('host.get_record', dst)['uuid']
+    uuid = session.host.get_uuid(host_ref)
     for compute_host, host_uuid in src_aggregate.metadetails.iteritems():
         if host_uuid == uuid:
             return compute_host
