@@ -21,7 +21,7 @@ class ExpectedMethodFault:
     pass
 
 
-class ErrorUtilTestCase(test.TestCase):
+class ErrorUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ErrorUtilTestCase, self).setUp()
 
