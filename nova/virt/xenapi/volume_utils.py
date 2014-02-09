@@ -24,6 +24,7 @@ import string
 from eventlet import greenthread
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
@@ -38,13 +39,6 @@ CONF = cfg.CONF
 CONF.register_opts(xenapi_volume_utils_opts, 'xenserver')
 
 LOG = logging.getLogger(__name__)
-
-
-class StorageError(Exception):
-    """To raise errors related to SR, VDI, PBD, and VBD commands."""
-
-    def __init__(self, message=None):
-        super(StorageError, self).__init__(message)
 
 
 def _handle_sr_params(params):
@@ -98,7 +92,8 @@ def find_sr_from_vbd(session, vbd_ref):
         sr_ref = session.call_xenapi("VDI.get_SR", vdi_ref)
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
-        raise StorageError(_('Unable to find SR from VBD %s') % vbd_ref)
+        raise exception.StorageError(
+                reason=_('Unable to find SR from VBD %s') % vbd_ref)
     return sr_ref
 
 
@@ -155,13 +150,15 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
             vdi_ref = _get_vdi_ref(session, sr_ref, vdi_uuid, target_lun)
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
-        raise StorageError(_('Unable to introduce VDI on SR %s') % sr_ref)
+        raise exception.StorageError(
+                reason=_('Unable to introduce VDI on SR %s') % sr_ref)
 
     if not vdi_ref:
-        raise StorageError(_('VDI not found on SR %(sr)s (vdi_uuid '
-                             '%(vdi_uuid)s, target_lun %(target_lun)s)') %
-                           {'sr': sr_ref, 'vdi_uuid': vdi_uuid,
-                            'target_lun': target_lun})
+        raise exception.StorageError(
+                reason=_('VDI not found on SR %(sr)s (vdi_uuid '
+                         '%(vdi_uuid)s, target_lun %(target_lun)s)') %
+                            {'sr': sr_ref, 'vdi_uuid': vdi_uuid,
+                             'target_lun': target_lun})
 
     try:
         vdi_rec = session.call_xenapi("VDI.get_record", vdi_ref)
@@ -169,8 +166,8 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
         LOG.debug(type(vdi_rec))
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
-        raise StorageError(_('Unable to get record'
-                             ' of VDI %s on') % vdi_ref)
+        raise exception.StorageError(
+                reason=_('Unable to get record of VDI %s on') % vdi_ref)
 
     if vdi_rec['managed']:
         # We do not need to introduce the vdi
@@ -191,8 +188,8 @@ def introduce_vdi(session, sr_ref, vdi_uuid=None, target_lun=None):
                                     vdi_rec['sm_config'])
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
-        raise StorageError(_('Unable to introduce VDI for SR %s')
-                            % sr_ref)
+        raise exception.StorageError(
+                reason=_('Unable to introduce VDI for SR %s') % sr_ref)
 
 
 def purge_sr(session, sr_ref):
@@ -210,8 +207,9 @@ def purge_sr(session, sr_ref):
 def get_device_number(mountpoint):
     device_number = _mountpoint_to_number(mountpoint)
     if device_number < 0:
-        raise StorageError(_('Unable to obtain target information %s') %
-                           mountpoint)
+        raise exception.StorageError(
+                reason=_('Unable to obtain target information %s') %
+                       mountpoint)
     return device_number
 
 
@@ -256,8 +254,9 @@ def _parse_volume_info(connection_data):
     if (volume_id is None or
         target_host is None or
             target_iqn is None):
-        raise StorageError(_('Unable to obtain target information'
-                             ' %s') % connection_data)
+        raise exception.StorageError(
+                reason=_('Unable to obtain target information %s') %
+                        connection_data)
     volume_info = {}
     volume_info['id'] = volume_id
     volume_info['target'] = target_host

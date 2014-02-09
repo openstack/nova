@@ -205,7 +205,7 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
                             mock_destroy):
         mock_create_vdi.return_value = 'vdi_ref'
         mock_attached.side_effect = test.TestingException
-        mock_destroy.side_effect = volume_utils.StorageError
+        mock_destroy.side_effect = exception.StorageError(reason="")
 
         instance = {"uuid": "asdf"}
         self.assertRaises(test.TestingException,
@@ -391,7 +391,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
         vm_utils.destroy_vdi(self.session,
-                             "ref").AndRaise(volume_utils.StorageError)
+                "ref").AndRaise(exception.StorageError(reason=""))
 
         self.mox.ReplayAll()
 
@@ -1034,7 +1034,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
-        self.assertRaises(volume_utils.StorageError, vm_utils.unplug_vbd,
+        self.assertRaises(exception.StorageError, vm_utils.unplug_vbd,
                           session, vbd_ref, vm_ref)
         self.assertEqual(1, session.call_xenapi.call_count)
 
@@ -1043,7 +1043,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
-        self.assertRaises(volume_utils.StorageError, vm_utils.unplug_vbd,
+        self.assertRaises(exception.StorageError, vm_utils.unplug_vbd,
                           session, vm_ref, vbd_ref)
 
         self.assertEqual(11, session.call_xenapi.call_count)
@@ -1238,7 +1238,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         utils.execute('mkfs', '-t', 'ext4', '/dev/fakedev1',
             run_as_root=True).AndRaise(test.TestingException)
         vm_utils.destroy_vdi(self.session,
-            mox.IgnoreArg()).AndRaise(volume_utils.StorageError)
+            mox.IgnoreArg()).AndRaise(exception.StorageError(reason=""))
 
         self.mox.ReplayAll()
         self.assertRaises(test.TestingException, vm_utils._generate_disk,

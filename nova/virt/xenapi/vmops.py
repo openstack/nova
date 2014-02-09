@@ -1270,7 +1270,7 @@ class VMOps(object):
         for vdi_ref in vdi_refs:
             try:
                 vm_utils.destroy_vdi(self._session, vdi_ref)
-            except volume_utils.StorageError as exc:
+            except exception.StorageError as exc:
                 LOG.error(exc)
 
     def _destroy_kernel_ramdisk(self, instance, vm_ref):

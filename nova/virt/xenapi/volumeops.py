@@ -132,7 +132,7 @@ class VolumeOps(object):
         try:
             vbd_ref = vm_utils.find_vbd_by_number(
                     self._session, vm_ref, device_number)
-        except volume_utils.StorageError:
+        except exception.StorageError:
             # NOTE(sirp): If we don't find the VBD then it must have been
             # detached previously.
             LOG.warn(_('Skipping detach because VBD for %s was'

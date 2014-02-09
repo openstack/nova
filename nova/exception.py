@@ -1066,6 +1066,10 @@ class InvalidLocalStorage(NovaException):
     msg_fmt = _("%(path)s is not on local storage: %(reason)s")
 
 
+class StorageError(NovaException):
+    msg_fmt = _("Storage error: %(reason)s")
+
+
 class MigrationError(NovaException):
     msg_fmt = _("Migration error: %(reason)s")
 

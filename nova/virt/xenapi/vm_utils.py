@@ -403,8 +403,8 @@ def find_vbd_by_number(session, vm_ref, number):
                     return vbd_ref
             except session.XenAPI.Failure as exc:
                 LOG.exception(exc)
-    raise volume_utils.StorageError(
-            _('VBD not found in instance %s') % vm_ref)
+    raise exception.StorageError(
+            reason=_('VBD not found in instance %s') % vm_ref)
 
 
 def _should_retry_unplug_vbd(err):
@@ -440,12 +440,13 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
                           'max_attempts': max_attempts, 'err': err})
             else:
                 LOG.exception(exc)
-                raise volume_utils.StorageError(
-                        _('Unable to unplug VBD %s') % vbd_ref)
+                raise exception.StorageError(
+                        reason=_('Unable to unplug VBD %s') % vbd_ref)
 
-    raise volume_utils.StorageError(
-            _('Reached maximum number of retries trying to unplug VBD %s')
-            % vbd_ref)
+    raise exception.StorageError(
+            reason=_('Reached maximum number of retries '
+                     'trying to unplug VBD %s')
+                        % vbd_ref)
 
 
 def destroy_vbd(session, vbd_ref):
@@ -454,8 +455,8 @@ def destroy_vbd(session, vbd_ref):
         session.call_xenapi('VBD.destroy', vbd_ref)
     except session.XenAPI.Failure as exc:
         LOG.exception(exc)
-        raise volume_utils.StorageError(
-                _('Unable to destroy VBD %s') % vbd_ref)
+        raise exception.StorageError(
+                reason=_('Unable to destroy VBD %s') % vbd_ref)
 
 
 def create_vbd(session, vm_ref, vdi_ref, userdevice, vbd_type='disk',
@@ -509,7 +510,7 @@ def destroy_vdi(session, vdi_ref):
         msg = _("Unable to destroy VDI %s") % vdi_ref
         LOG.debug(msg, exc_info=True)
         LOG.error(msg)
-        raise volume_utils.StorageError(msg)
+        raise exception.StorageError(reason=msg)
 
 
 def safe_destroy_vdis(session, vdi_refs):
@@ -517,7 +518,7 @@ def safe_destroy_vdis(session, vdi_refs):
     for vdi_ref in vdi_refs:
         try:
             destroy_vdi(session, vdi_ref)
-        except volume_utils.StorageError:
+        except exception.StorageError:
             msg = _("Ignoring error while destroying VDI: %s") % vdi_ref
             LOG.debug(msg)
 
@@ -565,7 +566,7 @@ def get_vdi_uuid_for_volume(session, connection_data):
         try:
             vdi_ref = volume_utils.introduce_vdi(session, sr_ref)
             vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
-        except volume_utils.StorageError as exc:
+        except exception.StorageError as exc:
             LOG.exception(exc)
             volume_utils.forget_sr(session, sr_ref)
 
@@ -631,7 +632,7 @@ def _dummy_vm(session, instance, vdi_ref):
         finally:
             try:
                 destroy_vbd(session, vbd_ref)
-            except volume_utils.StorageError:
+            except exception.StorageError:
                 # destroy_vbd() will log error
                 pass
     finally:
@@ -2167,8 +2168,8 @@ def _wait_for_device(dev):
             return
         time.sleep(1)
 
-    raise volume_utils.StorageError(
-        _('Timeout waiting for device %s to be created') % dev)
+    raise exception.StorageError(
+        reason=_('Timeout waiting for device %s to be created') % dev)
 
 
 def cleanup_attached_vdis(session):
@@ -2222,7 +2223,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
     finally:
         try:
             destroy_vbd(session, vbd_ref)
-        except volume_utils.StorageError:
+        except exception.StorageError:
             # destroy_vbd() will log error
             pass
         LOG.debug(_('Destroying VBD for VDI %s done.'), vdi_ref)
