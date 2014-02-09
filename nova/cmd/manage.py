@@ -253,10 +253,10 @@ class ProjectCommands(object):
                     return(2)
                 if ((int(value) < minimum) and
                    (maximum != -1 or (maximum == -1 and int(value) != -1))):
-                    print(_('Quota limit must greater than %s.') % minimum)
+                    print(_('Quota limit must be greater than %s.') % minimum)
                     return(2)
                 if maximum != -1 and int(value) > maximum:
-                    print(_('Quota limit must less than %s.') % maximum)
+                    print(_('Quota limit must be less than %s.') % maximum)
                     return(2)
                 try:
                     db.quota_create(ctxt, project_id, key, value,
