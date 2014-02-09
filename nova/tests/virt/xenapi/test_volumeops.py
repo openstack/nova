@@ -129,7 +129,7 @@ class VolumeAttachTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(volumeops.vm_utils, 'create_vbd')
         self.mox.StubOutWithMock(volumeops.vm_utils, 'is_vm_shutdown')
         self.mox.StubOutWithMock(ops._session.VBD, 'plug')
-        self.mox.StubOutWithMock(ops._session, 'call_xenapi')
+        self.mox.StubOutWithMock(ops._session.VDI, 'get_uuid')
 
         instance_name = 'instance_1'
         sr_uuid = '1'
@@ -161,8 +161,7 @@ class VolumeAttachTestCase(test.NoDBTestCase):
             vm_ref).AndReturn(not vm_running)
         if plugged:
             ops._session.VBD.plug(vbd_ref, vm_ref)
-        ops._session.call_xenapi("VDI.get_uuid",
-            vdi_ref).AndReturn(vdi_uuid)
+        ops._session.VDI.get_uuid(vdi_ref).AndReturn(vdi_uuid)
 
         self.mox.ReplayAll()
 
