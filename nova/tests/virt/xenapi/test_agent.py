@@ -273,7 +273,7 @@ class CallAgentTestCase(AgentTestCaseBase):
         instance = {"uuid": "fake"}
         addl_args = {"foo": "bar"}
 
-        session.call_xenapi.return_value = {'domid': '42'}
+        session.VM.get_domid.return_value = '42'
         mock_uuid.return_value = 1
         session.call_plugin.return_value = {'returncode': '4',
                                             'message': "asdf\\r\\n"}
@@ -289,7 +289,7 @@ class CallAgentTestCase(AgentTestCaseBase):
             'timeout': '300',
         }
         expected_args.update(addl_args)
-        session.call_xenapi.assert_called_once_with("VM.get_record", "vm_ref")
+        session.VM.get_domid.assert_called_once_with("vm_ref")
         session.call_plugin.assert_called_once_with("agent", "method",
                                                     expected_args)
 
@@ -299,7 +299,7 @@ class CallAgentTestCase(AgentTestCaseBase):
         session.XenAPI.Failure = xenapi_fake.Failure
         instance = {"uuid": "fake"}
 
-        session.call_xenapi.return_value = {'domid': '42'}
+        session.VM.get_domid.return_value = 42
         mock_uuid.return_value = 1
         if exception:
             session.call_plugin.side_effect = exception
@@ -318,7 +318,7 @@ class CallAgentTestCase(AgentTestCaseBase):
         }
         session.call_plugin.assert_called_once_with("agent", "method",
                                                     expected_args)
-        session.call_xenapi.assert_called_once_with("VM.get_record", "vm_ref")
+        session.VM.get_domid.assert_called_once_with("vm_ref")
 
     def test_call_agent_works_with_defaults(self, mock_uuid):
         session = mock.Mock()

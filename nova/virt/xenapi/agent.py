@@ -107,11 +107,12 @@ def _call_agent(session, instance, vm_ref, method, addl_args=None,
     if success_codes is None:
         success_codes = ['0']
 
-    vm_rec = session.call_xenapi("VM.get_record", vm_ref)
+    # always fetch domid because VM may have rebooted
+    dom_id = session.VM.get_domid(vm_ref)
 
     args = {
         'id': str(uuid.uuid4()),
-        'dom_id': vm_rec['domid'],
+        'dom_id': str(dom_id),
         'timeout': str(timeout),
     }
     args.update(addl_args)
