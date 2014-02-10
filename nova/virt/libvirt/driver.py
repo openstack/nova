@@ -3083,15 +3083,11 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.os_kernel = "/usr/bin/linux"
             guest.os_root = root_device_name
         else:
-            if ((CONF.libvirt.virt_type == "xen" and
-                 guest.os_type == vm_mode.XEN)):
-                guest.os_root = root_device_name
-
             if rescue:
                 if rescue.get('kernel_id'):
                     guest.os_kernel = os.path.join(inst_path, "kernel.rescue")
                     if CONF.libvirt.virt_type == "xen":
-                        guest.os_cmdline = "ro"
+                        guest.os_cmdline = "ro root=%s" % root_device_name
                     else:
                         guest.os_cmdline = ("root=%s %s" % (root_device_name,
                                                             CONSOLE))
@@ -3101,7 +3097,7 @@ class LibvirtDriver(driver.ComputeDriver):
             elif instance['kernel_id']:
                 guest.os_kernel = os.path.join(inst_path, "kernel")
                 if CONF.libvirt.virt_type == "xen":
-                    guest.os_cmdline = "ro"
+                    guest.os_cmdline = "ro root=%s" % root_device_name
                 else:
                     guest.os_cmdline = ("root=%s %s" % (root_device_name,
                                                         CONSOLE))

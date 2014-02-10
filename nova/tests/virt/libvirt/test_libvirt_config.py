@@ -1001,7 +1001,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj.os_type = "linux"
         obj.os_kernel = "/tmp/vmlinuz"
         obj.os_initrd = "/tmp/ramdisk"
-        obj.os_root = "root=xvda"
         obj.os_cmdline = "console=xvc0"
 
         disk = config.LibvirtConfigGuestDisk()
@@ -1024,7 +1023,6 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
                 <kernel>/tmp/vmlinuz</kernel>
                 <initrd>/tmp/ramdisk</initrd>
                 <cmdline>console=xvc0</cmdline>
-                <root>root=xvda</root>
               </os>
               <devices>
                 <disk type="file" device="disk">
