@@ -145,7 +145,7 @@ policy_data = """
     "compute_extension:config_drive": "",
     "compute_extension:v3:os-config-drive": "",
     "compute_extension:console_output": "",
-    "compute_extension:v3:console-output": "",
+    "compute_extension:v3:os-console-output": "",
     "compute_extension:consoles": "",
     "compute_extension:v3:os-remote-consoles": "",
     "compute_extension:createserverext": "",

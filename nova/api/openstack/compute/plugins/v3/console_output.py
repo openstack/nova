@@ -25,7 +25,7 @@ from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
 
-ALIAS = "console-output"
+ALIAS = "os-console-output"
 authorize = extensions.extension_authorizer('compute', "v3:" + ALIAS)
 
 
