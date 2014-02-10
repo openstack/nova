@@ -1302,13 +1302,6 @@ def security_group_rule_get_by_security_group(context, security_group_id,
         context, security_group_id, columns_to_join=columns_to_join)
 
 
-def security_group_rule_get_by_security_group_grantee(context,
-                                                      security_group_id):
-    """Get all rules that grant access to the given security group."""
-    return IMPL.security_group_rule_get_by_security_group_grantee(context,
-                                                             security_group_id)
-
-
 def security_group_rule_destroy(context, security_group_rule_id):
     """Deletes a security group rule."""
     return IMPL.security_group_rule_destroy(context, security_group_rule_id)

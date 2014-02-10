@@ -4296,15 +4296,6 @@ def security_group_rule_get_by_security_group(context, security_group_id,
 
 
 @require_context
-def security_group_rule_get_by_security_group_grantee(context,
-                                                      security_group_id):
-
-    return (_security_group_rule_get_query(context).
-                         filter_by(group_id=security_group_id).
-                         all())
-
-
-@require_context
 def security_group_rule_create(context, values):
     return _security_group_rule_create(context, values)
 
