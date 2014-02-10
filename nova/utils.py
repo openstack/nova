@@ -1001,9 +1001,9 @@ def is_none_string(val):
 
 def convert_version_to_int(version):
     try:
-        if type(version) == str:
+        if isinstance(version, six.string_types):
             version = convert_version_to_tuple(version)
-        if type(version) == tuple:
+        if isinstance(version, tuple):
             return reduce(lambda x, y: (x * 1000) + y, version)
     except Exception:
         raise exception.NovaException(message="Hypervisor version invalid.")
