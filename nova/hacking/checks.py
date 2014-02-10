@@ -37,6 +37,7 @@ virt_import_re = re.compile(
     r"^\s*(?:import|from) nova\.(?:tests\.)?virt\.(\w+)")
 virt_config_re = re.compile(
     r"CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
+author_tag_re = re.compile("^\s*#\s*@?(a|A)uthor:")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -146,6 +147,12 @@ def no_vi_headers(physical_line, line_number, lines):
             return 0, "N314: Don't put vi configuration in source files"
 
 
+def no_author_tags(physical_line):
+    if author_tag_re.match(physical_line):
+        pos = physical_line.find('author')
+        return pos, "N315: Don't use author tags"
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -154,3 +161,4 @@ def factory(register):
     register(import_no_virt_driver_config_deps)
     register(capital_cfg_help)
     register(no_vi_headers)
+    register(no_author_tags)

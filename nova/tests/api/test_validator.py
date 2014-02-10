@@ -1,5 +1,4 @@
 # Copyright 2011 Cloudscaling, Inc.
-# Author: Matthew Hooker <matt@cloudscaling.com>
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may

@@ -1,5 +1,4 @@
 # Copyright 2012 Cloudscaling, Inc.
-# Author: Joe Gordon <jogo@cloudscaling.com>
 # All Rights Reserved.
 # Copyright 2013 Red Hat, Inc.
 #
