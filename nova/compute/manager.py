@@ -3767,6 +3767,11 @@ class ComputeManager(manager.Manager):
 
         rt = self._get_resource_tracker(node)
         limits = filter_properties.get('limits', {})
+
+        if image:
+            shelved_image_ref = instance.image_ref
+            instance.image_ref = image['id']
+
         try:
             with rt.instance_claim(context, instance, limits):
                 self.driver.spawn(context, instance, image, injected_files=[],
@@ -3778,6 +3783,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception(_('Instance failed to spawn'), instance=instance)
 
         if image:
+            instance.image_ref = shelved_image_ref
             image_service = glance.get_default_image_service()
             image_service.delete(context, image['id'])
 
