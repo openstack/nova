@@ -75,9 +75,10 @@ class SchedulerHintsTestCase(test.TestCase):
         self.assertEqual(202, res.status_int)
 
     def test_create_server_with_hints(self):
+        hints = {'same_host': '48e6a9f6-30af-47e0-bc04-acaed113bb4e'}
 
         def fake_create(*args, **kwargs):
-            self.assertEqual(kwargs['scheduler_hints'], {'a': 'b'})
+            self.assertEqual(hints, kwargs['scheduler_hints'])
             return ([self.fake_instance], '')
 
         self.stubs.Set(nova.compute.api.API, 'create', fake_create)
@@ -90,7 +91,7 @@ class SchedulerHintsTestCase(test.TestCase):
                   'name': 'server_test',
                   'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                   'flavor_ref': '1',
-                  'os-scheduler-hints:scheduler_hints': {'a': 'b'},
+                  'os-scheduler-hints:scheduler_hints': hints,
             },
         }
 
@@ -227,7 +228,7 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(req, body).obj['server']
 
     def test_create_instance_with_scheduler_hints_disabled(self):
-        hints = {'a': 'b'}
+        hints = {'same_host': '48e6a9f6-30af-47e0-bc04-acaed113bb4e'}
         params = {'os-scheduler-hints:scheduler_hints': hints}
         old_create = compute_api.API.create
 
@@ -241,7 +242,7 @@ class ServersControllerCreateTest(test.TestCase):
                 override_controller=self.no_scheduler_hints_controller)
 
     def test_create_instance_with_scheduler_hints_enabled(self):
-        hints = {'a': 'b'}
+        hints = {'same_host': '48e6a9f6-30af-47e0-bc04-acaed113bb4e'}
         params = {'os-scheduler-hints:scheduler_hints': hints}
         old_create = compute_api.API.create
 
