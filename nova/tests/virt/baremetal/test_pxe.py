@@ -82,6 +82,9 @@ class BareMetalPXETestCase(bm_db_base.BMDBTestCase):
             ]
 
     def _create_node(self):
+        # File injection is off by default, but we should continue to test it
+        # until it is removed.
+        CONF.set_override('use_file_injection', True, 'baremetal')
         self.node = db.bm_node_create(self.context, self.node_info)
         for nic in self.nic_info:
             db.bm_interface_create(

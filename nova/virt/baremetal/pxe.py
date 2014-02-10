@@ -56,7 +56,7 @@ pxe_opts = [
     cfg.BoolOpt('use_file_injection',
                 help='If True, enable file injection for network info, '
                 'files and admin password',
-                default=True),
+                default=False),
     cfg.IntOpt('pxe_deploy_timeout',
                 help='Timeout for PXE deployments. Default: 0 (unlimited)',
                 default=0),
