@@ -17,8 +17,12 @@ import json
 import os
 import time
 
+from nova.openstack.common.gettextutils import _
+from nova.openstack.common import log as logging
 from nova import utils
 from oslo.config import cfg
+
+LOG = logging.getLogger(__name__)
 
 
 CONF = cfg.CONF
@@ -53,7 +57,11 @@ def register_storage_use(storage_path, hostname):
         id_path = os.path.join(storage_path, 'compute_nodes')
         if os.path.exists(id_path):
             with open(id_path) as f:
-                d = json.loads(f.read())
+                try:
+                    d = json.loads(f.read())
+                except ValueError:
+                    LOG.warning(_("Cannot decode JSON from %(id_path)s"),
+                                {"id_path": id_path})
 
         d[hostname] = time.time()
 
@@ -87,7 +95,11 @@ def get_storage_users(storage_path):
         id_path = os.path.join(storage_path, 'compute_nodes')
         if os.path.exists(id_path):
             with open(id_path) as f:
-                d = json.loads(f.read())
+                try:
+                    d = json.loads(f.read())
+                except ValueError:
+                    LOG.warning(_("Cannot decode JSON from %(id_path)s"),
+                                {"id_path": id_path})
 
         recent_users = []
         for node in d:
