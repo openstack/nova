@@ -200,7 +200,7 @@ class APIRouter(base_wsgi.Router):
 
     def _setup_ext_routes(self, mapper, ext_mgr, init_only):
         for resource in ext_mgr.get_resources():
-            LOG.debug(_('Extended resource: %s'),
+            LOG.debug(_('Extending resource: %s'),
                       resource.collection)
 
             if init_only is not None and resource.collection not in init_only:
@@ -240,7 +240,7 @@ class APIRouter(base_wsgi.Router):
                             msg_format_dict)
                 continue
 
-            LOG.debug(_('Extension %(ext_name)s extending resource: '
+            LOG.debug(_('Extension %(ext_name)s extended resource: '
                         '%(collection)s'),
                       msg_format_dict)
 
