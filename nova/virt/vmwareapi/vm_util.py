@@ -25,6 +25,7 @@ import functools
 from oslo.config import cfg
 
 from nova import exception
+from nova.network import model as network_model
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
@@ -35,6 +36,9 @@ from nova.virt.vmwareapi import vim_util
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
+ALL_SUPPORTED_NETWORK_DEVICES = ['VirtualE1000', 'VirtualE1000e',
+                                 'VirtualPCNet32', 'VirtualSriovEthernetCard',
+                                 'VirtualVmxnet']
 DSRecord = collections.namedtuple(
     'DSRecord', ['datastore', 'name', 'capacity', 'freespace'])
 
@@ -183,6 +187,18 @@ def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
     return virtual_device_config
 
 
+def _convert_vif_model(name):
+    """Converts standard VIF_MODEL types to the internal VMware ones."""
+    if name == network_model.VIF_MODEL_E1000:
+        return 'VirtualE1000'
+    if name == network_model.VIF_MODEL_E1000E:
+        return 'VirtualE1000e'
+    if name not in ALL_SUPPORTED_NETWORK_DEVICES:
+        msg = _('%s is not supported.') % name
+        raise exception.Invalid(msg)
+    return name
+
+
 def create_network_spec(client_factory, vif_info):
     """Builds a config spec for the addition of a new network
     adapter to the VM.
@@ -191,8 +207,7 @@ def create_network_spec(client_factory, vif_info):
     network_spec.operation = "add"
 
     # Keep compatible with other Hyper vif model parameter.
-    if vif_info['vif_model'] == "e1000":
-        vif_info['vif_model'] = "VirtualE1000"
+    vif_info['vif_model'] = _convert_vif_model(vif_info['vif_model'])
 
     vif = 'ns0:' + vif_info['vif_model']
     net_device = client_factory.create(vif)
