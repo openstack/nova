@@ -102,16 +102,13 @@ class VMwareVolumeOps(object):
         self._session._wait_for_task(reconfig_task)
 
     def _get_volume_uuid(self, vm_ref, volume_uuid):
-        volume_option = 'volume-%s' % volume_uuid
-        extra_config = self._session._call_method(vim_util,
-                                                  'get_dynamic_property',
-                                                  vm_ref, 'VirtualMachine',
-                                                  'config.extraConfig')
-        if extra_config:
-            options = extra_config.OptionValue
-            for option in options:
-                if option.key == volume_option:
-                    return option.value
+        prop = 'config.extraConfig["volume-%s"]' % volume_uuid
+        opt_val = self._session._call_method(vim_util,
+                                             'get_dynamic_property',
+                                             vm_ref, 'VirtualMachine',
+                                             prop)
+        if opt_val is not None:
+            return opt_val.value
 
     def detach_disk_from_vm(self, vm_ref, instance, device,
                             destroy_disk=False):
