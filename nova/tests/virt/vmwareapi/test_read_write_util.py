@@ -23,7 +23,7 @@ from nova.virt.vmwareapi import read_write_util
 CONF = cfg.CONF
 
 
-class ReadWriteUtilTestCase(test.TestCase):
+class ReadWriteUtilTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ReadWriteUtilTestCase, self).setUp()
 
