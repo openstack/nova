@@ -1208,6 +1208,7 @@ def generate_configdrive(session, instance, vm_ref, userdevice,
                     utils.execute('dd',
                                   'if=%s' % tmp_file,
                                   'of=%s' % dev_path,
+                                  'oflag=direct,sync',
                                   run_as_root=True)
 
         create_vbd(session, vm_ref, vdi_ref, userdevice, bootable=False,
@@ -2199,6 +2200,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
             _wait_for_device(dev)
             yield dev
         finally:
+            utils.execute('sync', run_as_root=True)
             LOG.debug(_('Destroying VBD for VDI %s ... '), vdi_ref)
             unplug_vbd(session, vbd_ref, this_vm_ref)
     finally:
@@ -2427,6 +2429,8 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
                               'if=%s' % src_path,
                               'of=%s' % dst_path,
                               'count=%d' % num_blocks,
+                              'iflag=direct,sync',
+                              'oflag=direct,sync',
                               run_as_root=True)
 
 
