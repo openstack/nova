@@ -74,6 +74,40 @@ class ResourceMonitorBase(object):
     def __init__(self, parent):
         self.compute_manager = parent
         self.source = None
+        self._data = {}
+
+    @classmethod
+    def add_timestamp(arg, func):
+        """Decorator to indicate that a method needs to add a timestamp.
+
+        When a function returning a value is decorated by the decorator,
+        which means a timestamp should be added into the returned value.
+        That is, a tuple (value, timestamp) is returned.
+
+        The timestamp is not the time when the function is called but probably
+        when the value the function returns was retrieved.
+        Actually the value is retrieved by the internal method
+        _update_data(). Because we don't allow _update_data() is called
+        so frequently. So, the value is read from the cache which was got in
+        the last call sometimes.
+
+        If users want to use this decorator, they need to implement class
+        method _update_data() and variable _data.
+        If users hope to define how the timestamp is got by themselves,
+        they should not use this decorator in their own classes.
+        """
+        def wrapper(cls, **kwargs):
+            cls._update_data()
+            return func(cls, **kwargs), cls._data.get("timestamp", None)
+        return wrapper
+
+    def _update_data(self):
+        """Method to update the metrics data.
+
+        Each subclass should implement this method to update metrics.
+        It will be called in the decorator add_timestamp.
+        """
+        pass
 
     def get_metric_names(self):
         """Get available metric names.
