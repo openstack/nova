@@ -404,8 +404,10 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
-                msg = ("Security group %s is not found for project %s" %
-                       (security_group_name, context.project_id))
+                msg = (_("Security group %(name)s is not found for "
+                         "project %(project)s") %
+                       {'name': security_group_name,
+                        'project': context.project_id})
                 self.raise_not_found(msg)
             else:
                 LOG.exception(_("Neutron Error:"))
@@ -418,8 +420,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 LOG.exception(_("Neutron Error:"))
 
         if not ports:
-            msg = ("instance_id %s could not be found as device id on"
-                   " any ports" % instance['uuid'])
+            msg = (_("instance_id %s could not be found as device id on"
+                   " any ports") % instance['uuid'])
             self.raise_not_found(msg)
 
         for port in ports:
@@ -453,8 +455,10 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
-                msg = ("Security group %s is not found for project %s" %
-                       (security_group_name, context.project_id))
+                msg = (_("Security group %(name)s is not found for "
+                         "project %(project)s") %
+                       {'name': security_group_name,
+                        'project': context.project_id})
                 self.raise_not_found(msg)
             else:
                 LOG.exception(_("Neutron Error:"))
@@ -467,8 +471,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 LOG.exception(_("Neutron Error:"))
 
         if not ports:
-            msg = ("instance_id %s could not be found as device id on"
-                   " any ports" % instance['uuid'])
+            msg = (_("instance_id %s could not be found as device id on"
+                   " any ports") % instance['uuid'])
             self.raise_not_found(msg)
 
         found_security_group = False
@@ -495,8 +499,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_("Neutron Error:"))
         if not found_security_group:
-            msg = (_("Security group %(security_group_name)s not assocaited "
-                     "with the instance %(instance)s"),
+            msg = (_("Security group %(security_group_name)s not associated "
+                     "with the instance %(instance)s") %
                    {'security_group_name': security_group_name,
                     'instance': instance['uuid']})
             self.raise_not_found(msg)
