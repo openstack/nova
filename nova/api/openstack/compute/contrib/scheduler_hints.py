@@ -35,7 +35,7 @@ class SchedulerHintsController(wsgi.Controller):
         # Fail if non-dict provided
         except ValueError:
             msg = _("Malformed scheduler_hints attribute")
-            raise webob.exc.HTTPBadRequest(reason=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         return hints
 
