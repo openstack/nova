@@ -2975,7 +2975,7 @@ class LibvirtConnTestCase(test.TestCase):
                 check = (lambda t: t.find('./os/kernel'), None)
             check_list.append(check)
 
-            # Hypervisors that only support vm_mode.HVM and Xen s
+            # Hypervisors that only support vm_mode.HVM and Xen
             # should not produce configuration that results in kernel
             # arguments
             if not expect_kernel and (hypervisor_type in
