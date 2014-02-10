@@ -53,10 +53,6 @@ class VirtAPIBaseTest(test.NoDBTestCase, test.APICoverage):
         self.assertExpected('agent_build_get_by_triple',
                             'fake-hv', 'gnu/hurd', 'fake-arch')
 
-    def test_block_device_mapping_get_all_by_instance(self):
-        self.assertExpected('block_device_mapping_get_all_by_instance',
-                            {'uuid': 'fake_uuid'}, legacy=False)
-
     def test_wait_for_instance_event(self):
         self.assertExpected('wait_for_instance_event',
                             'instance', ['event'])
@@ -90,18 +86,12 @@ class FakeVirtAPITest(VirtAPIBaseTest):
             # NOTE(danms): FakeVirtAPI will convert the first argument to
             # argument['id'], so expect that in the actual db call
             e_args = tuple([args[0]['id']] + list(args[1:]))
-        elif method in ('security_group_get_by_instance',
-                        'block_device_mapping_get_all_by_instance'):
+        elif method == 'security_group_get_by_instance':
             e_args = tuple([args[0]['uuid']] + list(args[1:]))
         else:
             e_args = args
 
-        if method == 'block_device_mapping_get_all_by_instance':
-            e_kwargs = {}
-        else:
-            e_kwargs = kwargs
-
-        getattr(db, db_method)(self.context, *e_args, **e_kwargs).AndReturn(
+        getattr(db, db_method)(self.context, *e_args, **kwargs).AndReturn(
                 'it worked')
         self.mox.ReplayAll()
         result = getattr(self.virtapi, method)(self.context, *args, **kwargs)
