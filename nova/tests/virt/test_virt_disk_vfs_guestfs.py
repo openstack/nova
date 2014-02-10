@@ -202,3 +202,14 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         self.assertEqual(vfs.handle.files["/some/file"]["gid"], 600)
 
         vfs.teardown()
+
+    def test_close_on_error(self):
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs.setup()
+        self.assertFalse(vfs.handle.kwargs['close_on_exit'])
+        vfs.teardown()
+        self.stubs.Set(fakeguestfs.GuestFS, 'SUPPORT_CLOSE_ON_EXIT', False)
+        vfs = vfsimpl.VFSGuestFS(imgfile="/dummy.qcow2", imgfmt="qcow2")
+        vfs.setup()
+        self.assertNotIn('close_on_exit', vfs.handle.kwargs)
+        vfs.teardown()

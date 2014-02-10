@@ -14,8 +14,12 @@
 
 
 class GuestFS(object):
+    SUPPORT_CLOSE_ON_EXIT = True
 
-    def __init__(self, close_on_exit=True):
+    def __init__(self, **kwargs):
+        if not self.SUPPORT_CLOSE_ON_EXIT and 'close_on_exit' in kwargs:
+            raise TypeError('close_on_exit')
+        self.kwargs = kwargs
         self.drives = []
         self.running = False
         self.closed = False
