@@ -3746,22 +3746,44 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         ips_for_delete = []
         ips_for_non_delete = []
 
-        def create_ips(i):
-            return [{'address': '1.1.%s.%s' % (i, k)} for k in range(1, 256)]
+        def create_ips(i, j):
+            return [{'address': '1.1.%s.%s' % (i, k)} for k in range(1, j + 1)]
 
         # NOTE(boris-42): Create more then 256 ip to check that
         #                 _ip_range_splitter works properly.
         for i in range(1, 3):
-            ips_for_delete.extend(create_ips(i))
-        ips_for_non_delete.extend(create_ips(3))
+            ips_for_delete.extend(create_ips(i, 255))
+        ips_for_non_delete.extend(create_ips(3, 255))
 
         db.floating_ip_bulk_create(self.ctxt,
                                    ips_for_delete + ips_for_non_delete)
+
+        non_bulk_ips_for_delete = create_ips(4, 3)
+        non_bulk_ips_for_non_delete = create_ips(5, 3)
+        non_bulk_ips = non_bulk_ips_for_delete + non_bulk_ips_for_non_delete
+        project_id = 'fake_project'
+        reservations = quota.QUOTAS.reserve(self.ctxt,
+                                      floating_ips=len(non_bulk_ips),
+                                      project_id=project_id)
+        for dct in non_bulk_ips:
+            self._create_floating_ip(dct)
+        quota.QUOTAS.commit(self.ctxt, reservations, project_id=project_id)
+        self.assertEqual(db.quota_usage_get_all_by_project(
+                            self.ctxt, project_id),
+                            {'project_id': project_id,
+                             'floating_ips': {'in_use': 6, 'reserved': 0}})
+        ips_for_delete.extend(non_bulk_ips_for_delete)
+        ips_for_non_delete.extend(non_bulk_ips_for_non_delete)
+
         db.floating_ip_bulk_destroy(self.ctxt, ips_for_delete)
 
         expected_addresses = map(lambda x: x['address'], ips_for_non_delete)
         self._assertEqualListsOfPrimitivesAsSets(self._get_existing_ips(),
                                                  expected_addresses)
+        self.assertEqual(db.quota_usage_get_all_by_project(
+                            self.ctxt, project_id),
+                            {'project_id': project_id,
+                             'floating_ips': {'in_use': 3, 'reserved': 0}})
 
     def test_floating_ip_create(self):
         floating_ip = self._create_floating_ip({})
