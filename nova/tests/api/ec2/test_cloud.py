@@ -1380,6 +1380,23 @@ class CloudTestCase(test.TestCase):
         instance = result['instancesSet'][0]
         self.assertIsNone(instance['dnsName'])
 
+    def test_describe_instances_booting_from_a_volume(self):
+        sys_meta = flavors.save_flavor_info(
+            {}, flavors.get_flavor(1))
+        inst = instance_obj.Instance()
+        inst.reservation_id = 'a'
+        inst.image_ref = ''
+        inst.root_device_name = '/dev/sdh'
+        inst.instance_type_id = 1
+        inst.vm_state = vm_states.ACTIVE
+        inst.host = 'host1'
+        inst.system_metadata = sys_meta
+        inst.create(self.context)
+        result = self.cloud.describe_instances(self.context)
+        result = result['reservationSet'][0]
+        instance = result['instancesSet'][0]
+        self.assertIsNone(instance['imageId'])
+
     def test_describe_images(self):
         describe_images = self.cloud.describe_images
 

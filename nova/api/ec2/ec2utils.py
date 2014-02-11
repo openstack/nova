@@ -107,7 +107,7 @@ def id_to_glance_id(context, image_id):
 @memoize
 def glance_id_to_id(context, glance_id):
     """Convert a glance id to an internal (db) id."""
-    if glance_id is None:
+    if not glance_id:
         return
     try:
         return db.s3_image_get_by_uuid(context, glance_id)['id']
@@ -122,6 +122,8 @@ def ec2_id_to_glance_id(context, ec2_id):
 
 def glance_id_to_ec2_id(context, glance_id, image_type='ami'):
     image_id = glance_id_to_id(context, glance_id)
+    if image_id is None:
+        return
     return image_ec2_id(image_id, image_type=image_type)
 
 
