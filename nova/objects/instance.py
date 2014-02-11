@@ -170,15 +170,17 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         super(Instance, self).__init__(*args, **kwargs)
         self._reset_metadata_tracking()
 
-    def _reset_metadata_tracking(self):
-        self._orig_system_metadata = (dict(self.system_metadata) if
-                                      'system_metadata' in self else {})
-        self._orig_metadata = (dict(self.metadata) if
-                               'metadata' in self else {})
+    def _reset_metadata_tracking(self, fields=None):
+        if fields is None or 'system_metadata' in fields:
+            self._orig_system_metadata = (dict(self.system_metadata) if
+                                          'system_metadata' in self else {})
+        if fields is None or 'metadata' in fields:
+            self._orig_metadata = (dict(self.metadata) if
+                                   'metadata' in self else {})
 
     def obj_reset_changes(self, fields=None):
         super(Instance, self).obj_reset_changes(fields)
-        self._reset_metadata_tracking()
+        self._reset_metadata_tracking(fields=fields)
 
     def obj_what_changed(self):
         changes = super(Instance, self).obj_what_changed()
