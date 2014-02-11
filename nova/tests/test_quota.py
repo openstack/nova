@@ -1585,7 +1585,8 @@ class DbQuotaDriverTestCase(test.TestCase):
     def _stub_get_settable_quotas(self):
         def fake_get_project_quotas(context, resources, project_id,
                                     quota_class=None, defaults=True,
-                                    usages=True, remains=False):
+                                    usages=True, remains=False,
+                                    project_quotas=None):
             self.calls.append('get_project_quotas')
             result = {}
             for k, v in resources.items():
@@ -1601,7 +1602,8 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         def fake_get_user_quotas(context, resources, project_id, user_id,
                                  quota_class=None, defaults=True,
-                                 usages=True):
+                                 usages=True, project_quotas=None,
+                                 user_quotas=None):
             self.calls.append('get_user_quotas')
             result = {}
             for k, v in resources.items():
@@ -1632,8 +1634,8 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, [
                 'get_project_quotas',
-                'get_user_quotas',
                 'quota_get_all_by_project_and_user',
+                'get_user_quotas',
                 ])
         self.assertEqual(result, {
                 'instances': {
@@ -1749,7 +1751,8 @@ class DbQuotaDriverTestCase(test.TestCase):
     def _stub_get_project_quotas(self):
         def fake_get_project_quotas(context, resources, project_id,
                                     quota_class=None, defaults=True,
-                                    usages=True, remains=False):
+                                    usages=True, remains=False,
+                                    project_quotas=None):
             self.calls.append('get_project_quotas')
             return dict((k, dict(limit=v.default))
                         for k, v in resources.items())
@@ -1796,7 +1799,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                                          quota.QUOTAS._resources,
                                          ['instances', 'cores', 'ram',
                                           'floating_ips', 'security_groups'],
-                                         True)
+                                         True,
+                                         project_id='test_project')
 
         self.assertEqual(self.calls, ['get_project_quotas'])
         self.assertEqual(result, dict(
@@ -1815,7 +1819,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                                          ['metadata_items', 'injected_files',
                                           'injected_file_content_bytes',
                                           'injected_file_path_bytes',
-                                          'security_group_rules'], False)
+                                          'security_group_rules'], False,
+                                         project_id='test_project')
 
         self.assertEqual(self.calls, ['get_project_quotas'])
         self.assertEqual(result, dict(
