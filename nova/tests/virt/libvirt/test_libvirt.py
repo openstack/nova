@@ -842,6 +842,7 @@ class LibvirtConnTestCase(test.TestCase):
         cfg = conn.get_guest_config(instance_ref,
                                     _fake_network_info(self.stubs, 1),
                                     None, disk_info)
+        self.assertEqual(cfg.uuid, instance_ref["uuid"])
         self.assertEqual(cfg.acpi, True)
         self.assertEqual(cfg.apic, True)
         self.assertEqual(cfg.memory, 2 * units.Mi)
@@ -6201,13 +6202,7 @@ class LibvirtConnTestCase(test.TestCase):
 
     def test_post_live_migration_at_destination_with_block_device_info(self):
         # Preparing mocks
-        dummyxml = ("<domain type='kvm'><name>instance-00000001</name>"
-                    "<devices>"
-                    "<graphics type='vnc' port='5900'/>"
-                    "</devices></domain>")
         mock_domain = self.mox.CreateMock(libvirt.virDomain)
-        self.mox.StubOutWithMock(mock_domain, "XMLDesc")
-        mock_domain.XMLDesc(0).AndReturn(dummyxml)
         self.resultXML = None
 
         def fake_none(*args, **kwargs):

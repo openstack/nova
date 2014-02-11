@@ -4488,14 +4488,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # libvirt.xml
             disk_info = blockinfo.get_disk_info(
                 CONF.libvirt.virt_type, instance, block_device_info)
-            self.to_xml(context, instance, network_info, disk_info,
-                        block_device_info=block_device_info,
-                        write_to_disk=True)
-            # libvirt.xml should be made by to_xml(), but libvirt
-            # does not accept to_xml() result, since uuid is not
-            # included in to_xml() result.
-            dom = self._lookup_by_name(instance["name"])
-            self._conn.defineXML(dom.XMLDesc(0))
+            xml = self.to_xml(context, instance, network_info, disk_info,
+                              block_device_info=block_device_info,
+                              write_to_disk=True)
+            self._conn.defineXML(xml)
 
     def get_instance_disk_info(self, instance_name, xml=None,
                                block_device_info=None):
