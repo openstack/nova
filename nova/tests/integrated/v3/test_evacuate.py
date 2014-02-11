@@ -14,7 +14,7 @@
 #    under the License.
 
 from nova.compute import api as compute_api
-from nova.compute import manager as compute_manager
+from nova.compute import rpcapi as compute_rpcapi
 from nova.servicegroup import api as service_group_api
 from nova.tests.integrated.v3 import test_servers
 
@@ -25,8 +25,9 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
     def test_server_evacuate(self):
         uuid = self._post_server()
 
+        # Note (wingwj): The host can't be the same one.
         req_subs = {
-            'host': self.compute.host,
+            'host': 'testHost',
             "adminPass": "MySecretPass",
             "onSharedStorage": 'False'
         }
@@ -43,17 +44,22 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
                     'zone': 'nova'
                     }
 
-        def fake_check_instance_exists(self, context, instance):
-            """Simulate validation of instance does not exist."""
-            return False
+        def fake_rebuild_instance(_self, ctxt, instance, new_pass,
+                                  injected_files, image_ref, orig_image_ref,
+                                  orig_sys_metadata, bdms, recreate=False,
+                                  on_shared_storage=False, host=None,
+                                  preserve_ephemeral=False, kwargs=None):
+            """Simulate that given parameters are correct."""
+            self.assertEqual(uuid, instance["uuid"])
+            self.assertEqual(new_pass, "MySecretPass")
+            self.assertEqual(host, "testHost")
 
         self.stubs.Set(service_group_api.API, 'service_is_up',
                        fake_service_is_up)
         self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
                        fake_service_get_by_compute_host)
-        self.stubs.Set(compute_manager.ComputeManager,
-                       '_check_instance_exists',
-                       fake_check_instance_exists)
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'rebuild_instance',
+                       fake_rebuild_instance)
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-evacuate-req', req_subs)

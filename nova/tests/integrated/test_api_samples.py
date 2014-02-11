@@ -37,6 +37,7 @@ from nova.cloudpipe import pipelib
 from nova.compute import api as compute_api
 from nova.compute import cells_api as cells_api
 from nova.compute import manager as compute_manager
+from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import manager as conductor_manager
 from nova import context
 from nova import db
@@ -3143,7 +3144,7 @@ class EvacuateJsonTest(ServersSampleBase):
         uuid = self._post_server()
 
         req_subs = {
-            'host': self.compute.host,
+            'host': 'testHost',
             "adminPass": "MySecretPass",
             "onSharedStorage": 'False'
         }
@@ -3160,17 +3161,21 @@ class EvacuateJsonTest(ServersSampleBase):
                     'zone': 'nova'
                     }
 
-        def fake_check_instance_exists(self, context, instance):
-            """Simulate validation of instance does not exist."""
-            return False
+        def fake_rebuild_instance(self, ctxt, instance, new_pass,
+                                  injected_files, image_ref, orig_image_ref,
+                                  orig_sys_metadata, bdms, recreate=False,
+                                  on_shared_storage=False, host=None,
+                                  preserve_ephemeral=False, kwargs=None):
+            return {
+                    'adminPass': new_pass
+                    }
 
         self.stubs.Set(service_group_api.API, 'service_is_up',
                        fake_service_is_up)
         self.stubs.Set(compute_api.HostAPI, 'service_get_by_compute_host',
                        fake_service_get_by_compute_host)
-        self.stubs.Set(compute_manager.ComputeManager,
-                      '_check_instance_exists',
-                      fake_check_instance_exists)
+        self.stubs.Set(compute_rpcapi.ComputeAPI, 'rebuild_instance',
+                       fake_rebuild_instance)
 
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-evacuate-req', req_subs)

@@ -315,3 +315,19 @@ class EvacuateTest(test.NoDBTestCase):
         req.content_type = 'application/json'
         res = req.get_response(app)
         self.assertEqual(res.status_int, 403)
+
+    def test_evacuate_to_same_host(self):
+        ctxt = self._get_admin_context()
+        app = fakes.wsgi_app(fake_auth_context=ctxt)
+        req = webob.Request.blank('/v2/fake/servers/%s/action' % self.UUID)
+        req.method = 'POST'
+        req.body = jsonutils.dumps({
+            'evacuate': {
+                'host': 'host1',
+                'onSharedStorage': 'false',
+                'adminPass': 'MyNewPass'
+                }
+            })
+        req.content_type = 'application/json'
+        res = req.get_response(app)
+        self.assertEqual(res.status_int, 400)
