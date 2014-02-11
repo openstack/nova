@@ -33,7 +33,8 @@ session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(".*\scfg\.")
 vi_header_re = re.compile("^#\s+vim?:.+")
 virt_file_re = re.compile("\./nova/(?:tests/)?virt/(\w+)/")
-virt_import_re = re.compile("from nova\.(?:tests\.)?virt\.(\w+) import")
+virt_import_re = re.compile(
+    "^\s*(?:import|from) nova\.(?:tests\.)?virt\.(\w+)")
 virt_config_re = re.compile("CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
 
 
@@ -72,7 +73,7 @@ def _get_virt_name(regex, data):
         return None
     driver = m.group(1)
     # Ignore things we mis-detect as virt drivers in the regex
-    if driver in ["test_virt_drivers", "driver",
+    if driver in ["test_virt_drivers", "driver", "firewall",
                   "disk", "api", "imagecache", "cpu"]:
         return None
     # TODO(berrange): remove once bugs 1261826 and 126182 are
