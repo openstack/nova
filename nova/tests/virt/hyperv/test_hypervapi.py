@@ -54,6 +54,7 @@ from nova.virt.hyperv import livemigrationutils
 from nova.virt.hyperv import networkutils
 from nova.virt.hyperv import networkutilsv2
 from nova.virt.hyperv import pathutils
+from nova.virt.hyperv import rdpconsoleutils
 from nova.virt.hyperv import utilsfactory
 from nova.virt.hyperv import vhdutils
 from nova.virt.hyperv import vhdutilsv2
@@ -173,6 +174,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                   'get_controller_volume_paths')
         self._mox.StubOutWithMock(vmutils.VMUtils,
                                   'enable_vm_metrics_collection')
+        self._mox.StubOutWithMock(vmutils.VMUtils, 'get_vm_id')
 
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'create_differencing_vhd')
         self._mox.StubOutWithMock(vhdutils.VHDUtils, 'reconnect_parent_vhd')
@@ -230,6 +232,9 @@ class HyperVAPITestCase(test.NoDBTestCase):
                                   'logout_storage_target')
         self._mox.StubOutWithMock(volumeutilsv2.VolumeUtilsV2,
                                   'execute_log_out')
+
+        self._mox.StubOutWithMock(rdpconsoleutils.RDPConsoleUtils,
+                                  'get_rdp_console_port')
 
         self._mox.StubOutClassWithMocks(instance_metadata, 'InstanceMetadata')
         self._mox.StubOutWithMock(instance_metadata.InstanceMetadata,
@@ -1636,6 +1641,29 @@ class HyperVAPITestCase(test.NoDBTestCase):
                     self._test_spawn_instance, [], None)
             mock_destroy.assert_called_once_with(self._context,
                     self._test_spawn_instance, [], None)
+
+    def test_get_rdp_console(self):
+        self.flags(my_ip="192.168.1.1")
+
+        self._instance_data = self._get_instance_data()
+        instance = db.instance_create(self._context, self._instance_data)
+
+        fake_port = 9999
+        fake_vm_id = "fake_vm_id"
+
+        m = rdpconsoleutils.RDPConsoleUtils.get_rdp_console_port()
+        m.AndReturn(fake_port)
+
+        m = vmutils.VMUtils.get_vm_id(mox.IsA(str))
+        m.AndReturn(fake_vm_id)
+
+        self._mox.ReplayAll()
+        connect_info = self._conn.get_rdp_console(self._context, instance)
+        self._mox.VerifyAll()
+
+        self.assertEqual(CONF.my_ip, connect_info['host'])
+        self.assertEqual(fake_port, connect_info['port'])
+        self.assertEqual(fake_vm_id, connect_info['internal_access_path'])
 
 
 class VolumeOpsTestCase(HyperVAPITestCase):
