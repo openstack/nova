@@ -335,6 +335,12 @@ class BaseTestCase(test.TestCase):
         self.stubs.Set(conductor_manager.ComputeTaskManager,
                        'migrate_server', _fake_migrate_server)
 
+    def _init_aggregate_with_host(self, aggr, aggr_name, zone, host):
+        if not aggr:
+            aggr = self.api.create_aggregate(self.context, aggr_name, zone)
+        aggr = self.api.add_host_to_aggregate(self.context, aggr['id'], host)
+        return aggr
+
 
 class ComputeVolumeTestCase(BaseTestCase):
 
@@ -8922,6 +8928,26 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.AggregateNotFound,
                           self.api.delete_aggregate, self.context, aggr['id'])
 
+    def test_check_az_for_aggregate(self):
+        # Ensure all conflict hosts can be returned
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host1 = values[fake_zone][0]
+        fake_host2 = values[fake_zone][1]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host1)
+        aggr1 = self._init_aggregate_with_host(aggr1, None, None, fake_host2)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host2)
+        aggr2 = self._init_aggregate_with_host(aggr2, None, None, fake_host1)
+        metadata = {'availability_zone': 'another_zone'}
+        try:
+            self.api.update_aggregate(self.context, aggr2['id'],
+                                      metadata)
+        except exception.InvalidAggregateAction as e:
+            msg = "host1 in avail_zone1,host2 in avail_zone1"
+            self.assertTrue(e.format_message().find(msg))
+
     def test_update_aggregate(self):
         # Ensure metadata can be updated.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
@@ -8935,6 +8961,81 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.updateprop.start')
         msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updateprop.end')
+
+    def test_update_aggregate_no_az(self):
+        # Ensure metadata without availability zone can be
+        # updated,even the aggregate contains hosts belong
+        # to another availability zone
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'name': 'new_fake_aggregate'}
+        fake_notifier.NOTIFICATIONS = []
+        aggr2 = self.api.update_aggregate(self.context, aggr2['id'],
+                                                  metadata)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updateprop.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updateprop.end')
+
+    def test_update_aggregate_az_change(self):
+        # Ensure availability zone can be updated,
+        # when the aggregate is the only one with
+        # availability zone
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'availability_zone': 'new_fake_zone'}
+        fake_notifier.NOTIFICATIONS = []
+        aggr1 = self.api.update_aggregate(self.context, aggr1['id'],
+                                                  metadata)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updateprop.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updateprop.end')
+
+    def test_update_aggregate_az_fails(self):
+        # Ensure aggregate's availability zone can't be updated,
+        # when aggregate has hosts in other availability zone
+        fake_notifier.NOTIFICATIONS = []
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'availability_zone': 'another_zone'}
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.update_aggregate,
+                          self.context, aggr2['id'], metadata)
+        fake_host2 = values[fake_zone][1]
+        aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
+                                               None, fake_host2)
+        metadata = {'availability_zone': fake_zone}
+        aggr3 = self.api.update_aggregate(self.context, aggr3['id'],
+                                          metadata)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
+        msg = fake_notifier.NOTIFICATIONS[13]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updateprop.start')
+        msg = fake_notifier.NOTIFICATIONS[14]
         self.assertEqual(msg.event_type,
                          'aggregate.updateprop.end')
 
@@ -8963,6 +9064,84 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertThat(expected['metadata'],
                         matchers.DictMatches({'availability_zone': 'fake_zone',
                         'foo_key2': 'foo_value2'}))
+
+    def test_update_aggregate_metadata_no_az(self):
+        # Ensure metadata without availability zone can be
+        # updated,even the aggregate contains hosts belong
+        # to another availability zone
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'foo_key2': 'foo_value3'}
+        fake_notifier.NOTIFICATIONS = []
+        aggr2 = self.api.update_aggregate_metadata(self.context, aggr2['id'],
+                                                  metadata)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updatemetadata.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updatemetadata.end')
+        self.assertThat(aggr2['metadata'],
+                        matchers.DictMatches({'foo_key2': 'foo_value3'}))
+
+    def test_update_aggregate_metadata_az_change(self):
+        # Ensure availability zone can be updated,
+        # when the aggregate is the only one with
+        # availability zone
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'availability_zone': 'new_fake_zone'}
+        fake_notifier.NOTIFICATIONS = []
+        aggr1 = self.api.update_aggregate_metadata(self.context,
+                                                   aggr1['id'], metadata)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updatemetadata.start')
+        msg = fake_notifier.NOTIFICATIONS[1]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updatemetadata.end')
+
+    def test_update_aggregate_metadata_az_fails(self):
+        # Ensure aggregate's availability zone can't be updated,
+        # when aggregate has hosts in other availability zone
+        fake_notifier.NOTIFICATIONS = []
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               fake_zone, fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'availability_zone': 'another_zone'}
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.update_aggregate_metadata,
+                          self.context, aggr2['id'], metadata)
+        fake_host2 = values[fake_zone][1]
+        aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
+                                               None, fake_host)
+        metadata = {'availability_zone': fake_zone}
+        aggr3 = self.api.update_aggregate_metadata(self.context,
+                                                   aggr3['id'],
+                                                   metadata)
+        self.assertEqual(len(fake_notifier.NOTIFICATIONS), 15)
+        msg = fake_notifier.NOTIFICATIONS[13]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updatemetadata.start')
+        msg = fake_notifier.NOTIFICATIONS[14]
+        self.assertEqual(msg.event_type,
+                         'aggregate.updatemetadata.end')
 
     def test_delete_aggregate(self):
         # Ensure we can delete an aggregate.

@@ -3232,12 +3232,32 @@ class AggregateAPI(base.Base):
         aggregates = aggregate_obj.AggregateList.get_all(context)
         return [self._reformat_aggregate_info(agg) for agg in aggregates]
 
+    def is_safe_to_update_az(self, context, aggregate, metadata,
+                                action_name):
+        """Determine if updates alter an aggregate's availability zone."""
+        if 'availability_zone' in metadata:
+            aggregate_az = aggregate.metadata.get("availability_zone")
+            for host in aggregate.hosts:
+                host_az = availability_zones.get_host_availability_zone(
+                                                    context, host)
+                if (host_az and host_az != metadata["availability_zone"]
+                   and host_az != CONF.default_availability_zone and
+                   host_az != aggregate_az):
+                    msg = _("This aggregate contains hosts in"
+                            " an existing availability zone")
+                    raise exception.InvalidAggregateAction(
+                                            action=action_name,
+                                            aggregate_id=aggregate.id,
+                                            reason=msg)
+
     @wrap_exception()
     def update_aggregate(self, context, aggregate_id, values):
         """Update the properties of an aggregate."""
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
         if 'name' in values:
             aggregate.name = values.pop('name')
+        self.is_safe_to_update_az(context, aggregate,
+                                    values, "update aggregate")
         if values:
             aggregate.metadata = values
         aggregate.save()
@@ -3251,6 +3271,8 @@ class AggregateAPI(base.Base):
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
         """Updates the aggregate metadata."""
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        self.is_safe_to_update_az(context, aggregate,
+                         metadata, "update aggregate metadata")
         aggregate.update_metadata(metadata)
         # If updated metadata include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
