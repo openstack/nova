@@ -14,7 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import re
 import webob
 
 from nova.api.openstack.compute.schemas.v3 import console_output
@@ -58,10 +57,6 @@ class ConsoleOutputController(wsgi.Controller):
         except NotImplementedError:
             msg = _("Unable to get console log, functionality not implemented")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
-
-        # XML output is not correctly escaped, so remove invalid characters
-        remove_re = re.compile('[\x00-\x08\x0B-\x1F]')
-        output = remove_re.sub('', output)
 
         return {'output': output}
 
