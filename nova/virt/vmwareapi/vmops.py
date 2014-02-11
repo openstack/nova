@@ -489,7 +489,7 @@ class VMwareVMOps(object):
                 vmdk_path = vm_util.build_datastore_path(data_store_name,
                                                          vmdk_name)
                 if disk_type != "sparse":
-                   # Create a flat virtual disk and retain the metadata file.
+                    # Create a flat virtual disk and retain the metadata file.
                     _create_virtual_disk(upload_folder, vmdk_path)
                     self._delete_datastore_file(instance,
                                                 flat_uploaded_vmdk_path,
