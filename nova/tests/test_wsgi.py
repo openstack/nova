@@ -21,18 +21,21 @@ import tempfile
 import testtools
 
 import eventlet
+import eventlet.wsgi
 import requests
 
 import nova.exception
 from nova import test
 from nova.tests import utils
 import nova.wsgi
+from oslo.config import cfg
 import urllib2
 import webob
 
 SSL_CERT_DIR = os.path.normpath(os.path.join(
                                 os.path.dirname(os.path.abspath(__file__)),
                                 'ssl_cert'))
+CONF = cfg.CONF
 
 
 class TestLoaderNothingExists(test.NoDBTestCase):
@@ -99,6 +102,11 @@ class TestWSGIServer(test.NoDBTestCase):
     def test_no_app(self):
         server = nova.wsgi.Server("test_app", None)
         self.assertEqual("test_app", server.name)
+
+    def test_custom_max_header_line(self):
+        CONF.max_header_line = 4096  # Default value is 16384.
+        server = nova.wsgi.Server("test_custom_max_header_line", None)
+        self.assertEqual(CONF.max_header_line, eventlet.wsgi.MAX_HEADER_LINE)
 
     def test_start_random_port(self):
         server = nova.wsgi.Server("test_random_port", None,
