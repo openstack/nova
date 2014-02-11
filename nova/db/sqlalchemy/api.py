@@ -881,9 +881,9 @@ def floating_ip_bulk_destroy(context, ips):
                                     reservations,
                                     project_id=project_id)
             except Exception:
-                LOG.exception(_("Failed to update usages bulk "
-                                "deallocating floating IP"))
-                raise
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_("Failed to update usages bulk "
+                                    "deallocating floating IP"))
 
 
 @require_context
