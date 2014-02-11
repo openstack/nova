@@ -31,6 +31,7 @@ from nova.network import model as network_model
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
+from nova.objects import migration as migration_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
 from nova import test
@@ -1489,3 +1490,79 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         self.compute._build_networks_for_instance(self.context, instance,
                 self.requested_networks, self.security_groups)
+
+
+class ComputeManagerMigrationTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(ComputeManagerMigrationTestCase, self).setUp()
+        self.compute = importutils.import_object(CONF.compute_manager)
+        self.context = context.RequestContext('fake', 'fake')
+        self.image = {}
+        self.instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE,
+                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        self.migration = migration_obj.Migration()
+        self.migration.status = 'migrating'
+
+    def test_finish_resize_failure(self):
+        elevated_context = self.context.elevated()
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_finish_resize',
+                              side_effect=exception.ResizeError(reason='')),
+            mock.patch.object(self.compute.conductor_api,
+                              'action_event_start'),
+            mock.patch.object(self.compute.conductor_api,
+                              'action_event_finish'),
+            mock.patch.object(self.compute.conductor_api,
+                              'instance_fault_create'),
+            mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(self.migration, 'save'),
+            mock.patch.object(self.context, 'elevated',
+                              return_value=elevated_context)
+        ) as (meth, event_start, event_finish, fault_create, instance_update,
+              migration_save, context_elevated):
+            self.assertRaises(
+                exception.ResizeError, self.compute.finish_resize,
+                self.context, [], self.image, self.instance, [],
+                self.migration
+            )
+            self.assertEqual("error", self.migration.status)
+            migration_save.assert_has_calls([mock.call(elevated_context)])
+
+    def test_resize_instance_failure(self):
+        elevated_context = self.context.elevated()
+        self.migration.dest_host = None
+        with contextlib.nested(
+            mock.patch.object(self.compute.driver,
+                              'migrate_disk_and_power_off',
+                              side_effect=exception.ResizeError(reason='')),
+            mock.patch.object(self.compute.conductor_api,
+                              'action_event_start'),
+            mock.patch.object(self.compute.conductor_api,
+                              'action_event_finish'),
+            mock.patch.object(self.compute.conductor_api,
+                              'instance_fault_create'),
+            mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(self.migration, 'save'),
+            mock.patch.object(self.context, 'elevated',
+                              return_value=elevated_context),
+            mock.patch.object(self.compute, '_get_instance_nw_info',
+                              return_value=None),
+            mock.patch.object(self.instance, 'save'),
+            mock.patch.object(self.compute, '_notify_about_instance_usage'),
+            mock.patch.object(self.compute,
+                              '_get_instance_volume_block_device_info',
+                              return_value=None),
+            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                              'get_by_instance_uuid',
+                              return_value=None)
+        ) as (meth, event_start, event_finish, fault_create, instance_update,
+              migration_save, context_elevated, nw_info, save_inst, notify,
+              vol_block_info, bdm):
+            self.assertRaises(
+                exception.ResizeError, self.compute.resize_instance,
+                self.context, self.instance, self.image, [], self.migration,
+                'type'
+            )
+            self.assertEqual("error", self.migration.status)
+            migration_save.assert_has_calls([mock.call(elevated_context)])
