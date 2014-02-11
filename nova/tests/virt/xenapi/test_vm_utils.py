@@ -874,7 +874,7 @@ class CreateVBDTestCase(VMUtilsTestBase):
 class UnplugVbdTestCase(VMUtilsTestBase):
     @mock.patch.object(greenthread, 'sleep')
     def test_unplug_vbd_works(self, mock_sleep):
-        session = mock.Mock()
+        session = _get_fake_session()
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -884,7 +884,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(0, mock_sleep.call_count)
 
     def test_unplug_vbd_raises_unexpected_error(self):
-        session = mock.Mock()
+        session = _get_fake_session()
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
         session.call_xenapi.side_effect = test.TestingException()
@@ -1728,16 +1728,13 @@ class VDIAttachedHere(VMUtilsTestBase):
     @mock.patch.object(vm_utils, 'destroy_vbd')
     @mock.patch.object(vm_utils, '_get_this_vm_ref')
     @mock.patch.object(vm_utils, 'create_vbd')
-    @mock.patch.object(volume_utils, 'vbd_plug')
     @mock.patch.object(vm_utils, '_remap_vbd_dev')
     @mock.patch.object(vm_utils, '_wait_for_device')
     @mock.patch.object(utils, 'execute')
-    @mock.patch.object(vm_utils, 'unplug_vbd')
-    def test_sync_called(self, mock_unplug_vbd, mock_execute,
-                         mock_wait_for_device, mock_remap_vbd_dev,
-                         mock_vbd_plug, mock_create_vbd,
+    def test_sync_called(self, mock_execute, mock_wait_for_device,
+                         mock_remap_vbd_dev, mock_create_vbd,
                          mock_get_this_vm_ref, mock_destroy_vbd):
-        session = mock.Mock()
+        session = _get_fake_session()
         with vm_utils.vdi_attached_here(session, 'vdi_ref'):
             pass
         mock_execute.assert_called_with('sync', run_as_root=True)
