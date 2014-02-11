@@ -118,7 +118,8 @@ compute_opts = [
 interval_opts = [
     cfg.IntOpt('bandwidth_poll_interval',
                default=600,
-               help='Interval to pull bandwidth usage info'),
+               help='Interval to pull network bandwidth usage info. Not '
+                    'supported on all hypervisors. Set to 0 to disable.'),
     cfg.IntOpt('sync_power_state_interval',
                default=600,
                help='Interval to sync power states between '
@@ -420,6 +421,7 @@ class ComputeManager(manager.Manager):
         self.volume_api = volume.API()
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
+        self._bw_usage_supported = True
         self._last_vol_usage_poll = 0
         self._last_info_cache_heal = 0
         self._last_bw_usage_cell_update = 0
@@ -4759,8 +4761,12 @@ class ComputeManager(manager.Manager):
                                       num_instances,
                                       time.time() - start_time))
 
-    @periodic_task.periodic_task
+    @periodic_task.periodic_task(spacing=CONF.bandwidth_poll_interval)
     def _poll_bandwidth_usage(self, context):
+
+        if (CONF.bandwidth_poll_interval <= 0 or not self._bw_usage_supported):
+            return
+
         prev_time, start_time = utils.last_completed_audit_period()
 
         curr_time = time.time()
@@ -4785,6 +4791,11 @@ class ComputeManager(manager.Manager):
                 # NOTE(mdragon): Not all hypervisors have bandwidth polling
                 # implemented yet.  If they don't it doesn't break anything,
                 # they just don't get the info in the usage events.
+                # NOTE(PhilDay): Record that its not supported so we can
+                # skip fast on future calls rather than waste effort getting
+                # the list of instances.
+                LOG.warning(_("Bandwidth usage not supported by hypervisor."))
+                self._bw_usage_supported = False
                 return
 
             refreshed = timeutils.utcnow()
