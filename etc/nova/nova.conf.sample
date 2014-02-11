@@ -3603,6 +3603,15 @@
 #image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
 
 
+#
+# Options defined in nova.virt.xenapi.volume_utils
+#
+
+# Number of seconds to wait for an SR to settle if the VDI
+# does not exist when first introduced  (integer value)
+#introduce_vdi_retry_wait=20
+
+
 [zookeeper]
 
 #
