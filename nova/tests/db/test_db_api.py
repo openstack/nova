@@ -7147,3 +7147,22 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
                           self.admin_context,
                           v2['compute_node_id'],
                           v2['address'])
+
+
+class RetryOnDeadlockTestCase(test.TestCase):
+    def test_without_deadlock(self):
+        @sqlalchemy_api._retry_on_deadlock
+        def call_api(*args, **kwargs):
+            return True
+        self.assertTrue(call_api())
+
+    def test_raise_deadlock(self):
+        self.attempts = 2
+
+        @sqlalchemy_api._retry_on_deadlock
+        def call_api(*args, **kwargs):
+            while self.attempts:
+                self.attempts = self.attempts - 1
+                raise db_exc.DBDeadlock("fake exception")
+            return True
+        self.assertTrue(call_api())
