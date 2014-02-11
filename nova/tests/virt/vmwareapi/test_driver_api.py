@@ -270,7 +270,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
 
-    def test_VC_Connection(self):
+    def test_login_retries(self):
         self.attempts = 0
         self.login_session = vmwareapi_fake.FakeVim()._login()
 
