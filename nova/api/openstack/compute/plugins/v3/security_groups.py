@@ -25,7 +25,6 @@ from nova.compute import api as compute_api
 from nova import exception
 from nova.network.security_group import neutron_driver
 from nova.network.security_group import openstack_driver
-from nova.openstack.common import xmlutils
 
 
 ALIAS = 'os-security-groups'
@@ -78,28 +77,12 @@ class SecurityGroupsOutputController(wsgi.Controller):
             # In this section of code len(servers) == 1 as you can only POST
             # one server in an API request.
             else:
-                try:
-                    # try converting to json
-                    req_obj = json.loads(req.body)
-                    # Add security group to server, if no security group was in
-                    # request add default since that is the group it is part of
-                    servers[0][key] = req_obj['server'].get(
-                        ATTRIBUTE_NAME, [{'name': 'default'}])
-                except ValueError:
-                    root = xmlutils.safe_minidom_parse_string(req.body)
-                    sg_root = root.getElementsByTagNameNS(
-                        SecurityGroups.namespace, key)
-                    groups = []
-                    if sg_root:
-                        security_groups = sg_root[0].getElementsByTagName(
-                            'security_group')
-                        for security_group in security_groups:
-                            groups.append(
-                                {'name': security_group.getAttribute('name')})
-                    if not groups:
-                        groups = [{'name': 'default'}]
-
-                    servers[0][key] = groups
+                # try converting to json
+                req_obj = json.loads(req.body)
+                # Add security group to server, if no security group was in
+                # request add default since that is the group it is part of
+                servers[0][key] = req_obj['server'].get(
+                    ATTRIBUTE_NAME, [{'name': 'default'}])
 
     def _show(self, req, resp_obj):
         if not softauth(req.environ['nova.context']):
