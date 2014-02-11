@@ -522,7 +522,7 @@ class VMwareVMOps(object):
                 # the cache into the instance directory.  If we are using
                 # linked clone it is references from the cache directory
                 dest_folder = instance['uuid']
-                dest_name = instance['name']
+                dest_name = instance_name
                 dest_vmdk_name = "%s/%s.vmdk" % (dest_folder,
                                                  dest_name)
                 dest_vmdk_path = vm_util.build_datastore_path(
@@ -1084,7 +1084,6 @@ class VMwareVMOps(object):
 
         self.power_off(instance)
         r_instance = copy.deepcopy(instance)
-        r_instance['name'] = r_instance['name'] + self._rescue_suffix
         instance_name = r_instance['uuid'] + self._rescue_suffix
         self.spawn(context, r_instance, image_meta,
                    None, None, network_info,
@@ -1123,7 +1122,6 @@ class VMwareVMOps(object):
 
         r_instance = copy.deepcopy(instance)
         instance_name = r_instance['uuid'] + self._rescue_suffix
-        r_instance['name'] = r_instance['name'] + self._rescue_suffix
         # detach the original instance disk from the rescue disk
         vm_rescue_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)

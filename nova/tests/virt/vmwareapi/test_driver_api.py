@@ -402,7 +402,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """
 
         self._create_vm()
-        inst_file_path = '[%s] %s/fake_name.vmdk' % (self.ds, self.uuid)
+        inst_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
         cache = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.vmdk' %
                  self.ds)
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
