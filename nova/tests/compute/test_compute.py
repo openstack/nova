@@ -7183,10 +7183,13 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance3['uuid'])
 
     @mock.patch('nova.db.network_get')
-    def test_get_all_by_multiple_options_at_once(self, network_get):
+    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
+    def test_get_all_by_multiple_options_at_once(self, fixed_get, network_get):
         # Test searching by multiple options at once.
         c = context.get_admin_context()
         network_manager = fake_network.FakeNetworkManager(self.stubs)
+        fixed_get.side_effect = (
+            network_manager.db.fixed_ips_by_virtual_interface)
         network_get.return_value = (
             dict(test_network.fake_network,
                  **network_manager.db.network_get(None, 1)))

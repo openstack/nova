@@ -1722,8 +1722,10 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertTrue(manager.create_networks(*args))
 
     @mock.patch('nova.db.network_get')
-    def test_get_instance_uuids_by_ip_regex(self, network_get):
+    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
+    def test_get_instance_uuids_by_ip_regex(self, fixed_get, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
+        fixed_get.side_effect = manager.db.fixed_ips_by_virtual_interface
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
         network_get.return_value = dict(test_network.fake_network,
@@ -1823,8 +1825,10 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(res[1]['instance_uuid'], _vifs[2]['instance_uuid'])
 
     @mock.patch('nova.db.network_get')
-    def test_get_instance_uuids_by_ip(self, network_get):
+    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
+    def test_get_instance_uuids_by_ip(self, fixed_get, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
+        fixed_get.side_effect = manager.db.fixed_ips_by_virtual_interface
         _vifs = manager.db.virtual_interface_get_all(None)
         fake_context = context.RequestContext('user', 'project')
         network_get.return_value = dict(test_network.fake_network,

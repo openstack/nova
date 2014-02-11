@@ -434,25 +434,25 @@ class NetworkManager(manager.Manager):
                 results.append({'instance_uuid': vif.instance_uuid,
                                 'ip': fixed_ipv6})
 
-            fixed_ips = self.db.fixed_ips_by_virtual_interface(context,
-                                                               vif.id)
+            fixed_ips = fixed_ip_obj.FixedIPList.get_by_virtual_interface_id(
+                context, vif.id)
             for fixed_ip in fixed_ips:
-                if not fixed_ip or not fixed_ip['address']:
+                if not fixed_ip or not fixed_ip.address:
                     continue
-                if fixed_ip['address'] == fixed_ip_filter:
+                if str(fixed_ip.address) == fixed_ip_filter:
                     results.append({'instance_uuid': vif.instance_uuid,
-                                    'ip': fixed_ip['address']})
+                                    'ip': fixed_ip.address})
                     continue
-                if ip_filter.match(fixed_ip['address']):
+                if ip_filter.match(str(fixed_ip.address)):
                     results.append({'instance_uuid': vif.instance_uuid,
-                                    'ip': fixed_ip['address']})
+                                    'ip': fixed_ip.address})
                     continue
-                for floating_ip in fixed_ip.get('floating_ips', []):
-                    if not floating_ip or not floating_ip['address']:
+                for floating_ip in fixed_ip.floating_ips:
+                    if not floating_ip or not floating_ip.address:
                         continue
-                    if ip_filter.match(floating_ip['address']):
+                    if ip_filter.match(str(floating_ip.address)):
                         results.append({'instance_uuid': vif.instance_uuid,
-                                        'ip': floating_ip['address']})
+                                        'ip': floating_ip.address})
                         continue
 
         return results
@@ -1271,7 +1271,7 @@ class NetworkManager(manager.Manager):
             ips.append({'network_id': network_id,
                         'address': address,
                         'reserved': reserved})
-        self.db.fixed_ip_bulk_create(context, ips)
+        fixed_ip_obj.FixedIPList.bulk_create(context, ips)
 
     def _allocate_fixed_ips(self, context, instance_id, host, networks,
                             **kwargs):

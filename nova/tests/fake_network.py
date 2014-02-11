@@ -30,6 +30,7 @@ from nova.objects import instance_info_cache
 from nova.objects import pci_device
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import jsonutils
+from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_pci_device
 from nova.virt.libvirt import config as libvirt_config
@@ -125,13 +126,16 @@ class FakeNetworkManager(network_manager.NetworkManager):
                         dict(address='173.16.1.2',
                              fixed_ip_id=210)]
 
-        fixed_ips = [dict(id=100,
+        fixed_ips = [dict(test_fixed_ip.fake_fixed_ip,
+                          id=100,
                           address='172.16.0.1',
                           virtual_interface_id=0),
-                     dict(id=200,
+                     dict(test_fixed_ip.fake_fixed_ip,
+                          id=200,
                           address='172.16.0.2',
                           virtual_interface_id=1),
-                     dict(id=210,
+                     dict(test_fixed_ip.fake_fixed_ip,
+                          id=210,
                           address='173.16.0.2',
                           virtual_interface_id=2)]
 
