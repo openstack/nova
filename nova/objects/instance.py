@@ -188,6 +188,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             changes.add('system_metadata')
         return changes
 
+    @classmethod
+    def _obj_from_primitive(cls, context, objver, primitive):
+        self = super(Instance, cls)._obj_from_primitive(context, objver,
+                                                        primitive)
+        self._reset_metadata_tracking()
+        return self
+
     def obj_make_compatible(self, primitive, target_version):
         target_version = (int(target_version.split('.')[0]),
                           int(target_version.split('.')[1]))

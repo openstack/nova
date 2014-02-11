@@ -426,7 +426,15 @@ class _TestObject(object):
                      'nova_object.namespace': 'nova',
                      'nova_object.version': '1.5',
                      'nova_object.data': {'foo': 1}}
-        obj = MyObj.obj_from_primitive(primitive)
+        real_method = MyObj._obj_from_primitive
+
+        def _obj_from_primitive(*args):
+            return real_method(*args)
+
+        with mock.patch.object(MyObj, '_obj_from_primitive') as ofp:
+            ofp.side_effect = _obj_from_primitive
+            obj = MyObj.obj_from_primitive(primitive)
+            ofp.assert_called_once_with(None, '1.5', primitive)
         self.assertEqual(obj.foo, 1)
 
     def test_hydration_version_different(self):

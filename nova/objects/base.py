@@ -224,6 +224,20 @@ class NovaObject(object):
                                                   supported=latest_ver)
 
     @classmethod
+    def _obj_from_primitive(cls, context, objver, primitive):
+        self = cls()
+        self._context = context
+        self.VERSION = objver
+        objdata = primitive['nova_object.data']
+        changes = primitive.get('nova_object.changes', [])
+        for name, field in self.fields.items():
+            if name in objdata:
+                setattr(self, name, field.from_primitive(self, name,
+                                                         objdata[name]))
+        self._changed_fields = set([x for x in changes if x in self.fields])
+        return self
+
+    @classmethod
     def obj_from_primitive(cls, primitive, context=None):
         """Object field-by-field hydration."""
         if primitive['nova_object.namespace'] != 'nova':
@@ -234,18 +248,8 @@ class NovaObject(object):
                                    primitive['nova_object.name']))
         objname = primitive['nova_object.name']
         objver = primitive['nova_object.version']
-        objdata = primitive['nova_object.data']
         objclass = cls.obj_class_from_name(objname, objver)
-        self = objclass()
-        self._context = context
-        self.VERSION = objver
-        for name, field in self.fields.items():
-            if name in objdata:
-                setattr(self, name, field.from_primitive(self, name,
-                                                         objdata[name]))
-        changes = primitive.get('nova_object.changes', [])
-        self._changed_fields = set([x for x in changes if x in self.fields])
-        return self
+        return objclass._obj_from_primitive(context, objver, primitive)
 
     def __deepcopy__(self, memo):
         """Efficiently make a deep copy of this object."""
