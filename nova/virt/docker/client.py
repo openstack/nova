@@ -19,6 +19,7 @@ import socket
 from eventlet.green import httplib
 import six
 
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 
@@ -50,23 +51,36 @@ def filter_data(f):
 
 
 class Response(object):
-    def __init__(self, http_response, skip_body=False):
+    def __init__(self, http_response, url=None):
+        self.url = url
         self._response = http_response
         self.code = int(http_response.status)
         self.data = http_response.read()
-        self.json = self._decode_json(self.data)
+        self._json = None
 
     def read(self, size=None):
         return self._response.read(size)
 
-    @filter_data
-    def _decode_json(self, data):
+    def to_json(self, default=None):
+        if not self._json:
+            self._json = self._decode_json(self.data, default)
+        return self._json
+
+    def _validate_content_type(self):
+        # Docker does not return always the correct Content-Type.
+        # Lets try to parse the response anyway since json is requested.
         if self._response.getheader('Content-Type') != 'application/json':
-            return
-        try:
-            return jsonutils.loads(self.data)
-        except ValueError:
-            return
+            LOG.debug(_("Content-Type of response is not application/json"
+                       " (Docker bug?). Requested URL %s") % self.url)
+
+    @filter_data
+    def _decode_json(self, data, default=None):
+        if not data:
+            return default
+        self._validate_content_type()
+        # Do not catch ValueError or SyntaxError since that
+        # just hides the root cause of errors.
+        return jsonutils.loads(data)
 
 
 class UnixHTTPConnection(httplib.HTTPConnection):
@@ -100,13 +114,13 @@ class DockerHTTPClient(object):
             kwargs['headers'] = headers
         conn = self.connection
         conn.request(*args, **kwargs)
-        return Response(conn.getresponse())
+        return Response(conn.getresponse(), url=args[1])
 
     def list_containers(self, _all=True):
         resp = self.make_request(
             'GET',
-            '/v1.4/containers/ps?all={0}&limit=50'.format(int(_all)))
-        return resp.json
+            '/v1.7/containers/ps?all={0}'.format(int(_all)))
+        return resp.to_json(default=[])
 
     def create_container(self, args, name):
         data = {
@@ -135,7 +149,7 @@ class DockerHTTPClient(object):
             body=jsonutils.dumps(data))
         if resp.code != 201:
             return
-        obj = jsonutils.loads(resp.data)
+        obj = resp.to_json()
         for k, v in obj.iteritems():
             if k.lower() == 'id':
                 return v
@@ -143,48 +157,48 @@ class DockerHTTPClient(object):
     def start_container(self, container_id):
         resp = self.make_request(
             'POST',
-            '/v1.4/containers/{0}/start'.format(container_id),
+            '/v1.7/containers/{0}/start'.format(container_id),
             body='{}')
         return (resp.code == 200)
 
     def inspect_image(self, image_name):
         resp = self.make_request(
             'GET',
-            '/v1.4/images/{0}/json'.format(image_name))
+            '/v1.7/images/{0}/json'.format(image_name))
         if resp.code != 200:
             return
-        return resp.json
+        return resp.to_json()
 
     def inspect_container(self, container_id):
         resp = self.make_request(
             'GET',
-            '/v1.4/containers/{0}/json'.format(container_id))
+            '/v1.7/containers/{0}/json'.format(container_id))
         if resp.code != 200:
             return
-        return resp.json
+        return resp.to_json()
 
     def stop_container(self, container_id):
         timeout = 5
         resp = self.make_request(
             'POST',
-            '/v1.4/containers/{0}/stop?t={1}'.format(container_id, timeout))
+            '/v1.7/containers/{0}/stop?t={1}'.format(container_id, timeout))
         return (resp.code == 204)
 
     def kill_container(self, container_id):
         resp = self.make_request(
             'POST',
-            '/v1.4/containers/{0}/kill'.format(container_id))
+            '/v1.7/containers/{0}/kill'.format(container_id))
         return (resp.code == 204)
 
     def destroy_container(self, container_id):
         resp = self.make_request(
             'DELETE',
-            '/v1.4/containers/{0}'.format(container_id))
+            '/v1.7/containers/{0}'.format(container_id))
         return (resp.code == 204)
 
     def pull_repository(self, name):
         parts = name.rsplit(':', 1)
-        url = '/v1.4/images/create?fromImage={0}'.format(parts[0])
+        url = '/v1.7/images/create?fromImage={0}'.format(parts[0])
         if len(parts) > 1:
             url += '&tag={0}'.format(parts[1])
         resp = self.make_request('POST', url)
@@ -196,7 +210,7 @@ class DockerHTTPClient(object):
         return (resp.code == 200)
 
     def push_repository(self, name, headers=None):
-        url = '/v1.4/images/{0}/push'.format(name)
+        url = '/v1.7/images/{0}/push'.format(name)
         # NOTE(samalba): docker requires the credentials fields even if
         # they're not needed here.
         body = ('{"username":"foo","password":"bar",'
@@ -211,7 +225,7 @@ class DockerHTTPClient(object):
 
     def commit_container(self, container_id, name):
         parts = name.rsplit(':', 1)
-        url = '/v1.4/commit?container={0}&repo={1}'.format(container_id,
+        url = '/v1.7/commit?container={0}&repo={1}'.format(container_id,
                                                            parts[0])
         if len(parts) > 1:
             url += '&tag={0}'.format(parts[1])
@@ -221,7 +235,7 @@ class DockerHTTPClient(object):
     def get_container_logs(self, container_id):
         resp = self.make_request(
             'POST',
-            ('/v1.4/containers/{0}/attach'
+            ('/v1.7/containers/{0}/attach'
              '?logs=1&stream=0&stdout=1&stderr=1').format(container_id))
         if resp.code != 200:
             return
