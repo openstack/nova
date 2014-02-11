@@ -62,6 +62,13 @@ __imagebackend_opts = [
                      ' if this flag is set to True.',
                 deprecated_group='DEFAULT',
                 deprecated_name='libvirt_sparse_logical_volumes'),
+    cfg.StrOpt('volume_clear',
+               default='zero',
+               help='Method used to wipe old volumes (valid options are: '
+                    'none, zero, shred)'),
+    cfg.IntOpt('volume_clear_size',
+               default=0,
+               help='Size in MiB to wipe at start of old volumes. 0 => all'),
     cfg.StrOpt('images_rbd_pool',
                default='rbd',
                help='The RADOS pool in which rbd volumes are stored',

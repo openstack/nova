@@ -2883,6 +2883,14 @@
 # Deprecated group/name - [DEFAULT]/libvirt_sparse_logical_volumes
 #sparse_logical_volumes=false
 
+# Method used to wipe old volumes (valid options are: none,
+# zero, shred) (string value)
+#volume_clear=zero
+
+# Size in MiB to wipe at start of old volumes. 0 => all
+# (integer value)
+#volume_clear_size=0
+
 # The RADOS pool in which rbd volumes are stored (string
 # value)
 # Deprecated group/name - [DEFAULT]/libvirt_images_rbd_pool
