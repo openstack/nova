@@ -15,6 +15,20 @@
 
 import re
 
+"""
+Guidelines for writing new hacking checks
+
+ - Use only for Nova specific tests. OpenStack general tests
+   should be submitted to the common 'hacking' module.
+ - Pick numbers in the range N3xx. Find the current test with
+   the highest allocated number and then pick the next value.
+ - Keep the test method code in the source file ordered based
+   on the N3xx value.
+ - List the new rule in the top level HACKING.rst file
+ - Add test cases for each new rule to nova/tests/test_hacking.py
+
+"""
+
 session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
 cfg_re = re.compile(".*\scfg\.")
 vi_header_re = re.compile("^#\s+vim?:.+")
@@ -106,7 +120,7 @@ def import_no_virt_driver_config_deps(physical_line, filename):
 
 
 def capital_cfg_help(logical_line, tokens):
-    msg = "N500: capitalize help string"
+    msg = "N313: capitalize help string"
 
     if cfg_re.match(logical_line):
         for t in range(len(tokens)):
@@ -122,12 +136,12 @@ def no_vi_headers(physical_line, line_number, lines):
     By default vi modelines can only appear in the first or
     last 5 lines of a source file.
 
-    N123
+    N314
     """
     # NOTE(gilliard): line_number is 1-indexed
     if line_number <= 5 or line_number > len(lines) - 5:
         if vi_header_re.match(physical_line):
-            return 0, "N123: Don't put vi configuration in source files"
+            return 0, "N314: Don't put vi configuration in source files"
 
 
 def factory(register):
