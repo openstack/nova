@@ -29,13 +29,14 @@ Guidelines for writing new hacking checks
 
 """
 
-session_check = re.compile("\w*def [a-zA-Z0-9].*[(].*session.*[)]")
-cfg_re = re.compile(".*\scfg\.")
-vi_header_re = re.compile("^#\s+vim?:.+")
-virt_file_re = re.compile("\./nova/(?:tests/)?virt/(\w+)/")
+session_check = re.compile(r"\w*def [a-zA-Z0-9].*[(].*session.*[)]")
+cfg_re = re.compile(r".*\scfg\.")
+vi_header_re = re.compile(r"^#\s+vim?:.+")
+virt_file_re = re.compile(r"\./nova/(?:tests/)?virt/(\w+)/")
 virt_import_re = re.compile(
-    "^\s*(?:import|from) nova\.(?:tests\.)?virt\.(\w+)")
-virt_config_re = re.compile("CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
+    r"^\s*(?:import|from) nova\.(?:tests\.)?virt\.(\w+)")
+virt_config_re = re.compile(
+    r"CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
 
 
 def import_no_db_in_virt(logical_line, filename):
