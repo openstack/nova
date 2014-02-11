@@ -233,6 +233,20 @@ class CloudTestCase(test.TestCase):
         db.floating_ip_create(self.context,
                               {'address': address,
                                'pool': 'nova'})
+        self.flags(network_api_class='nova.network.api.API')
+        self.cloud.allocate_address(self.context)
+        self.cloud.describe_addresses(self.context)
+        self.cloud.release_address(self.context,
+                                  public_ip=address)
+        db.floating_ip_destroy(self.context, address)
+
+    def test_describe_addresses_in_neutron(self):
+        # Makes sure describe addresses runs without raising an exception.
+        address = "10.10.10.10"
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        db.floating_ip_create(self.context,
+                              {'address': address,
+                               'pool': 'nova'})
         self.cloud.allocate_address(self.context)
         self.cloud.describe_addresses(self.context)
         self.cloud.release_address(self.context,
