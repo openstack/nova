@@ -70,7 +70,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.12',
+                    'nova_object.version': '1.13',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'launched_at': '1955-11-05T00:00:00Z'},
@@ -86,7 +86,7 @@ class _TestInstanceObject(object):
         primitive = inst.obj_to_primitive()
         expected = {'nova_object.name': 'Instance',
                     'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.12',
+                    'nova_object.version': '1.13',
                     'nova_object.data':
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
@@ -815,6 +815,17 @@ class _TestInstanceObject(object):
         inst = instance.Instance(system_metadata={})
         self.assertRaises(KeyError, inst.delete_flavor, None)
         self.assertRaises(KeyError, inst.delete_flavor, '')
+
+    @mock.patch.object(db, 'instance_metadata_delete')
+    def test_delete_metadata_key(self, db_delete):
+        inst = instance.Instance(context=self.context,
+                                 id=1, uuid='fake-uuid')
+        inst.metadata = {'foo': '1', 'bar': '2'}
+        inst.obj_reset_changes()
+        inst.delete_metadata_key('foo')
+        self.assertEqual({'bar': '2'}, inst.metadata)
+        self.assertEqual({}, inst.obj_get_changes())
+        db_delete.assert_called_once_with(self.context, inst.uuid, 'foo')
 
 
 class TestInstanceObject(test_objects._LocalTest,

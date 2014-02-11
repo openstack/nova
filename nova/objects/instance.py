@@ -75,7 +75,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     # Version 1.10: Added use_slave to refresh and get_by_uuid
     # Version 1.11: Update instance from database during destroy
     # Version 1.12: Added ephemeral_key_uuid
-    VERSION = '1.12'
+    # Version 1.13: Added delete_metadata_key()
+    VERSION = '1.13'
 
     fields = {
         'id': fields.IntegerField(),
@@ -548,6 +549,24 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
             self.system_metadata, "%s_" % namespace)
         self.save()
 
+    @base.remotable
+    def delete_metadata_key(self, context, key):
+        """Optimized metadata delete method.
+
+        This provides a more efficient way to delete a single metadata
+        key, instead of just calling instance.save(). This should be called
+        with the key still present in self.metadata, which it will update
+        after completion.
+        """
+        db.instance_metadata_delete(context, self.uuid, key)
+        md_was_changed = 'metadata' in self.obj_what_changed()
+        del self.metadata[key]
+        self._orig_metadata.pop(key, None)
+        instance_dict = base.obj_to_primitive(self)
+        notifications.send_update(context, instance_dict, instance_dict)
+        if not md_was_changed:
+            self.obj_reset_changes(['metadata'])
+
 
 def _make_instance_list(context, inst_list, db_inst_list, expected_attrs):
     get_fault = expected_attrs and 'fault' in expected_attrs
@@ -581,7 +600,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
     # Version 1.3: Added use_slave to get_by_filters
     # Version 1.4: Instance <= version 1.12
     # Version 1.5: Added method get_active_by_window_joined.
-    VERSION = '1.5'
+    # Version 1.6: Instance <= version 1.13
+    VERSION = '1.6'
 
     fields = {
         'objects': fields.ListOfObjectsField('Instance'),
@@ -593,7 +613,8 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
         '1.3': '1.11',
         '1.4': '1.12',
         '1.5': '1.12',
-    }
+        '1.6': '1.13',
+        }
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
