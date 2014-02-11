@@ -1437,7 +1437,7 @@ class CreateVmTestCase(VMUtilsTestBase):
         self.flags(vcpu_pin_set="2,3")
         session = mock.Mock()
         instance = {
-            "uuid": "uuid",
+            "uuid": "uuid", "os_type": "windows"
         }
 
         vm_utils.create_vm(session, instance, "label",
@@ -2033,14 +2033,25 @@ class DeviceIdTestCase(VMUtilsTestBase):
 
 class CreateVmRecordTestCase(VMUtilsTestBase):
     @mock.patch.object(flavors, 'extract_flavor')
-    def test_create_vm_record(self, mock_extract_flavor):
+    def test_create_vm_record_linux(self, mock_extract_flavor):
+        instance = {"uuid": "uuid123", "os_type": "linux"}
+        self._test_create_vm_record(mock_extract_flavor, instance, False)
+
+    @mock.patch.object(flavors, 'extract_flavor')
+    def test_create_vm_record_windows(self, mock_extract_flavor):
+        instance = {"uuid": "uuid123", "os_type": "windows"}
+        self._test_create_vm_record(mock_extract_flavor, instance, True)
+
+    def _test_create_vm_record(self, mock_extract_flavor, instance,
+                               is_viridian):
         session = mock.Mock()
-        instance = {"uuid": "uuid123"}
         flavor = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
         mock_extract_flavor.return_value = flavor
 
         vm_utils.create_vm(session, instance, "name", "kernel", "ramdisk",
                            device_id="0002")
+
+        is_viridian_str = str(is_viridian).lower()
 
         expected_vm_rec = {
             'VCPUs_params': {'cap': '0', 'weight': '2'},
@@ -2071,8 +2082,8 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
             'VCPUs_at_startup': '1',
             'HVM_boot_params': {'order': 'dc'},
             'platform': {'nx': 'true', 'pae': 'true', 'apic': 'true',
-                         'timeoffset': '0', 'viridian': 'true', 'acpi': 'true',
-                         'device_id': '0002'},
+                         'timeoffset': '0', 'viridian': is_viridian_str,
+                         'acpi': 'true', 'device_id': '0002'},
             'PV_legacy_args': '',
             'PV_kernel': '',
             'affinity': '',
