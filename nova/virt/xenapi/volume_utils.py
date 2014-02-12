@@ -302,25 +302,6 @@ def mountpoint_to_number(mountpoint):
         return -1
 
 
-def _get_volume_id(path_or_id):
-    """Retrieve the volume id from device_path."""
-    # If we have the ID and not a path, just return it.
-    if isinstance(path_or_id, int):
-        return path_or_id
-    # n must contain at least the volume_id
-    # :volume- is for remote volumes
-    # -volume- is for local volumes
-    # see compute/manager->setup_compute_volume
-    volume_id = path_or_id[path_or_id.find(':volume-') + 1:]
-    if volume_id == path_or_id:
-        volume_id = path_or_id[path_or_id.find('-volume--') + 1:]
-        volume_id = volume_id.replace('volume--', '')
-    else:
-        volume_id = volume_id.replace('volume-', '')
-        volume_id = volume_id[0:volume_id.find('-')]
-    return int(volume_id)
-
-
 def _get_target_host(iscsi_string):
     """Retrieve target host."""
     if iscsi_string:

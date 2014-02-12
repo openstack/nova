@@ -41,14 +41,6 @@ class ImageCache(object):
         self._pathutils = utilsfactory.get_pathutils()
         self._vhdutils = utilsfactory.get_vhdutils()
 
-    def _validate_vhd_image(self, vhd_path):
-        try:
-            self._vhdutils.validate_vhd(vhd_path)
-        except Exception as ex:
-            LOG.exception(ex)
-            raise vmutils.HyperVException(_('The image is not a valid VHD: %s')
-                                          % vhd_path)
-
     def _get_root_vhd_size_gb(self, instance):
         try:
             # In case of resizes we need the old root disk size
