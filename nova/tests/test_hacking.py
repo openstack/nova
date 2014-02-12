@@ -48,3 +48,10 @@ class HackingTestCase(test.NoDBTestCase):
             "CONF.import_opt('volume_drivers', "
             "'nova.virt.libvirt.driver', group='libvirt')",
             "./nova/virt/libvirt/volume.py"))
+
+    def test_virt_driver_imports(self):
+        self.assertTrue(checks.no_author_tags("# author: jogo"))
+        self.assertTrue(checks.no_author_tags("# @author: jogo"))
+        self.assertTrue(checks.no_author_tags("# @Author: jogo"))
+        self.assertTrue(checks.no_author_tags("# Author: jogo"))
+        self.assertFalse(checks.no_author_tags("# authorization of this"))
