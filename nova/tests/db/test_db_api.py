@@ -339,11 +339,6 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertEqual(expected_metadata, {'availability_zone':
             'fake_avail_zone'})
 
-    def test_aggregate_create_low_privi_context(self):
-        self.assertRaises(exception.AdminRequired,
-                          db.aggregate_create,
-                          self.context, _get_fake_aggr_values())
-
     def test_aggregate_get(self):
         ctxt = context.get_admin_context()
         result = _create_aggregate_with_hosts(context=ctxt)

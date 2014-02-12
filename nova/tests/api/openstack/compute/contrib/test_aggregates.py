@@ -21,6 +21,7 @@ from nova.api.openstack.compute.contrib import aggregates
 from nova import context
 from nova import exception
 from nova import test
+from nova.tests.api.openstack import fakes
 from nova.tests import matchers
 
 AGGREGATE_LIST = [
@@ -46,6 +47,7 @@ class AggregateTestCase(test.NoDBTestCase):
         super(AggregateTestCase, self).setUp()
         self.controller = aggregates.AggregateController()
         self.req = FakeRequest()
+        self.user_req = fakes.HTTPRequest.blank('/v2/os-aggregates')
         self.context = self.req.environ['nova.context']
 
     def test_index(self):
@@ -60,6 +62,11 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.assertEqual(AGGREGATE_LIST, result["aggregates"])
 
+    def test_index_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.index,
+                          self.user_req)
+
     def test_create(self):
         def stub_create_aggregate(context, name, availability_zone):
             self.assertEqual(context, self.context, "context")
@@ -73,6 +80,13 @@ class AggregateTestCase(test.NoDBTestCase):
                                           {"name": "test",
                                            "availability_zone": "nova1"}})
         self.assertEqual(AGGREGATE, result["aggregate"])
+
+    def test_create_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.create, self.user_req,
+                          {"aggregate":
+                              {"name": "test",
+                               "availability_zone": "nova1"}})
 
     def test_create_with_duplicate_aggregate_name(self):
         def stub_create_aggregate(context, name, availability_zone):
@@ -155,6 +169,11 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.assertEqual(AGGREGATE, aggregate["aggregate"])
 
+    def test_show_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.show,
+                          self.user_req, "1")
+
     def test_show_with_invalid_id(self):
         def stub_get_aggregate(context, id):
             raise exception.AggregateNotFound(aggregate_id=2)
@@ -180,6 +199,11 @@ class AggregateTestCase(test.NoDBTestCase):
         result = self.controller.update(self.req, "1", body=body)
 
         self.assertEqual(AGGREGATE, result["aggregate"])
+
+    def test_update_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.update,
+                          self.user_req, "1", body={})
 
     def test_update_with_only_name(self):
         body = {"aggregate": {"name": "new_name"}}
@@ -260,6 +284,12 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.assertEqual(aggregate["aggregate"], AGGREGATE)
 
+    def test_add_host_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.action,
+                          self.user_req, "1",
+                          body={"add_host": {"host": "host1"}})
+
     def test_add_host_with_already_added_host(self):
         def stub_add_host_to_aggregate(context, aggregate, host):
             raise exception.AggregateHostExists(aggregate_id=aggregate,
@@ -322,6 +352,12 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.assertTrue(stub_remove_host_from_aggregate.called)
 
+    def test_remove_host_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.action,
+                          self.user_req, "1",
+                          body={"remove_host": {"host": "host1"}})
+
     def test_remove_host_with_bad_aggregate(self):
         def stub_remove_host_from_aggregate(context, aggregate, host):
             raise exception.AggregateNotFound(aggregate_id=aggregate)
@@ -381,6 +417,13 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.assertEqual(AGGREGATE, result["aggregate"])
 
+    def test_set_metadata_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller._set_metadata,
+                          self.user_req, "1",
+                          body={"set_metadata": {"metadata":
+                                                    {"foo": "bar"}}})
+
     def test_set_metadata_with_bad_aggregate(self):
         body = {"set_metadata": {"metadata": {"foo": "bar"}}}
 
@@ -413,6 +456,11 @@ class AggregateTestCase(test.NoDBTestCase):
 
         self.controller.delete(self.req, "1")
         self.assertTrue(stub_delete_aggregate.called)
+
+    def test_delete_aggregate_no_admin(self):
+        self.assertRaises(exception.PolicyNotAuthorized,
+                          self.controller.delete,
+                          self.user_req, "1")
 
     def test_delete_aggregate_with_bad_aggregate(self):
         def stub_delete_aggregate(context, aggregate):
