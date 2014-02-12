@@ -19,6 +19,8 @@ Pluggable Weighing support
 
 import abc
 
+import six
+
 from nova import loadables
 
 
@@ -61,6 +63,7 @@ class WeighedObject(object):
         return "<WeighedObject '%s': %s>" % (self.obj, self.weight)
 
 
+@six.add_metaclass(abc.ABCMeta)
 class BaseWeigher(object):
     """Base class for pluggable weighers.
 
@@ -69,8 +72,6 @@ class BaseWeigher(object):
     taken into account in the normalization step, instead of taking the values
     from the calculated weights.
     """
-
-    __metaclass__ = abc.ABCMeta
 
     minval = None
     maxval = None
