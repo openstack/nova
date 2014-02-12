@@ -111,7 +111,7 @@ def fake_detach_interface(self, context, instance, port_id):
     raise exception.PortNotFound(port_id=port_id)
 
 
-def fake_get_instance(self, context, intance_id, columns_to_join=None):
+def fake_get_instance(self, *args, **kwargs):
     return {}
 
 
@@ -141,8 +141,8 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
-        def fake_get_instance_exception(self, context,
-                                        instance_uuid, columns_to_join=None):
+        def fake_get_instance_exception(self, context, instance_uuid,
+                                        **kwargs):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         self.stubs.Set(compute_api.API, 'get', fake_get_instance_exception)
@@ -168,8 +168,8 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
-        def fake_get_instance_exception(self, context,
-                                        instance_uuid, columns_to_join=None):
+        def fake_get_instance_exception(self, context, instance_uuid,
+                                        **kwargs):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         self.stubs.Set(compute_api.API, 'get', fake_get_instance_exception)
@@ -229,8 +229,8 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
-        def fake_get_instance_exception(self, context,
-                                        instance_uuid, columns_to_join=None):
+        def fake_get_instance_exception(self, context, instance_uuid,
+                                        **kwargs):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         self.stubs.Set(compute_api.API, 'get', fake_get_instance_exception)
@@ -297,8 +297,8 @@ class InterfaceAttachTests(test.NoDBTestCase):
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
 
-        def fake_get_instance_exception(self, context,
-                                        instance_uuid, columns_to_join=None):
+        def fake_get_instance_exception(self, context, instance_uuid,
+                                        **kwargs):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
 
         self.stubs.Set(compute_api.API, 'get', fake_get_instance_exception)

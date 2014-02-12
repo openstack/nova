@@ -23,7 +23,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova import utils
 
 
@@ -40,14 +39,6 @@ class RescueController(wsgi.Controller):
         super(RescueController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, instance_id, want_objects=False):
-        try:
-            return self.compute_api.get(context, instance_id,
-                                        want_objects=want_objects)
-        except exception.InstanceNotFound:
-            msg = _("Server not found")
-            raise exc.HTTPNotFound(msg)
-
     @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('rescue')
@@ -61,7 +52,8 @@ class RescueController(wsgi.Controller):
         else:
             password = utils.generate_password()
 
-        instance = self._get_instance(context, id, want_objects=True)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.rescue(context, instance,
                                     rescue_password=password)
@@ -85,7 +77,7 @@ class RescueController(wsgi.Controller):
         """Unrescue an instance."""
         context = req.environ["nova.context"]
         authorize(context)
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id)
         try:
             self.compute_api.unrescue(context, instance)
         except exception.InstanceInvalidState as state_error:

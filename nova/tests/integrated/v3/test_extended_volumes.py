@@ -43,8 +43,7 @@ class ExtendedVolumesSampleJsonTests(test_servers.ServersSampleBase):
 
     def _stub_compute_api_get(self):
 
-        def fake_compute_api_get(self, context, instance_id,
-                                 want_objects=False):
+        def fake_compute_api_get(self, context, instance_id, **kwargs):
             return {'uuid': instance_id}
 
         self.stubs.Set(compute_api.API, 'get', fake_compute_api_get)

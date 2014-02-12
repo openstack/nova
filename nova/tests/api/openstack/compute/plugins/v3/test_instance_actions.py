@@ -115,7 +115,8 @@ class InstanceActionsTest(test.NoDBTestCase):
         self.fake_actions = copy.deepcopy(fake_instance_actions.FAKE_ACTIONS)
         self.fake_events = copy.deepcopy(fake_instance_actions.FAKE_EVENTS)
 
-        def fake_get(self, context, instance_uuid):
+        def fake_get(self, context, instance_uuid, expected_attrs=None,
+                     want_objects=False):
             return {'uuid': instance_uuid}
 
         def fake_instance_get_by_uuid(context, instance_id,
@@ -204,7 +205,8 @@ class InstanceActionsTest(test.NoDBTestCase):
                           FAKE_UUID, FAKE_REQUEST_ID)
 
     def test_instance_not_found(self):
-        def fake_get(self, context, instance_uuid):
+        def fake_get(self, context, instance_uuid, expected_attrs=None,
+                     want_objects=False):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = fakes.HTTPRequestV3.blank('/servers/12/os-instance-actions')
@@ -212,7 +214,8 @@ class InstanceActionsTest(test.NoDBTestCase):
                           FAKE_UUID)
 
     def test_instance_not_found_in_show(self):
-        def fake_get(self, context, instance_uuid):
+        def fake_get(self, context, instance_uuid, expected_attrs=None,
+                     want_objects=False):
             raise exception.InstanceNotFound(instance_id=instance_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
         req = fakes.HTTPRequestV3.blank('/servers/12/os-instance-actions/1')

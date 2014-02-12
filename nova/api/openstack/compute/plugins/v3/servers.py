@@ -294,13 +294,9 @@ class ServersController(wsgi.Controller):
 
     def _get_server(self, context, req, instance_uuid):
         """Utility function for looking up an instance by uuid."""
-        try:
-            instance = self.compute_api.get(context, instance_uuid,
-                                            want_objects=True,
-                                            expected_attrs=['pci_devices'])
-        except exception.NotFound:
-            msg = _("Instance could not be found")
-            raise exc.HTTPNotFound(explanation=msg)
+        instance = common.get_instance(self.compute_api, context,
+                                       instance_uuid, want_objects=True,
+                                       expected_attrs=['pci_devices'])
         req.cache_db_instance(instance)
         return instance
 
@@ -407,15 +403,12 @@ class ServersController(wsgi.Controller):
 
     def show(self, req, id):
         """Returns server details by server id."""
-        try:
-            context = req.environ['nova.context']
-            instance = self.compute_api.get(context, id, want_objects=True,
-                    expected_attrs=['pci_devices'])
-            req.cache_db_instance(instance)
-            return self._view_builder.show(req, instance)
-        except exception.NotFound:
-            msg = _("Instance could not be found")
-            raise exc.HTTPNotFound(explanation=msg)
+        context = req.environ['nova.context']
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True,
+                                       expected_attrs=['pci_devices'])
+        req.cache_db_instance(instance)
+        return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
     def create(self, req, body):
@@ -609,18 +602,20 @@ class ServersController(wsgi.Controller):
             self.update_extension_manager.map(self._update_extension_point,
                                               body['server'], update_dict)
 
+        instance = common.get_instance(self.compute_api, ctxt, id,
+                                       want_objects=True,
+                                       expected_attrs=['pci_devices'])
         try:
-            instance = self.compute_api.get(ctxt, id, want_objects=True,
-                    expected_attrs=['pci_devices'])
+            # NOTE(mikal): this try block needs to stay because save() still
+            # might throw an exception.
             req.cache_db_instance(instance)
             policy.enforce(ctxt, 'compute:update', instance)
             instance.update(update_dict)
             instance.save()
+            return self._view_builder.show(req, instance)
         except exception.NotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
-
-        return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
     @wsgi.action('confirm_resize')

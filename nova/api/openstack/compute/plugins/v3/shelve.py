@@ -36,13 +36,6 @@ class ShelveController(wsgi.Controller):
         super(ShelveController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, instance_id):
-        try:
-            return self.compute_api.get(context, instance_id,
-                                        want_objects=True)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
     @exts.expected_errors((404, 409))
     @wsgi.action('shelve')
     def _shelve(self, req, id, body):
@@ -50,7 +43,8 @@ class ShelveController(wsgi.Controller):
         context = req.environ["nova.context"]
         auth_shelve(context)
 
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.shelve(context, instance)
         except exception.InstanceIsLocked as e:
@@ -68,7 +62,8 @@ class ShelveController(wsgi.Controller):
         context = req.environ["nova.context"]
         auth_shelve_offload(context)
 
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.shelve_offload(context, instance)
         except exception.InstanceIsLocked as e:
@@ -85,7 +80,8 @@ class ShelveController(wsgi.Controller):
         """Restore an instance from shelved mode."""
         context = req.environ["nova.context"]
         auth_unshelve(context)
-        instance = self._get_instance(context, id)
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             self.compute_api.unshelve(context, instance)
         except exception.InstanceIsLocked as e:

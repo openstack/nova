@@ -50,8 +50,10 @@ class AdminActionsController(wsgi.Controller):
         """Permit admins to migrate a server to a new host."""
         context = req.environ['nova.context']
         authorize(context, 'migrate')
+
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.resize(req.environ['nova.context'], instance)
         except exception.QuotaError as error:
             raise exc.HTTPRequestEntityTooLarge(
@@ -62,8 +64,6 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate')
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.FlavorNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.CannotResizeToSameFlavor as e:
@@ -79,10 +79,9 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'reset_network')
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id,
+                                           want_objects=True)
             self.compute_api.reset_network(context, instance)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
@@ -94,10 +93,9 @@ class AdminActionsController(wsgi.Controller):
         context = req.environ['nova.context']
         authorize(context, 'inject_network_info')
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id,
+                                           want_objects=True)
             self.compute_api.inject_network_info(context, instance)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         return webob.Response(status_int=202)
@@ -151,11 +149,8 @@ class AdminActionsController(wsgi.Controller):
             msg = _("Invalid metadata")
             raise exc.HTTPBadRequest(explanation=msg)
 
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
             image = self.compute_api.backup(context, instance, image_name,
                     backup_type, rotation, extra_properties=props)
@@ -198,7 +193,8 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=str(err))
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id,
+                                           want_objects=True)
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host)
         except (exception.ComputeServiceUnavailable,
@@ -213,8 +209,6 @@ class AdminActionsController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'migrate_live')
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
         return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404))
@@ -232,13 +226,11 @@ class AdminActionsController(wsgi.Controller):
                     "are: %s") % ', '.join(sorted(state_map.keys()))
             raise exc.HTTPBadRequest(explanation=msg)
 
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-            instance.vm_state = state
-            instance.task_state = None
-            instance.save(admin_state_reset=True)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
+        instance.vm_state = state
+        instance.task_state = None
+        instance.save(admin_state_reset=True)
         return webob.Response(status_int=202)
 
 

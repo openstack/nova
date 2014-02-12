@@ -23,11 +23,12 @@ from nova import test
 from nova.tests.api.openstack import fakes
 
 
-def fake_get(self, context, id, want_objects=False):
+def fake_get(self, context, id, expected_attrs=None, want_objects=False):
     return {'uuid': id}
 
 
-def fake_get_non_existent(self, context, id, want_objects=False):
+def fake_get_non_existent(self, context, id, expected_attrs=None,
+                          want_objects=False):
     raise exception.InstanceNotFound(instance_id=id)
 
 

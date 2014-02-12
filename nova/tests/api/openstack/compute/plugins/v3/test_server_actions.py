@@ -45,7 +45,7 @@ INSTANCE_IDS = {FAKE_UUID: 1}
 
 
 def return_server_not_found(*arg, **kwarg):
-    raise exception.NotFound()
+    raise exception.InstanceNotFound(instance_id='42')
 
 
 def instance_update_and_get_original(context, instance_uuid, values,

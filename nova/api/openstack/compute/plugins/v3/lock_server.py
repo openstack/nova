@@ -13,12 +13,11 @@
 #   under the License.
 
 import webob
-from webob import exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
-from nova import exception
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -41,11 +40,9 @@ class LockServerController(wsgi.Controller):
         """Lock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'lock')
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-            self.compute_api.lock(context, instance)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
+        self.compute_api.lock(context, instance)
         return webob.Response(status_int=202)
 
     @extensions.expected_errors(404)
@@ -54,11 +51,9 @@ class LockServerController(wsgi.Controller):
         """Unlock a server instance."""
         context = req.environ['nova.context']
         authorize(context, 'unlock')
-        try:
-            instance = self.compute_api.get(context, id, want_objects=True)
-            self.compute_api.unlock(context, instance)
-        except exception.InstanceNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
+        self.compute_api.unlock(context, instance)
         return webob.Response(status_int=202)
 
 

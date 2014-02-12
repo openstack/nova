@@ -43,14 +43,14 @@ class CommonMixin(object):
         instance = fake_instance.fake_instance_obj(self.context,
                 id=1, uuid=uuid, vm_state=vm_states.ACTIVE,
                 task_state=None, launched_at=timeutils.utcnow())
-        self.compute_api.get(self.context, uuid,
+        self.compute_api.get(self.context, uuid, expected_attrs=None,
                              want_objects=True).AndReturn(instance)
         return instance
 
     def _stub_instance_get_failure(self, exc_info, uuid=None):
         if uuid is None:
             uuid = uuidutils.generate_uuid()
-        self.compute_api.get(self.context, uuid,
+        self.compute_api.get(self.context, uuid, expected_attrs=None,
                              want_objects=True).AndRaise(exc_info)
         return uuid
 

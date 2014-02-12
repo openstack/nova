@@ -14,6 +14,7 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
@@ -41,7 +42,8 @@ class RemoteConsolesController(wsgi.Controller):
         console_type = body['get_vnc_console'].get('type')
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id,
+                                           want_objects=True)
             output = self.compute_api.get_vnc_console(context,
                                                       instance,
                                                       console_type)
@@ -70,7 +72,8 @@ class RemoteConsolesController(wsgi.Controller):
         console_type = body['get_spice_console'].get('type')
 
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            instance = common.get_instance(self.compute_api, context, id,
+                                           want_objects=True)
             output = self.compute_api.get_spice_console(context,
                                                         instance,
                                                         console_type)
@@ -95,8 +98,11 @@ class RemoteConsolesController(wsgi.Controller):
         # If type is not supplied or unknown, get_rdp_console below will cope
         console_type = body['get_rdp_console'].get('type')
 
+        instance = common.get_instance(self.compute_api, context, id,
+                                       want_objects=True)
         try:
-            instance = self.compute_api.get(context, id, want_objects=True)
+            # NOTE(mikal): get_rdp_console() can raise InstanceNotFound, so
+            # we still need to catch it here.
             output = self.compute_api.get_rdp_console(context,
                                                       instance,
                                                       console_type)
