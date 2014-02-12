@@ -289,6 +289,9 @@ class BareMetalDriver(driver.ComputeDriver):
                 self._unplug_vifs(instance, network_info)
 
                 _update_state(context, node, None, baremetal_states.DELETED)
+        else:
+            # We no longer need the image since we successfully deployed.
+            self.driver.destroy_images(context, node, instance)
 
     def rebuild(self, context, instance, image_meta, injected_files,
                 admin_password, bdms, detach_block_devices,

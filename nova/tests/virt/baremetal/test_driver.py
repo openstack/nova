@@ -19,6 +19,7 @@
 
 """Tests for the base baremetal driver class."""
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -335,6 +336,19 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
 
         row = db.bm_node_get(self.context, node['node']['id'])
         self.assertEqual(row['task_state'], baremetal_states.ERROR)
+
+    def test_spawn_destroy_images_on_deploy(self):
+        node = self._create_node()
+        self.driver.driver.destroy_images = mock.MagicMock()
+        self.driver.spawn(**node['spawn_params'])
+        row = db.bm_node_get(self.context, node['node']['id'])
+        self.assertEqual(row['task_state'], baremetal_states.ACTIVE)
+        self.assertEqual(row['instance_uuid'], node['instance']['uuid'])
+        self.assertEqual(row['instance_name'], node['instance']['hostname'])
+        instance = main_db.instance_get_by_uuid(self.context,
+                node['instance']['uuid'])
+        self.assertIsNotNone(instance)
+        self.assertEqual(1, self.driver.driver.destroy_images.call_count)
 
     def test_destroy_ok(self):
         node = self._create_node()
