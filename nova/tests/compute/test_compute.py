@@ -8944,12 +8944,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                                                fake_host2)
         aggr2 = self._init_aggregate_with_host(aggr2, None, None, fake_host1)
         metadata = {'availability_zone': 'another_zone'}
-        try:
-            self.api.update_aggregate(self.context, aggr2['id'],
-                                      metadata)
-        except exception.InvalidAggregateAction as e:
-            msg = "host1 in avail_zone1,host2 in avail_zone1"
-            self.assertTrue(e.format_message().find(msg))
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.update_aggregate,
+                          self.context, aggr2['id'], metadata)
 
     def test_update_aggregate(self):
         # Ensure metadata can be updated.
