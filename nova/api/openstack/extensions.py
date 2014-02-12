@@ -377,17 +377,21 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
         dirnames[:] = subdirs
 
 
-def extension_authorizer(api_name, extension_name):
+def core_authorizer(api_name, extension_name):
     def authorize(context, target=None, action=None):
         if target is None:
             target = {'project_id': context.project_id,
                       'user_id': context.user_id}
         if action is None:
-            act = '%s_extension:%s' % (api_name, extension_name)
+            act = '%s:%s' % (api_name, extension_name)
         else:
-            act = '%s_extension:%s:%s' % (api_name, extension_name, action)
+            act = '%s:%s:%s' % (api_name, extension_name, action)
         nova.policy.enforce(context, act, target)
     return authorize
+
+
+def extension_authorizer(api_name, extension_name):
+    return core_authorizer('%s_extension' % api_name, extension_name)
 
 
 def soft_extension_authorizer(api_name, extension_name):
@@ -400,6 +404,11 @@ def soft_extension_authorizer(api_name, extension_name):
         except exception.NotAuthorized:
             return False
     return authorize
+
+
+def check_compute_policy(context, action, target, scope='compute'):
+    _action = '%s:%s' % (scope, action)
+    nova.policy.enforce(context, _action, target)
 
 
 @six.add_metaclass(abc.ABCMeta)

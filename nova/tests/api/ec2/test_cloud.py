@@ -49,6 +49,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as instance_info_cache_obj
 from nova.objects import security_group as security_group_obj
 from nova.openstack.common import log as logging
+from nova.openstack.common import policy as common_policy
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.api.openstack.compute.contrib import (
@@ -2104,6 +2105,22 @@ class CloudTestCase(test.TestCase):
         self.assertEqual(result, expected)
         self._restart_compute_service()
 
+    def test_start_instances_policy_failed(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+        rules = {
+            "compute:start":
+                common_policy.parse_rule("project_id:non_fake"),
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.cloud.start_instances,
+                                self.context, [instance_id])
+        self.assertIn("compute:start", exc.format_message())
+        self._restart_compute_service()
+
     def test_stop_instances(self):
         kwargs = {'image_id': 'ami-1',
                   'instance_type': CONF.default_flavor,
@@ -2121,6 +2138,22 @@ class CloudTestCase(test.TestCase):
                                            'name': 'terminated'}}]}
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
+        self._restart_compute_service()
+
+    def test_stop_instances_policy_failed(self):
+        kwargs = {'image_id': 'ami-1',
+                  'instance_type': CONF.default_flavor,
+                  'max_count': 1, }
+        instance_id = self._run_instance(**kwargs)
+        rules = {
+            "compute:stop":
+                common_policy.parse_rule("project_id:non_fake")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.cloud.stop_instances,
+                                self.context, [instance_id])
+        self.assertIn("compute:stop", exc.format_message())
         self._restart_compute_service()
 
     def test_terminate_instances(self):

@@ -1480,6 +1480,19 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         body = dict(start="")
         self.controller._start_server(req, FAKE_UUID, body)
 
+    def test_start_policy_failed(self):
+        rules = {
+            "compute:v3:servers:start":
+                common_policy.parse_rule("project_id:non_fake")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(start="")
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._start_server,
+                                req, FAKE_UUID, body)
+        self.assertIn("compute:v3:servers:start", exc.format_message())
+
     def test_start_not_ready(self):
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
@@ -1503,6 +1516,19 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
         self.controller._stop_server(req, FAKE_UUID, body)
+
+    def test_stop_policy_failed(self):
+        rules = {
+            "compute:v3:servers:stop":
+                common_policy.parse_rule("project_id:non_fake")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(stop='')
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._stop_server,
+                                req, FAKE_UUID, body)
+        self.assertIn("compute:v3:servers:stop", exc.format_message())
 
     def test_stop_not_ready(self):
         self.stubs.Set(compute_api.API, 'stop', fake_start_stop_not_ready)

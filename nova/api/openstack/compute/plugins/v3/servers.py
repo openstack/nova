@@ -52,6 +52,7 @@ CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
 CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
 
 LOG = logging.getLogger(__name__)
+authorizer = extensions.core_authorizer('compute:v3', 'servers')
 
 
 class ServersController(wsgi.Controller):
@@ -977,6 +978,7 @@ class ServersController(wsgi.Controller):
         """Start an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
+        authorizer(context, instance, 'start')
         LOG.debug(_('start instance'), instance=instance)
         try:
             self.compute_api.start(context, instance)
@@ -990,6 +992,7 @@ class ServersController(wsgi.Controller):
         """Stop an instance."""
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
+        authorizer(context, instance, 'stop')
         LOG.debug(_('stop instance'), instance=instance)
         try:
             self.compute_api.stop(context, instance)

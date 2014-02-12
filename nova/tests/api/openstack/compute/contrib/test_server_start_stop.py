@@ -19,6 +19,7 @@ from nova.api.openstack.compute.contrib import server_start_stop
 from nova.compute import api as compute_api
 from nova import db
 from nova import exception
+from nova.openstack.common import policy as common_policy
 from nova import test
 from nova.tests.api.openstack import fakes
 
@@ -59,6 +60,20 @@ class ServerStartStopTest(test.TestCase):
         body = dict(start="")
         self.controller._start_server(req, 'test_inst', body)
 
+    def test_start_policy_failed(self):
+        rules = {
+            "compute:start":
+                common_policy.parse_rule("project_id:non_fake")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        body = dict(start="")
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._start_server,
+                                req, 'test_inst', body)
+        self.assertIn('compute:start', exc.format_message())
+
     def test_start_not_ready(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
         self.stubs.Set(compute_api.API, 'start', fake_start_stop_not_ready)
@@ -84,6 +99,20 @@ class ServerStartStopTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         body = dict(stop="")
         self.controller._stop_server(req, 'test_inst', body)
+
+    def test_stop_policy_failed(self):
+        rules = {
+            "compute:stop":
+                common_policy.parse_rule("project_id:non_fake")
+        }
+        common_policy.set_rules(common_policy.Rules(rules))
+        self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        body = dict(stop="")
+        exc = self.assertRaises(exception.PolicyNotAuthorized,
+                                self.controller._stop_server,
+                                req, 'test_inst', body)
+        self.assertIn("compute:stop", exc.format_message())
 
     def test_stop_not_ready(self):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get)
