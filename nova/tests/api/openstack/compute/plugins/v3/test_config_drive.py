@@ -186,9 +186,9 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         if override_controller:
-            server = override_controller.create(req, body).obj['server']
+            server = override_controller.create(req, body=body).obj['server']
         else:
-            server = self.controller.create(req, body).obj['server']
+            server = self.controller.create(req, body=body).obj['server']
 
     def test_create_instance_with_config_drive_disabled(self):
         params = {config_drive.ATTRIBUTE_NAME: "False"}
@@ -228,7 +228,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        res = self.controller.create(req, body=body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
@@ -255,7 +255,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.headers["content-type"] = "application/json"
 
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, req, body=body)
 
     def test_create_instance_without_config_drive(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -276,7 +276,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        res = self.controller.create(req, body=body).obj
 
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])

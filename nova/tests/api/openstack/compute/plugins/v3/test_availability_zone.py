@@ -351,9 +351,9 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         if override_controller:
-            server = override_controller.create(req, body).obj['server']
+            server = override_controller.create(req, body=body).obj['server']
         else:
-            server = self.controller.create(req, body).obj['server']
+            server = self.controller.create(req, body=body).obj['server']
 
     def test_create_instance_with_availability_zone_disabled(self):
         availability_zone = [{'availability_zone': 'foo'}]
@@ -402,7 +402,7 @@ class ServersControllerCreateTest(test.TestCase):
         agg = db.aggregate_create(admin_context,
                 {'name': 'agg1'}, {'availability_zone': 'nova'})
         db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
-        res = self.controller.create(req, body).obj
+        res = self.controller.create(req, body=body).obj
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])
 
@@ -425,6 +425,6 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        res = self.controller.create(req, body=body).obj
         server = res['server']
         self.assertEqual(FAKE_UUID, server['id'])

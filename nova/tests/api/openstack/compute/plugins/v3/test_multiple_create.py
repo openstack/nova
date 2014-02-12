@@ -150,9 +150,9 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         if override_controller:
-            server = override_controller.create(req, body).obj['server']
+            server = override_controller.create(req, body=body).obj['server']
         else:
-            server = self.controller.create(req, body).obj['server']
+            server = self.controller.create(req, body=body).obj['server']
 
     def test_create_instance_with_multiple_create_disabled(self):
         ret_res_id = True
@@ -229,7 +229,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
                           req,
-                          body)
+                          body=body)
 
     def test_create_instance_invalid_negative_max(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -250,7 +250,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
                           req,
-                          body)
+                          body=body)
 
     def test_create_instance_invalid_min_greater_than_max(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -272,7 +272,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
                           req,
-                          body)
+                          body=body)
 
     def test_create_instance_invalid_alpha_min(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -293,7 +293,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
                           req,
-                          body)
+                          body=body)
 
     def test_create_instance_invalid_alpha_max(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -314,7 +314,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create,
                           req,
-                          body)
+                          body=body)
 
     def test_create_multiple_instances(self):
         """Test creating multiple instances but not asking for
@@ -337,7 +337,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        res = self.controller.create(req, body=body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
         self._check_admin_password_len(res["server"])
@@ -364,7 +364,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body).obj
+        res = self.controller.create(req, body=body).obj
 
         self.assertEqual(FAKE_UUID, res["server"]["id"])
         self._check_admin_password_missing(res["server"])
@@ -400,7 +400,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.method = 'POST'
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
-        res = self.controller.create(req, body)
+        res = self.controller.create(req, body=body)
         reservation_id = res.obj['servers_reservation']['reservation_id']
         self.assertNotEqual(reservation_id, "")
         self.assertIsNotNone(reservation_id)
@@ -472,7 +472,7 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, req, body=body)
 
     def test_create_multiple_instance_with_non_integer_min_count(self):
         image_href = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
@@ -493,4 +493,4 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create, req, body)
+                          self.controller.create, req, body=body)
