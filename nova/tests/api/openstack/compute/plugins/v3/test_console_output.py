@@ -61,7 +61,8 @@ class ConsoleOutputExtensionTest(test.NoDBTestCase):
         self.stubs.Set(compute_api.API, 'get_console_output',
                        fake_get_console_output)
         self.stubs.Set(compute_api.API, 'get', fake_get)
-        self.app = fakes.wsgi_app_v3(init_only=('servers', 'console-output'))
+        self.app = fakes.wsgi_app_v3(init_only=('servers',
+                                                'os-console-output'))
 
     def _create_request(self, length_dict={}):
         body = {'get_console_output': length_dict}
