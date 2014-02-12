@@ -87,10 +87,6 @@ VERSIONS = {
         ],
         "media-types": [
             {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=3",
-            },
-            {
                 "base": "application/json",
                 "type": "application/vnd.openstack.compute+json;version=3",
             }
