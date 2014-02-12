@@ -124,6 +124,7 @@ class ConductorAPI(object):
     1.62 - Added object_backport()
     1.63 - Changed the format of values['stats'] from a dict to a JSON string
            in compute_node_update()
+    1.64 - Added use_slave to instance_get_all_filters()
     """
 
     VERSION_ALIASES = {
@@ -274,11 +275,19 @@ class ConductorAPI(object):
                           volume_id=volume_id, device_name=device_name)
 
     def instance_get_all_by_filters(self, context, filters, sort_key,
-                                    sort_dir, columns_to_join=None):
-        cctxt = self.client.prepare(version='1.47')
-        return cctxt.call(context, 'instance_get_all_by_filters',
-                          filters=filters, sort_key=sort_key,
+                                    sort_dir, columns_to_join=None,
+                                    use_slave=False):
+        msg_kwargs = dict(filters=filters, sort_key=sort_key,
                           sort_dir=sort_dir, columns_to_join=columns_to_join)
+
+        if self.client.can_send_version('1.64'):
+            version = '1.64'
+            msg_kwargs['use_slave'] = use_slave
+        else:
+            version = '1.47'
+
+        cctxt = self.client.prepare(version=version)
+        return cctxt.call(context, 'instance_get_all_by_filters', **msg_kwargs)
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):

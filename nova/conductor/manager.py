@@ -76,7 +76,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    target = messaging.Target(version='1.63')
+    target = messaging.Target(version='1.64')
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -342,10 +342,11 @@ class ConductorManager(manager.Manager):
                                       " invocation"))
 
     def instance_get_all_by_filters(self, context, filters, sort_key,
-                                    sort_dir, columns_to_join=None):
+                                    sort_dir, columns_to_join=None,
+                                    use_slave=False):
         result = self.db.instance_get_all_by_filters(
             context, filters, sort_key, sort_dir,
-            columns_to_join=columns_to_join)
+            columns_to_join=columns_to_join, use_slave=use_slave)
         return jsonutils.to_primitive(result)
 
     # NOTE(hanlind): This method can be removed in v2.0 of the RPC API.
