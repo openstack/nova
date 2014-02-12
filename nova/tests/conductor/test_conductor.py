@@ -347,8 +347,8 @@ class _BaseTestCase(object):
     def test_compute_node_update(self):
         node = {'id': 'fake-id'}
         self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(self.context, node['id'], 'fake-values',
-                               False).AndReturn('fake-result')
+        db.compute_node_update(self.context, node['id'], 'fake-values').\
+                               AndReturn('fake-result')
         self.mox.ReplayAll()
         result = self.conductor.compute_node_update(self.context, node,
                                                     'fake-values', False)

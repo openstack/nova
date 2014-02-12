@@ -21,7 +21,6 @@ import collections
 import copy
 import datetime
 import functools
-import itertools
 import sys
 import time
 import uuid
@@ -508,7 +507,6 @@ def _compute_node_get(context, compute_id, session=None):
     result = model_query(context, models.ComputeNode, session=session).\
             filter_by(id=compute_id).\
             options(joinedload('service')).\
-            options(joinedload('stats')).\
             first()
 
     if not result:
@@ -538,10 +536,9 @@ def compute_node_get_all(context, no_date_fields):
 
     engine = get_engine()
 
-    # Retrieve ComputeNode, Service, Stat.
+    # Retrieve ComputeNode, Service
     compute_node = models.ComputeNode.__table__
     service = models.Service.__table__
-    stat = models.ComputeNodeStat.__table__
 
     with engine.begin() as conn:
         redundant_columns = set(['deleted_at', 'created_at', 'updated_at',
@@ -561,14 +558,6 @@ def compute_node_get_all(context, no_date_fields):
                             order_by(service.c.id)
         service_rows = conn.execute(service_query).fetchall()
 
-        stat_query = select(filter_columns(stat)).\
-                        where(stat.c.deleted == 0).\
-                        order_by(stat.c.compute_node_id)
-        stat_rows = conn.execute(stat_query).fetchall()
-
-    # NOTE(msdubov): Transferring sqla.RowProxy objects to dicts.
-    stats = [dict(proxy.items()) for proxy in stat_rows]
-
     # Join ComputeNode & Service manually.
     services = {}
     for proxy in service_rows:
@@ -580,21 +569,6 @@ def compute_node_get_all(context, no_date_fields):
         node['service'] = services.get(proxy['service_id'])
 
         compute_nodes.append(node)
-
-    # Join ComputeNode & ComputeNodeStat manually.
-    # NOTE(msdubov): ComputeNode and ComputeNodeStat map 1-to-Many.
-    #                Running time is (asymptotically) optimal due to the use
-    #                of iterators (itertools.groupby() for ComputeNodeStat and
-    #                iter() for ComputeNode) - we handle each record only once.
-    compute_nodes.sort(key=lambda node: node['id'])
-    compute_nodes_iter = iter(compute_nodes)
-    for nid, nsts in itertools.groupby(stats, lambda s: s['compute_node_id']):
-        for node in compute_nodes_iter:
-            if node['id'] == nid:
-                node['stats'] = list(nsts)
-                break
-            else:
-                node['stats'] = []
 
     return compute_nodes
 
@@ -608,78 +582,28 @@ def compute_node_search_by_hypervisor(context, hypervisor_match):
             all()
 
 
-def _prep_stats_dict(values):
-    """Make list of ComputeNodeStats."""
-    stats = []
-    d = values.get('stats', {})
-    for k, v in d.iteritems():
-        stat = models.ComputeNodeStat()
-        stat['key'] = k
-        stat['value'] = v
-        stats.append(stat)
-    values['stats'] = stats
-
-
 @require_admin_context
 def compute_node_create(context, values):
     """Creates a new ComputeNode and populates the capacity fields
     with the most recent data.
     """
-    _prep_stats_dict(values)
     datetime_keys = ('created_at', 'deleted_at', 'updated_at')
     convert_objects_related_datetimes(values, *datetime_keys)
 
     compute_node_ref = models.ComputeNode()
     compute_node_ref.update(values)
     compute_node_ref.save()
+
     return compute_node_ref
-
-
-def _update_stats(context, new_stats, compute_id, session, prune_stats=False):
-
-    existing = model_query(context, models.ComputeNodeStat, session=session,
-            read_deleted="no").filter_by(compute_node_id=compute_id).all()
-    statmap = {}
-    for stat in existing:
-        key = stat['key']
-        statmap[key] = stat
-
-    stats = []
-    for k, v in new_stats.iteritems():
-        old_stat = statmap.pop(k, None)
-        if old_stat:
-            if old_stat['value'] != unicode(v):
-                # update existing value:
-                old_stat.update({'value': v})
-                stats.append(old_stat)
-        else:
-            # add new stat:
-            stat = models.ComputeNodeStat()
-            stat['compute_node_id'] = compute_id
-            stat['key'] = k
-            stat['value'] = v
-            stats.append(stat)
-
-    if prune_stats:
-        # prune un-touched old stats:
-        for stat in statmap.values():
-            session.add(stat)
-            stat.soft_delete(session=session)
-
-    # add new and updated stats
-    for stat in stats:
-        session.add(stat)
 
 
 @require_admin_context
 @_retry_on_deadlock
-def compute_node_update(context, compute_id, values, prune_stats=False):
+def compute_node_update(context, compute_id, values):
     """Updates the ComputeNode record with the most recent data."""
-    stats = values.pop('stats', {})
 
     session = get_session()
     with session.begin():
-        _update_stats(context, stats, compute_id, session, prune_stats)
         compute_ref = _compute_node_get(context, compute_id, session=session)
         # Always update this, even if there's going to be no other
         # changes in data.  This ensures that we invalidate the
@@ -688,16 +612,15 @@ def compute_node_update(context, compute_id, values, prune_stats=False):
         datetime_keys = ('created_at', 'deleted_at', 'updated_at')
         convert_objects_related_datetimes(values, *datetime_keys)
         compute_ref.update(values)
+
     return compute_ref
 
 
 @require_admin_context
 def compute_node_delete(context, compute_id):
-    """Delete a ComputeNode record and prune its stats."""
+    """Delete a ComputeNode record."""
     session = get_session()
     with session.begin():
-        # Prune the compute node's stats
-        _update_stats(context, {}, compute_id, session, True)
         result = model_query(context, models.ComputeNode, session=session).\
                  filter_by(id=compute_id).\
                  soft_delete(synchronize_session=False)

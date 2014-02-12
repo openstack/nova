@@ -356,7 +356,7 @@ class HostTestCase(test.TestCase):
                'vcpus': 16, 'memory_mb': 32, 'local_gb': 100,
                'vcpus_used': 16, 'memory_mb_used': 32, 'local_gb_used': 10,
                'hypervisor_type': 'qemu', 'hypervisor_version': 12003,
-               'cpu_info': '', 'stats': {}}
+               'cpu_info': '', 'stats': ''}
         db.compute_node_create(ctxt, dic)
 
         return db.service_get(ctxt, s_ref['id'])

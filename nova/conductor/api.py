@@ -237,8 +237,8 @@ class LocalAPI(object):
         return self._manager.compute_node_create(context, values)
 
     def compute_node_update(self, context, node, values, prune_stats=False):
-        return self._manager.compute_node_update(context, node, values,
-                                                 prune_stats)
+        # NOTE(belliott) ignore prune_stats param, it's no longer relevant
+        return self._manager.compute_node_update(context, node, values)
 
     def compute_node_delete(self, context, node):
         return self._manager.compute_node_delete(context, node)

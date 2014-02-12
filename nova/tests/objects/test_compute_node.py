@@ -42,6 +42,7 @@ fake_compute_node = {
     'cpu_info': 'Schmintel i786',
     'disk_available_least': 256,
     'metrics': '',
+    'stats': '{}',
 }
 
 
@@ -51,7 +52,8 @@ class _TestComputeNodeObject(object):
         db.compute_node_get(self.context, 123).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode.get_by_id(self.context, 123)
-        self.compare_obj(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node,
+                         comparators={'stats': self.json_comparator})
 
     def test_get_by_service_id(self):
         self.mox.StubOutWithMock(db, 'compute_node_get_by_service_id')
@@ -59,7 +61,8 @@ class _TestComputeNodeObject(object):
             fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode.get_by_service_id(self.context, 456)
-        self.compare_obj(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node,
+                         comparators={'stats': self.json_comparator})
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
@@ -69,19 +72,20 @@ class _TestComputeNodeObject(object):
         compute = compute_node.ComputeNode()
         compute.service_id = 456
         compute.create(self.context)
-        self.compare_obj(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node,
+                         comparators={'stats': self.json_comparator})
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(self.context, 123, {'vcpus_used': 3},
-                               prune_stats=False
-                               ).AndReturn(fake_compute_node)
+        db.compute_node_update(self.context, 123, {'vcpus_used': 3}).\
+                AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
         compute.id = 123
         compute.vcpus_used = 3
         compute.save(self.context)
-        self.compare_obj(compute, fake_compute_node)
+        self.compare_obj(compute, fake_compute_node,
+                         comparators={'stats': self.json_comparator})
 
     def test_destroy(self):
         self.mox.StubOutWithMock(db, 'compute_node_delete')
@@ -109,7 +113,8 @@ class _TestComputeNodeObject(object):
         self.mox.ReplayAll()
         computes = compute_node.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(computes))
-        self.compare_obj(computes[0], fake_compute_node)
+        self.compare_obj(computes[0], fake_compute_node,
+                         comparators={'stats': self.json_comparator})
 
     def test_get_by_hypervisor(self):
         self.mox.StubOutWithMock(db, 'compute_node_search_by_hypervisor')
@@ -119,7 +124,8 @@ class _TestComputeNodeObject(object):
         computes = compute_node.ComputeNodeList.get_by_hypervisor(self.context,
                                                                   'hyper')
         self.assertEqual(1, len(computes))
-        self.compare_obj(computes[0], fake_compute_node)
+        self.compare_obj(computes[0], fake_compute_node,
+                         comparators={'stats': self.json_comparator})
 
 
 class TestComputeNodeObject(test_objects._LocalTest,

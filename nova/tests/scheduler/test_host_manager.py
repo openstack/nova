@@ -377,18 +377,20 @@ class HostStateTestCase(test.NoDBTestCase):
     # in HostManagerTestCase.test_get_all_host_states()
 
     def test_stat_consumption_from_compute_node(self):
-        stats = [
-            dict(key='num_instances', value='5'),
-            dict(key='num_proj_12345', value='3'),
-            dict(key='num_proj_23456', value='1'),
-            dict(key='num_vm_%s' % vm_states.BUILDING, value='2'),
-            dict(key='num_vm_%s' % vm_states.SUSPENDED, value='1'),
-            dict(key='num_task_%s' % task_states.RESIZE_MIGRATING, value='1'),
-            dict(key='num_task_%s' % task_states.MIGRATING, value='2'),
-            dict(key='num_os_type_linux', value='4'),
-            dict(key='num_os_type_windoze', value='1'),
-            dict(key='io_workload', value='42'),
-        ]
+        stats = {
+            'num_instances': '5',
+            'num_proj_12345': '3',
+            'num_proj_23456': '1',
+            'num_vm_%s' % vm_states.BUILDING: '2',
+            'num_vm_%s' % vm_states.SUSPENDED: '1',
+            'num_task_%s' % task_states.RESIZE_MIGRATING: '1',
+            'num_task_%s' % task_states.MIGRATING: '2',
+            'num_os_type_linux': '4',
+            'num_os_type_windoze': '1',
+            'io_workload': '42',
+        }
+        stats = jsonutils.dumps(stats)
+
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
         compute = dict(stats=stats, memory_mb=1, free_disk_gb=0, local_gb=0,
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,
@@ -421,18 +423,20 @@ class HostStateTestCase(test.NoDBTestCase):
         self.assertEqual(hyper_ver_int, host.hypervisor_version)
 
     def test_stat_consumption_from_compute_node_non_pci(self):
-        stats = [
-            dict(key='num_instances', value='5'),
-            dict(key='num_proj_12345', value='3'),
-            dict(key='num_proj_23456', value='1'),
-            dict(key='num_vm_%s' % vm_states.BUILDING, value='2'),
-            dict(key='num_vm_%s' % vm_states.SUSPENDED, value='1'),
-            dict(key='num_task_%s' % task_states.RESIZE_MIGRATING, value='1'),
-            dict(key='num_task_%s' % task_states.MIGRATING, value='2'),
-            dict(key='num_os_type_linux', value='4'),
-            dict(key='num_os_type_windoze', value='1'),
-            dict(key='io_workload', value='42'),
-        ]
+        stats = {
+            'num_instances': '5',
+            'num_proj_12345': '3',
+            'num_proj_23456': '1',
+            'num_vm_%s' % vm_states.BUILDING: '2',
+            'num_vm_%s' % vm_states.SUSPENDED: '1',
+            'num_task_%s' % task_states.RESIZE_MIGRATING: '1',
+            'num_task_%s' % task_states.MIGRATING: '2',
+            'num_os_type_linux': '4',
+            'num_os_type_windoze': '1',
+            'io_workload': '42',
+        }
+        stats = jsonutils.dumps(stats)
+
         hyper_ver_int = utils.convert_version_to_int('6.0.0')
         compute = dict(stats=stats, memory_mb=0, free_disk_gb=0, local_gb=0,
                        local_gb_used=0, free_ram_mb=0, vcpus=0, vcpus_used=0,

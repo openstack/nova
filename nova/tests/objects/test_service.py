@@ -73,7 +73,8 @@ class _TestServiceObject(object):
         self.assertTrue(service_obj.obj_attr_is_set('compute_node'))
         self.compare_obj(service_obj.compute_node,
                          test_compute_node.fake_compute_node,
-                         allow_missing=OPTIONAL)
+                         allow_missing=OPTIONAL,
+                         comparators={'stats': self.json_comparator})
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'service_create')
@@ -162,7 +163,8 @@ class _TestServiceObject(object):
         service_obj.id = 123
         self.compare_obj(service_obj.compute_node,
                          test_compute_node.fake_compute_node,
-                         allow_missing=OPTIONAL)
+                         allow_missing=OPTIONAL,
+                         comparators={'stats': self.json_comparator})
         # Make sure it doesn't re-fetch this
         service_obj.compute_node
 

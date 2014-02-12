@@ -153,7 +153,7 @@ def compute_node_get(context, compute_id):
     :param compute_id: ID of the compute node
 
     :returns: Dictionary-like object containing properties of the compute node,
-              including its corresponding service and statistics
+              including its corresponding service
 
     Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
     """
@@ -184,7 +184,7 @@ def compute_node_get_all(context, no_date_fields=False):
                            Set to False by default
 
     :returns: List of dictionaries each containing compute node properties,
-              including corresponding service and stats
+              including corresponding service
     """
     return IMPL.compute_node_get_all(context, no_date_fields)
 
@@ -213,23 +213,19 @@ def compute_node_create(context, values):
     return IMPL.compute_node_create(context, values)
 
 
-def compute_node_update(context, compute_id, values, prune_stats=False):
+def compute_node_update(context, compute_id, values):
     """Set the given properties on a compute node and update it.
 
     :param context: The security context
     :param compute_id: ID of the compute node
     :param values: Dictionary containing compute node properties to be updated
-    :param prune_stats: If set to True, forces the compute node statistics
-                        entries corresponding to the given compute node with
-                        keys not present in the values['stats'] dictionary to
-                        be deleted from the database. Set to False by default
 
     :returns: Dictionary-like object containing the properties of the updated
               compute node, including its corresponding service and statistics
 
     Raises ComputeHostNotFound if compute node with the given ID doesn't exist.
     """
-    return IMPL.compute_node_update(context, compute_id, values, prune_stats)
+    return IMPL.compute_node_update(context, compute_id, values)
 
 
 def compute_node_delete(context, compute_id):
