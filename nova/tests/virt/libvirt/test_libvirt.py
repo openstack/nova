@@ -871,10 +871,12 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(type(cfg.clock),
                          vconfig.LibvirtConfigGuestClock)
         self.assertEqual(cfg.clock.offset, "utc")
-        self.assertEqual(len(cfg.clock.timers), 2)
+        self.assertEqual(len(cfg.clock.timers), 3)
         self.assertEqual(type(cfg.clock.timers[0]),
                          vconfig.LibvirtConfigGuestTimer)
         self.assertEqual(type(cfg.clock.timers[1]),
+                         vconfig.LibvirtConfigGuestTimer)
+        self.assertEqual(type(cfg.clock.timers[2]),
                          vconfig.LibvirtConfigGuestTimer)
         self.assertEqual(cfg.clock.timers[0].name, "pit")
         self.assertEqual(cfg.clock.timers[0].tickpolicy,
@@ -882,6 +884,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.clock.timers[1].name, "rtc")
         self.assertEqual(cfg.clock.timers[1].tickpolicy,
                          "catchup")
+        self.assertEqual(cfg.clock.timers[2].name, "hpet")
+        self.assertEqual(cfg.clock.timers[2].present, False)
 
     def test_get_guest_config_windows(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
