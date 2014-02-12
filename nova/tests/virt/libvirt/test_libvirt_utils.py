@@ -13,10 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import functools
 import os
-import tempfile
 
-import fixtures
+import mock
 from oslo.config import cfg
 
 from nova.openstack.common import processutils
@@ -212,29 +212,35 @@ blah BLAH: bb
 
         self.mox.VerifyAll()
 
-    def _test_copy_image(self, fake_execute, host):
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.utils.execute', fake_execute))
-        src = tempfile.NamedTemporaryFile()
-        dst = tempfile.NamedTemporaryFile()
-        libvirt_utils.copy_image(src.name, dst.name, host)
+    @mock.patch('nova.utils.execute')
+    def test_copy_image_local_cp(self, mock_execute):
+        libvirt_utils.copy_image('src', 'dest')
+        mock_execute.assert_called_once_with('cp', 'src', 'dest')
 
-    def test_copy_image_local_cp(self):
-        def fake_execute(*args, **kwargs):
-            self.assertTrue(args[0] == 'cp')
+    _rsync_call = functools.partial(mock.call,
+                                    'rsync', '--sparse', '--compress')
 
-        self._test_copy_image(fake_execute, host=None)
+    @mock.patch('nova.utils.execute')
+    def test_copy_image_rsync(self, mock_execute):
+        libvirt_utils.copy_image('src', 'dest', host='host')
 
-    def test_copy_image_local_rsync(self):
-        def fake_execute(*args, **kwargs):
-            self.assertTrue(args[0] == 'rsync')
+        mock_execute.assert_has_calls([
+            self._rsync_call('--dry-run', 'src', 'host:dest'),
+            self._rsync_call('src', 'host:dest'),
+        ])
+        self.assertEqual(2, mock_execute.call_count)
 
-        self._test_copy_image(fake_execute, host='fake-host')
+    @mock.patch('nova.utils.execute')
+    def test_copy_image_scp(self, mock_execute):
+        mock_execute.side_effect = [
+            processutils.ProcessExecutionError,
+            mock.DEFAULT,
+        ]
 
-    def test_copy_image_local_scp(self):
-        def fake_execute(*args, **kwargs):
-            if args[0] == 'rsync':
-                raise processutils.ProcessExecutionError("Bad result")
-            self.assertTrue(args[0] == 'scp')
+        libvirt_utils.copy_image('src', 'dest', host='host')
 
-        self._test_copy_image(fake_execute, host='fake-host')
+        mock_execute.assert_has_calls([
+            self._rsync_call('--dry-run', 'src', 'host:dest'),
+            mock.call('scp', 'src', 'host:dest'),
+        ])
+        self.assertEqual(2, mock_execute.call_count)
