@@ -18,11 +18,11 @@ import base64
 import datetime
 import mox
 import testtools
-import urlparse
 import uuid
 
 import iso8601
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack import compute

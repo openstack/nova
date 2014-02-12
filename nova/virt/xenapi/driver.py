@@ -36,9 +36,9 @@ A driver for XenServer or Xen Cloud Platform.
 """
 
 import math
-import urlparse
 
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils

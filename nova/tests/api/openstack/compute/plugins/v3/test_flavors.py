@@ -13,9 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six.moves.urllib.parse as urlparse
 import webob
-
-import urlparse
 
 from nova.api.openstack.compute.plugins.v3 import flavors
 from nova.openstack.common import jsonutils

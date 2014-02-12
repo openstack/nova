@@ -19,9 +19,9 @@ and as a WSGI layer
 """
 
 import copy
-import urlparse
 
 from lxml import etree
+import six.moves.urllib.parse as urlparse
 import webob
 
 from nova.api.openstack.compute import images

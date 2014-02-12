@@ -20,10 +20,10 @@ import glob
 import os
 import time
 import urllib2
-import urlparse
 
 from oslo.config import cfg
 import six
+import six.moves.urllib.parse as urlparse
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
