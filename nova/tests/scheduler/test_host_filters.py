@@ -34,6 +34,7 @@ from nova.tests.scheduler import fakes
 from nova import utils
 
 CONF = cfg.CONF
+
 CONF.import_opt('my_ip', 'nova.netconf')
 
 
@@ -778,6 +779,30 @@ class HostFiltersTestCase(test.NoDBTestCase):
                         'hypervisor_version': 5000}
         host = fakes.FakeHostState('host1', 'node1', capabilities)
         self.assertFalse(filt_cls.host_passes(host, filter_properties))
+
+    def test_image_properties_filter_pv_mode_compat(self):
+        # if an old image has 'pv' for a vm_mode it should be treated as xen
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ImagePropertiesFilter']()
+        img_props = {'properties': {'vm_mode': 'pv'}}
+        filter_properties = {'request_spec': {'image': img_props}}
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'xapi', 'xen')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
+
+    def test_image_properties_filter_hvm_mode_compat(self):
+        # if an old image has 'hv' for a vm_mode it should be treated as xen
+        self._stub_service_is_up(True)
+        filt_cls = self.class_map['ImagePropertiesFilter']()
+        img_props = {'properties': {'vm_mode': 'hv'}}
+        filter_properties = {'request_spec': {'image': img_props}}
+        hypervisor_version = utils.convert_version_to_int('6.0.0')
+        capabilities = {'supported_instances': [('x86_64', 'kvm', 'hvm')],
+                        'hypervisor_version': hypervisor_version}
+        host = fakes.FakeHostState('host1', 'node1', capabilities)
+        self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def _do_test_compute_filter_extra_specs(self, ecaps, especs, passes):
         """In real Openstack runtime environment,compute capabilities
