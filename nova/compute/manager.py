@@ -1721,7 +1721,7 @@ class ComputeManager(manager.Manager):
                     instance_uuid=instance.uuid, reason=e.format_message())
         except exception.BuildAbortException as e:
             with excutils.save_and_reraise_exception():
-                LOG.debug(e.format_message, instance=instance)
+                LOG.debug(e.format_message(), instance=instance)
                 self._notify_about_instance_usage(context, instance,
                         'create.error', extra_usage_info={'message':
                                                         e.format_message()})
