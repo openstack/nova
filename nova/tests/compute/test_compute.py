@@ -31,6 +31,7 @@ import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging
+import six
 from testtools import matchers as testtools_matchers
 
 import nova
@@ -5349,6 +5350,27 @@ class ComputeTestCase(BaseTestCase):
                    running_deleted_instance_action=action)
 
         return admin_context, instance1, instance2
+
+    def test_cleanup_running_deleted_instances_unrecognized_value(self):
+        admin_context = context.get_admin_context()
+        deleted_at = (timeutils.utcnow() -
+                      datetime.timedelta(hours=1, minutes=5))
+        instance = self._create_fake_instance({"deleted_at": deleted_at,
+                                               "deleted": True})
+        self.flags(running_deleted_instance_action='foo-action')
+
+        with mock.patch.object(
+                self.compute, '_get_instances_on_driver',
+                return_value=[instance]) as _get_instances_on_driver:
+            try:
+                # We cannot simply use an assertRaises here because the
+                # exception raised is too generally "Exception". To be sure
+                # that the exception raised is the expected one, we check
+                # the message.
+                self.compute._cleanup_running_deleted_instances(admin_context)
+                self.fail("Be sure this will never be executed.")
+            except Exception as e:
+                self.assertIn("Unrecognized value", six.text_type(e))
 
     def test_cleanup_running_deleted_instances_reap(self):
         bdms = []
