@@ -69,17 +69,21 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
-    def _test_action(self, action, body=None, method=None):
+    def _test_action(self, action, body=None, method=None,
+                     compute_api_args_map={}):
         if method is None:
             method = action
 
         instance = self._stub_instance_get()
-        getattr(self.compute_api, method)(self.context, instance)
+
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+        getattr(self.compute_api, method)(self.context, instance, *args,
+                                          **kwargs)
 
         self.mox.ReplayAll()
 
         res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: None})
+                                 {action: body})
         self.assertEqual(202, res.status_int)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
@@ -116,18 +120,22 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
-    def _test_locked_instance(self, action, method=None):
+    def _test_locked_instance(self, action, method=None, body=None,
+                              compute_api_args_map={}):
         if method is None:
             method = action
 
         instance = self._stub_instance_get()
-        getattr(self.compute_api, method)(self.context, instance).AndRaise(
+
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+        getattr(self.compute_api, method)(self.context, instance, *args,
+                                          **kwargs).AndRaise(
                 exception.InstanceIsLocked(instance_uuid=instance.uuid))
 
         self.mox.ReplayAll()
 
         res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {action: None})
+                                 {action: body})
         self.assertEqual(409, res.status_int)
         # Do these here instead of tearDown because this method is called
         # more than once for the same test case
@@ -136,11 +144,14 @@ class CommonMixin(object):
 
 
 class CommonTests(CommonMixin, test.NoDBTestCase):
-    def _test_actions(self, actions, method_translations={}):
+    def _test_actions(self, actions, method_translations={}, body_map={},
+                      args_map={}):
         for action in actions:
             method = method_translations.get(action)
+            body = body_map.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_action(action, method=method)
+            self._test_action(action, method=method, body=body,
+                              compute_api_args_map=args_map)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
@@ -163,10 +174,13 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def _test_actions_with_locked_instance(self, actions,
-                                           method_translations={}):
+                                           method_translations={},
+                                           body_map={}, args_map={}):
         for action in actions:
             method = method_translations.get(action)
+            body = body_map.get(action)
             self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_locked_instance(action, method=method)
+            self._test_locked_instance(action, method=method, body=body,
+                                       compute_api_args_map=args_map)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')

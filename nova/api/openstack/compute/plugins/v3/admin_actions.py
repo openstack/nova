@@ -25,7 +25,6 @@ from nova.compute import vm_states
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 
 LOG = logging.getLogger(__name__)
 ALIAS = "os-admin-actions"
@@ -43,34 +42,6 @@ class AdminActionsController(wsgi.Controller):
     def __init__(self, *args, **kwargs):
         super(AdminActionsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
-
-    @extensions.expected_errors((400, 404, 409, 413))
-    @wsgi.action('migrate')
-    def _migrate(self, req, id, body):
-        """Permit admins to migrate a server to a new host."""
-        context = req.environ['nova.context']
-        authorize(context, 'migrate')
-
-        instance = common.get_instance(self.compute_api, context, id,
-                                       want_objects=True)
-        try:
-            self.compute_api.resize(req.environ['nova.context'], instance)
-        except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
-                explanation=error.format_message(),
-                headers={'Retry-After': 0})
-        except exception.InstanceIsLocked as e:
-            raise exc.HTTPConflict(explanation=e.format_message())
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'migrate')
-        except exception.FlavorNotFound as e:
-            raise exc.HTTPNotFound(explanation=e.format_message())
-        except exception.CannotResizeToSameFlavor as e:
-            raise exc.HTTPBadRequest(explanation=e.format_message())
-        except exception.TooManyInstances as e:
-            raise exc.HTTPRequestEntityTooLarge(explanation=e.format_message())
-        return webob.Response(status_int=202)
 
     @extensions.expected_errors((404, 409))
     @wsgi.action('reset_network')
@@ -167,49 +138,6 @@ class AdminActionsController(wsgi.Controller):
             resp.headers['Location'] = image_ref
 
         return resp
-
-    @extensions.expected_errors((400, 404, 409))
-    @wsgi.action('migrate_live')
-    def _migrate_live(self, req, id, body):
-        """Permit admins to (live) migrate a server to a new host."""
-        context = req.environ["nova.context"]
-        authorize(context, 'migrate_live')
-
-        try:
-            block_migration = body["migrate_live"]["block_migration"]
-            disk_over_commit = body["migrate_live"]["disk_over_commit"]
-            host = body["migrate_live"]["host"]
-        except (TypeError, KeyError):
-            msg = _("host, block_migration and disk_over_commit must "
-                    "be specified for live migration.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-        try:
-            block_migration = strutils.bool_from_string(block_migration,
-                                                        strict=True)
-            disk_over_commit = strutils.bool_from_string(disk_over_commit,
-                                                         strict=True)
-        except ValueError as err:
-            raise exc.HTTPBadRequest(explanation=str(err))
-
-        try:
-            instance = common.get_instance(self.compute_api, context, id,
-                                           want_objects=True)
-            self.compute_api.live_migrate(context, instance, block_migration,
-                                          disk_over_commit, host)
-        except (exception.ComputeServiceUnavailable,
-                exception.InvalidHypervisorType,
-                exception.UnableToMigrateToSelf,
-                exception.DestinationHypervisorTooOld,
-                exception.NoValidHost,
-                exception.InvalidLocalStorage,
-                exception.InvalidSharedStorage,
-                exception.MigrationPreCheckError) as ex:
-            raise exc.HTTPBadRequest(explanation=ex.format_message())
-        except exception.InstanceInvalidState as state_error:
-            common.raise_http_conflict_for_instance_invalid_state(state_error,
-                    'migrate_live')
-        return webob.Response(status_int=202)
 
     @extensions.expected_errors((400, 404))
     @wsgi.action('reset_state')

@@ -156,42 +156,17 @@ class CommonMixin(object):
 
 class AdminActionsTest(CommonMixin, test.NoDBTestCase):
     def test_actions(self):
-        actions = ['migrate', 'reset_network', 'inject_network_info']
-        method_translations = {'migrate': 'resize'}
+        actions = ['reset_network', 'inject_network_info']
 
         for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_action(action, method=method)
-            # Re-mock this.
-            self.mox.StubOutWithMock(self.compute_api, 'get')
-
-    def test_actions_raise_conflict_on_invalid_state(self):
-        actions = ['migrate', 'migrate_live']
-        method_translations = {'migrate': 'resize',
-                               'migrate_live': 'live_migrate'}
-
-        body_map = {'migrate_live': {'host': 'hostname',
-                                     'block_migration': False,
-                                     'disk_over_commit': False}}
-        args_map = {'migrate_live': ((False, False, 'hostname'), {})}
-
-        for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_invalid_state(action, method=method,
-                                     body_map=body_map,
-                                     compute_api_args_map=args_map)
+            self.mox.StubOutWithMock(self.compute_api, action)
+            self._test_action(action)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_actions_with_non_existed_instance(self):
-        actions = ['migrate', 'reset_network', 'inject_network_info',
-                   'reset_state', 'migrate_live']
-        body_map = {'reset_state': {'state': 'active'},
-                    'migrate_live': {'host': 'hostname',
-                                     'block_migration': False,
-                                     'disk_over_commit': False}}
+        actions = ['reset_network', 'inject_network_info', 'reset_state']
+        body_map = {'reset_state': {'state': 'active'}}
         for action in actions:
             self._test_non_existing_instance(action,
                                              body_map=body_map)
@@ -199,133 +174,13 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
     def test_actions_with_locked_instance(self):
-        actions = ['migrate', 'reset_network', 'inject_network_info']
-        method_translations = {'migrate': 'resize'}
+        actions = ['reset_network', 'inject_network_info']
 
         for action in actions:
-            method = method_translations.get(action)
-            self.mox.StubOutWithMock(self.compute_api, method or action)
-            self._test_locked_instance(action, method=method)
+            self.mox.StubOutWithMock(self.compute_api, action)
+            self._test_locked_instance(action)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
-
-    def _test_migrate_exception(self, exc_info, expected_result):
-        self.mox.StubOutWithMock(self.compute_api, 'resize')
-        instance = self._stub_instance_get()
-        self.compute_api.resize(self.context, instance).AndRaise(exc_info)
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance['uuid'],
-                                 {'migrate': None})
-        self.assertEqual(expected_result, res.status_int)
-
-    def test_migrate_resize_to_same_flavor(self):
-        exc_info = exception.CannotResizeToSameFlavor()
-        self._test_migrate_exception(exc_info, 400)
-
-    def test_migrate_too_many_instances(self):
-        exc_info = exception.TooManyInstances(overs='', req='', used=0,
-                                              allowed=0, resource='')
-        self._test_migrate_exception(exc_info, 413)
-
-    def _test_migrate_live_succeeded(self, param):
-        self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-        instance = self._stub_instance_get()
-        self.compute_api.live_migrate(self.context, instance, False,
-                                      False, 'hostname')
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {'migrate_live': param})
-        self.assertEqual(202, res.status_int)
-
-    def test_migrate_live_enabled(self):
-        param = {'host': 'hostname',
-                 'block_migration': False,
-                 'disk_over_commit': False}
-        self._test_migrate_live_succeeded(param)
-
-    def test_migrate_live_enabled_with_string_param(self):
-        param = {'host': 'hostname',
-                 'block_migration': "False",
-                 'disk_over_commit': "False"}
-        self._test_migrate_live_succeeded(param)
-
-    def test_migrate_live_missing_dict_param(self):
-        res = self._make_request('/servers/FAKE/action',
-                                 {'migrate_live': {'dummy': 'hostname',
-                                                   'block_migration': False,
-                                                   'disk_over_commit': False}})
-        self.assertEqual(400, res.status_int)
-
-    def test_migrate_live_with_invalid_block_migration(self):
-        res = self._make_request('/servers/FAKE/action',
-                                 {'migrate_live': {'host': 'hostname',
-                                                   'block_migration': "foo",
-                                                   'disk_over_commit': False}})
-        self.assertEqual(400, res.status_int)
-
-    def test_migrate_live_with_invalid_disk_over_commit(self):
-        res = self._make_request('/servers/FAKE/action',
-                                 {'migrate_live': {'host': 'hostname',
-                                                   'block_migration': False,
-                                                   'disk_over_commit': "foo"}})
-        self.assertEqual(400, res.status_int)
-
-    def _test_migrate_live_failed_with_exception(self, fake_exc,
-                                                 uuid=None):
-        self.mox.StubOutWithMock(self.compute_api, 'live_migrate')
-
-        instance = self._stub_instance_get(uuid=uuid)
-        self.compute_api.live_migrate(self.context, instance, False,
-                                      False, 'hostname').AndRaise(fake_exc)
-
-        self.mox.ReplayAll()
-
-        res = self._make_request('/servers/%s/action' % instance.uuid,
-                                 {'migrate_live':
-                                  {'host': 'hostname',
-                                   'block_migration': False,
-                                   'disk_over_commit': False}})
-        self.assertEqual(400, res.status_int)
-        self.assertIn(unicode(fake_exc), res.body)
-
-    def test_migrate_live_compute_service_unavailable(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.ComputeServiceUnavailable(host='host'))
-
-    def test_migrate_live_invalid_hypervisor_type(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidHypervisorType())
-
-    def test_migrate_live_unable_to_migrate_to_self(self):
-        uuid = uuidutils.generate_uuid()
-        self._test_migrate_live_failed_with_exception(
-                exception.UnableToMigrateToSelf(instance_id=uuid,
-                                                host='host'),
-                uuid=uuid)
-
-    def test_migrate_live_destination_hypervisor_too_old(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.DestinationHypervisorTooOld())
-
-    def test_migrate_live_no_valid_host(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.NoValidHost(reason=''))
-
-    def test_migrate_live_invalid_local_storage(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidLocalStorage(path='', reason=''))
-
-    def test_migrate_live_invalid_shared_storage(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.InvalidSharedStorage(path='', reason=''))
-
-    def test_migrate_live_pre_check_error(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.MigrationPreCheckError(reason=''))
 
 
 class CreateBackupTests(CommonMixin, test.NoDBTestCase):
