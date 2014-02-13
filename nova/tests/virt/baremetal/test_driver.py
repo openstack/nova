@@ -28,6 +28,7 @@ from nova.compute import task_states
 from nova import db as main_db
 from nova import exception
 from nova.objects import instance as instance_obj
+from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.image import fake as fake_image
 from nova.tests import utils
@@ -385,6 +386,10 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(resources['memory_mb_used'], 0)
         self.assertEqual(resources['supported_instances'],
                 '[["test", "baremetal", "baremetal"]]')
+        self.assertEqual(resources['stats'],
+                         '{"cpu_arch": "test", "baremetal_driver": '
+                         '"nova.virt.baremetal.fake.FakeDriver", '
+                         '"test_spec": "test_value"}')
 
         self.driver.spawn(**node['spawn_params'])
         resources = self.driver.get_available_resource(node['node']['uuid'])
@@ -394,7 +399,8 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.driver.destroy(**node['destroy_params'])
         resources = self.driver.get_available_resource(node['node']['uuid'])
         self.assertEqual(resources['memory_mb_used'], 0)
-        self.assertEqual(resources['stats']['test_spec'], 'test_value')
+        stats = jsonutils.loads(resources['stats'])
+        self.assertEqual(stats['test_spec'], 'test_value')
 
     def test_get_available_nodes(self):
         self.assertEqual(0, len(self.driver.get_available_nodes()))

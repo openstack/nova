@@ -482,7 +482,7 @@ class BareMetalDriver(driver.ComputeDriver):
                'cpu_info': 'baremetal cpu',
                'supported_instances':
                         jsonutils.dumps(self.supported_instances),
-               'stats': self.extra_specs
+               'stats': jsonutils.dumps(self.extra_specs)
                }
         return dic
 
