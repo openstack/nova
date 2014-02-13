@@ -38,6 +38,12 @@ virt_import_re = re.compile(
 virt_config_re = re.compile(
     r"CONF\.import_opt\('.*?', 'nova\.virt\.(\w+)('|.)")
 author_tag_re = re.compile("^\s*#\s*@?(a|A)uthor:")
+asse_trueinst_re = re.compile(
+                     r"(.)*assertTrue\(isinstance\((\w|\.|\'|\"|\[|\])+, "
+                     "(\w|\.|\'|\"|\[|\])+\)\)")
+asse_equal_type_re = re.compile(
+                       r"(.)*assertEqual\(type\((\w|\.|\'|\"|\[|\])+\), "
+                       "(\w|\.|\'|\"|\[|\])+\)")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -153,6 +159,24 @@ def no_author_tags(physical_line):
         return pos, "N315: Don't use author tags"
 
 
+def assert_true_instance(logical_line):
+    """Check for assertTrue(isinstance(a, b)) sentences
+
+    N316
+    """
+    if asse_trueinst_re.match(logical_line):
+        yield (0, "N316: assertTrue(isinstance(a, b)) sentences not allowed")
+
+
+def assert_equal_type(logical_line):
+    """Check for assertEqual(type(A), B) sentences
+
+    N317
+    """
+    if asse_equal_type_re.match(logical_line):
+        yield (0, "N317: assertEqual(type(A), B) sentences not allowed")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -162,3 +186,5 @@ def factory(register):
     register(capital_cfg_help)
     register(no_vi_headers)
     register(no_author_tags)
+    register(assert_true_instance)
+    register(assert_equal_type)

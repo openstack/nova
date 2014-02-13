@@ -196,10 +196,10 @@ class BareMetalLibVirtVolumeDriverTestCase(test.TestCase):
         self.tid = 100
 
     def test_init_loads_volume_drivers(self):
-        self.assertEqual(type(self.driver.volume_drivers['fake']),
-                         libvirt_volume.LibvirtFakeVolumeDriver)
-        self.assertEqual(type(self.driver.volume_drivers['fake2']),
-                         libvirt_volume.LibvirtFakeVolumeDriver)
+        self.assertIsInstance(self.driver.volume_drivers['fake'],
+                              libvirt_volume.LibvirtFakeVolumeDriver)
+        self.assertIsInstance(self.driver.volume_drivers['fake2'],
+                              libvirt_volume.LibvirtFakeVolumeDriver)
         self.assertEqual(len(self.driver.volume_drivers), 2)
 
     def test_fake_connect_volume(self):

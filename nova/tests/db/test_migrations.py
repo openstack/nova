@@ -628,8 +628,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnExists(engine, 'compute_nodes', 'metrics')
 
         compute_nodes = db_utils.get_table(engine, 'compute_nodes')
-        self.assertTrue(isinstance(compute_nodes.c.metrics.type,
-                            sqlalchemy.types.Text))
+        self.assertIsInstance(compute_nodes.c.metrics.type,
+                              sqlalchemy.types.Text)
 
     def _post_downgrade_228(self, engine):
         self.assertColumnNotExists(engine, 'compute_nodes', 'metrics')
@@ -638,8 +638,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnExists(engine, 'compute_nodes', 'extra_resources')
 
         compute_nodes = db_utils.get_table(engine, 'compute_nodes')
-        self.assertTrue(isinstance(compute_nodes.c.extra_resources.type,
-                            sqlalchemy.types.Text))
+        self.assertIsInstance(compute_nodes.c.extra_resources.type,
+                              sqlalchemy.types.Text)
 
     def _post_downgrade_229(self, engine):
         self.assertColumnNotExists(engine, 'compute_nodes', 'extra_resources')
@@ -651,10 +651,10 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
             self.assertColumnExists(engine, table_name, 'details')
 
         action_events = db_utils.get_table(engine, 'instance_actions_events')
-        self.assertTrue(isinstance(action_events.c.host.type,
-                                   sqlalchemy.types.String))
-        self.assertTrue(isinstance(action_events.c.details.type,
-                                   sqlalchemy.types.Text))
+        self.assertIsInstance(action_events.c.host.type,
+                              sqlalchemy.types.String)
+        self.assertIsInstance(action_events.c.details.type,
+                              sqlalchemy.types.Text)
 
     def _post_downgrade_230(self, engine):
         for table_name in ['instance_actions_events',
@@ -666,8 +666,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnExists(engine, 'instances', 'ephemeral_key_uuid')
 
         instances = db_utils.get_table(engine, 'instances')
-        self.assertTrue(isinstance(instances.c.ephemeral_key_uuid.type,
-            sqlalchemy.types.String))
+        self.assertIsInstance(instances.c.ephemeral_key_uuid.type,
+                              sqlalchemy.types.String)
         self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
 
     def _post_downgrade_231(self, engine):
@@ -685,8 +685,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertColumnExists(engine, 'compute_nodes', 'stats')
 
         compute_nodes = db_utils.get_table(engine, 'compute_nodes')
-        self.assertTrue(isinstance(compute_nodes.c.stats.type,
-                            sqlalchemy.types.Text))
+        self.assertIsInstance(compute_nodes.c.stats.type,
+                              sqlalchemy.types.Text)
 
         self.assertRaises(sqlalchemy.exc.NoSuchTableError, db_utils.get_table,
                           engine, 'compute_node_stats')

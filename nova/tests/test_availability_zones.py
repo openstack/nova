@@ -125,9 +125,9 @@ class AvailabilityZoneTestCases(test.TestCase):
         service = self._create_service_with_topic('network', self.host)
         services = db.service_get_all(self.context)
         new_service = az.set_availability_zones(self.context, services)[0]
-        self.assertEqual(type(services[0]['host']), unicode)
+        self.assertIsInstance(services[0]['host'], unicode)
         cached_key = az._make_cache_key(services[0]['host'])
-        self.assertEqual(type(cached_key), str)
+        self.assertIsInstance(cached_key, str)
         self._destroy_service(service)
 
     def test_set_availability_zone_not_compute_service(self):

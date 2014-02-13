@@ -55,3 +55,18 @@ class HackingTestCase(test.NoDBTestCase):
         self.assertTrue(checks.no_author_tags("# @Author: jogo"))
         self.assertTrue(checks.no_author_tags("# Author: jogo"))
         self.assertFalse(checks.no_author_tags("# authorization of this"))
+
+    def test_assert_true_instance(self):
+        self.assertEqual(len(list(checks.assert_true_instance(
+            "self.assertTrue(isinstance(e, "
+            "exception.BuildAbortException))"))), 1)
+
+        self.assertEqual(
+            len(list(checks.assert_true_instance("self.assertTrue()"))), 0)
+
+    def test_assert_equal_type(self):
+        self.assertEqual(len(list(checks.assert_equal_type(
+            "self.assertEqual(type(als['QuicAssist']), list)"))), 1)
+
+        self.assertEqual(
+            len(list(checks.assert_equal_type("self.assertTrue()"))), 0)

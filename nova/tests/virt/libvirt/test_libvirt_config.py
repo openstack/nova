@@ -84,7 +84,7 @@ class LibvirtConfigCapsTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigCaps()
         obj.parse_str(xmlin)
 
-        self.assertEqual(type(obj.host), config.LibvirtConfigCapsHost)
+        self.assertIsInstance(obj.host, config.LibvirtConfigCapsHost)
         self.assertEqual(obj.host.uuid, "c7a5fdbd-edaf-9455-926a-d65c16db1809")
 
         xmlout = obj.to_xml()
@@ -1159,8 +1159,8 @@ class LibvirtConfigGuestTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigGuest()
         obj.parse_str(xmldoc)
         self.assertEqual(len(obj.devices), 1)
-        self.assertEqual(type(obj.devices[0]),
-                         config.LibvirtConfigGuestHostdevPCI)
+        self.assertIsInstance(obj.devices[0],
+                              config.LibvirtConfigGuestHostdevPCI)
         self.assertEqual(obj.devices[0].mode, 'subsystem')
         self.assertEqual(obj.devices[0].managed, 'no')
 
@@ -1283,10 +1283,10 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigNodeDevice()
         obj.parse_str(xmlin)
 
-        self.assertEqual(type(obj.pci_capability),
-                         config.LibvirtConfigNodeDevicePciCap)
-        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.pci_capability,
+                              config.LibvirtConfigNodeDevicePciCap)
+        self.assertIsInstance(obj.pci_capability.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
         self.assertEqual(obj.pci_capability.fun_capability[0].type,
                           "virt_functions")
         self.assertEqual(len(obj.pci_capability.fun_capability[0].
@@ -1318,10 +1318,10 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigNodeDevice()
         obj.parse_str(xmlin)
 
-        self.assertEqual(type(obj.pci_capability),
-                         config.LibvirtConfigNodeDevicePciCap)
-        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.pci_capability,
+                              config.LibvirtConfigNodeDevicePciCap)
+        self.assertIsInstance(obj.pci_capability.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
         self.assertEqual(obj.pci_capability.fun_capability[0].type,
                           "phys_function")
         self.assertEqual(len(obj.pci_capability.fun_capability[0].
@@ -1350,10 +1350,10 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigNodeDevice()
         obj.parse_str(xmlin)
 
-        self.assertEqual(type(obj.pci_capability),
-                         config.LibvirtConfigNodeDevicePciCap)
-        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.pci_capability,
+                              config.LibvirtConfigNodeDevicePciCap)
+        self.assertIsInstance(obj.pci_capability.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
         self.assertEqual(obj.pci_capability.fun_capability[0].type,
                           "virt_functions")
 
@@ -1380,10 +1380,10 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigNodeDevice()
         obj.parse_str(xmlin)
 
-        self.assertEqual(type(obj.pci_capability),
-                         config.LibvirtConfigNodeDevicePciCap)
-        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.pci_capability,
+                              config.LibvirtConfigNodeDevicePciCap)
+        self.assertIsInstance(obj.pci_capability.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
         self.assertEqual(obj.pci_capability.fun_capability[0].type,
                           "virt_functions")
 
@@ -1414,10 +1414,10 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
         obj = config.LibvirtConfigNodeDevice()
         obj.parse_str(xmlin)
 
-        self.assertEqual(type(obj.pci_capability),
-                          config.LibvirtConfigNodeDevicePciCap)
-        self.assertEqual(type(obj.pci_capability.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.pci_capability,
+                              config.LibvirtConfigNodeDevicePciCap)
+        self.assertIsInstance(obj.pci_capability.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
         self.assertEqual(obj.pci_capability.fun_capability[0].type,
                           "phys_function")
         self.assertEqual(obj.pci_capability.fun_capability[1].type,
@@ -1451,8 +1451,8 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.product_id, '0x8086-3')
         self.assertEqual(obj.vendor, "Intel Inc.")
         self.assertEqual(obj.vendor_id, "0x8086")
-        self.assertEqual(type(obj.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
 
         self.assertEqual(obj.fun_capability[0].type, 'virt_functions')
         self.assertEqual(obj.fun_capability[0].device_addrs,
@@ -1487,8 +1487,8 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.product_id, '0x8086-3')
         self.assertEqual(obj.vendor, "Intel Inc.")
         self.assertEqual(obj.vendor_id, "0x8086")
-        self.assertEqual(type(obj.fun_capability[0]),
-                         config.LibvirtConfigNodeDevicePciSubFunctionCap)
+        self.assertIsInstance(obj.fun_capability[0],
+                              config.LibvirtConfigNodeDevicePciSubFunctionCap)
 
         self.assertEqual(obj.fun_capability[0].type, 'virt_functions')
         self.assertEqual(obj.fun_capability[0].device_addrs,

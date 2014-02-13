@@ -620,7 +620,7 @@ class MigrateDiskAndPowerOffTestCase(VMOpsTestBase):
 class MigrateDiskResizingUpTestCase(VMOpsTestBase):
     def _fake_snapshot_attached_here(self, session, instance, vm_ref, label,
                                      userdevice, post_snapshot_callback):
-        self.assertTrue(isinstance(instance, dict))
+        self.assertIsInstance(instance, dict)
         if userdevice == '0':
             self.assertEqual("vm_ref", vm_ref)
             self.assertEqual("fake-snapshot", label)
