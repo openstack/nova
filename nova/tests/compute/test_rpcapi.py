@@ -751,7 +751,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='3.11')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
