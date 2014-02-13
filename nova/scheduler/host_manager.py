@@ -183,16 +183,16 @@ class HostState(object):
         all_ram_mb = compute['memory_mb']
 
         # Assume virtual size is all consumed by instances if use qcow2 disk.
-        free_gb = compute.get('free_disk_gb')
+        free_gb = compute['free_disk_gb']
         least_gb = compute.get('disk_available_least')
-        if least_gb > free_gb and free_gb:
-            # can occur when an instance in database is not on host
-            LOG.warn(_("Host has more disk space than database expected"
-                       " (%(physical)sgb > %(database)sgb)") %
-                     {'physical': least_gb, 'database': free_gb})
-        free_disk_mb = min(val for val in [least_gb,
-                                           free_gb] if val is not None)
-        free_disk_mb *= 1024
+        if least_gb is not None:
+            if least_gb > free_gb:
+                # can occur when an instance in database is not on host
+                LOG.warn(_("Host has more disk space than database expected"
+                           " (%(physical)sgb > %(database)sgb)") %
+                         {'physical': least_gb, 'database': free_gb})
+            free_gb = min(least_gb, free_gb)
+        free_disk_mb = free_gb * 1024
 
         self.disk_mb_used = compute['local_gb_used'] * 1024
 
