@@ -274,6 +274,9 @@ class HostManagerTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(host_manager.LOG, 'warn')
 
         db.compute_node_get_all(context).AndReturn(fakes.COMPUTE_NODES)
+        # node 3 host physical disk space is greater than database
+        host_manager.LOG.warn("Host has more disk space than database expected"
+                              " (3333gb > 3072gb)")
         # Invalid service
         host_manager.LOG.warn("No service for compute ID 5")
 
