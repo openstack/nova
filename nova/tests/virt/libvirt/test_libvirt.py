@@ -5773,8 +5773,31 @@ class LibvirtConnTestCase(test.TestCase):
         conn.lookupByID(2).AndReturn(DiagFakeDomain(5))
 
         self.mox.ReplayAll()
-
         self.assertEqual(5, driver.get_vcpu_used())
+
+    def test_failing_vcpu_count_none(self):
+        """Domain will return zero if the current number of vcpus used
+        is None. This is in case of VM state starting up or shutting
+        down. None type returned is counted as zero.
+        """
+
+        class DiagFakeDomain(object):
+            def __init__(self):
+                pass
+
+            def vcpus(self):
+                return None
+
+        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        conn = driver._conn
+        self.mox.StubOutWithMock(driver, 'list_instance_ids')
+        conn.lookupByID = self.mox.CreateMockAnything()
+
+        driver.list_instance_ids().AndReturn([1])
+        conn.lookupByID(1).AndReturn(DiagFakeDomain())
+
+        self.mox.ReplayAll()
+        self.assertEqual(0, driver.get_vcpu_used())
 
     def test_get_instance_capabilities(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
