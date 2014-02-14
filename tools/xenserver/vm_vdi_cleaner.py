@@ -27,10 +27,15 @@ possible_topdir = os.getcwd()
 if os.path.exists(os.path.join(possible_topdir, "nova", "__init__.py")):
         sys.path.insert(0, possible_topdir)
 
-
+from nova import config
 from nova import context
 from nova import db
 from nova import exception
+
+# NOTE(philip-schwartz) Added service import to fix issue where importing
+# xenapi service would cause an ArgsAlreadyParsedError exception
+from nova import service
+
 from nova.openstack.common import timeutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver
@@ -285,6 +290,7 @@ def clean_orphaned_instances(xenapi, orphaned_instances):
 
 def main():
     """Main loop."""
+    config.parse_args(sys.argv)
     args = CONF(args=sys.argv[1:], usage='%(prog)s [options] --command={' +
             '|'.join(ALLOWED_COMMANDS) + '}')
 
