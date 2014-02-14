@@ -1364,7 +1364,8 @@ class VlanNetworkTestCase(test.TestCase):
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')
-    def test_deallocate_fixed_no_vif(self, net_get, fixed_get):
+    @mock.patch('nova.db.fixed_ip_update')
+    def test_deallocate_fixed_no_vif(self, fixed_update, net_get, fixed_get):
         """Verify that deallocate doesn't raise when no vif is returned.
 
         Ensures https://bugs.launchpad.net/nova/+bug/968457 doesn't return
@@ -1384,13 +1385,18 @@ class VlanNetworkTestCase(test.TestCase):
         elevated = context1.elevated()
         fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
         fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                      address=fix_addr.address,
                                       allocated=True,
                                       virtual_interface_id=3,
                                       instance_uuid=instance.uuid,
                                       network=dict(test_network.fake_network,
                                                    **networks[1]))
         self.flags(force_dhcp_release=True)
+        fixed_update.return_value = fixed_get.return_value
         self.network.deallocate_fixed_ip(context1, fix_addr.address, 'fake')
+        fixed_update.assert_called_once_with(context1, fix_addr.address,
+                                             {'allocated': False,
+                                              'virtual_interface_id': None})
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')
