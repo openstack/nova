@@ -122,6 +122,8 @@ class ConductorAPI(object):
            security_group_rule_get_by_security_group()
     1.61 - Return deleted instance from instance_destroy()
     1.62 - Added object_backport()
+    1.63 - Changed the format of values['stats'] from a dict to a JSON string
+           in compute_node_update()
     """
 
     VERSION_ALIASES = {
@@ -358,7 +360,13 @@ class ConductorAPI(object):
 
     def compute_node_update(self, context, node, values, prune_stats=False):
         node_p = jsonutils.to_primitive(node)
-        cctxt = self.client.prepare(version='1.33')
+        if self.client.can_send_version('1.63'):
+            version = '1.63'
+        else:
+            version = '1.33'
+            if 'stats' in values:
+                values['stats'] = jsonutils.loads(values['stats'])
+        cctxt = self.client.prepare(version=version)
         return cctxt.call(context, 'compute_node_update',
                           node=node_p, values=values,
                           prune_stats=prune_stats)
