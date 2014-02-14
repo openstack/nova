@@ -10,6 +10,6 @@ psycopg2
 pylint==0.25.2
 python-subunit
 sphinx>=1.1.2,<1.2
-oslo.sphinx
+oslosphinx
 testrepository>=0.0.17
 testtools>=0.9.32
