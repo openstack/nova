@@ -69,15 +69,15 @@ CONF = cfg.CONF
 CONF.import_opt('vswitch_name', 'nova.virt.hyperv.vif', 'hyperv')
 
 
-class HyperVAPITestCase(test.NoDBTestCase):
-    """Unit tests for Hyper-V driver calls."""
+class HyperVAPIBaseTestCase(test.NoDBTestCase):
+    """Base unit tests class for Hyper-V driver calls."""
 
     def __init__(self, test_case_name):
         self._mox = mox.Mox()
-        super(HyperVAPITestCase, self).__init__(test_case_name)
+        super(HyperVAPIBaseTestCase, self).__init__(test_case_name)
 
     def setUp(self):
-        super(HyperVAPITestCase, self).setUp()
+        super(HyperVAPIBaseTestCase, self).setUp()
 
         self._user_id = 'fake'
         self._project_id = 'fake'
@@ -248,7 +248,11 @@ class HyperVAPITestCase(test.NoDBTestCase):
 
     def tearDown(self):
         self._mox.UnsetStubs()
-        super(HyperVAPITestCase, self).tearDown()
+        super(HyperVAPIBaseTestCase, self).tearDown()
+
+
+class HyperVAPITestCase(HyperVAPIBaseTestCase):
+    """Unit tests for Hyper-V driver calls."""
 
     def test_get_available_resource(self):
         cpu_info = {'Architecture': 'fake',
@@ -1666,7 +1670,7 @@ class HyperVAPITestCase(test.NoDBTestCase):
         self.assertEqual(fake_vm_id, connect_info['internal_access_path'])
 
 
-class VolumeOpsTestCase(HyperVAPITestCase):
+class VolumeOpsTestCase(HyperVAPIBaseTestCase):
     """Unit tests for VolumeOps class."""
 
     def setUp(self):
