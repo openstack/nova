@@ -60,7 +60,7 @@ class ComputeVMModeTest(test.NoDBTestCase):
 
     def test_name_none(self):
         mode = vm_mode.name(None)
-        self.assertEqual(None, mode)
+        self.assertIsNone(mode)
 
     def test_name_invalid(self):
         self.assertRaises(exception.Invalid, vm_mode.name, 'invalid')

@@ -1917,7 +1917,7 @@ class ImportMigratedDisksTestCase(VMUtilsTestBase):
         session = mock.Mock()
         vdi_ref = 'vdi_ref'
         vdi_rec = {'sm_config': {}}
-        self.assertEqual(None, vm_utils._get_vhd_parent_uuid(session,
+        self.assertIsNone(vm_utils._get_vhd_parent_uuid(session,
                                                              vdi_ref,
                                                              vdi_rec))
         self.assertFalse(session.call_xenapi.called)
