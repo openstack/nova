@@ -451,6 +451,12 @@ class ComputeManager(manager.SchedulerDependentManager):
         self.use_legacy_block_device_info = \
                             self.driver.need_legacy_block_device_info
 
+    def create_rpc_dispatcher(self, backdoor_port=None, additional_apis=None):
+        additional_apis = additional_apis or []
+        additional_apis.append(ComputeV3Proxy(self))
+        return super(ComputeManager, self).create_rpc_dispatcher(
+                     backdoor_port, additional_apis)
+
     def _get_resource_tracker(self, nodename):
         rt = self._resource_tracker_dict.get(nodename)
         if not rt:
@@ -1510,7 +1516,8 @@ class ComputeManager(manager.SchedulerDependentManager):
                                               legacy=False)
         block_device_mapping = (
             driver_block_device.convert_volumes(bdms) +
-            driver_block_device.convert_snapshots(bdms))
+            driver_block_device.convert_snapshots(bdms) +
+            driver_block_device.convert_images(bdms))
 
         if not refresh_conn_info:
             # if the block_device_mapping has no value in connection_info
@@ -3317,7 +3324,7 @@ class ComputeManager(manager.SchedulerDependentManager):
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance)
 
-        self.driver.resume(instance, network_info,
+        self.driver.resume(context, instance, network_info,
                            block_device_info)
 
         instance.power_state = self._get_power_state(context, instance)
@@ -5096,3 +5103,90 @@ class ComputeManager(manager.SchedulerDependentManager):
                     instance.cleaned = True
                 with utils.temporary_mutation(context, read_deleted='yes'):
                     instance.save(context)
+
+
+class ComputeV3Proxy(object):
+
+    # NOTE(russellb) The compute rpc API version 3.0 is exactly the same as
+    # 2.latest used in Havana, so we can safely pass it through directly to the
+    # 2.x implementation compute manager.
+    RPC_API_VERSION = '3.0'
+
+    supported_methods = (
+        'add_aggregate_host',
+        'add_fixed_ip_to_instance',
+        'attach_interface',
+        'attach_volume',
+        'change_instance_metadata',
+        'check_can_live_migrate_destination',
+        'check_can_live_migrate_source',
+        'check_instance_shared_storage',
+        'confirm_resize',
+        'detach_interface',
+        'detach_volume',
+        'finish_resize',
+        'finish_revert_resize',
+        'get_console_output',
+        'get_console_pool_info',
+        'get_console_topic',
+        'get_diagnostics',
+        'get_vnc_console',
+        'get_spice_console',
+        'validate_console_port',
+        'host_maintenance_mode',
+        'host_power_action',
+        'inject_file',
+        'inject_network_info',
+        'live_migration',
+        'pause_instance',
+        'post_live_migration_at_destination',
+        'power_off_instance',
+        'power_on_instance',
+        'pre_live_migration',
+        'prep_resize',
+        'reboot_instance',
+        'rebuild_instance',
+        'refresh_provider_fw_rules',
+        'remove_aggregate_host',
+        'remove_fixed_ip_from_instance',
+        'remove_volume_connection',
+        'rescue_instance',
+        'reset_network',
+        'resize_instance',
+        'resume_instance',
+        'revert_resize',
+        'rollback_live_migration_at_destination',
+        'run_instance',
+        'set_admin_password',
+        'set_host_enabled',
+        'swap_volume',
+        'get_host_uptime',
+        'reserve_block_device_name',
+        'live_snapshot_instance',
+        'backup_instance',
+        'snapshot_instance',
+        'start_instance',
+        'stop_instance',
+        'suspend_instance',
+        'terminate_instance',
+        'unpause_instance',
+        'unrescue_instance',
+        'soft_delete_instance',
+        'restore_instance',
+        'shelve_instance',
+        'shelve_offload_instance',
+        'unshelve_instance',
+        'volume_snapshot_create',
+        'volume_snapshot_delete',
+        'refresh_security_group_rules',
+        'refresh_security_group_members',
+        'refresh_instance_security_rules',
+    )
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def __getattr__(self, attr):
+        if attr not in self.supported_methods:
+            raise AttributeError()
+        return getattr(self.manager, attr)

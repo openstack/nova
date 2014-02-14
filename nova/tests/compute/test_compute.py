@@ -552,7 +552,6 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_poll_volume_usage_with_data(self):
         ctxt = 'MockContext'
         self.compute.host = 'MockHost'
-        curr_time = time.time()
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
@@ -566,7 +565,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         CONF.volume_usage_poll_interval = 10
         self.compute._last_vol_usage_poll = 0
         self.compute._poll_volume_usage(ctxt)
-        self.assertTrue((curr_time < self.compute._last_vol_usage_poll),
+        self.assertTrue(self.compute._last_vol_usage_poll > 0,
                         "_last_vol_usage_poll was not properly updated <%s>" %
                         self.compute._last_vol_usage_poll)
         self.mox.UnsetStubs()
@@ -2191,6 +2190,39 @@ class ComputeTestCase(BaseTestCase):
     def test_reboot_fail_running(self):
         self._test_reboot(False, fail_reboot=True,
                           fail_running=True)
+
+    def test_get_instance_volume_block_device_info_source_image(self):
+        def _fake_get_instance_volume_bdms(context, instance, legacy=True):
+            bdms = [{
+                'id': 3,
+                'volume_id': u'4cbc9e62-6ba0-45dd-b647-934942ead7d6',
+                'instance_uuid': 'fake-instance',
+                'device_name': '/dev/vda',
+                'connection_info': '{"driver_volume_type": "rbd"}',
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'image_id': 'fake-image-id-1',
+                'boot_index': 0
+            }]
+
+            return bdms
+
+        with mock.patch.object(self.compute, '_get_instance_volume_bdms',
+                               _fake_get_instance_volume_bdms):
+            block_device_info = (
+                self.compute._get_instance_volume_block_device_info(
+                    self.context, self._create_fake_instance())
+            )
+            expected = {
+                'block_device_mapping': [{
+                    'connection_info': {
+                        'driver_volume_type': 'rbd'
+                    },
+                    'mount_device': '/dev/vda',
+                    'delete_on_termination': None
+                }]
+            }
+            self.assertEqual(block_device_info, expected)
 
     def test_set_admin_password(self):
         # Ensure instance can have its admin password set.
@@ -9555,3 +9587,18 @@ class ComputeAPIClassNameTestCase(test.TestCase):
         self.flags(cell_type='fake_cell_type', group='cells')
         self.assertRaises(exception.InvalidInput,
                           compute._get_compute_api_class_name)
+
+
+class ComputeManagerV3TestCase(test.TestCase):
+    def test_v3_passes_through_to_v2(self):
+        self.count = 0
+
+        def _fake(*args, **kwargs):
+            self.count += 1
+
+        manager = compute_manager.ComputeManager()
+        proxy = compute_manager.ComputeV3Proxy(manager)
+        for m in proxy.supported_methods:
+            self.stubs.Set(manager, m, _fake)
+            getattr(proxy, m)()
+        self.assertEqual(self.count, len(proxy.supported_methods))

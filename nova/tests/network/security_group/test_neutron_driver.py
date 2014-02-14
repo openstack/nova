@@ -83,3 +83,99 @@ class TestNeutronDriver(test.NoDBTestCase):
         sg_api = security_groups.NativeNeutronSecurityGroupAPI()
         self.assertRaises(exception.SecurityGroupLimitExceeded,
                           sg_api.add_rules, self.context, None, name, [vals])
+
+    def test_instances_security_group_bindings(self):
+        server_id = 'c5a20e8d-c4b0-47cf-9dca-ebe4f758acb1'
+        port1_id = '4c505aec-09aa-47bc-bcc0-940477e84dc0'
+        port2_id = 'b3b31a53-6e29-479f-ae5c-00b7b71a6d44'
+        sg1_id = '2f7ce969-1a73-4ef9-bbd6-c9a91780ecd4'
+        sg2_id = '20c89ce5-9388-4046-896e-64ffbd3eb584'
+        servers = [{'id': server_id}]
+        ports = [{'id': port1_id, 'device_id': server_id,
+                  'security_groups': [sg1_id]},
+                 {'id': port2_id, 'device_id': server_id,
+                  'security_groups': [sg2_id]}]
+        port_list = {'ports': ports}
+        sg1 = {'id': sg1_id, 'name': 'wol'}
+        sg2 = {'id': sg2_id, 'name': 'eor'}
+        security_groups_list = {'security_groups': [sg1, sg2]}
+
+        sg_bindings = {server_id: [{'name': 'wol'}, {'name': 'eor'}]}
+
+        self.moxed_client.list_ports(device_id=[server_id]).AndReturn(
+            port_list)
+        self.moxed_client.list_security_groups(id=[sg2_id, sg1_id]).AndReturn(
+            security_groups_list)
+        self.mox.ReplayAll()
+
+        sg_api = neutron_driver.SecurityGroupAPI()
+        result = sg_api.get_instances_security_groups_bindings(
+                                  self.context, servers)
+        self.assertEquals(result, sg_bindings)
+
+    def _test_instances_security_group_bindings_scale(self, num_servers):
+        max_query = 150
+        sg1_id = '2f7ce969-1a73-4ef9-bbd6-c9a91780ecd4'
+        sg2_id = '20c89ce5-9388-4046-896e-64ffbd3eb584'
+        sg1 = {'id': sg1_id, 'name': 'wol'}
+        sg2 = {'id': sg2_id, 'name': 'eor'}
+        security_groups_list = {'security_groups': [sg1, sg2]}
+        servers = []
+        device_ids = []
+        ports = []
+        sg_bindings = {}
+        for i in xrange(0, num_servers):
+            server_id = "server-%d" % i
+            port_id = "port-%d" % i
+            servers.append({'id': server_id})
+            device_ids.append(server_id)
+            ports.append({'id': port_id,
+                          'device_id': server_id,
+                          'security_groups': [sg1_id, sg2_id]})
+            sg_bindings[server_id] = [{'name': 'wol'}, {'name': 'eor'}]
+
+        for x in xrange(0, num_servers, max_query):
+            self.moxed_client.list_ports(
+                       device_id=device_ids[x:x + max_query]).\
+                       AndReturn({'ports': ports[x:x + max_query]})
+
+        self.moxed_client.list_security_groups(id=[sg2_id, sg1_id]).AndReturn(
+            security_groups_list)
+        self.mox.ReplayAll()
+
+        sg_api = neutron_driver.SecurityGroupAPI()
+        result = sg_api.get_instances_security_groups_bindings(
+                                  self.context, servers)
+        self.assertEquals(result, sg_bindings)
+
+    def test_instances_security_group_bindings_less_than_max(self):
+        self._test_instances_security_group_bindings_scale(100)
+
+    def test_instances_security_group_bindings_max(self):
+        self._test_instances_security_group_bindings_scale(150)
+
+    def test_instances_security_group_bindings_more_then_max(self):
+        self._test_instances_security_group_bindings_scale(300)
+
+    def test_instances_security_group_bindings_with_hidden_sg(self):
+        servers = [{'id': 'server_1'}]
+        ports = [{'id': '1', 'device_id': 'dev_1', 'security_groups': ['1']},
+                 {'id': '2', 'device_id': 'dev_1', 'security_groups': ['2']}]
+        port_list = {'ports': ports}
+        sg1 = {'id': '1', 'name': 'wol'}
+        sg2 = {'id': '2', 'name': 'eor'}
+        # User doesn't have access to sg2
+        security_groups_list = {'security_groups': [sg1]}
+
+        sg_bindings = {'dev_1': [{'name': 'wol'}]}
+
+        self.moxed_client.list_ports(device_id=['server_1']).AndReturn(
+            port_list)
+        self.moxed_client.list_security_groups(id=['1', '2']).AndReturn(
+            security_groups_list)
+        self.mox.ReplayAll()
+
+        sg_api = neutron_driver.SecurityGroupAPI()
+        result = sg_api.get_instances_security_groups_bindings(
+                                  self.context, servers)
+        self.assertEquals(result, sg_bindings)

@@ -21,6 +21,9 @@
 Test suite for VMwareAPI.
 """
 
+import contextlib
+
+import mock
 import mox
 from oslo.config import cfg
 
@@ -43,6 +46,7 @@ from nova import utils as nova_utils
 from nova.virt import driver as v_driver
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vm_util
@@ -52,10 +56,87 @@ from nova.virt.vmwareapi import volume_util
 from nova.virt.vmwareapi import volumeops
 
 
-class fake_vm_ref(object):
-    def __init__(self):
-        self.value = 4
-        self._type = 'VirtualMachine'
+class VMwareSessionTestCase(test.NoDBTestCase):
+
+    def _fake_is_vim_object(self, module):
+        return True
+
+    @mock.patch('time.sleep')
+    def test_call_method_vim_fault(self, mock_sleep):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        def _fake_session_is_active(self):
+            return False
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(driver.VMwareAPISession, '_session_is_active',
+                              _fake_session_is_active)
+        ) as (_fake_vim, _fake_create, _fake_is_active):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.VimFaultException,
+                              api_session._call_method,
+                              stubs, 'fake_temp_method_exception',
+                              *args, **kwargs)
+
+    def test_call_method_vim_empty(self):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        def _fake_session_is_active(self):
+            return True
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+            mock.patch.object(driver.VMwareAPISession, '_session_is_active',
+                              _fake_session_is_active)
+        ) as (_fake_vim, _fake_create, _fake_is_active):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            res = api_session._call_method(stubs, 'fake_temp_method_exception',
+                                           *args, **kwargs)
+            self.assertEqual([], res)
+
+    @mock.patch('time.sleep')
+    def test_call_method_session_exception(self, mock_sleep):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+        ) as (_fake_vim, _fake_create):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            self.assertRaises(error_util.SessionConnectionException,
+                              api_session._call_method,
+                              stubs, 'fake_temp_session_exception',
+                              *args, **kwargs)
 
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):
@@ -124,10 +205,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.node_name = 'test_url'
+        self.ds = 'ds1'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        vmwareapi_fake.reset()
         db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
+        vmwareapi_fake.reset()
         self.conn = driver.VMwareESXDriver(fake.FakeVirtAPI)
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
@@ -278,8 +360,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """
 
         self._create_vm()
-        inst_file_path = '[fake-ds] %s/fake_name.vmdk' % self.uuid
-        cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
+        inst_file_path = '[%s] %s/fake_name.vmdk' % (self.ds, self.uuid)
+        cache_file_path = '[%s] vmware_base/fake_image_uuid.vmdk' % self.ds
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
         self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
 
@@ -287,8 +369,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
         self._create_vm()
-        cache_file_path = '[fake-ds] vmware_base/fake_image_uuid.vmdk'
-        cache_root_path = '[fake-ds] vmware_base/fake_image_uuid.80.vmdk'
+        cache_file_path = '[%s] vmware_base/fake_image_uuid.vmdk' % self.ds
+        cache_root_path = '[%s] vmware_base/fake_image_uuid.80.vmdk' % self.ds
         self.assertTrue(vmwareapi_fake.get_file(cache_file_path))
         self.assertTrue(vmwareapi_fake.get_file(cache_root_path))
 
@@ -502,7 +584,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.SUSPENDED)
-        self.conn.resume(self.instance, self.network_info)
+        self.conn.resume(self.context, self.instance, self.network_info)
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
@@ -510,7 +592,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_resume_non_existent(self):
         self._create_instance_in_the_db()
         self.assertRaises(exception.InstanceNotFound, self.conn.resume,
-                          self.instance, self.network_info)
+                          self.context, self.instance, self.network_info)
 
     def test_resume_not_suspended(self):
         self._create_vm()
@@ -518,7 +600,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
         self.assertRaises(exception.InstanceResumeFailure, self.conn.resume,
-                          self.instance, self.network_info)
+                          self.context, self.instance, self.network_info)
 
     def test_power_on(self):
         self._create_vm()
@@ -1048,9 +1130,14 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.flags(cluster_name=[cluster_name, cluster_name2],
                    task_poll_interval=10, datastore_regex='.*', group='vmware')
         self.flags(vnc_enabled=False)
+        vmwareapi_fake.reset(vc=True)
         self.conn = driver.VMwareVCDriver(None, False)
         self.node_name = self.conn._resources.keys()[0]
         self.node_name2 = self.conn._resources.keys()[1]
+        if cluster_name2 in self.node_name2:
+            self.ds = 'ds1'
+        else:
+            self.ds = 'ds2'
         self.vnc_host = 'ha-host'
 
     def tearDown(self):
@@ -1164,11 +1251,11 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         # Check calls for delete vmdk and -flat.vmdk pair
         self.conn._vmops._delete_datastore_file(
                 mox.IgnoreArg(),
-                "[fake-ds] vmware-tmp/%s-flat.vmdk" % uuid_str,
+                "[%s] vmware-tmp/%s-flat.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
         self.conn._vmops._delete_datastore_file(
                 mox.IgnoreArg(),
-                "[fake-ds] vmware-tmp/%s.vmdk" % uuid_str,
+                "[%s] vmware-tmp/%s.vmdk" % (self.ds, uuid_str),
                 mox.IgnoreArg()).AndReturn(None)
 
         self.mox.ReplayAll()
@@ -1230,3 +1317,10 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def test_confirm_migration(self):
         self._create_vm()
         self.conn.confirm_migration(self.context, self.instance, None)
+
+    def test_datastore_dc_map(self):
+        vmops = self.conn._resources[self.node_name]['vmops']
+        self.assertEqual({}, vmops._datastore_dc_mapping)
+        self._create_vm()
+        # currently there are 2 data stores
+        self.assertEqual(2, len(vmops._datastore_dc_mapping))

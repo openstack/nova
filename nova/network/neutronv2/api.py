@@ -191,7 +191,6 @@ class API(base.Base):
                 raise exception.PortLimitExceeded()
             raise
 
-    @refresh_cache
     def allocate_for_instance(self, context, instance, **kwargs):
         """Allocate network resources for the instance.
 
@@ -402,7 +401,8 @@ class API(base.Base):
         LOG.debug(_('deallocate_for_instance() for %s'),
                   instance['display_name'])
         search_opts = {'device_id': instance['uuid']}
-        data = neutronv2.get_client(context).list_ports(**search_opts)
+        neutron = neutronv2.get_client(context)
+        data = neutron.list_ports(**search_opts)
         ports = [port['id'] for port in data.get('ports', [])]
 
         requested_networks = kwargs.get('requested_networks') or {}
@@ -411,12 +411,15 @@ class API(base.Base):
 
         for port in ports:
             try:
-                neutronv2.get_client(context).delete_port(port)
-            except Exception:
-                LOG.exception(_("Failed to delete neutron port %(portid)s")
-                              % {'portid': port})
+                neutron.delete_port(port)
+            except neutronv2.exceptions.NeutronClientException as e:
+                if e.status_code == 404:
+                    LOG.warning(_("Port %s does not exist"), port)
+                else:
+                    with excutils.save_and_reraise_exception():
+                        LOG.exception(_("Failed to delete neutron port %s"),
+                                      port)
 
-    @refresh_cache
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None,
                                    conductor_api=None):
@@ -425,7 +428,6 @@ class API(base.Base):
                 requested_networks=[(network_id, requested_ip, port_id)],
                 conductor_api=conductor_api)
 
-    @refresh_cache
     def deallocate_port_for_instance(self, context, instance, port_id,
                                      conductor_api=None):
         """Remove a specified port from the instance.
@@ -933,12 +935,18 @@ class API(base.Base):
         return subnets
 
     def _nw_info_build_network(self, port, networks, subnets):
-        # NOTE(danms): This loop can't fail to find a network since we
-        # filtered ports to only the ones matching networks in our parent
+        network_name = None
         for net in networks:
             if port['network_id'] == net['id']:
                 network_name = net['name']
+                tenant_id = net['tenant_id']
                 break
+        else:
+            tenant_id = port['tenant_id']
+            LOG.warning(_("Network %(id)s not matched with the tenants "
+                          "network! The ports tenant %(tenant_id)s will be "
+                          "used."),
+                        {'id': port['network_id'], 'tenant_id': tenant_id})
 
         bridge = None
         ovs_interfaceid = None
@@ -962,7 +970,7 @@ class API(base.Base):
             bridge=bridge,
             injected=CONF.flat_injected,
             label=network_name,
-            tenant_id=net['tenant_id']
+            tenant_id=tenant_id
             )
         network['subnets'] = subnets
         port_profile = port.get('binding:profile')
@@ -976,11 +984,15 @@ class API(base.Base):
         return network, ovs_interfaceid
 
     def _build_network_info_model(self, context, instance, networks=None):
+        # Note(arosen): on interface-attach networks only contains the
+        # network that the interface is being attached to.
+
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
         client = neutronv2.get_client(context, admin=True)
         data = client.list_ports(**search_opts)
         ports = data.get('ports', [])
+        nw_info = network_model.NetworkInfo()
         if networks is None:
             # retrieve networks from info_cache to get correct nic order
             network_cache = self.conductor_api.instance_get_by_uuid(
@@ -988,17 +1000,37 @@ class API(base.Base):
             network_cache = jsonutils.loads(network_cache)
             net_ids = [iface['network']['id'] for iface in network_cache]
             networks = self._get_available_networks(context,
-                                                    instance['project_id'])
+                                                    instance['project_id'],
+                                                    net_ids)
 
         # ensure ports are in preferred network order, and filter out
         # those not attached to one of the provided list of networks
         else:
+
+            # Unfortunately, this is sometimes in unicode and sometimes not
+            if isinstance(instance['info_cache']['network_info'], unicode):
+                ifaces = jsonutils.loads(
+                    instance['info_cache']['network_info'])
+            else:
+                ifaces = instance['info_cache']['network_info']
+
+            # Include existing interfaces so they are not removed from the db.
+            # Needed when interfaces are added to existing instances.
+            for iface in ifaces:
+                nw_info.append(network_model.VIF(
+                    id=iface['id'],
+                    address=iface['address'],
+                    network=iface['network'],
+                    type=iface['type'],
+                    ovs_interfaceid=iface['ovs_interfaceid'],
+                    devname=iface['devname']))
+
             net_ids = [n['id'] for n in networks]
+
         ports = [port for port in ports if port['network_id'] in net_ids]
         _ensure_requested_network_ordering(lambda x: x['network_id'],
                                            ports, net_ids)
 
-        nw_info = network_model.NetworkInfo()
         for port in ports:
             network_IPs = self._nw_info_get_ips(client, port)
             subnets = self._nw_info_get_subnets(context, port, network_IPs)

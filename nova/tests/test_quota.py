@@ -2415,47 +2415,55 @@ class NoopQuotaDriverTestCase(test.TestCase):
                    max_age=0,
                    )
 
-        self.expected_quotas = dict([(r, -1)
-                                     for r in quota.QUOTAS._resources])
+        self.expected_with_usages = {}
+        self.expected_without_usages = {}
+        self.expected_without_dict = {}
+        for r in quota.QUOTAS._resources:
+            self.expected_with_usages[r] = dict(limit=-1,
+                                                in_use=-1,
+                                                reserved=-1)
+            self.expected_without_usages[r] = dict(limit=-1)
+            self.expected_without_dict[r] = -1
+
         self.driver = quota.NoopQuotaDriver()
 
     def test_get_defaults(self):
         # Use our pre-defined resources
         result = self.driver.get_defaults(None, quota.QUOTAS._resources)
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_without_dict, result)
 
     def test_get_class_quotas(self):
         result = self.driver.get_class_quotas(None,
                                               quota.QUOTAS._resources,
                                               'test_class')
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_without_dict, result)
 
     def test_get_class_quotas_no_defaults(self):
         result = self.driver.get_class_quotas(None,
                                               quota.QUOTAS._resources,
                                               'test_class',
                                               False)
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_without_dict, result)
 
     def test_get_project_quotas(self):
         result = self.driver.get_project_quotas(None,
                                                 quota.QUOTAS._resources,
                                                 'test_project')
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_with_usages, result)
 
     def test_get_user_quotas(self):
         result = self.driver.get_user_quotas(None,
                                              quota.QUOTAS._resources,
                                              'test_project',
                                              'fake_user')
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_with_usages, result)
 
     def test_get_project_quotas_no_defaults(self):
         result = self.driver.get_project_quotas(None,
                                                 quota.QUOTAS._resources,
                                                 'test_project',
                                                 defaults=False)
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_with_usages, result)
 
     def test_get_user_quotas_no_defaults(self):
         result = self.driver.get_user_quotas(None,
@@ -2463,14 +2471,14 @@ class NoopQuotaDriverTestCase(test.TestCase):
                                              'test_project',
                                              'fake_user',
                                              defaults=False)
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_with_usages, result)
 
     def test_get_project_quotas_no_usages(self):
         result = self.driver.get_project_quotas(None,
                                                 quota.QUOTAS._resources,
                                                 'test_project',
                                                 usages=False)
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_without_usages, result)
 
     def test_get_user_quotas_no_usages(self):
         result = self.driver.get_user_quotas(None,
@@ -2478,4 +2486,4 @@ class NoopQuotaDriverTestCase(test.TestCase):
                                              'test_project',
                                              'fake_user',
                                              usages=False)
-        self.assertEqual(self.expected_quotas, result)
+        self.assertEqual(self.expected_without_usages, result)

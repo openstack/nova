@@ -96,9 +96,14 @@ def fake_get_instance_security_groups(*args, **kwargs):
     return [{'name': 'fake'}]
 
 
-def fake_get_instances_security_groups_bindings(inst, context):
-    return {UUID1: [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}],
-            UUID2: [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}]}
+def fake_get_instances_security_groups_bindings(inst, context, servers):
+    groups = {UUID1: [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}],
+              UUID2: [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}],
+              UUID3: [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}]}
+    result = {}
+    for server in servers:
+        result[server['id']] = groups.get(server['id'])
+    return result
 
 
 class SecurityGroupsOutputTest(test.TestCase):

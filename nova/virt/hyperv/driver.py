@@ -100,7 +100,7 @@ class HyperVDriver(driver.ComputeDriver):
     def suspend(self, instance):
         self._vmops.suspend(instance)
 
-    def resume(self, instance, network_info, block_device_info=None):
+    def resume(self, context, instance, network_info, block_device_info=None):
         self._vmops.resume(instance)
 
     def power_off(self, instance):

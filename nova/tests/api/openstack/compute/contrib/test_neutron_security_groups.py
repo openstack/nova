@@ -164,6 +164,7 @@ class TestNeutronSecurityGroups(
         self._create_network()
         fake_instance = {'project_id': 'fake_tenant',
                          'availability_zone': 'zone_one',
+                         'info_cache': {'network_info': []},
                          'security_groups': [],
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance'}
@@ -270,6 +271,8 @@ class TestNeutronSecurityGroups(
         self.manager._removeSecurityGroup(req, '1', body)
 
     def test_get_instances_security_groups_bindings(self):
+        servers = [{'id': test_security_groups.FAKE_UUID1},
+                   {'id': test_security_groups.FAKE_UUID2}]
         sg1 = self._create_sg_template(name='test1').get('security_group')
         sg2 = self._create_sg_template(name='test2').get('security_group')
         # test name='' is replaced with id
@@ -290,8 +293,8 @@ class TestNeutronSecurityGroups(
         security_group_api = self.controller.security_group_api
         bindings = (
             security_group_api.get_instances_security_groups_bindings(
-                context.get_admin_context()))
-        self.assertEquals(bindings, expected)
+                context.get_admin_context(), servers))
+        self.assertEqual(bindings, expected)
 
     def test_get_instance_security_groups(self):
         sg1 = self._create_sg_template(name='test1').get('security_group')
@@ -763,7 +766,7 @@ class MockClient(object):
         device_id = _params.get('device_id')
         for port in self._fake_ports.values():
             if device_id:
-                if device_id == port['device_id']:
+                if port['device_id'] in device_id:
                     ret.append(port)
             else:
                 ret.append(port)

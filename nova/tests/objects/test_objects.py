@@ -15,6 +15,8 @@
 import contextlib
 import datetime
 import iso8601
+
+import mock
 import netaddr
 
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -469,6 +471,16 @@ class _TestObject(object):
         self.assertRaises(exception.UnsupportedObjectError,
                           base.NovaObject.obj_class_from_name, 'foo', '1.0')
 
+    def test_obj_class_from_name_supported_version(self):
+        error = None
+        try:
+            base.NovaObject.obj_class_from_name('MyObj', '1.25')
+        except exception.IncompatibleObjectVersion as error:
+            pass
+
+        self.assertIsNotNone(error)
+        self.assertEqual('1.5', error.kwargs['supported'])
+
     def test_with_alternate_context(self):
         ctxt1 = context.RequestContext('foo', 'foo')
         ctxt2 = context.RequestContext('bar', 'alternate')
@@ -693,6 +705,19 @@ class TestObjectSerializer(_BaseTestCase):
         ser = base.NovaObjectSerializer()
         for thing in (1, 'foo', [1, 2], {'foo': 'bar'}):
             self.assertEqual(thing, ser.deserialize_entity(None, thing))
+
+    def test_deserialize_entity_newer_version(self):
+        ser = base.NovaObjectSerializer()
+        ser._conductor = mock.Mock()
+        ser._conductor.object_backport.return_value = 'backported'
+        obj = MyObj()
+        obj.VERSION = '1.25'
+        primitive = obj.obj_to_primitive()
+        result = ser.deserialize_entity(self.context, primitive)
+        self.assertEqual('backported', result)
+        ser._conductor.object_backport.assert_called_with(self.context,
+                                                          primitive,
+                                                          '1.5')
 
     def test_object_serialization(self):
         ser = base.NovaObjectSerializer()

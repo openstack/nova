@@ -119,7 +119,7 @@ vmwareapi_opts = [
 CONF = cfg.CONF
 CONF.register_opts(vmwareapi_opts, 'vmware')
 
-TIME_BETWEEN_API_CALL_RETRIES = 2.0
+TIME_BETWEEN_API_CALL_RETRIES = 1.0
 
 
 class Failure(Exception):
@@ -212,7 +212,7 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Suspend the specified instance."""
         self._vmops.suspend(instance)
 
-    def resume(self, instance, network_info, block_device_info=None):
+    def resume(self, context, instance, network_info, block_device_info=None):
         """Resume the suspended VM instance."""
         self._vmops.resume(instance)
 
@@ -685,7 +685,7 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.suspend(instance)
 
-    def resume(self, instance, network_info, block_device_info=None):
+    def resume(self, context, instance, network_info, block_device_info=None):
         """Resume the suspended VM instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.resume(instance)
@@ -760,7 +760,7 @@ class VMwareAPISession(object):
         self._host_password = password
         self._api_retry_count = retry_count
         self._scheme = scheme
-        self._session_id = None
+        self._session = None
         self.vim = None
         self._create_session()
 
@@ -785,11 +785,11 @@ class VMwareAPISession(object):
                 # Terminate the earlier session, if possible ( For the sake of
                 # preserving sessions as there is a limit to the number of
                 # sessions we can have )
-                if self._session_id:
+                if self._session:
                     try:
                         self.vim.TerminateSession(
                                 self.vim.get_service_content().sessionManager,
-                                sessionId=[self._session_id])
+                                sessionId=[self._session.key])
                     except Exception as excep:
                         # This exception is something we can live with. It is
                         # just an extra caution on our side. The session may
@@ -797,7 +797,7 @@ class VMwareAPISession(object):
                         # SessionIsActive, but that is an overhead because we
                         # anyway would have to call TerminateSession.
                         LOG.debug(excep)
-                self._session_id = session.key
+                self._session = session
                 return
             except Exception as excep:
                 LOG.critical(_("Unable to connect to server at %(server)s, "
@@ -823,6 +823,18 @@ class VMwareAPISession(object):
         """Check if the module is a VIM Object instance."""
         return isinstance(module, vim.Vim)
 
+    def _session_is_active(self):
+        active = False
+        try:
+            active = self.vim.SessionIsActive(
+                    self.vim.get_service_content().sessionManager,
+                    sessionID=self._session.key,
+                    userName=self._session.userName)
+        except Exception as e:
+            LOG.warning(_("Unable to validate session %s!"),
+                        self._session.key)
+        return active
+
     def _call_method(self, module, method, *args, **kwargs):
         """
         Calls a method within the module specified with
@@ -831,7 +843,6 @@ class VMwareAPISession(object):
         args = list(args)
         retry_count = 0
         exc = None
-        last_fault_list = []
         while True:
             try:
                 if not self._is_vim_object(module):
@@ -857,14 +868,12 @@ class VMwareAPISession(object):
                     # RetrievePropertiesResponse and also the same is returned
                     # when there is say empty answer to the query for
                     # VMs on the host ( as in no VMs on the host), we have no
-                    # way to differentiate.
-                    # So if the previous response was also am empty response
-                    # and after creating a new session, we get the same empty
-                    # response, then we are sure of the response being supposed
-                    # to be empty.
-                    if error_util.FAULT_NOT_AUTHENTICATED in last_fault_list:
+                    # way to differentiate. We thus check if the session is
+                    # active
+                    if self._session_is_active():
                         return []
-                    last_fault_list = excep.fault_list
+                    LOG.warning(_("Session %s is inactive!"),
+                                self._session.key)
                     self._create_session()
                 else:
                     # No re-trying for errors for API call has gone through
@@ -875,6 +884,10 @@ class VMwareAPISession(object):
                 # For exceptions which may come because of session overload,
                 # we retry
                 exc = excep
+            except error_util.SessionConnectionException as excep:
+                # For exceptions with connections we create the session
+                exc = excep
+                self._create_session()
             except Exception as excep:
                 # If it is a proper exception, say not having furnished
                 # proper data in the SOAP call or the retry limit having
@@ -887,8 +900,8 @@ class VMwareAPISession(object):
                 break
             time.sleep(TIME_BETWEEN_API_CALL_RETRIES)
 
-        LOG.critical(_("In vmwareapi:_call_method, "
-                     "got this exception: %s") % exc)
+        LOG.critical(_("In vmwareapi: _call_method (session=%s)"),
+                     self._session.key, exc_info=True)
         raise
 
     def _get_vim(self):

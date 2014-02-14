@@ -203,7 +203,7 @@ class FakeDriver(driver.ComputeDriver):
     def suspend(self, instance):
         pass
 
-    def resume(self, instance, network_info, block_device_info=None):
+    def resume(self, context, instance, network_info, block_device_info=None):
         pass
 
     def destroy(self, instance, network_info, block_device_info=None,

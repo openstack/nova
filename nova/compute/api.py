@@ -3412,9 +3412,11 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         group = {'name': name,
                  'description': description}
 
+        columns_to_join = ['rules.grantee_group']
         group_ref = self.db.security_group_update(context,
-                                                  security_group['id'],
-                                                  group)
+                security_group['id'],
+                group,
+                columns_to_join=columns_to_join)
         return group_ref
 
     def get(self, context, name=None, id=None, map_exception=False):

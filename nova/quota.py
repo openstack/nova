@@ -662,6 +662,18 @@ class NoopQuotaDriver(object):
             quotas[resource.name] = -1
         return quotas
 
+    def _get_noop_quotas(self, resources, usages=None, remains=False):
+        quotas = {}
+        for resource in resources.values():
+            quotas[resource.name] = {}
+            quotas[resource.name]['limit'] = -1
+            if usages:
+                quotas[resource.name]['in_use'] = -1
+                quotas[resource.name]['reserved'] = -1
+            if remains:
+                quotas[resource.name]['remains'] = -1
+        return quotas
+
     def get_user_quotas(self, context, resources, project_id, user_id,
                         quota_class=None, defaults=True,
                         usages=True):
@@ -685,10 +697,7 @@ class NoopQuotaDriver(object):
         :param usages: If True, the current in_use and reserved counts
                        will also be returned.
         """
-        quotas = {}
-        for resource in resources.values():
-            quotas[resource.name] = -1
-        return quotas
+        return self._get_noop_quotas(resources, usages=usages)
 
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
@@ -714,10 +723,7 @@ class NoopQuotaDriver(object):
         :param remains: If True, the current remains of the project will
                         will be returned.
         """
-        quotas = {}
-        for resource in resources.values():
-            quotas[resource.name] = -1
-        return quotas
+        return self._get_noop_quotas(resources, usages=usages, remains=remains)
 
     def get_settable_quotas(self, context, resources, project_id,
                             user_id=None):

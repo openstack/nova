@@ -422,10 +422,11 @@ class TestSecurityGroups(test.TestCase):
             self.assertEquals(sg['id'], group_id)
             return security_group_db(sg)
 
-        def return_update_security_group(context, group_id, values):
-            self.assertEquals(sg_update['id'], group_id)
-            self.assertEquals(sg_update['name'], values['name'])
-            self.assertEquals(sg_update['description'], values['description'])
+        def return_update_security_group(context, group_id, values,
+                                         columns_to_join=None):
+            self.assertEqual(sg_update['id'], group_id)
+            self.assertEqual(sg_update['name'], values['name'])
+            self.assertEqual(sg_update['description'], values['description'])
             return security_group_db(sg_update)
 
         self.stubs.Set(nova.db, 'security_group_update',
@@ -1509,9 +1510,14 @@ def fake_compute_create(*args, **kwargs):
     return ([fake_compute_get(*args, **kwargs)], '')
 
 
-def fake_get_instances_security_groups_bindings(inst, context):
-    return {UUID1: [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}],
-            UUID2: [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}]}
+def fake_get_instances_security_groups_bindings(inst, context, servers):
+    groups = {UUID1: [{'name': 'fake-0-0'}, {'name': 'fake-0-1'}],
+              UUID2: [{'name': 'fake-1-0'}, {'name': 'fake-1-1'}],
+              UUID3: [{'name': 'fake-2-0'}, {'name': 'fake-2-1'}]}
+    result = {}
+    for server in servers:
+        result[server['id']] = groups.get(server['id'])
+    return result
 
 
 class SecurityGroupsOutputTest(test.TestCase):
