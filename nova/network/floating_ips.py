@@ -23,6 +23,7 @@ from nova.db import base
 from nova import exception
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import dns_domain as dns_domain_obj
+from nova.objects import fixed_ip as fixed_ip_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -81,9 +82,9 @@ class FloatingIP(object):
             fixed_ip_id = floating_ip.get('fixed_ip_id')
             if fixed_ip_id:
                 try:
-                    fixed_ip = self.db.fixed_ip_get(admin_context,
-                                                    fixed_ip_id,
-                                                    get_network=True)
+                    fixed_ip = fixed_ip_obj.FixedIP.get_by_id(
+                        admin_context, fixed_ip_id,
+                        expected_attrs=['network'])
                 except exception.FixedIpNotFound:
                     msg = _('Fixed ip %s not found') % fixed_ip_id
                     LOG.debug(msg)
@@ -91,9 +92,9 @@ class FloatingIP(object):
                 interface = CONF.public_interface or floating_ip['interface']
                 try:
                     self.l3driver.add_floating_ip(floating_ip['address'],
-                                                  fixed_ip['address'],
+                                                  fixed_ip.address,
                                                   interface,
-                                                  fixed_ip['network'])
+                                                  fixed_ip.network)
                 except processutils.ProcessExecutionError:
                     LOG.debug(_('Interface %s not found'), interface)
                     raise exception.NoFloatingIpInterface(interface=interface)
@@ -156,19 +157,19 @@ class FloatingIP(object):
             instance_uuid = instance['uuid']
 
         try:
-            fixed_ips = self.db.fixed_ip_get_by_instance(context,
-                                                         instance_uuid)
+            fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(
+                context, instance_uuid)
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
         # add to kwargs so we can pass to super to save a db lookup there
         kwargs['fixed_ips'] = fixed_ips
         for fixed_ip in fixed_ips:
-            fixed_id = fixed_ip['id']
+            fixed_id = fixed_ip.id
             floating_ips = self.db.floating_ip_get_by_fixed_ip_id(context,
                                                                   fixed_id)
             # disassociate floating ips related to fixed_ip
             for floating_ip in floating_ips:
-                address = floating_ip['address']
+                address = str(floating_ip.address)
                 try:
                     self.disassociate_floating_ip(context,
                                                   address,
@@ -310,20 +311,21 @@ class FloatingIP(object):
         orig_instance_uuid = None
         if floating_ip['fixed_ip_id']:
             # find previously associated instance
-            fixed_ip = self.db.fixed_ip_get(context,
-                                            floating_ip['fixed_ip_id'])
-            if fixed_ip['address'] == fixed_address:
+            fixed_ip = fixed_ip_obj.FixedIP.get_by_id(
+                context, floating_ip['fixed_ip_id'])
+            if str(fixed_ip.address) == fixed_address:
                 # NOTE(vish): already associated to this address
                 return
-            orig_instance_uuid = fixed_ip['instance_uuid']
+            orig_instance_uuid = fixed_ip.instance_uuid
 
             self.disassociate_floating_ip(context, floating_address)
 
-        fixed_ip = self.db.fixed_ip_get_by_address(context, fixed_address)
+        fixed_ip = fixed_ip_obj.FixedIP.get_by_address(context,
+                                                       fixed_address)
 
         # send to correct host, unless i'm the correct host
         network = self.db.network_get(context.elevated(),
-                                      fixed_ip['network_id'])
+                                      fixed_ip.network_id)
         if network['multi_host']:
             instance = self.db.instance_get_by_uuid(context,
                                                     fixed_ip['instance_uuid'])
@@ -336,12 +338,12 @@ class FloatingIP(object):
             # i'm the correct host
             self._associate_floating_ip(context, floating_address,
                                         fixed_address, interface,
-                                        fixed_ip['instance_uuid'])
+                                        fixed_ip.instance_uuid)
         else:
             # send to correct host
             self.network_rpcapi._associate_floating_ip(context,
                     floating_address, fixed_address, interface, host,
-                    fixed_ip['instance_uuid'])
+                    fixed_ip.instance_uuid)
 
         return orig_instance_uuid
 
@@ -410,15 +412,16 @@ class FloatingIP(object):
             floating_address = floating_ip['address']
             raise exception.FloatingIpNotAssociated(address=floating_address)
 
-        fixed_ip = self.db.fixed_ip_get(context, floating_ip['fixed_ip_id'])
+        fixed_ip = fixed_ip_obj.FixedIP.get_by_id(context,
+                                                  floating_ip['fixed_ip_id'])
 
         # send to correct host, unless i'm the correct host
         network = self.db.network_get(context.elevated(),
-                                      fixed_ip['network_id'])
+                                      fixed_ip.network_id)
         interface = floating_ip.get('interface')
         if network['multi_host']:
             instance = self.db.instance_get_by_uuid(context,
-                                                    fixed_ip['instance_uuid'])
+                                                    fixed_ip.instance_uuid)
             service = self.db.service_get_by_host_and_topic(
                     context.elevated(), instance['host'], CONF.network_topic)
             if service and self.servicegroup_api.service_is_up(service):
@@ -436,11 +439,11 @@ class FloatingIP(object):
         if host == self.host:
             # i'm the correct host
             self._disassociate_floating_ip(context, address, interface,
-                                           fixed_ip['instance_uuid'])
+                                           fixed_ip.instance_uuid)
         else:
             # send to correct host
             self.network_rpcapi._disassociate_floating_ip(context, address,
-                    interface, host, fixed_ip['instance_uuid'])
+                    interface, host, fixed_ip.instance_uuid)
 
     def _disassociate_floating_ip(self, context, address, interface,
                                   instance_uuid):
@@ -545,13 +548,13 @@ class FloatingIP(object):
                 continue
 
             interface = CONF.public_interface or floating_ip['interface']
-            fixed_ip = self.db.fixed_ip_get(context,
-                                            floating_ip['fixed_ip_id'],
-                                            get_network=True)
+            fixed_ip = fixed_ip_obj.FixedIP.get_by_id(
+                context, floating_ip['fixed_ip_id'],
+                expected_attrs=['network'])
             self.l3driver.remove_floating_ip(floating_ip['address'],
-                                             fixed_ip['address'],
+                                             fixed_ip.address,
                                              interface,
-                                             fixed_ip['network'])
+                                             fixed_ip.network)
 
             # NOTE(ivoks): Destroy conntrack entries on source compute
             # host.
@@ -593,13 +596,13 @@ class FloatingIP(object):
                                        {'host': dest})
 
             interface = CONF.public_interface or floating_ip['interface']
-            fixed_ip = self.db.fixed_ip_get(context,
-                                            floating_ip['fixed_ip_id'],
-                                            get_network=True)
+            fixed_ip = fixed_ip_obj.FixedIP.get_by_id(
+                context, floating_ip['fixed_ip_id'],
+                expected_attrs=['network'])
             self.l3driver.add_floating_ip(floating_ip['address'],
-                                          fixed_ip['address'],
+                                          fixed_ip.address,
                                           interface,
-                                          fixed_ip['network'])
+                                          fixed_ip.network)
 
     def _prepare_domain_entry(self, context, domainref):
         scope = domainref.scope
