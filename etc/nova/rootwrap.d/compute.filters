@@ -155,6 +155,7 @@ brctl: CommandFilter, brctl, root
 mkswap: CommandFilter, mkswap, root
 
 # nova/virt/xenapi/vm_utils.py: 'mkfs'
+# nova/utils.py: 'mkfs', fs, path, label
 mkfs: CommandFilter, mkfs, root
 
 # nova/virt/libvirt/utils.py: 'qemu-img'
