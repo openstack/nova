@@ -54,7 +54,7 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(202, resp.status_int)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual("AABBCC112233", resp_json['admin_password'])
 
@@ -66,10 +66,30 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(202, resp.status_int)
         resp_json = jsonutils.loads(resp.body)
         self.assertEqual(CONF.password_length,
                          len(resp_json['admin_password']))
+
+    def test_rescue_with_none(self):
+        body = dict(rescue=None)
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(202, resp.status_int)
+
+    def test_rescue_with_empty_dict(self):
+        body = dict(rescue=dict())
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(202, resp.status_int)
 
     def test_rescue_disable_password(self):
         self.flags(enable_instance_password=False)
@@ -80,7 +100,7 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(202, resp.status_int)
         resp_json = jsonutils.loads(resp.body)
         self.assertNotIn('admin_password', resp_json)
 
@@ -97,7 +117,7 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 409)
+        self.assertEqual(409, resp.status_int)
 
     def test_unrescue(self):
         body = dict(unrescue=None)
@@ -107,7 +127,7 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 202)
+        self.assertEqual(202, resp.status_int)
 
     def test_unrescue_of_active_instance(self):
         body = dict(unrescue=None)
@@ -122,7 +142,7 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 409)
+        self.assertEqual(409, resp.status_int)
 
     def test_rescue_raises_unrescuable(self):
         body = dict(rescue=None)
@@ -137,4 +157,14 @@ class RescueTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         resp = req.get_response(self.app)
-        self.assertEqual(resp.status_int, 400)
+        self.assertEqual(400, resp.status_int)
+
+    def test_rescue_with_invalid_property(self):
+        body = {"rescue": {"test": "test"}}
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(400, resp.status_int)
