@@ -15,6 +15,7 @@
 
 import fixtures
 import os
+import time
 
 from oslo.config import cfg
 
@@ -555,6 +556,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
     def test_libvirt_kvm_iser_volume_with_multipath(self):
         self.flags(iser_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
+        self.stubs.Set(time, 'sleep', lambda x: None)
         devs = ['/dev/mapper/sda', '/dev/mapper/sdb']
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
         libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
@@ -583,6 +585,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
     def test_libvirt_kvm_iser_volume_with_multipath_getmpdev(self):
         self.flags(iser_use_multipath=True, group='libvirt')
         self.stubs.Set(os.path, 'exists', lambda x: True)
+        self.stubs.Set(time, 'sleep', lambda x: None)
         libvirt_driver = volume.LibvirtISERVolumeDriver(self.fake_conn)
         name0 = 'volume-00000000'
         location0 = '10.0.2.15:3260'
