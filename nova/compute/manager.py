@@ -956,12 +956,10 @@ class ComputeManager(manager.Manager):
 
         extra_usage_info = {}
 
-        def notify(status, msg=None, **kwargs):
+        def notify(status, msg="", **kwargs):
             """Send a create.{start,error,end} notification."""
             type_ = "create.%(status)s" % dict(status=status)
             info = extra_usage_info.copy()
-            if not msg:
-                msg = ""
             info['message'] = unicode(msg)
             self._notify_about_instance_usage(context, instance, type_,
                     extra_usage_info=info, **kwargs)
