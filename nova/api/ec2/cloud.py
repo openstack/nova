@@ -1265,6 +1265,18 @@ class CloudController(object):
 
     def run_instances(self, context, **kwargs):
         min_count = int(kwargs.get('min_count', 1))
+        max_count = int(kwargs.get('max_count', min_count))
+        try:
+            min_count = utils.validate_integer(
+                min_count, "min_count", min_value=1)
+            max_count = utils.validate_integer(
+                max_count, "max_count", min_value=1)
+        except exception.InvalidInput as e:
+            raise exception.InvalidInput(message=e.format_message())
+
+        if min_count > max_count:
+            msg = _('min_count must be <= max_count')
+            raise exception.InvalidInput(message=msg)
 
         client_token = kwargs.get('client_token')
         if client_token:
