@@ -192,6 +192,10 @@ class HostState(object):
                                  'new': data['host_hostname']})
                 data['host_hostname'] = self._stats['host_hostname']
             data['hypervisor_hostname'] = data['host_hostname']
+            vcpus_used = 0
+            for vm_ref, vm_rec in vm_utils.list_vms(self._session):
+                vcpus_used = vcpus_used + int(vm_rec['VCPUs_max'])
+            data['vcpus_used'] = vcpus_used
             self._stats = data
 
 
