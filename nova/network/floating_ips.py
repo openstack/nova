@@ -26,6 +26,7 @@ from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
+from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -424,8 +425,8 @@ class FloatingIP(object):
         if network.multi_host:
             instance = instance_obj.Instance.get_by_uuid(
                 context, fixed_ip.instance_uuid)
-            service = self.db.service_get_by_host_and_topic(
-                    context.elevated(), instance.host, CONF.network_topic)
+            service = service_obj.Service.get_by_host_and_topic(
+                context.elevated(), instance.host, CONF.network_topic)
             if service and self.servicegroup_api.service_is_up(service):
                 host = instance.host
             else:

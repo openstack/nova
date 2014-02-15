@@ -45,6 +45,7 @@ from nova.tests import fake_network
 from nova.tests import matchers
 from nova.tests.objects import test_fixed_ip
 from nova.tests.objects import test_network
+from nova.tests.objects import test_service
 from nova import utils
 
 CONF = cfg.CONF
@@ -2213,7 +2214,9 @@ class FloatingIPTestCase(test.TestCase):
     @mock.patch('nova.db.fixed_ip_get')
     @mock.patch('nova.db.network_get')
     @mock.patch('nova.db.instance_get_by_uuid')
-    def test_disassociate_floating_ip_multi_host_calls(self, inst_get, net_get,
+    @mock.patch('nova.db.service_get_by_host_and_topic')
+    def test_disassociate_floating_ip_multi_host_calls(self, service_get,
+                                                       inst_get, net_get,
                                                        fixed_get):
         floating_ip = {
             'fixed_ip_id': 12
@@ -2242,10 +2245,7 @@ class FloatingIPTestCase(test.TestCase):
         fixed_get.return_value = fixed_ip
         net_get.return_value = network
         inst_get.return_value = instance
-
-        self.stubs.Set(self.network.db,
-                       'service_get_by_host_and_topic',
-                       lambda _x, _y, _z: 'service')
+        service_get.return_value = test_service.fake_service
 
         self.stubs.Set(self.network.servicegroup_api,
                        'service_is_up',
