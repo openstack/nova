@@ -24,6 +24,7 @@ from nova import exception
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import fixed_ip as fixed_ip_obj
+from nova.objects import network as network_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -324,14 +325,14 @@ class FloatingIP(object):
                                                        fixed_address)
 
         # send to correct host, unless i'm the correct host
-        network = self.db.network_get(context.elevated(),
-                                      fixed_ip.network_id)
-        if network['multi_host']:
+        network = network_obj.Network.get_by_id(context.elevated(),
+                                                fixed_ip.network_id)
+        if network.multi_host:
             instance = self.db.instance_get_by_uuid(context,
-                                                    fixed_ip['instance_uuid'])
+                                                    fixed_ip.instance_uuid)
             host = instance['host']
         else:
-            host = network['host']
+            host = network.host
 
         interface = floating_ip.get('interface')
         if host == self.host:
@@ -416,10 +417,10 @@ class FloatingIP(object):
                                                   floating_ip['fixed_ip_id'])
 
         # send to correct host, unless i'm the correct host
-        network = self.db.network_get(context.elevated(),
-                                      fixed_ip.network_id)
+        network = network_obj.Network.get_by_id(context.elevated(),
+                                                fixed_ip.network_id)
         interface = floating_ip.get('interface')
-        if network['multi_host']:
+        if network.multi_host:
             instance = self.db.instance_get_by_uuid(context,
                                                     fixed_ip.instance_uuid)
             service = self.db.service_get_by_host_and_topic(
@@ -434,7 +435,7 @@ class FloatingIP(object):
                 host = self.host
                 interface = None
         else:
-            host = network['host']
+            host = network.host
 
         if host == self.host:
             # i'm the correct host
