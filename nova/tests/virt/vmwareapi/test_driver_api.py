@@ -21,6 +21,7 @@ Test suite for VMwareAPI.
 
 import contextlib
 import copy
+import time
 
 import mock
 import mox
@@ -281,6 +282,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             return self.login_session
 
         self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
+        self.stubs.Set(time, 'sleep', lambda x: None)
         self.conn = driver.VMwareAPISession()
         self.assertEqual(self.attempts, 2)
 
