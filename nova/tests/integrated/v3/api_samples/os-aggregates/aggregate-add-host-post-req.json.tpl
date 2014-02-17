@@ -1,6 +1,5 @@
 {
-  "add_host":
-    {
-      "host": "%(host_name)s"
+    "add_host": {
+        "host": "%(host_name)s"
     }
 }
