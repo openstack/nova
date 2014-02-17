@@ -54,7 +54,7 @@ class Host(object):
                                     self._session._get_vim(),
                                     "PowerUpHostFromStandBy_Task", host_mor,
                                     timeoutSec=60)
-        self._session._wait_for_task(host, host_task)
+        self._session._wait_for_task(host_task)
 
     def host_maintenance_mode(self, host, mode):
         """Start/Stop host maintenance window. On start, it triggers
@@ -74,7 +74,7 @@ class Host(object):
                                     self._session._get_vim(),
                                     "ExitMaintenanceMode_Task",
                                     host_mor, timeout=0)
-        self._session._wait_for_task(host, host_task)
+        self._session._wait_for_task(host_task)
 
     def set_host_enabled(self, _host, enabled):
         """Sets the specified host's ability to accept new instances."""

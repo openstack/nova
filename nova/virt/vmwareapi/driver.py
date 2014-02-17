@@ -867,14 +867,13 @@ class VMwareAPISession(object):
     def _stop_loop(self, loop):
         loop.stop()
 
-    def _wait_for_task(self, instance_uuid, task_ref):
+    def _wait_for_task(self, task_ref):
         """
         Return a Deferred that will give the result of the given task.
         The task is polled until it completes.
         """
         done = event.Event()
         loop = loopingcall.FixedIntervalLoopingCall(self._poll_task,
-                                                    instance_uuid,
                                                     task_ref, done)
         loop.start(CONF.vmware.task_poll_interval)
         try:
@@ -885,7 +884,7 @@ class VMwareAPISession(object):
             self._stop_loop(loop)
         return ret_val
 
-    def _poll_task(self, instance_uuid, task_ref, done):
+    def _poll_task(self, task_ref, done):
         """
         Poll the given task, and fires the given Deferred if we
         get a result.
