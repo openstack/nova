@@ -41,7 +41,7 @@ BUILDING = 0x09
 # TODO(justinsb): Power state really needs to be a proper class,
 # so that we're not locked into the libvirt status codes and can put mapping
 # logic here rather than spread throughout the code
-_STATE_MAP = {
+STATE_MAP = {
     NOSTATE: 'pending',
     RUNNING: 'running',
     PAUSED: 'paused',
