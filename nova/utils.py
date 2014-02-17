@@ -94,8 +94,7 @@ TIME_UNITS = {
 }
 
 
-_IS_NEUTRON_ATTEMPTED = False
-_IS_NEUTRON = False
+_IS_NEUTRON = None
 
 synchronized = lockutils.synchronized_with_prefix('nova-')
 
@@ -1025,10 +1024,9 @@ def convert_version_to_tuple(version_str):
 
 
 def is_neutron():
-    global _IS_NEUTRON_ATTEMPTED
     global _IS_NEUTRON
 
-    if _IS_NEUTRON_ATTEMPTED:
+    if _IS_NEUTRON is not None:
         return _IS_NEUTRON
 
     try:
@@ -1036,7 +1034,6 @@ def is_neutron():
         cls_name = CONF.network_api_class
         if cls_name == 'nova.network.quantumv2.api.API':
             cls_name = 'nova.network.neutronv2.api.API'
-        _IS_NEUTRON_ATTEMPTED = True
 
         from nova.network.neutronv2 import api as neutron_api
         _IS_NEUTRON = issubclass(importutils.import_class(cls_name),
@@ -1048,11 +1045,8 @@ def is_neutron():
 
 
 def reset_is_neutron():
-    global _IS_NEUTRON_ATTEMPTED
     global _IS_NEUTRON
-
-    _IS_NEUTRON_ATTEMPTED = False
-    _IS_NEUTRON = False
+    _IS_NEUTRON = None
 
 
 def is_auto_disk_config_disabled(auto_disk_config_raw):
