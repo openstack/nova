@@ -76,7 +76,7 @@ class ConductorManager(manager.Manager):
     namespace.  See the ComputeTaskManager class for details.
     """
 
-    target = messaging.Target(version='1.62')
+    target = messaging.Target(version='1.63')
 
     def __init__(self, *args, **kwargs):
         super(ConductorManager, self).__init__(service_name='conductor',
@@ -455,6 +455,13 @@ class ConductorManager(manager.Manager):
     def compute_node_update(self, context, node, values, prune_stats=False):
         # NOTE(belliott) prune_stats is no longer relevant and will be
         # ignored
+        if isinstance(values.get('stats'), dict):
+            # NOTE(danms): In Icehouse, the 'stats' was changed from a dict
+            # to a JSON string. If we get a dict-based value, convert it to
+            # JSON, which the lower layers now expect. This can be removed
+            # in version 2.0 of the RPC API
+            values['stats'] = jsonutils.dumps(values['stats'])
+
         result = self.db.compute_node_update(context, node['id'], values)
         return jsonutils.to_primitive(result)
 

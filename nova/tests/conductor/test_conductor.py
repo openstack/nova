@@ -347,12 +347,23 @@ class _BaseTestCase(object):
     def test_compute_node_update(self):
         node = {'id': 'fake-id'}
         self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(self.context, node['id'], 'fake-values').\
+        db.compute_node_update(self.context, node['id'], {'fake': 'values'}).\
                                AndReturn('fake-result')
         self.mox.ReplayAll()
         result = self.conductor.compute_node_update(self.context, node,
-                                                    'fake-values', False)
+                                                    {'fake': 'values'}, False)
         self.assertEqual(result, 'fake-result')
+
+    def test_compute_node_update_with_non_json_stats(self):
+        node = {'id': 'fake-id'}
+        fake_input = {'stats': {'a': 'b'}}
+        fake_vals = {'stats': jsonutils.dumps(fake_input['stats'])}
+        self.mox.StubOutWithMock(db, 'compute_node_update')
+        db.compute_node_update(self.context, node['id'], fake_vals
+                               ).AndReturn('fake-result')
+        self.mox.ReplayAll()
+        self.conductor.compute_node_update(self.context, node,
+                                           fake_input, False)
 
     def test_compute_node_delete(self):
         node = {'id': 'fake-id'}
