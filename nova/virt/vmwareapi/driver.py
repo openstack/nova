@@ -82,16 +82,6 @@ CONF.register_opts(vmwareapi_opts, 'vmware')
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 
 
-class Failure(Exception):
-    """Base Exception class for handling task failures."""
-
-    def __init__(self, details):
-        self.details = details
-
-    def __str__(self):
-        return str(self.details)
-
-
 class VMwareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
