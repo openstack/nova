@@ -451,6 +451,27 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._init_instance(self.context, instance)
         self.mox.VerifyAll()
 
+    def test_init_instance_deletes_error_deleting_instance(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ERROR
+        instance.task_state = task_states.DELETING
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
+        self.mox.StubOutWithMock(self.compute, '_delete_instance')
+        self.mox.StubOutWithMock(instance, 'obj_load_attr')
+
+        bdms = []
+        instance.obj_load_attr('metadata')
+        instance.obj_load_attr('system_metadata')
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, instance.uuid).AndReturn(bdms)
+        self.compute._delete_instance(self.context, instance, bdms)
+        self.mox.ReplayAll()
+
+        self.compute._init_instance(self.context, instance)
+        self.mox.VerifyAll()
+
     def test_get_instances_on_driver(self):
         fake_context = context.get_admin_context()
 

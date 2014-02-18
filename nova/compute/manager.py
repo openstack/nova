@@ -782,11 +782,12 @@ class ComputeManager(manager.Manager):
 
         # Instances that are shut down, or in an error state can not be
         # initialized and are not attempted to be recovered. The exception
-        # to this are instances that are in RESIZE_MIGRATING, which are
-        # attempted recovery further down.
+        # to this are instances that are in RESIZE_MIGRATING or DELETING,
+        # which are dealt with further down.
         if (instance.vm_state == vm_states.SOFT_DELETED or
             (instance.vm_state == vm_states.ERROR and
-            instance.task_state != task_states.RESIZE_MIGRATING)):
+            instance.task_state not in
+            (task_states.RESIZE_MIGRATING, task_states.DELETING))):
             LOG.debug(_("Instance is in %s state."),
                       instance.vm_state, instance=instance)
             return
