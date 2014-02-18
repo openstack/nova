@@ -28,7 +28,9 @@ from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
 from nova import manager
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
+from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
 from nova.openstack.common import timeutils
 
@@ -50,6 +52,8 @@ CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
 CONF.register_opts(cell_manager_opts, group='cells')
 
+LOG = logging.getLogger(__name__)
+
 
 class CellsManager(manager.Manager):
     """The nova-cells manager class.  This class defines RPC
@@ -70,6 +74,12 @@ class CellsManager(manager.Manager):
     target = oslo_messaging.Target(version='1.25')
 
     def __init__(self, *args, **kwargs):
+        LOG.warn(_('The cells feature of Nova is considered experimental '
+                   'by the OpenStack project because it receives much '
+                   'less testing than the rest of Nova. This may change '
+                   'in the future, but current deployers should be aware '
+                   'that the use of it in production right now may be '
+                   'risky.'))
         # Mostly for tests.
         cell_state_manager = kwargs.pop('cell_state_manager', None)
         super(CellsManager, self).__init__(service_name='cells',
