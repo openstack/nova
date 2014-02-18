@@ -645,8 +645,10 @@ class LibvirtDriver(driver.ComputeDriver):
         finally:
             # Enabling the compute service, in case it was disabled
             # since the connection was successful.
-            is_connected = bool(wrapped_conn)
-            self.set_host_enabled(CONF.host, is_connected)
+            disable_reason = DISABLE_REASON_UNDEFINED
+            if not wrapped_conn:
+                disable_reason = 'Failed to connect to libvirt'
+            self._set_host_enabled(bool(wrapped_conn), disable_reason)
 
         self._wrapped_conn = wrapped_conn
 
@@ -700,7 +702,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._wrapped_conn = None
                 # Disable compute service to avoid
                 # new instances of being scheduled on this host.
-                self.set_host_enabled(CONF.host, _error)
+                self._set_host_enabled(False, disable_reason=_error)
 
     @staticmethod
     def _test_connection(conn):
@@ -2721,8 +2723,9 @@ class LibvirtDriver(driver.ComputeDriver):
                       % {'dev': pci_devs, 'dom': dom.ID()})
             raise
 
-    def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances.
+    def _set_host_enabled(self, enabled,
+                          disable_reason=DISABLE_REASON_UNDEFINED):
+        """Enables / Disables the compute service on this host.
 
            This doesn't override non-automatic disablement with an automatic
            setting; thereby permitting operators to keep otherwise
@@ -2732,12 +2735,7 @@ class LibvirtDriver(driver.ComputeDriver):
         status_name = {True: 'disabled',
                        False: 'enabled'}
 
-        if isinstance(enabled, bool):
-            disable_service = not enabled
-            disable_reason = DISABLE_REASON_UNDEFINED
-        else:
-            disable_service = bool(enabled)
-            disable_reason = enabled
+        disable_service = not enabled
 
         ctx = nova_context.get_admin_context()
         try:
