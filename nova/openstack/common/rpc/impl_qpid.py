@@ -517,7 +517,7 @@ class Connection(object):
                         "Sleeping %(delay)s seconds") % msg_dict
                 LOG.error(msg)
                 time.sleep(delay)
-                delay = min(2 * delay, 60)
+                delay = min(delay + 1, 5)
             else:
                 LOG.info(_('Connected to AMQP server on %s'), broker)
                 break
