@@ -30,7 +30,7 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
     fields = {
         'id': fields.IntegerField(),
-        'address': fields.IPV4Address(),
+        'address': fields.IPV4AndV6Address(),
         'network_id': fields.IntegerField(nullable=True),
         'virtual_interface_id': fields.IntegerField(nullable=True),
         'instance_uuid': fields.UUIDField(nullable=True),

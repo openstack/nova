@@ -1338,7 +1338,7 @@ class NetworkManager(manager.Manager):
             # check if the fixed IP address is valid and
             # it actually belongs to the network
             if address is not None:
-                if not utils.is_valid_ipv4(address):
+                if not utils.is_valid_ip_address(address):
                     raise exception.FixedIpInvalid(address=address)
 
                 fixed_ip_ref = fixed_ip_obj.FixedIP.get_by_address(

@@ -117,6 +117,13 @@ fixed_ips = [{'id': 0,
               'instance_uuid': 0,
               'allocated': False,
               'virtual_interface_id': 0,
+              'floating_ips': []},
+             {'id': 0,
+              'network_id': 1,
+              'address': '2001:db9:0:1::10',
+              'instance_uuid': 0,
+              'allocated': False,
+              'virtual_interface_id': 0,
               'floating_ips': []}]
 
 
@@ -280,6 +287,28 @@ class FlatNetworkTestCase(test.TestCase):
         ip = dict(test_fixed_ip.fake_fixed_ip, **fixed_ips[0])
         ip['network'] = dict(test_network.fake_network,
                              **networks[0])
+        ip['instance_uuid'] = None
+        db.fixed_ip_get_by_address(mox.IgnoreArg(),
+                                   mox.IgnoreArg(),
+                                   columns_to_join=mox.IgnoreArg()
+                                   ).AndReturn(ip)
+
+        self.mox.ReplayAll()
+        self.network.validate_networks(self.context, requested_networks)
+
+    def test_validate_networks_valid_fixed_ipv6(self):
+        self.mox.StubOutWithMock(db, 'network_get_all_by_uuids')
+        self.mox.StubOutWithMock(db, 'fixed_ip_get_by_address')
+
+        requested_networks = [('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+                               '2001:db9:0:1::10')]
+        db.network_get_all_by_uuids(mox.IgnoreArg(), mox.IgnoreArg(),
+                mox.IgnoreArg()).AndReturn(
+                    [dict(test_network.fake_network, **networks[1])])
+
+        ip = dict(test_fixed_ip.fake_fixed_ip, **fixed_ips[2])
+        ip['network'] = dict(test_network.fake_network,
+                             **networks[1])
         ip['instance_uuid'] = None
         db.fixed_ip_get_by_address(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
