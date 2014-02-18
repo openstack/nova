@@ -161,7 +161,7 @@ class TestDiskImage(test.NoDBTestCase):
         self.assertEqual(diskimage._mounter, fakemount)
         self.assertEqual(dev, '/dev/fake')
         diskimage.umount()
-        self.assertEqual(diskimage._mounter, None)
+        self.assertIsNone(diskimage._mounter)
 
     @mock.patch('__builtin__.open')
     def test_teardown(self, mock_open):
@@ -181,7 +181,7 @@ class TestDiskImage(test.NoDBTestCase):
         self.assertEqual(diskimage._mounter, fakemount)
         self.assertEqual(dev, '/dev/fake')
         diskimage.teardown()
-        self.assertEqual(diskimage._mounter, None)
+        self.assertIsNone(diskimage._mounter)
 
 
 class TestVirtDisk(test.NoDBTestCase):

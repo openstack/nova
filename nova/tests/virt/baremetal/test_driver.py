@@ -194,7 +194,7 @@ class BareMetalDriverWithDBTestCase(bm_db_base.BMDBTestCase):
         self.assertEqual(row['instance_name'], node['instance']['hostname'])
         instance = main_db.instance_get_by_uuid(self.context,
                 node['instance']['uuid'])
-        self.assertEqual(instance['default_ephemeral_device'], None)
+        self.assertIsNone(instance['default_ephemeral_device'])
 
     def _test_rebuild(self, ephemeral):
         node = self._create_node(ephemeral=ephemeral)
