@@ -2764,7 +2764,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.debug(_('Not overriding manual compute service '
                                 'status with: %s'),
                                  status_name[disable_service])
-            return status_name[disable_service]
         except exception.ComputeHostNotFound:
             LOG.warn(_('Cannot update service status on host: %s,'
                         'since it is not registered.') % CONF.host)

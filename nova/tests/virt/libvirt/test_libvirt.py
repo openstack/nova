@@ -506,29 +506,37 @@ class LibvirtConnTestCase(test.TestCase):
 
         return db.service_create(context.get_admin_context(), service_ref)
 
+    def _get_host_disabled(self, host):
+        return db.service_get_by_compute_host(context.get_admin_context(),
+                                              host)['disabled']
+
     def test_set_host_enabled_with_disable(self):
         # Tests disabling an enabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(host='fake-mini')
-        self.assertEqual('disabled', conn._set_host_enabled(False))
+        conn._set_host_enabled(False)
+        self.assertTrue(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_with_enable(self):
         # Tests enabling a disabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(disabled=True, host='fake-mini')
-        self.assertEqual('enabled', conn._set_host_enabled(True))
+        conn._set_host_enabled(True)
+        self.assertTrue(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_with_enable_state_enabled(self):
         # Tests enabling an enabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(disabled=False, host='fake-mini')
-        self.assertEqual('enabled', conn._set_host_enabled(True))
+        conn._set_host_enabled(True)
+        self.assertFalse(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_with_disable_state_disabled(self):
         # Tests disabling a disabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(disabled=True, host='fake-mini')
-        self.assertEqual('disabled', conn._set_host_enabled(False))
+        conn._set_host_enabled(False)
+        self.assertTrue(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_swallows_exceptions(self):
         # Tests that set_host_enabled will swallow exceptions coming from the
@@ -539,7 +547,7 @@ class LibvirtConnTestCase(test.TestCase):
             # Make db.service_get_by_compute_host raise NovaException; this
             # is more robust than just raising ComputeHostNotFound.
             db_mock.side_effect = exception.NovaException
-            self.assertIsNone(conn._set_host_enabled(False))
+            conn._set_host_enabled(False)
 
     def create_instance_obj(self, context, **params):
         default_params = self.test_instance
