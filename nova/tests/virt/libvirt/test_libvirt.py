@@ -1417,6 +1417,77 @@ class LibvirtConnTestCase(test.TestCase):
                                     image_meta, disk_info)
         self.assertEqual(cfg.os_cmdline, "fake_os_command_line")
 
+    def test_get_guest_config_armv7(self):
+        def get_host_capabilities_stub(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = "armv7l"
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.flags(virt_type="kvm",
+                   group="libvirt")
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "get_host_capabilities",
+                       get_host_capabilities_stub)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info)
+        self.assertEqual(cfg.os_mach_type, "vexpress-a15")
+
+    def test_get_guest_config_aarch64(self):
+        def get_host_capabilities_stub(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = "aarch64"
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.flags(virt_type="kvm",
+                   group="libvirt")
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "get_host_capabilities",
+                       get_host_capabilities_stub)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info)
+        self.assertEqual(cfg.os_mach_type, "virt")
+
+    def test_get_guest_config_machine_type_through_image_meta(self):
+        self.flags(virt_type="kvm",
+                   group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        image_meta = {"properties": {"hw_machine_type":
+            "fake_machine_type"}}
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    image_meta, disk_info)
+        self.assertEqual(cfg.os_mach_type, "fake_machine_type")
+
     def _test_get_guest_config_ppc64(self, device_index):
         """Test for nova.virt.libvirt.driver.LibvirtDriver.get_guest_config.
         """
