@@ -378,7 +378,7 @@ class ServersControllerCreateTest(test.TestCase):
         """utility function - check server_dict for admin_password absence."""
         self.assertNotIn("admin_password", server_dict)
 
-    def test_create_multiple_instances_resv_id_return(self):
+    def _create_multiple_instances_resv_id_return(self, resv_id_return):
         """Test creating multiple instances with asking for
         reservation_id
         """
@@ -392,7 +392,7 @@ class ServersControllerCreateTest(test.TestCase):
                 'flavor_ref': flavor_ref,
                 'metadata': {'hello': 'world',
                              'open': 'stack'},
-                multiple_create.RRID_ATTRIBUTE_NAME: True
+                multiple_create.RRID_ATTRIBUTE_NAME: resv_id_return
             }
         }
 
@@ -405,6 +405,12 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertNotEqual(reservation_id, "")
         self.assertIsNotNone(reservation_id)
         self.assertTrue(len(reservation_id) > 1)
+
+    def test_create_multiple_instances_with_resv_id_return(self):
+        self._create_multiple_instances_resv_id_return(True)
+
+    def test_create_multiple_instances_with_string_resv_id_return(self):
+        self._create_multiple_instances_resv_id_return("True")
 
     def test_create_multiple_instances_with_multiple_volume_bdm(self):
         """
