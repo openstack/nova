@@ -383,14 +383,16 @@ def process_launcher():
 # NOTE(vish): the global launcher is to maintain the existing
 #             functionality of calling service.serve +
 #             service.wait
-_launcher = []
+_launcher = None
 
 
 def serve(server, workers=None):
     global _launcher
-    _launcher.append(service.launch(server, workers=workers))
+    if _launcher:
+        raise RuntimeError(_('serve() can only be called once'))
+    
+    _launcher = service.launch(server, workers=workers)
 
 
 def wait():
-    for service in _launcher:
-        service.wait()
+    _launcher.wait()
