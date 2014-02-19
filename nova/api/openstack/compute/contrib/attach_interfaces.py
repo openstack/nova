@@ -103,6 +103,12 @@ class InterfaceAttachmentController(object):
             LOG.audit(_("Attach interface"), instance=instance)
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
+        except (exception.PortNotFound,
+                exception.PortInUse,
+                exception.NetworkDuplicated,
+                exception.NetworkAmbiguous,
+                exception.NetworkNotFound) as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.NotFound as e:
             LOG.exception(e)
             raise exc.HTTPNotFound()
