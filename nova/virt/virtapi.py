@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
 
 class VirtAPI(object):
     def instance_update(self, context, instance_uuid, updates):
@@ -47,4 +49,9 @@ class VirtAPI(object):
         :param instance: the instance we're getting bdms for
         :param legacy: get bdm info in legacy format (or not)
         """
+        raise NotImplementedError()
+
+    @contextlib.contextmanager
+    def wait_for_instance_event(self, instance, event_names, deadline=300,
+                                error_callback=None):
         raise NotImplementedError()

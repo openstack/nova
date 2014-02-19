@@ -36,6 +36,7 @@ import uuid
 
 import eventlet.event
 from eventlet import greenthread
+import eventlet.timeout
 from oslo.config import cfg
 from oslo import messaging
 
@@ -63,6 +64,7 @@ from nova.network.security_group import openstack_driver
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import external_event as external_event_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
@@ -476,6 +478,63 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         capi = self._compute.conductor_api
         return capi.block_device_mapping_get_all_by_instance(context, instance,
                                                              legacy=legacy)
+
+    def _default_error_callback(self, event_name, instance):
+        raise exception.NovaException(_('Instance event failed'))
+
+    @contextlib.contextmanager
+    def wait_for_instance_event(self, instance, event_names, deadline=300,
+                                error_callback=None):
+        """Plan to wait for some events, run some code, then wait.
+
+        This context manager will first create plans to wait for the
+        provided event_names, yield, and then wait for all the scheduled
+        events to complete.
+
+        Note that this uses an eventlet.timeout.Timeout to bound the
+        operation, so callers should be prepared to catch that
+        failure and handle that situation appropriately.
+
+        If the event is not received by the specified timeout deadline,
+        eventlet.timeout.Timeout is raised.
+
+        If the event is received but did not have a 'completed'
+        status, a NovaException is raised.  If an error_callback is
+        provided, instead of raising an exception as detailed above
+        for the failure case, the callback will be called with the
+        event_name and instance, and can return True to continue
+        waiting for the rest of the events, False to stop processing,
+        or raise an exception which will bubble up to the waiter.
+
+        :param:instance: The instance for which an event is expected
+        :param:event_names: A list of event names. Each element can be a
+                            string event name or tuple of strings to
+                            indicate (name, tag).
+        :param:deadline: Maximum number of seconds we should wait for all
+                         of the specified events to arrive.
+        :param:error_callback: A function to be called if an event arrives
+        """
+
+        if error_callback is None:
+            error_callback = self._default_error_callback
+        events = {}
+        for event_name in event_names:
+            if isinstance(event_name, tuple):
+                name, tag = event_name
+                event_name = external_event_obj.InstanceExternalEvent.make_key(
+                    name, tag)
+            events[event_name] = (
+                self._compute.instance_events.prepare_for_instance_event(
+                    instance, event_name))
+        yield
+        with eventlet.timeout.Timeout(deadline):
+            for event_name, event in events.items():
+                actual_event = event.wait()
+                if actual_event.status == 'completed':
+                    continue
+                decision = error_callback(event_name, instance)
+                if decision is False:
+                    break
 
 
 class ComputeManager(manager.Manager):
