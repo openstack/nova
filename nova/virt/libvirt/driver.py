@@ -4703,6 +4703,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                    block_device_info=None):
         LOG.debug(_("Starting migrate_disk_and_power_off"),
                    instance=instance)
+
+        # Checks if the migration needs a disk resize down.
+        for kind in ('root_gb', 'ephemeral_gb'):
+            if flavor[kind] < instance[kind]:
+                reason = _("Unable to resize disk down.")
+                raise exception.InstanceFaultRollback(
+                    exception.ResizeError(reason=reason))
+
         disk_info_text = self.get_instance_disk_info(instance['name'],
                 block_device_info=block_device_info)
         disk_info = jsonutils.loads(disk_info_text)

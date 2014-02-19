@@ -7433,10 +7433,11 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(os.path, 'exists', fake_os_path_exists)
 
         ins_ref = self._create_instance()
+        flavor = {'root_gb': 10, 'ephemeral_gb': 20}
 
         self.assertRaises(AssertionError,
                           self.libvirtconnection.migrate_disk_and_power_off,
-                          None, ins_ref, '10.0.0.2', None, None)
+                          None, ins_ref, '10.0.0.2', flavor, None)
 
     def test_migrate_disk_and_power_off(self):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
@@ -7474,15 +7475,25 @@ class LibvirtDriverTestCase(test.TestCase):
         self.stubs.Set(utils, 'execute', fake_execute)
 
         ins_ref = self._create_instance()
+        flavor = {'root_gb': 10, 'ephemeral_gb': 20}
+
         # dest is different host case
         out = self.libvirtconnection.migrate_disk_and_power_off(
-               None, ins_ref, '10.0.0.2', None, None)
+               None, ins_ref, '10.0.0.2', flavor, None)
         self.assertEqual(out, disk_info_text)
 
         # dest is same host case
         out = self.libvirtconnection.migrate_disk_and_power_off(
-               None, ins_ref, '10.0.0.1', None, None)
+               None, ins_ref, '10.0.0.1', flavor, None)
         self.assertEqual(out, disk_info_text)
+
+    def test_migrate_disk_and_power_off_resize_error(self):
+        instance = self._create_instance()
+        flavor = {'root_gb': 5}
+        self.assertRaises(
+            exception.InstanceFaultRollback,
+            self.libvirtconnection.migrate_disk_and_power_off,
+            'ctx', instance, '10.0.0.1', flavor, None)
 
     def test_wait_for_running(self):
         def fake_get_info(instance):
