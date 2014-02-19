@@ -564,21 +564,18 @@ class LibvirtBlockInfoTest(test.TestCase):
                             device_type=dev)
                 self.assertEqual(bus, res)
 
-        image_meta = {'properties': {'hw_disk_bus': 'scsi'}}
-        bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                                                     image_meta)
-        self.assertEqual(bus, 'scsi')
-
-        image_meta = {'properties': {'hw_disk_bus': 'usb',
-                                     'hw_cdrom_bus': 'scsi'}}
-        bus = blockinfo.get_disk_bus_for_device_type('kvm',
+        expected = (
+                ('scsi', None, 'disk', 'scsi'),
+                (None, 'scsi', 'cdrom', 'scsi'),
+                ('usb', None, 'disk', 'usb')
+                )
+        for dbus, cbus, dev, res in expected:
+            image_meta = {'properties': {'hw_disk_bus': dbus,
+                                         'hw_cdrom_bus': cbus}}
+            bus = blockinfo.get_disk_bus_for_device_type('kvm',
                                                      image_meta,
-                                                     device_type='cdrom')
-        self.assertEqual(bus, 'scsi')
-
-        bus = blockinfo.get_disk_bus_for_device_type('kvm',
-                                                     image_meta)
-        self.assertEqual(bus, 'usb')
+                                                     device_type=dev)
+            self.assertEqual(bus, res)
 
         image_meta = {'properties': {'hw_disk_bus': 'xen'}}
         self.assertRaises(exception.UnsupportedHardware,
