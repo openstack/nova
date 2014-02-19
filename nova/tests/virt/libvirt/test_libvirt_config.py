@@ -1606,3 +1606,27 @@ class LibvirtConfigGuestSeclabel(LibvirtConfigBaseTest):
               <seclabel type='dynamic'>
                 <baselabel>system_u:system_r:my_svirt_t:s0</baselabel>
               </seclabel>""")
+
+
+class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
+
+    def test_config_rng_driver(self):
+        obj = config.LibvirtConfigGuestRng()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+<rng model='virtio'>
+    <backend model='random'>/dev/random</backend>
+</rng>""")
+
+    def test_config_rng_driver_with_rate(self):
+        obj = config.LibvirtConfigGuestRng()
+        obj.rate_period = '12'
+        obj.rate_bytes = '34'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+<rng model='virtio'>
+    <rate period='12' bytes='34'/>
+    <backend model='random'>/dev/random</backend>
+</rng>""")
