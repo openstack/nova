@@ -425,6 +425,14 @@
             "updated": "2013-02-08T00:00:00+00:00"
         },
         {
+            "alias": "os-server-external-events",
+            "description": "Server External Event Triggers.",
+            "links": [],
+            "name": "ServerExternalEvents",
+            "namespace": "http://docs.openstack.org/compute/ext/server-external-events/api/v2",
+            "updated": "2014-02-18T00:00:00-00:00"
+        },
+        {
             "alias": "os-instance_usage_audit_log",
             "description": "Admin-only Task Log Monitoring.",
             "links": [],

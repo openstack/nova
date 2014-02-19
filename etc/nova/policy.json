@@ -258,7 +258,7 @@
     "compute_extension:os-assisted-volume-snapshots:delete": "rule:admin_api",
     "compute_extension:console_auth_tokens": "rule:admin_api",
     "compute_extension:v3:os-console-auth-tokens": "rule:admin_api",
-
+    "compute_extension:os-server-external-events:create": "rule:admin_api",
 
     "volume:create": "",
     "volume:get_all": "",

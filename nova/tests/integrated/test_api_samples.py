@@ -4137,3 +4137,26 @@ class PreserveEphemeralOnRebuildJsonTest(ServersSampleBase):
 
 class PreserveEphemeralOnRebuildXmlTest(PreserveEphemeralOnRebuildJsonTest):
     ctype = 'xml'
+
+
+class ServerExternalEventsJsonTest(ServersSampleBase):
+    extension_name = ('nova.api.openstack.compute.contrib.'
+                      'server_external_events.Server_external_events')
+
+    def test_create_event(self):
+        instance_uuid = self._post_server()
+        subs = {
+            'uuid': instance_uuid,
+            'name': 'network-changed',
+            'status': 'completed',
+            'tag': 'foo',
+            }
+        response = self._do_post('os-server-external-events',
+                                 'event-create-req',
+                                 subs)
+        subs.update(self._get_regexes())
+        self._verify_response('event-create-resp', subs, response, 200)
+
+
+class ServerExternalEventsXmlTest(ServerExternalEventsJsonTest):
+    ctype = 'xml'

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <events>
+    <event>
+      <name>test-event</name>
+      <tag>foo</tag>
+      <status>completed</status>
+      <server_uuid>7dd63360-256e-4304-ba46-7d87311fbf33</server_uuid>
+    </event>
+  </events>

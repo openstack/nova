@@ -417,6 +417,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-server-external-events",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ServerExternalEvents",
+            "namespace": "http://docs.openstack.org/compute/ext/server-external-events/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-instance_usage_audit_log",
             "description": "%(text)s",
             "links": [],

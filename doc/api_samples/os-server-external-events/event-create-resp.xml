@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<events>
+  <event>
+    <status>completed</status>
+    <tag>foo</tag>
+    <name>network-changed</name>
+    <server_uuid>8544aae8-a2e0-4429-8537-d3aaeaf55dc2</server_uuid>
+    <code>200</code>
+  </event>
+</events>

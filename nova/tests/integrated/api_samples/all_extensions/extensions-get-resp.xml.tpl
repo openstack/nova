@@ -222,6 +222,9 @@
   <extension alias="os-instance-actions" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/instance-actions/api/v1.1" name="InstanceActions">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-server-external-events" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/server-external-events/api/v2" name="ServerExternalEvents">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-migrations" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/migrations/api/v2.0" name="Migrations">
     <description>%(text)s</description>
   </extension>
