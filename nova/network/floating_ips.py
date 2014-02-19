@@ -223,7 +223,7 @@ class FloatingIP(object):
             raise exception.FloatingIpLimitExceeded()
 
         try:
-            floating_ip = self.db.floating_ip_allocate_address(
+            floating_ip = floating_ip_obj.FloatingIP.allocate_address(
                 context, project_id, pool, auto_assigned=auto_assigned)
             payload = dict(project_id=project_id, floating_ip=floating_ip)
             self.notifier.info(context,
@@ -281,7 +281,7 @@ class FloatingIP(object):
             LOG.exception(_("Failed to update usages deallocating "
                             "floating IP"))
 
-        self.db.floating_ip_deallocate(context, address)
+        floating_ip_obj.FloatingIP.deallocate(context, address)
 
         # Commit the reservations
         if reservations:
