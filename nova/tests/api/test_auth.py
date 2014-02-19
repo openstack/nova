@@ -70,6 +70,35 @@ class TestNovaKeystoneContextMiddleware(test.NoDBTestCase):
         response = self.request.get_response(self.middleware)
         self.assertEqual(response.status, '500 Internal Server Error')
 
+    def test_domain_id(self):
+        self.request.headers['X_USER'] = 'testuser'
+        self.request.headers['X_DOMAIN_ID'] = 'testdomainid'
+        self.request.headers['X_PROJECT_DOMAIN_ID'] = 'testprojdomainid'
+        self.request.headers['X_USER_DOMAIN_ID'] = 'testuserdomainid'
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(self.context.domain_id, 'testdomainid')
+        self.assertEqual(self.context.project_domain_id, 'testprojdomainid')
+        self.assertEqual(self.context.user_domain_id, 'testuserdomainid')
+
+    def test_no_domain_id(self):
+        self.request.headers['X_USER'] = 'testuser'
+        self.request.headers['X_PROJECT_DOMAIN_ID'] = 'testprojdomainid'
+        self.request.headers['X_USER_DOMAIN_ID'] = 'testuserdomainid'
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(self.context.domain_id, None)
+        self.assertEqual(self.context.project_domain_id, 'testprojdomainid')
+        self.assertEqual(self.context.user_domain_id, 'testuserdomainid')
+
+    def test_no_domain_info(self):
+        self.request.headers['X_USER'] = 'testuser'
+        response = self.request.get_response(self.middleware)
+        self.assertEqual(response.status, '200 OK')
+        self.assertEqual(self.context.domain_id, 'default')
+        self.assertEqual(self.context.project_domain_id, 'default')
+        self.assertEqual(self.context.user_domain_id, 'default')
+
 
 class TestKeystoneMiddlewareRoles(test.NoDBTestCase):
 

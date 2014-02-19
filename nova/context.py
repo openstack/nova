@@ -44,8 +44,10 @@ class RequestContext(object):
 
     """
 
-    def __init__(self, user_id, project_id, is_admin=None, read_deleted="no",
-                 roles=None, remote_address=None, timestamp=None,
+    def __init__(self, user_id, project_id, domain_id=None,
+                 project_domain_id=None, user_domain_id=None,
+                 is_admin=None, read_deleted="no", roles=None,
+                 remote_address=None, timestamp=None,
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
                  service_catalog=None, instance_lock_checked=False, **kwargs):
@@ -66,6 +68,9 @@ class RequestContext(object):
 
         self.user_id = user_id
         self.project_id = project_id
+        self.domain_id = domain_id
+        self.project_domain_id = project_domain_id
+        self.user_domain_id = user_domain_id
         self.roles = roles or []
         self.read_deleted = read_deleted
         self.remote_address = remote_address
