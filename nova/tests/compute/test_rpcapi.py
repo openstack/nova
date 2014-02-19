@@ -104,7 +104,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_add_fixed_ip_to_instance(self):
         self._test_compute_api('add_fixed_ip_to_instance', 'cast',
-                instance=self.fake_instance, network_id='id')
+                instance=self.fake_instance, network_id='id', version='3.12')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

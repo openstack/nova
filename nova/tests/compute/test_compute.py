@@ -3120,7 +3120,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, network_id=1,
-                instance=instance)
+                instance=self._objectify(instance))
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context,
@@ -8043,7 +8043,8 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance(params={'host': CONF.host})
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.add_fixed_ip(self.context, instance, '1')
+        self.compute_api.add_fixed_ip(self.context, self._objectify(instance),
+                                      '1')
         self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
         self.compute_api.delete(self.context, self._objectify(instance))
 

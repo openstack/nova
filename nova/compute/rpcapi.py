@@ -225,6 +225,7 @@ class ComputeAPI(object):
         3.9 - Update rescue_instance() to take an instance object
         3.10 - Added get_rdp_console method
         3.11 - Update unrescue_instance() to take an object
+        3.12 - Update add_fixed_ip_to_instance() to take an object
     '''
 
     VERSION_ALIASES = {
@@ -280,13 +281,16 @@ class ComputeAPI(object):
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.12'):
+            version = '3.12'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
-                   instance=instance_p, network_id=network_id)
+                   instance=instance, network_id=network_id)
 
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
