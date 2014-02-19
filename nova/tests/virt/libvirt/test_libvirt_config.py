@@ -1616,11 +1616,12 @@ class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
 <rng model='virtio'>
-    <backend model='random'>/dev/random</backend>
+    <backend model='random'/>
 </rng>""")
 
     def test_config_rng_driver_with_rate(self):
         obj = config.LibvirtConfigGuestRng()
+        obj.backend = '/dev/random'
         obj.rate_period = '12'
         obj.rate_bytes = '34'
 
