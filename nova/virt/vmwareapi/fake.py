@@ -1245,11 +1245,27 @@ class FakeVim(object):
         for obj in objs:
             try:
                 obj_ref = obj.obj
-                # This means that we are doing a search for the managed
-                # data objects of the type in the inventory
                 if obj_ref == "RootFolder":
+                    # This means that we are retrieving props for all managed
+                    # data objects of the specified 'type' in the entire
+                    # inventory. This gets invoked by vim_util.get_objects.
                     mdo_refs = _db_content[type]
+                elif obj_ref.type != type:
+                    # This means that we are retrieving props for the managed
+                    # data objects in the parent object's 'path' property.
+                    # This gets invoked by vim_util.get_inner_objects
+                    # eg. obj_ref = <ManagedObjectReference of a cluster>
+                    #     type = 'DataStore'
+                    #     path = 'datastore'
+                    # the above will retrieve all datastores in the given
+                    # cluster.
+                    parent_mdo = _db_content[obj_ref.type][obj_ref]
+                    path = obj.selectSet[0].path
+                    mdo_refs = parent_mdo.get(path).ManagedObjectReference
                 else:
+                    # This means that we are retrieving props of the given
+                    # managed data object. This gets invoked by
+                    # vim_util.get_properties_for_a_collection_of_objects.
                     mdo_refs = [obj_ref]
 
                 for mdo_ref in mdo_refs:
