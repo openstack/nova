@@ -482,7 +482,9 @@ class XenAPIDriver(driver.ComputeDriver):
                # arch_filter.py - see libvirt/driver.py get_cpu_info
                'cpu_info': jsonutils.dumps(host_stats['host_cpu_info']),
                'supported_instances': jsonutils.dumps(
-                   host_stats['supported_instances'])}
+                   host_stats['supported_instances']),
+               'pci_passthrough_devices': jsonutils.dumps(
+                   host_stats['pci_passthrough_devices'])}
 
         return dic
 

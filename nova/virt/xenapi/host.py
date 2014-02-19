@@ -17,6 +17,8 @@
 Management class for host-related functions (start, reboot, etc).
 """
 
+import re
+
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import conductor
@@ -27,6 +29,7 @@ from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.pci import pci_whitelist
 from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 
@@ -149,7 +152,83 @@ class HostState(object):
         super(HostState, self).__init__()
         self._session = session
         self._stats = {}
+        self._pci_device_filter = pci_whitelist.get_pci_devices_filter()
         self.update_status()
+
+    def _get_passthrough_devices(self):
+        """Get a list pci devices that are available for pci passthtough.
+
+        We use a plugin to get the output of the lspci command runs on dom0.
+        From this list we will extract pci devices that are using the pciback
+        kernel driver. Then we compare this list to the pci whitelist to get
+        a new list of pci devices that can be used for pci passthrough.
+
+        :returns: a list of pci devices available for pci passthrough.
+        """
+        def _compile_hex(pattern):
+            """
+            Return a compiled regular expression pattern into which we have
+            replaced occurences of hex by [\da-fA-F].
+            """
+            return re.compile(pattern.replace("hex", r"[\da-fA-F]"))
+
+        def _parse_pci_device_string(dev_string):
+            """
+            Exctract information from the device string about the slot, the
+            vendor and the product ID. The string is as follow:
+                "Slot:\tBDF\nClass:\txxxx\nVendor:\txxxx\nDevice:\txxxx\n..."
+            Return a dictionary with informations about the device.
+            """
+            slot_regex = _compile_hex(r"Slot:\t"
+                                      r"((?:hex{4}:)?"  # Domain: (optional)
+                                      r"hex{2}:"        # Bus:
+                                      r"hex{2}\."       # Device.
+                                      r"hex{1})")       # Function
+            vendor_regex = _compile_hex(r"\nVendor:\t(hex+)")
+            product_regex = _compile_hex(r"\nDevice:\t(hex+)")
+
+            slot_id = slot_regex.findall(dev_string)
+            vendor_id = vendor_regex.findall(dev_string)
+            product_id = product_regex.findall(dev_string)
+
+            if not slot_id or not vendor_id or not product_id:
+                raise exception.NovaException(
+                    _("Failed to parse information about"
+                      " a pci device for passthrough"))
+
+            type_pci = self._session.call_plugin_serialized(
+                'xenhost', 'get_pci_type', slot_id[0])
+
+            return {'label': '_'.join(['label',
+                                       vendor_id[0],
+                                       product_id[0]]),
+                    'vendor_id': vendor_id[0],
+                    'product_id': product_id[0],
+                    'address': slot_id[0],
+                    'dev_id': '_'.join(['pci', slot_id[0]]),
+                    'dev_type': type_pci,
+                    'status': 'available'}
+
+        # Devices are separated by a blank line. That is why we
+        # use "\n\n" as separator.
+        lspci_out = self._session.call_plugin_serialized(
+            'xenhost', 'get_pci_device_details')
+        pci_list = lspci_out.split("\n\n")
+
+        # For each device of the list, check if it uses the pciback
+        # kernel driver and if it does, get informations and add it
+        # to the list of passthrough_devices. Ignore it if the driver
+        # is not pciback.
+        passthrough_devices = []
+
+        for dev_string_info in pci_list:
+            if "Driver:\tpciback" in dev_string_info:
+                new_dev = _parse_pci_device_string(dev_string_info)
+
+                if self._pci_device_filter.device_assignable(new_dev):
+                    passthrough_devices.append(new_dev)
+
+        return passthrough_devices
 
     def get_host_stats(self, refresh=False):
         """Return the current state of the host. If 'refresh' is
@@ -196,6 +275,7 @@ class HostState(object):
             for vm_ref, vm_rec in vm_utils.list_vms(self._session):
                 vcpus_used = vcpus_used + int(vm_rec['VCPUs_max'])
             data['vcpus_used'] = vcpus_used
+            data['pci_passthrough_devices'] = self._get_passthrough_devices()
             self._stats = data
 
 

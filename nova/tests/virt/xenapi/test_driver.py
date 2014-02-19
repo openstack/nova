@@ -33,7 +33,8 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'host_hostname': 'somename',
                 'supported_instances': 'x86_64',
                 'host_cpu_info': {'cpu_count': 50},
-                'vcpus_used': 10}
+                'vcpus_used': 10,
+                'pci_passthrough_devices': ''}
 
     def test_available_resource(self):
         self.flags(connection_url='test_url',

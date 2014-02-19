@@ -24,7 +24,8 @@ import utils
 
 # 1.0 - Initial version.
 # 1.1 - New call to check GC status
-PLUGIN_VERSION = "1.1"
+# 1.2 - Added support for pci passthrough devices
+PLUGIN_VERSION = "1.2"
 
 def get_version(session):
     return PLUGIN_VERSION
