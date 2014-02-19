@@ -240,6 +240,7 @@ class ComputeAPI(object):
         3.20 - Make restore_instance take an instance object
         3.21 - Made rebuild take new-world BDM objects
         3.22 - Made terminate_instance take new-world BDM objects
+        3.23 - Added external_instance_event()
     '''
 
     VERSION_ALIASES = {
@@ -959,6 +960,13 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
                    volume_id=volume_id, snapshot_id=snapshot_id,
                    delete_info=delete_info)
+
+    def external_instance_event(self, ctxt, instances, events):
+        cctxt = self.client.prepare(
+            server=_compute_host(None, instances[0]),
+            version='3.23')
+        cctxt.cast(ctxt, 'external_instance_event', instances=instances,
+                   events=events)
 
 
 class SecurityGroupAPI(object):
