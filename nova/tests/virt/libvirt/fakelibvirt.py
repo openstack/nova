@@ -111,6 +111,8 @@ VIR_MIGRATE_UNDEFINE_SOURCE = 16
 
 VIR_NODE_CPU_STATS_ALL_CPUS = -1
 
+VIR_DOMAIN_START_PAUSED = 1
+
 # libvirtError enums
 # (Intentionally different from what's in libvirt. We do this to check,
 #  that consumers of the library are using the symbolic names rather than

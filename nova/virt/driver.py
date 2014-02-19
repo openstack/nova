@@ -48,6 +48,16 @@ driver_opts = [
     cfg.BoolOpt('use_cow_images',
                 default=True,
                 help='Whether to use cow images'),
+    cfg.BoolOpt('vif_plugging_is_fatal',
+                default=True,
+                help="Fail instance boot if vif plugging fails"),
+    cfg.IntOpt('vif_plugging_timeout',
+               default=300,
+               help='Number of seconds to wait for neutron vif plugging '
+                    'events to arrive before continuing or failing (see '
+                    'vif_plugging_is_fatal). If this is set to zero and '
+                    'vif_plugging_is_fatal is False, events should not '
+                    'be expected to arrive at all.'),
 ]
 
 CONF = cfg.CONF
