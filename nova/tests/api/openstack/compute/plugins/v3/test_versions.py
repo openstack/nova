@@ -27,6 +27,12 @@ NS = {
 
 
 EXP_LINKS = {
+   'v2.0': {
+       'pdf': 'http://docs.openstack.org/'
+               'api/openstack-compute/2/os-compute-devguide-2.pdf',
+       'wadl': 'http://docs.openstack.org/'
+               'api/openstack-compute/2/wadl/os-compute-2.wadl'
+    },
    'v3.0': {
        'pdf': 'http://docs.openstack.org/'
                'api/openstack-compute/3/os-compute-devguide-3.pdf',
@@ -37,7 +43,38 @@ EXP_LINKS = {
 
 
 EXP_VERSIONS = {
-    "version": {
+    "v2.0": {
+        "id": "v2.0",
+        "status": "CURRENT",
+        "updated": "2011-01-21T11:33:21Z",
+        "links": [
+            {
+                "rel": "self",
+                "href": "http://localhost/v3/",
+            },
+            {
+                "rel": "describedby",
+                "type": "application/pdf",
+                "href": EXP_LINKS['v2.0']['pdf'],
+            },
+            {
+                "rel": "describedby",
+                "type": "application/vnd.sun.wadl+xml",
+                "href": EXP_LINKS['v2.0']['wadl'],
+            },
+        ],
+        "media-types": [
+            {
+                "base": "application/xml",
+                "type": "application/vnd.openstack.compute+xml;version=2",
+            },
+            {
+                "base": "application/json",
+                "type": "application/vnd.openstack.compute+json;version=2",
+            }
+        ],
+    },
+    "v3.0": {
         "id": "v3.0",
         "status": "EXPERIMENTAL",
         "updated": "2013-07-23T11:33:21Z",
@@ -84,8 +121,35 @@ class VersionsTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         version = jsonutils.loads(res.body)
-        expected = EXP_VERSIONS
+        expected = {"version": EXP_VERSIONS['v3.0']}
         self.assertEqual(expected, version)
+
+    def test_get_version_3_versions_v3_detail(self):
+        req = webob.Request.blank('/v3/versions/v3.0')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v3())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = jsonutils.loads(res.body)
+        expected = {"version": EXP_VERSIONS['v3.0']}
+        self.assertEqual(expected, version)
+
+    def test_get_version_3_versions_v2_detail(self):
+        req = webob.Request.blank('/v3/versions/v2.0')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v3())
+        self.assertEqual(res.status_int, 200)
+        self.assertEqual(res.content_type, "application/json")
+        version = jsonutils.loads(res.body)
+        expected = {"version": EXP_VERSIONS['v2.0']}
+        self.assertEqual(expected, version)
+
+    def test_get_version_3_versions_invalid(self):
+        req = webob.Request.blank('/v3/versions/1234')
+        req.accept = "application/json"
+        res = req.get_response(fakes.wsgi_app_v3())
+        self.assertEqual(res.status_int, 404)
+        self.assertEqual(res.content_type, "application/json")
 
     def test_get_version_3_detail_content_type(self):
         req = webob.Request.blank('/')
@@ -94,5 +158,5 @@ class VersionsTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         version = jsonutils.loads(res.body)
-        expected = EXP_VERSIONS
+        expected = {"version": EXP_VERSIONS['v3.0']}
         self.assertEqual(expected, version)
