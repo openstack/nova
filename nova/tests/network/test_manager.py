@@ -2369,7 +2369,9 @@ class FloatingIPTestCase(test.TestCase):
 
     @mock.patch('nova.db.fixed_ip_get')
     @mock.patch('nova.db.floating_ip_get_by_address')
-    def test_migrate_instance_start(self, floating_get, fixed_get):
+    @mock.patch('nova.db.floating_ip_update')
+    def test_migrate_instance_start(self, floating_update, floating_get,
+                                    fixed_get):
         called = {'count': 0}
 
         def fake_floating_ip_get_by_address(context, address):
@@ -2385,6 +2387,8 @@ class FloatingIPTestCase(test.TestCase):
                                       instance_uuid='fake_uuid',
                                       address='10.0.0.2',
                                       network=test_network.fake_network)
+        floating_update.return_value = fake_floating_ip_get_by_address(
+            None, '1.2.3.4')
 
         def fake_remove_floating_ip(floating_addr, fixed_addr, interface,
                                     network):
@@ -2394,13 +2398,8 @@ class FloatingIPTestCase(test.TestCase):
             if not str(fixed_ip) == "10.0.0.2":
                 raise exception.FixedIpInvalid(address=fixed_ip)
 
-        def fake_floating_ip_update(context, address, args):
-            pass
-
         self.stubs.Set(self.network, '_is_stale_floating_ip_address',
                                  fake_is_stale_floating_ip_address)
-        self.stubs.Set(self.network.db, 'floating_ip_update',
-                       fake_floating_ip_update)
         self.stubs.Set(self.network.l3driver, 'remove_floating_ip',
                        fake_remove_floating_ip)
         self.stubs.Set(self.network.l3driver, 'clean_conntrack',
@@ -2418,7 +2417,8 @@ class FloatingIPTestCase(test.TestCase):
         self.assertEqual(called['count'], 2)
 
     @mock.patch('nova.db.fixed_ip_get')
-    def test_migrate_instance_finish(self, fixed_get):
+    @mock.patch('nova.db.floating_ip_update')
+    def test_migrate_instance_finish(self, floating_update, fixed_get):
         called = {'count': 0}
 
         def fake_floating_ip_get_by_address(context, address):
@@ -2433,20 +2433,17 @@ class FloatingIPTestCase(test.TestCase):
                                       instance_uuid='fake_uuid',
                                       address='10.0.0.2',
                                       network=test_network.fake_network)
+        floating_update.return_value = fake_floating_ip_get_by_address(
+            None, '1.2.3.4')
 
         def fake_add_floating_ip(floating_addr, fixed_addr, interface,
                                  network):
             called['count'] += 1
 
-        def fake_floating_ip_update(context, address, args):
-            pass
-
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
                        fake_floating_ip_get_by_address)
         self.stubs.Set(self.network, '_is_stale_floating_ip_address',
                                  fake_is_stale_floating_ip_address)
-        self.stubs.Set(self.network.db, 'floating_ip_update',
-                       fake_floating_ip_update)
         self.stubs.Set(self.network.l3driver, 'add_floating_ip',
                        fake_add_floating_ip)
         self.mox.ReplayAll()
