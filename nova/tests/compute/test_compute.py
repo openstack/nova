@@ -5077,8 +5077,9 @@ class ComputeTestCase(BaseTestCase):
                                   self._create_fake_instance(params))
 
         self.admin_ctxt = context.get_admin_context()
-        self.instance = db.instance_get_by_uuid(self.admin_ctxt,
-                                                self.instance['uuid'])
+        self.instance = instance_obj.Instance._from_db_object(self.context,
+               instance_obj.Instance(),
+               db.instance_get_by_uuid(self.admin_ctxt, self.instance['uuid']))
 
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
                                                         self.instance,
@@ -5095,8 +5096,7 @@ class ComputeTestCase(BaseTestCase):
                 False,
                 fake_block_dev_info)
         self.compute._get_power_state(self.admin_ctxt,
-                                      self.instance).AndReturn(
-                                                     'fake_power_state')
+                                      self.instance).AndReturn(10001)
 
     def _finish_post_live_migration_at_destination(self):
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
