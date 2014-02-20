@@ -120,7 +120,6 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.conn._vmops._attach_cdrom_to_vm(mox.IgnoreArg(),
                                                mox.IgnoreArg(),
                                                mox.IgnoreArg(),
-                                               mox.IgnoreArg(),
                                                mox.IgnoreArg())
         self.mox.ReplayAll()
         # if spawn does not call the _create_config_drive or
