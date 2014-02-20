@@ -1001,6 +1001,51 @@ class LibvirtConnTestCase(test.TestCase):
                               vconfig.LibvirtConfigGuestDisk)
         self.assertEqual(cfg.devices[2].target_dev, 'hdd')
 
+    def test_get_guest_config_with_virtio_scsi_bus(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = {"properties": {"hw_scsi_model": "virtio-scsi"}}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, [], image_meta)
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertIsInstance(cfg.devices[0],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                         vconfig.LibvirtConfigGuestController)
+        self.assertEqual(cfg.devices[2].model, 'virtio-scsi')
+
+    def test_get_guest_config_with_virtio_scsi_bus_bdm(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = {"properties": {"hw_scsi_model": "virtio-scsi"}}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        conn_info = {'driver_volume_type': 'fake'}
+        bd_info = {'block_device_mapping': [
+                  {'connection_info': conn_info, 'mount_device': '/dev/sdc',
+                   'disk_bus': 'scsi'},
+                  {'connection_info': conn_info, 'mount_device': '/dev/sdd',
+                   'disk_bus': 'scsi'}]}
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, bd_info, image_meta)
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info,
+                                    [], bd_info)
+        self.assertIsInstance(cfg.devices[2],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(cfg.devices[2].target_dev, 'sdc')
+        self.assertEqual(cfg.devices[2].target_bus, 'scsi')
+        self.assertIsInstance(cfg.devices[3],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(cfg.devices[3].target_dev, 'sdd')
+        self.assertEqual(cfg.devices[3].target_bus, 'scsi')
+        self.assertIsInstance(cfg.devices[4],
+                         vconfig.LibvirtConfigGuestController)
+        self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
+
     def test_get_guest_config_with_vnc(self):
         self.flags(vnc_enabled=True)
         self.flags(virt_type='kvm',
