@@ -28,7 +28,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils
 from nova.virt.baremetal import db as bmdb
-from nova.virt.libvirt import utils as libvirt_utils
+from nova.virt import volumeutils
 
 opts = [
     cfg.BoolOpt('use_unsafe_iscsi',
@@ -190,7 +190,7 @@ class VolumeDriver(object):
 
     def get_volume_connector(self, instance):
         if not self._initiator:
-            self._initiator = libvirt_utils.get_iscsi_initiator()
+            self._initiator = volumeutils.get_iscsi_initiator()
             if not self._initiator:
                 LOG.warn(_('Could not determine iscsi initiator name'),
                          instance=instance)
