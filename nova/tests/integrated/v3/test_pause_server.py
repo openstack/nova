@@ -31,11 +31,11 @@ class PauseServerSamplesJsonTest(test_servers.ServersSampleBase):
         # Get api samples to pause server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'pause-server', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(202, response.status)
 
     def test_post_unpause(self):
         # Get api samples to unpause server request.
         self.test_post_pause()
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'unpause-server', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(202, response.status)
