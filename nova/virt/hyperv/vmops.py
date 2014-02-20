@@ -145,14 +145,16 @@ class VMOps(object):
                 LOG.debug(_("Creating differencing VHD. Parent: "
                             "%(base_vhd_path)s, Target: %(root_vhd_path)s"),
                           {'base_vhd_path': base_vhd_path,
-                           'root_vhd_path': root_vhd_path})
+                           'root_vhd_path': root_vhd_path},
+                          instance=instance)
                 self._vhdutils.create_differencing_vhd(root_vhd_path,
                                                        base_vhd_path)
             else:
                 LOG.debug(_("Copying VHD image %(base_vhd_path)s to target: "
                             "%(root_vhd_path)s"),
                           {'base_vhd_path': base_vhd_path,
-                           'root_vhd_path': root_vhd_path})
+                           'root_vhd_path': root_vhd_path},
+                          instance=instance)
                 self._pathutils.copyfile(base_vhd_path, root_vhd_path)
 
                 base_vhd_info = self._vhdutils.get_vhd_info(base_vhd_path)
@@ -174,7 +176,8 @@ class VMOps(object):
                     LOG.debug(_("Resizing VHD %(root_vhd_path)s to new "
                                 "size %(root_vhd_size)s"),
                               {'root_vhd_size': root_vhd_internal_size,
-                               'root_vhd_path': root_vhd_path})
+                               'root_vhd_path': root_vhd_path},
+                              instance=instance)
                     self._vhdutils.resize_vhd(root_vhd_path,
                                               root_vhd_internal_size,
                                               is_file_max_size=False)
@@ -263,7 +266,7 @@ class VMOps(object):
                                        root_vhd_path is None)
 
         for vif in network_info:
-            LOG.debug(_('Creating nic for instance: %s'), instance_name)
+            LOG.debug(_('Creating nic for instance'), instance=instance)
             self._vmutils.create_nic(instance_name,
                                      vif['id'],
                                      vif['address'])
@@ -277,7 +280,7 @@ class VMOps(object):
             vmutils.HyperVException(_('Invalid config_drive_format "%s"') %
                                     CONF.config_drive_format)
 
-        LOG.info(_('Using config drive for instance: %s'), instance=instance)
+        LOG.info(_('Using config drive for instance'), instance=instance)
 
         extra_md = {}
         if admin_password and CONF.hyperv.config_drive_inject_password:
@@ -334,7 +337,7 @@ class VMOps(object):
     def destroy(self, instance, network_info=None, block_device_info=None,
                 destroy_disks=True):
         instance_name = instance['name']
-        LOG.info(_("Got request to destroy instance: %s"), instance_name)
+        LOG.info(_("Got request to destroy instance"), instance=instance)
         try:
             if self._vmutils.vm_exists(instance_name):
 
@@ -347,7 +350,7 @@ class VMOps(object):
                 self._vmutils.destroy_vm(instance_name)
                 self._disconnect_volumes(volume_drives)
             else:
-                LOG.debug(_("Instance not found: %s"), instance_name)
+                LOG.debug(_("Instance not found"), instance=instance)
 
             if destroy_disks:
                 self._delete_disk_files(instance_name)
@@ -358,7 +361,7 @@ class VMOps(object):
 
     def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance."""
-        LOG.debug(_("reboot instance"), instance=instance)
+        LOG.debug(_("Rebooting instance"), instance=instance)
         self._set_vm_state(instance['name'],
                            constants.HYPERV_VM_STATE_REBOOT)
 

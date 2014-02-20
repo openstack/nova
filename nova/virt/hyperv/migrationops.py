@@ -42,6 +42,8 @@ class MigrationOps(object):
         self._imagecache = imagecache.ImageCache()
 
     def _migrate_disk_files(self, instance_name, disk_files, dest):
+        # TODO(mikal): it would be nice if this method took a full instance,
+        # because it could then be passed to the log messages below.
         same_host = False
         if dest in self._hostutils.get_local_ips():
             same_host = True
