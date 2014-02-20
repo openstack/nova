@@ -3729,6 +3729,24 @@ def security_group_ensure_default(context):
                       'project_id': context.project_id}
             default_group = _security_group_create(context, values,
                                                    session=session)
+            usage = model_query(context, models.QuotaUsage,
+                                read_deleted="no", session=session).\
+                     filter_by(project_id=context.project_id).\
+                     filter_by(user_id=context.user_id).\
+                     filter_by(resource='security_groups')
+            # Create quota usage for auto created default security group
+            if not usage.first():
+                elevated = context.elevated()
+                _quota_usage_create(elevated,
+                                    context.project_id,
+                                    context.user_id,
+                                    'security_groups',
+                                    1, 0,
+                                    None,
+                                    session=session)
+            else:
+                usage.update({'in_use': int(usage.first().in_use) + 1})
+
             default_rules = _security_group_rule_get_default_query(context,
                                 session=session).all()
             for default_rule in default_rules:
