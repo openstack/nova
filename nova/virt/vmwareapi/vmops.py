@@ -165,8 +165,20 @@ class VMwareVMOps(object):
                 vim.get_service_content().fileManager,
                 name=datastore_path,
                 datacenter=dc_ref)
-        self._session._wait_for_task(instance['uuid'],
-                                     file_delete_task)
+        try:
+            self._session._wait_for_task(instance['uuid'],
+                                         file_delete_task)
+        except (error_util.CannotDeleteFileException,
+                error_util.FileFaultException,
+                error_util.FileLockedException,
+                error_util.FileNotFoundException) as e:
+            # There may be more than one process or thread that tries
+            # to delete the file.
+            LOG.debug(_("Unable to delete %(ds)s. There may be more than "
+                        "one process or thread that tries to delete the file. "
+                        "Exception: %(ex)s"),
+                      {'ds': datastore_path, 'ex': e})
+
         LOG.debug(_("Deleted the datastore file"), instance=instance)
 
     def spawn(self, context, instance, image_meta, injected_files,

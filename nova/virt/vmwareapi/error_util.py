@@ -24,7 +24,11 @@ from nova.openstack.common import log as logging
 LOG = logging.getLogger(__name__)
 
 ALREADY_EXISTS = 'AlreadyExists'
+CANNOT_DELETE_FILE = 'CannotDeleteFile'
 FILE_ALREADY_EXISTS = 'FileAlreadyExists'
+FILE_FAULT = 'FileFault'
+FILE_LOCKED = 'FileLocked'
+FILE_NOT_FOUND = 'FileNotFound'
 INVALID_PROPERTY = 'InvalidProperty'
 NOT_AUTHENTICATED = 'NotAuthenticated'
 
@@ -133,9 +137,29 @@ class AlreadyExistsException(VMwareDriverException):
     code = 409
 
 
+class CannotDeleteFileException(VMwareDriverException):
+    msg_fmt = _("Cannot delete file.")
+    code = 403
+
+
 class FileAlreadyExistsException(VMwareDriverException):
     msg_fmt = _("File already exists.")
     code = 409
+
+
+class FileFaultException(VMwareDriverException):
+    msg_fmt = _("File fault.")
+    code = 409
+
+
+class FileLockedException(VMwareDriverException):
+    msg_fmt = _("File locked.")
+    code = 403
+
+
+class FileNotFoundException(VMwareDriverException):
+    msg_fmt = _("File not found.")
+    code = 404
 
 
 class InvalidPropertyException(VMwareDriverException):
@@ -152,7 +176,11 @@ class NotAuthenticatedException(VMwareDriverException):
 # special treatment.
 _fault_classes_registry = {
     ALREADY_EXISTS: AlreadyExistsException,
+    CANNOT_DELETE_FILE: CannotDeleteFileException,
     FILE_ALREADY_EXISTS: FileAlreadyExistsException,
+    FILE_FAULT: FileFaultException,
+    FILE_LOCKED: FileLockedException,
+    FILE_NOT_FOUND: FileNotFoundException,
     INVALID_PROPERTY: InvalidPropertyException,
     NOT_AUTHENTICATED: NotAuthenticatedException,
 }

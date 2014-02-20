@@ -276,6 +276,38 @@ class FileAlreadyExists(DataObject):
         self.__name__ = error_util.FILE_ALREADY_EXISTS
 
 
+class FileNotFound(DataObject):
+    """File not found class."""
+
+    def __init__(self):
+        super(FileNotFound, self).__init__()
+        self.__name__ = error_util.FILE_NOT_FOUND
+
+
+class FileFault(DataObject):
+    """File fault."""
+
+    def __init__(self):
+        super(FileFault, self).__init__()
+        self.__name__ = error_util.FILE_FAULT
+
+
+class CannotDeleteFile(DataObject):
+    """Cannot delete file."""
+
+    def __init__(self):
+        super(CannotDeleteFile, self).__init__()
+        self.__name__ = error_util.CANNOT_DELETE_FILE
+
+
+class FileLocked(DataObject):
+    """File locked."""
+
+    def __init__(self):
+        super(FileLocked, self).__init__()
+        self.__name__ = error_util.FILE_LOCKED
+
+
 class VirtualDisk(DataObject):
     """
     Virtual Disk class.
