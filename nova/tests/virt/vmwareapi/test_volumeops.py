@@ -26,15 +26,10 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
     def setUp(self):
 
-        def fake_del():
-            return
-
         super(VMwareVolumeOpsTestCase, self).setUp()
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
         self._session = driver.VMwareAPISession()
-        self.stubs.Set(self._session, '__del__',
-                       fake_del)
 
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self.instance = {'name': 'fake_name', 'uuid': 'fake_uuid'}
