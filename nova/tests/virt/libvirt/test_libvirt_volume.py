@@ -637,6 +637,8 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.flags(nfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
+
         export_string = '192.168.1.1:/nfs/share1'
         export_mnt_base = os.path.join(mnt_base,
                 utils.get_hash_str(export_string))
@@ -655,11 +657,37 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
 
+    def test_libvirt_nfs_driver_already_mounted(self):
+        # NOTE(vish) exists is to make driver assume connecting worked
+        mnt_base = '/mnt'
+        self.flags(nfs_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
+
+        export_string = '192.168.1.1:/nfs/share1'
+        export_mnt_base = os.path.join(mnt_base,
+                utils.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, self.name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertFileTypeEquals(tree, file_path)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        expected_commands = [
+            ('findmnt', '--target', export_mnt_base, '--source',
+             export_string),
+            ('umount', export_mnt_base)]
+        self.assertEqual(self.executes, expected_commands)
+
     def test_libvirt_nfs_driver_with_opts(self):
         mnt_base = '/mnt'
         self.flags(nfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtNFSVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/nfs/share1'
         options = '-o intr,nfsvers=3'
         export_mnt_base = os.path.join(mnt_base,
@@ -710,6 +738,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         export_mnt_base = os.path.join(mnt_base,
                 utils.get_hash_str(export_string))
@@ -728,8 +757,32 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             ('umount', export_mnt_base)]
         self.assertEqual(expected_commands, self.executes)
 
+    def test_libvirt_glusterfs_driver_already_mounted(self):
+        mnt_base = '/mnt'
+        self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
+
+        libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        export_string = '192.168.1.1:/volume-00001'
+        export_mnt_base = os.path.join(mnt_base,
+                utils.get_hash_str(export_string))
+        file_path = os.path.join(export_mnt_base, self.name)
+
+        connection_info = {'data': {'export': export_string,
+                                    'name': self.name}}
+        conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
+        tree = conf.format_dom()
+        self._assertFileTypeEquals(tree, file_path)
+        libvirt_driver.disconnect_volume(connection_info, "vde")
+
+        expected_commands = [
+            ('findmnt', '--target', export_mnt_base,
+             '--source', export_string),
+            ('umount', export_mnt_base)]
+        self.assertEqual(self.executes, expected_commands)
+
     def test_libvirt_glusterfs_driver_qcow2(self):
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         name = 'volume-00001'
         format = 'qcow2'
@@ -753,6 +806,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         self.flags(glusterfs_mount_point_base=mnt_base, group='libvirt')
 
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         options = '-o backupvolfile-server=192.168.1.2'
         export_mnt_base = os.path.join(mnt_base,
@@ -779,6 +833,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
     def test_libvirt_glusterfs_libgfapi(self):
         self.flags(qemu_allowed_storage_drivers=['gluster'], group='libvirt')
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
+        self.stubs.Set(libvirt_utils, 'is_mounted', lambda x, d: False)
         export_string = '192.168.1.1:/volume-00001'
         name = 'volume-00001'
 

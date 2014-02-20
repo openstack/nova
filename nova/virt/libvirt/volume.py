@@ -685,7 +685,8 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         """
         mount_path = os.path.join(CONF.libvirt.nfs_mount_point_base,
                                   utils.get_hash_str(nfs_export))
-        self._mount_nfs(mount_path, nfs_export, options, ensure=True)
+        if not virtutils.is_mounted(mount_path, nfs_export):
+            self._mount_nfs(mount_path, nfs_export, options, ensure=True)
         return mount_path
 
     def _mount_nfs(self, mount_path, nfs_share, options=None, ensure=False):
@@ -835,8 +836,9 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         """
         mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
                                   utils.get_hash_str(glusterfs_export))
-        self._mount_glusterfs(mount_path, glusterfs_export,
-                              options, ensure=True)
+        if not virtutils.is_mounted(mount_path, glusterfs_export):
+            self._mount_glusterfs(mount_path, glusterfs_export,
+                                  options, ensure=True)
         return mount_path
 
     def _mount_glusterfs(self, mount_path, glusterfs_share,

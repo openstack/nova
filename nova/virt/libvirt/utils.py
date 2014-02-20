@@ -695,3 +695,21 @@ def get_arch(image_meta):
             return arch
 
     return platform.processor()
+
+
+def is_mounted(mount_path, source=None):
+    """Check if the given source is mounted at given destination point."""
+    try:
+        check_cmd = ['findmnt', '--target', mount_path]
+        if source:
+            check_cmd.extend(['--source', source])
+
+        utils.execute(*check_cmd)
+        return True
+    except processutils.ProcessExecutionError as exc:
+        return False
+    except OSError as exc:
+        #info since it's not required to have this tool.
+        if exc.errno == errno.ENOENT:
+            LOG.info(_("findmnt tool is not installed"))
+        return False
