@@ -1630,3 +1630,16 @@ class LibvirtConfigGuestRngTest(LibvirtConfigBaseTest):
     <rate period='12' bytes='34'/>
     <backend model='random'>/dev/random</backend>
 </rng>""")
+
+
+class LibvirtConfigGuestControllerTest(LibvirtConfigBaseTest):
+
+    def test_config_guest_contoller(self):
+        obj = config.LibvirtConfigGuestController()
+        obj.type = 'scsi'
+        obj.index = 0
+        obj.model = 'virtio-scsi'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+                <controller type='scsi' index='0' model='virtio-scsi'/>""")
