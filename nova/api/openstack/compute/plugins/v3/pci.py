@@ -14,14 +14,26 @@
 #    under the License.
 
 
+import webob.exc
+
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova import compute
+from nova import exception
+from nova.objects import pci_device
 from nova.openstack.common import jsonutils
 
 
 ALIAS = 'os-pci'
 instance_authorize = extensions.soft_extension_authorizer(
     'compute', 'v3:' + ALIAS + ':pci_servers')
+
+authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
+
+PCI_ADMIN_KEYS = ['id', 'address', 'vendor_id', 'product_id', 'status',
+                  'compute_node_id']
+PCI_DETAIL_KEYS = ['dev_type', 'label', 'instance_uuid', 'dev_id',
+                   'extra_info']
 
 
 class PciServerController(wsgi.Controller):
@@ -68,6 +80,57 @@ class PciHypervisorController(wsgi.Controller):
             self._extend_hypervisor(hypervisor, compute_node)
 
 
+class PciController(object):
+
+    def __init__(self):
+        self.host_api = compute.HostAPI()
+
+    def _view_pcidevice(self, device, detail=False):
+        dev_dict = {}
+        for key in PCI_ADMIN_KEYS:
+            dev_dict[key] = device[key]
+        if detail:
+            for field in PCI_DETAIL_KEYS:
+                if field == 'instance_uuid':
+                    dev_dict['server_uuid'] = device[field]
+                else:
+                    dev_dict[field] = device[field]
+        return dev_dict
+
+    def _get_all_nodes_pci_devices(self, req, detail, action):
+        context = req.environ['nova.context']
+        authorize(context, action=action)
+        compute_nodes = self.host_api.compute_node_get_all(context)
+        results = []
+        for node in compute_nodes:
+            pci_devs = pci_device.PciDeviceList.get_by_compute_node(
+                context, node['id'])
+            results.extend([self._view_pcidevice(dev, detail)
+                            for dev in pci_devs])
+        return results
+
+    @extensions.expected_errors(())
+    def detail(self, req):
+        results = self._get_all_nodes_pci_devices(req, True, 'detail')
+        return dict(pci_devices=results)
+
+    @extensions.expected_errors(404)
+    def show(self, req, id):
+        context = req.environ['nova.context']
+        authorize(context, action='show')
+        try:
+            pci_dev = pci_device.PciDevice.get_by_dev_id(context, id)
+        except exception.PciDeviceNotFoundById as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+        result = self._view_pcidevice(pci_dev, True)
+        return dict(pci_device=result)
+
+    @extensions.expected_errors(())
+    def index(self, req):
+        results = self._get_all_nodes_pci_devices(req, False, 'index')
+        return dict(pci_devices=results)
+
+
 class Pci(extensions.V3APIExtensionBase):
     """Pci access support."""
     name = "PCIAccess"
@@ -75,7 +138,10 @@ class Pci(extensions.V3APIExtensionBase):
     version = 1
 
     def get_resources(self):
-        return []
+        resources = [extensions.ResourceExtension(ALIAS,
+                     PciController(),
+                     collection_actions={'detail': 'GET'})]
+        return resources
 
     def get_controller_extensions(self):
         server_extension = extensions.ControllerExtension(
