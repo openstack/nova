@@ -2722,3 +2722,10 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
                      CONF.xenserver.ipxe_mkisofs_cmd, instance=instance)
         else:
             raise
+
+
+def set_other_config_pci(session, vm_ref, params):
+    """Set the pci key of other-config parameter to params."""
+    other_config = session.call_xenapi("VM.get_other_config", vm_ref)
+    other_config['pci'] = params
+    session.call_xenapi("VM.set_other_config", vm_ref, other_config)

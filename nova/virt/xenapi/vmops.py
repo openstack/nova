@@ -44,6 +44,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
+from nova.pci import pci_manager
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
@@ -368,6 +369,48 @@ class VMOps(object):
         self._ensure_instance_name_unique(name_label)
         self._ensure_enough_free_mem(instance)
 
+        def attach_disks(undo_mgr, vm_ref, vdis, disk_image_type):
+            try:
+                ipxe_boot = strutils.bool_from_string(
+                        image_meta['properties']['ipxe_boot'])
+            except KeyError:
+                ipxe_boot = False
+
+            if ipxe_boot:
+                if 'iso' in vdis:
+                    vm_utils.handle_ipxe_iso(
+                        self._session, instance, vdis['iso'], network_info)
+                else:
+                    LOG.warning(_('ipxe_boot is True but no ISO image found'),
+                                instance=instance)
+
+            if resize:
+                self._resize_up_vdis(instance, vdis)
+
+            self._attach_disks(instance, vm_ref, name_label, vdis,
+                               disk_image_type, network_info, admin_password,
+                               injected_files)
+            if not first_boot:
+                self._attach_mapped_block_devices(instance,
+                                                  block_device_info)
+
+        def attach_pci_devices(undo_mgr, vm_ref):
+            dev_to_passthrough = ""
+            devices = pci_manager.get_instance_pci_devs(instance)
+            for d in devices:
+                pci_address = d["address"]
+                if pci_address.count(":") == 1:
+                    pci_address = "0000:" + pci_address
+                dev_to_passthrough += ",0/" + pci_address
+
+            # Remove the first comma if string is not empty.
+            # Note(guillaume-thouvenin): If dev_to_passthrough is empty, we
+            #                            don't need to update other_config.
+            if dev_to_passthrough:
+                vm_utils.set_other_config_pci(self._session,
+                                              vm_ref,
+                                              dev_to_passthrough[1:])
+
         @step
         def determine_disk_image_type_step(undo_mgr):
             return vm_utils.determine_disk_image_type(image_meta)
@@ -398,30 +441,9 @@ class VMOps(object):
             return vm_ref
 
         @step
-        def attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type):
-            try:
-                ipxe_boot = strutils.bool_from_string(
-                        image_meta['properties']['ipxe_boot'])
-            except KeyError:
-                ipxe_boot = False
-
-            if ipxe_boot:
-                if 'iso' in vdis:
-                    vm_utils.handle_ipxe_iso(
-                        self._session, instance, vdis['iso'], network_info)
-                else:
-                    LOG.warning(_('ipxe_boot is True but no ISO image found'),
-                                instance=instance)
-
-            if resize:
-                self._resize_up_vdis(instance, vdis)
-
-            self._attach_disks(instance, vm_ref, name_label, vdis,
-                               disk_image_type, network_info, admin_password,
-                               injected_files)
-            if not first_boot:
-                self._attach_mapped_block_devices(instance,
-                                                  block_device_info)
+        def attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type):
+            attach_disks(undo_mgr, vm_ref, vdis, disk_image_type)
+            attach_pci_devices(undo_mgr, vm_ref)
 
         if rescue:
             # NOTE(johannes): Attach root disk to rescue VM now, before
@@ -486,7 +508,7 @@ class VMOps(object):
 
             vm_ref = create_vm_record_step(undo_mgr, disk_image_type,
                     kernel_file, ramdisk_file)
-            attach_disks_step(undo_mgr, vm_ref, vdis, disk_image_type)
+            attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type)
 
             inject_instance_data_step(undo_mgr, vm_ref, vdis)
             setup_network_step(undo_mgr, vm_ref)
