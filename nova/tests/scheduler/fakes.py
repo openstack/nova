@@ -123,6 +123,50 @@ COMPUTE_NODES_METRICS = [
                                        'source': 'host4'
                                       },
                                      ])),
+        dict(id=5, local_gb=768, memory_mb=768, vcpus=8,
+             disk_available_least=768, free_ram_mb=768, vcpus_used=0,
+             free_disk_gb=768, local_gb_used=0, updated_at=None,
+             service=dict(host='host5', disabled=False),
+             hypervisor_hostname='node5', host_ip='127.0.0.1',
+             hypervisor_version=0,
+             metrics=jsonutils.dumps([{'name': 'foo',
+                                       'value': 768,
+                                       'timestamp': None,
+                                       'source': 'host5'
+                                      },
+                                      {'name': 'bar',
+                                       'value': 0,
+                                       'timestamp': None,
+                                       'source': 'host5'
+                                      },
+                                      {'name': 'zot',
+                                       'value': 1,
+                                       'timestamp': None,
+                                       'source': 'host5'
+                                      },
+                                     ])),
+        dict(id=6, local_gb=2048, memory_mb=2048, vcpus=8,
+             disk_available_least=2048, free_ram_mb=2048, vcpus_used=0,
+             free_disk_gb=2048, local_gb_used=0, updated_at=None,
+             service=dict(host='host6', disabled=False),
+             hypervisor_hostname='node6', host_ip='127.0.0.1',
+             hypervisor_version=0,
+             metrics=jsonutils.dumps([{'name': 'foo',
+                                       'value': 2048,
+                                       'timestamp': None,
+                                       'source': 'host6'
+                                      },
+                                      {'name': 'bar',
+                                       'value': 0,
+                                       'timestamp': None,
+                                       'source': 'host6'
+                                      },
+                                      {'name': 'zot',
+                                       'value': 2,
+                                       'timestamp': None,
+                                       'source': 'host6'
+                                      },
+                                     ])),
 ]
 
 INSTANCES = [

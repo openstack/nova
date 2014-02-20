@@ -227,10 +227,22 @@ class MetricsWeigherTestCase(test.NoDBTestCase):
                                    ['=5', 'bar=-2.1'],
                                    [('bar', -2.1)])
 
-    def test_metric_not_found(self):
+    def test_metric_not_found_required(self):
         setting = ['foo=1', 'zot=2']
         self.assertRaises(exception.ComputeHostMetricNotFound,
                           self._do_test,
                           setting,
                           8192,
                           'host4')
+
+    def test_metric_not_found_non_required(self):
+        # host1: foo=512,  bar=1
+        # host2: foo=1024, bar=2
+        # host3: foo=3072, bar=1
+        # host4: foo=8192, bar=0
+        # host5: foo=768, bar=0, zot=1
+        # host6: foo=2048, bar=0, zot=2
+        # so, host5 should win:
+        self.flags(required=False, group='metrics')
+        setting = ['foo=0.0001', 'zot=-1']
+        self._do_test(setting, 1.0, 'host5')

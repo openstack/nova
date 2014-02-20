@@ -3030,6 +3030,21 @@
 # -1.0. (list value)
 #weight_setting=
 
+# How to treat the unavailable metrics. When a metric is NOT
+# available for a host, if it is set to be True, it would
+# raise an exception, so it is recommended to use the
+# scheduler filter MetricFilter to filter out those hosts. If
+# it is set to be False, the unavailable metric would be
+# treated as a negative factor in weighing process, the
+# returned value would be set by the option
+# weight_of_unavailable. (boolean value)
+#required=true
+
+# The final weight value to be returned if required is set to
+# False and any one of the metrics set by weight_setting is
+# unavailable. (floating point value)
+#weight_of_unavailable=-10000.0
+
 
 [osapi_v3]
 
