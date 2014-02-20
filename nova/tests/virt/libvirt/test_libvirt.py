@@ -3668,6 +3668,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(eventlet.greenthread, 'sleep', lambda x: None)
         self.assertRaises(processutils.ProcessExecutionError,
                           conn.pre_live_migration,
                           self.context, instance, block_device_info=None,
@@ -3687,6 +3688,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(eventlet.greenthread, 'sleep', lambda x: None)
         conn.pre_live_migration(self.context, instance, block_device_info=None,
                                 network_info=[], disk_info={})
 
