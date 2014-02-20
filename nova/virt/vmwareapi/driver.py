@@ -803,7 +803,7 @@ class VMwareAPISession(object):
                 # to a session gone bad. So we try re-creating a session
                 # and then proceeding ahead with the call.
                 exc = excep
-                if error_util.FAULT_NOT_AUTHENTICATED in excep.fault_list:
+                if error_util.NOT_AUTHENTICATED in excep.fault_list:
                     # Because of the idle session returning an empty
                     # RetrievePropertiesResponse and also the same is returned
                     # when there is say empty answer to the query for
@@ -819,6 +819,9 @@ class VMwareAPISession(object):
                     # No re-trying for errors for API call has gone through
                     # and is the caller's fault. Caller should handle these
                     # errors. e.g, InvalidArgument fault.
+                    # Raise specific exceptions here if possible
+                    if excep.fault_list:
+                        raise error_util.get_fault_class(excep.fault_list[0])
                     break
             except error_util.SessionOverLoadException as excep:
                 # For exceptions which may come because of session overload,
@@ -909,7 +912,11 @@ class VMwareAPISession(object):
                           "status: error %(error_info)s"),
                          {'task_name': task_name, 'task_ref': task_ref,
                           'error_info': error_info})
-                done.send_exception(exception.NovaException(error_info))
+                # Check if we can raise a specific exception
+                error = task_info.error
+                name = error.fault.__class__.__name__
+                task_ex = error_util.get_fault_class(name)(error_info)
+                done.send_exception(task_ex)
         except Exception as excep:
             LOG.warn(_("In vmwareapi:_poll_task, Got this error %s") % excep)
             done.send_exception(excep)

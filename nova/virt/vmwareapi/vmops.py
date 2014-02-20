@@ -41,6 +41,7 @@ from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
@@ -370,12 +371,15 @@ class VMwareVMOps(object):
                 destinationName=vm_util.build_datastore_path(data_store_name,
                                                              base_folder),
                 destinationDatacenter=dc_info.ref)
-            # TODO(garyk): ensure that _wait_for_task raises an exception that
-            # can be specifically treated here.
             try:
                 self._session._wait_for_task(instance['uuid'], vmdk_move_task)
-            except Exception as e:
-                LOG.warning(_("File moving failed - %s"), e)
+            except error_util.FileAlreadyExistsException:
+                # File move has failed. This may be due to the fact that a
+                # process or thread has already completed the opertaion.
+                # In the event of a FileAlreadyExists we continue, all other
+                # exceptions will be raised.
+                LOG.debug(_("File %(folder)s already exists on %(ds)s."),
+                          {'folder': base_folder, 'ds': data_store_name})
 
         def _fetch_image_on_datastore():
             """Fetch image from Glance to datastore."""

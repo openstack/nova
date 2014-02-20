@@ -13,6 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
+import mock
 from oslo.config import cfg
 
 from nova import exception
@@ -20,6 +23,7 @@ from nova.network import model as network_model
 from nova import test
 from nova.tests import matchers
 from nova.tests.virt.vmwareapi import test_vm_util
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vif
@@ -272,3 +276,49 @@ class VMwareVifTestCase(test.NoDBTestCase):
         self.assertRaises(exception.NetworkNotFoundForBridge,
                           vif.get_neutron_network, self.session,
                           self.vif['network']['id'], self.cluster, self.vif)
+
+    def test_create_port_group_already_exists(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == 'AddPortGroup':
+                raise error_util.AlreadyExistsException()
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_add_vswitch_port_group_spec'),
+            mock.patch.object(vm_util, 'get_host_ref'),
+            mock.patch.object(self.session, '_call_method',
+                              fake_call_method)
+        ) as (_add_vswitch, _get_host, _call_method):
+            network_util.create_port_group(self.session, 'pg_name',
+                                           'vswitch_name', vlan_id=0,
+                                           cluster=None)
+
+    def test_create_port_group_exception(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == 'AddPortGroup':
+                raise error_util.VMwareDriverException()
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_add_vswitch_port_group_spec'),
+            mock.patch.object(vm_util, 'get_host_ref'),
+            mock.patch.object(self.session, '_call_method',
+                              fake_call_method)
+        ) as (_add_vswitch, _get_host, _call_method):
+            self.assertRaises(error_util.VMwareDriverException,
+                              network_util.create_port_group,
+                              self.session, 'pg_name',
+                              'vswitch_name', vlan_id=0,
+                              cluster=None)
+
+    def test_get_neutron_network_invalid_property(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == 'get_dynamic_property':
+                raise error_util.InvalidPropertyException()
+
+        with contextlib.nested(
+            mock.patch.object(vm_util, 'get_host_ref'),
+            mock.patch.object(self.session, '_call_method',
+                              fake_call_method),
+            mock.patch.object(network_util, 'get_network_with_the_name')
+        ) as (_get_host, _call_method, _get_name):
+            vif.get_neutron_network(self.session, 'network_name',
+                                    'cluster', 'vif')

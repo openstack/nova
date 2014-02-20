@@ -194,8 +194,9 @@ class Vim:
                 doc = excep.document
                 detail = doc.childAtPath("/Envelope/Body/Fault/detail")
                 fault_list = []
-                for child in detail.getChildren():
-                    fault_list.append(child.get("type"))
+                if detail:
+                    for child in detail.getChildren():
+                        fault_list.append(child.get("type"))
                 raise error_util.VimFaultException(fault_list, excep)
             except AttributeError as excep:
                 raise error_util.VimAttributeError(_("No such SOAP method "
