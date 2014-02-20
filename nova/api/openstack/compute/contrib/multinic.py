@@ -70,7 +70,8 @@ class MultinicController(wsgi.Controller):
             msg = _("Missing 'address' argument for removeFixedIp")
             raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-        instance = self._get_instance(context, id)
+        instance = self._get_instance(context, id,
+                                      want_objects=True)
         address = body['removeFixedIp']['address']
 
         try:
