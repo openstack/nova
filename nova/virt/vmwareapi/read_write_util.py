@@ -23,7 +23,8 @@ Collection of classes to handle image upload/download to/from Image service
 import httplib
 import urllib
 import urllib2
-import urlparse
+
+import six.moves.urllib.parse as urlparse
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging

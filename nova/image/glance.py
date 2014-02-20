@@ -23,12 +23,12 @@ import json
 import random
 import sys
 import time
-import urlparse
 
 import glanceclient
 import glanceclient.exc
 from oslo.config import cfg
 import six
+import six.moves.urllib.parse as urlparse
 
 from nova import exception
 import nova.image.download as image_xfers

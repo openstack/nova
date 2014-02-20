@@ -14,7 +14,8 @@
 
 import httplib
 import urllib
-import urlparse
+
+import six.moves.urllib.parse as urlparse
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils

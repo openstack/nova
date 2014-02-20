@@ -17,9 +17,9 @@ import functools
 import itertools
 import os
 import re
-import urlparse
 
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 import webob
 from webob import exc
 

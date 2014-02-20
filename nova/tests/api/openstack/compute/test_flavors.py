@@ -14,9 +14,8 @@
 #    under the License.
 
 from lxml import etree
+import six.moves.urllib.parse as urlparse
 import webob
-
-import urlparse
 
 from nova.api.openstack.compute import flavors
 from nova.api.openstack import xmlutil

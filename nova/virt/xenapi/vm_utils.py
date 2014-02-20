@@ -23,12 +23,12 @@ import contextlib
 import os
 import time
 import urllib
-import urlparse
 import uuid
 from xml.parsers import expat
 
 from eventlet import greenthread
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device

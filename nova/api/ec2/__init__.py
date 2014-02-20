@@ -18,11 +18,10 @@ Starting point for routing EC2 requests.
 
 """
 
-import urlparse
-
 from eventlet.green import httplib
 from oslo.config import cfg
 import six
+import six.moves.urllib.parse as urlparse
 import webob
 import webob.dec
 import webob.exc
