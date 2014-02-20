@@ -3973,7 +3973,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Temporary: convert supported_instances into a string, while keeping
         # the RPC version as JSON. Can be changed when RPC broadcast is removed
-        stats = self.host_state.get_host_stats(refresh=True)
+        stats = self.get_host_stats(refresh=True)
         stats['supported_instances'] = jsonutils.dumps(
                 stats['supported_instances'])
         return stats
