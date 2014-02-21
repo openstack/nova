@@ -14,25 +14,22 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import sqlalchemy as sql
+from sqlalchemy import Column, MetaData, Boolean, Table, text
 
 
 def upgrade(migrate_engine):
     # Upgrade operations go here. Don't create your own engine; bind
     # migrate_engine to your metadata
-    meta = sql.MetaData()
+    meta = MetaData()
     meta.bind = migrate_engine
-    project_table = sql.Table('instances', meta, autoload=True)
-    parent_project_id = sql.Column('project_domain_id', sql.String(255))
+    project_table = Table('instances', meta, autoload=True)
+    parent_project_id = Column('project_domain_id', String(255))
     project_table.create_column(parent_project_id)
 
 
-
-
 def downgrade(migrate_engine):
-    meta = sql.MetaData()
+    meta = MetaData()
     meta.bind = migrate_engine
     # Operations to reverse the above upgrade go here.
-    migration_helpers.remove_constraints(list_constraints(migrate_engine))
-    project_table = sql.Table('instances', meta, autoload=True)
+    project_table = Table('instances', meta, autoload=True)
     project_table.drop_column('project_domain_id')
