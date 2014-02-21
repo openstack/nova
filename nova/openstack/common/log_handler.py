@@ -26,4 +26,4 @@ class PublishErrorsHandler(logging.Handler):
         notifier.api.notify(None, 'error.publisher',
                             'error_notification',
                             notifier.api.ERROR,
-                            dict(error=record.msg))
+                            dict(error=record.getMessage()))
