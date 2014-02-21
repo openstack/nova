@@ -233,7 +233,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
     """Driver to attach Network volumes to libvirt."""
     def __init__(self, connection):
         super(LibvirtISCSIVolumeDriver, self).__init__(connection,
-                                                       is_block_dev=False)
+                                                       is_block_dev=True)
         self.num_scan_tries = CONF.libvirt.num_iscsi_scan_tries
         self.use_multipath = CONF.libvirt.iscsi_use_multipath
 
