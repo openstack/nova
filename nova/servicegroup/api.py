@@ -75,7 +75,6 @@ class API(object):
 
     def __init__(self, *args, **kwargs):
         self.basic_config_check()
-        super(API, self).__init__(*args, **kwargs)
 
     def basic_config_check(self):
         """Perform basic config check."""
