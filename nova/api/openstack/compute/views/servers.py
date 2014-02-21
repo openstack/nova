@@ -88,6 +88,7 @@ class ViewBuilder(common.ViewBuilder):
                 "name": instance["display_name"],
                 "status": self._get_vm_status(instance),
                 "tenant_id": instance.get("project_id") or "",
+                "domain_id": instance.get("project_domain_id") or "",
                 "user_id": instance.get("user_id") or "",
                 "metadata": self._get_metadata(instance),
                 "hostId": self._get_host_id(instance) or "",
