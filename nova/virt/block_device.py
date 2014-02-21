@@ -17,9 +17,11 @@ import operator
 
 from nova import block_device
 from nova.objects import block_device as block_device_obj
+from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
+from nova.volume import encryptors
 
 LOG = logging.getLogger(__name__)
 
@@ -209,14 +211,12 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             self['connection_info'] = None
 
     @update_db
-    def attach(self, context, instance, volume_api, virt_driver):
+    def attach(self, context, instance, volume_api, virt_driver,
+               do_check_attach=True, do_driver_attach=False):
         volume = volume_api.get(context, self.volume_id)
-        volume_api.check_attach(context, volume, instance=instance)
+        if do_check_attach:
+            volume_api.check_attach(context, volume, instance=instance)
 
-        # Attach a volume to an instance at boot time. So actual attach
-        # is done by instance creation.
-        instance_id = instance['id']
-        instance_uuid = instance['uuid']
         volume_id = volume['id']
         context = context.elevated()
 
@@ -224,12 +224,31 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         connection_info = volume_api.initialize_connection(context,
                                                            volume_id,
                                                            connector)
-        volume_api.attach(context, volume_id,
-                          instance_uuid, self['mount_device'])
-
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
+
+        # If do_driver_attach is False, we will attach a volume to an instance
+        # at boot time. So actual attach is done by instance creation code.
+        if do_driver_attach:
+            encryption = encryptors.get_encryption_metadata(
+                context, volume_api, volume_id, connection_info)
+
+            try:
+                virt_driver.attach_volume(
+                        context, connection_info, instance,
+                        self['mount_device'], encryption=encryption)
+            except Exception:  # pylint: disable=W0702
+                with excutils.save_and_reraise_exception():
+                    LOG.exception(_("Driver failed to attach volume "
+                                    "%(volume_id)s at %(mountpoint)s"),
+                                  {'volume_id': volume_id,
+                                   'mountpoint': self['mount_device']},
+                                  context=context, instance=instance)
+                    volume_api.terminate_connection(context, volume_id,
+                                                    connector)
         self['connection_info'] = connection_info
+        volume_api.attach(context, volume_id,
+                          instance['uuid'], self['mount_device'])
 
     @update_db
     def refresh_connection_info(self, context, instance,
