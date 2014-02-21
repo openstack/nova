@@ -318,6 +318,12 @@ class Service(service.Service):
         except Exception:
             pass
 
+        try:
+            self.manager.cleanup_host()
+        except Exception:
+            LOG.exception(_('Service error occurred during cleanup_host'))
+            pass
+
         super(Service, self).stop()
 
     def periodic_tasks(self, raise_on_error=False):

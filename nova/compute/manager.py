@@ -826,6 +826,9 @@ class ComputeManager(manager.Manager):
             if CONF.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
 
+    def cleanup_host(self):
+        self.driver.cleanup_host(host=self.host)
+
     def pre_start_hook(self):
         """After the service is initialized, but before we fully bring
         the service up by listening on RPC queues, make sure to update
