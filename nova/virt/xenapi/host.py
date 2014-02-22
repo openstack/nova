@@ -168,7 +168,7 @@ class HostState(object):
         def _compile_hex(pattern):
             """
             Return a compiled regular expression pattern into which we have
-            replaced occurences of hex by [\da-fA-F].
+            replaced occurrences of hex by [\da-fA-F].
             """
             return re.compile(pattern.replace("hex", r"[\da-fA-F]"))
 
