@@ -87,10 +87,6 @@ class VMwareHTTPFile(object):
         except Exception as exc:
             LOG.exception(exc)
 
-    def __del__(self):
-        """Close the file handle on garbage collection."""
-        self.close()
-
     def _build_vim_cookie_headers(self, vim_cookies):
         """Build ESX host session cookie headers."""
         cookie_header = ""

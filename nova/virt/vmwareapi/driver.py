@@ -753,11 +753,6 @@ class VMwareAPISession(object):
                 time.sleep(delay)
                 delay = min(2 * delay, 60)
 
-    def __del__(self):
-        """Logs-out the session."""
-        if hasattr(self, 'vim') and self.vim:
-            self.vim.Logout(self.vim.get_service_content().sessionManager)
-
     def _is_vim_object(self, module):
         """Check if the module is a VIM Object instance."""
         return isinstance(module, vim.Vim)
