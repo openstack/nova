@@ -59,6 +59,8 @@ CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
 
 LOG = logging.getLogger(__name__)
 
+XML_WARNING = False
+
 
 def make_fault(elem):
     fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
@@ -73,6 +75,12 @@ def make_fault(elem):
 def make_server(elem, detailed=False):
     elem.set('name')
     elem.set('id')
+
+    global XML_WARNING
+    if not XML_WARNING:
+        LOG.warning(_('XML support has been deprecated and will be removed '
+                      'in the Juno release.'))
+        XML_WARNING = True
 
     if detailed:
         elem.set('userId', 'user_id')
