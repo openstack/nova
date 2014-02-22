@@ -206,6 +206,7 @@ class VMwareAPIConfTestCase(test.NoDBTestCase):
     """Unit tests for VMWare API configurations."""
     def setUp(self):
         super(VMwareAPIConfTestCase, self).setUp()
+        vm_util.vm_refs_cache_reset()
 
     def tearDown(self):
         super(VMwareAPIConfTestCase, self).tearDown()
@@ -258,6 +259,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(VMwareAPIVMTestCase, self).setUp()
+        vm_util.vm_refs_cache_reset()
         self.context = context.RequestContext('fake', 'fake', is_admin=False)
         self.flags(host_ip='test_url',
                    host_username='test_username',
@@ -368,12 +370,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         if not node:
             node = self.node_name
         self._create_instance_in_the_db(node=node, uuid=uuid)
+        self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
         self.type_data = db.flavor_get_by_name(None, 'm1.large')
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
                         block_device_info=None)
         self._check_vm_record(num_instances=num_instances)
+        self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
 
     def _check_vm_record(self, num_instances=1):
         """
@@ -397,6 +401,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vcpus = self.type_data['vcpus']
         self.assertEqual(vm_info['max_mem'], mem_kib)
         self.assertEqual(vm_info['mem'], mem_kib)
+        self.assertEqual(vm.get("summary.config.instanceUuid"), self.uuid)
         self.assertEqual(vm.get("summary.config.numCpu"), vcpus)
         self.assertEqual(vm.get("summary.config.memorySizeMB"),
                          self.type_data['memory_mb'])
@@ -980,6 +985,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.conn.destroy(self.context, self.instance, self.network_info)
         instances = self.conn.list_instances()
         self.assertEqual(len(instances), 0)
+        self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
 
     def test_destroy_non_existent(self):
         self._create_instance_in_the_db()
@@ -1018,6 +1024,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.SHUTDOWN)
+        self.assertIsNotNone(vm_util.vm_ref_cache_get('%s-rescue' % self.uuid))
 
     def test_rescue(self):
         self._rescue()
@@ -1156,7 +1163,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
         self.stubs.Set(self.conn._vmops, "_get_orig_vm_name_label",
                        fake_get_orig_vm_name_label)
-        self.stubs.Set(vm_util, "get_vm_ref_from_uuid",
+        self.stubs.Set(vm_util, "_get_vm_ref_from_uuid",
                        fake_get_vm_ref_from_uuid)
         self.stubs.Set(vm_util, "get_vm_ref_from_name",
                        fake_get_vm_ref_from_name)
@@ -1389,6 +1396,7 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
     def setUp(self):
         super(VMwareAPIHostTestCase, self).setUp()
         self.flags(image_cache_subdirectory_name='vmware_base')
+        vm_util.vm_refs_cache_reset()
         self.flags(host_ip='test_url',
                    host_username='test_username',
                    host_password='test_pass', group='vmware')

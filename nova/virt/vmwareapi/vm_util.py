@@ -20,6 +20,7 @@ The VMware API VM utility module to build SOAP object specs.
 
 import collections
 import copy
+import functools
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -28,6 +29,53 @@ from nova.openstack.common import units
 from nova.virt.vmwareapi import vim_util
 
 LOG = logging.getLogger(__name__)
+# A cache for VM references. The key will be the VM name
+# and the value is the VM reference. The VM name is unique. This
+# is either the UUID of the instance or UUID-rescue in the case
+# that this is a rescue VM. This is in order to prevent
+# unnecessary communication with the backend.
+_VM_REFS_CACHE = {}
+
+
+def vm_refs_cache_reset():
+    global _VM_REFS_CACHE
+    _VM_REFS_CACHE = {}
+
+
+def vm_ref_cache_delete(id):
+    _VM_REFS_CACHE.pop(id, None)
+
+
+def vm_ref_cache_update(id, vm_ref):
+    _VM_REFS_CACHE[id] = vm_ref
+
+
+def vm_ref_cache_get(id):
+    return _VM_REFS_CACHE.get(id)
+
+
+def _vm_ref_cache(id, func, session, data):
+    vm_ref = vm_ref_cache_get(id)
+    if not vm_ref:
+        vm_ref = func(session, data)
+        vm_ref_cache_update(id, vm_ref)
+    return vm_ref
+
+
+def vm_ref_cache_from_instance(func):
+    @functools.wraps(func)
+    def wrapper(session, instance):
+        id = instance['uuid']
+        return _vm_ref_cache(id, func, session, instance)
+    return wrapper
+
+
+def vm_ref_cache_from_name(func):
+    @functools.wraps(func)
+    def wrapper(session, name):
+        id = name
+        return _vm_ref_cache(id, func, session, name)
+    return wrapper
 
 
 def build_datastore_path(datastore_name, path):
@@ -55,6 +103,10 @@ def get_vm_create_spec(client_factory, instance, name, data_store_name,
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
     config_spec.name = name
     config_spec.guestId = os_type
+    # The name is the unique identifier for the VM. This will either be the
+    # instance UUID or the instance UUID with suffix '-rescue' for VM's that
+    # are in rescue mode
+    config_spec.instanceUuid = name
 
     # Allow nested ESX instances to host 64 bit VMs.
     if os_type == "vmkernel5Guest":
@@ -684,7 +736,7 @@ def _cancel_retrieve_if_necessary(session, results):
                                        token)
 
 
-def get_vm_ref_from_name(session, vm_name):
+def _get_vm_ref_from_name(session, vm_name):
     """Get reference to the VM with the name specified."""
     vms = session._call_method(vim_util, "get_objects",
                 "VirtualMachine", ["name"])
@@ -692,21 +744,54 @@ def get_vm_ref_from_name(session, vm_name):
                                     _get_object_for_value)
 
 
-def get_vm_ref_from_uuid(session, instance_uuid):
-    """Get reference to the VM with the uuid specified."""
+@vm_ref_cache_from_name
+def get_vm_ref_from_name(session, vm_name):
+    return (_get_vm_ref_from_vm_uuid(session, vm_name) or
+            _get_vm_ref_from_name(session, vm_name))
+
+
+def _get_vm_ref_from_uuid(session, instance_uuid):
+    """Get reference to the VM with the uuid specified.
+
+    This method reads all of the names of the VM's that are running
+    on the backend, then it filters locally the matching
+    instance_uuid. It is far more optimal to use
+    _get_vm_ref_from_vm_uuid.
+    """
     vms = session._call_method(vim_util, "get_objects",
                 "VirtualMachine", ["name"])
     return _get_object_from_results(session, vms, instance_uuid,
                                     _get_object_for_value)
 
 
+def _get_vm_ref_from_vm_uuid(session, instance_uuid):
+    """Get reference to the VM.
+
+    The method will make use of FindAllByUuid to get the VM reference.
+    This method finds all VM's on the backend that match the
+    instance_uuid, more specifically all VM's on the backend that have
+    'config_spec.instanceUuid' set to 'instance_uuid'.
+    """
+    vm_refs = session._call_method(
+        session._get_vim(),
+        "FindAllByUuid",
+        session._get_vim().get_service_content().searchIndex,
+        uuid=instance_uuid,
+        vmSearch=True,
+        instanceUuid=True)
+    if vm_refs:
+        return vm_refs[0]
+
+
+@vm_ref_cache_from_instance
 def get_vm_ref(session, instance):
     """Get reference to the VM through uuid or vm name."""
-    vm_ref = get_vm_ref_from_uuid(session, instance['uuid'])
-    if not vm_ref:
-        vm_ref = get_vm_ref_from_name(session, instance['name'])
+    uuid = instance['uuid']
+    vm_ref = (_get_vm_ref_from_vm_uuid(session, uuid) or
+                  _get_vm_ref_from_uuid(session, uuid) or
+                  _get_vm_ref_from_name(session, instance['name']))
     if vm_ref is None:
-        raise exception.InstanceNotFound(instance_id=instance['uuid'])
+        raise exception.InstanceNotFound(instance_id=uuid)
     return vm_ref
 
 
