@@ -101,8 +101,9 @@ compute_opts = [
                default=paths.state_path_def('instances'),
                help='Where instances are stored on disk'),
     cfg.BoolOpt('instance_usage_audit',
-               default=False,
-               help="Generate periodic compute.instance.exists notifications"),
+                default=False,
+                help="Generate periodic compute.instance.exists"
+                     " notifications"),
     cfg.IntOpt('live_migration_retry_count',
                default=30,
                help="Number of 1 second retries needed in live_migration"),
@@ -127,7 +128,7 @@ interval_opts = [
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,
                help="Number of seconds between instance info_cache self "
-                        "healing updates"),
+                    "healing updates"),
     cfg.IntOpt('reclaim_instance_interval',
                default=0,
                help='Interval in seconds for reclaiming deleted instances'),
