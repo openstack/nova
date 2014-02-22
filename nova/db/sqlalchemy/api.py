@@ -4714,12 +4714,13 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 @require_context
-def bw_usage_get(context, uuid, start_period, mac):
-    return model_query(context, models.BandwidthUsage, read_deleted="yes").\
-                      filter_by(start_period=start_period).\
-                      filter_by(uuid=uuid).\
-                      filter_by(mac=mac).\
-                      first()
+def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
+    return model_query(context, models.BandwidthUsage, read_deleted="yes",
+                       use_slave=use_slave).\
+                           filter_by(start_period=start_period).\
+                           filter_by(uuid=uuid).\
+                           filter_by(mac=mac).\
+                           first()
 
 
 @require_context

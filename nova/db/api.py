@@ -1612,7 +1612,7 @@ def agent_build_update(context, agent_build_id, values):
 ####################
 
 
-def bw_usage_get(context, uuid, start_period, mac):
+def bw_usage_get(context, uuid, start_period, mac, use_slave=False):
     """Return bw usage for instance and mac in a given audit period."""
     return IMPL.bw_usage_get(context, uuid, start_period, mac)
 
