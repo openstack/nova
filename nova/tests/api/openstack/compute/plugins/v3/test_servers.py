@@ -62,12 +62,6 @@ CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
 
 FAKE_UUID = fakes.FAKE_UUID
-NS = "{http://docs.openstack.org/compute/api/v1.1}"
-ATOMNS = "{http://www.w3.org/2005/Atom}"
-XPATH_NS = {
-    'atom': 'http://www.w3.org/2005/Atom',
-    'ns': 'http://docs.openstack.org/compute/api/v1.1'
-}
 
 INSTANCE_IDS = {FAKE_UUID: 1}
 FIELDS = instance_obj.INSTANCE_DEFAULT_FIELDS
@@ -2986,7 +2980,6 @@ class ServersInvalidRequestTestCase(test.TestCase):
 class FakeExt(extensions.V3APIExtensionBase):
     name = "AccessIPs"
     alias = 'os-access-ips'
-    namespace = "http://docs.openstack.org/compute/ext/os-access-ips/api/v3"
     version = 1
 
     def fake_extension_point(self, *args, **kwargs):
