@@ -79,10 +79,6 @@ EXP_VERSIONS = {
         "updated": "2013-07-23T11:33:21Z",
         "media-types": [
             {
-                "base": "application/xml",
-                "type": "application/vnd.openstack.compute+xml;version=3",
-            },
-            {
                 "base": "application/json",
                 "type": "application/vnd.openstack.compute+json;version=3",
             }
@@ -365,11 +361,6 @@ class VersionsTest(test.NoDBTestCase):
                 ],
                 "media-types": [
                     {
-                        "base": "application/xml",
-                        "type":
-                        "application/vnd.openstack.compute+xml;version=3",
-                    },
-                    {
                         "base": "application/json",
                         "type":
                         "application/vnd.openstack.compute+json;version=3",
@@ -474,11 +465,6 @@ class VersionsTest(test.NoDBTestCase):
                     },
                 ],
                 "media-types": [
-                    {
-                        "base": "application/xml",
-                        "type":
-                        "application/vnd.openstack.compute+xml;version=3",
-                    },
                     {
                         "base": "application/json",
                         "type":
