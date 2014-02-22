@@ -34,7 +34,7 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
         # Get api samples to migrate server request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'migrate-server', {})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(202, response.status)
 
     def test_post_live_migrate_server(self):
         # Get api samples to server live migrate request.
@@ -63,4 +63,4 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'live-migrate-server',
                                  {'hostname': self.compute.host})
-        self.assertEqual(response.status, 202)
+        self.assertEqual(202, response.status)
