@@ -23,6 +23,7 @@ import urllib
 import uuid as uuid_lib
 
 from lxml import etree
+import mock
 from oslo.config import cfg
 
 from nova.api.metadata import password
@@ -1653,8 +1654,8 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
         super(ServicesJsonTest, self).tearDown()
         timeutils.clear_time_override()
 
-    def fake_load(self, *args):
-        return True
+    def fake_load(self, service_name):
+        return service_name == 'os-extended-services'
 
     def test_services_list(self):
         """Return a list of all agent builds."""
@@ -1735,6 +1736,51 @@ class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
 
 class ExtendedServicesXmlTest(ExtendedServicesJsonTest):
     """This extension is tested in the ServicesXmlTest class."""
+    ctype = 'xml'
+
+
+@mock.patch.object(db, 'service_get_all',
+                   side_effect=test_services.fake_db_api_service_get_all)
+@mock.patch.object(db, 'service_get_by_args',
+                   side_effect=test_services.fake_service_get_by_host_binary)
+class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
+    extends_name = ("nova.api.openstack.compute.contrib.services.Services")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "extended_services_delete.Extended_services_delete")
+
+    def setUp(self):
+        super(ExtendedServicesDeleteJsonTest, self).setUp()
+        timeutils.set_time_override(test_services.fake_utcnow())
+
+    def tearDown(self):
+        super(ExtendedServicesDeleteJsonTest, self).tearDown()
+        timeutils.clear_time_override()
+
+    def test_service_detail(self, *mocks):
+        """
+        Return a list of all running services with the disable reason
+        information if that exists.
+        """
+        response = self._do_get('os-services')
+        self.assertEqual(response.status, 200)
+        subs = {'id': 1,
+                'binary': 'nova-compute',
+                'host': 'host1',
+                'zone': 'nova',
+                'status': 'disabled',
+                'state': 'up'}
+        subs.update(self._get_regexes())
+        return self._verify_response('services-get-resp',
+                                     subs, response, 200)
+
+    def test_service_delete(self, *mocks):
+        response = self._do_delete('os-services/1')
+        self.assertEqual(response.status, 204)
+        self.assertEqual(response.read(), "")
+
+
+class ExtendedServicesDeleteXmlTest(ExtendedServicesDeleteJsonTest):
+    """This extension is tested in the ExtendedServicesDeleteJsonTest class."""
     ctype = 'xml'
 
 

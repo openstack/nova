@@ -16,6 +16,7 @@ from oslo.config import cfg
 import webob.exc
 
 from nova.api.openstack import extensions
+from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -28,7 +29,7 @@ CONF = cfg.CONF
 CONF.import_opt('service_down_time', 'nova.service')
 
 
-class ServiceController(object):
+class ServiceController(wsgi.Controller):
 
     def __init__(self):
         self.host_api = compute.HostAPI()
@@ -60,6 +61,7 @@ class ServiceController(object):
         if svc['disabled']:
             active = 'disabled'
         service_detail = {'binary': svc['binary'], 'host': svc['host'],
+                     'id': svc['id'],
                      'zone': svc['availability_zone'],
                      'status': active, 'state': state,
                      'updated_at': svc['updated_at'],
@@ -83,6 +85,19 @@ class ServiceController(object):
             return False
 
         return True
+
+    @wsgi.response(204)
+    @extensions.expected_errors((400, 404))
+    def delete(self, req, id):
+        """Deletes the specified service."""
+        context = req.environ['nova.context']
+        authorize(context)
+
+        try:
+            self.host_api.service_delete(context, id)
+        except exception.ServiceNotFound:
+            explanation = _("Service %s not found.") % id
+            raise webob.exc.HTTPNotFound(explanation=explanation)
 
     @extensions.expected_errors(())
     def index(self, req):

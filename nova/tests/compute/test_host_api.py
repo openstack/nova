@@ -14,10 +14,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
+
+import mock
+
 from nova.cells import utils as cells_utils
 from nova import compute
 from nova import context
 from nova import exception
+from nova.objects import service as service_obj
 from nova import test
 from nova.tests import fake_notifier
 from nova.tests.objects import test_objects
@@ -305,6 +310,18 @@ class ComputeHostAPITestCase(test.TestCase):
                 state='fake-state')
         self.assertEqual('fake-response', result)
 
+    def test_service_delete(self):
+        with contextlib.nested(
+            mock.patch.object(service_obj.Service, 'get_by_id',
+                              return_value=service_obj.Service()),
+            mock.patch.object(service_obj.Service, 'destroy')
+        ) as (
+            get_by_id, destroy
+        ):
+            self.host_api.service_delete(self.ctxt, 1)
+            get_by_id.assert_called_once_with(self.ctxt, 1)
+            destroy.assert_called_once_with()
+
 
 class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
     def setUp(self):
@@ -412,6 +429,14 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         result = self.host_api.service_update(
             self.ctxt, host_name, binary, params_to_update)
         self._compare_obj(result, expected_result)
+
+    def test_service_delete(self):
+        cell_service_id = cells_utils.cell_with_item('cell1', 1)
+        with mock.patch.object(self.host_api.cells_rpcapi,
+                               'service_delete') as service_delete:
+            self.host_api.service_delete(self.ctxt, cell_service_id)
+            service_delete.assert_called_once_with(
+                self.ctxt, cell_service_id)
 
     def test_instance_get_all_by_host(self):
         instances = [dict(id=1, cell_name='cell1', host='host1'),

@@ -3,41 +3,37 @@
         {
             "id": 1,
             "binary": "nova-scheduler",
-            "disabled_reason": "test1",
             "host": "host1",
             "state": "up",
             "status": "disabled",
-            "updated_at": "2012-10-29T13:42:02.000000",
+            "updated_at": "%(timestamp)s",
             "zone": "internal"
         },
         {
             "id": 2,
             "binary": "nova-compute",
-            "disabled_reason": "test2",
             "host": "host1",
             "state": "up",
             "status": "disabled",
-            "updated_at": "2012-10-29T13:42:05.000000",
+            "updated_at": "%(timestamp)s",
             "zone": "nova"
         },
         {
             "id": 3,
             "binary": "nova-scheduler",
-            "disabled_reason": "",
             "host": "host2",
             "state": "down",
             "status": "enabled",
-            "updated_at": "2012-09-19T06:55:34.000000",
+            "updated_at": "%(timestamp)s",
             "zone": "internal"
         },
         {
             "id": 4,
             "binary": "nova-compute",
-            "disabled_reason": "test4",
             "host": "host2",
             "state": "down",
             "status": "disabled",
-            "updated_at": "2012-09-18T08:03:38.000000",
+            "updated_at": "%(timestamp)s",
             "zone": "nova"
         }
     ]

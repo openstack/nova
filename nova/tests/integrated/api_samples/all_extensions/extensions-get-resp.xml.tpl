@@ -233,4 +233,7 @@
   <extension alias="os-preserve-ephemeral-rebuild" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2" name="PreserveEphemeralOnRebuild">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-extended-services-delete" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/extended_services_delete/api/v2" name="ExtendedServicesDelete">
+    <description>%(text)s</description>
+  </extension>
 </extensions>

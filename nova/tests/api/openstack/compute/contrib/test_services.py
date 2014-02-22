@@ -15,6 +15,8 @@
 
 import calendar
 import datetime
+
+import mock
 import webob.exc
 
 from nova.api.openstack.compute.contrib import services
@@ -332,6 +334,44 @@ class ServicesTest(test.TestCase):
                     'disabled_reason': 'test2'}]}
         self.assertEqual(res_dict, response)
 
+    def test_services_detail_with_delete_extension(self):
+        self.ext_mgr.extensions['os-extended-services-delete'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+        with mock.patch.object(self.controller.host_api, 'service_get_all',
+                               side_effect=fake_host_api_service_get_all):
+            req = FakeRequest()
+            res_dict = self.controller.index(req)
+            response = {'services': [
+                {'binary': 'nova-scheduler',
+                 'host': 'host1',
+                 'id': 1,
+                 'zone': 'internal',
+                 'status': 'disabled',
+                 'state': 'up',
+                 'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+                {'binary': 'nova-compute',
+                 'host': 'host1',
+                 'id': 2,
+                 'zone': 'nova',
+                 'status': 'disabled',
+                 'state': 'up',
+                 'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+                {'binary': 'nova-scheduler',
+                 'host': 'host2',
+                 'id': 3,
+                 'zone': 'internal',
+                 'status': 'enabled',
+                 'state': 'down',
+                 'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
+                {'binary': 'nova-compute',
+                 'host': 'host2',
+                 'id': 4,
+                 'zone': 'nova',
+                 'status': 'disabled',
+                 'state': 'down',
+                 'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+            self.assertEqual(res_dict, response)
+
     def test_services_enable(self):
         def _service_update(context, service_id, values):
             self.assertIsNone(values['disabled_reason'])
@@ -396,3 +436,35 @@ class ServicesTest(test.TestCase):
         self.assertFalse(self.controller._is_valid_as_reason(reason))
         reason = 'it\'s a valid reason.'
         self.assertTrue(self.controller._is_valid_as_reason(reason))
+
+    def test_services_delete(self):
+        self.ext_mgr.extensions['os-extended-services-delete'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+
+        request = fakes.HTTPRequest.blank('/v2/fakes/os-services/1',
+                                          use_admin_context=True)
+        request.method = 'DELETE'
+
+        with mock.patch.object(self.controller.host_api,
+                               'service_delete') as service_delete:
+            self.controller.delete(request, '1')
+            service_delete.assert_called_once_with(
+                request.environ['nova.context'], '1')
+            self.assertEqual(self.controller.delete.wsgi_code, 204)
+
+    def test_services_delete_not_found(self):
+        self.ext_mgr.extensions['os-extended-services-delete'] = True
+        self.controller = services.ServiceController(self.ext_mgr)
+
+        request = fakes.HTTPRequest.blank('/v2/fakes/os-services/abc',
+                                          use_admin_context=True)
+        request.method = 'DELETE'
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.delete, request, 'abc')
+
+    def test_services_delete_not_enabled(self):
+        request = fakes.HTTPRequest.blank('/v2/fakes/os-services/300',
+                                          use_admin_context=True)
+        request.method = 'DELETE'
+        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
+                          self.controller.delete, request, '300')

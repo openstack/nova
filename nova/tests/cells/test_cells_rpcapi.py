@@ -310,6 +310,16 @@ class CellsAPITestCase(test.NoDBTestCase):
                            version='1.7')
         self.assertEqual(result, 'fake_response')
 
+    def test_service_delete(self):
+        call_info = self._stub_rpc_method('call', None)
+        cell_service_id = 'cell@id'
+        result = self.cells_rpcapi.service_delete(
+            self.fake_context, cell_service_id=cell_service_id)
+        expected_args = {'cell_service_id': cell_service_id}
+        self._check_result(call_info, 'service_delete',
+                           expected_args, version='1.26')
+        self.assertIsNone(result)
+
     def test_proxy_rpc_to_manager(self):
         call_info = self._stub_rpc_method('call', 'fake_response')
         result = self.cells_rpcapi.proxy_rpc_to_manager(

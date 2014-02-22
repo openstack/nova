@@ -3,7 +3,6 @@
         {
             "id": 1,
             "binary": "nova-scheduler",
-            "disabled_reason": "test1",
             "host": "host1",
             "state": "up",
             "status": "disabled",
@@ -13,7 +12,6 @@
         {
             "id": 2,
             "binary": "nova-compute",
-            "disabled_reason": "test2",
             "host": "host1",
             "state": "up",
             "status": "disabled",
@@ -23,7 +21,6 @@
         {
             "id": 3,
             "binary": "nova-scheduler",
-            "disabled_reason": "",
             "host": "host2",
             "state": "down",
             "status": "enabled",
@@ -33,7 +30,6 @@
         {
             "id": 4,
             "binary": "nova-compute",
-            "disabled_reason": "test4",
             "host": "host2",
             "state": "down",
             "status": "disabled",

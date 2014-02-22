@@ -757,6 +757,10 @@ class _TargetedMessageMethods(_BaseMessageMethods):
             self.host_api.service_update(message.ctxt, host_name, binary,
                                          params_to_update))
 
+    def service_delete(self, message, service_id):
+        """Deletes the specified service."""
+        self.host_api.service_delete(message.ctxt, service_id)
+
     def proxy_rpc_to_manager(self, message, host_name, rpc_message,
                              topic, timeout):
         """Proxy RPC to the given compute topic."""
@@ -1534,6 +1538,15 @@ class MessageRunner(object):
                                   method_kwargs, 'down', cell_name,
                                   need_response=True)
         return message.process()
+
+    def service_delete(self, ctxt, cell_name, service_id):
+        """Deletes the specified service."""
+        method_kwargs = {'service_id': service_id}
+        message = _TargetedMessage(self, ctxt,
+                                   'service_delete',
+                                   method_kwargs, 'down', cell_name,
+                                   need_response=True)
+        message.process()
 
     def proxy_rpc_to_manager(self, ctxt, cell_name, host_name, topic,
                              rpc_message, call, timeout):

@@ -623,6 +623,14 @@
             "name": "PreserveEphemeralOnRebuild",
             "namespace": "http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2",
             "updated": "%(timestamp)s"
+        },
+        {
+            "alias": "os-extended-services-delete",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedServicesDelete",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_services_delete/api/v2",
+            "updated": "%(timestamp)s"
         }
     ]
 }

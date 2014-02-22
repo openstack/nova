@@ -88,6 +88,7 @@ class CellsAPI(object):
         handle the version_cap being set to 1.24.
 
         1.25 - Adds rebuild_instance()
+        1.26 - Adds service_delete()
     '''
 
     VERSION_ALIASES = {
@@ -257,6 +258,12 @@ class CellsAPI(object):
                           host_name=host_name,
                           binary=binary,
                           params_to_update=params_to_update)
+
+    def service_delete(self, ctxt, cell_service_id):
+        """Deletes the specified service."""
+        cctxt = self.client.prepare(version='1.26')
+        cctxt.call(ctxt, 'service_delete',
+                   cell_service_id=cell_service_id)
 
     def proxy_rpc_to_manager(self, ctxt, rpc_message, topic, call=False,
                              timeout=None):

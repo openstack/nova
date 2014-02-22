@@ -78,3 +78,9 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV3):
                                 'service-disable-log-put-req', subs)
         return self._verify_response('service-disable-log-put-resp',
                                      subs, response, 200)
+
+    def test_service_delete(self):
+        """Delete an existing service."""
+        response = self._do_delete('os-services/1')
+        self.assertEqual(response.status, 204)
+        self.assertEqual(response.read(), "")
