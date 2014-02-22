@@ -161,7 +161,7 @@ class ExtendedVolumesController(wsgi.Controller):
         except exception.InvalidDevicePath as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.response(202)
     @wsgi.action('detach')
     @validation.schema(extended_volumes.detach)
@@ -196,6 +196,9 @@ class ExtendedVolumesController(wsgi.Controller):
         for bdm in bdms:
             if bdm.volume_id != volume_id:
                 continue
+            if bdm.is_root:
+                msg = _("Can't detach root device volume")
+                raise exc.HTTPForbidden(explanation=msg)
             try:
                 self.compute_api.detach_volume(context, instance, volume)
                 break

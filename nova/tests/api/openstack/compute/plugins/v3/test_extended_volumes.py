@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import extended_volumes
@@ -228,6 +229,14 @@ class ExtendedVolumesTest(test.TestCase):
         url = "/v3/servers/%s/action" % UUID1
         res = self._make_request(url, {"detach": None})
         self.assertEqual(res.status_int, 400)
+
+    @mock.patch('nova.objects.block_device.BlockDeviceMapping.is_root',
+                 new_callable=mock.PropertyMock)
+    def test_detach_volume_root(self, mock_isroot):
+        url = "/v3/servers/%s/action" % UUID1
+        mock_isroot.return_value = True
+        res = self._make_request(url, {"detach": {"volume_id": UUID1}})
+        self.assertEqual(res.status_int, 403)
 
     def test_attach_volume(self):
         url = "/v3/servers/%s/action" % UUID1
