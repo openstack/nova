@@ -670,7 +670,9 @@ def instance_get_active_by_window_joined(context, begin, end=None,
 def instance_get_all_by_host(context, host,
                              columns_to_join=None, use_slave=False):
     """Get all instances belonging to a host."""
-    return IMPL.instance_get_all_by_host(context, host, columns_to_join)
+    return IMPL.instance_get_all_by_host(context, host,
+                                         columns_to_join,
+                                         use_slave=use_slave)
 
 
 def instance_get_all_by_host_and_node(context, host, node):

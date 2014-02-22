@@ -1720,13 +1720,14 @@ def _instances_fill_metadata(context, instances,
 
     meta = collections.defaultdict(list)
     if 'metadata' in manual_joins:
-        for row in _instance_metadata_get_multi(context, uuids, use_slave):
+        for row in _instance_metadata_get_multi(context, uuids,
+                                                use_slave=use_slave):
             meta[row['instance_uuid']].append(row)
 
     sys_meta = collections.defaultdict(list)
     if 'system_metadata' in manual_joins:
         for row in _instance_system_metadata_get_multi(context, uuids,
-                                                       use_slave):
+                                                       use_slave=use_slave):
             sys_meta[row['instance_uuid']].append(row)
 
     pcidevs = collections.defaultdict(list)
@@ -4542,11 +4543,12 @@ def cell_get_all(context):
 ########################
 # User-provided metadata
 
-def _instance_metadata_get_multi(context, instance_uuids, session=None):
+def _instance_metadata_get_multi(context, instance_uuids,
+                                 session=None, use_slave=False):
     if not instance_uuids:
         return []
     return model_query(context, models.InstanceMetadata,
-                       session=session).\
+                       session=session, use_slave=use_slave).\
                     filter(
             models.InstanceMetadata.instance_uuid.in_(instance_uuids))
 
@@ -4607,11 +4609,12 @@ def instance_metadata_update(context, instance_uuid, metadata, delete):
 # System-owned metadata
 
 
-def _instance_system_metadata_get_multi(context, instance_uuids, session=None):
+def _instance_system_metadata_get_multi(context, instance_uuids,
+                                        session=None, use_slave=False):
     if not instance_uuids:
         return []
     return model_query(context, models.InstanceSystemMetadata,
-                       session=session).\
+                       session=session, use_slave=use_slave).\
                     filter(
             models.InstanceSystemMetadata.instance_uuid.in_(instance_uuids))
 
