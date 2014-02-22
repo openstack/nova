@@ -919,8 +919,9 @@ class VlanNetworkTestCase(test.TestCase):
                                       is_admin=False)
 
         def fake1(*args, **kwargs):
-            return dict(test_floating_ip.fake_floating_ip,
-                        address='10.0.0.1', network='fakenet')
+            return dict(test_fixed_ip.fake_fixed_ip,
+                        address='10.0.0.1',
+                        network=test_network.fake_network)
 
         # floating ip that's already associated
         def fake2(*args, **kwargs):
@@ -986,8 +987,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(exception.NoFloatingIpInterface,
                           self.network._associate_floating_ip,
                           ctxt,
-                          mox.IgnoreArg(),
-                          mox.IgnoreArg(),
+                          '1.2.3.4',
+                          '1.2.3.5',
                           mox.IgnoreArg(),
                           mox.IgnoreArg())
 
@@ -2678,7 +2679,8 @@ class FloatingIPTestCase(test.TestCase):
 
     def _test_associate_floating_ip_failure(self, stdout, expected_exception):
         def _fake_catchall(*args, **kwargs):
-            return {'id': 'fake', 'network': 'fake'}
+            return dict(test_fixed_ip.fake_fixed_ip,
+                        network=test_network.fake_network)
 
         def _fake_add_floating_ip(*args, **kwargs):
             raise processutils.ProcessExecutionError(stdout)
@@ -2692,7 +2694,7 @@ class FloatingIPTestCase(test.TestCase):
 
         self.assertRaises(expected_exception,
                           self.network._associate_floating_ip, self.context,
-                          '', '', '', '')
+                          '1.2.3.4', '1.2.3.5', '', '')
 
     def test_associate_floating_ip_failure(self):
         self._test_associate_floating_ip_failure(None,
