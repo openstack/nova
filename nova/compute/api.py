@@ -3006,7 +3006,7 @@ class API(base.Base):
 
         self._record_action_start(context, instance, instance_actions.EVACUATE)
 
-        # NODE(danms): Transitional until evacuate supports objects
+        # NOTE(danms): Transitional until evacuate supports objects
         inst_obj = instance_obj.Instance._from_db_object(
             context, instance_obj.Instance(), instance,
             expected_attrs=['metadata', 'system_metadata'])
