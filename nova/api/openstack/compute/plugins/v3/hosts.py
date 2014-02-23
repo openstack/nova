@@ -80,6 +80,9 @@ class HostController(wsgi.Controller):
         zone = req.GET.get('zone', None)
         if zone:
             filters['availability_zone'] = zone
+        service = req.GET.get('service')
+        if service:
+            filters['topic'] = service
         services = self.api.service_get_all(context, filters=filters,
                                             set_zones=True)
         hosts = []
