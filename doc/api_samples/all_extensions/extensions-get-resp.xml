@@ -126,6 +126,9 @@
   <extension alias="os-extended-services" updated="2013-05-17T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/extended_services/api/v2" name="ExtendedServices">
     <description>Extended services support.</description>
   </extension>
+  <extension alias="os-extended-hypervisors" updated="2013-10-21T00:00:00-00:00" namespace="http://docs.openstack.org/compute/ext/extended_hypervisors/api/v1.1" name="ExtendedHypervisors">
+    <description>Extended hypervisors support.</description>
+  </extension>
   <extension alias="os-extended-volumes" updated="2013-06-07T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1" name="ExtendedVolumes">
     <description>Extended Volumes support.</description>
   </extension>

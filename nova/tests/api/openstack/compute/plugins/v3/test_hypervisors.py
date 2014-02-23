@@ -47,7 +47,8 @@ TEST_HYPERS = [
          current_workload=2,
          running_vms=2,
          cpu_info='cpu_info',
-         disk_available_least=100),
+         disk_available_least=100,
+         host_ip='1.1.1.1'),
     dict(id=2,
          service_id=2,
          service=dict(id=2,
@@ -71,7 +72,8 @@ TEST_HYPERS = [
          current_workload=2,
          running_vms=2,
          cpu_info='cpu_info',
-         disk_available_least=100)]
+         disk_available_least=100,
+         host_ip='2.2.2.2')]
 TEST_SERVERS = [dict(name="inst1", uuid="uuid1", host="compute1"),
                 dict(name="inst2", uuid="uuid2", host="compute2"),
                 dict(name="inst3", uuid="uuid3", host="compute1"),
@@ -168,6 +170,7 @@ class HypervisorsTest(test.NoDBTestCase):
                 running_vms=2,
                 cpu_info='cpu_info',
                 disk_available_least=100,
+                host_ip='1.1.1.1',
                 service=dict(id=1, host='compute1')))
 
     def test_view_hypervisor_servers(self):
@@ -219,7 +222,8 @@ class HypervisorsTest(test.NoDBTestCase):
                          current_workload=2,
                          running_vms=2,
                          cpu_info='cpu_info',
-                         disk_available_least=100),
+                         disk_available_least=100,
+                         host_ip='1.1.1.1'),
                     dict(id=2,
                          service=dict(id=2, host="compute2"),
                          vcpus=4,
@@ -236,7 +240,8 @@ class HypervisorsTest(test.NoDBTestCase):
                          current_workload=2,
                          running_vms=2,
                          cpu_info='cpu_info',
-                         disk_available_least=100)]))
+                         disk_available_least=100,
+                         host_ip='2.2.2.2')]))
 
     def test_detail_non_admin(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/detail')
@@ -275,7 +280,8 @@ class HypervisorsTest(test.NoDBTestCase):
                     current_workload=2,
                     running_vms=2,
                     cpu_info='cpu_info',
-                    disk_available_least=100)))
+                    disk_available_least=100,
+                    host_ip='1.1.1.1')))
 
     def test_show_non_admin(self):
         req = fakes.HTTPRequestV3.blank('/os-hypervisors/1')

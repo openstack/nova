@@ -3468,6 +3468,27 @@ class HypervisorsSampleXmlTests(HypervisorsSampleJsonTests):
     ctype = "xml"
 
 
+class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
+    extends_name = ("nova.api.openstack.compute.contrib."
+                    "hypervisors.Hypervisors")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "extended_hypervisors.Extended_hypervisors")
+
+    def test_hypervisors_show_with_ip(self):
+        hypervisor_id = 1
+        subs = {
+            'hypervisor_id': hypervisor_id
+        }
+        response = self._do_get('os-hypervisors/%s' % hypervisor_id)
+        subs.update(self._get_regexes())
+        self._verify_response('hypervisors-show-with-ip-resp',
+                              subs, response, 200)
+
+
+class ExtendedHypervisorsXmlTest(ExtendedHypervisorsJsonTest):
+    ctype = 'xml'
+
+
 class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
                       "Hypervisors")

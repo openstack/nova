@@ -147,6 +147,9 @@
   <extension alias="os-hypervisors" updated="%(timestamp)s" namespace="http://docs.openstack.org/compute/ext/hypervisors/api/v1.1" name="Hypervisors">
     <description>%(text)s</description>
   </extension>
+  <extension alias="os-extended-hypervisors" name="ExtendedHypervisors" namespace="http://docs.openstack.org/compute/ext/extended_hypervisors/api/v1.1" updated="%(timestamp)s">
+    <description>%(text)s</description>
+  </extension>
   <extension alias="os-instance_usage_audit_log" updated="%(timestamp)s" namespace="http://docs.openstack.org/ext/services/api/v1.1" name="OSInstanceUsageAuditLog">
     <description>%(text)s</description>
   </extension>
