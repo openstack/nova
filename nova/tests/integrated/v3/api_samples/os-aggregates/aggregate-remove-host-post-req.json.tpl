@@ -1,6 +1,5 @@
 {
-  "remove_host":
-    {
-      "host": "%(host_name)s"
+    "remove_host": {
+        "host": "%(host_name)s"
     }
 }
