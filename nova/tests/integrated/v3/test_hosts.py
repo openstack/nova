@@ -49,3 +49,9 @@ class HostsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         response = self._do_get('os-hosts')
         subs = self._get_regexes()
         self._verify_response('hosts-list-resp', subs, response, 200)
+
+    def test_hosts_list_compute_service(self):
+        response = self._do_get('os-hosts?service=compute')
+        subs = self._get_regexes()
+        self._verify_response('hosts-list-compute-service-resp',
+                               subs, response, 200)

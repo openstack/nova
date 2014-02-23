@@ -1,0 +1,9 @@
+{
+    "hosts": [
+        {
+            "host_name": "09c025b0efc64211bd23fc50fa974cdf",
+            "service": "compute",
+            "zone": "nova"
+        }
+    ]
+}
