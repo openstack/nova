@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as instance_obj
@@ -57,6 +58,9 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
         updates = self.obj_get_changes()
         updates.pop('id', None)
         db_migration = db.migration_create(context, updates)
