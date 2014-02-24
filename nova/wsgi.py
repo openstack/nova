@@ -285,7 +285,7 @@ class Application(object):
           res = 'message\n'
 
           # Option 2: a nicely formatted HTTP exception page
-          res = exc.HTTPForbidden(detail='Nice try')
+          res = exc.HTTPForbidden(explanation='Nice try')
 
           # Option 3: a webob Response object (in case you need to play with
           # headers, or you want to be treated like an iterable, or or or)
