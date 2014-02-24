@@ -43,6 +43,14 @@ class NovaBase(models.SoftDeleteMixin,
                models.ModelBase):
     metadata = None
 
+    def save(self, session=None):
+        from nova.db.sqlalchemy import api
+
+        if session is None:
+            session = api.get_session()
+
+        super(NovaBase, self).save(session=session)
+
 
 class Service(BASE, NovaBase):
     """Represents a running service on a host."""

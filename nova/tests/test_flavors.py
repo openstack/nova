@@ -18,9 +18,9 @@ import time
 from nova.compute import flavors
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import api as sql_session
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import session as sql_session
 from nova import test
 
 
