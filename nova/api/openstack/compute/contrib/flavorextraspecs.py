@@ -24,6 +24,7 @@ from nova.compute import flavors
 from nova import db
 from nova import exception
 from nova.openstack.common.gettextutils import _
+from nova import utils
 
 authorize = extensions.extension_authorizer('compute', 'flavorextraspecs')
 
@@ -55,11 +56,24 @@ class FlavorExtraSpecsController(object):
             expl = _('No Request Body')
             raise exc.HTTPBadRequest(explanation=expl)
 
-    def _check_key_names(self, keys):
+    def _check_extra_specs(self, specs):
+        if type(specs) is not dict:
+            msg = _('Bad extra_specs provided')
+            raise exc.HTTPBadRequest(explanation=msg)
+
         try:
-            flavors.validate_extra_spec_keys(keys)
+            flavors.validate_extra_spec_keys(specs.keys())
         except exception.InvalidInput as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
+
+        for key, value in specs.iteritems():
+            try:
+                utils.check_string_length(key, 'extra_specs key',
+                                          min_length=1, max_length=255)
+                utils.check_string_length(value, 'extra_specs value',
+                                          max_length=255)
+            except exception.InvalidInput as error:
+                raise exc.HTTPBadRequest(explanation=error.format_message())
 
     @wsgi.serializers(xml=ExtraSpecsTemplate)
     def index(self, req, flavor_id):
@@ -74,7 +88,7 @@ class FlavorExtraSpecsController(object):
         authorize(context, action='create')
         self._check_body(body)
         specs = body.get('extra_specs')
-        self._check_key_names(specs.keys())
+        self._check_extra_specs(specs)
         try:
             db.flavor_extra_specs_update_or_create(context,
                                                               flavor_id,
@@ -87,7 +101,7 @@ class FlavorExtraSpecsController(object):
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
         authorize(context, action='update')
-        self._check_body(body)
+        self._check_extra_specs(body)
         if id not in body:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
