@@ -1257,14 +1257,31 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_unrescue(self):
         self._rescue()
+        self.test_vm_ref = None
+        self.test_device_name = None
 
-        def fake_detach_disk_from_vm(*args, **kwargs):
-            pass
+        def fake_power_off_vm_ref(vm_ref):
+            self.test_vm_ref = vm_ref
+            self.assertIsNotNone(vm_ref)
 
-        self.stubs.Set(self.conn._volumeops, "detach_disk_from_vm",
-                       fake_detach_disk_from_vm)
+        def fake_detach_disk_from_vm(vm_ref, instance,
+                                     device_name, destroy_disk=False):
+            self.test_device_name = device_name
+            info = self.conn.get_info(instance)
+            self._check_vm_info(info, power_state.SHUTDOWN)
 
-        self.conn.unrescue(self.instance, None)
+        with contextlib.nested(
+            mock.patch.object(self.conn._vmops, "_power_off_vm_ref",
+                              side_effect=fake_power_off_vm_ref),
+            mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
+                              side_effect=fake_detach_disk_from_vm),
+        ) as (poweroff, detach):
+            self.conn.unrescue(self.instance, None)
+            poweroff.assert_called_once_with(self.test_vm_ref)
+            detach.assert_called_once_with(self.test_vm_ref, mock.ANY,
+                                           self.test_device_name)
+            self.test_vm_ref = None
+            self.test_device_name = None
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
