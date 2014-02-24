@@ -1681,19 +1681,16 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.RESTORE)
 
         try:
-            if instance['host']:
-                instance = self.update(context, instance,
-                            task_state=task_states.RESTORING,
-                            expected_task_state=[None],
-                            deleted_at=None)
+            if instance.host:
+                instance.task_state = task_states.RESTORING
+                instance.deleted_at = None
+                instance.save(expected_task_state=[None])
                 self.compute_rpcapi.restore_instance(context, instance)
             else:
-                self.update(context,
-                            instance,
-                            vm_state=vm_states.ACTIVE,
-                            task_state=None,
-                            expected_task_state=[None],
-                            deleted_at=None)
+                instance.vm_state = vm_states.ACTIVE
+                instance.task_state = None
+                instance.deleted_at = None
+                instance.save(expected_task_state=[None])
 
             QUOTAS.commit(context, quota_reservations)
         except Exception:

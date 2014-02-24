@@ -6831,39 +6831,6 @@ class ComputeAPITestCase(BaseTestCase):
         finally:
             db.instance_destroy(self.context, ref[0]['uuid'])
 
-    def test_restore(self):
-        # Ensure instance can be restored from a soft delete.
-        instance, instance_uuid = self._run_instance(params={
-                'host': CONF.host,
-                'cell_name': 'foo'})
-
-        instance = instance_obj.Instance.get_by_uuid(
-            self.context, instance_uuid,
-            expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
-        self.compute_api.soft_delete(self.context, instance)
-
-        instance.refresh()
-        self.assertEqual(instance.task_state, task_states.SOFT_DELETING)
-
-        # set the state that the instance gets when soft_delete finishes
-        instance.vm_state = vm_states.SOFT_DELETED
-        instance.task_state = None
-        instance.save()
-
-        # Ensure quotas are committed
-        self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
-        nova.quota.QUOTAS.commit(mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-
-        instance = instance_obj.Instance.get_by_uuid(self.context,
-                                                     instance_uuid)
-        self.compute_api.restore(self.context, instance)
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.RESTORING)
-
-        db.instance_destroy(self.context, instance['uuid'])
-
     def _test_rebuild(self, vm_state):
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']

@@ -415,7 +415,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.19')
+    target = messaging.Target(version='3.20')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2114,6 +2114,7 @@ class ComputeManager(manager.Manager):
                            user_id=user_id)
         self._notify_about_instance_usage(context, instance, "soft_delete.end")
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2128,11 +2129,10 @@ class ComputeManager(manager.Manager):
             # doesn't implement the restore method
             self._power_on(context, instance)
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context, instance['uuid'],
-                power_state=current_power_state,
-                vm_state=vm_states.ACTIVE,
-                expected_task_state=task_states.RESTORING,
-                task_state=None)
+        instance.power_state = current_power_state
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=task_states.RESTORING)
         self._notify_about_instance_usage(context, instance, "restore.end")
 
     def _rebuild_default_impl(self, context, instance, image_meta,

@@ -16,6 +16,7 @@
 import copy
 import datetime
 import iso8601
+import mock
 import mox
 
 from nova.compute import api as compute_api
@@ -1687,6 +1688,23 @@ class _ComputeAPIUnitTestMixIn(object):
                           image_id,
                           "new password",
                           auto_disk_config=True)
+
+    @mock.patch('nova.quota.QUOTAS.commit')
+    @mock.patch('nova.quota.QUOTAS.reserve')
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch('nova.objects.instance_action.InstanceAction.action_start')
+    def test_restore(self, action_start, instance_save, quota_reserve,
+                     quota_commit):
+        instance = self._create_instance_obj()
+        instance.vm_state = vm_states.SOFT_DELETED
+        instance.task_state = None
+        instance.save()
+        with mock.patch.object(self.compute_api, 'compute_rpcapi') as rpc:
+            self.compute_api.restore(self.context, instance)
+            rpc.restore_instance.assert_called_once_with(self.context,
+                                                         instance)
+        self.assertEqual(instance.task_state, task_states.RESTORING)
+        self.assertEqual(1, quota_commit.call_count)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

@@ -585,7 +585,10 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def restore(self, instance):
-        """Restore the specified instance."""
+        """Restore the specified instance.
+
+        :param instance: nova.objects.instance.Instance
+        """
         raise NotImplementedError()
 
     def get_available_resource(self, nodename):
