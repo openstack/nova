@@ -1175,9 +1175,9 @@ def generate_ephemeral(session, instance, vm_ref, first_userdevice,
             LOG.debug(_("Error when generating ephemeral disk. "
                         "Device: %(userdevice)s Size GB: %(size_gb)s "
                         "Error: %(exc)s"), {
-                            userdevice: userdevice,
-                            size_gb: size_gb,
-                            exc: exc})
+                            'userdevice': userdevice,
+                            'size_gb': size_gb,
+                            'exc': exc})
             safe_destroy_vdis(session, vdi_refs)
 
 
