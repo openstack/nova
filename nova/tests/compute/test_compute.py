@@ -3182,15 +3182,15 @@ class ComputeTestCase(BaseTestCase):
                              'vnet1_tx_packets': 662,
                             }
 
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance, {}, {}, [], None,
+        instance = self._create_fake_instance_obj()
+        self.compute.run_instance(self.context,
+                jsonutils.to_primitive(instance), {}, {}, [], None,
                 None, True, None, False)
 
         diagnostics = self.compute.get_diagnostics(self.context,
                 instance=instance)
         self.assertEqual(diagnostics, expected_diagnostic)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        self.compute.terminate_instance(self.context, instance, [], [])
 
     def test_add_fixed_ip_usage_notification(self):
         def dummy(*args, **kwargs):
@@ -8740,7 +8740,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                      security_group_name)
 
     def test_get_diagnostics(self):
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
 
         rpcapi = compute_rpcapi.ComputeAPI
         self.mox.StubOutWithMock(rpcapi, 'get_diagnostics')

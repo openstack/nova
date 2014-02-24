@@ -28,13 +28,14 @@ def fake_get_diagnostics(self, _context, instance_uuid):
     return {'data': 'Some diagnostic info'}
 
 
-def fake_instance_get(self, _context, instance_uuid):
+def fake_instance_get(self, _context, instance_uuid, want_objects=False):
     if instance_uuid != UUID:
         raise Exception("Invalid UUID")
     return {'uuid': instance_uuid}
 
 
-def fake_instance_get_instance_not_found(self, _context, instance_uuid):
+def fake_instance_get_instance_not_found(self, _context, instance_uuid,
+        want_objects=False):
     raise exception.InstanceNotFound(instance_id=instance_uuid)
 
 

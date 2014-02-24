@@ -477,7 +477,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_get_diagnostics(self):
-        instance_ref, network_info = self._get_running_instance()
+        instance_ref, network_info = self._get_running_instance(obj=True)
         self.connection.get_diagnostics(instance_ref)
 
     @catch_notimplementederror
