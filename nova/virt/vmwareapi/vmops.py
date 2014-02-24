@@ -1085,12 +1085,26 @@ class VMwareVMOps(object):
                         "get_dynamic_property", vm_rescue_ref,
                         "VirtualMachine", "config.hardware.device")
         device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
+        self._power_off_vm_ref(vm_rescue_ref)
         self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
         self.destroy(r_instance, None, instance_name=instance_name)
         self._power_on(instance)
 
+    def _power_off_vm_ref(self, vm_ref):
+        """Power off the specifed vm.
+
+        :param vm_ref: a reference object to the VM.
+        """
+        poweroff_task = self._session._call_method(
+                                    self._session._get_vim(),
+                                    "PowerOffVM_Task", vm_ref)
+        self._session._wait_for_task(None, poweroff_task)
+
     def power_off(self, instance):
-        """Power off the specified instance."""
+        """Power off the specified instance.
+
+        :param instance: nova.objects.instance.Instance
+        """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         pwr_state = self._session._call_method(vim_util,
@@ -1099,10 +1113,7 @@ class VMwareVMOps(object):
         # Only PoweredOn VMs can be powered off.
         if pwr_state == "poweredOn":
             LOG.debug(_("Powering off the VM"), instance=instance)
-            poweroff_task = self._session._call_method(
-                                        self._session._get_vim(),
-                                        "PowerOffVM_Task", vm_ref)
-            self._session._wait_for_task(instance['uuid'], poweroff_task)
+            self._power_off_vm_ref(vm_ref)
             LOG.debug(_("Powered off the VM"), instance=instance)
         # Raise Exception if VM is suspended
         elif pwr_state == "suspended":
