@@ -426,7 +426,7 @@ class ServicesTest(test.TestCase):
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                }
-        self.assertRaises(webob.exc.HTTPUnprocessableEntity,
+        self.assertRaises(webob.exc.HTTPBadRequest,
                 self.controller.update, req, "disable-log-reason", body)
 
     def test_invalid_reason_field(self):
