@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova.objects import keypair
 from nova.openstack.common import timeutils
 from nova.tests.objects import test_objects
@@ -52,6 +53,19 @@ class _TestKeyPairObject(object):
         keypair_obj.public_key = 'keydata'
         keypair_obj.create(self.context)
         self.compare_obj(keypair_obj, fake_keypair)
+
+    def test_recreate_fails(self):
+        self.mox.StubOutWithMock(db, 'key_pair_create')
+        db.key_pair_create(self.context,
+                           {'name': 'foo-keypair',
+                            'public_key': 'keydata'}).AndReturn(fake_keypair)
+        self.mox.ReplayAll()
+        keypair_obj = keypair.KeyPair()
+        keypair_obj.name = 'foo-keypair'
+        keypair_obj.public_key = 'keydata'
+        keypair_obj.create(self.context)
+        self.assertRaises(exception.ObjectActionError, keypair_obj.create,
+                          self.context)
 
     def test_destroy(self):
         self.mox.StubOutWithMock(db, 'key_pair_destroy')
