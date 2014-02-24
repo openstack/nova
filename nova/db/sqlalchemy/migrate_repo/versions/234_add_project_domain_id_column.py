@@ -14,7 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from sqlalchemy import Column, MetaData, Boolean, Table, text
+from sqlalchemy import Column, MetaData, String, Table
 
 
 def upgrade(migrate_engine):
