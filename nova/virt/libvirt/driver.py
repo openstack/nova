@@ -1086,7 +1086,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Delete all LVM disks for given instance object."""
         disks = self._lvm_disks(instance)
         if disks:
-            libvirt_utils.remove_logical_volumes(*disks)
+            libvirt_utils.remove_logical_volumes(disks)
 
     def _lvm_disks(self, instance):
         """Returns all LVM disks for given instance object."""

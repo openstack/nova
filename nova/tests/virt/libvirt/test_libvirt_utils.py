@@ -13,12 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import functools
 import os
 
 import mock
 from oslo.config import cfg
 
+from nova import exception
 from nova.openstack.common import processutils
 from nova import test
 from nova import utils
@@ -229,6 +231,21 @@ blah BLAH: bb
             self._rsync_call('src', 'host:dest'),
         ])
         self.assertEqual(2, mock_execute.call_count)
+
+    def test_fail_remove_all_logical_volumes(self):
+
+        def fake_execute(*args, **kwargs):
+            if 'vol2' in args:
+                raise processutils.ProcessExecutionError('Error')
+
+        with contextlib.nested(
+             mock.patch.object(libvirt_utils, 'clear_logical_volume'),
+             mock.patch.object(libvirt_utils, 'execute',
+                  side_effect=fake_execute)) as (mock_clear, mock_execute):
+            self.assertRaises(exception.VolumesNotRemoved,
+                              libvirt_utils.remove_logical_volumes,
+                              ['vol1', 'vol2', 'vol3'])
+            self.assertEqual(3, mock_execute.call_count)
 
     @mock.patch('nova.utils.execute')
     def test_copy_image_scp(self, mock_execute):
