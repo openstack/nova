@@ -413,7 +413,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.14')
+    target = messaging.Target(version='3.15')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -3573,17 +3573,24 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     @wrap_instance_fault
-    def unshelve_instance(self, context, instance, image):
+    def unshelve_instance(self, context, instance, image,
+                          filter_properties=None, node=None):
         """Unshelve the instance.
 
         :param context: request context
         :param instance: an Instance dict
         :param image: an image to build from.  If None we assume a
             volume backed instance.
+        :param filter_properties: dict containing limits, retry info etc.
+        :param node: target compute node
         """
+        if filter_properties is None:
+            filter_properties = {}
+
         @utils.synchronized(instance['uuid'])
         def do_unshelve_instance():
-            self._unshelve_instance(context, instance, image)
+            self._unshelve_instance(context, instance, image,
+                                    filter_properties, node)
         do_unshelve_instance()
 
     def _unshelve_instance_key_scrub(self, instance):
@@ -3599,12 +3606,10 @@ class ComputeManager(manager.Manager):
         """Restore previously scrubbed keys before saving the instance."""
         instance.update(keys)
 
-    def _unshelve_instance(self, context, instance, image):
+    def _unshelve_instance(self, context, instance, image, filter_properties,
+                           node):
         self._notify_about_instance_usage(context, instance, 'unshelve.start')
-        compute_info = self._get_compute_info(context.elevated(), self.host)
         instance.task_state = task_states.SPAWNING
-        instance.node = compute_info['hypervisor_hostname']
-        instance.host = self.host
         instance.save()
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -3612,11 +3617,19 @@ class ComputeManager(manager.Manager):
                 context, instance, legacy=False)
         block_device_info = self._prep_block_device(context, instance, bdms)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
+
+        if node is None:
+            node = self.driver.get_available_nodes()[0]
+            LOG.debug(_('No node specified, defaulting to %s'), node)
+
+        rt = self._get_resource_tracker(node)
+        limits = filter_properties.get('limits', {})
         try:
-            self.driver.spawn(context, instance, image, injected_files=[],
-                    admin_password=None,
-                    network_info=network_info,
-                    block_device_info=block_device_info)
+            with rt.instance_claim(context, instance, limits):
+                self.driver.spawn(context, instance, image, injected_files=[],
+                                  admin_password=None,
+                                  network_info=network_info,
+                                  block_device_info=block_device_info)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Instance failed to spawn'), instance=instance)

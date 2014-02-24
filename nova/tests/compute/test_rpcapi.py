@@ -780,7 +780,9 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_unshelve_instance(self):
         self._test_compute_api('unshelve_instance', 'cast',
-                instance=self.fake_instance, host='host', image='image')
+                instance=self.fake_instance, host='host', image='image',
+                filter_properties={'fakeprop': 'fakeval'}, node='node',
+                version='3.15')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
