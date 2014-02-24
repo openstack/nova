@@ -28,8 +28,7 @@ authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class AgentController(object):
-    """
-    The agent is talking about guest agent.The host can use this for
+    """The agent is talking about guest agent.The host can use this for
     things like accessing files on the disk, configuring networking,
     or running other applications/scripts in the guest while it is
     running. Typically this uses some hypervisor-specific transport
@@ -52,9 +51,7 @@ class AgentController(object):
     """
     @extensions.expected_errors(())
     def index(self, req):
-        """
-        Return a list of all agent builds. Filter by hypervisor.
-        """
+        """Return a list of all agent builds. Filter by hypervisor."""
         context = req.environ['nova.context']
         authorize(context)
         hypervisor = None

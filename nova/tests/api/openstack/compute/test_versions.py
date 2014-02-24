@@ -435,8 +435,7 @@ class VersionsTest(test.NoDBTestCase):
             [{'rel': 'self', 'href': 'http://localhost/v3/images/1'}]))
 
     def test_multi_choice_server_atom(self):
-        """
-        Make sure multi choice responses do not have content-type
+        """Make sure multi choice responses do not have content-type
         application/atom+xml (should use default of json)
         """
         req = webob.Request.blank('/servers')

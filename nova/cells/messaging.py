@@ -732,8 +732,7 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         return jsonutils.to_primitive(service)
 
     def service_update(self, message, host_name, binary, params_to_update):
-        """
-        Used to enable/disable a service. For compute services, setting to
+        """Used to enable/disable a service. For compute services, setting to
         disabled stops new builds arriving on that host.
 
         :param host_name: the name of the host machine that the service is
@@ -1509,8 +1508,7 @@ class MessageRunner(object):
 
     def service_update(self, ctxt, cell_name, host_name, binary,
                        params_to_update):
-        """
-        Used to enable/disable a service. For compute services, setting to
+        """Used to enable/disable a service. For compute services, setting to
         disabled stops new builds arriving on that host.
 
         :param host_name: the name of the host machine that the service is

@@ -40,8 +40,7 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
     run_filter_once_per_request = True
 
     def host_passes(self, host_state, filter_properties):
-        """
-        Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
+        """Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
         to True:
                      | isolated_image | non_isolated_image
         -------------+----------------+-------------------

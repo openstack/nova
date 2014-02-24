@@ -321,8 +321,7 @@ class TimeOverride(fixtures.Fixture):
 
 
 class NoDBTestCase(TestCase):
-    """
-    `NoDBTestCase` differs from TestCase in that DB access is not supported.
+    """`NoDBTestCase` differs from TestCase in that DB access is not supported.
     This makes tests run significantly faster. If possible, all new tests
     should derive from this class.
     """

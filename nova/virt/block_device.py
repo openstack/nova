@@ -123,8 +123,7 @@ class DriverBlockDevice(dict):
         return dict((key, self.get(key)) for key in self._legacy_fields)
 
     def attach(self, **kwargs):
-        """
-        Make the device available to be used by VMs.
+        """Make the device available to be used by VMs.
 
         To be overriden in subclasses with the connecting logic for
         the type of device the subclass represents.

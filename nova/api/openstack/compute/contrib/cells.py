@@ -133,8 +133,7 @@ class CellDeserializer(wsgi.XMLDeserializer):
 
 
 def _filter_keys(item, keys):
-    """
-    Filters all model attributes except for keys
+    """Filters all model attributes except for keys
     item is a dict
 
     """
@@ -142,8 +141,7 @@ def _filter_keys(item, keys):
 
 
 def _fixup_cell_info(cell_info, keys):
-    """
-    If the transport_url is present in the cell, derive username,
+    """If the transport_url is present in the cell, derive username,
     rpc_host, and rpc_port from it.
     """
 
@@ -294,8 +292,7 @@ class Controller(object):
             raise exc.HTTPBadRequest(explanation=msg)
 
     def _normalize_cell(self, cell, existing=None):
-        """
-        Normalize input cell data.  Normalizations include:
+        """Normalize input cell data.  Normalizations include:
 
         * Converting cell['type'] to is_parent boolean.
         * Merging existing transport URL with transport information.

@@ -172,8 +172,7 @@ class PlainMapper(APIMapper):
 
 
 class APIRouter(base_wsgi.Router):
-    """
-    Routes requests on the OpenStack API to the appropriate controller
+    """Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
     ExtensionManager = None  # override in subclasses
@@ -252,8 +251,7 @@ class APIRouter(base_wsgi.Router):
 
 
 class APIRouterV3(base_wsgi.Router):
-    """
-    Routes requests on the OpenStack v3 API to the appropriate controller
+    """Routes requests on the OpenStack v3 API to the appropriate controller
     and method.
     """
 

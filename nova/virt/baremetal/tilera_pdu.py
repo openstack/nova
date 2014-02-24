@@ -93,8 +93,7 @@ class Pdu(base.PowerManager):
                 "to PDU"))
 
     def _exec_pdutool(self, mode):
-        """
-        Changes power state of the given node.
+        """Changes power state of the given node.
 
         According to the mode (1-ON, 2-OFF, 3-REBOOT), power state can be
         changed. /tftpboot/pdu_mgr script handles power management of

@@ -37,9 +37,8 @@ def stub_service_get_by_host_and_topic(context, host_name, topic):
 
 
 def stub_set_host_enabled(context, host_name, enabled):
-    """
-    Simulates three possible behaviours for VM drivers or compute drivers when
-    enabling or disabling a host.
+    """Simulates three possible behaviours for VM drivers or compute
+    drivers when enabling or disabling a host.
 
     'enabled' means new instances can go to this host
     'disabled' means they can't

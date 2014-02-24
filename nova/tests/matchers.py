@@ -316,8 +316,7 @@ class XMLExpectedChild(XMLMismatch):
 
 
 class XMLMatchState(object):
-    """
-    Maintain some state for matching.
+    """Maintain some state for matching.
 
     Tracks the XML node path and saves the expected and actual full
     XML text, for use by the XMLMismatch subclasses.
@@ -339,8 +338,7 @@ class XMLMatchState(object):
         return '/' + '/'.join(self.path)
 
     def node(self, tag, idx):
-        """
-        Adds tag and index to the path; they will be popped off when
+        """Adds tag and index to the path; they will be popped off when
         the corresponding 'with' statement exits.
 
         :param tag: The element tag

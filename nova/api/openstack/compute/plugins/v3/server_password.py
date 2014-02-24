@@ -44,8 +44,7 @@ class ServerPasswordController(object):
     @extensions.expected_errors(404)
     @wsgi.response(204)
     def clear(self, req, server_id):
-        """
-        Removes the encrypted server password from the metadata server
+        """Removes the encrypted server password from the metadata server
 
         Note that this does not actually change the instance server
         password.

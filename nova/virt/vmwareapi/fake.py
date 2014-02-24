@@ -208,16 +208,14 @@ class ManagedObject(object):
                                                   self.mo_id))
 
     def set(self, attr, val):
-        """
-        Sets an attribute value. Not using the __setattr__ directly for we
+        """Sets an attribute value. Not using the __setattr__ directly for we
         want to set attributes of the type 'a.b.c' and using this function
         class we set the same.
         """
         self.__setattr__(attr, val)
 
     def get(self, attr):
-        """
-        Gets an attribute. Used as an intermediary to get nested
+        """Gets an attribute. Used as an intermediary to get nested
         property like 'a.b.c' value.
         """
         return self.__getattr__(attr)
@@ -265,9 +263,7 @@ class DataObject(object):
 
 
 class HostInternetScsiHba(DataObject):
-    """
-    iSCSI Host Bus Adapter
-    """
+    """iSCSI Host Bus Adapter"""
 
     def __init__(self):
         super(HostInternetScsiHba, self).__init__()
@@ -316,9 +312,7 @@ class FileLocked(DataObject):
 
 
 class VirtualDisk(DataObject):
-    """
-    Virtual Disk class.
-    """
+    """Virtual Disk class."""
 
     def __init__(self, controllerKey=0, unitNumber=0):
         super(VirtualDisk, self).__init__()
@@ -433,8 +427,7 @@ class VirtualMachine(ManagedObject):
         self.set("summary.runtime", runtime)
 
     def reconfig(self, factory, val):
-        """
-        Called to reconfigure the VM. Actually customizes the property
+        """Called to reconfigure the VM. Actually customizes the property
         setting of the Virtual Machine object.
         """
         try:
@@ -956,8 +949,7 @@ class FakeVim(object):
     """Fake VIM Class."""
 
     def __init__(self, protocol="https", host="localhost", trace=None):
-        """
-        Initializes the suds client object, sets the service content
+        """Initializes the suds client object, sets the service content
         contents and the cookies for the session.
         """
         self._session = None

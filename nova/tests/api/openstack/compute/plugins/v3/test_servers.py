@@ -1229,12 +1229,11 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['metadata']['seq'], str(i + 1))
 
     def test_get_all_server_details_with_host(self):
-        '''
-        We want to make sure that if two instances are on the same host, then
-        they return the same host_id. If two instances are on different hosts,
-        they should return different host_ids. In this test, there are 5
-        instances - 2 on one host and 3 on another.
-        '''
+        """We want to make sure that if two instances are on the same host,
+        then they return the same host_id. If two instances are on different
+        hosts, they should return different host_ids. In this test,
+        there are 5 instances - 2 on one host and 3 on another.
+        """
 
         def return_servers_with_host(context, *args, **kwargs):
             return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
@@ -2896,8 +2895,7 @@ class ServersViewBuilderTest(test.TestCase):
 
 
 class ServersAllExtensionsTestCase(test.TestCase):
-    """
-    Servers tests using default API router with all extensions enabled.
+    """Servers tests using default API router with all extensions enabled.
 
     The intent here is to catch cases where extensions end up throwing
     an exception because of a malformed request before the core API
@@ -2957,9 +2955,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
 
 class ServersInvalidRequestTestCase(test.TestCase):
-    """
-    Tests of places we throw 400 Bad Request from
-    """
+    """Tests of places we throw 400 Bad Request from."""
 
     def setUp(self):
         super(ServersInvalidRequestTestCase, self).setUp()

@@ -42,8 +42,7 @@ CONF.register_opt(allow_instance_snapshots_opt)
 
 
 class APIRouter(nova.api.openstack.APIRouter):
-    """
-    Routes requests on the OpenStack API to the appropriate controller
+    """Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
     ExtensionManager = extensions.ExtensionManager
@@ -130,8 +129,7 @@ class APIRouter(nova.api.openstack.APIRouter):
 
 
 class APIRouterV3(nova.api.openstack.APIRouterV3):
-    """
-    Routes requests on the OpenStack API to the appropriate controller
+    """Routes requests on the OpenStack API to the appropriate controller
     and method.
     """
     def __init__(self, init_only=None):

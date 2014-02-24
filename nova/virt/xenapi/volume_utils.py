@@ -86,18 +86,14 @@ def introduce_sr(session, sr_uuid, label, params):
 
 
 def forget_sr(session, sr_ref):
-    """
-    Forgets the storage repository without destroying the VDIs within
-    """
+    """Forgets the storage repository without destroying the VDIs within."""
     LOG.debug(_('Forgetting SR...'))
     unplug_pbds(session, sr_ref)
     session.call_xenapi("SR.forget", sr_ref)
 
 
 def find_sr_by_uuid(session, sr_uuid):
-    """
-    Return the storage repository given a uuid.
-    """
+    """Return the storage repository given a uuid."""
     try:
         return session.call_xenapi("SR.get_by_uuid", sr_uuid)
     except session.XenAPI.Failure as exc:
@@ -249,8 +245,7 @@ def parse_sr_info(connection_data, description=''):
 
 
 def parse_volume_info(connection_data):
-    """
-    Parse device_path and mountpoint as they can be used by XenAPI.
+    """Parse device_path and mountpoint as they can be used by XenAPI.
     In particular, the mountpoint (e.g. /dev/sdc) must be translated
     into a numeric literal.
     """

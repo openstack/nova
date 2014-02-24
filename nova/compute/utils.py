@@ -295,8 +295,7 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
 def notify_about_instance_usage(notifier, context, instance, event_suffix,
                                 network_info=None, system_metadata=None,
                                 extra_usage_info=None):
-    """
-    Send a notification about an instance.
+    """Send a notification about an instance.
 
     :param notifier: a messaging.Notifier
     :param event_suffix: Event type like "delete.start" or "exists"
@@ -321,8 +320,7 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
 
 
 def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
-    """
-    Send a notification about aggregate update.
+    """Send a notification about aggregate update.
 
     :param event_suffix: Event type like "create.start" or "create.end"
     :param aggregate_payload: payload for aggregate update
@@ -342,8 +340,7 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
 
 
 def notify_about_host_update(context, event_suffix, host_payload):
-    """
-    Send a notification about host update.
+    """Send a notification about host update.
 
     :param event_suffix: Event type like "create.start" or "create.end"
     :param host_payload: payload for host update. It is a dict and there

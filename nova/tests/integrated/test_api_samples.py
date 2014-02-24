@@ -1690,8 +1690,7 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
         self._verify_response('service-disable-put-resp', subs, response, 200)
 
     def test_service_detail(self):
-        """
-        Return a list of all running services with the disable reason
+        """Return a list of all running services with the disable reason
         information if that exists.
         """
         self.stubs.Set(extensions.ExtensionManager, "is_loaded",
@@ -1725,8 +1724,7 @@ class ServicesXmlTest(ServicesJsonTest):
 
 
 class ExtendedServicesJsonTest(ApiSampleTestBaseV2):
-    """
-    This extension is extending the functionalities of the
+    """This extension is extending the functionalities of the
     Services extension so the funcionalities introduced by this extension
     are tested in the ServicesJsonTest and ServicesXmlTest classes.
     """
@@ -1758,8 +1756,7 @@ class ExtendedServicesDeleteJsonTest(ApiSampleTestBaseV2):
         timeutils.clear_time_override()
 
     def test_service_detail(self, *mocks):
-        """
-        Return a list of all running services with the disable reason
+        """Return a list of all running services with the disable reason
         information if that exists.
         """
         response = self._do_get('os-services')

@@ -41,8 +41,7 @@ LOG = logging.getLogger(__name__)
 
 
 class MockKeyManager(key_mgr.KeyManager):
-    """
-    This mock key manager implementation supports all the methods specified
+    """This mock key manager implementation supports all the methods specified
     by the key manager interface. This implementation stores keys within a
     dictionary, and as a result, it is not acceptable for use across different
     services. Side effects (e.g., raising exceptions) for each method are

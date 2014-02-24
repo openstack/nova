@@ -468,9 +468,7 @@ class Failure(Exception):
 
 
 class SessionBase(object):
-    """
-    Base class for Fake Sessions
-    """
+    """Base class for Fake Sessions."""
 
     def __init__(self, uri):
         self._session = None

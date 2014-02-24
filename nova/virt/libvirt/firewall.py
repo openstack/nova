@@ -31,8 +31,7 @@ libvirt = None
 
 
 class NWFilterFirewall(base_firewall.FirewallDriver):
-    """
-    This class implements a network filtering mechanism by using
+    """This class implements a network filtering mechanism by using
     libvirt's nwfilter.
     all instances get a filter ("nova-base") applied. This filter
     provides some basic security such as protection against MAC
@@ -62,8 +61,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     @staticmethod
     def nova_no_nd_reflection_filter():
-        """
-        This filter protects false positives on IPv6 Duplicate Address
+        """This filter protects false positives on IPv6 Duplicate Address
         Detection(DAD).
         """
         return '''<filter name='nova-no-nd-reflection' chain='ipv6'>
@@ -186,8 +184,7 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         return xml
 
     def get_base_filter_list(self, instance, allow_dhcp):
-        """
-        Obtain a list of base filters to apply to an instance.
+        """Obtain a list of base filters to apply to an instance.
         The return value should be a list of strings, each
         specifying a filter name.  Subclasses can override this
         function to add additional filters as needed.  Additional

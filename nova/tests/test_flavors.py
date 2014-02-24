@@ -216,8 +216,7 @@ class InstanceTypeTestCase(test.TestCase):
         self.assertEqual(inst_type_name, deleted_inst_type["name"])
 
     def test_read_deleted_false_converting_flavorid(self):
-        """
-        Ensure deleted flavors are not returned when not needed (for
+        """Ensure deleted flavors are not returned when not needed (for
         example when creating a server and attempting to translate from
         flavorid to instance_type_id.
         """

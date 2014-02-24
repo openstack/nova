@@ -476,8 +476,7 @@ class ViewBuilder(object):
     """Model API responses as dictionaries."""
 
     def _get_project_id(self, request):
-        """
-        Get project id from request url if present or empty string
+        """Get project id from request url if present or empty string
         otherwise
         """
         project_id = request.environ["nova.context"].project_id

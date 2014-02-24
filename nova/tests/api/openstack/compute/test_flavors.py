@@ -695,9 +695,7 @@ class FlavorsXMLSerializationTest(test.TestCase):
 
 
 class DisabledFlavorsWithRealDBTest(test.TestCase):
-    """
-    Tests that disabled flavors should not be shown nor listed.
-    """
+    """Tests that disabled flavors should not be shown nor listed."""
     def setUp(self):
         super(DisabledFlavorsWithRealDBTest, self).setUp()
         self.controller = flavors.Controller()
@@ -759,9 +757,8 @@ class DisabledFlavorsWithRealDBTest(test.TestCase):
         self.assertEqual(db_flavorids, api_flavorids)
 
     def test_show_should_include_disabled_flavor_for_user(self):
-        """
-        Counterintuitively we should show disabled flavors to all users and not
-        just admins. The reason is that, when a user performs a server-show
+        """Counterintuitively we should show disabled flavors to all users and
+        not just admins. The reason is that, when a user performs a server-show
         request, we want to be able to display the pretty flavor name ('512 MB
         Instance') and not just the flavor-id even if the flavor id has been
         marked disabled.

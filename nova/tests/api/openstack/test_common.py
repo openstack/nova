@@ -36,10 +36,9 @@ ATOMNS = "{http://www.w3.org/2005/Atom}"
 
 
 class LimiterTest(test.TestCase):
-    """
-    Unit tests for the `nova.api.openstack.common.limited` method which takes
-    in a list of items and, depending on the 'offset' and 'limit' GET params,
-    returns a subset or complete set of the given items.
+    """Unit tests for the `nova.api.openstack.common.limited` method which
+    takes in a list of items and, depending on the 'offset' and 'limit' GET
+    params, returns a subset or complete set of the given items.
     """
 
     def setUp(self):
@@ -160,8 +159,7 @@ class LimiterTest(test.TestCase):
 
 
 class PaginationParamsTest(test.TestCase):
-    """
-    Unit tests for the `nova.api.openstack.common.get_pagination_params`
+    """Unit tests for the `nova.api.openstack.common.get_pagination_params`
     method which takes in a request object and returns 'marker' and 'limit'
     GET params.
     """

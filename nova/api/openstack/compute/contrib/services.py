@@ -148,9 +148,7 @@ class ServiceController(object):
 
     @wsgi.serializers(xml=ServicesIndexTemplate)
     def index(self, req):
-        """
-        Return a list of all running services. Filter by host & service name.
-        """
+        """Return a list of all running services."""
         detailed = self.ext_mgr.is_loaded('os-extended-services')
         services = self._get_services_list(req, detailed)
 

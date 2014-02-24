@@ -282,8 +282,7 @@ class Instance(BASE, NovaBase):
 
 
 class InstanceInfoCache(BASE, NovaBase):
-    """
-    Represents a cache of information about an instance
+    """Represents a cache of information about an instance
     """
     __tablename__ = 'instance_info_caches'
     __table_args__ = (
@@ -1349,8 +1348,7 @@ class InstanceGroup(BASE, NovaBase):
 
 
 class PciDevice(BASE, NovaBase):
-    """
-    Represents a PCI host device that can be passed through to instances.
+    """Represents a PCI host device that can be passed through to instances.
     """
     __tablename__ = 'pci_devices'
     __table_args__ = (

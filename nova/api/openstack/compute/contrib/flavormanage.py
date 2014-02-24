@@ -25,9 +25,7 @@ authorize = extensions.extension_authorizer('compute', 'flavormanage')
 
 
 class FlavorManageController(wsgi.Controller):
-    """
-    The Flavor Lifecycle API controller for the OpenStack API.
-    """
+    """The Flavor Lifecycle API controller for the OpenStack API."""
     _view_builder_class = flavors_view.ViewBuilder
 
     def __init__(self):
@@ -87,9 +85,7 @@ class FlavorManageController(wsgi.Controller):
 
 
 class Flavormanage(extensions.ExtensionDescriptor):
-    """
-    Flavor create/delete API support
-    """
+    """Flavor create/delete API support."""
 
     name = "FlavorManage"
     alias = "os-flavor-manage"

@@ -219,8 +219,7 @@ def check_instance_cell(fn):
 
 
 def _diff_dict(orig, new):
-    """
-    Return a dict describing how to change orig to new.  The keys
+    """Return a dict describing how to change orig to new.  The keys
     correspond to values that have changed; the value will be a list
     of one or two elements.  The first element of the list will be
     either '+' or '-', indicating whether the key was updated or
@@ -441,8 +440,7 @@ class API(base.Base):
                 raise exception.InvalidMetadataSize(reason=msg)
 
     def _check_requested_secgroups(self, context, secgroups):
-        """
-        Check if the security group requested exists and belongs to
+        """Check if the security group requested exists and belongs to
         the project.
         """
         for secgroup in secgroups:
@@ -455,8 +453,7 @@ class API(base.Base):
 
     def _check_requested_networks(self, context, requested_networks,
                                   max_count):
-        """
-        Check if the networks requested belongs to the project
+        """Check if the networks requested belongs to the project
         and the fixed IP address for each network provided is within
         same the network block
         """
@@ -1267,8 +1264,7 @@ class API(base.Base):
                block_device_mapping=None, access_ip_v4=None,
                access_ip_v6=None, requested_networks=None, config_drive=None,
                auto_disk_config=None, scheduler_hints=None, legacy_bdm=True):
-        """
-        Provision instances, sending instance information to the
+        """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
 
@@ -2110,8 +2106,7 @@ class API(base.Base):
                 context, None, None, image)
 
         def _reset_image_metadata():
-            """
-            Remove old image properties that we're storing as instance
+            """Remove old image properties that we're storing as instance
             system metadata.  These properties start with 'image_'.
             Then add the properties for the new image.
             """
@@ -2234,8 +2229,7 @@ class API(base.Base):
     @staticmethod
     def _resize_quota_delta(context, new_flavor,
                             old_flavor, sense, compare):
-        """
-        Calculate any quota adjustment required at a particular point
+        """Calculate any quota adjustment required at a particular point
         in the resize cycle.
 
         :param context: the request context
@@ -2261,15 +2255,13 @@ class API(base.Base):
 
     @staticmethod
     def _upsize_quota_delta(context, new_flavor, old_flavor):
-        """
-        Calculate deltas required to adjust quota for an instance upsize.
+        """Calculate deltas required to adjust quota for an instance upsize.
         """
         return API._resize_quota_delta(context, new_flavor, old_flavor, 1, 1)
 
     @staticmethod
     def _reverse_upsize_quota_delta(context, migration_ref):
-        """
-        Calculate deltas required to reverse a prior upsizing
+        """Calculate deltas required to reverse a prior upsizing
         quota adjustment.
         """
         old_flavor = flavor_obj.Flavor.get_by_id(
@@ -2281,8 +2273,7 @@ class API(base.Base):
 
     @staticmethod
     def _downsize_quota_delta(context, instance):
-        """
-        Calculate deltas required to adjust quota for an instance downsize.
+        """Calculate deltas required to adjust quota for an instance downsize.
         """
         old_flavor = instance.get_flavor('old')
         new_flavor = instance.get_flavor('new')
@@ -3478,8 +3469,7 @@ class KeypairAPI(base.Base):
 
 
 class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
-    """
-    Sub-set of the Compute API related to managing security groups
+    """Sub-set of the Compute API related to managing security groups
     and security group rules
     """
 
@@ -3491,8 +3481,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.security_group_rpcapi = compute_rpcapi.SecurityGroupAPI()
 
     def validate_property(self, value, property, allowed):
-        """
-        Validate given security group property.
+        """Validate given security group property.
 
         :param value:          the value to validate, as a string or unicode
         :param property:       the property, either 'name' or 'description'

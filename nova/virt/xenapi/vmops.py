@@ -153,9 +153,7 @@ def make_step_decorator(context, instance, update_instance_progress,
 
 
 class VMOps(object):
-    """
-    Management class for VM-related tasks
-    """
+    """Management class for VM-related tasks."""
     def __init__(self, session, virtapi):
         self.compute_api = compute.API()
         self._session = session
@@ -1153,8 +1151,7 @@ class VMOps(object):
 
     @staticmethod
     def _sanitize_xenstore_key(key):
-        """
-        Xenstore only allows the following characters as keys:
+        """Xenstore only allows the following characters as keys:
 
         ABCDEFGHIJKLMNOPQRSTUVWXYZ
         abcdefghijklmnopqrstuvwxyz
@@ -1638,8 +1635,7 @@ class VMOps(object):
         return info_dict
 
     def inject_network_info(self, instance, network_info, vm_ref=None):
-        """
-        Generate the network info and make calls to place it into the
+        """Generate the network info and make calls to place it into the
         xenstore and the xenstore param list.
         vm_ref can be passed in because it will sometimes be different than
         what vm_utils.lookup(session, instance['name']) will find (ex: rescue)
@@ -1734,8 +1730,7 @@ class VMOps(object):
         update_hostname()
 
     def _write_to_xenstore(self, instance, path, value, vm_ref=None):
-        """
-        Writes the passed value to the xenstore record for the given VM
+        """Writes the passed value to the xenstore record for the given VM
         at the specified location. A XenAPIPlugin.PluginError will be raised
         if any error is encountered in the write process.
         """
@@ -1744,8 +1739,7 @@ class VMOps(object):
                                       value=jsonutils.dumps(value))
 
     def _delete_from_xenstore(self, instance, path, vm_ref=None):
-        """
-        Deletes the value from the xenstore record for the given VM at
+        """Deletes the value from the xenstore record for the given VM at
         the specified location.  A XenAPIPlugin.PluginError will be
         raised if any error is encountered in the delete process.
         """
@@ -1754,8 +1748,7 @@ class VMOps(object):
 
     def _make_plugin_call(self, plugin, method, instance=None, vm_ref=None,
                           **addl_args):
-        """
-        Abstracts out the process of calling a method of a xenapi plugin.
+        """Abstracts out the process of calling a method of a xenapi plugin.
         Any errors raised by the plugin will in turn raise a RuntimeError here.
         """
         args = {}
@@ -1791,8 +1784,7 @@ class VMOps(object):
         return domid
 
     def _add_to_param_xenstore(self, vm_ref, key, val):
-        """
-        Takes a key/value pair and adds it to the xenstore parameter
+        """Takes a key/value pair and adds it to the xenstore parameter
         record for the given vm instance. If the key exists in xenstore,
         it is overwritten
         """
@@ -1800,8 +1792,7 @@ class VMOps(object):
         self._session.call_xenapi('VM.add_to_xenstore_data', vm_ref, key, val)
 
     def _remove_from_param_xenstore(self, vm_ref, key):
-        """
-        Takes a single key and removes it from the xenstore parameter
+        """Takes a single key and removes it from the xenstore parameter
         record data for the given VM.
         If the key doesn't exist, the request is ignored.
         """

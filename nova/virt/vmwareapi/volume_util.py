@@ -33,9 +33,7 @@ class StorageError(Exception):
 
 
 def get_host_iqn(session, cluster=None):
-    """
-    Return the host iSCSI IQN.
-    """
+    """Return the host iSCSI IQN."""
     host_mor = vm_util.get_host_ref(session, cluster)
     hbas_ret = session._call_method(vim_util, "get_dynamic_property",
                                     host_mor, "HostSystem",
@@ -53,9 +51,7 @@ def get_host_iqn(session, cluster=None):
 
 
 def find_st(session, data, cluster=None):
-    """
-    Return the iSCSI Target given a volume info.
-    """
+    """Return the iSCSI Target given a volume info."""
     target_portal = data['target_portal']
     target_iqn = data['target_iqn']
     host_mor = vm_util.get_host_ref(session, cluster)
@@ -126,9 +122,7 @@ def find_st(session, data, cluster=None):
 
 
 def rescan_iscsi_hba(session, cluster=None):
-    """
-    Rescan the iSCSI HBA to discover iSCSI targets.
-    """
+    """Rescan the iSCSI HBA to discover iSCSI targets."""
     host_mor = vm_util.get_host_ref(session, cluster)
     storage_system_mor = session._call_method(vim_util, "get_dynamic_property",
                                               host_mor, "HostSystem",

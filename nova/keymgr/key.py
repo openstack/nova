@@ -54,9 +54,7 @@ class Key(object):
 
 
 class SymmetricKey(Key):
-    """
-    This class represents symmetric keys
-    """
+    """This class represents symmetric keys."""
 
     def __init__(self, alg, key):
         """Create a new SymmetricKey object.

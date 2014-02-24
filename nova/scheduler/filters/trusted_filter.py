@@ -83,8 +83,7 @@ CONF.register_opts(trusted_opts, group=trust_group)
 
 
 class HTTPSClientAuthConnection(httplib.HTTPSConnection):
-    """
-    Class to make a HTTPS connection, with support for full client-based
+    """Class to make a HTTPS connection, with support for full client-based
     SSL Authentication
     """
 
@@ -100,8 +99,7 @@ class HTTPSClientAuthConnection(httplib.HTTPSConnection):
         self.timeout = timeout
 
     def connect(self):
-        """
-        Connect to a host on a given (SSL) port.
+        """Connect to a host on a given (SSL) port.
         If ca_file is pointing somewhere, use it to check Server Certificate.
 
         Redefined/copied and extended from httplib.py:1105 (Python 2.6.x).

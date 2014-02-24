@@ -421,8 +421,7 @@ class CellStateManager(base.Base):
 class CellStateManagerDB(CellStateManager):
     @utils.synchronized('cell-db-sync')
     def _cell_data_sync(self, force=False):
-        """
-        Update cell status for all cells from the backing data store
+        """Update cell status for all cells from the backing data store
         when necessary.
 
         :param force: If True, cell status will be updated regardless
@@ -456,8 +455,7 @@ class CellStateManagerFile(CellStateManager):
         super(CellStateManagerFile, self).__init__(cell_state_cls)
 
     def _cell_data_sync(self, force=False):
-        """
-        Update cell status for all cells from the backing data store
+        """Update cell status for all cells from the backing data store
         when necessary.
 
         :param force: If True, cell status will be updated regardless

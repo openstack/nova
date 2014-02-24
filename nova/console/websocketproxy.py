@@ -38,9 +38,7 @@ class NovaWebSocketProxy(websockify.WebSocketProxy):
                                            ssl_target=None, *args, **kwargs)
 
     def new_client(self):
-        """
-        Called after a new WebSocket connection has been established.
-        """
+        """Called after a new WebSocket connection has been established."""
         # Reopen the eventlet hub to make sure we don't share an epoll
         # fd with parent and/or siblings, which would be bad
         from eventlet import hubs

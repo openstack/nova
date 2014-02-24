@@ -288,9 +288,8 @@ def _make_image_fixtures():
 
 
 def stub_out_glanceclient_create(stubs, sent_to_glance):
-    """
-    We return the metadata sent to glance by modifying the sent_to_glance dict
-    in place.
+    """We return the metadata sent to glance by modifying the sent_to_glance
+    dict in place
     """
     orig_add_image = glanceclient.v1.images.ImageManager.create
 

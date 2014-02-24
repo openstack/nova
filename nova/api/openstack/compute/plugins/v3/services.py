@@ -101,8 +101,8 @@ class ServiceController(wsgi.Controller):
 
     @extensions.expected_errors(())
     def index(self, req):
-        """
-        Return a list of all running services. Filter by host & service name.
+        """Return a list of all running services. Filter by host & service
+        name
         """
         services = self._get_services_list(req)
 

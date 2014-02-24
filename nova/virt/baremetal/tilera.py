@@ -81,8 +81,7 @@ def get_partition_sizes(instance):
 
 
 def get_tftp_image_info(instance):
-    """
-    Generate the paths for tftp files for this instance.
+    """Generate the paths for tftp files for this instance.
 
     Raises NovaException if
     - instance does not contain kernel_id
@@ -297,8 +296,7 @@ class Tilera(base.NodeDriver):
                 os.path.join(CONF.baremetal.tftp_root, instance['uuid']))
 
     def _iptables_set(self, node_ip, user_data):
-        """
-        Sets security setting (iptables:port) if needed.
+        """Sets security setting (iptables:port) if needed.
 
         iptables -A INPUT -p tcp ! -s $IP --dport $PORT -j DROP
         /tftpboot/iptables_rule script sets iptables rule on the given node.

@@ -64,8 +64,7 @@ LOG = logging.getLogger(__name__)
 
 
 def _get_connect_string(backend, user, passwd, database):
-    """
-    Try to get a connection with a very specific set of values, if we get
+    """Try to get a connection with a very specific set of values, if we get
     these then we'll run the tests, otherwise they are skipped
     """
     if backend == "postgres":
@@ -154,8 +153,7 @@ class CommonTestsMixIn(object):
         self._test_mysql_opportunistically()
 
     def test_mysql_connect_fail(self):
-        """
-        Test that we can trigger a mysql connection failure and we fail
+        """Test that we can trigger a mysql connection failure and we fail
         gracefully to ensure we don't break people without mysql
         """
         if _is_backend_avail('mysql', "openstack_cifail", self.PASSWD,
@@ -166,8 +164,7 @@ class CommonTestsMixIn(object):
         self._test_postgresql_opportunistically()
 
     def test_postgresql_connect_fail(self):
-        """
-        Test that we can trigger a postgres connection failure and we fail
+        """Test that we can trigger a postgres connection failure and we fail
         gracefully to ensure we don't break people without postgres
         """
         if _is_backend_avail('postgres', "openstack_cifail", self.PASSWD,

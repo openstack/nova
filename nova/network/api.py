@@ -36,8 +36,7 @@ LOG = logging.getLogger(__name__)
 
 
 def refresh_cache(f):
-    """
-    Decorator to update the instance_info_cache
+    """Decorator to update the instance_info_cache
 
     Requires context and instance as function args
     """

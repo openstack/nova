@@ -6209,9 +6209,7 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
 
     def test_create_domain_define_xml_fails(self):
-        """
-        Tests that the xml is logged when defining the domain fails.
-        """
+        """Tests that the xml is logged when defining the domain fails."""
         fake_xml = "<test>this is a test</test>"
 
         def fake_defineXML(xml):
@@ -6234,8 +6232,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(self.log_error_called)
 
     def test_create_domain_with_flags_fails(self):
-        """
-        Tests that the xml is logged when creating the domain with flags fails.
+        """Tests that the xml is logged when creating the domain with flags
+        fails
         """
         fake_xml = "<test>this is a test</test>"
         fake_domain = FakeVirtDomain(fake_xml)
@@ -6261,9 +6259,8 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertTrue(self.log_error_called)
 
     def test_create_domain_enable_hairpin_fails(self):
-        """
-        Tests that the xml is logged when enabling hairpin mode for the domain
-        fails.
+        """Tests that the xml is logged when enabling hairpin mode for the
+        domain fails.
         """
         utils.reset_is_neutron()
         fake_xml = "<test>this is a test</test>"
@@ -6372,8 +6369,7 @@ class LibvirtConnTestCase(test.TestCase):
                           conn.get_spice_console, self.context, instance)
 
     def _test_attach_detach_interface_get_config(self, method_name):
-        """
-        Tests that the get_config() method is properly called in
+        """Tests that the get_config() method is properly called in
         attach_interface() and detach_interface().
 
         method_name: either \"attach_interface\" or \"detach_interface\"
@@ -6416,15 +6412,13 @@ class LibvirtConnTestCase(test.TestCase):
             raise ValueError("Unhandled method %" % method_name)
 
     def test_attach_interface_get_config(self):
-        """
-        Tests that the get_config() method is properly called in
+        """Tests that the get_config() method is properly called in
         attach_interface().
         """
         self._test_attach_detach_interface_get_config("attach_interface")
 
     def test_detach_interface_get_config(self):
-        """
-        Tests that the get_config() method is properly called in
+        """Tests that the get_config() method is properly called in
         detach_interface().
         """
         self._test_attach_detach_interface_get_config("detach_interface")

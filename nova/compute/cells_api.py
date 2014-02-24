@@ -536,8 +536,7 @@ class HostAPI(compute_api.HostAPI):
                                                        db_service)
 
     def service_update(self, context, host_name, binary, params_to_update):
-        """
-        Used to enable/disable a service. For compute services, setting to
+        """Used to enable/disable a service. For compute services, setting to
         disabled stops new builds arriving on that host.
 
         :param host_name: the name of the host machine that the service is

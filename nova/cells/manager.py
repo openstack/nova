@@ -274,8 +274,7 @@ class CellsManager(manager.Manager):
         return service
 
     def get_host_uptime(self, ctxt, host_name):
-        """
-        Return host uptime for a compute host in a certain cell
+        """Return host uptime for a compute host in a certain cell
 
         :param host_name: fully qualified hostname. It should be in format of
          parent!child@host_id
@@ -286,8 +285,7 @@ class CellsManager(manager.Manager):
         return response.value_or_raise()
 
     def service_update(self, ctxt, host_name, binary, params_to_update):
-        """
-        Used to enable/disable a service. For compute services, setting to
+        """Used to enable/disable a service. For compute services, setting to
         disabled stops new builds arriving on that host.
 
         :param host_name: the name of the host machine that the service is

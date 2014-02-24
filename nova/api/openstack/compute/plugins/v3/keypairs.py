@@ -52,8 +52,7 @@ class KeypairController(object):
     @wsgi.response(201)
     @validation.schema(keypairs.create)
     def create(self, req, body):
-        """
-        Create or import keypair.
+        """Create or import keypair.
 
         Sending name will generate a key and return private_key
         and fingerprint.
@@ -98,9 +97,7 @@ class KeypairController(object):
     @wsgi.response(204)
     @extensions.expected_errors(404)
     def delete(self, req, id):
-        """
-        Delete a keypair with a given name
-        """
+        """Delete a keypair with a given name."""
         context = req.environ['nova.context']
         authorize(context, action='delete')
         try:
@@ -122,9 +119,7 @@ class KeypairController(object):
 
     @extensions.expected_errors(())
     def index(self, req):
-        """
-        List of keypairs for a user
-        """
+        """List of keypairs for a user."""
         context = req.environ['nova.context']
         authorize(context, action='index')
         key_pairs = self.api.get_key_pairs(context, context.user_id)

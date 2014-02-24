@@ -25,8 +25,7 @@ CONF = cfg.CONF
 
 
 def _get_my_ip():
-    """
-    Returns the actual ip of the local machine.
+    """Returns the actual ip of the local machine.
 
     This code figures out what source address would be used if some traffic
     were to be sent out to some well known address on the Internet. In this

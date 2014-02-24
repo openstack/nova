@@ -73,8 +73,7 @@ class AggregateController(wsgi.Controller):
     @extensions.expected_errors((400, 409))
     @wsgi.response(201)
     def create(self, req, body):
-        """
-        Creates an aggregate, given its name and
+        """Creates an aggregate, given its name and
         optional availability zone.
         """
         context = _get_context(req)

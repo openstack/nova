@@ -458,8 +458,7 @@ def check_isinstance(obj, cls):
 
 
 def parse_server_string(server_str):
-    """
-    Parses the given server_string and returns a list of host and port.
+    """Parses the given server_string and returns a list of host and port.
     If it's not a combination of host part and port, the port element
     is a null string. If the input is invalid expression, return a null
     list.
@@ -989,8 +988,7 @@ def spawn_n(func, *args, **kwargs):
 
 
 def is_none_string(val):
-    """
-    Check if a string represents a None value.
+    """Check if a string represents a None value.
     """
     if not isinstance(val, six.string_types):
         return False

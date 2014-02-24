@@ -6386,9 +6386,7 @@ class ArchiveTestCase(test.TestCase):
                 self.uuid_tablenames_to_cleanup.add(tablename)
 
     def _test_archive_deleted_rows_for_one_uuid_table(self, tablename):
-        """
-        :returns: 0 on success, 1 if no uuid column, 2 if insert failed
-        """
+        """:returns: 0 on success, 1 if no uuid column, 2 if insert failed."""
         main_table = db_utils.get_table(self.engine, tablename)
         if not hasattr(main_table.c, "uuid"):
             # Not a uuid table, so skip it.

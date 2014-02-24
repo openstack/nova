@@ -91,8 +91,7 @@ def build_datastore_path(datastore_name, path):
 
 
 def split_datastore_path(datastore_path):
-    """
-    Split the VMware style datastore path to get the Datastore
+    """Split the VMware style datastore path to get the Datastore
     name and the entity path.
     """
     spl = datastore_path.split('[', 1)[1].split(']', 1)
@@ -173,8 +172,7 @@ def get_vm_resize_spec(client_factory, instance):
 
 
 def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
-    """
-    Builds a Config Spec for the LSI or Bus Logic Controller's addition
+    """Builds a Config Spec for the LSI or Bus Logic Controller's addition
     which acts as the controller for the virtual hard disk to be attached
     to the VM.
     """
@@ -199,8 +197,7 @@ def create_controller_spec(client_factory, key, adapter_type="lsiLogic"):
 
 
 def create_network_spec(client_factory, vif_info):
-    """
-    Builds a config spec for the addition of a new network
+    """Builds a config spec for the addition of a new network
     adapter to the VM.
     """
     network_spec = client_factory.create('ns0:VirtualDeviceConfigSpec')
@@ -393,8 +390,7 @@ def _is_scsi_controller(device):
 
 
 def _find_allocated_slots(devices):
-    """
-    Return dictionary which maps controller_key to list of allocated unit
+    """Return dictionary which maps controller_key to list of allocated unit
     numbers for that controller_key.
     """
     taken = {}
@@ -411,8 +407,7 @@ def _find_allocated_slots(devices):
 
 def allocate_controller_key_and_unit_number(client_factory, devices,
                                             adapter_type):
-    """
-    This function inspects the current set of hardware devices and returns
+    """This function inspects the current set of hardware devices and returns
     controller_key and unit_number that can be used for attaching a new virtual
     disk to adapter with the given adapter_type.
     """
@@ -520,8 +515,7 @@ def create_virtual_disk_spec(client_factory, controller_key,
                              linked_clone=False,
                              unit_number=None,
                              device_name=None):
-    """
-    Builds spec for the creation of a new/ attaching of an already existing
+    """Builds spec for the creation of a new/ attaching of an already existing
     Virtual Disk to the VM.
     """
     virtual_device_config = client_factory.create(
@@ -577,8 +571,7 @@ def create_virtual_disk_spec(client_factory, controller_key,
 
 
 def detach_virtual_disk_spec(client_factory, device, destroy_disk=False):
-    """
-    Builds spec for the detach of an already existing Virtual Disk from VM.
+    """Builds spec for the detach of an already existing Virtual Disk from VM.
     """
     virtual_device_config = client_factory.create(
                             'ns0:VirtualDeviceConfigSpec')
@@ -871,8 +864,7 @@ def get_host_ref_from_id(session, host_id, property_list=None):
 
 
 def get_host_id_from_vm_ref(session, vm_ref):
-    """
-    This method allows you to find the managed object
+    """This method allows you to find the managed object
     ID of the host running a VM. Since vMotion can
     change the value, you should not presume that this
     is a value that you can cache for very long and
@@ -909,8 +901,7 @@ def get_host_id_from_vm_ref(session, vm_ref):
 
 
 def property_from_property_set(property_name, property_set):
-    '''
-    Use this method to filter property collector results.
+    '''Use this method to filter property collector results.
 
     Because network traffic is expensive, multiple
     VMwareAPI calls will sometimes pile-up properties

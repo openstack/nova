@@ -24,9 +24,7 @@ authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
 
 
 class FlavorManageController(wsgi.Controller):
-    """
-    The Flavor Lifecycle API controller for the OpenStack API.
-    """
+    """The Flavor Lifecycle API controller for the OpenStack API."""
     _view_builder_class = flavors_view.V3ViewBuilder
 
     def __init__(self):
@@ -90,9 +88,7 @@ class FlavorManageController(wsgi.Controller):
 
 
 class FlavorManage(extensions.V3APIExtensionBase):
-    """
-    Flavor create/delete API support
-    """
+    """Flavor create/delete API support."""
 
     name = "FlavorManage"
     alias = ALIAS

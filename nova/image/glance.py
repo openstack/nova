@@ -142,8 +142,7 @@ def _create_glance_client(context, host, port, use_ssl, version=1):
 
 
 def get_api_servers():
-    """
-    Shuffle a list of CONF.glance_api_servers and return an iterator
+    """Shuffle a list of CONF.glance_api_servers and return an iterator
     that will cycle through the list, looping around to the beginning
     if necessary.
     """
@@ -195,8 +194,7 @@ class GlanceClientWrapper(object):
                                      self.use_ssl, version)
 
     def call(self, context, version, method, *args, **kwargs):
-        """
-        Call a glance client method.  If we get a connection error,
+        """Call a glance client method.  If we get a connection error,
         retry the request according to CONF.glance_num_retries.
         """
         retry_excs = (glanceclient.exc.ServiceUnavailable,

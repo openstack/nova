@@ -1271,8 +1271,7 @@ def _fixed_ip_get_by_address(context, address, session=None,
 
 @require_admin_context
 def fixed_ip_get_by_address_detailed(context, address):
-    """
-    :returns: a tuple of (models.FixedIp, models.Network, models.Instance)
+    """:returns: a tuple of (models.FixedIp, models.Network, models.Instance)
     """
     try:
         result = model_query(context, models.FixedIp,
@@ -3439,8 +3438,7 @@ def _block_device_mapping_get_query(context, session=None,
 
 
 def _scrub_empty_str_values(dct, keys_to_scrub):
-    """
-    Remove any keys found in sequence keys_to_scrub from the dict
+    """Remove any keys found in sequence keys_to_scrub from the dict
     if they have the value ''.
     """
     for key in keys_to_scrub:
@@ -3579,8 +3577,7 @@ def _security_group_get_query(context, session=None, read_deleted=None,
 
 
 def _security_group_get_by_names(context, session, project_id, group_names):
-    """
-    Get security group models for a project by a list of names.
+    """Get security group models for a project by a list of names.
     Raise SecurityGroupNotFoundForProject for a name not found.
     """
     query = _security_group_get_query(context, session=session,
@@ -4241,8 +4238,7 @@ def _flavor_get_query(context, session=None, read_deleted=None):
 def flavor_get_all(context, inactive=False, filters=None,
                    sort_key='flavorid', sort_dir='asc', limit=None,
                    marker=None):
-    """
-    Returns all flavors.
+    """Returns all flavors.
     """
     filters = filters or {}
 

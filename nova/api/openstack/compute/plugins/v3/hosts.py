@@ -37,8 +37,7 @@ class HostController(wsgi.Controller):
 
     @extensions.expected_errors(())
     def index(self, req):
-        """
-        :returns: A dict in the format:
+        """:returns: A dict in the format:
 
             {'hosts': [{'host_name': 'some.host.name',
                'service': 'cells',
@@ -94,19 +93,17 @@ class HostController(wsgi.Controller):
 
     @extensions.expected_errors((400, 404, 501))
     def update(self, req, id, body):
-        """
-        :param body: example format {'host': {'status': 'enable',
+        """:param body: example format {'host': {'status': 'enable',
                                      'maintenance_mode': 'enable'}}
-        :returns:
+           :returns:
         """
         def read_enabled(orig_val, msg):
-            """
-            :param orig_val: A string with either 'enable' or 'disable'. May
-                             be surrounded by whitespace, and case doesn't
-                             matter
-            :param msg: The message to be passed to HTTPBadRequest. A single
-                        %s will be replaced with orig_val.
-            :returns:   True for 'enabled' and False for 'disabled'
+            """:param orig_val: A string with either 'enable' or 'disable'. May
+                                be surrounded by whitespace, and case doesn't
+                                matter
+               :param msg: The message to be passed to HTTPBadRequest. A single
+                           %s will be replaced with orig_val.
+               :returns: True for 'enabled' and False for 'disabled'
             """
             val = orig_val.strip().lower()
             if val == "enable":

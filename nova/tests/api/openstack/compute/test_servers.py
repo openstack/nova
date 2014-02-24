@@ -1141,12 +1141,11 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['metadata']['seq'], str(i + 1))
 
     def test_get_all_server_details_with_host(self):
-        '''
-        We want to make sure that if two instances are on the same host, then
-        they return the same hostId. If two instances are on different hosts,
-        they should return different hostId's. In this test, there are 5
-        instances - 2 on one host and 3 on another.
-        '''
+        """We want to make sure that if two instances are on the same host,
+        then they return the same hostId. If two instances are on different
+        hosts, they should return different hostId's. In this test, there
+        are 5 instances - 2 on one host and 3 on another.
+        """
 
         def return_servers_with_host(context, *args, **kwargs):
             return [fakes.stub_instance(i + 1, 'fake', 'fake', host=i % 2,
@@ -2002,8 +2001,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertTrue(len(reservation_id) > 1)
 
     def test_create_multiple_instances_with_multiple_volume_bdm(self):
-        """
-        Test that a BadRequest is raised if multiple instances
+        """Test that a BadRequest is raised if multiple instances
         are requested with a list of block device mappings for volumes.
         """
         self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
@@ -2027,8 +2025,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params, no_image=True)
 
     def test_create_multiple_instances_with_single_volume_bdm(self):
-        """
-        Test that a BadRequest is raised if multiple instances
+        """Test that a BadRequest is raised if multiple instances
         are requested to boot from a single volume.
         """
         self.ext_mgr.extensions = {'os-multiple-create': 'fake'}
@@ -2505,8 +2502,7 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_volumes_enabled_no_image(self):
-        """
-        Test that the create will fail if there is no image
+        """Test that the create will fail if there is no image
         and no bdms supplied in the request
         """
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
@@ -2533,8 +2529,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, {}, no_image=True)
 
     def test_create_instance_with_volumes_enabled_and_bdms_no_image(self):
-        """
-        Test that the create works if there is no image supplied but
+        """Test that the create works if there is no image supplied but
         os-volumes extension is enabled and bdms are supplied
         """
         self.ext_mgr.extensions = {'os-volumes': 'fake'}
@@ -4657,8 +4652,7 @@ class ServerXMLSerializationTest(test.TestCase):
 
 
 class ServersAllExtensionsTestCase(test.TestCase):
-    """
-    Servers tests using default API router with all extensions enabled.
+    """Servers tests using default API router with all extensions enabled.
 
     The intent here is to catch cases where extensions end up throwing
     an exception because of a malformed request before the core API
@@ -4717,9 +4711,7 @@ class ServersAllExtensionsTestCase(test.TestCase):
 
 
 class ServersUnprocessableEntityTestCase(test.TestCase):
-    """
-    Tests of places we throw 422 Unprocessable Entity from
-    """
+    """Tests of places we throw 422 Unprocessable Entity from."""
 
     def setUp(self):
         super(ServersUnprocessableEntityTestCase, self).setUp()

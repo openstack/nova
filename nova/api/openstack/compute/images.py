@@ -100,8 +100,7 @@ class Controller(wsgi.Controller):
                                nova.image.glance.get_default_image_service())
 
     def _get_filters(self, req):
-        """
-        Return a dictionary of query param filters from the request
+        """Return a dictionary of query param filters from the request.
 
         :param req: the Request object coming from the wsgi layer
         :retval a dict of key/value filters

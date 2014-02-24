@@ -44,8 +44,7 @@ class HostUtils(object):
         return ctypes.windll.kernel32.IsProcessorFeaturePresent(feature_key)
 
     def get_memory_info(self):
-        """
-        Returns a tuple with total visible memory and free physical memory
+        """Returns a tuple with total visible memory and free physical memory
         expressed in kB.
         """
         mem_info = self._conn_cimv2.query("SELECT TotalVisibleMemorySize, "
@@ -55,8 +54,7 @@ class HostUtils(object):
                 long(mem_info.FreePhysicalMemory))
 
     def get_volume_info(self, drive):
-        """
-        Returns a tuple with total size and free space
+        """Returns a tuple with total size and free space
         expressed in bytes.
         """
         logical_disk = self._conn_cimv2.query("SELECT Size, FreeSpace "

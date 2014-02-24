@@ -282,10 +282,9 @@ class ApiEc2TestCase(test.TestCase):
         return self.http
 
     def test_return_valid_isoformat(self):
-        """
-            Ensure that the ec2 api returns datetime in xs:dateTime
-            (which apparently isn't datetime.isoformat())
-            NOTE(ken-pepple): https://bugs.launchpad.net/nova/+bug/721297
+        """Ensure that the ec2 api returns datetime in xs:dateTime
+           (which apparently isn't datetime.isoformat())
+           NOTE(ken-pepple): https://bugs.launchpad.net/nova/+bug/721297
         """
         conv = apirequest._database_to_isoformat
         # sqlite database representation with microseconds
@@ -438,8 +437,7 @@ class ApiEc2TestCase(test.TestCase):
                 'test group')
 
     def test_authorize_revoke_security_group_cidr(self):
-        """
-        Test that we can add and remove CIDR based rules
+        """Test that we can add and remove CIDR based rules
         to a security group
         """
         self.expect_http()
@@ -542,8 +540,7 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEqual(rv[0].name, 'default')
 
     def test_authorize_revoke_security_group_cidr_v6(self):
-        """
-        Test that we can add and remove CIDR based rules
+        """Test that we can add and remove CIDR based rules
         to a security group for IPv6
         """
         self.expect_http()
@@ -594,8 +591,7 @@ class ApiEc2TestCase(test.TestCase):
         self.assertEqual(rv[0].name, 'default')
 
     def test_authorize_revoke_security_group_foreign_group(self):
-        """
-        Test that we can grant and revoke another security group access
+        """Test that we can grant and revoke another security group access
         to a security group
         """
         self.expect_http()

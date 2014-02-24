@@ -28,8 +28,7 @@ guestfs = None
 
 class VFSGuestFS(vfs.VFS):
 
-    """
-    This class implements a VFS module that uses the libguestfs APIs
+    """This class implements a VFS module that uses the libguestfs APIs
     to access the disk image. The disk image is never mapped into
     the host filesystem, thus avoiding any potential for symlink
     attacks from the guest filesystem.

@@ -392,8 +392,7 @@ class VMwareVCDriver(VMwareESXDriver):
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
                                    block_device_info=None):
-        """
-        Transfers the disk of a running instance in multiple phases, turning
+        """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
         _vmops = self._get_vmops_for_compute_node(instance['node'])
@@ -690,8 +689,7 @@ class VMwareVCDriver(VMwareESXDriver):
 
 
 class VMwareAPISession(object):
-    """
-    Sets up a session with the VC/ESX host and handles all
+    """Sets up a session with the VC/ESX host and handles all
     the calls made to the host.
     """
 
@@ -771,8 +769,7 @@ class VMwareAPISession(object):
         return active
 
     def _call_method(self, module, method, *args, **kwargs):
-        """
-        Calls a method within the module specified with
+        """Calls a method within the module specified with
         args provided.
         """
         args = list(args)
@@ -868,8 +865,7 @@ class VMwareAPISession(object):
         loop.stop()
 
     def _wait_for_task(self, task_ref):
-        """
-        Return a Deferred that will give the result of the given task.
+        """Return a Deferred that will give the result of the given task.
         The task is polled until it completes.
         """
         done = event.Event()
@@ -885,8 +881,7 @@ class VMwareAPISession(object):
         return ret_val
 
     def _poll_task(self, task_ref, done):
-        """
-        Poll the given task, and fires the given Deferred if we
+        """Poll the given task, and fires the given Deferred if we
         get a result.
         """
         try:

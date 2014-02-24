@@ -73,16 +73,14 @@ class VimFaultException(Exception):
 
 
 class FaultCheckers(object):
-    """
-    Methods for fault checking of SOAP response. Per Method error handlers
+    """Methods for fault checking of SOAP response. Per Method error handlers
     for which we desire error checking are defined. SOAP faults are
     embedded in the SOAP messages as properties and not as SOAP faults.
     """
 
     @staticmethod
     def retrievepropertiesex_fault_checker(resp_obj):
-        """
-        Checks the RetrievePropertiesEx response for errors. Certain faults
+        """Checks the RetrievePropertiesEx response for errors. Certain faults
         are sent as part of the SOAP body as property of missingSet.
         For example NotAuthenticated fault.
         """

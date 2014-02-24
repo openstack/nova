@@ -28,8 +28,7 @@ LOG = logging.getLogger(__name__)
 
 
 class MiniDNS(dns_driver.DNSDriver):
-    """
-    Trivial DNS driver. This will read/write to a local, flat file
+    """Trivial DNS driver. This will read/write to a local, flat file
     and have no effect on your actual DNS system. This class is
     strictly for testing purposes, and should keep you out of dependency
     hell.

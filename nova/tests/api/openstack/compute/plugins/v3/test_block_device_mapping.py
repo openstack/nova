@@ -102,8 +102,7 @@ class BlockDeviceMappingTest(test.TestCase):
                           override_controller=self.no_volumes_controller)
 
     def test_create_instance_with_volumes_enabled_no_image(self):
-        """
-        Test that the create will fail if there is no image
+        """Test that the create will fail if there is no image
         and no bdms supplied in the request
         """
         old_create = compute_api.API.create
