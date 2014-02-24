@@ -280,6 +280,9 @@ class Instance(BASE, NovaBase):
     # Records whether an instance has been deleted from disk
     cleaned = Column(Integer, default=0)
 
+    # The domain which contains the project of the instance
+    project_domain_id = Column(String(255))
+
 
 class InstanceInfoCache(BASE, NovaBase):
     """
