@@ -335,7 +335,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_soft_delete(self):
-        instance_ref, network_info = self._get_running_instance()
+        instance_ref, network_info = self._get_running_instance(obj=True)
         self.connection.soft_delete(instance_ref)
 
     @catch_notimplementederror

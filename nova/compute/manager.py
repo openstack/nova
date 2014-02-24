@@ -2104,14 +2104,13 @@ class ComputeManager(manager.Manager):
         try:
             self._notify_about_instance_usage(context, instance,
                                               "soft_delete.start")
-            db_inst = obj_base.obj_to_primitive(instance)
             try:
-                self.driver.soft_delete(db_inst)
+                self.driver.soft_delete(instance)
             except NotImplementedError:
                 # Fallback to just powering off the instance if the
                 # hypervisor doesn't implement the soft_delete method
                 self.driver.power_off(instance)
-            current_power_state = self._get_power_state(context, db_inst)
+            current_power_state = self._get_power_state(context, instance)
             instance.power_state = current_power_state
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None

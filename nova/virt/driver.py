@@ -538,7 +538,10 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def soft_delete(self, instance):
-        """Soft delete the specified instance."""
+        """Soft delete the specified instance.
+
+        :param instance: nova.objects.instance.Instance
+        """
         raise NotImplementedError()
 
     def restore(self, instance):
