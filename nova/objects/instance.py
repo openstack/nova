@@ -162,6 +162,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
         'cleaned': fields.BooleanField(default=False),
 
         'pci_devices': fields.ObjectField('PciDeviceList', nullable=True),
+
+        'project_domain_id': fields.StringField(nullable=True),
         }
 
     obj_extra_fields = ['name']
