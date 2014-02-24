@@ -542,7 +542,7 @@ class API(base_api.NetworkAPI):
                 try:
                     neutronv2.get_client(context).update_port(p['id'],
                                                               port_req_body)
-                    return
+                    return self._get_instance_nw_info(context, instance)
                 except Exception as ex:
                     msg = _("Unable to update port %(portid)s on subnet "
                             "%(subnet_id)s with failure: %(exception)s")
@@ -576,7 +576,7 @@ class API(base_api.NetworkAPI):
                 msg = _("Unable to update port %(portid)s with"
                         " failure: %(exception)s")
                 LOG.debug(msg, {'portid': p['id'], 'exception': ex})
-            return
+            return self._get_instance_nw_info(context, instance)
 
         raise exception.FixedIpNotFoundForSpecificInstance(
                 instance_uuid=instance['uuid'], ip=address)
