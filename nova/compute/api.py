@@ -2590,13 +2590,6 @@ class API(base.Base):
                                                new_pass=password)
 
     @wrap_check_policy
-    @check_instance_lock
-    def inject_file(self, context, instance, path, file_contents):
-        """Write a file to the given instance."""
-        self.compute_rpcapi.inject_file(context, instance=instance, path=path,
-                file_contents=file_contents)
-
-    @wrap_check_policy
     @check_instance_host
     def get_vnc_console(self, context, instance, console_type):
         """Get a url to an instance Console."""

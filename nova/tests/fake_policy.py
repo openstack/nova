@@ -58,8 +58,6 @@ policy_data = """
     "compute:attach_volume": "",
     "compute:detach_volume": "",
 
-    "compute:inject_file": "",
-
     "compute:set_admin_password": "",
 
     "compute:rescue": "",

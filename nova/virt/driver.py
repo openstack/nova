@@ -879,6 +879,9 @@ class ComputeDriver(object):
         parameter is the base64-encoded path to which the file is to be
         written on the instance; the third is the contents of the file, also
         base64-encoded.
+
+        NOTE(russellb) This method is deprecated and will be removed once it
+        can be removed from nova.compute.manager.
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()

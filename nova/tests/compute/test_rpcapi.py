@@ -351,16 +351,6 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('host_power_action', 'call', action='action',
                 host='host', version='2.0')
 
-    def test_inject_file(self):
-        self._test_compute_api('inject_file', 'cast',
-                instance=self.fake_instance, path='path', file_contents='fc')
-
-        # NOTE(russellb) Havana compat
-        self.flags(compute='havana', group='upgrade_levels')
-        self._test_compute_api('inject_file', 'cast',
-                instance=self.fake_instance, path='path', file_contents='fc',
-                version='2.0')
-
     def test_inject_network_info(self):
         self._test_compute_api('inject_network_info', 'cast',
                 instance=self.fake_instance)

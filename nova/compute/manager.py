@@ -2653,6 +2653,9 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def inject_file(self, context, path, file_contents, instance):
         """Write a file to the specified path in an instance on this host."""
+        # NOTE(russellb) Remove this method, as well as the underlying virt
+        # driver methods, when the compute rpc interface is bumped to 4.x
+        # as it is no longer used.
         context = context.elevated()
         current_power_state = self._get_power_state(context, instance)
         expected_state = power_state.RUNNING

@@ -344,13 +344,6 @@ class ComputeCellsAPI(compute_api.API):
         self._cast_to_cells(context, instance, 'set_admin_password',
                 password=password)
 
-    @check_instance_cell
-    def inject_file(self, context, instance, *args, **kwargs):
-        """Write a file to the given instance."""
-        super(ComputeCellsAPI, self).inject_file(context, instance, *args,
-                **kwargs)
-        self._cast_to_cells(context, instance, 'inject_file', *args, **kwargs)
-
     @wrap_check_policy
     @check_instance_cell
     def get_vnc_console(self, context, instance, console_type):
