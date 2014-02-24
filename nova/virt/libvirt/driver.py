@@ -3448,12 +3448,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                 "defined domain with xml: %s") %
                               domain.XMLDesc(0))
 
-        try:
-            self._enable_hairpin(domain.XMLDesc(0))
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                LOG.error(_("An error occurred while enabling hairpin mode on "
-                            "domain with xml: %s") % domain.XMLDesc(0))
+        if not utils.is_neutron():
+            try:
+                self._enable_hairpin(domain.XMLDesc(0))
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_("An error occurred while enabling hairpin "
+                                "mode on domain with xml: %s")
+                              % domain.XMLDesc(0))
 
         # NOTE(uni): Now the container is running with its own private mount
         # namespace and so there is no need to keep the container rootfs
