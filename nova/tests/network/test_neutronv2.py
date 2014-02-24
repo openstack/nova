@@ -2369,6 +2369,19 @@ class TestNeutronv2WithMock(test.TestCase):
         # Assert the calls.
         create_port_mock.assert_called_once_with(port_req_body)
 
+    def test_get_network_detail_not_found(self):
+        api = neutronapi.API()
+        expected_exc = exceptions.NetworkNotFoundClient()
+        network_uuid = '02cacbca-7d48-4a2c-8011-43eecf8a9786'
+        with mock.patch.object(client.Client, 'show_network',
+                               side_effect=expected_exc) as (
+            fake_show_network):
+            self.assertRaises(exception.NetworkNotFound,
+                              api.get,
+                              self.context,
+                              network_uuid)
+            fake_show_network.assert_called_once_with(network_uuid)
+
 
 class TestNeutronv2ModuleMethods(test.TestCase):
 
