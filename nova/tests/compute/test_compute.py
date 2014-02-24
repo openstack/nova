@@ -8388,10 +8388,8 @@ class ComputeAPITestCase(BaseTestCase):
         new_type = flavors.get_flavor_by_flavor_id('4')
         sys_meta = flavors.save_flavor_info({}, new_type)
 
-        instance = {
-            'image_ref': 'foo',
-            'system_metadata': sys_meta,
-            }
+        instance = instance_obj.Instance(image_ref='foo',
+                                         system_metadata=sys_meta)
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'allocate_port_for_instance')
         nwinfo = [fake_network_cache_model.new_vif()]
@@ -8417,7 +8415,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api,
                        'deallocate_port_for_instance',
                        lambda a, b, c: [])
-        self.compute.detach_interface(self.context, {}, port_id)
+        instance = instance_obj.Instance()
+        self.compute.detach_interface(self.context, instance, port_id)
         self.assertEqual(self.compute.driver._interfaces, {})
 
     def test_attach_volume(self):

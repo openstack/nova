@@ -232,6 +232,7 @@ class ComputeAPI(object):
         3.16 - Make reserve_block_device_name and attach_volume use new-world
               objects, and add disk_bus and device_type params to
               reserve_block_device_name, and bdm param to attach_volume
+        3.17 - Update attach_interface and detach_interface to take an object
     '''
 
     VERSION_ALIASES = {
@@ -301,12 +302,15 @@ class ComputeAPI(object):
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
         # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.25')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.17'):
+            version = '3.17'
+        else:
+            version = self._get_compat_version('3.0', '2.25')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         return cctxt.call(ctxt, 'attach_interface',
-                          instance=instance_p, network_id=network_id,
+                          instance=instance, network_id=network_id,
                           port_id=port_id, requested_ip=requested_ip)
 
     def attach_volume(self, ctxt, instance, volume_id, mountpoint, bdm=None):
@@ -379,12 +383,15 @@ class ComputeAPI(object):
 
     def detach_interface(self, ctxt, instance, port_id):
         # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.25')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.17'):
+            version = '3.17'
+        else:
+            version = self._get_compat_version('3.0', '2.25')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_interface',
-                   instance=instance_p, port_id=port_id)
+                   instance=instance, port_id=port_id)
 
     def detach_volume(self, ctxt, instance, volume_id):
         # NOTE(russellb) Havana compat

@@ -413,11 +413,17 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def attach_interface(self, instance, image_meta, vif):
-        """Attach an interface to the instance."""
+        """Attach an interface to the instance.
+
+        :param instance: nova.objects.instance.Instance
+        """
         raise NotImplementedError()
 
     def detach_interface(self, instance, vif):
-        """Detach an interface from the instance."""
+        """Detach an interface from the instance.
+
+        :param instance: nova.objects.instance.Instance
+        """
         raise NotImplementedError()
 
     def migrate_disk_and_power_off(self, context, instance, dest,

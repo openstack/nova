@@ -99,7 +99,8 @@ class InterfaceAttachmentController(object):
             raise exc.HTTPBadRequest()
 
         try:
-            instance = self.compute_api.get(context, server_id)
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
             LOG.audit(_("Attach interface"), instance=instance)
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
@@ -134,7 +135,8 @@ class InterfaceAttachmentController(object):
         port_id = id
 
         try:
-            instance = self.compute_api.get(context, server_id)
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
             LOG.audit(_("Detach interface %s"), port_id, instance=instance)
 
         except exception.NotFound:
