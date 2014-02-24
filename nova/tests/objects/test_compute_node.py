@@ -13,6 +13,7 @@
 #    under the License.
 
 from nova import db
+from nova import exception
 from nova.objects import compute_node
 from nova.objects import service
 from nova.openstack.common import timeutils
@@ -74,6 +75,17 @@ class _TestComputeNodeObject(object):
         compute.create(self.context)
         self.compare_obj(compute, fake_compute_node,
                          comparators={'stats': self.json_comparator})
+
+    def test_recreate_fails(self):
+        self.mox.StubOutWithMock(db, 'compute_node_create')
+        db.compute_node_create(self.context, {'service_id': 456}).AndReturn(
+            fake_compute_node)
+        self.mox.ReplayAll()
+        compute = compute_node.ComputeNode()
+        compute.service_id = 456
+        compute.create(self.context)
+        self.assertRaises(exception.ObjectActionError, compute.create,
+                          self.context)
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')
