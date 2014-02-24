@@ -343,7 +343,7 @@ class API(base.Base):
                 'rxtx_factor': flavor['rxtx_factor'],
                 'host': instance['host'],
                 'network_id': network_id}
-        self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
+        return self.network_rpcapi.add_fixed_ip_to_instance(context, **args)
 
     @wrap_check_policy
     @refresh_cache
@@ -355,7 +355,8 @@ class API(base.Base):
                 'rxtx_factor': flavor['rxtx_factor'],
                 'host': instance['host'],
                 'address': address}
-        self.network_rpcapi.remove_fixed_ip_from_instance(context, **args)
+        return self.network_rpcapi.remove_fixed_ip_from_instance(context,
+                                                                 **args)
 
     @wrap_check_policy
     def add_network_to_project(self, context, project_id, network_uuid=None):
