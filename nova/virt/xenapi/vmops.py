@@ -573,7 +573,6 @@ class VMOps(object):
     def _attach_disks(self, instance, vm_ref, name_label, vdis,
                       disk_image_type, network_info,
                       admin_password=None, files=None):
-        ctx = nova_context.get_admin_context()
         flavor = flavors.extract_flavor(instance)
 
         # Attach (required) root disk
@@ -916,7 +915,6 @@ class VMOps(object):
                             active_root_vdi_uuid,
                             active_vdi_uuids)
 
-            current_chain = ephemeral_chains[0]
             remaining_chains = []
             if number_of_chains > 1:
                 remaining_chains = ephemeral_chains[1:]
