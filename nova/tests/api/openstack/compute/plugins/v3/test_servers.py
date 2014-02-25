@@ -100,6 +100,12 @@ def fake_start_stop_not_ready(self, context, instance):
     raise exception.InstanceNotReady(instance_id=instance["uuid"])
 
 
+def fake_start_stop_invalid_state(self, context, instance):
+    raise exception.InstanceInvalidState(
+        instance_uuid=instance['uuid'], attr='fake_attr',
+        method='fake_method', state='fake_state')
+
+
 def fake_instance_get_by_uuid_not_found(context, uuid,
                                         columns_to_join, use_slave=False):
     raise exception.InstanceNotFound(instance_id=uuid)
@@ -1502,6 +1508,13 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._start_server, req, FAKE_UUID, body)
 
+    def test_start_invalid(self):
+        self.stubs.Set(compute_api.API, 'start', fake_start_stop_invalid_state)
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(start="")
+        self.assertRaises(webob.exc.HTTPConflict,
+            self.controller._start_server, req, FAKE_UUID, body)
+
     def test_stop(self):
         self.mox.StubOutWithMock(compute_api.API, 'stop')
         compute_api.API.stop(mox.IgnoreArg(), mox.IgnoreArg())
@@ -1536,6 +1549,13 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                        fakes.fake_actions_to_locked_server)
         req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
         body = dict(stop="")
+        self.assertRaises(webob.exc.HTTPConflict,
+            self.controller._stop_server, req, FAKE_UUID, body)
+
+    def test_stop_invalid_state(self):
+        self.stubs.Set(compute_api.API, 'stop', fake_start_stop_invalid_state)
+        req = fakes.HTTPRequestV3.blank('/servers/%s/action' % FAKE_UUID)
+        body = dict(start="")
         self.assertRaises(webob.exc.HTTPConflict,
             self.controller._stop_server, req, FAKE_UUID, body)
 
