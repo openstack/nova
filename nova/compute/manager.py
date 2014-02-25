@@ -5201,8 +5201,7 @@ class ComputeManager(manager.Manager):
                 else:
                     raise Exception(_("Unrecognized value '%s'"
                                       " for CONF.running_deleted_"
-                                      "instance_action"), action,
-                                    instance=instance)
+                                      "instance_action") % action)
 
     def _running_deleted_instances(self, context):
         """Returns a list of instances nova thinks is deleted,
