@@ -15,6 +15,7 @@
 import collections
 import functools
 
+import anyjson
 from oslo import messaging
 
 from nova import rpc
@@ -50,6 +51,10 @@ class FakeNotifier(object):
 
     def _notify(self, priority, ctxt, event_type, payload):
         payload = self._serializer.serialize_entity(ctxt, payload)
+        # NOTE(sileht): simulate the kombu serializer
+        # this permit to raise an exception if something have not
+        # been serialized correctly
+        anyjson.serialize(payload)
         msg = FakeMessage(self.publisher_id, priority, event_type, payload)
         NOTIFICATIONS.append(msg)
 
