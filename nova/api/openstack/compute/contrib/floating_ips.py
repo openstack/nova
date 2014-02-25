@@ -186,7 +186,9 @@ class FloatingIPController(object):
             try:
                 disassociate_floating_ip(self, context, instance, address)
             except exception.FloatingIpNotAssociated:
-                LOG.info(_("Floating ip %s has been disassociated") % address)
+                msg = ("Floating ip %s has already been disassociated, "
+                       "perhaps by another concurrent action.") % address
+                LOG.debug(msg)
 
         # release ip from project
         self.network_api.release_floating_ip(context, address)
