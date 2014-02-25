@@ -294,6 +294,7 @@ policy_data = """
     "compute_extension:console_auth_tokens": "is_admin:True",
     "compute_extension:v3:os-console-auth-tokens": "is_admin:True",
     "compute_extension:os-server-external-events:create": "rule:admin_api",
+    "compute_extension:v3:os-server-external-events:create": "rule:admin_api",
 
     "volume:create": "",
     "volume:get": "",
