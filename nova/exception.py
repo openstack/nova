@@ -909,6 +909,11 @@ class ConsoleTypeUnavailable(Invalid):
     msg_fmt = _("Unavailable console type %(console_type)s.")
 
 
+class ConsolePortRangeExhausted(NovaException):
+    msg_fmt = _("The console port range %(min_port)d-%(max_port)d is "
+                "exhausted.")
+
+
 class FlavorNotFound(NotFound):
     msg_fmt = _("Flavor %(flavor_id)s could not be found.")
 

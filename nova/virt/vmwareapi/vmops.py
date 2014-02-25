@@ -333,7 +333,7 @@ class VMwareVMOps(object):
 
         # Set the vnc configuration of the instance, vnc port starts from 5900
         if CONF.vnc_enabled:
-            vnc_port = self._get_vnc_port(vm_ref)
+            vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port)
 
         def _create_virtual_disk(folder, virtual_disk_path):
@@ -1446,9 +1446,17 @@ class VMwareVMOps(object):
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
+        opt_value = self._session._call_method(vim_util,
+                               'get_dynamic_property',
+                               vm_ref, 'VirtualMachine',
+                               vm_util.VNC_CONFIG_KEY)
+        if opt_value:
+            port = int(opt_value.value)
+        else:
+            raise exception.ConsoleTypeUnavailable(console_type='vnc')
 
         return {'host': CONF.vmware.host_ip,
-                'port': self._get_vnc_port(vm_ref),
+                'port': port,
                 'internal_access_path': None}
 
     def get_vnc_console_vcenter(self, instance):
@@ -1470,14 +1478,6 @@ class VMwareVMOps(object):
                 {'uuid': instance['name'], 'host_name': host_name})
 
         return vnc_console
-
-    @staticmethod
-    def _get_vnc_port(vm_ref):
-        """Return VNC port for an VM."""
-        vm_id = int(vm_ref.value.replace('vm-', ''))
-        port = CONF.vmware.vnc_port + vm_id % CONF.vmware.vnc_port_total
-
-        return port
 
     @staticmethod
     def _get_machine_id_str(network_info):
