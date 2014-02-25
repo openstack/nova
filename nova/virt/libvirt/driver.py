@@ -3026,6 +3026,7 @@ class LibvirtDriver(driver.ComputeDriver):
             instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)
         disk_mapping = disk_info['mapping']
+        img_meta_prop = image_meta.get('properties', {}) if image_meta else {}
 
         CONSOLE = "console=tty0 console=ttyS0"
 
@@ -3267,9 +3268,8 @@ class LibvirtDriver(driver.ComputeDriver):
             elif CONF.spice.enabled:
                 video.type = 'qxl'
 
-            meta_prop = image_meta.get('properties', {}) if image_meta else {}
-            if meta_prop.get('hw_video_model'):
-                video.type = meta_prop.get('hw_video_model')
+            if img_meta_prop.get('hw_video_model'):
+                video.type = img_meta_prop.get('hw_video_model')
                 if (video.type not in VALID_VIDEO_DEVICES):
                     raise exception.InvalidVideoMode(model=video.type)
 
@@ -3295,6 +3295,17 @@ class LibvirtDriver(driver.ComputeDriver):
                 qga.source_path = ("/var/lib/libvirt/qemu/%s.%s.sock" %
                                 ("org.qemu.guest_agent.0", instance['name']))
                 guest.add_device(qga)
+
+            if (img_meta_prop.get('hw_rng_model') == 'virtio' and
+                flavor.extra_specs.get('hw_rng:allowed',
+                                             '').lower() == 'true'):
+                rng_device = vconfig.LibvirtConfigGuestRng()
+                rate_bytes = flavor.extra_specs.get('hw_rng:rate_bytes', 0)
+                period = flavor.extra_specs.get('hw_rng:rate_period', 0)
+                if rate_bytes:
+                    rng_device.rate_bytes = int(rate_bytes)
+                    rng_device.rate_period = int(period)
+                guest.add_device(rng_device)
 
         if CONF.libvirt.virt_type in ('xen', 'qemu', 'kvm'):
             for pci_dev in pci_manager.get_instance_pci_devs(instance):

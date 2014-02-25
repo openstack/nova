@@ -1352,6 +1352,110 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.devices[4].type, "tablet")
         self.assertEqual(cfg.devices[5].type, "vnc")
 
+    def test_get_guest_config_with_rng_device(self):
+        self.flags(virt_type='kvm',
+                   use_usb_tablet=False,
+                   group='libvirt')
+
+        fake_flavour = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavour.extra_specs = {'hw_rng:allowed': 'True'}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        image_meta = {"properties": {"hw_rng_model": "virtio"}}
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavour):
+            cfg = conn.get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+            self.assertEqual(len(cfg.devices), 7)
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestRng)
+
+    def test_get_guest_config_with_rng_not_allowed(self):
+        self.flags(virt_type='kvm',
+                   use_usb_tablet=False,
+                   group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        image_meta = {"properties": {"hw_rng_model": "virtio"}}
+        cfg = conn.get_guest_config(instance_ref, [],
+                                    image_meta, disk_info)
+        self.assertEqual(len(cfg.devices), 6)
+        self.assertIsInstance(cfg.devices[0],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                              vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[3],
+                              vconfig.LibvirtConfigGuestSerial)
+        self.assertIsInstance(cfg.devices[4],
+                              vconfig.LibvirtConfigGuestGraphics)
+        self.assertIsInstance(cfg.devices[5],
+                              vconfig.LibvirtConfigGuestVideo)
+
+    def test_get_guest_config_with_rng_limits(self):
+        self.flags(virt_type='kvm',
+                   use_usb_tablet=False,
+                   group='libvirt')
+
+        fake_flavour = flavor_obj.Flavor.get_by_id(
+                                 self.context,
+                                 self.test_instance['instance_type_id'])
+        fake_flavour.extra_specs = {'hw_rng:allowed': 'True',
+                                    'hw_rng:rate_bytes': '1024',
+                                    'hw_rng:rate_period': '2'}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        image_meta = {"properties": {"hw_rng_model": "virtio"}}
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=fake_flavour):
+            cfg = conn.get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+            self.assertEqual(len(cfg.devices), 7)
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestVideo)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestRng)
+            self.assertEqual(cfg.devices[6].rate_bytes, 1024)
+            self.assertEqual(cfg.devices[6].rate_period, 2)
+
     def _create_fake_service_compute(self):
         service_info = {
             'host': 'fake',
