@@ -12,10 +12,13 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import mock
 
 from nova.network import model as network_model
 from nova import test
 from nova import utils
+from nova.virt.vmwareapi import error_util
+from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
 
@@ -101,3 +104,42 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         value = vmops.VMwareVMOps.decide_linked_clone("yes", False)
         self.assertTrue(value,
                         "image level metadata failed to override global")
+
+    def _setup_create_cache_mocks(self):
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        base_name = ops._base_folder
+        ds_name = "datastore"
+        ds_ref = mock.Mock()
+        path = vm_util.build_datastore_path(ds_name, base_name)
+        ops._mkdir = mock.Mock()
+        return ds_name, ds_ref, ops, path
+
+    def test_create_cache_folder(self):
+        ds_name, ds_ref, ops, path = self._setup_create_cache_mocks()
+        ops.create_cache_folder(ds_name, ds_ref)
+        ops._mkdir.assert_called_with(path, ds_ref)
+
+    def test_create_cache_folder_with_exception(self):
+        ds_name, ds_ref, ops, path = self._setup_create_cache_mocks()
+        ops._mkdir.side_effect = error_util.FileAlreadyExistsException()
+        ops.create_cache_folder(ds_name, ds_ref)
+        # assert that the
+        ops._mkdir.assert_called_with(path, ds_ref)
+
+    def test_check_if_folder_file_exists_with_existing(self):
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        ops.create_cache_folder = mock.Mock()
+        ops._file_exists = mock.Mock()
+        ops._file_exists.return_value = True
+        ops._check_if_folder_file_exists(mock.Mock(), "datastore",
+                                         "folder", "some_file")
+        ops.create_cache_folder.assert_called_once()
+
+    def test_check_if_folder_file_exists_no_existing(self):
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        ops.create_cache_folder = mock.Mock()
+        ops._file_exists = mock.Mock()
+        ops._file_exists.return_value = True
+        ops._check_if_folder_file_exists(mock.Mock(), "datastore",
+                                         "folder", "some_file")
+        ops.create_cache_folder.assert_called_once()
