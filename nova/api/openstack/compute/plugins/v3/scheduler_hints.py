@@ -37,5 +37,5 @@ class SchedulerHints(extensions.V3APIExtensionBase):
         scheduler_hints = server_dict.get(ALIAS + ':scheduler_hints', {})
         if not isinstance(scheduler_hints, dict):
             msg = _("Malformed scheduler_hints attribute")
-            raise webob.exc.HTTPBadRequest(reason=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
         create_kwargs['scheduler_hints'] = scheduler_hints
