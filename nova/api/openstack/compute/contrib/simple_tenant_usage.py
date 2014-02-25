@@ -145,18 +145,18 @@ class SimpleTenantUsageController(object):
                                             period_stop)
             flavor = self._get_flavor(context, instance, flavors)
             if not flavor:
-                continue
+                info['flavor'] = ''
+            else:
+                info['flavor'] = flavor.name
 
             info['instance_id'] = instance.uuid
             info['name'] = instance.display_name
 
-            info['memory_mb'] = flavor.memory_mb
-            info['local_gb'] = flavor.root_gb + flavor.ephemeral_gb
-            info['vcpus'] = flavor.vcpus
+            info['memory_mb'] = instance.memory_mb
+            info['local_gb'] = instance.root_gb + instance.ephemeral_gb
+            info['vcpus'] = instance.vcpus
 
             info['tenant_id'] = instance.project_id
-
-            info['flavor'] = flavor.name
 
             # NOTE(mriedem): We need to normalize the start/end times back
             # to timezone-naive so the response doesn't change after the

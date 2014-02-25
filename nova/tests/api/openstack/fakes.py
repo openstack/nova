@@ -492,8 +492,8 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   limit=None, marker=None,
                   launched_at=timeutils.utcnow(),
                   terminated_at=timeutils.utcnow(),
-                  availability_zone='', locked_by=None, cleaned=False):
-
+                  availability_zone='', locked_by=None, cleaned=False,
+                  memory_mb=0, vcpus=0, root_gb=0, ephemeral_gb=0):
     if user_id is None:
         user_id = 'fake_user'
     if project_id is None:
@@ -548,10 +548,10 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "vm_state": vm_state or vm_states.BUILDING,
         "task_state": task_state,
         "power_state": power_state,
-        "memory_mb": 0,
-        "vcpus": 0,
-        "root_gb": 0,
-        "ephemeral_gb": 0,
+        "memory_mb": memory_mb,
+        "vcpus": vcpus,
+        "root_gb": root_gb,
+        "ephemeral_gb": ephemeral_gb,
         "ephemeral_key_uuid": None,
         "hostname": display_name or server_name,
         "host": host,
