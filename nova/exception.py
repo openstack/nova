@@ -1296,7 +1296,7 @@ class CryptoCRLFileNotFound(FileNotFound):
 
 
 class InstanceRecreateNotSupported(Invalid):
-    msg_fmt = _('Instance recreate is not implemented by this virt driver.')
+    msg_fmt = _('Instance recreate is not supported.')
 
 
 class ServiceGroupUnavailable(NovaException):
