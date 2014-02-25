@@ -55,9 +55,7 @@ vmwareapi_opts = [
                help='Name of a VMware Cluster ComputeResource. Used only if '
                     'compute_driver is vmwareapi.VMwareVCDriver.'),
     cfg.StrOpt('datastore_regex',
-               help='Regex to match the name of a datastore. '
-                    'Used only if compute_driver is '
-                    'vmwareapi.VMwareVCDriver.'),
+               help='Regex to match the name of a datastore.'),
     cfg.FloatOpt('task_poll_interval',
                  default=0.5,
                  help='The interval used for polling of remote tasks.'),
@@ -111,10 +109,20 @@ class VMwareESXDriver(driver.ComputeDriver):
                               "compute_driver=vmwareapi.VMwareESXDriver or "
                               "vmwareapi.VMwareVCDriver"))
 
+        self._datastore_regex = None
+        if CONF.vmware.datastore_regex:
+            try:
+                self._datastore_regex = re.compile(CONF.vmware.datastore_regex)
+            except re.error:
+                raise exception.InvalidInput(reason=
+                    _("Invalid Regular Expression %s")
+                    % CONF.vmware.datastore_regex)
+
         self._session = VMwareAPISession(scheme=scheme)
         self._volumeops = volumeops.VMwareVolumeOps(self._session)
         self._vmops = vmops.VMwareVMOps(self._session, self.virtapi,
-                                        self._volumeops)
+                                        self._volumeops,
+                                        datastore_regex=self._datastore_regex)
         self._host = host.Host(self._session)
         self._host_state = None
 
@@ -367,14 +375,6 @@ class VMwareVCDriver(VMwareESXDriver):
             LOG.warn(_("The following clusters could not be found in the"
                 " vCenter %s") % list(missing_clusters))
 
-        self._datastore_regex = None
-        if CONF.vmware.datastore_regex:
-            try:
-                self._datastore_regex = re.compile(CONF.vmware.datastore_regex)
-            except re.error:
-                raise exception.InvalidInput(reason=
-                _("Invalid Regular Expression %s")
-                % CONF.vmware.datastore_regex)
         # The _resources is used to maintain the vmops, volumeops and vcstate
         # objects per cluster
         self._resources = {}

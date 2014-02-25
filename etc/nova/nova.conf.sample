@@ -3296,8 +3296,7 @@
 # compute_driver is vmwareapi.VMwareVCDriver. (multi valued)
 #cluster_name=<None>
 
-# Regex to match the name of a datastore. Used only if
-# compute_driver is vmwareapi.VMwareVCDriver. (string value)
+# Regex to match the name of a datastore. (string value)
 #datastore_regex=<None>
 
 # The interval used for polling of remote tasks. (floating
