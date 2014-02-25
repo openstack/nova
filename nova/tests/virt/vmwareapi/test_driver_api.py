@@ -304,6 +304,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.task_ref = None
         self.exception = False
 
+    def test_driver_capabilities(self):
+        self.assertFalse(self.conn.capabilities['has_imagecache'])
+        self.assertFalse(self.conn.capabilities['supports_recreate'])
+
     def test_login_retries(self):
         self.attempts = 0
         self.login_session = vmwareapi_fake.FakeVim()._login()
