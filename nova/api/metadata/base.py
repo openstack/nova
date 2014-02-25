@@ -85,6 +85,8 @@ MD_JSON_NAME = "meta_data.json"
 VD_JSON_NAME = "vendor_data.json"
 UD_NAME = "user_data"
 PASS_NAME = "password"
+MIME_TYPE_TEXT_PLAIN = "text/plain"
+MIME_TYPE_APPLICATION_JSON = "application/json"
 
 LOG = logging.getLogger(__name__)
 
@@ -120,6 +122,8 @@ class InstanceMetadata():
                 ctxt, instance_obj.Instance(), instance,
                 expected_attrs=['metadata', 'system_metadata'])
 
+        # The default value of mimeType is set to MIME_TYPE_TEXT_PLAIN
+        self.set_mimetype(MIME_TYPE_TEXT_PLAIN)
         self.instance = instance
         self.extra_md = extra_md
 
@@ -206,6 +210,12 @@ class InstanceMetadata():
 
         self.route_configuration = RouteConfiguration(path_handlers)
         return self.route_configuration
+
+    def set_mimetype(self, mime_type):
+        self.md_mimetype = mime_type
+
+    def get_mimetype(self):
+        return self.md_mimetype
 
     def get_ec2_metadata(self, version):
         if version == "latest":
@@ -317,6 +327,7 @@ class InstanceMetadata():
         if self._check_os_version(GRIZZLY, version):
             metadata['random_seed'] = base64.b64encode(os.urandom(512))
 
+        self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
         return json.dumps(metadata)
 
     def _handle_content(self, path_tokens):
@@ -350,6 +361,7 @@ class InstanceMetadata():
 
     def _vendor_data(self, version, path):
         if self._check_os_version(HAVANA, version):
+            self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
             return json.dumps(self.vddriver.get())
         raise KeyError(path)
 
@@ -369,6 +381,9 @@ class InstanceMetadata():
             path = posixpath.normpath("/" + path)
         else:
             path = posixpath.normpath(path)
+
+        # Set default mimeType. It will be modified only if there is a change
+        self.set_mimetype(MIME_TYPE_TEXT_PLAIN)
 
         # fix up requests, prepending /ec2 to anything that does not match
         path_tokens = path.split('/')[1:]
