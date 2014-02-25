@@ -1153,8 +1153,6 @@ class FakeVim(object):
         ds_path = kwargs.get("name")
         if _db_content.get("files", None) is None:
             raise exception.NoFilesFound()
-        if get_file(ds_path):
-            raise error_util.FileAlreadyExistsException()
         _db_content["files"].append(ds_path)
 
     def _set_power_state(self, method, vm_ref, pwr_state="poweredOn"):
