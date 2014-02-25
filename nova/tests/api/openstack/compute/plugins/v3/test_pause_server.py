@@ -41,6 +41,10 @@ class PauseServerTests(admin_only_action_common.CommonTests):
     def test_pause_unpause_with_non_existed_instance(self):
         self._test_actions_with_non_existed_instance(['pause', 'unpause'])
 
+    def test_pause_unpause_with_non_existed_instance_in_compute_api(self):
+        self._test_actions_instance_not_found_in_compute_api(['pause',
+                                                              'unpause'])
+
     def test_pause_unpause_raise_conflict_on_invalid_state(self):
         self._test_actions_raise_conflict_on_invalid_state(['pause',
                                                             'unpause'])
