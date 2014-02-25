@@ -2723,15 +2723,16 @@ class ServersControllerCreateTest(test.TestCase):
             self.validation_fail_instance_destroy_called = True
 
         self.stubs.Set(compute_api.API, '_validate_bdm', _validate_bdm)
-        self.stubs.Set(db, 'instance_destroy', _instance_destroy)
+        self.stubs.Set(instance_obj.Instance, 'destroy', _instance_destroy)
 
         for _ in xrange(len(bdm_exceptions)):
             params = {'block_device_mapping_v2': [bdm.copy()]}
             self.assertRaises(webob.exc.HTTPBadRequest,
                               self._test_create_extra, params)
             self.assertTrue(self.validation_fail_test_validate_called)
+            self.assertTrue(self.validation_fail_instance_destroy_called)
             self.validation_fail_test_validate_called = False
-            self.validation_fail_test_validate_called = True
+            self.validation_fail_instance_destroy_called = False
 
     def test_create_instance_with_bdm_delete_on_termination(self):
         self.ext_mgr.extensions = {'os-volumes': 'fake'}

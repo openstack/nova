@@ -1226,7 +1226,7 @@ class API(base.Base):
                     instance_type, image, block_device_mapping)
         except exception.InvalidBDM:
             with excutils.save_and_reraise_exception():
-                self.db.instance_destroy(context, instance['uuid'])
+                instance.destroy(context)
 
         return instance
 
