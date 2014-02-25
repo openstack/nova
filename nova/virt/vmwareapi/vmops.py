@@ -1598,7 +1598,7 @@ class VMwareVMOps(object):
             return False
         return True
 
-    def _path_file_exists(self, ds_browser, ds_path, file_name):
+    def _file_exists(self, ds_browser, ds_path, file_name):
         """Check if the path and file exists on the datastore."""
         client_factory = self._session._get_vim().client.factory
         search_spec = vm_util.search_datastore_spec(client_factory, file_name)
@@ -1618,11 +1618,11 @@ class VMwareVMOps(object):
                 continue
             break
         if task_info.state == "error":
-            return False, False
+            return False
 
         file_exists = (getattr(task_info.result, 'file', False) and
                        task_info.result.file[0].path == file_name)
-        return True, file_exists
+        return file_exists
 
     def _mkdir(self, ds_path, ds_ref):
         """
@@ -1638,21 +1638,27 @@ class VMwareVMOps(object):
                     createParentDirectories=True)
         LOG.debug(_("Created directory with path %s") % ds_path)
 
+    def create_cache_folder(self, ds_name, ds_ref):
+        try:
+            path = vm_util.build_datastore_path(ds_name, self._base_folder)
+            self._mkdir(path, ds_ref)
+        except error_util.FileAlreadyExistsException:
+            # NOTE(hartsocks): if the temp folder already exists, that
+            # just means the temp folder was prepped by another process.
+            pass
+
     def _check_if_folder_file_exists(self, ds_ref, ds_name,
                                      folder_name, file_name):
+
+        # Ensure that the cache folder exists
+        self.create_cache_folder(ds_name, ds_ref)
+
         ds_browser = self._session._call_method(
             vim_util, "get_dynamic_property", ds_ref, "Datastore", "browser")
         # Check if the folder exists or not. If not, create one
         # Check if the file exists or not.
         folder_path = vm_util.build_datastore_path(ds_name, folder_name)
-        folder_exists, file_exists = self._path_file_exists(ds_browser,
-                                                            folder_path,
-                                                            file_name)
-        # Ensure that the cache folder exists
-        if not folder_exists:
-            self._mkdir(vm_util.build_datastore_path(ds_name,
-                                                     self._base_folder),
-                        ds_ref)
+        file_exists = self._file_exists(ds_browser, folder_path, file_name)
 
         return file_exists
 
