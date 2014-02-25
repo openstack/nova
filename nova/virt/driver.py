@@ -609,12 +609,12 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
-    def pre_live_migration(self, ctxt, instance_ref, block_device_info,
+    def pre_live_migration(self, ctxt, instance, block_device_info,
                            network_info, disk_info, migrate_data=None):
         """Prepare an instance for live migration
 
         :param ctxt: security context
-        :param instance_ref: instance object that will be migrated
+        :param instance: nova.objects.instance.Instance object
         :param block_device_info: instance block device information
         :param network_info: instance network information
         :param disk_info: instance disk information
@@ -822,7 +822,7 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         pass
 
-    def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
+    def ensure_filtering_rules_for_instance(self, instance, network_info):
         """Setting up filtering rules and waiting for its completion.
 
         To migrate an instance, filtering rules to hypervisors
@@ -842,7 +842,7 @@ class ComputeDriver(object):
         not be started when setting-up filtering rules operations
         are not completed.
 
-        :param instance_ref: nova.db.sqlalchemy.models.Instance object
+        :param instance: nova.objects.instance.Instance object
 
         """
         # TODO(Vek): Need to pass context in for access to auth_token

@@ -427,7 +427,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_pre_live_migration(self):
         self._test_compute_api('pre_live_migration', 'call',
                 instance=self.fake_instance, block_migration='block_migration',
-                disk='disk', host='host', migrate_data=None)
+                disk='disk', host='host', migrate_data=None, version='3.19')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

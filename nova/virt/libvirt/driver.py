@@ -4266,7 +4266,7 @@ class LibvirtDriver(driver.ComputeDriver):
             timeout_count.pop()
             if len(timeout_count) == 0:
                 msg = _('The firewall filter for %s does not exist')
-                raise exception.NovaException(msg % instance["name"])
+                raise exception.NovaException(msg % instance.name)
             time_module.sleep(1)
 
     def filter_defer_apply_on(self):

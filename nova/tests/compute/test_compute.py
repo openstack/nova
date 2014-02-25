@@ -4876,7 +4876,7 @@ class ComputeTestCase(BaseTestCase):
     def test_pre_live_migration_instance_has_no_fixed_ip(self):
         # Confirm that no exception is raised if there is no fixed ip on
         # pre_live_migration
-        instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = self._create_fake_instance_obj()
         c = context.get_admin_context()
 
         self.mox.ReplayAll()
@@ -4894,8 +4894,7 @@ class ComputeTestCase(BaseTestCase):
                        '_get_instance_nw_info', stupid)
 
         # creating instance testdata
-        instance = jsonutils.to_primitive(self._create_fake_instance(
-                                          {'host': 'dummy'}))
+        instance = self._create_fake_instance_obj({'host': 'dummy'})
         c = context.get_admin_context()
         nw_info = fake_network.fake_get_instance_nw_info(self.stubs)
 
@@ -4942,7 +4941,7 @@ class ComputeTestCase(BaseTestCase):
         src_host = 'fake-src-host'
         instance = dict(uuid='fake_instance', host=src_host,
                         name='fake-name')
-        updated_instance = self._create_fake_instance(
+        updated_instance = self._create_fake_instance_obj(
                                                {'host': 'fake-dest-host'})
         dest_host = updated_instance['host']
         fake_bdms = [dict(volume_id='vol1-id'), dict(volume_id='vol2-id')]
@@ -4994,7 +4993,7 @@ class ComputeTestCase(BaseTestCase):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance_ref = self._create_fake_instance()
+        instance_ref = self._create_fake_instance_obj()
         instance_ref['host'] = self.compute.host
         dest = 'desthost'
         inst_uuid = instance_ref['uuid']

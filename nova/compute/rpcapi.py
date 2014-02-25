@@ -235,6 +235,7 @@ class ComputeAPI(object):
         3.17 - Update attach_interface and detach_interface to take an object
         3.18 - Update get_diagnostics() to take an instance object
         ...  - Removed inject_file(), as it was unused.
+        3.19 - Update pre_live_migration to take instance object
     '''
 
     VERSION_ALIASES = {
@@ -558,12 +559,15 @@ class ComputeAPI(object):
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.21')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.19'):
+            version = '3.19'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.21')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'pre_live_migration',
-                          instance=instance_p,
+                          instance=instance,
                           block_migration=block_migration,
                           disk=disk, migrate_data=migrate_data)
 
