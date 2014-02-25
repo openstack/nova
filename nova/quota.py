@@ -23,6 +23,7 @@ import six
 
 from nova import db
 from nova import exception
+from nova.objects import keypair as keypair_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -1418,7 +1419,7 @@ resources = [
     CountableResource('security_group_rules',
                       db.security_group_rule_count_by_group,
                       'quota_security_group_rules'),
-    CountableResource('key_pairs', db.key_pair_count_by_user,
+    CountableResource('key_pairs', keypair_obj.KeyPairList.get_count_by_user,
                       'quota_key_pairs'),
     ]
 
