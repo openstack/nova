@@ -156,7 +156,7 @@ class Lockout(wsgi.Middleware):
         failures = int(self.mc.get(failures_key) or 0)
         if failures >= CONF.lockout_attempts:
             detail = _("Too many failed authentications.")
-            raise webob.exc.HTTPForbidden(detail=detail)
+            raise webob.exc.HTTPForbidden(explanation=detail)
         res = req.get_response(self.application)
         if res.status_int == 403:
             failures = self.mc.incr(failures_key)
@@ -302,7 +302,7 @@ class Requestify(wsgi.Middleware):
             if expired:
                 msg = _("Timestamp failed validation.")
                 LOG.exception(msg)
-                raise webob.exc.HTTPForbidden(detail=msg)
+                raise webob.exc.HTTPForbidden(explanation=msg)
 
             # Raise KeyError if omitted
             action = req.params['Action']
