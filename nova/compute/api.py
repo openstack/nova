@@ -127,6 +127,7 @@ CONF.import_opt('default_ephemeral_format', 'nova.virt.driver')
 MAX_USERDATA_SIZE = 65535
 QUOTAS = quota.QUOTAS
 RO_SECURITY_GROUPS = ['default']
+VIDEO_RAM = 'hw_video:ram_max_mb'
 
 
 def check_instance_state(vm_state=None, task_state=(None,),
@@ -336,7 +337,8 @@ class API(base.Base):
 
         # Determine requested cores and ram
         req_cores = max_count * instance_type['vcpus']
-        req_ram = max_count * instance_type['memory_mb']
+        vram_mb = int(instance_type.get('extra_specs', {}).get(VIDEO_RAM, 0))
+        req_ram = max_count * (instance_type['memory_mb'] + vram_mb)
 
         # Check the quota
         try:
@@ -355,7 +357,8 @@ class API(base.Base):
                               headroom['cores'] // instance_type['vcpus'])
             if instance_type['memory_mb']:
                 allowed = min(allowed,
-                              headroom['ram'] // instance_type['memory_mb'])
+                              headroom['ram'] // (instance_type['memory_mb'] +
+                                                  vram_mb))
 
             # Convert to the appropriate exception message
             if allowed <= 0:
@@ -1567,7 +1570,9 @@ class API(base.Base):
                     pass
                 else:
                     instance_vcpus = old_inst_type['vcpus']
-                    instance_memory_mb = old_inst_type['memory_mb']
+                    vram_mb = int(old_inst_type['extra_specs']
+                                                            .get(VIDEO_RAM, 0))
+                    instance_memory_mb = (old_inst_type['memory_mb'] + vram_mb)
                     LOG.debug(_("going to delete a resizing instance"))
 
         reservations = QUOTAS.reserve(context,

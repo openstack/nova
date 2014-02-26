@@ -1511,3 +1511,8 @@ class InvalidVideoMode(Invalid):
 class RngDeviceNotExist(Invalid):
     msg_fmt = _("The provided RNG device path: (%(path)s) is not "
                 "present on the host.")
+
+
+class RequestedVRamTooHigh(NovaException):
+    msg_fmt = _("The requested amount of video memory %(req_vram)d is higher"
+                "than the maximum allowed by flavor %(max_vram)d.")

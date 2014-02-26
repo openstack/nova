@@ -1323,6 +1323,90 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(cfg.devices[7].type, "unix")
         self.assertEqual(cfg.devices[7].target_name, "org.qemu.guest_agent.0")
 
+    def test_get_guest_config_with_video_driver_vram(self):
+        self.flags(vnc_enabled=False)
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(enabled=True,
+                   agent_enabled=True,
+                   group='spice')
+
+        instance_type = flavor_obj.Flavor.get_by_id(self.context, 5)
+        instance_type.extra_specs = {'hw_video:ram_max_mb': "100"}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_video_model": "qxl",
+                                     "hw_video_ram": "64"}}
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=instance_type):
+            cfg = conn.get_guest_config(instance_ref, [],
+                                        image_meta, disk_info)
+            self.assertEqual(len(cfg.devices), 7)
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestSerial)
+            self.assertIsInstance(cfg.devices[4],
+                                  vconfig.LibvirtConfigGuestChannel)
+            self.assertIsInstance(cfg.devices[5],
+                                  vconfig.LibvirtConfigGuestGraphics)
+            self.assertIsInstance(cfg.devices[6],
+                                  vconfig.LibvirtConfigGuestVideo)
+
+            self.assertEqual(cfg.devices[5].type, "spice")
+            self.assertEqual(cfg.devices[6].type, "qxl")
+            self.assertEqual(cfg.devices[6].vram, 64)
+
+    def test_video_driver_flavor_limit_not_set(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(enabled=True,
+                   agent_enabled=True,
+                   group='spice')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_video_model": "qxl",
+                                     "hw_video_ram": "64"}}
+        self.assertRaises(exception.RequestedVRamTooHigh,
+                          conn.get_guest_config,
+                          instance_ref,
+                          [],
+                          image_meta,
+                          disk_info)
+
+    def test_video_driver_ram_above_flavor_limit(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(enabled=True,
+                   agent_enabled=True,
+                   group='spice')
+
+        instance_type = flavor_obj.Flavor.get_by_id(self.context, 5)
+        instance_type.extra_specs = {'hw_video:ram_max_mb': "50"}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {"properties": {"hw_video_model": "qxl",
+                                     "hw_video_ram": "64"}}
+        with mock.patch.object(flavor_obj.Flavor, 'get_by_id',
+                               return_value=instance_type):
+            self.assertRaises(exception.RequestedVRamTooHigh,
+                              conn.get_guest_config,
+                              instance_ref,
+                              [],
+                              image_meta,
+                              disk_info)
+
     def test_get_guest_config_without_qga_through_image_meta(self):
         self.flags(virt_type='kvm', group='libvirt')
 
