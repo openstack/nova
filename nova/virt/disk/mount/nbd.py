@@ -74,12 +74,6 @@ class NbdMount(api.Mount):
             return None
         return os.path.join('/dev', device)
 
-    def _read_pid_file(self, pidfile):
-        # This is for unit test convenience
-        with open(pidfile) as f:
-            pid = int(f.readline())
-        return pid
-
     @utils.synchronized('nbd-allocation-lock')
     def _inner_get_dev(self):
         device = self._allocate_nbd()

@@ -187,18 +187,6 @@ class _BaseMessage(object):
         self.routing_path = routing_path + self.our_path_part
         self.hop_count += 1
 
-    def _at_max_hop_count(self, do_raise=True):
-        """Check if we're at the max hop count.  If we are and do_raise is
-        True, raise CellMaxHopCountReached.  If we are at the max and
-        do_raise is False... return True, else False.
-        """
-        if self.hop_count >= self.max_hop_count:
-            if do_raise:
-                raise exception.CellMaxHopCountReached(
-                        hop_count=self.hop_count)
-            return True
-        return False
-
     def _process_locally(self):
         """Its been determined that we should process this message in this
         cell.  Go through the MessageRunner to call the appropriate

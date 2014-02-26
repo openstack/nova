@@ -257,10 +257,6 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
                 LOG.debug(_('The nwfilter(%s) is not found.'),
                           instance_filter_name, instance=instance)
 
-    def _define_filters(self, filter_name, filter_children):
-        self._define_filter(self._filter_container(filter_name,
-                                                   filter_children))
-
     @staticmethod
     def _instance_filter_name(instance, nic_id=None):
         if not nic_id:
