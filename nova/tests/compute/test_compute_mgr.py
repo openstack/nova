@@ -430,6 +430,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.task_state = task_states.IMAGE_SNAPSHOT
         self._test_init_instance_cleans_image_states(instance)
 
+    def test_init_instance_cleans_image_state_snapshot_pending(self):
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
+        self._test_init_instance_cleans_image_states(instance)
+
     def test_init_instance_errors_when_not_migrating(self):
         instance = instance_obj.Instance(self.context)
         instance.uuid = 'foo'
