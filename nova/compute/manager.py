@@ -414,7 +414,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.16')
+    target = messaging.Target(version='3.17')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4077,6 +4077,7 @@ class ComputeManager(manager.Manager):
         except exception.NotFound:
             pass
 
+    @object_compat
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip):
         """Use hotplug to add an network adapter to an instance."""
@@ -4095,6 +4096,7 @@ class ComputeManager(manager.Manager):
         self.driver.attach_interface(instance, image_meta, network_info[0])
         return network_info[0]
 
+    @object_compat
     def detach_interface(self, context, instance, port_id):
         """Detach an network adapter from an instance."""
         # FIXME(comstud): Why does this need elevated context?

@@ -120,7 +120,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_attach_interface(self):
         self._test_compute_api('attach_interface', 'call',
                 instance=self.fake_instance, network_id='id', port_id='id2',
-                requested_ip='192.168.1.50')
+                version='3.17', requested_ip='192.168.1.50')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -205,7 +205,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_detach_interface(self):
         self._test_compute_api('detach_interface', 'cast',
-                instance=self.fake_instance, port_id='fake_id')
+                version='3.17', instance=self.fake_instance, port_id='fake_id')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

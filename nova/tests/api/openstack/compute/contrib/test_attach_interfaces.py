@@ -113,7 +113,7 @@ def fake_detach_interface(self, context, instance, port_id):
     raise exception.PortNotFound(port_id=port_id)
 
 
-def fake_get_instance(self, context, intance_id):
+def fake_get_instance(self, context, intance_id, want_objects=False):
     return {}
 
 

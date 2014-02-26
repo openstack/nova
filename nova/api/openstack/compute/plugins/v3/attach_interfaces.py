@@ -99,7 +99,7 @@ class InterfaceAttachmentController(object):
             raise exc.HTTPBadRequest()
 
         instance = common.get_instance(self.compute_api, context,
-                                       server_id)
+                                       server_id, want_objects=True)
         LOG.audit(_("Attach interface to %s"), instance=instance)
 
         try:
@@ -131,7 +131,8 @@ class InterfaceAttachmentController(object):
         authorize(context)
         port_id = id
 
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         LOG.audit(_("Detach interface %s"), port_id, instance=instance)
         try:
             self.compute_api.detach_interface(context,
