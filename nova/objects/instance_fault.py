@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import itertools
+
 from nova import db
 from nova.objects import base
 from nova.objects import fields
@@ -32,10 +34,11 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject):
         }
 
     @staticmethod
-    def _from_db_object(fault, db_fault):
+    def _from_db_object(context, fault, db_fault):
         # NOTE(danms): These are identical right now
         for key in fault.fields:
             fault[key] = db_fault[key]
+        fault._context = context
         fault.obj_reset_changes()
         return fault
 
@@ -44,17 +47,8 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject):
         db_faults = db.instance_fault_get_by_instance_uuids(context,
                                                             [instance_uuid])
         if instance_uuid in db_faults and db_faults[instance_uuid]:
-            return cls._from_db_object(cls(), db_faults[instance_uuid][0])
-
-
-def _make_fault_list(faultlist, db_faultlist):
-    faultlist.objects = []
-    for instance_uuid in db_faultlist:
-        for db_fault in db_faultlist[instance_uuid]:
-            faultlist.objects.append(InstanceFault._from_db_object(
-                InstanceFault(), db_fault))
-    faultlist.obj_reset_changes()
-    return faultlist
+            return cls._from_db_object(context, cls(),
+                                       db_faults[instance_uuid][0])
 
 
 class InstanceFaultList(base.ObjectListBase, base.NovaObject):
@@ -72,6 +66,8 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_instance_uuids(cls, context, instance_uuids):
-        db_faults = db.instance_fault_get_by_instance_uuids(context,
-                                                            instance_uuids)
-        return _make_fault_list(cls(), db_faults)
+        db_faultdict = db.instance_fault_get_by_instance_uuids(context,
+                                                               instance_uuids)
+        db_faultlist = itertools.chain(*db_faultdict.values())
+        return base.obj_make_list(context, InstanceFaultList(), InstanceFault,
+                                  db_faultlist)

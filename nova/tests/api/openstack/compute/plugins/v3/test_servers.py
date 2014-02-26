@@ -2619,7 +2619,8 @@ class ServersViewBuilderTest(test.TestCase):
 
     def test_build_server_detail_with_fault(self):
         self.instance['vm_state'] = vm_states.ERROR
-        self.instance['fault'] = fake_instance.fake_fault_obj(self.uuid)
+        self.instance['fault'] = fake_instance.fake_fault_obj(
+                                     self.request.context, self.uuid)
 
         image_bookmark = "http://localhost:9292/images/5"
         flavor_bookmark = "http://localhost/flavors/1"
@@ -2688,7 +2689,8 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail_with_fault_that_has_been_deleted(self):
         self.instance['deleted'] = 1
         self.instance['vm_state'] = vm_states.ERROR
-        fault = fake_instance.fake_fault_obj(self.uuid, code=500,
+        fault = fake_instance.fake_fault_obj(self.request.context,
+                                             self.uuid, code=500,
                                              message="No valid host was found")
         self.instance['fault'] = fault
 
@@ -2706,6 +2708,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail_with_fault_no_details_not_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
         self.instance['fault'] = fake_instance.fake_fault_obj(
+                                                   self.request.context,
                                                    self.uuid,
                                                    code=500,
                                                    message='Error')
@@ -2722,6 +2725,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail_with_fault_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
         self.instance['fault'] = fake_instance.fake_fault_obj(
+                                                   self.request.context,
                                                    self.uuid,
                                                    code=500,
                                                    message='Error')
@@ -2739,6 +2743,7 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail_with_fault_no_details_admin(self):
         self.instance['vm_state'] = vm_states.ERROR
         self.instance['fault'] = fake_instance.fake_fault_obj(
+                                                   self.request.context,
                                                    self.uuid,
                                                    code=500,
                                                    message='Error',
@@ -2756,7 +2761,8 @@ class ServersViewBuilderTest(test.TestCase):
     def test_build_server_detail_with_fault_but_active(self):
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
-        self.instance['fault'] = fake_instance.fake_fault_obj(self.uuid)
+        self.instance['fault'] = fake_instance.fake_fault_obj(
+                                     self.request.context, self.uuid)
 
         output = self.view_builder.show(self.request, self.instance)
         self.assertNotIn('fault', output['server'])

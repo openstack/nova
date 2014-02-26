@@ -85,7 +85,7 @@ def fake_instance_obj(context, **updates):
                expected_attrs=expected_attrs)
 
 
-def fake_fault_obj(instance_uuid, code=404,
+def fake_fault_obj(context, instance_uuid, code=404,
                    message='HTTPNotFound',
                    details='Stock details for test',
                    **updates):
@@ -103,6 +103,6 @@ def fake_fault_obj(instance_uuid, code=404,
     }
     if updates:
         fault.update(updates)
-    return inst_fault_obj.InstanceFault._from_db_object(
+    return inst_fault_obj.InstanceFault._from_db_object(context,
                                            inst_fault_obj.InstanceFault(),
                                            fault)

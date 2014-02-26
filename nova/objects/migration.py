@@ -80,15 +80,6 @@ class Migration(base.NovaPersistentObject, base.NovaObject):
                                                  self.instance_uuid)
 
 
-def _make_list(context, list_obj, item_cls, db_list):
-    list_obj.objects = []
-    for db_item in db_list:
-        item = item_cls._from_db_object(context, item_cls(), db_item)
-        list_obj.objects.append(item)
-    list_obj.obj_reset_changes()
-    return list_obj
-
-
 class MigrationList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              Migration <= 1.1
@@ -109,15 +100,18 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
                                         dest_compute, use_slave=False):
         db_migrations = db.migration_get_unconfirmed_by_dest_compute(
             context, confirm_window, dest_compute, use_slave=use_slave)
-        return _make_list(context, MigrationList(), Migration, db_migrations)
+        return base.obj_make_list(context, MigrationList(), Migration,
+                                  db_migrations)
 
     @base.remotable_classmethod
     def get_in_progress_by_host_and_node(cls, context, host, node):
         db_migrations = db.migration_get_in_progress_by_host_and_node(
             context, host, node)
-        return _make_list(context, MigrationList(), Migration, db_migrations)
+        return base.obj_make_list(context, MigrationList(), Migration,
+                                  db_migrations)
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters):
         db_migrations = db.migration_get_all_by_filters(context, filters)
-        return _make_list(context, MigrationList(), Migration, db_migrations)
+        return base.obj_make_list(context, MigrationList(), Migration,
+                                  db_migrations)

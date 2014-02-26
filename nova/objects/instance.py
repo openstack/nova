@@ -279,9 +279,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                     context, instance.uuid))
 
         if 'pci_devices' in expected_attrs:
-            pci_devices = pci_device._make_pci_list(
+            pci_devices = base.obj_make_list(
                     context, pci_device.PciDeviceList(),
-                    db_inst['pci_devices'])
+                    pci_device.PciDevice, db_inst['pci_devices'])
             instance['pci_devices'] = pci_devices
         if 'info_cache' in expected_attrs:
             if db_inst['info_cache'] is None:
@@ -294,9 +294,9 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
                 instance_info_cache.InstanceInfoCache._from_db_object(
                     context, instance.info_cache, db_inst['info_cache'])
         if 'security_groups' in expected_attrs:
-            sec_groups = security_group._make_secgroup_list(
+            sec_groups = base.obj_make_list(
                     context, security_group.SecurityGroupList(),
-                    db_inst['security_groups'])
+                    security_group.SecurityGroup, db_inst['security_groups'])
             instance['security_groups'] = sec_groups
 
         instance._context = context
