@@ -312,7 +312,7 @@ class FilterScheduler(driver.Scheduler):
         # Note: remember, we are using an iterator here. So only
         # traverse this list once. This can bite you if the hosts
         # are being scanned in a filter or weighing function.
-        hosts = self.host_manager.get_all_host_states(elevated)
+        hosts = self._get_all_host_states(elevated)
 
         selected_hosts = []
         if instance_uuids:
@@ -350,3 +350,7 @@ class FilterScheduler(driver.Scheduler):
             if update_group_hosts is True:
                 filter_properties['group_hosts'].append(chosen_host.obj.host)
         return selected_hosts
+
+    def _get_all_host_states(self, context):
+        """Template method, so a subclass can implement caching."""
+        return self.host_manager.get_all_host_states(context)

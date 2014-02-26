@@ -114,6 +114,7 @@ class HostState(object):
 
         # Mutable available resources.
         # These will change as resources are virtually "consumed".
+        self.total_usable_ram_mb = 0
         self.total_usable_disk_gb = 0
         self.disk_mb_used = 0
         self.free_ram_mb = 0

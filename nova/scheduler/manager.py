@@ -42,12 +42,20 @@ from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
 
-scheduler_driver_opt = cfg.StrOpt('scheduler_driver',
-        default='nova.scheduler.filter_scheduler.FilterScheduler',
-        help='Default driver to use for the scheduler')
-
+scheduler_driver_opts = [
+    cfg.StrOpt('scheduler_driver',
+               default='nova.scheduler.filter_scheduler.FilterScheduler',
+               help='Default driver to use for the scheduler'),
+    cfg.IntOpt('scheduler_driver_task_period',
+               default=60,
+               help='How often (in seconds) to run periodic tasks in '
+                    'the scheduler driver of your choice. '
+                    'Please note this is likely to interact with the value '
+                    'of service_down_time, but exactly how they interact '
+                    'will depend on your choice of scheduler driver.'),
+]
 CONF = cfg.CONF
-CONF.register_opt(scheduler_driver_opt)
+CONF.register_opts(scheduler_driver_opts)
 
 QUOTAS = quota.QUOTAS
 
@@ -255,6 +263,11 @@ class SchedulerManager(manager.Manager):
     @periodic_task.periodic_task
     def _expire_reservations(self, context):
         QUOTAS.expire(context)
+
+    @periodic_task.periodic_task(spacing=CONF.scheduler_driver_task_period,
+                                 run_immediately=True)
+    def _run_periodic_tasks(self, context):
+        self.driver.run_periodic_tasks(context)
 
     # NOTE(russellb) This method can be removed in 3.0 of this API.  It is
     # deprecated in favor of the method in the base API.

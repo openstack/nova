@@ -1836,6 +1836,13 @@
 # Default driver to use for the scheduler (string value)
 #scheduler_driver=nova.scheduler.filter_scheduler.FilterScheduler
 
+# How often (in seconds) to run periodic tasks in the
+# scheduler driver of your choice. Please note this is likely
+# to interact with the value of service_down_time, but exactly
+# how they interact will depend on your choice of scheduler
+# driver. (integer value)
+#scheduler_driver_task_period=60
+
 
 #
 # Options defined in nova.scheduler.rpcapi
