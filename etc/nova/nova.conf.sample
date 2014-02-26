@@ -2945,7 +2945,7 @@
 
 # Compress snapshot images when possible. This currently
 # applies exclusively to qcow2 images (boolean value)
-# Deprecated group/name - [DEFAULT]/libvirt_snashot_compression
+# Deprecated group/name - [DEFAULT]/libvirt_snapshot_compression
 #snapshot_compression=false
 
 

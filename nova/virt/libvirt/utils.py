@@ -40,7 +40,7 @@ libvirt_opts = [
                 help='Compress snapshot images when possible. This '
                      'currently applies exclusively to qcow2 images',
                 deprecated_group='DEFAULT',
-                deprecated_name='libvirt_snashot_compression'),
+                deprecated_name='libvirt_snapshot_compression'),
     ]
 
 CONF = cfg.CONF
