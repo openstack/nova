@@ -24,6 +24,7 @@ from nova import exception
 from nova.openstack.common import policy as common_policy
 from nova import policy
 from nova import test
+from nova.tests import policy_fixture
 from nova import utils
 
 
@@ -204,3 +205,20 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
 
         self.assertEqual(check('target', dict(is_admin=True)), False)
         self.assertEqual(check('target', dict(is_admin=False)), True)
+
+
+class AdminRolePolicyTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(AdminRolePolicyTestCase, self).setUp()
+        self.policy = self.useFixture(policy_fixture.RoleBasedPolicyFixture())
+        self.context = context.RequestContext('fake', 'fake', roles=['member'])
+        self.actions = policy.get_rules().keys()
+        self.target = {}
+
+    def test_enforce_admin_actions_with_nonadmin_context_throws(self):
+        """Check if non-admin context passed to admin actions throws
+           Policy not authorized exception
+        """
+        for action in self.actions:
+            self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
+                          self.context, action, self.target)
