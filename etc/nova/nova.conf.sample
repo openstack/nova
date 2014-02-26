@@ -2870,6 +2870,11 @@
 # file=directsync,block=none (list value)
 #disk_cachemodes=
 
+# A path to a device that will be used as source of entropy on
+# the host. Permitted options are: /dev/random or /dev/hwrng
+# (string value)
+#rng_dev_path=<None>
+
 
 #
 # Options defined in nova.virt.libvirt.imagebackend

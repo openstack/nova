@@ -1506,3 +1506,8 @@ class KeyManagerError(NovaException):
 
 class InvalidVideoMode(Invalid):
     msg_fmt = _("Provided video model (%(model)s) is not supported.")
+
+
+class RngDeviceNotExist(Invalid):
+    msg_fmt = _("The provided RNG device path: (%(path)s) is not "
+                "present on the host.")
