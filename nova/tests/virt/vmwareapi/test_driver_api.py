@@ -333,7 +333,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
 
-        def fake_poll_task(instance_uuid, task_ref, done):
+        def fake_poll_task(task_ref, done):
             done.send_exception(exception.NovaException('fake exception'))
 
         def fake_stop_loop(loop):
@@ -346,7 +346,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.stubs.Set(self.conn, "_stop_loop",
                        fake_stop_loop)
         self.assertRaises(exception.NovaException,
-                          self.conn._wait_for_task, 'fake-id', 'fake-ref')
+                          self.conn._wait_for_task, 'fake-ref')
         self.assertEqual(self.stop_called, 1)
 
     def _create_instance_in_the_db(self, node=None, set_image_ref=True,
@@ -573,13 +573,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         tmp_file = '[%s] vmware_base/%s/%s.80-flat.vmdk' % (self.ds,
                                                             id, id)
 
-        def fake_wait_for_task(instance_uuid, task_ref):
+        def fake_wait_for_task(task_ref):
             if task_ref == self.task_ref:
                 self.task_ref = None
                 self.assertTrue(vmwareapi_fake.get_file(cached_image))
                 self.assertTrue(vmwareapi_fake.get_file(tmp_file))
                 raise exception.NovaException('No space!')
-            return self.wait_task(instance_uuid, task_ref)
+            return self.wait_task(task_ref)
 
         def fake_call_method(module, method, *args, **kwargs):
             task_ref = self.call_method(module, method, *args, **kwargs)
@@ -616,12 +616,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # self.exception will be checked to see that
         # the exception has indeed been raised.
 
-        def fake_wait_for_task(instance_uuid, task_ref):
+        def fake_wait_for_task(task_ref):
             if task_ref == self.task_ref:
                 self.task_ref = None
                 self.exception = True
                 raise error_util.FileAlreadyExistsException()
-            return self.wait_task(instance_uuid, task_ref)
+            return self.wait_task(task_ref)
 
         def fake_call_method(module, method, *args, **kwargs):
             task_ref = self.call_method(module, method, *args, **kwargs)
@@ -648,12 +648,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         # will be checked to see that the exception has
         # indeed been raised.
 
-        def fake_wait_for_task(instance_uuid, task_ref):
+        def fake_wait_for_task(task_ref):
             if task_ref == self.task_ref:
                 self.task_ref = None
                 self.exception = True
                 raise error_util.VMwareDriverException('Exception!')
-            return self.wait_task(instance_uuid, task_ref)
+            return self.wait_task(task_ref)
 
         def fake_call_method(module, method, *args, **kwargs):
             task_ref = self.call_method(module, method, *args, **kwargs)

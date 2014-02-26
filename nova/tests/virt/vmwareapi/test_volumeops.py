@@ -60,7 +60,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             self._volumeops.detach_disk_from_vm('fake_vm_ref', self.instance,
                                                 fake_device, destroy_disk)
             _wait_for_task.assert_has_calls([
-                   mock.call(self.instance['uuid'], 'fake_configure_task')])
+                   mock.call('fake_configure_task')])
 
     def test_detach_with_destroy_disk_from_vm(self):
         self._test_detach_disk_from_vm(destroy_disk=True)

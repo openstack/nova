@@ -49,7 +49,6 @@ class VMwareVolumeOps(object):
         Attach disk to VM by reconfiguration.
         """
         instance_name = instance['name']
-        instance_uuid = instance['uuid']
         client_factory = self._session._get_vim().client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,
@@ -76,7 +75,7 @@ class VMwareVolumeOps(object):
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
                                         spec=vmdk_attach_config_spec)
-        self._session._wait_for_task(instance_uuid, reconfig_task)
+        self._session._wait_for_task(reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(instance_name)s to attach "
                     "disk %(vmdk_path)s or device %(device_name)s with type "
                     "%(disk_type)s"),
@@ -84,8 +83,6 @@ class VMwareVolumeOps(object):
                    'device_name': device_name, 'disk_type': disk_type})
 
     def _update_volume_details(self, vm_ref, instance, volume_uuid):
-        instance_uuid = instance['uuid']
-
         # Store the uuid of the volume_device
         hw_devices = self._session._call_method(vim_util,
                                                 'get_dynamic_property',
@@ -104,7 +101,7 @@ class VMwareVolumeOps(object):
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
                                         spec=extra_config_specs)
-        self._session._wait_for_task(instance_uuid, reconfig_task)
+        self._session._wait_for_task(reconfig_task)
 
     def _get_volume_uuid(self, vm_ref, volume_uuid):
         volume_option = 'volume-%s' % volume_uuid
@@ -124,7 +121,6 @@ class VMwareVolumeOps(object):
         Detach disk from VM by reconfiguration.
         """
         instance_name = instance['name']
-        instance_uuid = instance['uuid']
         client_factory = self._session._get_vim().client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(
                                     client_factory, device, destroy_disk)
@@ -136,7 +132,7 @@ class VMwareVolumeOps(object):
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
                                         spec=vmdk_detach_config_spec)
-        self._session._wait_for_task(instance_uuid, reconfig_task)
+        self._session._wait_for_task(reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(instance_name)s to detach "
                     "disk %(disk_key)s"),
                   {'instance_name': instance_name, 'disk_key': disk_key})
@@ -282,7 +278,7 @@ class VMwareVolumeOps(object):
         task = self._session._call_method(self._session._get_vim(),
                                           "RelocateVM_Task", volume_ref,
                                           spec=spec)
-        self._session._wait_for_task(task.value, task)
+        self._session._wait_for_task(task)
 
     def _get_res_pool_of_vm(self, vm_ref):
         """Get resource pool to which the VM belongs."""
