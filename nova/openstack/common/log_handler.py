@@ -13,9 +13,9 @@
 #    under the License.
 import logging
 
-from nova.openstack.common import notifier
-
 from oslo.config import cfg
+
+from nova.openstack.common import notifier
 
 
 class PublishErrorsHandler(logging.Handler):
