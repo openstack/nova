@@ -138,6 +138,28 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    def _test_not_implemented_state(self, action, method=None,
+                                    error_text=None):
+        if method is None:
+            method = action
+        body_map = {}
+        compute_api_args_map = {}
+        instance = self._stub_instance_get()
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+        getattr(self.compute_api, method)(self.context, instance,
+                                          *args, **kwargs).AndRaise(
+                NotImplementedError())
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance['uuid'],
+                                 {action: body_map.get(action)})
+        self.assertEqual(501, res.status_int)
+        self.assertIn(error_text, res.body)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
     def _test_locked_instance(self, action, method=None):
         if method is None:
             method = action
@@ -189,6 +211,17 @@ class AdminActionsTest(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, method or action)
             self._test_invalid_state(action, method=method, body_map=body_map,
                                      compute_api_args_map=args_map)
+            # Re-mock this.
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+
+    def test_actions_raise_on_not_implemented(self):
+        tests = [
+            ('pause', 'Virt driver does not implement pause function.'),
+            ('unpause', 'Virt driver does not implement unpause function.')
+        ]
+        for (action, error_text) in tests:
+            self.mox.StubOutWithMock(self.compute_api, action)
+            self._test_not_implemented_state(action, error_text=error_text)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
