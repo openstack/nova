@@ -5414,7 +5414,8 @@ class ComputeTestCase(BaseTestCase):
                               'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
                               'post_live_migration_at_destination'),
-            mock.patch.object(self.compute.driver, 'unplug_vifs'),
+            mock.patch.object(self.compute.driver,
+                              'post_live_migration_at_source'),
             mock.patch.object(self.compute.network_api,
                               'setup_networks_on_host'),
             mock.patch.object(self.compute.instance_events,
@@ -5422,7 +5423,8 @@ class ComputeTestCase(BaseTestCase):
         ) as (
             post_live_migration, unfilter_instance,
             migrate_instance_start, post_live_migration_at_destination,
-            unplug_vifs, setup_networks_on_host, clear_events
+            post_live_migration_at_source, setup_networks_on_host,
+            clear_events
         ):
             self.compute._post_live_migration(c, instance, dest)
 
@@ -5436,7 +5438,8 @@ class ComputeTestCase(BaseTestCase):
                 mock.call(c, instance, migration)])
             post_live_migration_at_destination.assert_has_calls([
                 mock.call(c, instance, False, dest)])
-            unplug_vifs.assert_has_calls([mock.call(instance, [])])
+            post_live_migration_at_source.assert_has_calls(
+                [mock.call(c, instance, [])])
             setup_networks_on_host.assert_has_calls([
                 mock.call(c, instance, self.compute.host, teardown=True)])
             clear_events.assert_called_once_with(instance)

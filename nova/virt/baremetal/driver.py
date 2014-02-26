@@ -400,7 +400,7 @@ class BareMetalDriver(driver.ComputeDriver):
                                 "baremetal database: %s") % e)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
-                destroy_disks=True, migrate_data=None):
+                destroy_disks=True, migrate_data=None, destroy_vifs=True):
         """Cleanup after instance being destroyed."""
         pass
 
