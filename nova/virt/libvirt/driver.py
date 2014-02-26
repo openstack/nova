@@ -3291,15 +3291,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
         if CONF.libvirt.virt_type in ('qemu', 'kvm'):
             qga_enabled = False
-            # Enable qga only if the 'hw_qemu_guest_agent' property is set
-            if (image_meta is not None and image_meta.get('properties') and
-                    image_meta['properties'].get('hw_qemu_guest_agent')
-                    is not None):
-                hw_qga = image_meta['properties']['hw_qemu_guest_agent']
-                if hw_qga.lower() == 'yes':
-                    LOG.debug(_("Qemu guest agent is enabled through image "
-                                "metadata"), instance=instance)
-                    qga_enabled = True
+            # Enable qga only if the 'hw_qemu_guest_agent' is equal to yes
+            hw_qga = img_meta_prop.get('hw_qemu_guest_agent', 'no')
+            if hw_qga.lower() == 'yes':
+                LOG.debug(_("Qemu guest agent is enabled through image "
+                            "metadata"), instance=instance)
+                qga_enabled = True
 
             if qga_enabled:
                 qga = vconfig.LibvirtConfigGuestChannel()
