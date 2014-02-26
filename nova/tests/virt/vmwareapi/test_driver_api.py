@@ -52,6 +52,7 @@ from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim
+from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
@@ -425,7 +426,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         found_vm_uuid = False
         found_iface_id = False
-        for c in vm.get("config.extraConfig"):
+        for c in vm.get("config.extraConfig").OptionValue:
             if (c.key == "nvp.vm-uuid" and c.value == self.instance['uuid']):
                 found_vm_uuid = True
             if (c.key == "nvp.iface-id.0" and c.value == "vif-xxx-yyy-zzz"):
@@ -772,6 +773,31 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(image, 'Test-Snapshot')
         self.assertEqual(instance, self.instance)
         self.assertEqual(kwargs['disk_type'], 'preallocated')
+
+    def test_get_vm_ref_using_extra_config(self):
+        self._create_vm()
+        vm_ref = vm_util._get_vm_ref_from_extraconfig(self.conn._session,
+                                                     self.instance['uuid'])
+        self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
+        # Disrupt the fake Virtual Machine object so that extraConfig
+        # cannot be matched.
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm.get('config.extraConfig["nvp.vm-uuid"]').value = ""
+        # We should not get a Virtual Machine through extraConfig.
+        vm_ref = vm_util._get_vm_ref_from_extraconfig(self.conn._session,
+                                                     self.instance['uuid'])
+        self.assertIsNone(vm_ref, 'VM Reference should be none')
+        # Check if we can find the Virtual Machine using the name.
+        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
+
+    def test_get_object_for_optionvalue(self):
+        self._create_vm()
+        vms = self.conn._session._call_method(vim_util, "get_objects",
+                "VirtualMachine", ['config.extraConfig["nvp.vm-uuid"]'])
+        vm_ref = vm_util._get_object_for_optionvalue(vms,
+                                                     self.instance["uuid"])
+        self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
 
     def _test_snapshot(self):
         expected_calls = [
