@@ -363,7 +363,7 @@ class FakeDriver(driver.ComputeDriver):
                'memory_mb_used': 0,
                'local_gb_used': 0,
                'hypervisor_type': 'fake',
-               'hypervisor_version': '1.0',
+               'hypervisor_version': utils.convert_version_to_int('1.0'),
                'hypervisor_hostname': nodename,
                'disk_available_least': 0,
                'cpu_info': '?',

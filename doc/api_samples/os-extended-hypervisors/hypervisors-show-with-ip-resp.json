@@ -8,7 +8,7 @@
         "free_ram_mb": 7680,
         "hypervisor_hostname": "fake-mini",
         "hypervisor_type": "fake",
-        "hypervisor_version": 1,
+        "hypervisor_version": 1000,
         "id": 1,
         "local_gb": 1028,
         "local_gb_used": 0,

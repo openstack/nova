@@ -591,6 +591,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                 'supported_instances']
         for key in keys:
             self.assertIn(key, host_status)
+        self.assertIsInstance(host_status['hypervisor_version'], int)
 
     @catch_notimplementederror
     def test_get_host_stats(self):

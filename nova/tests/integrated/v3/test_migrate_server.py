@@ -55,7 +55,7 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
                            report_count=1,
                            updated_at='foo',
                            hypervisor_type='bar',
-                           hypervisor_version='1',
+                           hypervisor_version='1000',
                            disabled=False)
             return {'compute_node': [service]}
         self.stubs.Set(db, "service_get_by_compute_host", fake_get_compute)
