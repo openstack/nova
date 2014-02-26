@@ -380,7 +380,8 @@ def load_standard_extensions(ext_mgr, logger, path, package, ext_list=None):
 def core_authorizer(api_name, extension_name):
     def authorize(context, target=None, action=None):
         if target is None:
-            target = {'project_id': context.project_id,
+            target = {'domain_id': context.domain_id,
+                      'project_id': context.project_id,
                       'user_id': context.user_id}
         if action is None:
             act = '%s:%s' % (api_name, extension_name)
