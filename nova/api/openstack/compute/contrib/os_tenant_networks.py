@@ -80,7 +80,7 @@ class NetworkController(object):
             try:
                 self._default_networks = self._get_default_networks()
             except Exception:
-                LOG.exception("Failed to get default networks")
+                LOG.exception(_("Failed to get default networks"))
 
     def _get_default_networks(self):
         project_id = CONF.neutron_default_tenant_id
