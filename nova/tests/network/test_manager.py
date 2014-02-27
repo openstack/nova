@@ -33,6 +33,7 @@ from nova.network import manager as network_manager
 from nova.network import model as net_model
 from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import floating_ip as floating_ip_obj
+from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
@@ -2156,9 +2157,12 @@ class AllocateTestCase(test.TestCase):
         db.floating_ip_create(self.context,
                               {'address': address,
                                'pool': 'nova'})
-        inst = db.instance_create(self.context, {'host': self.compute.host,
-                                                 'display_name': HOST,
-                                                 'instance_type_id': 1})
+        inst = instance_obj.Instance()
+        inst.host = self.compute.host
+        inst.display_name = HOST
+        inst.instance_type_id = 1
+        inst.uuid = FAKEUUID
+        inst.create(self.context)
         networks = db.network_get_all(self.context)
         for network in networks:
             db.network_update(self.context, network['id'],
@@ -2172,10 +2176,7 @@ class AllocateTestCase(test.TestCase):
         fixed_ip = nw_info.fixed_ips()[0]['address']
         self.assertTrue(utils.is_valid_ipv4(fixed_ip))
         self.network.deallocate_for_instance(self.context,
-                                             instance_id=inst['id'],
-                                             fixed_ips=fixed_ip,
-                                             host=self.network.host,
-                                             project_id=project_id)
+                instance=inst)
 
     def test_allocate_for_instance_with_mac(self):
         available_macs = set(['ca:fe:de:ad:be:ef'])

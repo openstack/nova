@@ -269,7 +269,7 @@ class NetworkManager(manager.Manager):
         The one at a time part is to flatten the layout to help scale
     """
 
-    target = messaging.Target(version='1.10')
+    target = messaging.Target(version='1.11')
 
     # If True, this manager requires VIF to create a bridge.
     SHOULD_CREATE_BRIDGE = False
@@ -530,13 +530,17 @@ class NetworkManager(manager.Manager):
         # deleted before the IPs are released, so we need to get deleted
         # instances too
         read_deleted_context = context.elevated(read_deleted='yes')
-        instance_uuid = kwargs['instance_id']
-        if not uuidutils.is_uuid_like(instance_uuid):
-            instance = instance_obj.Instance.get_by_id(read_deleted_context,
-                                                       instance_uuid)
+        if 'instance' in kwargs:
+            instance = kwargs['instance']
             instance_uuid = instance.uuid
-
-        host = kwargs.get('host')
+            host = instance.host
+        else:
+            instance_uuid = kwargs['instance_id']
+            if not uuidutils.is_uuid_like(instance_uuid):
+                instance = instance_obj.Instance.get_by_id(
+                        read_deleted_context, instance_uuid)
+                instance_uuid = instance.uuid
+            host = kwargs.get('host')
 
         try:
             if 'fixed_ips' in kwargs:

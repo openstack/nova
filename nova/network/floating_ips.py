@@ -147,15 +147,17 @@ class FloatingIP(object):
 
         rpc.called by network_api
         """
-        instance_uuid = kwargs.get('instance_id')
-
-        if not uuidutils.is_uuid_like(instance_uuid):
-            # NOTE(francois.charlier): in some cases the instance might be
-            # deleted before the IPs are released, so we need to get deleted
-            # instances too
-            instance = instance_obj.Instance.get_by_id(
-                context.elevated(read_deleted='yes'), instance_uuid)
-            instance_uuid = instance.uuid
+        if 'instance' in kwargs:
+            instance_uuid = kwargs['instance'].uuid
+        else:
+            instance_uuid = kwargs['instance_id']
+            if not uuidutils.is_uuid_like(instance_uuid):
+                # NOTE(francois.charlier): in some cases the instance might be
+                # deleted before the IPs are released, so we need to get
+                # deleted instances too
+                instance = instance_obj.Instance.get_by_id(
+                    context.elevated(read_deleted='yes'), instance_uuid)
+                instance_uuid = instance.uuid
 
         try:
             fixed_ips = fixed_ip_obj.FixedIPList.get_by_instance_uuid(

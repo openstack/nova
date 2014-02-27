@@ -72,6 +72,8 @@ class NetworkAPI(object):
         NOTE: remove unused method get_vif_by_mac_address()
         NOTE: remove unused method get_network()
         NOTE: remove unused method get_all_networks()
+        1.11 - Add instance to deallocate_for_instance().  Remove instance_id,
+               project_id, and host.
     '''
 
     VERSION_ALIASES = {
@@ -166,14 +168,25 @@ class NetworkAPI(object):
                           requested_networks=requested_networks,
                           macs=jsonutils.to_primitive(macs))
 
-    def deallocate_for_instance(self, ctxt, instance_id, project_id,
-                                host, requested_networks=None):
+    def deallocate_for_instance(self, ctxt, instance, requested_networks=None):
         cctxt = self.client
+        kwargs = {}
+        if self.client.can_send_version('1.11'):
+            version = '1.11'
+            kwargs['instance'] = instance
+            kwargs['requested_networks'] = requested_networks
+        else:
+            if self.client.can_send_version('1.10'):
+                version = '1.10'
+                kwargs['requested_networks'] = requested_networks
+            else:
+                version = '1.0'
+            kwargs['host'] = instance['host']
+            kwargs['instance_id'] = instance.uuid
+            kwargs['project_id'] = instance.project_id
         if CONF.multi_host:
-            cctxt = cctxt.prepare(server=host)
-        return cctxt.call(ctxt, 'deallocate_for_instance',
-                          instance_id=instance_id, project_id=project_id,
-                          host=host, requested_networks=requested_networks)
+            cctxt = cctxt.prepare(server=instance['host'], version=version)
+        return cctxt.call(ctxt, 'deallocate_for_instance', **kwargs)
 
     def add_fixed_ip_to_instance(self, ctxt, instance_id, rxtx_factor,
                                  host, network_id):
