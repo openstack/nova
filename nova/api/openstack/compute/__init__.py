@@ -51,6 +51,9 @@ class APIRouter(nova.api.openstack.APIRouter):
     ExtensionManager = extensions.ExtensionManager
 
     def _setup_routes(self, mapper, ext_mgr, init_only):
+
+        print init_only  # REMOVER
+
         if init_only is None or 'versions' in init_only:
             self.resources['versions'] = versions.create_resource()
             mapper.connect("versions", "/",
@@ -116,14 +119,10 @@ class APIRouter(nova.api.openstack.APIRouter):
 
         if init_only is None or 'domains' in init_only:
             self.resources['domains'] = domains.create_resource(ext_mgr)
+
             domains_controller = self.resources['domains']
 
-            mapper.resource("image_meta", "metadata",
-                            controller=domains_controller,
-                            parent_resource=dict(member_name='image',
-                            collection_name='images'))
-
-            mapper.connect("metadata",
+            mapper.connect("domains",
                            "/domains/{domain_id}/servers",
                            controller=domains_controller,
                            action='get',
