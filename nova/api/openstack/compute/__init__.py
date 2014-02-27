@@ -130,7 +130,7 @@ class APIRouter(nova.api.openstack.APIRouter):
             mapper.connect("domains",
                            "/domains/{domain_id}/servers",
                            controller=domains_controller,
-                           action='get',
+                           action='index_domain',
                            conditions={"method": ['GET']})
 
         if init_only is None or 'server_metadata' in init_only:
