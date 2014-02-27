@@ -32,8 +32,7 @@ from nova.api.openstack.compute import plugins
 from nova.api.openstack.compute import server_metadata
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
-# TODO FIX
-from nova.api.openstack.compute.contrib import domains
+from nova.api.openstack.compute import domains
 
 
 allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',

@@ -16,6 +16,8 @@
 import six.moves.urllib.parse as urlparse
 from webob import exc
 
+from oslo.config import cfg
+
 from nova.api.openstack import extensions
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
@@ -43,26 +45,16 @@ from nova import policy
 from nova import utils
 
 
-QUOTAS = quota.QUOTAS
+CONF = cfg.CONF
+CONF.import_opt('enable_instance_password',
+                'nova.api.openstack.compute.servers')
+CONF.import_opt('network_api_class', 'nova.network')
+CONF.import_opt('reclaim_instance_interval', 'nova.compute.manager')
+CONF.import_opt('extensions_blacklist', 'nova.api.openstack', group='osapi_v3')
+CONF.import_opt('extensions_whitelist', 'nova.api.openstack', group='osapi_v3')
+
 LOG = logging.getLogger(__name__)
-NON_QUOTA_KEYS = ['tenant_id', 'id', 'force']
-
-
-authorize_update = extensions.extension_authorizer('compute', 'quotas:update')
-authorize_show = extensions.extension_authorizer('compute', 'quotas:show')
-authorize_delete = extensions.extension_authorizer('compute', 'quotas:delete')
-
-
-class DomainQuotaTemplate(xmlutil.TemplateBuilder):
-    def construct(self):
-        root = xmlutil.TemplateElement('quota_set', selector='quota_set')
-        root.set('id')
-
-        for resource in QUOTAS.resources:
-            elem = xmlutil.SubTemplateElement(root, resource)
-            elem.text = resource
-
-        return xmlutil.MasterTemplate(root, 1)
+authorizer = extensions.core_authorizer('compute:v3', 'domains')
 
 
 class DomainSetsController(wsgi.Controller):
