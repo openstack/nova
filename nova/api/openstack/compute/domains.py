@@ -184,6 +184,7 @@ class Domains(extensions.ExtensionDescriptor):
 
     def get_resources(self):
         LOG.debug(_("Entrou no get_resources"))
+
         resources = []
 
         res = extensions.ResourceExtension('domains',
