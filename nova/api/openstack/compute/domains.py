@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six.moves.urllib.parse as urlparse
 from webob import exc
 
 from oslo.config import cfg
@@ -184,6 +183,7 @@ class Domains(extensions.ExtensionDescriptor):
     updated = "2014-02-26T00:00:00+00:00"
 
     def get_resources(self):
+        LOG.debug(_("Entrou no get_resources"))
         resources = []
 
         res = extensions.ResourceExtension('domains',

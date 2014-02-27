@@ -34,6 +34,10 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute import domains
 
+from nova.openstack.common import log as logging
+
+LOG = logging.getLogger(__name__)
+
 
 allow_instance_snapshots_opt = cfg.BoolOpt('allow_instance_snapshots',
         default=True,
@@ -52,7 +56,8 @@ class APIRouter(nova.api.openstack.APIRouter):
 
     def _setup_routes(self, mapper, ext_mgr, init_only):
 
-        print init_only  # REMOVER
+        LOG.debug(_('INIT_ONLY: %s'), init_only)
+        print "INIT_ONLY", init_only  # REMOVER
 
         if init_only is None or 'versions' in init_only:
             self.resources['versions'] = versions.create_resource()
