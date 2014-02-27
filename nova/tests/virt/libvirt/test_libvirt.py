@@ -1471,6 +1471,10 @@ class LibvirtConnTestCase(test.TestCase):
                                   vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[6],
                                   vconfig.LibvirtConfigGuestRng)
+            self.assertEqual(cfg.devices[6].model, 'random')
+            self.assertIsNone(cfg.devices[6].backend)
+            self.assertIsNone(cfg.devices[6].rate_bytes)
+            self.assertIsNone(cfg.devices[6].rate_period)
 
     def test_get_guest_config_with_rng_not_allowed(self):
         self.flags(virt_type='kvm',
@@ -1537,6 +1541,8 @@ class LibvirtConnTestCase(test.TestCase):
                                   vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[6],
                                   vconfig.LibvirtConfigGuestRng)
+            self.assertEqual(cfg.devices[6].model, 'random')
+            self.assertIsNone(cfg.devices[6].backend)
             self.assertEqual(cfg.devices[6].rate_bytes, 1024)
             self.assertEqual(cfg.devices[6].rate_period, 2)
 
@@ -1579,7 +1585,10 @@ class LibvirtConnTestCase(test.TestCase):
                              vconfig.LibvirtConfigGuestVideo)
             self.assertIsInstance(cfg.devices[6],
                              vconfig.LibvirtConfigGuestRng)
+            self.assertEqual(cfg.devices[6].model, 'random')
             self.assertEqual(cfg.devices[6].backend, '/dev/hw_rng')
+            self.assertIsNone(cfg.devices[6].rate_bytes)
+            self.assertIsNone(cfg.devices[6].rate_period)
 
     def test_get_guest_config_with_rng_dev_not_present(self):
         self.flags(virt_type='kvm',

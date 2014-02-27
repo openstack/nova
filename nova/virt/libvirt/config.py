@@ -1371,7 +1371,7 @@ class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
                                                       **kwargs)
 
         self.model = 'random'
-        self.backend = '/dev/random'
+        self.backend = None
         self.rate_period = None
         self.rate_bytes = None
 
