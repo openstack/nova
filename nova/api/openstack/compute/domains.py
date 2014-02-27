@@ -64,7 +64,7 @@ class DomainsController(wsgi.Controller):
     def index_domain(self, req):
         """Returns a list of server names and ids for a given user."""
         try:
-            servers = self._get_servers(req, is_detail=False)
+            servers = self._get_servers_domain(req, is_detail=False)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
@@ -72,7 +72,7 @@ class DomainsController(wsgi.Controller):
     def detail_domain(self, req):
         """Returns a list of server details for a given user."""
         try:
-            servers = self._get_servers(req, is_detail=True)
+            servers = self._get_servers_domain(req, is_detail=True)
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
