@@ -52,6 +52,14 @@ LOG = logging.getLogger(__name__)
 # to ascii characters.
 VALID_ID_REGEX = re.compile("^[\w\.\- ]*$")
 VALID_NAME_REGEX = re.compile("^[\w\.\- ]*$", re.UNICODE)
+# NOTE(dosaboy): This is supposed to represent the maximum value that we can
+# place into a SQL single precision float so that we can check whether values
+# are oversize. Postgres and MySQL both define this as their max whereas Sqlite
+# uses dynamic typing so this would not apply. Different dbs react in different
+# ways to oversize values e.g. postgres will raise an exception while mysql
+# will round off the value. Nevertheless we may still want to know prior to
+# insert whether the value is oversize.
+SQL_SP_FLOAT_MAX = 3.40282e+38
 
 # Validate extra specs key names.
 VALID_EXTRASPEC_NAME_REGEX = re.compile(r"[\w\.\- :]+$", re.UNICODE)
@@ -136,10 +144,12 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
     # rxtx_factor should be a positive float
     try:
         kwargs['rxtx_factor'] = float(kwargs['rxtx_factor'])
-        if kwargs['rxtx_factor'] <= 0:
+        if (kwargs['rxtx_factor'] <= 0 or
+                kwargs['rxtx_factor'] > SQL_SP_FLOAT_MAX):
             raise ValueError()
     except ValueError:
-        msg = _("'rxtx_factor' argument must be a positive float")
+        msg = (_("'rxtx_factor' argument must be a float between 0 and %g") %
+               SQL_SP_FLOAT_MAX)
         raise exception.InvalidInput(reason=msg)
 
     kwargs['name'] = name
