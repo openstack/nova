@@ -1936,14 +1936,7 @@ class ComputeManager(manager.Manager):
         instance_uuid = instance['uuid']
         image = instance['image_ref']
 
-        if context.is_admin and context.project_id != instance['project_id']:
-            project_id = instance['project_id']
-        else:
-            project_id = context.project_id
-        if context.user_id != instance['user_id']:
-            user_id = instance['user_id']
-        else:
-            user_id = context.user_id
+        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
 
         was_soft_deleted = instance['vm_state'] == vm_states.SOFT_DELETED
         if was_soft_deleted:
@@ -2078,15 +2071,7 @@ class ComputeManager(manager.Manager):
     def soft_delete_instance(self, context, instance, reservations):
         """Soft delete an instance on this host."""
 
-        if context.is_admin and context.project_id != instance['project_id']:
-            project_id = instance['project_id']
-        else:
-            project_id = context.project_id
-        if context.user_id != instance['user_id']:
-            user_id = instance['user_id']
-        else:
-            user_id = context.user_id
-
+        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
         try:
             self._notify_about_instance_usage(context, instance,
                                               "soft_delete.start")

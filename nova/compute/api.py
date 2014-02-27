@@ -58,6 +58,7 @@ from nova.objects import instance_action
 from nova.objects import instance_info_cache
 from nova.objects import keypair as keypair_obj
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
@@ -1360,14 +1361,7 @@ class API(base.Base):
                     context, instance.uuid))
         reservations = None
 
-        if context.is_admin and context.project_id != instance.project_id:
-            project_id = instance.project_id
-        else:
-            project_id = context.project_id
-        if context.user_id != instance.user_id:
-            user_id = instance.user_id
-        else:
-            user_id = context.user_id
+        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
 
         # At these states an instance has a snapshot associate.
         if instance['vm_state'] in (vm_states.SHELVED,
