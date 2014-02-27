@@ -1555,10 +1555,11 @@ class CommonNetworkTestCase(test.TestCase):
                                        network_id=123)]
 
         manager.deallocate_for_instance(
-            ctx, instance_id='ignore', host='somehost')
+            ctx, instance=instance_obj.Instance._from_db_object(self.context,
+                instance_obj.Instance(), instance_get.return_value))
 
         self.assertEqual([
-            (ctx, '1.2.3.4', 'somehost')
+            (ctx, '1.2.3.4', 'fake-host')
         ], manager.deallocate_fixed_ip_calls)
 
     @mock.patch('nova.db.fixed_ip_get_by_instance')
@@ -2331,43 +2332,44 @@ class FloatingIPTestCase(test.TestCase):
     def test_deallocation_deleted_instance(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = db.instance_create(self.context, {
-                'project_id': self.project_id, 'deleted': True})
+        instance = instance_obj.Instance()
+        instance.project_id = self.project_id
+        instance.deleted = True
+        instance.create(self.context)
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
                 'host': CONF.host,
                 'label': 'foo'})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
-                'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
+                'instance_uuid': instance.uuid, 'address': '10.1.1.1',
                 'network_id': network['id']})
         db.floating_ip_create(self.context, {
-                'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
+                'address': '10.10.10.10', 'instance_uuid': instance.uuid,
                 'fixed_ip_id': fixed['id'],
                 'project_id': self.project_id})
-        self.network.deallocate_for_instance(self.context,
-                instance_id=instance['uuid'])
+        self.network.deallocate_for_instance(self.context, instance=instance)
 
     def test_deallocation_duplicate_floating_ip(self):
         self.stubs.Set(self.network, '_teardown_network_on_host',
                        lambda *args, **kwargs: None)
-        instance = db.instance_create(self.context, {
-                'project_id': self.project_id})
+        instance = instance_obj.Instance()
+        instance.project_id = self.project_id
+        instance.create(self.context)
         network = db.network_create_safe(self.context.elevated(), {
                 'project_id': self.project_id,
                 'host': CONF.host,
                 'label': 'foo'})
         fixed = db.fixed_ip_create(self.context, {'allocated': True,
-                'instance_uuid': instance['uuid'], 'address': '10.1.1.1',
+                'instance_uuid': instance.uuid, 'address': '10.1.1.1',
                 'network_id': network['id']})
         db.floating_ip_create(self.context, {
                 'address': '10.10.10.10',
                 'deleted': True})
         db.floating_ip_create(self.context, {
-                'address': '10.10.10.10', 'instance_uuid': instance['uuid'],
+                'address': '10.10.10.10', 'instance_uuid': instance.uuid,
                 'fixed_ip_id': fixed['id'],
                 'project_id': self.project_id})
-        self.network.deallocate_for_instance(self.context,
-                instance_id=instance['uuid'])
+        self.network.deallocate_for_instance(self.context, instance=instance)
 
     @mock.patch('nova.db.fixed_ip_get')
     @mock.patch('nova.db.floating_ip_get_by_address')

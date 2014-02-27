@@ -185,7 +185,8 @@ class FakeNetworkManager(network_manager.NetworkManager):
         self.network_rpcapi = network_rpcapi.NetworkAPI()
 
     # TODO(matelakat) method signature should align with the faked one's
-    def deallocate_fixed_ip(self, context, address=None, host=None):
+    def deallocate_fixed_ip(self, context, address=None, host=None,
+            instance=None):
         self.deallocate_fixed_ip_calls.append((context, address, host))
         # TODO(matelakat) use the deallocate_fixed_ip_calls instead
         self.deallocate_called = address

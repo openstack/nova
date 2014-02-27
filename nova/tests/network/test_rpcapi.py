@@ -89,7 +89,7 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(rpcapi, 'client')
 
         version_check = [
-            'deallocate_for_instance'
+            'deallocate_for_instance', 'deallocate_fixed_ip'
         ]
         if method in version_check:
             rpcapi.client.can_send_version(mox.IgnoreArg()).AndReturn(True)
@@ -287,8 +287,10 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
                 vpn=True, host='fake_host')
 
     def test_deallocate_fixed_ip(self):
+        instance = fake_instance.fake_db_instance()
         self._test_network_api('deallocate_fixed_ip', rpc_method='call',
-                address='fake_addr', host='fake_host')
+                address='fake_addr', host='fake_host', instance=instance,
+                version='1.12')
 
     def test_update_dns(self):
         self._test_network_api('update_dns', rpc_method='cast', fanout=True,
