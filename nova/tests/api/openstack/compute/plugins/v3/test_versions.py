@@ -37,11 +37,15 @@ EXP_LINKS = {
 
 
 EXP_VERSIONS = {
-    "v3.0": {
+    "version": {
         "id": "v3.0",
         "status": "EXPERIMENTAL",
         "updated": "2013-07-23T11:33:21Z",
         "links": [
+            {
+                "rel": "self",
+                "href": "http://localhost/v3/",
+            },
             {
                 "rel": "describedby",
                 "type": "application/pdf",
@@ -80,42 +84,7 @@ class VersionsTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         version = jsonutils.loads(res.body)
-        expected = {
-            "version": {
-                "id": "v3.0",
-                "status": "EXPERIMENTAL",
-                "updated": "2013-07-23T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v3/",
-                    },
-                ],
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v3/",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": EXP_LINKS['v3.0']['pdf'],
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": EXP_LINKS['v3.0']['wadl'],
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/json",
-                        "type": "application/"
-                                "vnd.openstack.compute+json;version=3",
-                    },
-                ],
-            },
-        }
+        expected = EXP_VERSIONS
         self.assertEqual(expected, version)
 
     def test_get_version_3_detail_content_type(self):
@@ -125,40 +94,5 @@ class VersionsTest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, "application/json")
         version = jsonutils.loads(res.body)
-        expected = {
-            "version": {
-                "id": "v3.0",
-                "status": "EXPERIMENTAL",
-                "updated": "2013-07-23T11:33:21Z",
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v3/",
-                    },
-                ],
-                "links": [
-                    {
-                        "rel": "self",
-                        "href": "http://localhost/v3/",
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/pdf",
-                        "href": EXP_LINKS['v3.0']['pdf'],
-                    },
-                    {
-                        "rel": "describedby",
-                        "type": "application/vnd.sun.wadl+xml",
-                        "href": EXP_LINKS['v3.0']['wadl'],
-                    },
-                ],
-                "media-types": [
-                    {
-                        "base": "application/json",
-                        "type": "application/"
-                                "vnd.openstack.compute+json;version=3",
-                    },
-                ],
-            },
-        }
+        expected = EXP_VERSIONS
         self.assertEqual(expected, version)
