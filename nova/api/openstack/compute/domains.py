@@ -58,6 +58,8 @@ authorizer = extensions.core_authorizer('compute:v3', 'domains')
 
 class DomainsController(wsgi.Controller):
 
+    _view_builder_class = views_servers.ViewBuilder
+
     def __init__(self, ext_mgr=None, **kwargs):
         super(DomainsController, self).__init__(**kwargs)
         self.compute_api = compute.API()
