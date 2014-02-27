@@ -115,7 +115,7 @@ class APIRouter(nova.api.openstack.APIRouter):
                            conditions={"method": ['PUT']})
 
         if init_only is None or 'domains' in init_only:
-            self.resources['domains'] = domains.create_resource()
+            self.resources['domains'] = domains.create_resource(ext_mgr)
             domains_controller = self.resources['domains']
 
             mapper.resource("image_meta", "metadata",
