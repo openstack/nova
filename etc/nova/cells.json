@@ -5,7 +5,7 @@
         "transport_url": "rabbit://rabbit.example.com",
         "weight_offset": 0.0,
         "weight_scale": 1.0,
-        "is_parent": true,
+        "is_parent": true
     },
     "cell1": {
         "name": "cell1",
@@ -13,7 +13,7 @@
         "transport_url": "rabbit://rabbit1.example.com",
         "weight_offset": 0.0,
         "weight_scale": 1.0,
-        "is_parent": false,
+        "is_parent": false
     },
     "cell2": {
         "name": "cell2",
@@ -21,6 +21,6 @@
         "transport_url": "rabbit://rabbit2.example.com",
         "weight_offset": 0.0,
         "weight_scale": 1.0,
-        "is_parent": false,
+        "is_parent": false
     }
 }
