@@ -234,6 +234,7 @@ class ComputeAPI(object):
               reserve_block_device_name, and bdm param to attach_volume
         3.17 - Update attach_interface and detach_interface to take an object
         3.18 - Update get_diagnostics() to take an instance object
+        ...  - Removed inject_file(), as it was unused.
     '''
 
     VERSION_ALIASES = {
@@ -518,16 +519,6 @@ class ComputeAPI(object):
         version = self._get_compat_version('3.0', '2.0')
         cctxt = self.client.prepare(server=host, version=version)
         return cctxt.call(ctxt, 'host_power_action', action=action)
-
-    def inject_file(self, ctxt, instance, path, file_contents):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(server=_compute_host(None, instance),
-                version=version)
-        cctxt.cast(ctxt, 'inject_file',
-                   instance=instance_p, path=path,
-                   file_contents=file_contents)
 
     def inject_network_info(self, ctxt, instance):
         # NOTE(russellb) Havana compat

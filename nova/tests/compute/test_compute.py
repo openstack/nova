@@ -2627,27 +2627,6 @@ class ComputeTestCase(BaseTestCase):
                                                       None,
                                                       expected_exception)
 
-    def test_inject_file(self):
-        # Ensure we can write a file to an instance.
-        called = {'inject': False}
-
-        def fake_driver_inject_file(self2, instance, path, contents):
-            self.assertEqual(path, "/tmp/test")
-            self.assertEqual(contents, "File Contents")
-            called['inject'] = True
-
-        self.stubs.Set(nova.virt.fake.FakeDriver, 'inject_file',
-                       fake_driver_inject_file)
-
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-        self.compute.run_instance(self.context, instance, {}, {}, [], None,
-                None, True, None, False)
-        self.compute.inject_file(self.context, "/tmp/test",
-                "File Contents", instance=instance)
-        self.assertTrue(called['inject'])
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
-
     def test_inject_network_info(self):
         # Ensure we can inject network info.
         called = {'inject': False}
@@ -8753,13 +8732,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.delete(self.context, self._objectify(instance))
-
-    def test_inject_file(self):
-        # Ensure we can write a file to an instance.
-        instance = self._create_fake_instance()
-        self.compute_api.inject_file(self.context, instance,
-                                     "/tmp/test", "File Contents")
-        db.instance_destroy(self.context, instance['uuid'])
 
     def test_secgroup_refresh(self):
         instance = self._create_fake_instance()
