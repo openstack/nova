@@ -245,6 +245,7 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         connection_info = self.iscsi_connection(self.vol, self.location,
                                                 self.iqn)
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
+        self.assertEqual('qemu', conf.driver_name)
         tree = conf.format_dom()
         dev_str = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-1' % (self.location,
                                                               self.iqn)
