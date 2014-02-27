@@ -57,7 +57,7 @@ LOG = logging.getLogger(__name__)
 authorizer = extensions.core_authorizer('compute:v3', 'domains')
 
 
-class DomainSetsController(wsgi.Controller):
+class DomainsController(wsgi.Controller):
 
     def __init__(self, ext_mgr):
         self.ext_mgr = ext_mgr
@@ -169,6 +169,10 @@ def remove_invalid_options(context, search_options, allowed_search_options):
         search_options.pop(opt, None)
 
 
+def create_resource(ext_mgr):
+    return wsgi.Resource(DomainsController(ext_mgr))
+
+
 class Domains(extensions.ExtensionDescriptor):
     """Domain Quotas management support."""
 
@@ -183,7 +187,7 @@ class Domains(extensions.ExtensionDescriptor):
         resources = []
 
         res = extensions.ResourceExtension('domains',
-                                    DomainSetsController(self.ext_mgr),
+                                    DomainsController(self.ext_mgr),
                                     member_actions={'defaults': 'GET'})
         resources.append(res)
 
