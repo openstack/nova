@@ -22,8 +22,7 @@ from validators import _SchemaValidator
 
 
 def schema(request_body_schema):
-    """
-    Register a schema to validate request body.
+    """Register a schema to validate request body.
 
     Registered schema will be used for validating request body just before
     API method executing.

@@ -182,8 +182,7 @@ class VMwareVMOps(object):
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
-        """
-        Creates a VM instance.
+        """Creates a VM instance.
 
         Steps followed are:
 
@@ -224,8 +223,7 @@ class VMwareVMOps(object):
         # hard to maintain file. At some future date, refactor this method to
         # be a full-fledged method. This will also make unit testing easier.
         def _get_image_properties(root_size):
-            """
-            Get the Size of the flat vmdk file that is there on the storage
+            """Get the Size of the flat vmdk file that is there on the storage
             repository.
             """
             image_ref = instance.get('image_ref')
@@ -888,8 +886,7 @@ class VMwareVMOps(object):
         _upload_vmdk_to_image_repository()
 
         def _clean_temp_data():
-            """
-            Delete temporary vmdk files generated in image handling
+            """Delete temporary vmdk files generated in image handling
             operations.
             """
             # The data file is the one occupying space, and likelier to see
@@ -955,8 +952,7 @@ class VMwareVMOps(object):
             LOG.debug(_("Did hard reboot of VM"), instance=instance)
 
     def _delete(self, instance, network_info):
-        """
-        Destroy a VM instance. Steps followed are:
+        """Destroy a VM instance. Steps followed are:
         1. Power off the VM, if it is in poweredOn state.
         2. Destroy the VM.
         """
@@ -978,8 +974,7 @@ class VMwareVMOps(object):
 
     def destroy(self, instance, network_info, destroy_disks=True,
                 instance_name=None):
-        """
-        Destroy a VM instance. Steps followed are:
+        """Destroy a VM instance. Steps followed are:
         1. Power off the VM, if it is in poweredOn state.
         2. Un-register a VM.
         3. Delete the contents of the folder holding the VM related data.
@@ -1230,8 +1225,7 @@ class VMwareVMOps(object):
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor):
-        """
-        Transfers the disk of a running instance in multiple phases, turning
+        """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
         """
         # 0. Zero out the progress to begin
@@ -1504,9 +1498,8 @@ class VMwareVMOps(object):
         return machine_id_str
 
     def _set_machine_id(self, client_factory, instance, network_info):
-        """
-        Set the machine id of the VM for guest tools to pick up and reconfigure
-        the network interfaces.
+        """Set the machine id of the VM for guest tools to pick up
+        and reconfigure the network interfaces.
         """
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
@@ -1524,9 +1517,7 @@ class VMwareVMOps(object):
                   instance=instance)
 
     def _set_vnc_config(self, client_factory, instance, port):
-        """
-        Set the vnc configuration of the VM.
-        """
+        """Set the vnc configuration of the VM."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
         vnc_config_spec = vm_util.get_vnc_config_spec(
@@ -1623,8 +1614,7 @@ class VMwareVMOps(object):
         return file_exists
 
     def _mkdir(self, ds_path, ds_ref):
-        """
-        Creates a directory at the path specified. If it is just "NAME",
+        """Creates a directory at the path specified. If it is just "NAME",
         then a directory with this name is created at the topmost level of the
         DataStore.
         """

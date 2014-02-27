@@ -1218,8 +1218,7 @@ class Controller(wsgi.Controller):
         return image_uuid
 
     def _image_from_req_data(self, data):
-        """
-        Get image data from the request or raise appropriate
+        """Get image data from the request or raise appropriate
         exceptions
 
         If no image is supplied - checks to see if there is

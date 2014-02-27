@@ -407,8 +407,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertTrue(len(reservation_id) > 1)
 
     def test_create_multiple_instances_with_multiple_volume_bdm(self):
-        """
-        Test that a BadRequest is raised if multiple instances
+        """Test that a BadRequest is raised if multiple instances
         are requested with a list of block device mappings for volumes.
         """
         min_count = 2
@@ -431,8 +430,7 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params, no_image=True)
 
     def test_create_multiple_instances_with_single_volume_bdm(self):
-        """
-        Test that a BadRequest is raised if multiple instances
+        """Test that a BadRequest is raised if multiple instances
         are requested to boot from a single volume.
         """
         min_count = 2

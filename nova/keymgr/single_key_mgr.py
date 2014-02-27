@@ -29,11 +29,11 @@ LOG = logging.getLogger(__name__)
 
 
 class SingleKeyManager(mock_key_mgr.MockKeyManager):
-    """
-    This key manager implementation supports all the methods specified by the
-    key manager interface. This implementation creates a single key in response
-    to all invocations of create_key. Side effects (e.g., raising exceptions)
-    for each method are handled as specified by the key manager interface.
+    """This key manager implementation supports all the methods specified by
+    the key manager interface. This implementation creates a single key in
+    response to all invocations of create_key. Side effects
+    (e.g., raising exceptions) for each method are handled as specified by
+    the key manager interface.
     """
 
     def __init__(self):

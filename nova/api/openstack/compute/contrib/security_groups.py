@@ -111,9 +111,7 @@ class SecurityGroupsTemplate(xmlutil.TemplateBuilder):
 
 
 class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
-    """
-    Deserializer to handle xml-formatted security group requests.
-    """
+    """Deserializer to handle xml-formatted security group requests."""
     def default(self, string):
         """Deserialize an xml-formatted security group create request."""
         dom = xmlutil.safe_minidom_parse_string(string)
@@ -131,9 +129,7 @@ class SecurityGroupXMLDeserializer(wsgi.MetadataXMLDeserializer):
 
 
 class SecurityGroupRulesXMLDeserializer(wsgi.MetadataXMLDeserializer):
-    """
-    Deserializer to handle xml-formatted security group requests.
-    """
+    """Deserializer to handle xml-formatted security group requests."""
 
     def default(self, string):
         """Deserialize an xml-formatted security group create request."""

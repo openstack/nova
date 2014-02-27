@@ -165,8 +165,7 @@ def get_fake_device_info():
 
 
 def stub_vm_utils_with_vdi_attached_here(function):
-    """
-    vm_utils.with_vdi_attached_here needs to be stubbed out because it
+    """vm_utils.with_vdi_attached_here needs to be stubbed out because it
     calls down to the filesystem to attach a vdi. This provides a
     decorator to handle that.
     """

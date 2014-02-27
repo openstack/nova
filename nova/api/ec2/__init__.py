@@ -468,8 +468,7 @@ def exception_to_ec2code(ex):
 
 
 def ec2_error_ex(ex, req, code=None, message=None, unexpected=False):
-    """
-    Return an EC2 error response based on passed exception and log
+    """Return an EC2 error response based on passed exception and log
     the exception on an appropriate log level:
 
         * DEBUG: expected errors

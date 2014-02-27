@@ -1388,8 +1388,7 @@ def get_dev(network):
 
 
 class LinuxNetInterfaceDriver(object):
-    """
-    Abstract class that defines generic network host API
+    """Abstract class that defines generic network host API
     for for all Linux interface drivers.
     """
 

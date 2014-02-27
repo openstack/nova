@@ -39,8 +39,7 @@ class TestServerExceptionEC2(Exception):
 
 
 class Ec2ErrorResponseTestCase(test.NoDBTestCase):
-    """
-    Test EC2 error responses.
+    """Test EC2 error responses.
 
     This deals mostly with api/ec2/__init__.py code, especially
     the ec2_error_ex helper.
@@ -85,17 +84,14 @@ class Ec2ErrorResponseTestCase(test.NoDBTestCase):
         self.assertEqual(requestid_e.text, self.context.request_id)
 
     def test_exception_ec2_4xx(self):
-        """
-        Test response to EC2 exception with code = 400.
-        """
+        """Test response to EC2 exception with code = 400."""
         msg = "Test client failure."
         err = ec2.ec2_error_ex(TestClientExceptionEC2(msg), self.req)
         self._validate_ec2_error(err, TestClientExceptionEC2.code,
                                  TestClientExceptionEC2.ec2_code, msg)
 
     def test_exception_ec2_5xx(self):
-        """
-        Test response to EC2 exception with code = 500.
+        """Test response to EC2 exception with code = 500.
 
         Expected errors are treated as client ones even with 5xx code.
         """
@@ -105,9 +101,7 @@ class Ec2ErrorResponseTestCase(test.NoDBTestCase):
                                  msg)
 
     def test_unexpected_exception_ec2_4xx(self):
-        """
-        Test response to unexpected EC2 exception with code = 400.
-        """
+        """Test response to unexpected EC2 exception with code = 400."""
         msg = "Test unexpected client failure."
         err = ec2.ec2_error_ex(TestClientExceptionEC2(msg), self.req,
                            unexpected=True)
@@ -115,8 +109,7 @@ class Ec2ErrorResponseTestCase(test.NoDBTestCase):
                                  TestClientExceptionEC2.ec2_code, msg)
 
     def test_unexpected_exception_ec2_5xx(self):
-        """
-        Test response to unexpected EC2 exception with code = 500.
+        """Test response to unexpected EC2 exception with code = 500.
 
         Server exception messages (with code >= 500 or without code) should
         be filtered as they might contain sensitive information.
@@ -129,8 +122,7 @@ class Ec2ErrorResponseTestCase(test.NoDBTestCase):
                                  unknown_msg=True)
 
     def test_unexpected_exception_builtin(self):
-        """
-        Test response to builtin unexpected exception.
+        """Test response to builtin unexpected exception.
 
         Server exception messages (with code >= 500 or without code) should
         be filtered as they might contain sensitive information.

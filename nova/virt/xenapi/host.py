@@ -37,9 +37,7 @@ LOG = logging.getLogger(__name__)
 
 
 class Host(object):
-    """
-    Implements host related operations.
-    """
+    """Implements host related operations."""
     def __init__(self, session, virtapi):
         self._session = session
         self._virtapi = virtapi
@@ -166,15 +164,13 @@ class HostState(object):
         :returns: a list of pci devices available for pci passthrough.
         """
         def _compile_hex(pattern):
-            """
-            Return a compiled regular expression pattern into which we have
+            """Return a compiled regular expression pattern into which we have
             replaced occurrences of hex by [\da-fA-F].
             """
             return re.compile(pattern.replace("hex", r"[\da-fA-F]"))
 
         def _parse_pci_device_string(dev_string):
-            """
-            Exctract information from the device string about the slot, the
+            """Exctract information from the device string about the slot, the
             vendor and the product ID. The string is as follow:
                 "Slot:\tBDF\nClass:\txxxx\nVendor:\txxxx\nDevice:\txxxx\n..."
             Return a dictionary with informations about the device.

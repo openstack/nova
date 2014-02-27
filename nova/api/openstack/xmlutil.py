@@ -888,9 +888,7 @@ class TemplateBuilder(object):
 
 
 def make_links(parent, selector=None):
-    """
-    Attach an Atom <links> element to the parent.
-    """
+    """Attach an Atom <links> element to the parent."""
 
     elem = SubTemplateElement(parent, '{%s}link' % XMLNS_ATOM,
                               selector=selector)
@@ -905,8 +903,7 @@ def make_links(parent, selector=None):
 def make_flat_dict(name, selector=None, subselector=None,
                    ns=None, colon_ns=False, root=None,
                    ignore_sub_dicts=False):
-    """
-    Utility for simple XML templates that traditionally used
+    """Utility for simple XML templates that traditionally used
     XMLDictSerializer with no metadata.  Returns a template element
     where the top-level element has the given tag name, and where
     sub-elements have tag names derived from the object's keys and

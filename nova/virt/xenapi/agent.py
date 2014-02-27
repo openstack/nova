@@ -367,8 +367,7 @@ class XenAPIBasedAgent(object):
 
 
 def find_guest_agent(base_dir):
-    """
-    tries to locate a guest agent at the path
+    """tries to locate a guest agent at the path
     specified by agent_rel_path
     """
     if CONF.xenserver.disable_agent:
@@ -415,8 +414,7 @@ def should_use_agent(instance):
 
 
 class SimpleDH(object):
-    """
-    This class wraps all the functionality needed to implement
+    """This class wraps all the functionality needed to implement
     basic Diffie-Hellman-Merkle key exchange in Python. It features
     intelligent defaults for the prime and base numbers needed for the
     calculation, while allowing you to supply your own. It requires that

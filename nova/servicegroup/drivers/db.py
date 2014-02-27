@@ -72,8 +72,7 @@ class DbDriver(api.ServiceGroupDriver):
         return abs(elapsed) <= CONF.service_down_time
 
     def get_all(self, group_id):
-        """
-        Returns ALL members of the given group
+        """Returns ALL members of the given group
         """
         LOG.debug(_('DB_Driver: get_all members of the %s group') % group_id)
         rs = []

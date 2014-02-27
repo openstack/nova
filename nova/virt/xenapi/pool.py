@@ -45,9 +45,7 @@ CONF.import_opt('host', 'nova.netconf')
 
 
 class ResourcePool(object):
-    """
-    Implements resource pool operations.
-    """
+    """Implements resource pool operations."""
     def __init__(self, session, virtapi):
         host_rec = session.call_xenapi('host.get_record', session.host_ref)
         self._host_name = host_rec['hostname']

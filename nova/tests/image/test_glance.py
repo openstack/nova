@@ -88,8 +88,7 @@ class TestGlanceSerializer(test.NoDBTestCase):
 
 
 class TestGlanceImageService(test.NoDBTestCase):
-    """
-    Tests the Glance image service.
+    """Tests the Glance image service.
 
     At a high level, the translations involved are:
 
@@ -191,8 +190,7 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.assertThat(image_metas[0], matchers.DictMatches(expected))
 
     def test_create_without_instance_id(self):
-        """
-        Ensure we can create an image without having to specify an
+        """Ensure we can create an image without having to specify an
         instance_id. Public images are an example of an image not tied to an
         instance.
         """

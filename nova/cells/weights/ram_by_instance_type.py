@@ -38,8 +38,7 @@ class RamByInstanceTypeWeigher(weights.BaseCellWeigher):
         return CONF.cells.ram_weight_multiplier
 
     def _weigh_object(self, cell, weight_properties):
-        """
-        Use the 'ram_free' for a particular instance_type advertised from a
+        """Use the 'ram_free' for a particular instance_type advertised from a
         child cell's capacity to compute a weight.  We want to direct the
         build to a cell with a higher capacity.  Since higher weights win,
         we just return the number of units available for the instance_type.

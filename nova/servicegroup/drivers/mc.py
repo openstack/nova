@@ -70,8 +70,7 @@ class MemcachedDriver(api.ServiceGroupDriver):
         return self.mc.get(str(key)) is not None
 
     def get_all(self, group_id):
-        """
-        Returns ALL members of the given group
+        """Returns ALL members of the given group
         """
         LOG.debug(_('Memcached_Driver: get_all members of the %s group') %
                   group_id)

@@ -131,8 +131,7 @@ class FloatingIPBulkController(object):
         return {"floating_ips_bulk_delete": ip_range}
 
     def _address_to_hosts(self, addresses):
-        """
-        Iterate over hosts within an address range.
+        """Iterate over hosts within an address range.
 
         If an explicit range specifier is missing, the parameter is
         interpreted as a specific individual address.

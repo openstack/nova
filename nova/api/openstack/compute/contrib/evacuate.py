@@ -37,8 +37,7 @@ class Controller(wsgi.Controller):
 
     @wsgi.action('evacuate')
     def _evacuate(self, req, id, body):
-        """
-        Permit admins to evacuate a server from a failed host
+        """Permit admins to evacuate a server from a failed host
         to a new one.
         """
         context = req.environ["nova.context"]

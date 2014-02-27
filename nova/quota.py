@@ -88,8 +88,7 @@ CONF.register_opts(quota_opts)
 
 
 class DbQuotaDriver(object):
-    """
-    Driver to perform necessary checks to enforce quotas and obtain
+    """Driver to perform necessary checks to enforce quotas and obtain
     quota information.  The default driver utilizes the local
     database.
     """
@@ -127,8 +126,7 @@ class DbQuotaDriver(object):
 
     def get_class_quotas(self, context, resources, quota_class,
                          defaults=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         quota class.
 
         :param context: The request context, for access checks.
@@ -201,8 +199,7 @@ class DbQuotaDriver(object):
                         quota_class=None, defaults=True,
                         usages=True, project_quotas=None,
                         user_quotas=None):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         user and project.
 
         :param context: The request context, for access checks.
@@ -244,8 +241,7 @@ class DbQuotaDriver(object):
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
                            usages=True, remains=False, project_quotas=None):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         project.
 
         :param context: The request context, for access checks.
@@ -279,8 +275,7 @@ class DbQuotaDriver(object):
 
     def get_settable_quotas(self, context, resources, project_id,
                             user_id=None):
-        """
-        Given a list of resources, retrieve the range of settable quotas for
+        """Given a list of resources, retrieve the range of settable quotas for
         the given user or project.
 
         :param context: The request context, for access checks.
@@ -317,8 +312,7 @@ class DbQuotaDriver(object):
 
     def _get_quotas(self, context, resources, keys, has_sync, project_id=None,
                     user_id=None, project_quotas=None):
-        """
-        A helper method which retrieves the quotas for the specific
+        """A helper method which retrieves the quotas for the specific
         resources identified by keys, and which apply to the current
         context.
 
@@ -565,8 +559,7 @@ class DbQuotaDriver(object):
                                 user_id=user_id)
 
     def usage_reset(self, context, resources):
-        """
-        Reset the usage records for a particular user on a list of
+        """Reset the usage records for a particular user on a list of
         resources.  This will force that user's usage records to be
         refreshed the next time a reservation is made.
 
@@ -595,8 +588,7 @@ class DbQuotaDriver(object):
                 pass
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project and user.
 
         :param context: The request context, for access checks.
@@ -607,8 +599,7 @@ class DbQuotaDriver(object):
         db.quota_destroy_all_by_project_and_user(context, project_id, user_id)
 
     def destroy_all_by_project(self, context, project_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project.
 
         :param context: The request context, for access checks.
@@ -665,8 +656,7 @@ class NoopQuotaDriver(object):
 
     def get_class_quotas(self, context, resources, quota_class,
                          defaults=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         quota class.
 
         :param context: The request context, for access checks.
@@ -697,8 +687,7 @@ class NoopQuotaDriver(object):
     def get_user_quotas(self, context, resources, project_id, user_id,
                         quota_class=None, defaults=True,
                         usages=True):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         user and project.
 
         :param context: The request context, for access checks.
@@ -722,8 +711,7 @@ class NoopQuotaDriver(object):
     def get_project_quotas(self, context, resources, project_id,
                            quota_class=None, defaults=True,
                            usages=True, remains=False):
-        """
-        Given a list of resources, retrieve the quotas for the given
+        """Given a list of resources, retrieve the quotas for the given
         project.
 
         :param context: The request context, for access checks.
@@ -747,8 +735,7 @@ class NoopQuotaDriver(object):
 
     def get_settable_quotas(self, context, resources, project_id,
                             user_id=None):
-        """
-        Given a list of resources, retrieve the range of settable quotas for
+        """Given a list of resources, retrieve the range of settable quotas for
         the given user or project.
 
         :param context: The request context, for access checks.
@@ -862,8 +849,7 @@ class NoopQuotaDriver(object):
         pass
 
     def usage_reset(self, context, resources):
-        """
-        Reset the usage records for a particular user on a list of
+        """Reset the usage records for a particular user on a list of
         resources.  This will force that user's usage records to be
         refreshed the next time a reservation is made.
 
@@ -878,8 +864,7 @@ class NoopQuotaDriver(object):
         pass
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project and user.
 
         :param context: The request context, for access checks.
@@ -889,8 +874,7 @@ class NoopQuotaDriver(object):
         pass
 
     def destroy_all_by_project(self, context, project_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project.
 
         :param context: The request context, for access checks.
@@ -913,8 +897,7 @@ class BaseResource(object):
     """Describe a single resource for quota checking."""
 
     def __init__(self, name, flag=None):
-        """
-        Initializes a Resource.
+        """Initializes a Resource.
 
         :param name: The name of the resource, i.e., "instances".
         :param flag: The name of the flag or configuration option
@@ -926,8 +909,7 @@ class BaseResource(object):
         self.flag = flag
 
     def quota(self, driver, context, **kwargs):
-        """
-        Given a driver and context, obtain the quota for this
+        """Given a driver and context, obtain the quota for this
         resource.
 
         :param driver: A quota driver.
@@ -1023,14 +1005,12 @@ class AbsoluteResource(BaseResource):
 
 
 class CountableResource(AbsoluteResource):
-    """
-    Describe a resource where the counts aren't based solely on the
+    """Describe a resource where the counts aren't based solely on the
     project ID.
     """
 
     def __init__(self, name, count, flag=None):
-        """
-        Initializes a CountableResource.
+        """Initializes a CountableResource.
 
         Countable resources are those resources which directly
         correspond to objects in the database, i.e., instances, cores,
@@ -1185,8 +1165,7 @@ class QuotaEngine(object):
                                               remains=remains)
 
     def get_settable_quotas(self, context, project_id, user_id=None):
-        """
-        Given a list of resources, retrieve the range of settable quotas for
+        """Given a list of resources, retrieve the range of settable quotas for
         the given user or project.
 
         :param context: The request context, for access checks.
@@ -1342,8 +1321,7 @@ class QuotaEngine(object):
         LOG.debug(_("Rolled back reservations %s"), reservations)
 
     def usage_reset(self, context, resources):
-        """
-        Reset the usage records for a particular user on a list of
+        """Reset the usage records for a particular user on a list of
         resources.  This will force that user's usage records to be
         refreshed the next time a reservation is made.
 
@@ -1359,8 +1337,7 @@ class QuotaEngine(object):
         self._driver.usage_reset(context, resources)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project and user.
 
         :param context: The request context, for access checks.
@@ -1372,8 +1349,7 @@ class QuotaEngine(object):
                                                      project_id, user_id)
 
     def destroy_all_by_project(self, context, project_id):
-        """
-        Destroy all quotas, usages, and reservations associated with a
+        """Destroy all quotas, usages, and reservations associated with a
         project.
 
         :param context: The request context, for access checks.

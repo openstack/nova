@@ -29,9 +29,7 @@ LOG = logging.getLogger(__name__)
 
 
 class Host(object):
-    """
-    Implements host related operations.
-    """
+    """Implements host related operations."""
     def __init__(self, session):
         self._session = session
 

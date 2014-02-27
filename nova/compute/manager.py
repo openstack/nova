@@ -588,8 +588,7 @@ class ComputeManager(manager.Manager):
         return shared_storage
 
     def _complete_partial_deletion(self, context, instance):
-        """
-        Complete deletion for instances in DELETED status but not marked as
+        """Complete deletion for instances in DELETED status but not marked as
         deleted in the DB
         """
         instance.destroy()
@@ -2697,8 +2696,7 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event
     def rescue_instance(self, context, instance, rescue_password):
-        """
-        Rescue an instance on this host.
+        """Rescue an instance on this host.
         :param rescue_password: password to set on rescue instance
         """
         context = context.elevated()

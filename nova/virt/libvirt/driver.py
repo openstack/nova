@@ -1796,8 +1796,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _volume_snapshot_delete(self, context, instance, volume_id,
                                 snapshot_id, delete_info=None):
-        """
-        Note:
+        """Note:
             if file being merged into == active image:
                 do a blockRebase (pull) operation
             else:
@@ -3536,9 +3535,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return domain
 
     def get_all_block_devices(self):
-        """
-        Return all block devices in use on this node.
-        """
+        """Return all block devices in use on this node."""
         devices = []
         for dom_id in self.list_instance_ids():
             try:
@@ -3559,8 +3556,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return devices
 
     def get_disks(self, instance_name):
-        """
-        Note that this function takes an instance name.
+        """Note that this function takes an instance name.
 
         Returns a list of all block devices for this domain.
         """
@@ -3577,8 +3573,7 @@ class LibvirtDriver(driver.ComputeDriver):
                        for target in doc.findall('devices/disk/target')])
 
     def get_interfaces(self, xml):
-        """
-        Note that this function takes a domain xml.
+        """Note that this function takes a domain xml.
 
         Returns a list of all network interfaces for this instance.
         """
@@ -3952,9 +3947,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return vol_usage
 
     def block_stats(self, instance_name, disk):
-        """
-        Note that this function takes an instance name.
-        """
+        """Note that this function takes an instance name."""
         try:
             domain = self._lookup_by_name(instance_name)
             return domain.blockStats(disk)
@@ -3970,9 +3963,7 @@ class LibvirtDriver(driver.ComputeDriver):
                        'Cannot get block stats for device'), instance_name)
 
     def interface_stats(self, instance_name, interface):
-        """
-        Note that this function takes an instance name.
-        """
+        """Note that this function takes an instance name."""
         domain = self._lookup_by_name(instance_name)
         return domain.interfaceStats(interface)
 
@@ -4450,16 +4441,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _create_images_and_backing(self, context, instance, instance_dir,
                                    disk_info_json):
-        """
-        :param context: security context
-        :param instance:
-            nova.db.sqlalchemy.models.Instance object
-            instance object that is migrated.
-        :param instance_dir:
-            instance path to use, calculated externally to handle block
-            migrating an instance with an old style instance path
-        :param disk_info_json:
-            json strings specified in get_instance_disk_info
+        """:param context: security context
+           :param instance:
+               nova.db.sqlalchemy.models.Instance object
+               instance object that is migrated.
+           :param instance_dir:
+               instance path to use, calculated externally to handle block
+               migrating an instance with an old style instance path
+           :param disk_info_json:
+               json strings specified in get_instance_disk_info
 
         """
         if not disk_info_json:

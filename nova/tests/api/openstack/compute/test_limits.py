@@ -73,9 +73,7 @@ class BaseLimitTestSuite(test.NoDBTestCase):
 
 
 class LimitsControllerTest(BaseLimitTestSuite):
-    """
-    Tests for `limits.LimitsController` class.
-    """
+    """Tests for `limits.LimitsController` class."""
 
     def setUp(self):
         """Run before each test."""
@@ -321,9 +319,7 @@ class MockLimiter(limits.Limiter):
 
 
 class LimitMiddlewareTest(BaseLimitTestSuite):
-    """
-    Tests for the `limits.RateLimitingMiddleware` class.
-    """
+    """Tests for the `limits.RateLimitingMiddleware` class."""
 
     @webob.dec.wsgify
     def _empty_app(self, request):
@@ -397,9 +393,7 @@ class LimitMiddlewareTest(BaseLimitTestSuite):
 
 
 class LimitTest(BaseLimitTestSuite):
-    """
-    Tests for the `limits.Limit` class.
-    """
+    """Tests for the `limits.Limit` class."""
 
     def test_GET_no_delay(self):
         # Test a limit handles 1 GET per second.
@@ -429,8 +423,7 @@ class LimitTest(BaseLimitTestSuite):
 
 
 class ParseLimitsTest(BaseLimitTestSuite):
-    """
-    Tests for the default limits parser in the in-memory
+    """Tests for the default limits parser in the in-memory
     `limits.Limiter` class.
     """
 
@@ -495,9 +488,7 @@ class ParseLimitsTest(BaseLimitTestSuite):
 
 
 class LimiterTest(BaseLimitTestSuite):
-    """
-    Tests for the in-memory `limits.Limiter` class.
-    """
+    """Tests for the in-memory `limits.Limiter` class."""
 
     def setUp(self):
         """Run before each test."""
@@ -518,8 +509,7 @@ class LimiterTest(BaseLimitTestSuite):
         return sum(item for item in results if item)
 
     def test_no_delay_GET(self):
-        """
-        Simple test to ensure no delay on a single call for a limit verb we
+        """Simple test to ensure no delay on a single call for a limit verb we
         didn"t set.
         """
         delay = self.limiter.check_for_delay("GET", "/anything")
@@ -531,8 +521,7 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(delay, (None, None))
 
     def test_delay_PUT(self):
-        """
-        Ensure the 11th PUT will result in a delay of 6.0 seconds until
+        """Ensure the 11th PUT will result in a delay of 6.0 seconds until
         the next request will be granced.
         """
         expected = [None] * 10 + [6.0]
@@ -541,8 +530,7 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(expected, results)
 
     def test_delay_POST(self):
-        """
-        Ensure the 8th POST will result in a delay of 6.0 seconds until
+        """Ensure the 8th POST will result in a delay of 6.0 seconds until
         the next request will be granced.
         """
         expected = [None] * 7
@@ -564,10 +552,9 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(expected, results)
 
     def test_delay_PUT_servers(self):
-        """
-        Ensure PUT on /servers limits at 5 requests, and PUT elsewhere is still
-        OK after 5 requests...but then after 11 total requests, PUT limiting
-        kicks in.
+        """Ensure PUT on /servers limits at 5 requests, and PUT elsewhere is
+        still OK after 5 requests...but then after 11 total requests, PUT
+        limiting kicks in.
         """
         # First 6 requests on PUT /servers
         expected = [None] * 5 + [12.0]
@@ -580,8 +567,7 @@ class LimiterTest(BaseLimitTestSuite):
         self.assertEqual(expected, results)
 
     def test_delay_PUT_wait(self):
-        """
-        Ensure after hitting the limit and then waiting for the correct
+        """Ensure after hitting the limit and then waiting for the correct
         amount of time, the limit will be lifted.
         """
         expected = [None] * 10 + [6.0]
@@ -665,9 +651,7 @@ class LimiterTest(BaseLimitTestSuite):
 
 
 class WsgiLimiterTest(BaseLimitTestSuite):
-    """
-    Tests for `limits.WsgiLimiter` class.
-    """
+    """Tests for `limits.WsgiLimiter` class."""
 
     def setUp(self):
         """Run before each test."""
@@ -736,9 +720,7 @@ class WsgiLimiterTest(BaseLimitTestSuite):
 
 
 class FakeHttplibSocket(object):
-    """
-    Fake `httplib.HTTPResponse` replacement.
-    """
+    """Fake `httplib.HTTPResponse` replacement."""
 
     def __init__(self, response_string):
         """Initialize new `FakeHttplibSocket`."""
@@ -750,20 +732,15 @@ class FakeHttplibSocket(object):
 
 
 class FakeHttplibConnection(object):
-    """
-    Fake `httplib.HTTPConnection`.
-    """
+    """Fake `httplib.HTTPConnection`."""
 
     def __init__(self, app, host):
-        """
-        Initialize `FakeHttplibConnection`.
-        """
+        """Initialize `FakeHttplibConnection`."""
         self.app = app
         self.host = host
 
     def request(self, method, path, body="", headers=None):
-        """
-        Requests made via this connection actually get translated and routed
+        """Requests made via this connection actually get translated and routed
         into our WSGI app, we then wait for the response and turn it back into
         an `httplib.HTTPResponse`.
         """
@@ -826,13 +803,10 @@ def wire_HTTPConnection_to_WSGI(host, app):
 
 
 class WsgiLimiterProxyTest(BaseLimitTestSuite):
-    """
-    Tests for the `limits.WsgiLimiterProxy` class.
-    """
+    """Tests for the `limits.WsgiLimiterProxy` class."""
 
     def setUp(self):
-        """
-        Do some nifty HTTP/WSGI magic which allows for WSGI to be called
+        """Do some nifty HTTP/WSGI magic which allows for WSGI to be called
         directly by something like the `httplib` library.
         """
         super(WsgiLimiterProxyTest, self).setUp()

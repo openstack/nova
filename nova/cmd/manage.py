@@ -223,8 +223,7 @@ class ProjectCommands(object):
     @args('--key', metavar='<key>', help='Key')
     @args('--value', metavar='<value>', help='Value')
     def quota(self, project_id, user_id=None, key=None, value=None):
-        """
-        Create, update or display quotas for project/user
+        """Create, update or display quotas for project/user
 
         If no quota key is provided, the quota will be displayed.
         If a valid quota key is provided and it does not exist,
@@ -401,8 +400,7 @@ class FloatingIpCommands(object):
 
     @staticmethod
     def address_to_hosts(addresses):
-        """
-        Iterate over hosts within an address range.
+        """Iterate over hosts within an address range.
 
         If an explicit range specifier is missing, the parameter is
         interpreted as a specific individual address.
@@ -679,8 +677,8 @@ class ServiceCommands(object):
     @args('--host', metavar='<host>', help='Host')
     @args('--service', metavar='<service>', help='Nova service')
     def list(self, host=None, service=None):
-        """
-        Show a list of all running services. Filter by host & service name.
+        """Show a list of all running services. Filter by host & service
+        name
         """
         servicegroup_api = servicegroup.API()
         ctxt = context.get_admin_context()

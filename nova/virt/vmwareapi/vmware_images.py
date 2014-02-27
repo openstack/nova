@@ -172,8 +172,7 @@ def upload_image(context, image, instance, **kwargs):
 
 
 def get_vmdk_size_and_properties(context, image, instance):
-    """
-    Get size of the vmdk file that is to be downloaded for attach in spawn.
+    """Get size of the vmdk file that is to be downloaded for attach in spawn.
     Need this to create the dummy virtual disk for the meta-data file. The
     geometry of the disk created depends on the size.
     """

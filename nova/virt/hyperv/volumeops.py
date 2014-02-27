@@ -54,8 +54,7 @@ CONF.import_opt('my_ip', 'nova.netconf')
 
 
 class VolumeOps(object):
-    """
-    Management class for Volume-related tasks
+    """Management class for Volume-related tasks
     """
 
     def __init__(self):
@@ -108,8 +107,7 @@ class VolumeOps(object):
             self._get_mounted_disk_from_lun(target_iqn, target_lun, True)
 
     def attach_volume(self, connection_info, instance_name, ebs_root=False):
-        """
-        Attach a volume to the SCSI controller or to the IDE controller if
+        """Attach a volume to the SCSI controller or to the IDE controller if
         ebs_root is True
         """
         target_iqn = None

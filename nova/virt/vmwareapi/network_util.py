@@ -29,8 +29,7 @@ LOG = logging.getLogger(__name__)
 
 
 def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
-    """
-    Gets reference to the network whose name is passed as the
+    """Gets reference to the network whose name is passed as the
     argument.
     """
     host = vm_util.get_host_ref(session, cluster)
@@ -80,8 +79,7 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
 
 
 def get_vswitch_for_vlan_interface(session, vlan_interface, cluster=None):
-    """
-    Gets the vswitch associated with the physical network adapter
+    """Gets the vswitch associated with the physical network adapter
     with the name supplied.
     """
     # Get the list of vSwicthes on the Host System
@@ -141,8 +139,7 @@ def get_vlanid_and_vswitch_for_portgroup(session, pg_name, cluster=None):
 
 
 def create_port_group(session, pg_name, vswitch_name, vlan_id=0, cluster=None):
-    """
-    Creates a port group on the host system with the vlan tags
+    """Creates a port group on the host system with the vlan tags
     supplied. VLAN id 0 means no vlan id association.
     """
     client_factory = session._get_vim().client.factory

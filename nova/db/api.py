@@ -442,8 +442,7 @@ def migration_get_by_instance_and_status(context, instance_uuid, status):
 
 def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
         dest_compute, use_slave=False):
-    """
-    Finds all unconfirmed migrations within the confirmation window for
+    """Finds all unconfirmed migrations within the confirmation window for
     a specific destination compute host.
     """
     return IMPL.migration_get_unconfirmed_by_dest_compute(context,

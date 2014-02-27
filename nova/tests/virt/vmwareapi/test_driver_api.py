@@ -389,8 +389,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
 
     def _check_vm_record(self, num_instances=1):
-        """
-        Check if the spawned VM's properties correspond to the instance in
+        """Check if the spawned VM's properties correspond to the instance in
         the db.
         """
         instances = self.conn.list_instances()
@@ -436,8 +435,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertTrue(found_iface_id)
 
     def _check_vm_info(self, info, pwr_state=power_state.RUNNING):
-        """
-        Check if the get_info returned values correspond to the instance
+        """Check if the get_info returned values correspond to the instance
         object in the db.
         """
         mem_kib = long(self.type_data['memory_mb']) << 10
@@ -1129,9 +1127,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             None, None)
 
     def _test_finish_migration(self, power_on, resize_instance=False):
-        """
-        Tests the finish_migration method on vmops
-        """
+        """Tests the finish_migration method on vmops."""
 
         self.power_on_called = False
 
@@ -1178,9 +1174,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.instance, None)
 
     def _test_finish_revert_migration(self, power_on):
-        """
-        Tests the finish_revert_migration method on vmops
-        """
+        """Tests the finish_revert_migration method on vmops."""
 
         # setup the test instance in the database
         self._create_vm()

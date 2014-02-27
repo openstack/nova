@@ -118,8 +118,7 @@ def run_command(cmd, cmd_input=None, ok_exit_codes=None):
 
 
 def make_staging_area(sr_path):
-    """
-    The staging area is a place where we can temporarily store and
+    """The staging area is a place where we can temporarily store and
     manipulate VHDs. The use of the staging area is different for upload and
     download:
 
@@ -205,8 +204,7 @@ def _assert_vhd_not_hidden(path):
 
 
 def _validate_vhd(vdi_path):
-    """
-    This checks for several errors in the VHD structure.
+    """This checks for several errors in the VHD structure.
 
     Most notably, it checks that the timestamp in the footer is correct, but
     may pick up other errors also.
@@ -248,8 +246,7 @@ def _validate_vhd(vdi_path):
 
 
 def _validate_vdi_chain(vdi_path):
-    """
-    This check ensures that the parent pointers on the VHDs are valid
+    """This check ensures that the parent pointers on the VHDs are valid
     before we move the VDI chain to the SR. This is *very* important
     because a bad parent pointer will corrupt the SR causing a cascade of
     failures.

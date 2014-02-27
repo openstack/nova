@@ -40,9 +40,8 @@ def API(*args, **kwargs):
 
 
 def HostAPI(*args, **kwargs):
-    """
-    Returns the 'HostAPI' class from the same module as the configured compute
-    api
+    """Returns the 'HostAPI' class from the same module as the configured
+    compute api
     """
     importutils = nova.openstack.common.importutils
     compute_api_class_name = _get_compute_api_class_name()
@@ -52,8 +51,7 @@ def HostAPI(*args, **kwargs):
 
 
 def InstanceActionAPI(*args, **kwargs):
-    """
-    Returns the 'InstanceActionAPI' class from the same module as the
+    """Returns the 'InstanceActionAPI' class from the same module as the
     configured compute api.
     """
     importutils = nova.openstack.common.importutils

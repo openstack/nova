@@ -27,9 +27,7 @@ def get_view_builder(req):
 class ViewBuilder(common.ViewBuilder):
 
     def __init__(self, base_url):
-        """
-        :param base_url: url of the root wsgi application
-        """
+        """:param base_url: url of the root wsgi application."""
         self.base_url = base_url
 
     def build_choices(self, VERSIONS, req):

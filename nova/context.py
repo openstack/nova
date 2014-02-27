@@ -49,16 +49,16 @@ class RequestContext(object):
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
                  service_catalog=None, instance_lock_checked=False, **kwargs):
-        """
-        :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
-            indicates deleted records are visible, 'only' indicates that
-            *only* deleted records are visible.
+        """:param read_deleted: 'no' indicates deleted records are hidden,
+                'yes' indicates deleted records are visible,
+                'only' indicates that *only* deleted records are visible.
 
-        :param overwrite: Set to False to ensure that the greenthread local
-            copy of the index is not overwritten.
 
-        :param kwargs: Extra arguments that might be present, but we ignore
-            because they possibly came in from older rpc messages.
+           :param overwrite: Set to False to ensure that the greenthread local
+                copy of the index is not overwritten.
+
+           :param kwargs: Extra arguments that might be present, but we ignore
+                because they possibly came in from older rpc messages.
         """
         if kwargs:
             LOG.warn(_('Arguments dropped when creating context: %s') %

@@ -2439,8 +2439,7 @@ class CloudTestCase(test.TestCase):
         self._do_test_create_image(False)
 
     def test_create_image_instance_store(self):
-        """
-        Ensure CreateImage fails as expected for an instance-store-backed
+        """Ensure CreateImage fails as expected for an instance-store-backed
         instance
         """
         # enforce periodic tasks run in short time to avoid wait for 60s.

@@ -200,16 +200,14 @@ class ComputeDriver(object):
         return {'memory_mb': 0}
 
     def list_instances(self):
-        """
-        Return the names of all the instances known to the virtualization
+        """Return the names of all the instances known to the virtualization
         layer, as a list.
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
     def list_instance_uuids(self):
-        """
-        Return the UUIDS of all the instances known to the virtualization
+        """Return the UUIDS of all the instances known to the virtualization
         layer, as a list.
         """
         raise NotImplementedError()
@@ -258,8 +256,7 @@ class ComputeDriver(object):
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
-        """
-        Create a new instance/VM/domain on the virtualization platform.
+        """Create a new instance/VM/domain on the virtualization platform.
 
         Once this successfully completes, the instance should be
         running (power_state.RUNNING).
@@ -398,8 +395,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_host_ip_addr(self):
-        """
-        Retrieves the IP address of the dom0
+        """Retrieves the IP address of the dom0
         """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
@@ -439,8 +435,7 @@ class ComputeDriver(object):
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,
                                    block_device_info=None):
-        """
-        Transfers the disk of a running instance in multiple phases, turning
+        """Transfers the disk of a running instance in multiple phases, turning
         off the instance before the end.
 
         :param instance: nova.objects.instance.Instance
@@ -448,8 +443,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def snapshot(self, context, instance, image_id, update_task_state):
-        """
-        Snapshots the specified instance.
+        """Snapshots the specified instance.
 
         :param context: security context
         :param instance: nova.objects.instance.Instance
@@ -490,8 +484,7 @@ class ComputeDriver(object):
 
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info=None, power_on=True):
-        """
-        Finish reverting a resize.
+        """Finish reverting a resize.
 
         :param context: the context for the finish_revert_migration
         :param instance: nova.objects.instance.Instance being migrated/resized
@@ -528,8 +521,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def resume(self, context, instance, network_info, block_device_info=None):
-        """
-        resume the specified instance.
+        """resume the specified instance.
 
         :param context: the context for the resume
         :param instance: nova.objects.instance.Instance being resumed
@@ -862,8 +854,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def set_admin_password(self, context, instance, new_pass=None):
-        """
-        Set the root password on the specified instance.
+        """Set the root password on the specified instance.
 
         :param instance: nova.objects.instance.Instance
         :param new_password: the new password
@@ -871,8 +862,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def inject_file(self, instance, b64_path, b64_contents):
-        """
-        Writes a file on the specified instance.
+        """Writes a file on the specified instance.
 
         The first parameter is an instance of nova.compute.service.Instance,
         and so the instance is being specified as instance.name. The second
@@ -887,8 +877,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def change_instance_metadata(self, context, instance, diff):
-        """
-        Applies a diff to the instance metadata.
+        """Applies a diff to the instance metadata.
 
         This is an optional driver method which is used to publish
         changes to the instance's metadata to the hypervisor.  If the
@@ -986,8 +975,7 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def block_stats(self, instance_name, disk_id):
-        """
-        Return performance counters associated with the given disk_id on the
+        """Return performance counters associated with the given disk_id on the
         given instance_name.  These are returned as [rd_req, rd_bytes, wr_req,
         wr_bytes, errs], where rd indicates read, wr indicates write, req is
         the total number of I/O requests made, bytes is the total number of
@@ -1006,9 +994,8 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def interface_stats(self, instance_name, iface_id):
-        """
-        Return performance counters associated with the given iface_id on the
-        given instance_id.  These are returned as [rx_bytes, rx_packets,
+        """Return performance counters associated with the given iface_id
+        on the given instance_id.  These are returned as [rx_bytes, rx_packets,
         rx_errs, rx_drop, tx_bytes, tx_packets, tx_errs, tx_drop], where rx
         indicates receive, tx indicates transmit, bytes and packets indicate
         the total number of bytes or packets transferred, and errs and dropped
@@ -1079,8 +1066,7 @@ class ComputeDriver(object):
         pass
 
     def manage_image_cache(self, context, all_instances):
-        """
-        Manage the driver's local image cache.
+        """Manage the driver's local image cache.
 
         Some drivers chose to cache images for instances on disk. This method
         is an opportunity to do management of that cache which isn't directly
@@ -1215,8 +1201,7 @@ class ComputeDriver(object):
 
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
-        """
-        Snapshots volumes attached to a specified instance.
+        """Snapshots volumes attached to a specified instance.
 
         :param context: request context
         :param instance: nova.objects.instance.Instance that has the volume
@@ -1234,8 +1219,7 @@ class ComputeDriver(object):
 
     def volume_snapshot_delete(self, context, instance, volume_id,
                                snapshot_id, delete_info):
-        """
-        Snapshots volumes attached to a specified instance.
+        """Snapshots volumes attached to a specified instance.
 
         :param context: request context
         :param instance: nova.objects.instance.Instance that has the volume

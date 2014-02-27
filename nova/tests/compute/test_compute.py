@@ -106,8 +106,7 @@ def fake_not_implemented(*args, **kwargs):
 
 
 def get_primitive_instance_by_uuid(context, instance_uuid):
-    """
-    Helper method to get an instance and then convert it to
+    """Helper method to get an instance and then convert it to
     a primitive form using jsonutils.
     """
     instance = db.instance_get_by_uuid(context, instance_uuid)
@@ -1670,8 +1669,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(len(bdms), 0)
 
     def test_run_terminate_no_image(self):
-        """
-        Make sure instance started without image (from volume)
+        """Make sure instance started without image (from volume)
         can be termintad without issues
         """
         params = {'image_ref': ''}
@@ -2604,8 +2602,7 @@ class ComputeTestCase(BaseTestCase):
                 self._objectify(inst_ref), [], [])
 
     def test_set_admin_password_driver_not_authorized(self):
-        """
-        Ensure expected exception is raised if set_admin_password not
+        """Ensure expected exception is raised if set_admin_password not
         authorized.
         """
         exc = exception.NotAuthorized(_('Internal error'))
@@ -2616,8 +2613,7 @@ class ComputeTestCase(BaseTestCase):
                                                 expected_exception)
 
     def test_set_admin_password_driver_not_implemented(self):
-        """
-        Ensure expected exception is raised if set_admin_password not
+        """Ensure expected exception is raised if set_admin_password not
         implemented by driver.
         """
         exc = NotImplementedError()
@@ -4644,8 +4640,7 @@ class ComputeTestCase(BaseTestCase):
 
     def _test_finish_revert_resize(self, power_on,
                                    remove_old_vm_state=False):
-        """
-        Convenience method that does most of the work for the
+        """Convenience method that does most of the work for the
         test_finish_revert_resize tests.
         :param power_on -- True if testing resize from ACTIVE state, False if
         testing resize from STOPPED state.
@@ -9703,8 +9698,7 @@ class ComputePolicyTestCase(BaseTestCase):
 
 
 class DisabledInstanceTypesTestCase(BaseTestCase):
-    """
-    Some instance-types are marked 'disabled' which means that they will not
+    """Some instance-types are marked 'disabled' which means that they will not
     show up in customer-facing listings. We do, however, want those
     instance-types to be available for emergency migrations and for rebuilding
     of existing instances.

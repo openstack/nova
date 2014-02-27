@@ -29,18 +29,14 @@ LOG = logging.getLogger(__name__)
 
 
 class VolumeOps(object):
-    """
-    Management class for Volume-related tasks
-    """
+    """Management class for Volume-related tasks."""
 
     def __init__(self, session):
         self._session = session
 
     def attach_volume(self, connection_info, instance_name, mountpoint,
                       hotplug=True):
-        """
-        Attach volume storage to VM instance.
-        """
+        """Attach volume storage to VM instance."""
 
         # NOTE: No Resource Pool concept so far
         LOG.debug(_('Attach_volume: %(connection_info)s, %(instance_name)s,'
@@ -63,8 +59,7 @@ class VolumeOps(object):
         return (sr_uuid, vdi_uuid)
 
     def connect_volume(self, connection_info):
-        """
-        Attach volume storage to the hypervisor without attaching to a VM
+        """Attach volume storage to the hypervisor without attaching to a VM
 
         Used to attach the just the SR - e.g. for during live migration
         """

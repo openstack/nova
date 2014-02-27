@@ -33,8 +33,7 @@ CONF.register_opts(weigher_opts, group='cells')
 
 
 class WeightOffsetWeigher(weights.BaseCellWeigher):
-    """
-    Weight cell by weight_offset db field.
+    """Weight cell by weight_offset db field.
     Originally designed so you can set a default cell by putting
     its weight_offset to 999999999999999 (highest weight wins)
     """

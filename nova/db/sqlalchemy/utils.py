@@ -183,10 +183,9 @@ def _drop_unique_constraint_in_sqlite(migrate_engine, table_name, uc_name,
 
 def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
                            **col_name_col_instance):
-    """
-    This method drops UC from table and works for mysql, postgresql and sqlite.
-    In mysql and postgresql we are able to use "alter table" construction. In
-    sqlite is only one way to drop UC:
+    """This method drops UC from table and works for mysql, postgresql and
+    sqlite. In mysql and postgresql we are able to use "alter table"
+    construction. In sqlite is only one way to drop UC:
         1) Create new table with same columns, indexes and constraints
            (except one that we want to drop).
         2) Copy data from old table to new.
@@ -215,8 +214,7 @@ def drop_unique_constraint(migrate_engine, table_name, uc_name, *columns,
 
 def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
                                           use_soft_delete, *uc_column_names):
-    """
-    This method is used to drop all old rows that have the same values for
+    """This method is used to drop all old rows that have the same values for
     columns in uc_columns.
     """
     meta = MetaData()
@@ -257,9 +255,8 @@ def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
 
 
 def check_shadow_table(migrate_engine, table_name):
-    """
-    This method checks that table with ``table_name`` and corresponding shadow
-    table have same columns.
+    """This method checks that table with ``table_name`` and
+    corresponding shadow table have same columns.
     """
     meta = MetaData()
     meta.bind = migrate_engine
@@ -296,9 +293,8 @@ def check_shadow_table(migrate_engine, table_name):
 
 def create_shadow_table(migrate_engine, table_name=None, table=None,
                         **col_name_col_instance):
-    """
-    This method create shadow table for table with name ``table_name`` or table
-    instance ``table``.
+    """This method create shadow table for table with name ``table_name``
+    or table instance ``table``.
     :param table_name: Autoload table with this name and create shadow table
     :param table: Autoloaded table, so just create corresponding shadow table.
     :param col_name_col_instance:   contains pair column_name=column_instance.

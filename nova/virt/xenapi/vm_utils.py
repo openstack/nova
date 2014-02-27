@@ -1072,8 +1072,7 @@ def _make_partition(session, dev, partition_start, partition_end):
 
 def _generate_disk(session, instance, vm_ref, userdevice, name_label,
                    disk_type, size_mb, fs_type):
-    """
-    Steps to programmatically generate a disk:
+    """Steps to programmatically generate a disk:
 
         1. Create VDI of desired size
 
@@ -2466,8 +2465,7 @@ def _mounted_processing(device, key, net, metadata):
 
 
 def _prepare_injectables(inst, network_info):
-    """
-    prepares the ssh key and the network configuration file to be
+    """prepares the ssh key and the network configuration file to be
     injected into the disk image
     """
     #do the import here - Jinja2 will be loaded only if injection is performed

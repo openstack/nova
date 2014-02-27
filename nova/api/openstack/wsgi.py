@@ -86,8 +86,7 @@ class Request(webob.Request):
         self._extension_data = {'db_items': {}}
 
     def cache_db_items(self, key, items, item_key='id'):
-        """
-        Allow API methods to store objects from a DB query to be
+        """Allow API methods to store objects from a DB query to be
         used by API extensions within the same API request.
 
         An instance of this class only lives for the lifetime of a
@@ -99,8 +98,7 @@ class Request(webob.Request):
             db_items[item[item_key]] = item
 
     def get_db_items(self, key):
-        """
-        Allow an API extension to get previously stored objects within
+        """Allow an API extension to get previously stored objects within
         the same API request.
 
         Note that the object data will be slightly stale.
@@ -108,8 +106,7 @@ class Request(webob.Request):
         return self._extension_data['db_items'][key]
 
     def get_db_item(self, key, item_key):
-        """
-        Allow an API extension to get a previously stored object
+        """Allow an API extension to get a previously stored object
         within the same API request.
 
         Note that the object data will be slightly stale.
@@ -246,9 +243,8 @@ class JSONDeserializer(TextDeserializer):
 class XMLDeserializer(TextDeserializer):
 
     def __init__(self, metadata=None):
-        """
-        :param metadata: information needed to deserialize xml into
-                         a dictionary.
+        """:param metadata: information needed to deserialize xml into
+           a dictionary.
         """
         super(XMLDeserializer, self).__init__()
         self.metadata = metadata or {}
@@ -365,10 +361,9 @@ class JSONDictSerializer(DictSerializer):
 class XMLDictSerializer(DictSerializer):
 
     def __init__(self, metadata=None, xmlns=None):
-        """
-        :param metadata: information needed to deserialize xml into
-                         a dictionary.
-        :param xmlns: XML namespace to include with serialized xml
+        """:param metadata: information needed to deserialize xml into
+           a dictionary.
+           :param xmlns: XML namespace to include with serialized xml
         """
         super(XMLDictSerializer, self).__init__()
         self.metadata = metadata or {}
@@ -735,14 +730,15 @@ class Resource(wsgi.Application):
 
     def __init__(self, controller, action_peek=None, inherits=None,
                  **deserializers):
-        """
-        :param controller: object that implement methods created by routes lib
-        :param action_peek: dictionary of routines for peeking into an action
-                            request body to determine the desired action
-        :param inherits: another resource object that this resource should
-                         inherit extensions from. Any action extensions that
-                         are applied to the parent resource will also apply
-                         to this resource.
+        """:param controller: object that implement methods created by routes
+                              lib
+           :param action_peek: dictionary of routines for peeking into an
+                               action request body to determine the
+                               desired action
+           :param inherits: another resource object that this resource should
+                            inherit extensions from. Any action extensions that
+                            are applied to the parent resource will also apply
+                            to this resource.
         """
 
         self.controller = controller
@@ -1255,14 +1251,10 @@ class Fault(webob.exc.HTTPException):
 
 
 class RateLimitFault(webob.exc.HTTPException):
-    """
-    Rate-limited request response.
-    """
+    """Rate-limited request response."""
 
     def __init__(self, message, details, retry_time):
-        """
-        Initialize new `RateLimitFault` with relevant information.
-        """
+        """Initialize new `RateLimitFault` with relevant information."""
         hdrs = RateLimitFault._retry_after(retry_time)
         self.wrapped_exc = webob.exc.HTTPTooManyRequests(headers=hdrs)
         self.content = {
@@ -1283,9 +1275,8 @@ class RateLimitFault(webob.exc.HTTPException):
 
     @webob.dec.wsgify(RequestClass=Request)
     def __call__(self, request):
-        """
-        Return the wrapped exception with a serialized body conforming to our
-        error format.
+        """Return the wrapped exception with a serialized body conforming
+        to our error format.
         """
         user_locale = request.best_match_language()
         content_type = request.best_match_content_type()

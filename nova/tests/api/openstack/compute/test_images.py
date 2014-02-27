@@ -39,8 +39,7 @@ NOW_API_FORMAT = "2010-10-11T10:30:22Z"
 
 
 class ImagesControllerTest(test.NoDBTestCase):
-    """
-    Test of the OpenStack API /images application controller w/Glance.
+    """Test of the OpenStack API /images application controller w/Glance.
     """
 
     def setUp(self):

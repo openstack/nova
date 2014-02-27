@@ -244,8 +244,7 @@ class CellsAPI(object):
         return cctxt.call(context, 'get_host_uptime', host_name=host_name)
 
     def service_update(self, ctxt, host_name, binary, params_to_update):
-        """
-        Used to enable/disable a service. For compute services, setting to
+        """Used to enable/disable a service. For compute services, setting to
         disabled stops new builds arriving on that host.
 
         :param host_name: the name of the host machine that the service is

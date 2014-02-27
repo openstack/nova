@@ -57,8 +57,7 @@ def build_traversal_spec(client_factory, name, spec_type, path, skip,
 
 
 def build_recursive_traversal_spec(client_factory):
-    """
-    Builds the Recursive Traversal Spec to traverse the object managed
+    """Builds the Recursive Traversal Spec to traverse the object managed
     object hierarchy.
     """
     visit_folders_select_spec = build_selection_spec(client_factory,
@@ -258,8 +257,7 @@ def get_prop_filter_spec(client_factory, obj_spec, prop_spec):
 
 def get_properties_for_a_collection_of_objects(vim, type,
                                                obj_list, properties):
-    """
-    Gets the list of properties for the collection of
+    """Gets the list of properties for the collection of
     objects of the type specified.
     """
     client_factory = vim.client.factory

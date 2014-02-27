@@ -32,9 +32,7 @@ LOG = logging.getLogger(__name__)
 
 
 class VMwareVolumeOps(object):
-    """
-    Management class for Volume-related tasks
-    """
+    """Management class for Volume-related tasks."""
 
     def __init__(self, session, cluster=None, vc_support=False):
         self._session = session
@@ -45,9 +43,7 @@ class VMwareVolumeOps(object):
                           adapter_type, disk_type, vmdk_path=None,
                           disk_size=None, linked_clone=False,
                           device_name=None):
-        """
-        Attach disk to VM by reconfiguration.
-        """
+        """Attach disk to VM by reconfiguration."""
         instance_name = instance['name']
         client_factory = self._session._get_vim().client.factory
         devices = self._session._call_method(vim_util,
@@ -117,9 +113,7 @@ class VMwareVolumeOps(object):
 
     def detach_disk_from_vm(self, vm_ref, instance, device,
                             destroy_disk=False):
-        """
-        Detach disk from VM by reconfiguration.
-        """
+        """Detach disk from VM by reconfiguration."""
         instance_name = instance['name']
         client_factory = self._session._get_vim().client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(

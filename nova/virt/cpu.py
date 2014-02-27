@@ -33,8 +33,7 @@ CONF.register_opts(virt_cpu_opts)
 
 
 def get_cpuset_ids():
-    """
-    Parsing vcpu_pin_set config.
+    """Parsing vcpu_pin_set config.
 
     Returns a list of pcpu ids can be used by instances.
     """

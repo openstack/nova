@@ -29,8 +29,7 @@ LOG = logging.getLogger(__name__)
 
 class VFSLocalFS(vfs.VFS):
 
-    """
-    os.path.join() with safety check for injected file paths.
+    """os.path.join() with safety check for injected file paths.
 
     Join the supplied path components and make sure that the
     resulting path we are injecting into is within the
