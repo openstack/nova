@@ -41,7 +41,7 @@ class MultinicController(wsgi.Controller):
                                         want_objects=want_objects)
         except exception.InstanceNotFound:
             msg = _("Server not found")
-            raise exc.HTTPNotFound(msg)
+            raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.action('addFixedIp')
     def _add_fixed_ip(self, req, id, body):

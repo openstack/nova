@@ -37,7 +37,8 @@ class NetworkAssociateActionController(wsgi.Controller):
         try:
             self.network_api.associate(context, id, host=None)
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
         return exc.HTTPAccepted()
 
     @wsgi.action("disassociate_project")
@@ -48,7 +49,8 @@ class NetworkAssociateActionController(wsgi.Controller):
         try:
             self.network_api.associate(context, id, project=None)
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
         return exc.HTTPAccepted()
 
     @wsgi.action("associate_host")
@@ -60,7 +62,8 @@ class NetworkAssociateActionController(wsgi.Controller):
             self.network_api.associate(context, id,
                                        host=body['associate_host'])
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
         return exc.HTTPAccepted()
 
 

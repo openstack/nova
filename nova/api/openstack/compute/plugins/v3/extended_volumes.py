@@ -92,8 +92,9 @@ class ExtendedVolumesController(wsgi.Controller):
                                                               'swap_volume')
 
         if not found:
-            raise exc.HTTPNotFound("The volume was either invalid or not "
-                                   "attached to the instance.")
+            msg = _("The volume was either invalid or not attached to the "
+                    "instance.")
+            raise exc.HTTPNotFound(explanation=msg)
         else:
             return webob.Response(status_int=202)
 

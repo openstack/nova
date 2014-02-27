@@ -153,7 +153,8 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
         try:
             rule = self.security_group_api.get_default_rule(context, id)
         except exception.SecurityGroupDefaultRuleNotFound:
-            raise exc.HTTPNotFound(_("security group default rule not found"))
+            msg = _("security group default rule not found")
+            raise exc.HTTPNotFound(explanation=msg)
 
         fmt_rule = self._format_security_group_default_rule(rule)
         return {"security_group_default_rule": fmt_rule}

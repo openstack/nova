@@ -41,7 +41,7 @@ class ShelveController(wsgi.Controller):
                                         want_objects=True)
         except exception.InstanceNotFound:
             msg = _("Server not found")
-            raise exc.HTTPNotFound(msg)
+            raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.action('shelve')
     def _shelve(self, req, id, body):

@@ -107,7 +107,8 @@ class NetworkController(object):
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
-            raise exc.HTTPNotFound(_("Network not found"))
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
         return {'network': network_dict(network)}
 
     def delete(self, req, id):
@@ -131,7 +132,8 @@ class NetworkController(object):
         except exception.PolicyNotAuthorized as e:
             raise exc.HTTPForbidden(explanation=str(e))
         except exception.NetworkNotFound:
-            response = exc.HTTPNotFound(_("Network not found"))
+            msg = _("Network not found")
+            raise exc.HTTPNotFound(explanation=msg)
 
         return response
 
