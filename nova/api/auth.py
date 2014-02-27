@@ -94,10 +94,14 @@ class InjectContext(wsgi.Middleware):
 class NovaKeystoneContext(wsgi.Middleware):
     """Make a request context from keystone headers."""
 
-    domain_info = ['X_DOMAIN', 'X_PROJECT_DOMAIN_ID', 'X_USER_DOMAIN_ID']
-
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
+        project_domain_id = req.headers.get('X_PROJECT_DOMAIN_ID')
+        domain_id = req.headers.get('X_USER_DOMAIN_ID')
+        if domain_id is None:
+            LOG.debug("X_USER_DOMAIN_ID not found in request")
+        if project_domain_id is None:
+            LOG.debug("X_PROJECT_DOMAIN_ID not found in request")
         user_id = req.headers.get('X_USER')
         user_id = req.headers.get('X_USER_ID', user_id)
         if user_id is None:
@@ -114,18 +118,6 @@ class NovaKeystoneContext(wsgi.Middleware):
             project_id = req.headers['X_TENANT']
         project_name = req.headers.get('X_TENANT_NAME')
         user_name = req.headers.get('X_USER_NAME')
-
-        def from_request_or_default(header):
-            return req.headers[header] if header in req.headers else None
-
-        if any(info in req.headers for info in self.domain_info):
-            domain_id = from_request_or_default('X_DOMAIN_ID')
-            project_domain_id = from_request_or_default('X_PROJECT_DOMAIN_ID')
-            user_domain_id = from_request_or_default('X_USER_DOMAIN_ID')
-        else:
-            domain_id = 'default'
-            project_domain_id = 'default'
-            user_domain_id = 'default'
 
         # Get the auth token
         auth_token = req.headers.get('X_AUTH_TOKEN',
@@ -147,15 +139,14 @@ class NovaKeystoneContext(wsgi.Middleware):
 
         ctx = context.RequestContext(user_id,
                                      project_id,
-                                     domain_id,
-                                     project_domain_id,
-                                     user_domain_id,
                                      user_name=user_name,
                                      project_name=project_name,
                                      roles=roles,
                                      auth_token=auth_token,
                                      remote_address=remote_address,
-                                     service_catalog=service_catalog)
+                                     service_catalog=service_catalog,
+                                     domain_id=domain_id,
+                                     project_domain_id=project_domain_id)
 
         req.environ['nova.context'] = ctx
         return self.application
