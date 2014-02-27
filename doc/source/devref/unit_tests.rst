@@ -6,14 +6,40 @@ Nova contains a suite of unit tests, in the nova/tests directory.
 Any proposed code change will be automatically rejected by the OpenStack
 Jenkins server [#f1]_ if the change causes unit test failures.
 
-Running the tests
------------------
+Preferred way to run the tests
+------------------------------
+
+The preferred way to run the unit tests is using ``tox``.  See `the
+unit testing section of the Testing wiki page`_ and Nova's HACKING.rst
+for more information.  Following are some simple examples.
+
+To run the Python 2.6 tests::
+
+    tox -e py26
+
+To run the style tests:
+
+    tox -e pep8
+
+You can request multiple tests, separated by commas::
+
+    tox -e py27,pep8
+
+Older way to run the tests
+--------------------------
+
+Using ``tox`` is preferred.  It is also possible to run the unit tests
+using the ``run_tests.sh`` script found at the top level of the
+project.  The remainder of this document is focused on
+``run_tests.sh``.
+
 Run the unit tests by doing::
 
     ./run_tests.sh
 
 This script is a wrapper around the `testr`_ testrunner and the `flake8`_ checker.
 
+.. _the unit testing section of the Testing wiki page: https://wiki.openstack.org/wiki/Testing#Unit_Tests
 .. _testr: https://code.launchpad.net/testrepository
 .. _flake8: https://github.com/bmcustodio/flake8
 
