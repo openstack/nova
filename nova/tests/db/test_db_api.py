@@ -428,7 +428,7 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertNotIn('bad', r1)
         # Delete metadata
         db.aggregate_metadata_delete(ctxt, a3['id'], 'good')
-        r2 = db.aggregate_metadata_get_by_host(ctxt, 'foo.openstack.org',
+        r2 = db.aggregate_metadata_get_by_host(ctxt, 'foo3.openstack.org',
                                                key='good')
         self.assertNotIn('good', r2)
 
