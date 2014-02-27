@@ -153,7 +153,7 @@ class ServiceController(wsgi.Controller):
 
         try:
             self.host_api.service_update(context, host, binary, status_detail)
-        except exception.ServiceNotFound as e:
+        except exception.HostBinaryNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return ret_value
