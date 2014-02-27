@@ -968,9 +968,13 @@ class ComputeManager(manager.Manager):
                     extra_usage_info=info, **kwargs)
 
         try:
-            image_meta = self._prebuild_instance(context, instance)
-            if image_meta:
+            self._prebuild_instance(context, instance)
+
+            if request_spec and request_spec.get('image'):
+                image_meta = request_spec['image']
                 extra_usage_info = {"image_name": image_meta['name']}
+            else:
+                image_meta = {}
 
             notify("start")  # notify that build is starting
 
@@ -1006,14 +1010,6 @@ class ComputeManager(manager.Manager):
             # Quickly bail out of here
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
-
-        if instance['image_ref']:
-            image_meta = _get_image_meta(context, instance['image_ref'])
-        else:
-            # Instance was started from volume - so no image ref
-            image_meta = {}
-
-        return image_meta
 
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,

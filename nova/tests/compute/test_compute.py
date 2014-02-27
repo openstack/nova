@@ -3238,8 +3238,9 @@ class ComputeTestCase(BaseTestCase):
         # Ensure run instance generates appropriate usage notification.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        self.compute.run_instance(self.context, instance, {}, {}, [], None,
-                None, True, None, False)
+        request_spec = {'image': {'name': 'fake_name'}}
+        self.compute.run_instance(self.context, instance, request_spec,
+                {}, [], None, None, True, None, False)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         msg = fake_notifier.NOTIFICATIONS[0]
