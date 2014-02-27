@@ -183,7 +183,7 @@ class Domains(extensions.ExtensionDescriptor):
     updated = "2014-02-26T00:00:00+00:00"
 
     def get_resources(self):
-        LOG.debug(_("Entrou no get_resources"))
+        LOG.debug("Entrou no get_resources")
 
         resources = []
 
