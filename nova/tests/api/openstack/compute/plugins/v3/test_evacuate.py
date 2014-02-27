@@ -14,6 +14,7 @@
 
 import uuid
 
+import mock
 from oslo.config import cfg
 import webob
 
@@ -82,11 +83,14 @@ class EvacuateTest(test.NoDBTestCase):
 
         return req, app
 
-    def test_evacuate_instance_with_no_target(self):
+    @mock.patch('nova.compute.api.API.evacuate')
+    def test_evacuate_instance_with_no_target(self, evacuate_mock):
         req, app = self._gen_request_with_app({'on_shared_storage': 'False',
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
-        self.assertEqual(400, res.status_int)
+        self.assertEqual(202, res.status_int)
+        evacuate_mock.assert_called_once_with(mock.ANY, mock.ANY, None,
+                                              mock.ANY, mock.ANY)
 
     def test_evacuate_instance_with_empty_host(self):
         req, app = self._gen_request_with_app({'host': '',

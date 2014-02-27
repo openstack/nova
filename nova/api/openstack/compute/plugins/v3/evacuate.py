@@ -55,7 +55,7 @@ class EvacuateController(wsgi.Controller):
         authorize(context)
 
         evacuate_body = body["evacuate"]
-        host = evacuate_body["host"]
+        host = evacuate_body.get("host")
         on_shared_storage = strutils.bool_from_string(
                                         evacuate_body["on_shared_storage"])
 
@@ -71,11 +71,12 @@ class EvacuateController(wsgi.Controller):
         elif not on_shared_storage:
             password = utils.generate_password()
 
-        try:
-            self.host_api.service_get_by_compute_host(context, host)
-        except exception.NotFound:
-            msg = _("Compute host %s not found.") % host
-            raise exc.HTTPNotFound(explanation=msg)
+        if host is not None:
+            try:
+                self.host_api.service_get_by_compute_host(context, host)
+            except exception.NotFound:
+                msg = _("Compute host %s not found.") % host
+                raise exc.HTTPNotFound(explanation=msg)
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)

@@ -25,7 +25,7 @@ evacuate = {
                 'on_shared_storage': parameter_types.boolean,
                 'admin_password': parameter_types.admin_password,
             },
-            'required': ['host', 'on_shared_storage'],
+            'required': ['on_shared_storage'],
             'additionalProperties': False,
         },
     },
