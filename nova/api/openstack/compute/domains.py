@@ -58,7 +58,9 @@ authorizer = extensions.core_authorizer('compute:v3', 'domains')
 
 class DomainsController(wsgi.Controller):
 
-    def __init__(self, ext_mgr):
+    def __init__(self, ext_mgr=None, **kwargs):
+        super(DomainsController, self).__init__(**kwargs)
+        self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
 
     def index_domain(self, req):
@@ -152,6 +154,11 @@ class DomainsController(wsgi.Controller):
             response = self._view_builder.index(req, instance_list)
         req.cache_db_instances(instance_list)
         return response
+
+    def _get_server_search_options(self):
+        """Return server search options allowed by non-admin."""
+        return ('reservation_id', 'name', 'status', 'image', 'flavor',
+                'ip', 'changes-since', 'all_tenants')
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
