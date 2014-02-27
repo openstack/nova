@@ -142,6 +142,8 @@ class ComputeDriver(object):
     def get_info(self, instance):
         """Get the current status of an instance, by name (not ID!)
 
+        :param instance: nova.objects.instance.Instance object
+
         Returns a dict containing:
 
         :state:           the running state, one of the power_state codes
@@ -374,7 +376,10 @@ class ComputeDriver(object):
         raise NotImplementedError()
 
     def get_diagnostics(self, instance):
-        """Return data about VM diagnostics."""
+        """Return data about VM diagnostics.
+
+        :param instance: nova.objects.instance.Instance
+        """
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 

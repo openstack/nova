@@ -273,7 +273,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_get_diagnostics(self):
         self._test_compute_api('get_diagnostics', 'call',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='3.18')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

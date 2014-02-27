@@ -31,7 +31,7 @@ class ServerDiagnosticsController(object):
         authorize(context)
         compute_api = compute.API()
         try:
-            instance = compute_api.get(context, server_id)
+            instance = compute_api.get(context, server_id, want_objects=True)
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(e.format_message())
 

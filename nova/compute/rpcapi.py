@@ -233,6 +233,7 @@ class ComputeAPI(object):
               objects, and add disk_bus and device_type params to
               reserve_block_device_name, and bdm param to attach_volume
         3.17 - Update attach_interface and detach_interface to take an object
+        3.18 - Update get_diagnostics() to take an instance object
     '''
 
     VERSION_ALIASES = {
@@ -443,13 +444,15 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.18'):
+            version = '3.18'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        return cctxt.call(ctxt, 'get_diagnostics',
-                          instance=instance_p)
+        return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
 
     def get_vnc_console(self, ctxt, instance, console_type):
         if self.client.can_send_version('3.2'):
