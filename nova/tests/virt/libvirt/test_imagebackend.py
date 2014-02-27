@@ -362,7 +362,7 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.image_class = imagebackend.Lvm
         super(LvmTestCase, self).setUp()
         self.flags(images_volume_group=self.VG, group='libvirt')
-        self.LV = '%s_%s' % (self.INSTANCE['name'], self.NAME)
+        self.LV = '%s_%s' % (self.INSTANCE['uuid'], self.NAME)
         self.OLD_STYLE_INSTANCE_PATH = None
         self.PATH = os.path.join('/dev', self.VG, self.LV)
 

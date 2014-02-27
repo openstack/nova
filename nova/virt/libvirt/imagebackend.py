@@ -361,7 +361,7 @@ class Lvm(Image):
                                      ' images_volume_group'
                                      ' flag to use LVM images.'))
             self.vg = CONF.libvirt.images_volume_group
-            self.lv = '%s_%s' % (self.escape(instance['name']),
+            self.lv = '%s_%s' % (instance['uuid'],
                                  self.escape(disk_name))
             self.path = os.path.join('/dev', self.vg, self.lv)
 

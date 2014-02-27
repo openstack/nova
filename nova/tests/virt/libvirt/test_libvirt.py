@@ -8093,6 +8093,21 @@ class LibvirtDriverTestCase(test.TestCase):
             self.libvirtconnection.get_instance_disk_info,
             instance_name)
 
+    @mock.patch('os.path.exists')
+    @mock.patch('nova.virt.libvirt.utils.list_logical_volumes')
+    def test_lvm_disks(self, listlvs, exists):
+        instance = instance_obj.Instance(uuid='fake-uuid',
+                                         id=1)
+        self.flags(images_volume_group='vols', group='libvirt')
+        exists.return_value = True
+        listlvs.return_value = ['fake-uuid_foo',
+                                'instance-00000001_bar',
+                                'other-uuid_foo',
+                                'instance-00000002_bar']
+        disks = self.libvirtconnection._lvm_disks(instance)
+        self.assertEqual(['/dev/vols/fake-uuid_foo',
+                          '/dev/vols/instance-00000001_bar'], disks)
+
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
