@@ -414,7 +414,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.18')
+    target = messaging.Target(version='3.19')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4187,6 +4187,7 @@ class ComputeManager(manager.Manager):
         return self.driver.check_can_live_migrate_source(ctxt, instance,
                                                          dest_check_data)
 
+    @object_compat
     @wrap_exception()
     @wrap_instance_fault
     def pre_live_migration(self, context, instance, block_migration, disk,

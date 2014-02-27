@@ -553,9 +553,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     @catch_notimplementederror
     def test_ensure_filtering_for_instance(self):
-        instance_ref = test_utils.get_test_instance()
+        instance = test_utils.get_test_instance(obj=True)
         network_info = test_utils.get_test_network_info()
-        self.connection.ensure_filtering_rules_for_instance(instance_ref,
+        self.connection.ensure_filtering_rules_for_instance(instance,
                                                             network_info)
 
     @catch_notimplementederror
