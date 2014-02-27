@@ -56,7 +56,7 @@ class APIRouter(nova.api.openstack.APIRouter):
 
     def _setup_routes(self, mapper, ext_mgr, init_only):
 
-        LOG.debug(_('INIT_ONLY: %s'), init_only)
+        LOG.debug(('INIT_ONLY: %s'), init_only)
         print "INIT_ONLY", init_only  # REMOVER
 
         if init_only is None or 'versions' in init_only:
