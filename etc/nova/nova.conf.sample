@@ -1470,8 +1470,14 @@
 # value)
 #neutron_admin_password=<None>
 
-# Tenant name for connecting to neutron in admin context
-# (string value)
+# Tenant id for connecting to neutron in admin context (string
+# value)
+#neutron_admin_tenant_id=<None>
+
+# DEPRECATED: Tenant name for connecting to neutron in admin
+# context.  This option is deprecated.  Please use
+# neutron_admin_tenant_id instead. Note that with Keystone V3
+# tenant names may not be unique. (string value)
 #neutron_admin_tenant_name=<None>
 
 # Region name for connecting to neutron in admin context
