@@ -141,6 +141,7 @@ class RequestContext(object):
                 'instance_lock_checked': self.instance_lock_checked,
                 'tenant': self.tenant,
                 'user': self.user,
+                'user_domain_id': self.user_domain_id,
                 'domain_id': self.domain_id,
                 'project_domain_id': self.project_domain_id}
 
