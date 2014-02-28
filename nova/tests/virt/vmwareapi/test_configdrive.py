@@ -72,7 +72,8 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'id': 1,
             'uuid': 'fake-uuid',
             'node': self.node_name,
-            'metadata': []
+            'metadata': [],
+            'expected_attrs': ['system_metadata'],
         }
         self.test_instance = fake_instance.fake_instance_obj(self.context,
                                                              **instance_values)

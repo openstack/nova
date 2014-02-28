@@ -373,6 +373,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'ephemeral_gb': self.type_data['ephemeral_gb'],
                   'vcpus': self.type_data['vcpus'],
                   'swap': self.type_data['swap'],
+                  'expected_attrs': ['system_metadata'],
         }
         if set_image_ref:
             values['image_ref'] = self.fake_image_uuid

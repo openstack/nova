@@ -1727,3 +1727,7 @@ class ImageSerialPortNumberInvalid(Invalid):
 class ImageSerialPortNumberExceedFlavorValue(Invalid):
     msg_fmt = _("Forbidden to exceed flavor value of number of serial "
                 "ports passed in image meta.")
+
+
+class InvalidImageConfigDrive(Invalid):
+    msg_fmt = _("Image's config drive option '%(config_drive)s' is invalid")

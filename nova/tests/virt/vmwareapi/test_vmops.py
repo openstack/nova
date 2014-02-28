@@ -63,7 +63,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             'memory_mb': 512,
             'image_ref': self._image_id,
             'root_gb': 10,
-            'node': 'respool-1001(MyResPoolName)'
+            'node': 'respool-1001(MyResPoolName)',
+            'expected_attrs': ['system_metadata'],
         }
         self._instance = fake_instance.fake_instance_obj(
                                  self._context, **self._instance_values)

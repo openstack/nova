@@ -592,6 +592,13 @@ class API(base.Base):
         if image['status'] != 'active':
             raise exception.ImageNotActive(image_id=image_id)
 
+        image_properties = image.get('properties', {})
+        config_drive_option = image_properties.get(
+            'img_config_drive', 'optional')
+        if config_drive_option not in ['optional', 'mandatory']:
+            raise exception.InvalidImageConfigDrive(
+                config_drive=config_drive_option)
+
         if instance_type['memory_mb'] < int(image.get('min_ram') or 0):
             raise exception.FlavorMemoryTooSmall()
 

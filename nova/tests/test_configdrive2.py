@@ -20,8 +20,10 @@ import tempfile
 import mox
 from oslo.config import cfg
 
+from nova import context
 from nova.openstack.common import fileutils
 from nova import test
+from nova.tests import fake_instance
 from nova import utils
 from nova.virt import configdrive
 
@@ -89,3 +91,14 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         finally:
             if imagefile:
                 fileutils.delete_if_exists(imagefile)
+
+    def test_config_drive_required_by_image_property(self):
+        inst = fake_instance.fake_instance_obj(context.get_admin_context())
+        inst.config_drive = ''
+        inst.system_metadata = {
+            utils.SM_IMAGE_PROP_PREFIX + 'img_config_drive': 'mandatory'}
+        self.assertTrue(configdrive.required_by(inst))
+
+        inst.system_metadata = {
+            utils.SM_IMAGE_PROP_PREFIX + 'img_config_drive': 'optional'}
+        self.assertFalse(configdrive.required_by(inst))
