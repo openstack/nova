@@ -312,11 +312,8 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
                 'kernel': [None, 'cccc'],
             }
         self.instance['uuid'] = 'fake-uuid'
-        iqn = "iqn-%s" % self.instance['uuid']
-        tilera_config = 'this is a fake tilera config'
-        self.instance['uuid'] = 'fake-uuid'
-        tilera_path = tilera.get_tilera_nfs_path(self.instance)
-        image_path = tilera.get_image_file_path(self.instance)
+        tilera.get_tilera_nfs_path(self.instance)
+        tilera.get_image_file_path(self.instance)
 
         self.mox.StubOutWithMock(tilera, 'get_tftp_image_info')
         self.mox.StubOutWithMock(tilera, 'get_partition_sizes')
@@ -334,8 +331,8 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
     def test_activate_and_deactivate_bootloader(self):
         self._create_node()
         self.instance['uuid'] = 'fake-uuid'
-        tilera_path = tilera.get_tilera_nfs_path(self.instance)
-        image_path = tilera.get_image_file_path(self.instance)
+        tilera.get_tilera_nfs_path(self.instance)
+        tilera.get_image_file_path(self.instance)
 
         self.mox.ReplayAll()
 
@@ -365,7 +362,7 @@ class TileraPublicMethodsTestCase(BareMetalTileraTestCase):
         self.mox.StubOutWithMock(tilera, 'get_tftp_image_info')
         self.mox.StubOutWithMock(self.driver, '_collect_mac_addresses')
 
-        tilera_path = tilera.get_tilera_nfs_path(self.node['id'])
+        tilera.get_tilera_nfs_path(self.node['id'])
 
         tilera.get_tftp_image_info(self.instance).\
                 AndRaise(exception.NovaException)

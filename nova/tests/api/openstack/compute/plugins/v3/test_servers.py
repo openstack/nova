@@ -1277,7 +1277,7 @@ class ServersControllerTest(ControllerTest):
         self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
 
         req = fakes.HTTPRequestV3.blank('/servers', use_admin_context=True)
-        servers = self.controller.index(req)['servers']
+        self.assertIn('servers', self.controller.index(req))
         self.assertIn('pci_devices', self.expected_attrs)
 
 
@@ -2390,7 +2390,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.req.body = jsonutils.dumps(self.body)
         res = self.controller.create(self.req, body=self.body).obj
 
-        server = res['server']
+        self.assertIn('server', res)
         self.assertIn('admin_password', self.body['server'])
 
     def test_create_instance_admin_password_empty(self):

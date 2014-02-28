@@ -102,26 +102,26 @@ class ClaimTestCase(test.NoDBTestCase):
             self.assertTrue(re.search(re_obj, str(ee)))
 
     def test_cpu_unlimited(self):
-        claim = self._claim(vcpus=100000)
+        self._claim(vcpus=100000)
 
     def test_memory_unlimited(self):
-        claim = self._claim(memory_mb=99999999)
+        self._claim(memory_mb=99999999)
 
     def test_disk_unlimited_root(self):
-        claim = self._claim(root_gb=999999)
+        self._claim(root_gb=999999)
 
     def test_disk_unlimited_ephemeral(self):
-        claim = self._claim(ephemeral_gb=999999)
+        self._claim(ephemeral_gb=999999)
 
     def test_cpu_oversubscription(self):
         limits = {'vcpu': 16}
-        claim = self._claim(limits, vcpus=8)
+        self._claim(limits, vcpus=8)
 
     def test_memory_with_overhead(self):
         overhead = {'memory_mb': 8}
         limits = {'memory_mb': 2048}
-        claim = self._claim(memory_mb=2040, limits=limits,
-                            overhead=overhead)
+        self._claim(memory_mb=2040, limits=limits,
+                    overhead=overhead)
 
     def test_memory_with_overhead_insufficient(self):
         overhead = {'memory_mb': 9}
@@ -137,8 +137,7 @@ class ClaimTestCase(test.NoDBTestCase):
                           self._claim, limits=limits, vcpus=17)
 
     def test_memory_oversubscription(self):
-        limits = {'memory_mb': 8192}
-        claim = self._claim(memory_mb=4096)
+        self._claim(memory_mb=4096)
 
     def test_memory_insufficient(self):
         limits = {'memory_mb': 8192}
@@ -147,8 +146,8 @@ class ClaimTestCase(test.NoDBTestCase):
 
     def test_disk_oversubscription(self):
         limits = {'disk_gb': 60}
-        claim = self._claim(root_gb=10, ephemeral_gb=40,
-                            limits=limits)
+        self._claim(root_gb=10, ephemeral_gb=40,
+                    limits=limits)
 
     def test_disk_insufficient(self):
         limits = {'disk_gb': 45}

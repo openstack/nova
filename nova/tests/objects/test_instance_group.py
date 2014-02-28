@@ -113,8 +113,7 @@ class _TestInstanceGroupObjects(test.TestCase):
         metadata = {'foo': 'bar'}
         obj_result.metadetails = metadata
         obj_result.save()
-        metadata1 = db.instance_group_metadata_get(self.context,
-                                                   db_result['uuid'])
+        db.instance_group_metadata_get(self.context, db_result['uuid'])
         for key, value in metadata.iteritems():
             self.assertEqual(value, metadata[key])
 

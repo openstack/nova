@@ -1026,8 +1026,6 @@ def openAuth(uri, auth, flags):
         raise Exception(
             _("Expected a function in 'auth[1]' parameter"))
 
-    connection_used = True
-
     return Connection(uri, (flags == VIR_CONNECT_RO))
 
 

@@ -1490,7 +1490,7 @@ def _fetch_vhd_image(context, session, instance, image_id):
 
     try:
         vdis = handler.download_image(context, session, image_id)
-    except Exception as e:
+    except Exception:
         default_handler = _default_download_handler()
 
         # Using type() instead of isinstance() so instance of subclass doesn't
@@ -2128,7 +2128,7 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
                       instance=instance)
         else:
             parent_ref = session.call_xenapi("VDI.get_by_uuid", parent_uuid)
-            base_uuid = _get_vhd_parent_uuid(session, parent_ref)
+            _get_vhd_parent_uuid(session, parent_ref)
             return
 
         greenthread.sleep(CONF.xenserver.vhd_coalesce_poll_interval)

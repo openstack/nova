@@ -372,7 +372,7 @@ class ServicesTest(test.TestCase):
 
         with mock.patch.object(self.controller.host_api,
                                'service_delete') as service_delete:
-            response = self.controller.delete(request, '1')
+            self.controller.delete(request, '1')
             service_delete.assert_called_once_with(
                 request.environ['nova.context'], '1')
             self.assertEqual(self.controller.delete.wsgi_code, 204)

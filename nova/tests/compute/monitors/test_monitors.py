@@ -72,10 +72,6 @@ class FakeMonitorClass3(monitors.ResourceMonitorBase):
 
 class FakeMonitorClass4(monitors.ResourceMonitorBase):
     def get_metrics(self, **kwargs):
-        data = [{'timestamp': 123,
-                 'name': 'key4',
-                 'value': 1600,
-                 'source': 'libvirt'}]
         raise test.TestingException()
 
     def get_metric_names(self):

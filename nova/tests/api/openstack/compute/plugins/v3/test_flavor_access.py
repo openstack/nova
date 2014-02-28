@@ -140,8 +140,6 @@ class FlavorAccessTest(test.NoDBTestCase):
 
     def test_list_flavor_access_public(self):
         # query flavor-access on public flavor should return 404
-        req = fakes.HTTPRequestV3.blank('/flavors/fake/flavor-access',
-                                        use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_access_controller.index,
                           self.req, '1')

@@ -362,9 +362,9 @@ class AggregateDBApiTestCase(test.TestCase):
         a1 = _create_aggregate_with_hosts(context=ctxt)
         a2 = _create_aggregate_with_hosts(context=ctxt, values=values2)
         # a3 has no hosts and should not be in the results.
-        a3 = _create_aggregate(context=ctxt, values=values3)
+        _create_aggregate(context=ctxt, values=values3)
         # a4 has no matching hosts.
-        a4 = _create_aggregate_with_hosts(context=ctxt, values=values4,
+        _create_aggregate_with_hosts(context=ctxt, values=values4,
                 hosts=['foo4.openstack.org'])
         # a5 has no matching hosts after deleting the only matching host.
         a5 = _create_aggregate_with_hosts(context=ctxt, values=values5,
@@ -423,8 +423,8 @@ class AggregateDBApiTestCase(test.TestCase):
         a2_metadata = {'good': 'value12', 'bad': 'badvalue12'}
         a3_hosts = ['foo2.openstack.org', 'foo3.openstack.org']
         a3_metadata = {'good': 'value23', 'bad': 'badvalue23'}
-        a1 = _create_aggregate_with_hosts(context=ctxt)
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+        _create_aggregate_with_hosts(context=ctxt)
+        _create_aggregate_with_hosts(context=ctxt, values=values2,
                 hosts=a2_hosts, metadata=a2_metadata)
         a3 = _create_aggregate_with_hosts(context=ctxt, values=values3,
                 hosts=a3_hosts, metadata=a3_metadata)
@@ -447,10 +447,10 @@ class AggregateDBApiTestCase(test.TestCase):
         a2_metadata = {'good': 'value12', 'bad': 'badvalue12'}
         a3_hosts = ['foo2.openstack.org', 'foo3.openstack.org']
         a3_metadata = {'good': 'value23', 'bad': 'badvalue23'}
-        a1 = _create_aggregate_with_hosts(context=ctxt)
-        a2 = _create_aggregate_with_hosts(context=ctxt, values=values2,
+        _create_aggregate_with_hosts(context=ctxt)
+        _create_aggregate_with_hosts(context=ctxt, values=values2,
                 hosts=a2_hosts, metadata=a2_metadata)
-        a3 = _create_aggregate_with_hosts(context=ctxt, values=values3,
+        _create_aggregate_with_hosts(context=ctxt, values=values3,
                 hosts=a3_hosts, metadata=a3_metadata)
         r1 = db.aggregate_host_get_by_metadata_key(ctxt, key='good')
         self.assertEqual({
@@ -1114,8 +1114,8 @@ class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(rules[0]['id'], security_group_rule['id'])
 
     def test_security_group_rule_destroy(self):
-        security_group1 = self._create_security_group({'name': 'fake1'})
-        security_group2 = self._create_security_group({'name': 'fake2'})
+        self._create_security_group({'name': 'fake1'})
+        self._create_security_group({'name': 'fake2'})
         security_group_rule1 = self._create_security_group_rule({})
         security_group_rule2 = self._create_security_group_rule({})
         db.security_group_rule_destroy(self.ctxt, security_group_rule1['id'])
@@ -1133,7 +1133,7 @@ class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_security_group_rule_get(self):
         security_group_rule1 = (
                 self._create_security_group_rule({}))
-        security_group_rule2 = self._create_security_group_rule({})
+        self._create_security_group_rule({})
         real_security_group_rule = db.security_group_rule_get(self.ctxt,
                                               security_group_rule1['id'])
         self._assertEqualObjects(security_group_rule1,
@@ -1359,7 +1359,6 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
                     'project_id': 'fake_proj1',
         }
 
-        columns_to_join = ['rules.grantee_group']
         updated_group = db.security_group_update(self.ctxt,
                                     security_group['id'],
                                     new_values,
@@ -1369,7 +1368,7 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(updated_group['rules'], [])
 
     def test_security_group_update_to_duplicate(self):
-        security_group1 = self._create_security_group(
+        self._create_security_group(
                 {'name': 'fake1', 'project_id': 'fake_proj1'})
         security_group2 = self._create_security_group(
                 {'name': 'fake1', 'project_id': 'fake_proj2'})
@@ -1722,7 +1721,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_get_all_by_filters_deleted_and_soft_deleted(self):
         inst1 = self.create_instance_with_args()
         inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        inst3 = self.create_instance_with_args()
+        self.create_instance_with_args()
         db.instance_destroy(self.ctxt, inst1['uuid'])
         result = db.instance_get_all_by_filters(self.ctxt,
                                                 {'deleted': True})
@@ -1733,8 +1732,8 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_get_all_by_filters_deleted_no_soft_deleted(self):
         inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
-        inst3 = self.create_instance_with_args()
+        self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        self.create_instance_with_args()
         db.instance_destroy(self.ctxt, inst1['uuid'])
         result = db.instance_get_all_by_filters(self.ctxt,
                                                 {'deleted': True,
@@ -1755,7 +1754,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
     def test_instance_get_all_by_filters_not_deleted(self):
         inst1 = self.create_instance_with_args()
-        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
         inst3 = self.create_instance_with_args()
         inst4 = self.create_instance_with_args(vm_state=vm_states.ACTIVE)
         db.instance_destroy(self.ctxt, inst1['uuid'])
@@ -1964,11 +1963,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         set_and_check(meta)
 
     def test_security_group_in_use(self):
-        instance = db.instance_create(self.ctxt, dict(host='foo'))
-        values = [
-            {'instances': [instance]},
-            {'instances': []},
-        ]
+        db.instance_create(self.ctxt, dict(host='foo'))
 
     def test_instance_update_updates_system_metadata(self):
         # Ensure that system_metadata is updated during instance_update
@@ -4930,7 +4925,7 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_network_delete_safe(self):
         values = {'host': 'localhost', 'project_id': 'project1'}
         network = db.network_create_safe(self.ctxt, values)
-        db_network = db.network_get(self.ctxt, network['id'])
+        db.network_get(self.ctxt, network['id'])
         values = {'network_id': network['id'], 'address': '192.168.1.5'}
         address1 = db.fixed_ip_create(self.ctxt, values)['address']
         values = {'network_id': network['id'],
@@ -5012,7 +5007,7 @@ class NetworkTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # network with fixed ip with host set
         net2 = db.network_create_safe(self.ctxt, {})
         db.fixed_ip_create(self.ctxt, {'host': host, 'network_id': net2.id})
-        data = db.network_get_all_by_host(self.ctxt, host)
+        db.network_get_all_by_host(self.ctxt, host)
         self._assertEqualListsOfObjects([net1, net2],
             db.network_get_all_by_host(self.ctxt, host))
         # network with instance with host set
@@ -5311,9 +5306,9 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         network = db.network_create_safe(self.ctxt, {})
         for i in range(2):
             address = '192.168.0.%d' % i
-            ip = db.fixed_ip_create(self.ctxt, {'project_id': 'project1',
-                                                'address': address,
-                                                'network_id': network['id']})
+            db.fixed_ip_create(self.ctxt, {'project_id': 'project1',
+                                           'address': address,
+                                           'network_id': network['id']})
             db.fixed_ip_associate(self.ctxt, address,
                                   instances[0].uuid, network['id'])
 
@@ -6625,7 +6620,7 @@ class InstanceGroupDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_group_create_with_same_key(self):
         values = self._get_default_values()
         values['uuid'] = 'fake_id'
-        result = self._create_instance_group(self.context, values)
+        self._create_instance_group(self.context, values)
         self.assertRaises(exception.InstanceGroupIdExists,
                           self._create_instance_group, self.context, values)
 
@@ -7030,8 +7025,6 @@ class PciDeviceDBApiTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_pci_device_get_by_id(self):
         v1, v2 = self._create_fake_pci_devs()
         result = db.pci_device_get_by_id(self.admin_context, 3353)
-        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
-                        'created_at']
         self._assertEqualObjects(v1, result, self.ignored_keys)
 
     def test_pci_device_get_by_id_not_found(self):

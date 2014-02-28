@@ -55,7 +55,7 @@ class GlanceImageTestCase(test.NoDBTestCase):
         self.assertEqual('metadata', image.meta)
 
     def test_meta_caching(self):
-        image_service = self._stub_out_glance_services()
+        self._stub_out_glance_services()
         self.mox.ReplayAll()
 
         image = self._get_image()

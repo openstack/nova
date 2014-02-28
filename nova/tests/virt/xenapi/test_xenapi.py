@@ -238,8 +238,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vm = xenapi_fake.create_vm(self.instance['name'], 'Running')
         conn_info = self._make_connection_info()
-        result = conn.attach_volume(
-                None, conn_info, self.instance, '/dev/sdc')
+        conn.attach_volume(None, conn_info, self.instance, '/dev/sdc')
 
         # check that the VM has a VBD attached to it
         # Get XenAPI record for VBD
@@ -318,7 +317,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # Instance VDI
         vdi1 = xenapi_fake.create_vdi('instance-aaaa', None,
                 other_config={'nova_instance_uuid': 'aaaa'})
-        vbd1 = xenapi_fake.create_vbd(vm, vdi1)
+        xenapi_fake.create_vbd(vm, vdi1)
         # Only looks like instance VDI
         vdi2 = xenapi_fake.create_vdi('instance-bbbb', None)
         vbd2 = xenapi_fake.create_vbd(vm, vdi2)
@@ -407,7 +406,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
     def test_get_vnc_console_for_rescue(self):
         instance = self._create_instance(obj=True)
-        session = get_session()
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         rescue_vm = xenapi_fake.create_vm(instance['name'] + '-rescue',
                                           'Running')
@@ -967,7 +965,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         # Instance id = 2 will use vlan network (see db/fakes.py)
         ctxt = self.context.elevated()
         self.network.conductor_api = conductor_api.LocalAPI()
-        instance = self._create_instance(2, False)
+        self._create_instance(2, False)
         networks = self.network.db.network_get_all(ctxt)
         with mock.patch('nova.objects.network.Network._from_db_object'):
             for network in networks:
@@ -1230,8 +1228,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         # Unrescue expects the original instance to be powered off
         conn.power_off(instance)
-        rescue_vm = xenapi_fake.create_vm(instance['name'] + '-rescue',
-                'Running')
+        xenapi_fake.create_vm(instance['name'] + '-rescue', 'Running')
         conn.unrescue(instance, None)
 
     def test_unrescue_not_in_rescue(self):
@@ -1779,7 +1776,6 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
     def test_migrate_rollback_when_resize_down_fs_fails(self):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         vmops = conn._vmops
-        virtapi = vmops._virtapi
 
         self.mox.StubOutWithMock(vmops, '_resize_ensure_vm_is_shutdown')
         self.mox.StubOutWithMock(vmops, '_apply_orig_vm_name_label')
@@ -1983,7 +1979,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
     def test_host_state_vcpus_used(self):
         stats = self.conn.get_host_stats(True)
         self.assertEqual(stats['vcpus_used'], 0)
-        vm = xenapi_fake.create_vm(self.instance['name'], 'Running')
+        xenapi_fake.create_vm(self.instance['name'], 'Running')
         stats = self.conn.get_host_stats(True)
         self.assertEqual(stats['vcpus_used'], 4)
 
@@ -2032,15 +2028,13 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
                                False, 'off_maintenance')
 
     def test_set_enable_host_enable(self):
-        values = _create_service_entries(self.context, values={'nova':
-            ['host']})
+        _create_service_entries(self.context, values={'nova': ['host']})
         self._test_host_action(self.conn.set_host_enabled, True, 'enabled')
         service = db.service_get_by_args(self.context, 'host', 'nova-compute')
         self.assertEqual(service.disabled, False)
 
     def test_set_enable_host_disable(self):
-        values = _create_service_entries(self.context, values={'nova':
-            ['host']})
+        _create_service_entries(self.context, values={'nova': ['host']})
         self._test_host_action(self.conn.set_host_enabled, False, 'disabled')
         service = db.service_get_by_args(self.context, 'host', 'nova-compute')
         self.assertEqual(service.disabled, True)
@@ -2167,7 +2161,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.stubs.Set(vm_utils, "_resize_part_and_fs",
                        fake_resize_part_and_fs)
 
-        ctx = context.RequestContext(self.user_id, self.project_id)
+        context.RequestContext(self.user_id, self.project_id)
         session = get_session()
 
         disk_image_type = vm_utils.ImageType.DISK_VHD
@@ -2283,7 +2277,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
 
     def assertCalled(self, instance,
                      disk_image_type=vm_utils.ImageType.DISK_VHD):
-        ctx = context.RequestContext(self.user_id, self.project_id)
+        context.RequestContext(self.user_id, self.project_id)
         session = get_session()
 
         vm_ref = xenapi_fake.create_vm(instance['name'], 'Halted')
@@ -2714,11 +2708,11 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
         admin_ctxt = context.get_admin_context()
         # add a rule and send the update message, check for 1 rule
-        provider_fw0 = db.provider_fw_rule_create(admin_ctxt,
-                                                  {'protocol': 'tcp',
-                                                   'cidr': '10.99.99.99/32',
-                                                   'from_port': 1,
-                                                   'to_port': 65535})
+        db.provider_fw_rule_create(admin_ctxt,
+                                   {'protocol': 'tcp',
+                                    'cidr': '10.99.99.99/32',
+                                    'from_port': 1,
+                                    'to_port': 65535})
         self.fw.refresh_provider_fw_rules()
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
@@ -3057,7 +3051,6 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
             aggr = self.api.add_host_to_aggregate(self.context,
                                                   aggr['id'], host)
         # let's mock the fact that the aggregate is in error!
-        status = {'operational_state': pool_states.ERROR}
         expected = self.api.remove_host_from_aggregate(self.context,
                                                        aggr['id'],
                                                        values[fake_zone][0])
@@ -3402,12 +3395,6 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
             return {'returncode': 'error', 'message': 'Plugin not found'}
         self.stubs.Set(self.conn._vmops, "_make_plugin_call",
                        fake_make_plugin_call)
-
-        dest_check_data = {'block_migration': True,
-                           'migrate_data': {
-                            'destination_sr_ref': None,
-                            'migrate_send_data': None
-                           }}
 
         self.assertRaises(exception.MigrationError,
                           self.conn.check_can_live_migrate_source,

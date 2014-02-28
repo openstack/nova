@@ -1168,8 +1168,6 @@ class FakeVim(object):
         source_vmref = args[0]
         source_vm_mdo = _get_vm_mdo(source_vmref)
         clone_spec = kwargs.get("spec")
-        ds = _db_content["Datastore"].keys()[0]
-        host = _db_content["HostSystem"].keys()[0]
         vm_dict = {
          "name": kwargs.get("name"),
          "ds": source_vm_mdo.get("datastore"),

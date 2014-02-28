@@ -121,7 +121,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(self.app)
-        output = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 409)
 
     def test_get_vnc_console_no_type(self):
@@ -207,7 +207,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(self.app)
-        output = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 409)
 
     def test_get_spice_console_no_type(self):
@@ -292,7 +292,7 @@ class ConsolesExtensionTest(test.NoDBTestCase):
         req.headers["content-type"] = "application/json"
 
         res = req.get_response(self.app)
-        output = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 409)
 
     def test_get_rdp_console_no_type(self):

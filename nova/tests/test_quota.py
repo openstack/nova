@@ -123,8 +123,6 @@ class QuotaIntegrationTestCase(test.TestCase):
         # Setting cores quota to unlimited:
         self.flags(quota_cores=-1)
         instance = self._create_instance(cores=4)
-        inst_type = flavors.get_flavor_by_name('m1.small')
-        image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         db.instance_destroy(self.context, instance['uuid'])
 
     def test_too_many_addresses(self):
@@ -2118,7 +2116,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
     def test_quota_reserve_cores_unlimited(self):
         # Requesting 8 cores, quota_cores set to unlimited:
         self.flags(quota_cores=-1)
-        context = self._init_usages(1, 8, 1 * 1024, 1)
+        self._init_usages(1, 8, 1 * 1024, 1)
         self.assertEqual(self.sync_called, set([]))
         self.usages_list[0]["in_use"] = 1
         self.usages_list[0]["reserved"] = 0
@@ -2135,7 +2133,7 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
     def test_quota_reserve_ram_unlimited(self):
         # Requesting 10*1024 ram, quota_ram set to unlimited:
         self.flags(quota_ram=-1)
-        context = self._init_usages(1, 1, 10 * 1024, 1)
+        self._init_usages(1, 1, 10 * 1024, 1)
         self.assertEqual(self.sync_called, set([]))
         self.usages_list[0]["in_use"] = 1
         self.usages_list[0]["reserved"] = 0

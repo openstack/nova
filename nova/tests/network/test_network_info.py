@@ -24,7 +24,7 @@ from nova.virt import netutils
 class RouteTests(test.NoDBTestCase):
     def test_create_route_with_attrs(self):
         route = fake_network_cache_model.new_route()
-        ip = fake_network_cache_model.new_ip(dict(address='192.168.1.1'))
+        fake_network_cache_model.new_ip(dict(address='192.168.1.1'))
         self.assertEqual(route['cidr'], '0.0.0.0/24')
         self.assertEqual(route['gateway']['address'], '192.168.1.1')
         self.assertEqual(route['interface'], 'eth0')
@@ -323,13 +323,8 @@ class NetworkTests(test.NoDBTestCase):
         self.assertNotEqual(network1, network2)
 
     def test_hydrate(self):
-        new_network = dict(
-            id=1,
-            bridge='br0',
-            label='public',
-            subnets=[fake_network_cache_model.new_subnet(),
-                fake_network_cache_model.new_subnet(
-                        dict(cidr='255.255.255.255'))])
+        fake_network_cache_model.new_subnet()
+        fake_network_cache_model.new_subnet(dict(cidr='255.255.255.255'))
         network = model.Network.hydrate(fake_network_cache_model.new_network())
 
         self.assertEqual(network['id'], 1)
@@ -428,10 +423,7 @@ class VIFTests(test.NoDBTestCase):
         self.assertEqual(labeled_ips, ip_dict)
 
     def test_hydrate(self):
-        new_vif = dict(
-            id=1,
-            address='127.0.0.1',
-            network=fake_network_cache_model.new_network())
+        fake_network_cache_model.new_network()
         vif = model.VIF.hydrate(fake_network_cache_model.new_vif())
         self.assertEqual(vif['id'], 1)
         self.assertEqual(vif['address'], 'aa:aa:aa:aa:aa:aa')

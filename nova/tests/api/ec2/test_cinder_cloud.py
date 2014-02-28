@@ -88,7 +88,7 @@ class CinderCloudTestCase(test.TestCase):
     def setUp(self):
         super(CinderCloudTestCase, self).setUp()
         ec2utils.reset_cache()
-        vol_tmpdir = self.useFixture(fixtures.TempDir()).path
+        self.useFixture(fixtures.TempDir()).path
         fake_utils.stub_out_utils_spawn_n(self.stubs)
         self.flags(compute_driver='nova.virt.fake.FakeDriver',
                    volume_api_class='nova.tests.fake_volume.API')

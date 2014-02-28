@@ -644,9 +644,9 @@ class ResourceTest(test.NoDBTestCase):
                 return {'foo': 'bar'}
 
         req = fakes.HTTPRequest.blank('/tests')
-        context = req.environ['nova.context']
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
+        self.assertIn('nova.context', req.environ)
         self.assertEqual(response.body, '{"foo": "bar"}')
         self.assertEqual(response.status_int, 200)
 
@@ -672,9 +672,9 @@ class ResourceTest(test.NoDBTestCase):
                 pass
 
         req = fakes.HTTPRequest.blank('/tests')
-        context = req.environ['nova.context']
         app = fakes.TestRouter(Controller())
         response = req.get_response(app)
+        self.assertIn('nova.context', req.environ)
         self.assertEqual(response.body, '')
         self.assertEqual(response.status_int, 200)
 
@@ -886,12 +886,12 @@ class ResourceTest(test.NoDBTestCase):
 
         def extension1(req):
             called.append('pre1')
-            resp_obj = yield
+            yield
             called.append('post1')
 
         def extension2(req):
             called.append('pre2')
-            resp_obj = yield
+            yield
             called.append('post2')
 
         extensions = [extension1, extension2]
@@ -991,11 +991,11 @@ class ResourceTest(test.NoDBTestCase):
         called = []
 
         def extension1(req):
-            resp_obj = yield
+            yield
             called.append(1)
 
         def extension2(req):
-            resp_obj = yield
+            yield
             called.append(2)
 
         ext1 = extension1(None)
@@ -1020,11 +1020,11 @@ class ResourceTest(test.NoDBTestCase):
         called = []
 
         def extension1(req):
-            resp_obj = yield
+            yield
             called.append(1)
 
         def extension2(req):
-            resp_obj = yield
+            yield
             called.append(2)
             yield 'foo'
 
@@ -1217,19 +1217,19 @@ class ValidBodyTest(test.NoDBTestCase):
         self.assertTrue(self.controller.is_valid_body(body, 'foo'))
 
     def test_is_valid_body_none(self):
-        resource = wsgi.Resource(controller=None)
+        wsgi.Resource(controller=None)
         self.assertFalse(self.controller.is_valid_body(None, 'foo'))
 
     def test_is_valid_body_empty(self):
-        resource = wsgi.Resource(controller=None)
+        wsgi.Resource(controller=None)
         self.assertFalse(self.controller.is_valid_body({}, 'foo'))
 
     def test_is_valid_body_no_entity(self):
-        resource = wsgi.Resource(controller=None)
+        wsgi.Resource(controller=None)
         body = {'bar': {}}
         self.assertFalse(self.controller.is_valid_body(body, 'foo'))
 
     def test_is_valid_body_malformed_entity(self):
-        resource = wsgi.Resource(controller=None)
+        wsgi.Resource(controller=None)
         body = {'foo': 'bar'}
         self.assertFalse(self.controller.is_valid_body(body, 'foo'))

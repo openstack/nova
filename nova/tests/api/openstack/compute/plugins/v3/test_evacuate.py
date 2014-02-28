@@ -95,7 +95,7 @@ class EvacuateTest(test.NoDBTestCase):
                                                'on_shared_storage': 'False',
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
-        res_dict = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(400, res.status_int)
 
     def test_evacuate_instance_with_too_long_host(self):
@@ -104,7 +104,7 @@ class EvacuateTest(test.NoDBTestCase):
                                                'on_shared_storage': 'False',
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
-        res_dict = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(400, res.status_int)
 
     def test_evacuate_instance_with_invalid_characters_host(self):
@@ -113,7 +113,7 @@ class EvacuateTest(test.NoDBTestCase):
                                                'on_shared_storage': 'False',
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
-        res_dict = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(400, res.status_int)
 
     def test_evacuate_instance_with_invalid_on_shared_storage(self):
@@ -121,7 +121,7 @@ class EvacuateTest(test.NoDBTestCase):
                                                'on_shared_storage': 'foo',
                                                'admin_password': 'MyNewPass'})
         res = req.get_response(app)
-        res_dict = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(400, res.status_int)
 
     def test_evacuate_instance_without_on_shared_storage(self):

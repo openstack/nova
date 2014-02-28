@@ -572,7 +572,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.stubs.Set(virtutils, 'chown', lambda x, y: None)
 
         # We need to stub utime as well
-        orig_utime = os.utime
         self.stubs.Set(os, 'utime', lambda x, y: None)
 
         # Fake up some instances in the instances directory

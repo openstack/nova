@@ -684,7 +684,6 @@ class WsgiLimiterTest(BaseLimitTestSuite):
 
     def test_invalid_methods(self):
         # Only POSTs should work.
-        requests = []
         for method in ["GET", "PUT", "DELETE", "HEAD", "OPTIONS"]:
             request = webob.Request.blank("/", method=method)
             response = request.get_response(self.app)

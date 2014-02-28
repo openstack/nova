@@ -166,9 +166,9 @@ class FiltersTestCase(test.NoDBTestCase):
 
         filter_handler = filters.BaseFilterHandler(filters.BaseFilter)
         filter_classes = [Filter1, Filter2]
-        result = filter_handler.get_filtered_objects(filter_classes,
-                                                     filter_objs_initial,
-                                                     filter_properties)
+        filter_handler.get_filtered_objects(filter_classes,
+                                            filter_objs_initial,
+                                            filter_properties)
 
     def test_get_filtered_objects_none_response(self):
         filter_objs_initial = ['initial', 'filter1', 'objects1']

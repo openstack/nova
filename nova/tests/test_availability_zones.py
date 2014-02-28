@@ -124,7 +124,7 @@ class AvailabilityZoneTestCases(test.TestCase):
         """Test set availability zone cache key is unicode."""
         service = self._create_service_with_topic('network', self.host)
         services = db.service_get_all(self.context)
-        new_service = az.set_availability_zones(self.context, services)[0]
+        az.set_availability_zones(self.context, services)
         self.assertIsInstance(services[0]['host'], unicode)
         cached_key = az._make_cache_key(services[0]['host'])
         self.assertIsInstance(cached_key, str)

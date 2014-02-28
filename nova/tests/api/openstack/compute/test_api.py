@@ -60,7 +60,7 @@ class APITest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, ctype)
 
-        body = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
 
     def test_vendor_content_type_xml(self):
         ctype = 'application/vnd.openstack.compute+xml'
@@ -72,7 +72,7 @@ class APITest(test.NoDBTestCase):
         self.assertEqual(res.status_int, 200)
         self.assertEqual(res.content_type, ctype)
 
-        body = etree.XML(res.body)
+        etree.XML(res.body)
 
     def test_exceptions_are_converted_to_faults_webob_exc(self):
         @webob.dec.wsgify
@@ -176,8 +176,6 @@ class APITest(test.NoDBTestCase):
     def test_exception_with_none_code_throws_500(self):
         class ExceptionWithNoneCode(Exception):
             code = None
-
-        msg = 'Internal Server Error'
 
         @webob.dec.wsgify
         def fail(req):

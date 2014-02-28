@@ -34,7 +34,6 @@ class fake_session(object):
     def _wait_for_task(self, task_ref):
         task_info = self._call_method('module', "get_dynamic_property",
                         task_ref, "Task", "info")
-        task_name = task_info.name
         if task_info.state == 'success':
             return task_info
         else:

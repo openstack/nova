@@ -85,8 +85,8 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.session.call_plugin_serialized('glance', 'download_vhd', **params)
         self.mox.ReplayAll()
 
-        vdis = self.store.download_image(
-                self.context, self.session, 'fake_image_uuid')
+        self.store.download_image(self.context, self.session,
+                                  'fake_image_uuid')
 
         self.mox.VerifyAll()
 
@@ -126,8 +126,8 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
             error = self.session.XenAPI.Failure(details=error_details)
             mock_call_plugin_serialized.side_effect = [error, "success"]
 
-            vdis = self.store.download_image(
-                self.context, self.session, 'fake_image_uuid')
+            self.store.download_image(self.context, self.session,
+                                      'fake_image_uuid')
 
             mock_call_plugin_serialized.assert_has_calls(calls)
             mock_log_debug.assert_has_calls(log_calls, any_order=True)

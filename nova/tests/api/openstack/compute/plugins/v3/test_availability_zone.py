@@ -396,10 +396,10 @@ class ServersControllerCreateTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
         admin_context = context.get_admin_context()
-        service1 = db.service_create(admin_context, {'host': 'host1_zones',
-                                         'binary': "nova-compute",
-                                         'topic': 'compute',
-                                         'report_count': 0})
+        db.service_create(admin_context, {'host': 'host1_zones',
+                                          'binary': "nova-compute",
+                                          'topic': 'compute',
+                                          'report_count': 0})
         agg = db.aggregate_create(admin_context,
                 {'name': 'agg1'}, {'availability_zone': 'nova'})
         db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')

@@ -279,7 +279,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         # NOTE(vish) exists is to make driver assume connecting worked
         self.stubs.Set(os.path, 'exists', lambda x: True)
         libvirt_driver = volume.LibvirtISCSIVolumeDriver(self.fake_conn)
-        name = 'volume-00000001'
         devs = ['/dev/disk/by-path/ip-%s-iscsi-%s-lun-2' % (self.location,
                                                             self.iqn)]
         self.stubs.Set(self.fake_conn, 'get_all_block_devices', lambda: devs)
@@ -327,7 +326,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
               mock_run_multipath, mock_device_name, mock_get_portals,
               mock_get_iqn):
             mock_run_multipath.side_effect = processutils.ProcessExecutionError
-            name = 'volume-00000001'
             vol = {'id': 1, 'name': self.name}
             connection_info = self.iscsi_connection(vol, self.location,
                                                     self.iqn)
@@ -520,7 +518,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
                                                 self.iqn)
         mpdev_filepath = '/dev/mapper/foo'
         connection_info['data']['device_path'] = mpdev_filepath
-        target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
         self.stubs.Set(libvirt_driver,
                        '_get_target_portals_from_iscsiadm_output',
@@ -596,7 +593,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         connection_info = self.iscsi_connection(self.vol, self.location,
                                                 self.iqn)
         mpdev_filepath = '/dev/mapper/foo'
-        target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
         self.stubs.Set(libvirt_driver,
                        '_get_target_portals_from_iscsiadm_output',
@@ -625,7 +621,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             "dev": "vde",
             "type": "disk",
             }
-        target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
         self.stubs.Set(libvirt_driver,
                        '_get_target_portals_from_iscsiadm_output',
@@ -646,7 +641,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         name0 = 'volume-00000000'
         location0 = '10.0.2.15:3260'
         iqn0 = 'iqn.2010-10.org.iser.openstack:%s' % name0
-        vol0 = {'id': 0, 'name': name0}
         dev0 = '/dev/disk/by-path/ip-%s-iscsi-%s-lun-0' % (location0, iqn0)
         name = 'volume-00000001'
         location = '10.0.2.15:3260'
@@ -663,7 +657,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             "dev": "vde",
             "type": "disk",
             }
-        target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
         self.stubs.Set(libvirt_driver,
                        '_get_target_portals_from_iscsiadm_output',
@@ -939,7 +932,6 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             conf = libvirt_driver.connect_volume(connection_info,
                                                  self.disk_info)
             tree = conf.format_dom()
-            dev_str = '/dev/disk/by-path/pci-0000:05:00.2-fc-0x%s-lun-1' % wwn
             self.assertEqual(tree.get('type'), 'block')
             self.assertEqual(tree.find('./source').get('dev'),
                              multipath_devname)

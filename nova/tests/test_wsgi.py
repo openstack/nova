@@ -105,7 +105,7 @@ class TestWSGIServer(test.NoDBTestCase):
 
     def test_custom_max_header_line(self):
         CONF.max_header_line = 4096  # Default value is 16384.
-        server = nova.wsgi.Server("test_custom_max_header_line", None)
+        nova.wsgi.Server("test_custom_max_header_line", None)
         self.assertEqual(CONF.max_header_line, eventlet.wsgi.MAX_HEADER_LINE)
 
     def test_start_random_port(self):

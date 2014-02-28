@@ -131,7 +131,6 @@ def get_sub_folders(session, ds_browser, ds_path):
 
     If the path does not exist then an empty set is returned.
     """
-    client_factory = session._get_vim().client.factory
     search_task = session._call_method(
             session._get_vim(),
             "SearchDatastore_Task",

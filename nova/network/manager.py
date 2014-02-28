@@ -503,7 +503,7 @@ class NetworkManager(manager.Manager):
         try:
             self._allocate_mac_addresses(context, instance_uuid, networks,
                                          macs)
-        except Exception as e:
+        except Exception:
             with excutils.save_and_reraise_exception():
                 # If we fail to allocate any one mac address, clean up all
                 # allocated VIFs

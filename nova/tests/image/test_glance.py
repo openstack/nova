@@ -359,7 +359,6 @@ class TestGlanceImageService(test.NoDBTestCase):
     def test_download_module_file_bad_module(self):
         _, data_filename = self._get_tempfile()
         file_url = 'applesauce://%s' % data_filename
-        data_called = False
 
         class MyGlanceStubClient(glance_stubs.StubGlanceClient):
             data_called = False
@@ -841,7 +840,7 @@ class TestDetail(test.NoDBTestCase):
         client.call.return_value = [mock.sentinel.images_0]
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageService(client)
-        images = service.detail(ctx, **params)
+        service.detail(ctx, **params)
 
         client.call.assert_called_once_with(ctx, 1, 'list', limit=10)
 
@@ -1006,7 +1005,7 @@ class TestDelete(test.NoDBTestCase):
         client.call.return_value = True
         ctx = mock.sentinel.ctx
         service = glance.GlanceImageService(client)
-        result = service.delete(ctx, mock.sentinel.image_id)
+        service.delete(ctx, mock.sentinel.image_id)
         client.call.assert_called_once_with(ctx, 1, 'delete',
                                             mock.sentinel.image_id)
 

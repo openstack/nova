@@ -363,7 +363,7 @@ def validate_device_name(value):
         #                  is supported by nova.compute
         utils.check_string_length(value, 'Device name',
                                   min_length=1, max_length=255)
-    except exception.InvalidInput as e:
+    except exception.InvalidInput:
         raise exception.InvalidBDMFormat(
             details="Device name empty or too long.")
 
@@ -377,7 +377,7 @@ def validate_and_default_volume_size(bdm):
         try:
             bdm['volume_size'] = utils.validate_integer(
                 bdm['volume_size'], 'volume_size', min_value=0)
-        except exception.InvalidInput as e:
+        except exception.InvalidInput:
             raise exception.InvalidBDMFormat(
                 details="Invalid volume_size.")
 

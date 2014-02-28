@@ -239,7 +239,7 @@ class MetadataTestCase(test.TestCase):
                     'swap': '/dev/sdc',
                     'ebs0': '/dev/sdh'}
 
-        capi = conductor_api.LocalAPI()
+        conductor_api.LocalAPI()
 
         self.assertEqual(base._format_instance_mapping(ctxt,
                          instance_ref0), block_device._DEFAULT_MAPPINGS)

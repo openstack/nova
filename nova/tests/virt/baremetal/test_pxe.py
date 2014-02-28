@@ -503,7 +503,7 @@ class PXEPublicMethodsTestCase(BareMetalPXETestCase):
         iqn = "iqn-%s" % self.instance['uuid']
         pxe_config = 'this is a fake pxe config'
         pxe_path = pxe.get_pxe_config_file_path(self.instance)
-        image_path = pxe.get_image_file_path(self.instance)
+        pxe.get_image_file_path(self.instance)
 
         self.mox.StubOutWithMock(flavor_obj.Flavor, 'get_by_id')
         self.mox.StubOutWithMock(pxe, 'get_tftp_image_info')

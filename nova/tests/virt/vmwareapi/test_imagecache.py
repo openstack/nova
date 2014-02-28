@@ -84,7 +84,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(ds_util, 'get_sub_folders',
                               fake_get_sub_folders)
-        ) as (_get_sub_folders):
+        ):
             self.exists = True
             ts = self._imagecache._get_timestamp('fake-ds-browser',
                                                  'fake-ds-path')
@@ -113,7 +113,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(vim_util, 'get_dynamic_property',
                               fake_get_dynamic_property)
-        ) as _get_dynamic:
+        ):
             self.fake_called = 0
             self.assertEqual({}, self._imagecache._ds_browser)
             browser = self._imagecache._get_ds_browser('fake-ds-ref')

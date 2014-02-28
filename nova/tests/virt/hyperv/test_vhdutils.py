@@ -90,7 +90,7 @@ class VHDUtilsTestCase(test.NoDBTestCase):
     def test_get_vhd_format_vhdx(self):
         with mock.patch('nova.virt.hyperv.vhdutils.open',
                         mock.mock_open(read_data=vhdutils.VHDX_SIGNATURE),
-                        create=True) as mock_open:
+                        create=True):
 
             format = self._vhdutils.get_vhd_format(self._FAKE_VHD_PATH)
 

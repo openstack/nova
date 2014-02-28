@@ -375,7 +375,6 @@ def sign_csr(csr_text, project_id=None):
     if not project_id:
         return _sign_csr(csr_text, ca_folder())
     _ensure_project_folder(project_id)
-    project_folder = ca_folder(project_id)
     return _sign_csr(csr_text, ca_folder(project_id))
 
 

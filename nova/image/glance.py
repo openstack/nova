@@ -282,7 +282,7 @@ class GlanceImageService(object):
             return self._download_handlers[scheme]
         except KeyError:
             return None
-        except Exception as ex:
+        except Exception:
             LOG.error(_("Failed to instantiate the download handler "
                 "for %(scheme)s") % {'scheme': scheme})
         return

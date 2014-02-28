@@ -223,7 +223,7 @@ def work_on_disk(dev, root_mb, swap_mb, ephemeral_mb, image_path,
 
     try:
         root_uuid = block_uuid(root_part)
-    except processutils.ProcessExecutionError as err:
+    except processutils.ProcessExecutionError:
         with excutils.save_and_reraise_exception():
             LOG.error(_("Failed to detect root device UUID."))
     return root_uuid

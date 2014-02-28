@@ -242,8 +242,6 @@ class FlavorsTest(test.TestCase):
         response_list = response["flavors"]
         response_links = response["flavors_links"]
 
-        alternate = "%s/fake/flavors/%s"
-
         expected_flavors = [
             {
                 "id": "1",
@@ -274,8 +272,6 @@ class FlavorsTest(test.TestCase):
         response = self.controller.index(req)
         response_list = response["flavors"]
         response_links = response["flavors_links"]
-
-        alternate = "%s/fake/flavors/%s"
 
         expected_flavors = [
             {

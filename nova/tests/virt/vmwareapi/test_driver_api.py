@@ -614,8 +614,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self._create_vm()
         inst_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
-        cache = ('[%s] vmware_base/%s/%s.vmdk' %
-                 (self.ds, self.fake_image_uuid, self.fake_image_uuid))
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
         self._cached_files_exist()
 
@@ -1603,7 +1601,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_get_vnc_console_noport(self):
         self._create_vm()
-        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        vmwareapi_fake._get_objects("VirtualMachine").objects
         self.assertRaises(exception.ConsoleTypeUnavailable,
                           self.conn.get_vnc_console,
                           self.context,

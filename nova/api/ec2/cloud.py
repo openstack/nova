@@ -801,7 +801,7 @@ class CloudController(object):
         if volume.get('instance_uuid', None):
             instance_uuid = volume['instance_uuid']
             # Make sure instance exists
-            instance = instance_obj.Instance.get_by_uuid(context.elevated(),
+            instance_obj.Instance.get_by_uuid(context.elevated(),
                     instance_uuid)
 
             instance_ec2_id = ec2utils.id_to_ec2_inst_id(instance_uuid)

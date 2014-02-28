@@ -141,7 +141,6 @@ class APITestCase(test.NoDBTestCase):
     def test_extend_raw_success(self):
         imgfile = tempfile.NamedTemporaryFile()
         imgsize = 10
-        device = "/dev/sdh"
         use_cow = False
 
         self.mox.StubOutWithMock(api, 'can_resize_image')

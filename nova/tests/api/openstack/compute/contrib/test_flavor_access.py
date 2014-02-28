@@ -141,8 +141,6 @@ class FlavorAccessTest(test.NoDBTestCase):
 
     def test_list_flavor_access_public(self):
         # query os-flavor-access on public flavor should return 404
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors/os-flavor-access',
-                                      use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_access_controller.index,
                           self.req, '1')
@@ -294,8 +292,6 @@ class FlavorAccessTest(test.NoDBTestCase):
         self.stubs.Set(db, 'flavor_access_add',
                        stub_add_flavor_access)
         body = {'addTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
-                                      use_admin_context=True)
         self.assertRaises(exc.HTTPConflict,
                           self.flavor_action_controller._addTenantAccess,
                           self.req, '3', body)
@@ -307,8 +303,6 @@ class FlavorAccessTest(test.NoDBTestCase):
         self.stubs.Set(db, 'flavor_access_remove',
                        stub_remove_flavor_access)
         body = {'removeTenantAccess': {'tenant': 'proj2'}}
-        req = fakes.HTTPRequest.blank('/v2/fake/flavors/2/action',
-                                      use_admin_context=True)
         self.assertRaises(exc.HTTPNotFound,
                           self.flavor_action_controller._removeTenantAccess,
                           self.req, '3', body)

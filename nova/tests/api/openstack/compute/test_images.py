@@ -317,7 +317,6 @@ class ImagesControllerTest(test.NoDBTestCase):
         self._detail_request(filters, request)
 
     def test_image_detail_filter_server_href(self):
-        ref = 'http://localhost:8774/servers/' + self.uuid
         filters = {'property-instance_uuid': self.uuid}
         request = fakes.HTTPRequest.blank(self.url)
         self._detail_request(filters, request)

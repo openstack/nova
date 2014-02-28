@@ -195,7 +195,6 @@ class VolumeAttachTestCase(test.NoDBTestCase):
         sr_ref = 'sr_ref'
         vdi_uuid = '2'
         vdi_ref = 'vdi_ref'
-        vbd_ref = 'vbd_ref'
         connection_data = {'vdi_uuid': vdi_uuid}
         connection_info = {'data': connection_data,
                            'driver_volume_type': 'iscsi'}

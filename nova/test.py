@@ -276,7 +276,7 @@ class TestCase(testtools.TestCase):
 
         # Collect logs
         fs = '%(levelname)s [%(name)s] %(message)s'
-        fake = self.useFixture(fixtures.FakeLogger(format=fs, level=None))
+        self.useFixture(fixtures.FakeLogger(format=fs, level=None))
         root.handlers[0].setLevel(level)
 
         if level > logging.DEBUG:

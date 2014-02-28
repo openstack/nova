@@ -110,7 +110,7 @@ class FakeVirtDriver(driver.ComputeDriver):
         return d
 
     def estimate_instance_overhead(self, instance_info):
-        mem = instance_info['memory_mb']  # make sure memory value is present
+        instance_info['memory_mb']  # make sure memory value is present
         overhead = {
             'memory_mb': FAKE_VIRT_MEMORY_OVERHEAD
         }
@@ -601,8 +601,7 @@ class InstanceClaimTestCase(BaseTrackerTestCase):
         instance = self._fake_instance(memory_mb=claim_mem, root_gb=claim_disk,
                 ephemeral_gb=0)
 
-        claim = self.tracker.instance_claim(self.context, instance,
-                self.limits)
+        self.tracker.instance_claim(self.context, instance, self.limits)
 
         self.assertEqual(FAKE_VIRT_MEMORY_MB, self.compute["memory_mb"])
         self.assertEqual(claim_mem_total, self.compute["memory_mb_used"])
@@ -948,7 +947,7 @@ class ResizeClaimTestCase(BaseTrackerTestCase):
                   'old_instance_type_id': 1, 'new_instance_type_id': 1,
                   'status': 'post-migrating',
                   'instance_uuid': self.instance['uuid']}
-        migration = self._fake_migration_create(self.context, values)
+        self._fake_migration_create(self.context, values)
 
         # attach an instance to the destination host tracker:
         dest_tracker.instance_claim(self.context, self.instance)

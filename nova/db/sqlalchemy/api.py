@@ -4235,8 +4235,6 @@ def flavor_get_all(context, inactive=False, filters=None,
     # database.
     read_deleted = "yes" if inactive else "no"
 
-    sort_fn = {'desc': desc, 'asc': asc}
-
     query = _flavor_get_query(context, read_deleted=read_deleted)
 
     if 'min_memory_mb' in filters:
@@ -5550,10 +5548,8 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
         # We have one table (dns_domains) where the key is called
         # "domain" rather than "id"
         column = table.c.domain
-        column_name = "domain"
     else:
         column = table.c.id
-        column_name = "id"
     # NOTE(guochbo): Use InsertFromSelect and DeleteFromSelect to avoid
     # database's limit of maximum parameter in one SQL statement.
     query_insert = select([table],
@@ -5569,7 +5565,7 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
     try:
         # Group the insert and delete in a transaction.
         with conn.begin():
-            result_insert = conn.execute(insert_statement)
+            conn.execute(insert_statement)
             result_delete = conn.execute(delete_statement)
     except IntegrityError:
         # A foreign key constraint keeps us from deleting some of

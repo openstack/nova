@@ -77,8 +77,8 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
                 'bittorrent', 'download_vhd', **params)
         self.mox.ReplayAll()
 
-        vdis = self.store.download_image(
-                self.context, self.session, 'fake_image_uuid')
+        self.store.download_image(self.context, self.session,
+                                  'fake_image_uuid')
 
         self.mox.VerifyAll()
 

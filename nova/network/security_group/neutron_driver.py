@@ -261,7 +261,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             # works.... :/
             for rule_id in range(0, len(rule_ids)):
                 neutron.delete_security_group_rule(rule_ids.pop())
-        except n_exc.NeutronClientException as e:
+        except n_exc.NeutronClientException:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_("Neutron Error unable to delete %s"), rule_ids)
 

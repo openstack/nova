@@ -269,7 +269,6 @@ class PciDevTrackerTestCase(test.TestCase):
     def test_clean_usage(self):
         inst_2 = copy.copy(self.inst)
         inst_2.uuid = 'uuid5'
-        inst = {'uuid': 'uuid1', 'vm_state': vm_states.BUILDING}
         migr = {'instance_uuid': 'uuid2', 'vm_state': vm_states.BUILDING}
         orph = {'uuid': 'uuid3', 'vm_state': vm_states.BUILDING}
 
@@ -289,7 +288,6 @@ class PciDevTrackerTestCase(test.TestCase):
     def test_clean_usage_claims(self):
         inst_2 = copy.copy(self.inst)
         inst_2.uuid = 'uuid5'
-        inst = {'uuid': 'uuid1', 'vm_state': vm_states.BUILDING}
         migr = {'instance_uuid': 'uuid2', 'vm_state': vm_states.BUILDING}
         orph = {'uuid': 'uuid3', 'vm_state': vm_states.BUILDING}
 
@@ -328,7 +326,7 @@ class PciGetInstanceDevs(test.TestCase):
         self.stubs.Set(db, 'pci_device_get_all_by_instance_uuid',
             _fake_pci_device_get_by_instance_uuid)
         self._get_by_uuid = False
-        devices = pci_manager.get_instance_pci_devs(instance)
+        pci_manager.get_instance_pci_devs(instance)
         self.assertEqual(self._get_by_uuid, True)
 
     def test_get_devs_object(self):
@@ -348,5 +346,5 @@ class PciGetInstanceDevs(test.TestCase):
             _fake_obj_load_attr)
 
         self.load_attr_called = False
-        devices = pci_manager.get_instance_pci_devs(inst)
+        pci_manager.get_instance_pci_devs(inst)
         self.assertEqual(self.load_attr_called, True)

@@ -48,7 +48,6 @@ class TestWeigher(test.NoDBTestCase):
             ((20.0, 50.0), (0.4, 1.0), 0.0, None),
             ((20.0, 50.0), (0.2, 0.5), 0.0, 100.0),
         )
-        normalize_to = (1.0, 10.0)
         for seq, result, minval, maxval in map_:
             ret = weights.normalize(seq, minval=minval, maxval=maxval)
             self.assertEqual(tuple(ret), result)

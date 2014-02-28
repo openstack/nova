@@ -418,7 +418,6 @@ class FloatingIpTest(test.TestCase):
         self.assertTrue(rsp.status_int == 202)
 
     def test_floating_ip_associate_invalid_instance(self):
-        fixed_address = '192.168.1.100'
 
         def fake_get(self, context, id, expected_attrs=None,
                      want_objects=False):

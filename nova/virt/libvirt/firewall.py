@@ -237,7 +237,6 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
 
     def unfilter_instance(self, instance, network_info):
         """Clear out the nwfilter rules."""
-        instance_name = instance['name']
         for vif in network_info:
             nic_id = vif['address'].replace(':', '')
             instance_filter_name = self._instance_filter_name(instance, nic_id)

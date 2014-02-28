@@ -206,8 +206,8 @@ class GetKeypairsTestCase(KeypairAPITestCase):
 
 class DeleteKeypairTestCase(KeypairAPITestCase):
     def test_success(self):
-        keypair = self.keypair_api.get_key_pair(self.ctxt, self.ctxt.user_id,
-                                                self.existing_key_name)
+        self.keypair_api.get_key_pair(self.ctxt, self.ctxt.user_id,
+                                      self.existing_key_name)
         self.keypair_api.delete_key_pair(self.ctxt, self.ctxt.user_id,
                 self.existing_key_name)
         self.assertRaises(exception.KeypairNotFound,

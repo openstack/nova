@@ -2101,7 +2101,8 @@ class ServersControllerCreateTest(test.TestCase):
             self.body['server'].pop('imageRef', None)
         self.body['server'].update(params)
         self.req.body = jsonutils.dumps(self.body)
-        server = self.controller.create(self.req, self.body).obj['server']
+        self.assertIn('server',
+                      self.controller.create(self.req, self.body).obj)
 
     def test_create_instance_with_security_group_enabled(self):
         self.ext_mgr.extensions = {'os-security-groups': 'fake'}
@@ -2218,7 +2219,6 @@ class ServersControllerCreateTest(test.TestCase):
 
     def test_create_instance_name_all_blank_spaces(self):
         # proper local hrefs must start with 'http://localhost/v2/'
-        image_href = 'http://localhost/v2/images/%s' % self.image_uuid
         self.body['server']['name'] = ' ' * 64
         self.req.body = jsonutils.dumps(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -2453,7 +2453,8 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['flavorRef'] = 3
         self.req.body = jsonutils.dumps(self.body)
         try:
-            server = self.controller.create(self.req, self.body).obj['server']
+            self.assertIn('server',
+                          self.controller.create(self.req, self.body).obj)
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
             self.assertEqual(e.explanation, expected_msg)
@@ -2992,10 +2993,10 @@ class ServersControllerCreateTest(test.TestCase):
             expected = 'The requested availability zone is not available'
             self.assertEqual(e.explanation, expected)
         admin_context = context.get_admin_context()
-        service1 = db.service_create(admin_context, {'host': 'host1_zones',
-                                         'binary': "nova-compute",
-                                         'topic': 'compute',
-                                         'report_count': 0})
+        db.service_create(admin_context, {'host': 'host1_zones',
+                                          'binary': "nova-compute",
+                                          'topic': 'compute',
+                                          'report_count': 0})
         agg = db.aggregate_create(admin_context,
                 {'name': 'agg1'}, {'availability_zone': availability_zone})
         db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
@@ -3032,7 +3033,6 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_extra(params)
 
     def test_create_instance_with_multiple_create_disabled(self):
-        ret_res_id = True
         min_count = 2
         max_count = 3
         params = {
@@ -3188,7 +3188,7 @@ class ServersControllerCreateTest(test.TestCase):
         self.body['server']['flavorRef'] = 3
         self.req.body = jsonutils.dumps(self.body)
         try:
-            server = self.controller.create(self.req, self.body).obj['server']
+            self.controller.create(self.req, self.body).obj['server']
             self.fail('expected quota to be exceeded')
         except webob.exc.HTTPRequestEntityTooLarge as e:
             self.assertEqual(e.explanation, expected_msg)

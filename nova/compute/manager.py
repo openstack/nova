@@ -689,7 +689,6 @@ class ComputeManager(manager.Manager):
                            'host (%(our_host)s).'),
                          {'instance_host': instance.host,
                           'our_host': our_host}, instance=instance)
-                destroy_disks = False
                 try:
                     network_info = self._get_instance_nw_info(context,
                                                               instance)
@@ -2280,7 +2279,7 @@ class ComputeManager(manager.Manager):
             except exception.InstanceNotFound:
                 LOG.info(_("Instance disappeared during terminate"),
                          instance=instance)
-            except Exception as error:
+            except Exception:
                 # As we're trying to delete always go to Error if something
                 # goes wrong that _delete_instance can't handle.
                 with excutils.save_and_reraise_exception():
@@ -5617,7 +5616,7 @@ class ComputeManager(manager.Manager):
                                   vm_state=vm_states.ACTIVE,
                                   task_state=None)
             raise error.inner_exception
-        except Exception as error:
+        except Exception:
             LOG.exception(_('Setting instance vm_state to ERROR'),
                           instance_uuid=instance_uuid)
             with excutils.save_and_reraise_exception():

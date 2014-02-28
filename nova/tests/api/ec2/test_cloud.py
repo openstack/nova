@@ -471,7 +471,7 @@ class CloudTestCase(test.TestCase):
             name = 'test name %i' % i
             descript = 'test description %i' % i
             create = self.cloud.create_security_group
-            result = create(self.context, name, descript)
+            create(self.context, name, descript)
 
         # 11'th group should fail
         self.assertRaises(exception.SecurityGroupLimitExceeded,
@@ -680,9 +680,8 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(revoke(self.context, group_id=sec['id'], **kwargs))
 
     def test_authorize_security_group_ingress_missing_protocol_params(self):
-        sec = db.security_group_create(self.context,
-                                       {'project_id': self.context.project_id,
-                                        'name': 'test'})
+        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
         self.assertRaises(exception.MissingParameter, authz, self.context,
                           'test')
@@ -786,10 +785,10 @@ class CloudTestCase(test.TestCase):
                 self.context, **kwargs)
 
     def test_delete_security_group_in_use_by_group(self):
-        group1 = self.cloud.create_security_group(self.context, 'testgrp1',
-                                                  "test group 1")
-        group2 = self.cloud.create_security_group(self.context, 'testgrp2',
-                                                  "test group 2")
+        self.cloud.create_security_group(self.context, 'testgrp1',
+                                         "test group 1")
+        self.cloud.create_security_group(self.context, 'testgrp2',
+                                         "test group 2")
         kwargs = {'groups': {'1': {'user_id': u'%s' % self.context.user_id,
                                    'group_name': u'testgrp2'}},
                  }
@@ -1348,14 +1347,14 @@ class CloudTestCase(test.TestCase):
                  'host': 'host1',
                  'vm_state': 'active',
                  'system_metadata': sys_meta}
-        inst1 = db.instance_create(self.context, args1)
+        db.instance_create(self.context, args1)
         args2 = {'reservation_id': 'b',
                  'image_ref': image_uuid,
                  'instance_type_id': 1,
                  'host': 'host1',
                  'vm_state': 'active',
                  'system_metadata': sys_meta}
-        inst2 = db.instance_create(self.context, args2)
+        db.instance_create(self.context, args2)
         result = self.cloud.describe_instances(self.context)
         self.assertEqual(len(result['reservationSet']), 2)
 
@@ -1367,13 +1366,13 @@ class CloudTestCase(test.TestCase):
         image_uuid = 'cedef40a-ed67-4d10-800e-17455edce175'
         sys_meta = flavors.save_flavor_info(
                             {}, flavors.get_flavor(1))
-        inst1 = db.instance_create(self.context, {'reservation_id': 'a',
-                                                  'image_ref': image_uuid,
-                                                  'instance_type_id': 1,
-                                                  'host': 'host1',
-                                                  'hostname': 'server-1234',
-                                                  'vm_state': 'active',
-                                                  'system_metadata': sys_meta})
+        db.instance_create(self.context, {'reservation_id': 'a',
+                                          'image_ref': image_uuid,
+                                          'instance_type_id': 1,
+                                          'host': 'host1',
+                                          'hostname': 'server-1234',
+                                          'vm_state': 'active',
+                                          'system_metadata': sys_meta})
         result = self.cloud.describe_instances(self.context)
         result = result['reservationSet'][0]
         instance = result['instancesSet'][0]
@@ -1728,13 +1727,13 @@ class CloudTestCase(test.TestCase):
 
         self.stubs.Set(s3.S3ImageService, 'create', fake_create)
         self.expected_name = 'fake_bucket/fake.img.manifest.xml'
-        result = register_image(self.context,
-                                image_location=self.expected_name,
-                                name=None)
+        register_image(self.context,
+                       image_location=self.expected_name,
+                       name=None)
         self.expected_name = 'an image name'
-        result = register_image(self.context,
-                                image_location='some_location',
-                                name=self.expected_name)
+        register_image(self.context,
+                       image_location='some_location',
+                       name=self.expected_name)
 
     def test_format_image(self):
         image = {
@@ -1818,7 +1817,7 @@ class CloudTestCase(test.TestCase):
         output = self.cloud.get_password_data(context=self.context,
                                               instance_id=[instance_id])
         self.assertEqual(output['passwordData'], 'fakepass')
-        rv = self.cloud.terminate_instances(self.context, [instance_id])
+        self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_console_output(self):
         instance_id = self._run_instance(
@@ -1831,7 +1830,7 @@ class CloudTestCase(test.TestCase):
                 'FAKE CONSOLE OUTPUT\nANOTHER\nLAST LINE')
         # TODO(soren): We need this until we can stop polling in the rpc code
         #              for unit tests.
-        rv = self.cloud.terminate_instances(self.context, [instance_id])
+        self.cloud.terminate_instances(self.context, [instance_id])
 
     def test_key_generation(self):
         result, private_key = self._create_key('test')
@@ -1890,7 +1889,7 @@ class CloudTestCase(test.TestCase):
         dummypub = f.readline().rstrip()
         f.close
         f = open(pubkey_path + '/dummy.fingerprint', 'r')
-        dummyfprint = f.readline().rstrip()
+        f.readline().rstrip()
         f.close
         key_name = 'testimportkey'
         public_key_material = base64.b64encode(dummypub)
@@ -2345,7 +2344,7 @@ class CloudTestCase(test.TestCase):
         kwargs = {'image_id': 'ami-1',
                   'instance_type': CONF.default_flavor,
                   'max_count': 1, }
-        instance_id = self._run_instance(**kwargs)
+        self._run_instance(**kwargs)
 
         self.assertRaises(exception.InstanceNotFound,
                           self.cloud.terminate_instances,
@@ -2360,8 +2359,8 @@ class CloudTestCase(test.TestCase):
 
         internal_uuid = db.get_instance_uuid_by_ec2_id(self.context,
                     ec2utils.ec2_id_to_id(instance_id))
-        instance = db.instance_update(self.context, internal_uuid,
-                                      {'disable_terminate': True})
+        db.instance_update(self.context, internal_uuid,
+                           {'disable_terminate': True})
 
         expected = {'instancesSet': [
                         {'instanceId': 'i-00000001',
@@ -2372,8 +2371,8 @@ class CloudTestCase(test.TestCase):
         result = self.cloud.terminate_instances(self.context, [instance_id])
         self.assertEqual(result, expected)
 
-        instance = db.instance_update(self.context, internal_uuid,
-                                      {'disable_terminate': False})
+        db.instance_update(self.context, internal_uuid,
+                           {'disable_terminate': False})
 
         expected = {'instancesSet': [
                         {'instanceId': 'i-00000001',

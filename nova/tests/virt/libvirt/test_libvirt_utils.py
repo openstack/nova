@@ -178,7 +178,6 @@ blah BLAH: bb
         user = 'user'
         self.flags(images_rbd_ceph_conf=conf, group='libvirt')
         self.flags(rbd_user=user, group='libvirt')
-        fn = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(libvirt_utils.utils,
                                  'execute')
         libvirt_utils.utils.execute('rbd', '-p', pool, 'ls', '--id',
@@ -197,7 +196,6 @@ blah BLAH: bb
         names = ['volume1', 'volume2', 'volume3']
         self.flags(images_rbd_ceph_conf=conf, group='libvirt')
         self.flags(rbd_user=user, group='libvirt')
-        fn = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(libvirt_utils.utils, 'execute')
         libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume1',
                                     '--id', user, '--conf', conf, attempts=3,

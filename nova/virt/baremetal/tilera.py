@@ -240,7 +240,7 @@ class Tilera(base.NodeDriver):
                  kernel
             ./fs_node_id/
         """
-        image_info = get_tftp_image_info(instance)
+        get_tftp_image_info(instance)
         (root_mb, swap_mb) = get_partition_sizes(instance)
         tilera_nfs_path = get_tilera_nfs_path(node['id'])
         image_file_path = get_image_file_path(instance)
@@ -286,7 +286,7 @@ class Tilera(base.NodeDriver):
                 bm_utils.unlink_without_raise(path)
 
         try:
-            macs = self._collect_mac_addresses(context, node)
+            self._collect_mac_addresses(context, node)
         except db_exc.DBError:
             pass
 

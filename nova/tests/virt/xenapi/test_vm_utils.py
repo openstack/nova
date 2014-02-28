@@ -1540,7 +1540,6 @@ class ScanSrTestCase(VMUtilsTestBase):
             details = ['SR_BACKEND_FAILURE_40', "", "", ""]
 
         session.XenAPI.Failure = FakeException
-        sr_scan_call_count = 0
 
         def fake_call_xenapi(*args):
             fake_call_xenapi.count += 1

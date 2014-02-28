@@ -105,7 +105,7 @@ class KeypairsTest(test.TestCase):
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 400)
-        res_dict = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
 
     def test_keypair_create_without_name(self):
         body = {'keypair': {'public_key': 'public key'}}
@@ -375,7 +375,7 @@ class KeypairsTest(test.TestCase):
         req.body = jsonutils.dumps(body)
         req.headers['Content-Type'] = 'application/json'
         res = req.get_response(self.app)
-        res_dict = jsonutils.loads(res.body)
+        jsonutils.loads(res.body)
         self.assertEqual(res.status_int, 400)
 
 

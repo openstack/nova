@@ -1089,8 +1089,8 @@ class LibvirtConnTestCase(test.TestCase):
         # This will exercise the failed code path still,
         # and won't require fakes and stubs of the iscsi discovery
         block_device_info = {}
-        cfg = conn.get_guest_config(instance_ref, [], None, disk_info,
-                                    None, block_device_info)
+        conn.get_guest_config(instance_ref, [], None, disk_info,
+                              None, block_device_info)
         instance_ref = db.instance_get(self.context, instance_ref['id'])
         self.assertEqual(instance_ref['root_device_name'], '/dev/vda')
 
@@ -3578,8 +3578,8 @@ class LibvirtConnTestCase(test.TestCase):
                            rescue=None, expect_xen_hvm=False, xen_only=False):
         user_context = context.RequestContext(self.user_id, self.project_id)
         instance_ref = db.instance_create(user_context, instance)
-        network_ref = db.project_get_networks(context.get_admin_context(),
-                                             self.project_id)[0]
+        db.project_get_networks(context.get_admin_context(),
+                                self.project_id)[0]
 
         xen_vm_mode = vm_mode.XEN
         if expect_xen_hvm:
@@ -3886,7 +3886,7 @@ class LibvirtConnTestCase(test.TestCase):
                           compute_info, compute_info, False)
 
     def test_check_can_live_migrate_dest_cleanup_works_correctly(self):
-        instance_ref = db.instance_create(self.context, self.test_instance)
+        db.instance_create(self.context, self.test_instance)
         dest_check_data = {"filename": "file",
                            "block_migration": True,
                            "disk_over_commit": False,
@@ -4741,10 +4741,8 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance,
                                             None,
                                             image_meta)
-        conn._create_image(context, instance,
-                           disk_info['mapping'])
-        xml = conn.to_xml(self.context, instance, None,
-                          disk_info, image_meta)
+        conn._create_image(context, instance, disk_info['mapping'])
+        conn.to_xml(self.context, instance, None, disk_info, image_meta)
 
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
@@ -4823,10 +4821,8 @@ class LibvirtConnTestCase(test.TestCase):
                                             instance,
                                             None,
                                             image_meta)
-        conn._create_image(context, instance,
-                           disk_info['mapping'])
-        xml = conn.to_xml(self.context, instance, None,
-                          disk_info, image_meta)
+        conn._create_image(context, instance, disk_info['mapping'])
+        conn.to_xml(self.context, instance, None, disk_info, image_meta)
 
         wantFiles = [
             {'filename': '356a192b7913b04c54574d18c28d46e6395428ab',
@@ -5453,7 +5449,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         def _check_xml_bus(name, xml, block_info):
             tree = etree.fromstring(xml)
-            got_disks = tree.findall('./devices/disk')
             got_disk_targets = tree.findall('./devices/disk/target')
             system_meta = utils.instance_sys_meta(instance)
             image_meta = utils.get_image_from_system_metadata(system_meta)
@@ -7639,11 +7634,11 @@ class IptablesFirewallTestCase(test.TestCase):
 
         admin_ctxt = context.get_admin_context()
         # add a rule and send the update message, check for 1 rule
-        provider_fw0 = db.provider_fw_rule_create(admin_ctxt,
-                                                  {'protocol': 'tcp',
-                                                   'cidr': '10.99.99.99/32',
-                                                   'from_port': 1,
-                                                   'to_port': 65535})
+        db.provider_fw_rule_create(admin_ctxt,
+                                   {'protocol': 'tcp',
+                                    'cidr': '10.99.99.99/32',
+                                    'from_port': 1,
+                                    'to_port': 65535})
         self.fw.refresh_provider_fw_rules()
         rules = [rule for rule in self.fw.iptables.ipv4['filter'].rules
                       if rule.chain == 'provider']
@@ -7709,9 +7704,7 @@ class NWFilterTestCase(test.TestCase):
                                                           ip_protocol='tcp',
                                                           cidr_ip='0.0.0.0/0')
 
-        security_group = db.security_group_get_by_name(self.context,
-                                                       'fake',
-                                                       'testgroup')
+        db.security_group_get_by_name(self.context, 'fake', 'testgroup')
         self.teardown_security_group()
 
     def teardown_security_group(self):
@@ -9238,7 +9231,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         instance = db.instance_create(self.c, self.inst)
         snapshot_id = 'snapshot-1234'
 
-        domain = FakeVirtDomain(fake_xml=self.dom_xml)
+        FakeVirtDomain(fake_xml=self.dom_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
@@ -9269,7 +9262,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
         instance = db.instance_create(self.c, self.inst)
         snapshot_id = '1234-9876'
 
-        domain = FakeVirtDomain(fake_xml=self.dom_xml)
+        FakeVirtDomain(fake_xml=self.dom_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
         self.mox.StubOutWithMock(self.conn, '_volume_api')
@@ -9300,7 +9293,7 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
     def test_volume_snapshot_delete_invalid_type(self):
         instance = db.instance_create(self.c, self.inst)
 
-        domain = FakeVirtDomain(fake_xml=self.dom_xml)
+        FakeVirtDomain(fake_xml=self.dom_xml)
 
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
         self.mox.StubOutWithMock(self.conn, '_volume_api')

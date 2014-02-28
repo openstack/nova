@@ -195,7 +195,6 @@ class VMwareVMOps(object):
         (file_type, is_iso) = self._get_disk_format(image_meta)
 
         client_factory = self._session._get_vim().client.factory
-        service_content = self._session._get_vim().get_service_content()
         ds = vm_util.get_datastore_ref_and_name(self._session, self._cluster,
                  datastore_regex=self._datastore_regex)
         data_store_ref = ds[0]
@@ -563,7 +562,6 @@ class VMwareVMOps(object):
                          datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
         instance_name = instance['name']
-        instance_uuid = instance['uuid']
         client_factory = self._session._get_vim().client.factory
         devices = self._session._call_method(vim_util,
                                     "get_dynamic_property", vm_ref,

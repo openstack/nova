@@ -156,7 +156,6 @@ class FilterScheduler(driver.Scheduler):
                            'scheduler.run_instance.scheduled', payload)
 
         # Update the metadata if necessary
-        scheduler_hints = filter_properties.get('scheduler_hints') or {}
         try:
             updated_instance = driver.instance_update_db(context,
                                                          instance_uuid)

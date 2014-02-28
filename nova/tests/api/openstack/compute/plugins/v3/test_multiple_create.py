@@ -155,7 +155,6 @@ class ServersControllerCreateTest(test.TestCase):
             server = self.controller.create(req, body=body).obj['server']
 
     def test_create_instance_with_multiple_create_disabled(self):
-        ret_res_id = True
         min_count = 2
         max_count = 3
         params = {

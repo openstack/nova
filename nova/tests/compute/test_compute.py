@@ -402,8 +402,7 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_attach_volume_serial(self):
         fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
         with (mock.patch.object(cinder.API, 'get_volume_encryption_metadata',
-                                return_value={})
-        ) as mock_get_vol_enc:
+                                return_value={})):
             instance = self._create_fake_instance()
             self.compute.attach_volume(self.context, self.volume_id,
                                        '/dev/vdb', instance, bdm=fake_bdm)
@@ -4171,7 +4170,6 @@ class ComputeTestCase(BaseTestCase):
         orig_mig_save = migration.save
         orig_inst_save = instance.save
         network_api = self.compute.network_api
-        conductor_api = self.compute.conductor_api
 
         self.mox.StubOutWithMock(network_api, 'setup_networks_on_host')
         self.mox.StubOutWithMock(network_api,
@@ -5227,7 +5225,6 @@ class ComputeTestCase(BaseTestCase):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
 
-        src_host = 'fake-src-host'
         instance = self._create_fake_instance_obj(
             {'host': 'src_host',
              'task_state': task_states.MIGRATING})
@@ -5798,7 +5795,7 @@ class ComputeTestCase(BaseTestCase):
 
         with mock.patch.object(
                 self.compute, '_get_instances_on_driver',
-                return_value=[instance]) as _get_instances_on_driver:
+                return_value=[instance]):
             try:
                 # We cannot simply use an assertRaises here because the
                 # exception raised is too generally "Exception". To be sure
@@ -6779,9 +6776,9 @@ class ComputeTestCase(BaseTestCase):
                    'instance_uuid': instance.uuid})
         bdm.create(self.context)
 
-        dev = self.compute.reserve_block_device_name(
-                self.context, instance, '/dev/vdb',
-                'fake-volume-id', 'virtio', 'disk')
+        self.compute.reserve_block_device_name(self.context, instance,
+                                               '/dev/vdb', 'fake-volume-id',
+                                               'virtio', 'disk')
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 self.context, instance.uuid)
@@ -7216,7 +7213,6 @@ class ComputeAPITestCase(BaseTestCase):
 
         # Make sure Compute API updates the image_ref before casting to
         # compute manager.
-        orig_update = self.compute_api.update
         info = {'image_ref': None, 'clean': False}
 
         def fake_rpc_rebuild(context, **kwargs):
@@ -7877,13 +7873,13 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_destroy(c, instance4['uuid'])
 
     def test_all_instance_metadata(self):
-        instance1 = self._create_fake_instance({'metadata': {'key1': 'value1'},
-                                               'user_id': 'user1',
-                                               'project_id': 'project1'})
+        self._create_fake_instance({'metadata': {'key1': 'value1'},
+                                                'user_id': 'user1',
+                                                'project_id': 'project1'})
 
-        instance2 = self._create_fake_instance({'metadata': {'key2': 'value2'},
-                                               'user_id': 'user2',
-                                               'project_id': 'project2'})
+        self._create_fake_instance({'metadata': {'key2': 'value2'},
+                                                'user_id': 'user2',
+                                                'project_id': 'project2'})
 
         _context = self.context
         _context.user_id = 'user1'
@@ -9446,8 +9442,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         values = _create_service_entries(self.context)
         fake_zone = values.keys()[0]
         fake_host = values[fake_zone][0]
-        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
-                                               fake_zone, fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                       fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'name': 'new_fake_aggregate'}
@@ -9471,8 +9467,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_host = values[fake_zone][0]
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host)
-        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
-                                               fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                       fake_host)
         metadata = {'availability_zone': 'new_fake_zone'}
         fake_notifier.NOTIFICATIONS = []
         aggr1 = self.api.update_aggregate(self.context, aggr1['id'],
@@ -9492,8 +9488,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         values = _create_service_entries(self.context)
         fake_zone = values.keys()[0]
         fake_host = values[fake_zone][0]
-        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
-                                               fake_zone, fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                       fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'availability_zone': 'another_zone'}
@@ -9521,9 +9517,9 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         values = _create_service_entries(self.context)
         fake_zone = values.keys()[0]
         fake_host = values[fake_zone][0]
-        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
-                                               CONF.default_availability_zone,
-                                               fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                       CONF.default_availability_zone,
+                                       fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'availability_zone': 'another_zone'}
@@ -9575,8 +9571,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         values = _create_service_entries(self.context)
         fake_zone = values.keys()[0]
         fake_host = values[fake_zone][0]
-        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
-                                               fake_zone, fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                       fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'foo_key2': 'foo_value3'}
@@ -9602,8 +9598,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_host = values[fake_zone][0]
         aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
                                                fake_zone, fake_host)
-        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
-                                               fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                       fake_host)
         metadata = {'availability_zone': 'new_fake_zone'}
         fake_notifier.NOTIFICATIONS = []
         aggr1 = self.api.update_aggregate_metadata(self.context,
@@ -9623,15 +9619,14 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         values = _create_service_entries(self.context)
         fake_zone = values.keys()[0]
         fake_host = values[fake_zone][0]
-        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
-                                               fake_zone, fake_host)
+        self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                       fake_zone, fake_host)
         aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
                                                fake_host)
         metadata = {'availability_zone': 'another_zone'}
         self.assertRaises(exception.InvalidAggregateAction,
                           self.api.update_aggregate_metadata,
                           self.context, aggr2['id'], metadata)
-        fake_host2 = values[fake_zone][1]
         aggr3 = self._init_aggregate_with_host(None, 'fake_aggregate3',
                                                None, fake_host)
         metadata = {'availability_zone': fake_zone}

@@ -30,7 +30,6 @@ from nova import db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import instance_action as instance_action_obj
@@ -974,7 +973,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
     def test_check_can_live_migrate_source(self):
         is_volume_backed = 'volume_backed'
-        bdms = 'bdms'
         dest_check_data = dict(foo='bar')
         db_instance = fake_instance.fake_db_instance()
         instance = objects.Instance._from_db_object(
@@ -987,7 +985,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'check_can_live_migrate_source')
 
-        instance_p = obj_base.obj_to_primitive(instance)
         self.compute.compute_api.is_volume_backed_instance(
                 self.context, instance).AndReturn(is_volume_backed)
         self.compute.driver.check_can_live_migrate_source(

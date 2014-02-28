@@ -267,7 +267,6 @@ def _make_image_fixtures():
 
     # Snapshot for User 1
     uuid = 'aa640691-d1a7-4a67-9d3c-d35ee6b3cc74'
-    server_ref = 'http://localhost/v2/servers/' + uuid
     snapshot_properties = {'instance_uuid': uuid, 'user_id': 'fake'}
     for status in ('queued', 'saving', 'active', 'killed',
                    'deleted', 'pending_delete'):

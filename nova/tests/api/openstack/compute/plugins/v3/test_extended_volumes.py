@@ -252,10 +252,10 @@ class ExtendedVolumesTest(test.TestCase):
 
     def test_attach_volume_disk_bus_and_disk_dev(self):
         url = "/v3/servers/%s/action" % UUID1
-        res = self._make_request(url, {"attach": {"volume_id": UUID1,
-                                                  "device": "/dev/vdb",
-                                                  "disk_bus": "ide",
-                                                  "device_type": "cdrom"}})
+        self._make_request(url, {"attach": {"volume_id": UUID1,
+                                            "device": "/dev/vdb",
+                                            "disk_bus": "ide",
+                                            "device_type": "cdrom"}})
 
     def test_attach_volume_with_bad_id(self):
         url = "/v3/servers/%s/action" % UUID1

@@ -49,7 +49,6 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
     def test_upload_image(self):
         store = vdi_through_dev.UploadToGlanceAsRawTgz(
             'context', 'session', 'instance', ['vdi0', 'vdi1'], 'id')
-        image_service = self.mox.CreateMock(glance.GlanceImageService)
         self.mox.StubOutWithMock(store, '_perform_upload')
         self.mox.StubOutWithMock(store, '_get_vdi_ref')
         self.mox.StubOutWithMock(vdi_through_dev, 'glance')
@@ -119,7 +118,7 @@ class TestUploadToGlanceAsRawTgz(test.NoDBTestCase):
 
         self.mox.ReplayAll()
 
-        result = store._get_virtual_size()
+        store._get_virtual_size()
 
     def test__create_pipe(self):
         store = vdi_through_dev.UploadToGlanceAsRawTgz(

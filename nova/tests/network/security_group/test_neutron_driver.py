@@ -194,7 +194,6 @@ class TestNeutronDriver(test.NoDBTestCase):
                  {'id': '2', 'device_id': 'dev_1', 'security_groups': ['2']}]
         port_list = {'ports': ports}
         sg1 = {'id': '1', 'name': 'wol'}
-        sg2 = {'id': '2', 'name': 'eor'}
         # User doesn't have access to sg2
         security_groups_list = {'security_groups': [sg1]}
 

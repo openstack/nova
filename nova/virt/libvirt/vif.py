@@ -427,7 +427,6 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).plug(instance, vif)
 
-        network = vif['network']
         iface_id = self.get_ovs_interfaceid(vif)
         dev = self.get_vif_devname(vif)
         linux_net.create_tap_dev(dev)

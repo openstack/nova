@@ -854,7 +854,7 @@ class ComputeTaskManager(base.Base):
                     self.compute_rpcapi.unshelve_instance(
                             context, instance, host, image=image,
                             filter_properties=filter_properties, node=node)
-            except exception.NoValidHost as ex:
+            except exception.NoValidHost:
                 instance.task_state = None
                 instance.save()
                 LOG.warning(_("No valid host found for unshelve instance"),

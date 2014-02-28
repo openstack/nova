@@ -111,7 +111,6 @@ class FloatingIP(object):
         if not uuidutils.is_uuid_like(instance_uuid):
             instance_uuid = kwargs.get('instance_uuid')
         project_id = kwargs.get('project_id')
-        requested_networks = kwargs.get('requested_networks')
         # call the next inherited class's allocate_for_instance()
         # which is currently the NetworkManager version
         # do this first so fixed ip is already allocated
@@ -378,7 +377,7 @@ class FloatingIP(object):
                 self.l3driver.add_floating_ip(floating_address, fixed_address,
                         interface, fixed['network'])
             except processutils.ProcessExecutionError as e:
-                with excutils.save_and_reraise_exception() as exc_ctxt:
+                with excutils.save_and_reraise_exception():
                     try:
                         floating_ip_obj.FloatingIP.disassociate(
                             context, floating_address)

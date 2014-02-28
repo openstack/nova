@@ -72,7 +72,7 @@ class _TestDNSDomain(object):
     def test_get_all(self):
         with mock.patch.object(db, 'dnsdomain_get_all') as get:
             get.return_value = [fake_dnsd]
-            dns_domains = dns_domain.DNSDomainList.get_all(self.context)
+            dns_domain.DNSDomainList.get_all(self.context)
 
 
 class TestDNSDomainObject(test_objects._LocalTest,
