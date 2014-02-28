@@ -28,7 +28,7 @@ class MockClient(object):
     def _fake_id(self):
         return uuid.uuid4().hex + uuid.uuid4().hex
 
-    def is_daemon_running(self):
+    def _is_daemon_running(self):
         return True
 
     @nova.virt.docker.client.filter_data
