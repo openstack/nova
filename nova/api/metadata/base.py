@@ -57,7 +57,6 @@ CONF = cfg.CONF
 CONF.register_opts(metadata_opts)
 CONF.import_opt('dhcp_domain', 'nova.network.manager')
 
-
 VERSIONS = [
     '1.0',
     '2007-01-19',
@@ -79,6 +78,8 @@ OPENSTACK_VERSIONS = [
     HAVANA,
 ]
 
+VERSION = "version"
+CONTENT = "content"
 CONTENT_DIR = "content"
 MD_JSON_NAME = "meta_data.json"
 VD_JSON_NAME = "vendor_data.json"
@@ -190,6 +191,22 @@ class InstanceMetadata():
         self.vddriver = vdclass(instance=instance, address=address,
                                 extra_md=extra_md, network_info=network_info)
 
+        self.route_configuration = None
+
+    def _route_configuration(self):
+        if self.route_configuration:
+            return self.route_configuration
+
+        path_handlers = {UD_NAME: self._user_data,
+                         PASS_NAME: self._password,
+                         VD_JSON_NAME: self._vendor_data,
+                         MD_JSON_NAME: self._metadata_as_json,
+                         VERSION: self._handle_version,
+                         CONTENT: self._handle_content}
+
+        self.route_configuration = RouteConfiguration(path_handlers)
+        return self.route_configuration
+
     def get_ec2_metadata(self, version):
         if version == "latest":
             version = VERSIONS[-1]
@@ -275,71 +292,24 @@ class InstanceMetadata():
 
     def get_openstack_item(self, path_tokens):
         if path_tokens[0] == CONTENT_DIR:
-            if len(path_tokens) == 1:
-                raise KeyError("no listing for %s" % "/".join(path_tokens))
-            if len(path_tokens) != 2:
-                raise KeyError("Too many tokens for /%s" % CONTENT_DIR)
-            return self.content[path_tokens[1]]
+            return self._handle_content(path_tokens)
+        return self._route_configuration().handle_path(path_tokens)
 
-        version = path_tokens[0]
-        if version == "latest":
-            version = OPENSTACK_VERSIONS[-1]
-
-        if version not in OPENSTACK_VERSIONS:
-            raise InvalidMetadataVersion(version)
-
-        path = '/'.join(path_tokens[1:])
-
-        if len(path_tokens) == 1:
-            # request for /version, give a list of what is available
-            ret = [MD_JSON_NAME]
-            if self.userdata_raw is not None:
-                ret.append(UD_NAME)
-            if self._check_os_version(GRIZZLY, version):
-                ret.append(PASS_NAME)
-            if self._check_os_version(HAVANA, version):
-                ret.append(VD_JSON_NAME)
-            return ret
-
-        if path == UD_NAME:
-            if self.userdata_raw is None:
-                raise KeyError(path)
-            return self.userdata_raw
-
-        if path == PASS_NAME and self._check_os_version(GRIZZLY, version):
-            return password.handle_password
-
-        if path == VD_JSON_NAME and self._check_os_version(HAVANA, version):
-            return json.dumps(self.vddriver.get())
-
-        if path != MD_JSON_NAME:
-            raise KeyError(path)
-
-        metadata = {}
-        metadata['uuid'] = self.uuid
-
+    def _metadata_as_json(self, version, path):
+        metadata = {'uuid': self.uuid}
         if self.launch_metadata:
             metadata['meta'] = self.launch_metadata
-
         if self.files:
             metadata['files'] = self.files
-
         if self.extra_md:
             metadata.update(self.extra_md)
-
-        if self.launch_metadata:
-            metadata['meta'] = self.launch_metadata
-
         if self.network_config:
             metadata['network_config'] = self.network_config
-
         if self.instance['key_name']:
             metadata['public_keys'] = {
                 self.instance['key_name']: self.instance['key_data']
             }
-
         metadata['hostname'] = self._get_hostname()
-
         metadata['name'] = self.instance['display_name']
         metadata['launch_index'] = self.instance['launch_index']
         metadata['availability_zone'] = self.availability_zone
@@ -347,11 +317,41 @@ class InstanceMetadata():
         if self._check_os_version(GRIZZLY, version):
             metadata['random_seed'] = base64.b64encode(os.urandom(512))
 
-        data = {
-            MD_JSON_NAME: json.dumps(metadata),
-        }
+        return json.dumps(metadata)
 
-        return data[path]
+    def _handle_content(self, path_tokens):
+        if len(path_tokens) == 1:
+            raise KeyError("no listing for %s" % "/".join(path_tokens))
+        if len(path_tokens) != 2:
+            raise KeyError("Too many tokens for /%s" % CONTENT_DIR)
+        return self.content[path_tokens[1]]
+
+    def _handle_version(self, version, path):
+        # request for /version, give a list of what is available
+        ret = [MD_JSON_NAME]
+        if self.userdata_raw is not None:
+            ret.append(UD_NAME)
+        if self._check_os_version(GRIZZLY, version):
+            ret.append(PASS_NAME)
+        if self._check_os_version(HAVANA, version):
+            ret.append(VD_JSON_NAME)
+
+        return ret
+
+    def _user_data(self, version, path):
+        if self.userdata_raw is None:
+            raise KeyError(path)
+        return self.userdata_raw
+
+    def _password(self, version, path):
+        if self._check_os_version(GRIZZLY, version):
+            return password.handle_password
+        raise KeyError(path)
+
+    def _vendor_data(self, version, path):
+        if self._check_os_version(HAVANA, version):
+            return json.dumps(self.vddriver.get())
+        raise KeyError(path)
 
     def _check_version(self, required, requested, versions=VERSIONS):
         return versions.index(requested) >= versions.index(required)
@@ -443,6 +443,36 @@ class InstanceMetadata():
 
         for (cid, content) in self.content.iteritems():
             yield ('%s/%s/%s' % ("openstack", CONTENT_DIR, cid), content)
+
+
+class RouteConfiguration(object):
+    """Routes metadata paths to request handlers."""
+
+    def __init__(self, path_handler):
+        self.path_handlers = path_handler
+
+    def _version(self, version):
+        if version == "latest":
+            version = OPENSTACK_VERSIONS[-1]
+
+        if version not in OPENSTACK_VERSIONS:
+            raise InvalidMetadataVersion(version)
+
+        return version
+
+    def handle_path(self, path_tokens):
+        version = self._version(path_tokens[0])
+        if len(path_tokens) == 1:
+            path = VERSION
+        else:
+            path = '/'.join(path_tokens[1:])
+
+        path_handler = self.path_handlers[path]
+
+        if path_handler is None:
+            raise KeyError(path)
+
+        return path_handler(version, path)
 
 
 class VendorDataDriver(object):
