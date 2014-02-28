@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import json
 import os
 
 import fixtures
@@ -42,3 +43,31 @@ class PolicyFixture(fixtures.Fixture):
         common_policy.set_rules(common_policy.Rules(
                 dict((k, common_policy.parse_rule(v))
                      for k, v in rules.items())))
+
+
+class RoleBasedPolicyFixture(fixtures.Fixture):
+
+    def __init__(self, role="admin", *args, **kwargs):
+        super(RoleBasedPolicyFixture, self).__init__(*args, **kwargs)
+        self.role = role
+
+    def setUp(self):
+        """Copy live policy.json file and convert all actions to
+           allow users of the specified role only
+        """
+        super(RoleBasedPolicyFixture, self).setUp()
+        policy = json.load(open(CONF.policy_file))
+
+        # Convert all actions to require specified role
+        for action, rule in policy.iteritems():
+            policy[action] = 'role:%s' % self.role
+
+        self.policy_dir = self.useFixture(fixtures.TempDir())
+        self.policy_file_name = os.path.join(self.policy_dir.path,
+                                            'policy.json')
+        with open(self.policy_file_name, 'w') as policy_file:
+            json.dump(policy, policy_file)
+        CONF.set_override('policy_file', self.policy_file_name)
+        nova.policy.reset()
+        nova.policy.init()
+        self.addCleanup(nova.policy.reset)
