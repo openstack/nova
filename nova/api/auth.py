@@ -96,9 +96,9 @@ class NovaKeystoneContext(wsgi.Middleware):
 
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
-        project_domain_id = req.headers.get('X_PROJECT_DOMAIN_ID')
-        user_domain_id = req.headers.get('X_USER_DOMAIN_ID')
-        domain_id = req.headers.get('X_DOMAIN_ID')
+        project_domain_id = req.headers['X_PROJECT_DOMAIN_ID']
+        user_domain_id = req.headers['X_USER_DOMAIN_ID']
+        domain_id = req.headers['X_DOMAIN_ID']
         if domain_id is None:
             LOG.debug("X_DOMAIN_ID not found in request")
         if user_domain_id is None:
