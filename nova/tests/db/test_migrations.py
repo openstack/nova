@@ -445,7 +445,7 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
                 self.PASSWD, self.DATABASE)
         engine = sqlalchemy.create_engine(connect_string)
         (user, password, database, host) = \
-                get_mysql_connection_info(urlparse.urlparse(connect_string))
+                get_pgsql_connection_info(urlparse.urlparse(connect_string))
         self.engines[database] = engine
         self.test_databases[database] = connect_string
 
