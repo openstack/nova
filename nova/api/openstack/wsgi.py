@@ -978,6 +978,8 @@ class Resource(wsgi.Application):
         LOG.debug(_("domain_id: %s") % domain_id)
 
         context = request.environ.get('nova.context')
+
+        LOG.debug(_("context.domain_id: %s") % context.domain_id)
         if (context and domain_id and (domain_id != context.domain_id)):
             msg = _("Malformed request URL: URL's domain_id '%(domain_id)s'"
                     " doesn't match Context's domain_id"

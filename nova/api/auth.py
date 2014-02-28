@@ -99,6 +99,7 @@ class NovaKeystoneContext(wsgi.Middleware):
         project_domain_id = req.headers['X_PROJECT_DOMAIN_ID']
         user_domain_id = req.headers['X_USER_DOMAIN_ID']
         domain_id = req.headers['X_DOMAIN_ID']
+        LOG.debug(_("domain_id: %s") % domain_id)
         if domain_id is None:
             LOG.debug("X_DOMAIN_ID not found in request")
         if user_domain_id is None:
