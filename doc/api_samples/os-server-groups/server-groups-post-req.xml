@@ -1,5 +1,5 @@
 <server_group name="test">
   <policies>
-  <policy>test_policy</policy>
+  <policy>anti-affinity</policy>
   </policies>
 </server_group>

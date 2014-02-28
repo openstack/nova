@@ -29,6 +29,7 @@ from nova.openstack.common import log as logging
 from nova import utils
 
 LOG = logging.getLogger(__name__)
+SUPPORTED_POLICIES = ['anti-affinity', 'affinity']
 
 authorize = extensions.extension_authorizer('compute', 'server_groups')
 
@@ -153,12 +154,38 @@ class ServerGroupController(wsgi.Controller):
         server_group['metadata'] = group.metadetails or {}
         return server_group
 
+    def _validate_policies(self, policies):
+        """Validate the policies.
+
+        Validates that there are no contradicting policies, for example
+        'anti-affinity' and 'affinity' in the same group.
+        :param policies:     the given policies of the server_group
+        """
+        if not policies:
+            return
+        if ('anti-affinity' in policies and
+            'affinity' in policies):
+            msg = _("Conflicting policies configured!")
+            raise nova.exception.InvalidInput(reason=msg)
+        not_supported = []
+        for policy in policies:
+            if policy not in SUPPORTED_POLICIES:
+                not_supported.append(policy)
+
+        if not_supported:
+            msg = _("Invalid policies: %s") % ', '.join(not_supported)
+            raise nova.exception.InvalidInput(reason=msg)
+
     def _validate_input_body(self, body, entity_name):
         if not self.is_valid_body(body, entity_name):
             msg = _("the body is invalid.")
             raise nova.exception.InvalidInput(reason=msg)
 
         subbody = dict(body[entity_name])
+
+        policies = subbody.get('policies')
+        # Validate that the policies do not contradict one another
+        self._validate_policies(policies)
 
         expected_fields = ['name', 'policies']
         for field in expected_fields:

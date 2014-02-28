@@ -2,7 +2,7 @@
 <server_groups xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
   <server_group id="%(id)s" name="test">
   <policies>
-  <policy>test_policy</policy>
+  <policy>anti-affinity</policy>
   </policies>
   <members/>
   <metadata/>

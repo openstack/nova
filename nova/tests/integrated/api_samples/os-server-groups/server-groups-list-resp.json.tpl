@@ -3,7 +3,7 @@
         {
             "id": "%(id)s",
             "name": "test",
-            "policies": ["test_policy"],
+            "policies": ["anti-affinity"],
             "members": [],
             "metadata": {}
         }
