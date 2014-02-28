@@ -2783,7 +2783,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute.snapshot_instance(self.context, image_id='fakesnap',
                                        instance=inst_obj)
 
-    def _test_snapshot_fails(self, raise_during_cleanup):
+    def _test_snapshot_fails(self, raise_during_cleanup, method,
+                             expected_state=True):
         def fake_snapshot(*args, **kwargs):
             raise test.TestingException()
 
@@ -2799,18 +2800,41 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
 
         inst_obj = self._get_snapshotting_instance()
-        self.assertRaises(test.TestingException,
-                          self.compute.snapshot_instance,
-                          self.context, image_id='fakesnap',
-                          instance=inst_obj)
-        self.assertTrue(self.fake_image_delete_called)
+        if method == 'snapshot':
+            self.assertRaises(test.TestingException,
+                              self.compute.snapshot_instance,
+                              self.context, image_id='fakesnap',
+                              instance=inst_obj)
+        else:
+            self.assertRaises(test.TestingException,
+                              self.compute.backup_instance,
+                              self.context, image_id='fakesnap',
+                              instance=inst_obj, backup_type='fake',
+                              rotation=1)
+
+        self.assertEqual(expected_state, self.fake_image_delete_called)
         self._assert_state({'task_state': None})
 
+    @mock.patch.object(nova.compute.manager.ComputeManager, '_rotate_backups')
+    def test_backup_fails(self, mock_rotate):
+        self._test_snapshot_fails(False, 'backup')
+
+    @mock.patch.object(nova.compute.manager.ComputeManager, '_rotate_backups')
+    def test_backup_fails_cleanup_ignores_exception(self, mock_rotate):
+        self._test_snapshot_fails(True, 'backup')
+
+    @mock.patch.object(nova.compute.manager.ComputeManager, '_rotate_backups')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_do_snapshot_instance')
+    def test_backup_fails_rotate_backup(self, mock_snap, mock_rotate):
+        mock_rotate.side_effect = test.TestingException()
+        self._test_snapshot_fails(True, 'backup', False)
+
     def test_snapshot_fails(self):
-        self._test_snapshot_fails(False)
+        self._test_snapshot_fails(False, 'snapshot')
 
     def test_snapshot_fails_cleanup_ignores_exception(self):
-        self._test_snapshot_fails(True)
+        self._test_snapshot_fails(True, 'snapshot')
 
     def test_snapshot_fails_with_glance_error(self):
         def fake_snapshot(*args, **kwargs):
