@@ -1813,6 +1813,8 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                          vm_state is SOFT_DELETED.
     """
 
+    LOG.debug("entrou no instance_get_all_by_filters o alchemy")
+
     sort_fn = {'desc': desc, 'asc': asc}
 
     if CONF.database.slave_connection == '':
