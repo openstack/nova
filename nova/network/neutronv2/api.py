@@ -334,7 +334,7 @@ class API(base_api.NetworkAPI):
                 with excutils.save_and_reraise_exception():
                     for port_id in touched_port_ids:
                         try:
-                            port_req_body = {'port': {'device_id': None}}
+                            port_req_body = {'port': {'device_id': ''}}
                             # Requires admin creds to set port bindings
                             if self._has_port_binding_extension(context):
                                 port_req_body['port']['binding:host_id'] = None
