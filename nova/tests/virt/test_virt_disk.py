@@ -163,19 +163,16 @@ class VirtDiskTest(test.NoDBTestCase):
         vfs = vfsguestfs.VFSGuestFS("/some/file", "qcow2")
         vfs.setup()
 
-        diskapi._inject_metadata_into_fs([{"key": "foo",
-                                           "value": "bar"},
-                                          {"key": "eek",
-                                           "value": "wizz"}], vfs)
+        diskapi._inject_metadata_into_fs({"foo": "bar", "eek": "wizz"}, vfs)
 
         self.assertIn("/meta.js", vfs.handle.files)
-        self.assertEqual(vfs.handle.files["/meta.js"],
-                         {'content': '{"foo": "bar", ' +
+        self.assertEqual({'content': '{"foo": "bar", ' +
                                      '"eek": "wizz"}',
                           'gid': 100,
                           'isdir': False,
                           'mode': 0o700,
-                          'uid': 100})
+                          'uid': 100},
+                         vfs.handle.files["/meta.js"])
         vfs.teardown()
 
     def test_inject_admin_password(self):
