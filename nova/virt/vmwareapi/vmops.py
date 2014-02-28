@@ -1479,14 +1479,15 @@ class VMwareVMOps(object):
             network = vif['network']
             ip_v4 = netmask_v4 = gateway_v4 = broadcast_v4 = dns = None
             subnets_v4 = [s for s in network['subnets'] if s['version'] == 4]
-            if len(subnets_v4[0]['ips']) > 0:
-                ip_v4 = subnets_v4[0]['ips'][0]
-            if len(subnets_v4[0]['dns']) > 0:
-                dns = subnets_v4[0]['dns'][0]['address']
+            if len(subnets_v4) > 0:
+                if len(subnets_v4[0]['ips']) > 0:
+                    ip_v4 = subnets_v4[0]['ips'][0]
+                if len(subnets_v4[0]['dns']) > 0:
+                    dns = subnets_v4[0]['dns'][0]['address']
 
-            netmask_v4 = str(subnets_v4[0].as_netaddr().netmask)
-            gateway_v4 = subnets_v4[0]['gateway']['address']
-            broadcast_v4 = str(subnets_v4[0].as_netaddr().broadcast)
+                netmask_v4 = str(subnets_v4[0].as_netaddr().netmask)
+                gateway_v4 = subnets_v4[0]['gateway']['address']
+                broadcast_v4 = str(subnets_v4[0].as_netaddr().broadcast)
 
             interface_str = ";".join([vif['address'],
                                       ip_v4 and ip_v4['address'] or '',
