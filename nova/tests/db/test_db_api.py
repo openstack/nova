@@ -1471,6 +1471,23 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                 {'display_name': 't.*st.'})
         self._assertEqualListsOfInstances(result, [i1, i2])
 
+    def test_instance_get_all_by_filters_changes_since(self):
+        i1 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:25.000000')
+        i2 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:26.000000')
+        changes_since = iso8601.parse_date('2013-12-05T15:03:25.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-since':
+                                                 changes_since})
+        self._assertEqualListsOfInstances([i1, i2], result)
+
+        changes_since = iso8601.parse_date('2013-12-05T15:03:26.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-since':
+                                                 changes_since})
+        self._assertEqualListsOfInstances([i2], result)
+
     def test_instance_get_all_by_filters_exact_match(self):
         instance = self.create_instance_with_args(host='host1')
         self.create_instance_with_args(host='host12')
