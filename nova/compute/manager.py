@@ -2955,7 +2955,6 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event
     def rescue_instance(self, context, instance, rescue_password,
                         rescue_image_ref=None):
-        """Rescue an instance on this host."""
         context = context.elevated()
         LOG.audit(_('Rescuing'), context=context, instance=instance)
 
@@ -3004,7 +3003,6 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event
     @wrap_instance_fault
     def unrescue_instance(self, context, instance):
-        """Rescue an instance on this host."""
         context = context.elevated()
         LOG.audit(_('Unrescuing'), context=context, instance=instance)
 
