@@ -984,7 +984,7 @@ class Resource(wsgi.Application):
             msg = _("Malformed request URL: URL's domain_id '%(domain_id)s'"
                     " doesn't match Context's domain_id"
                     " '%(context_domain_id)s'") % \
-                    {'project_id': domain_id,
+                    {'domain_id': domain_id,
                      'context_domain_id': context.domain_id}
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
         elif (context and (project_id is not None)
