@@ -94,12 +94,17 @@ class InjectContext(wsgi.Middleware):
 class NovaKeystoneContext(wsgi.Middleware):
     """Make a request context from keystone headers."""
 
+    domain_info = ['X_DOMAIN', 'X_PROJECT_DOMAIN_ID', 'X_USER_DOMAIN_ID']
+
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         project_domain_id = req.headers.get('X_PROJECT_DOMAIN_ID')
-        domain_id = req.headers.get('X_USER_DOMAIN_ID')
-        if domain_id is None:
+        user_domain_id = req.headers.get('X_USER_DOMAIN_ID')
+        domain_id = req.headers.get('X_DOMAIN')
+        if user_domain_id is None:
             LOG.debug("X_USER_DOMAIN_ID not found in request")
+        if domain_id is None:
+            LOG.debug("X_DOMAIN_ID not found in request")
         if project_domain_id is None:
             LOG.debug("X_PROJECT_DOMAIN_ID not found in request")
         user_id = req.headers.get('X_USER')
@@ -146,7 +151,8 @@ class NovaKeystoneContext(wsgi.Middleware):
                                      remote_address=remote_address,
                                      service_catalog=service_catalog,
                                      domain_id=domain_id,
-                                     project_domain_id=project_domain_id)
+                                     project_domain_id=project_domain_id,
+                                     user_domain_id=user_domain_id)
 
         req.environ['nova.context'] = ctx
         return self.application

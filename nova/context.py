@@ -49,7 +49,8 @@ class RequestContext(object):
                  request_id=None, auth_token=None, overwrite=True,
                  quota_class=None, user_name=None, project_name=None,
                  service_catalog=None, instance_lock_checked=False,
-                 domain_id=None, project_domain_id=None, **kwargs):
+                 domain_id=None, project_domain_id=None, user_domain_id=None,
+                 **kwargs):
         """
         :param read_deleted: 'no' indicates deleted records are hidden, 'yes'
             indicates deleted records are visible, 'only' indicates that
@@ -67,6 +68,7 @@ class RequestContext(object):
 
         self.domain_id = domain_id
         self.project_domain_id = project_domain_id
+        self.user_domain_id = user_domain_id
         self.user_id = user_id
         self.project_id = project_id
         self.roles = roles or []
