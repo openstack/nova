@@ -973,6 +973,10 @@ class Resource(wsgi.Application):
 
         project_id = action_args.pop("project_id", None)
         domain_id = action_args.pop("domain_id", None)
+
+        LOG.debug(_("Project id: %s") % project_id)
+        LOG.debug(_("domain_id: %s") % domain_id)
+
         context = request.environ.get('nova.context')
         if (context and domain_id and (domain_id != context.domain_id)):
             msg = _("Malformed request URL: URL's domain_id '%(domain_id)s'"
@@ -981,7 +985,8 @@ class Resource(wsgi.Application):
                     {'project_id': project_id,
                      'context_project_id': context.domain_id}
             return Fault(webob.exc.HTTPBadRequest(explanation=msg))
-        elif (context and project_id and (project_id != context.project_id)):
+        elif (context and (project_id is not None)
+              and (project_id != context.project_id)):
             msg = _("Malformed request URL: URL's project_id '%(project_id)s'"
                     " doesn't match Context's project_id"
                     " '%(context_project_id)s'") % \
