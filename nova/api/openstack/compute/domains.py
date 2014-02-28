@@ -134,7 +134,7 @@ class DomainsController(wsgi.Controller):
                 raise exc.HTTPBadRequest(explanation=msg)
 
         if context.domain_id:
-            search_opts['domain_id'] = context.domain_id
+            search_opts['project_domain_id'] = context.domain_id
 
         limit, marker = common.get_limit_and_marker(req)
         try:
