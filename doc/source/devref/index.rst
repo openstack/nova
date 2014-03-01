@@ -29,6 +29,7 @@ Programming HowTos and Tutorials
     development.environment
     unit_tests
     addmethod.openstackapi
+    gmr
 
 
 Background Concepts for Nova

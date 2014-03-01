@@ -24,8 +24,10 @@ from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
 from nova.objects import base as objects_base
 from nova.openstack.common import log as logging
+from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
+from nova import version
 
 CONF = cfg.CONF
 CONF.import_opt('network_topic', 'nova.network.rpcapi')
@@ -36,6 +38,8 @@ def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
+
+    gmr.TextGuruMeditation.setup_autorun(version)
 
     if not CONF.conductor.use_local:
         objects_base.NovaObject.indirection_api = \

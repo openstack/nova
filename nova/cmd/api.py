@@ -26,8 +26,10 @@ from oslo.config import cfg
 
 from nova import config
 from nova.openstack.common import log as logging
+from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
+from nova import version
 
 CONF = cfg.CONF
 CONF.import_opt('enabled_apis', 'nova.service')
@@ -38,6 +40,8 @@ def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
+
+    gmr.TextGuruMeditation.setup_autorun(version)
 
     launcher = service.process_launcher()
     for api in CONF.enabled_apis:

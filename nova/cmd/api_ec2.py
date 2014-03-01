@@ -22,8 +22,10 @@ from oslo.config import cfg
 
 from nova import config
 from nova.openstack.common import log as logging
+from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
 from nova import utils
+from nova import version
 
 
 CONF = cfg.CONF
@@ -34,6 +36,9 @@ def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
     utils.monkey_patch()
+
+    gmr.TextGuruMeditation.setup_autorun(version)
+
     should_use_ssl = 'ec2' in CONF.enabled_ssl_apis
     server = service.WSGIService('ec2', use_ssl=should_use_ssl,
                                  max_url_len=16384)
