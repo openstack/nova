@@ -113,7 +113,7 @@ class DockerDriverTestCase(_VirtDriverTestCase, test.TestCase):
             get_disk_usage
         ):
             # run the code
-            stats = self.connection._get_available_resource(nodename='test')
+            stats = self.connection.get_available_resource(nodename='test')
             # make our assertions
             get_memory_usage.assert_called_once_with()
             get_disk_usage.assert_called_once_with()
