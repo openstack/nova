@@ -64,9 +64,29 @@ class _TestInstanceActionObject(object):
         mock_get.assert_called_once_with(context,
             'fake-uuid', 'fake-request')
 
+    def test_pack_action_start(self):
+        values = instance_action.InstanceAction.pack_action_start(
+            self.context, 'fake-uuid', 'fake-action')
+        self.assertEqual(values['request_id'], self.context.request_id)
+        self.assertEqual(values['user_id'], self.context.user_id)
+        self.assertEqual(values['project_id'], self.context.project_id)
+        self.assertEqual(values['instance_uuid'], 'fake-uuid')
+        self.assertEqual(values['action'], 'fake-action')
+        self.assertEqual(values['start_time'].replace(tzinfo=None),
+                         self.context.timestamp)
+
+    def test_pack_action_finish(self):
+        timeutils.set_time_override(override_time=NOW)
+        values = instance_action.InstanceAction.pack_action_finish(
+            self.context, 'fake-uuid')
+        self.assertEqual(values['request_id'], self.context.request_id)
+        self.assertEqual(values['instance_uuid'], 'fake-uuid')
+        self.assertEqual(values['finish_time'].replace(tzinfo=None), NOW)
+
     @mock.patch.object(db, 'action_start')
     def test_action_start(self, mock_start):
-        expected_packed_values = compute_utils.pack_action_start(
+        test_class = instance_action.InstanceAction
+        expected_packed_values = test_class.pack_action_start(
             self.context, 'fake-uuid', 'fake-action')
         mock_start.return_value = fake_action
         action = instance_action.InstanceAction.action_start(
@@ -77,7 +97,8 @@ class _TestInstanceActionObject(object):
 
     @mock.patch.object(db, 'action_start')
     def test_action_start_no_result(self, mock_start):
-        expected_packed_values = compute_utils.pack_action_start(
+        test_class = instance_action.InstanceAction
+        expected_packed_values = test_class.pack_action_start(
             self.context, 'fake-uuid', 'fake-action')
         mock_start.return_value = fake_action
         action = instance_action.InstanceAction.action_start(
@@ -89,7 +110,8 @@ class _TestInstanceActionObject(object):
     @mock.patch.object(db, 'action_finish')
     def test_action_finish(self, mock_finish):
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_finish(
+        test_class = instance_action.InstanceAction
+        expected_packed_values = test_class.pack_action_finish(
             self.context, 'fake-uuid')
         mock_finish.return_value = fake_action
         action = instance_action.InstanceAction.action_finish(
@@ -101,7 +123,8 @@ class _TestInstanceActionObject(object):
     @mock.patch.object(db, 'action_finish')
     def test_action_finish_no_result(self, mock_finish):
         timeutils.set_time_override(override_time=NOW)
-        expected_packed_values = compute_utils.pack_action_finish(
+        test_class = instance_action.InstanceAction
+        expected_packed_values = test_class.pack_action_finish(
             self.context, 'fake-uuid')
         mock_finish.return_value = fake_action
         action = instance_action.InstanceAction.action_finish(
