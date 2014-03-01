@@ -417,7 +417,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_restore_instance(self):
         self._test_compute_api('restore_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='3.20')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

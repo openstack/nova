@@ -236,6 +236,7 @@ class ComputeAPI(object):
         3.18 - Update get_diagnostics() to take an instance object
         ...  - Removed inject_file(), as it was unused.
         3.19 - Update pre_live_migration to take instance object
+        3.20 - Make restore_instance take an instance object
     '''
 
     VERSION_ALIASES = {
@@ -882,12 +883,15 @@ class ComputeAPI(object):
                    instance=instance, reservations=reservations)
 
     def restore_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.18'):
+            version = '3.20'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'restore_instance', instance=instance_p)
+        cctxt.cast(ctxt, 'restore_instance', instance=instance)
 
     def shelve_instance(self, ctxt, instance, image_id=None):
         # NOTE(russellb) Havana compat
