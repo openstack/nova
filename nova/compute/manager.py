@@ -936,17 +936,37 @@ class ComputeManager(manager.Manager):
             return
 
         elif (current_power_state == power_state.RUNNING and
-           instance.task_state in [task_states.REBOOT_STARTED,
-                                   task_states.REBOOT_STARTED_HARD]):
-            LOG.warning(_("Instance in transitional state "
-                          "(%(task_state)s) at start-up and power state "
-                          "is (%(power_state)s), clearing task state"),
-                        {'task_state': instance['task_state'],
-                         'power_state': current_power_state},
-                        instance=instance)
+              instance.task_state in [task_states.REBOOT_STARTED,
+                                      task_states.REBOOT_STARTED_HARD,
+                                      task_states.PAUSING,
+                                      task_states.UNPAUSING]):
+            LOG.warn(_LW("Instance in transitional state "
+                         "(%(task_state)s) at start-up and power state "
+                         "is (%(power_state)s), clearing task state"),
+                         {'task_state': instance.task_state,
+                          'power_state': current_power_state},
+                          instance=instance)
             instance.task_state = None
             instance.vm_state = vm_states.ACTIVE
             instance.save()
+        elif (current_power_state == power_state.PAUSED and
+              instance.task_state == task_states.UNPAUSING):
+            LOG.warn(_LW("Instance in transitional state "
+                         "(%(task_state)s) at start-up and power state "
+                         "is (%(power_state)s), clearing task state "
+                         "and unpausing the instance"),
+                         {'task_state': instance.task_state,
+                          'power_state': current_power_state},
+                          instance=instance)
+            try:
+                self.unpause_instance(context, instance)
+            except NotImplementedError:
+                # Some virt driver didn't support pause and unpause
+                pass
+            except Exception:
+                LOG.exception(_LE('Failed to unpause instance'),
+                              instance=instance)
+            return
 
         if instance.task_state == task_states.POWERING_OFF:
             try:

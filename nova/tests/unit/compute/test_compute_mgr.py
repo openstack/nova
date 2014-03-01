@@ -598,6 +598,23 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     assert_called_once_with(self.context, instance)
         self.assertIsNone(instance.task_state)
 
+    @mock.patch('nova.compute.manager.ComputeManager._get_power_state',
+                return_value=power_state.RUNNING)
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def _test_init_instance_cleans_task_states(self, powerstate, state,
+            mock_get_uuid, mock_get_power_state):
+        instance = objects.Instance(self.context)
+        instance.uuid = 'fake-uuid'
+        instance.info_cache = None
+        instance.power_state = power_state.RUNNING
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = state
+        mock_get_power_state.return_value = powerstate
+
+        self.compute._init_instance(self.context, instance)
+
+        return instance
+
     def test_init_instance_cleans_image_state_pending_upload(self):
         instance = objects.Instance(self.context)
         instance.uuid = 'foo'
@@ -625,6 +642,35 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
         self._test_init_instance_cleans_image_states(instance)
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_init_instance_cleans_running_pausing(self, mock_save):
+        instance = self._test_init_instance_cleans_task_states(
+            power_state.RUNNING, task_states.PAUSING)
+        mock_save.assert_called_once_with()
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+
+    @mock.patch.object(objects.Instance, 'save')
+    def test_init_instance_cleans_running_unpausing(self, mock_save):
+        instance = self._test_init_instance_cleans_task_states(
+            power_state.RUNNING, task_states.UNPAUSING)
+        mock_save.assert_called_once_with()
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+
+    @mock.patch('nova.compute.manager.ComputeManager.unpause_instance')
+    def test_init_instance_cleans_paused_unpausing(self, mock_unpause):
+
+        def fake_unpause(context, instance):
+            instance.task_state = None
+
+        mock_unpause.side_effect = fake_unpause
+        instance = self._test_init_instance_cleans_task_states(
+            power_state.PAUSED, task_states.UNPAUSING)
+        mock_unpause.assert_called_once_with(self.context, instance)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertIsNone(instance.task_state)
 
     def test_init_instance_errors_when_not_migrating(self):
         instance = objects.Instance(self.context)
