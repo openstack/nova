@@ -33,6 +33,10 @@ from nova.virt.vmwareapi import vim_util
 
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+DSRecord = collections.namedtuple(
+    'DSRecord', ['datastore', 'name', 'capacity', 'freespace'])
+
 # A cache for VM references. The key will be the VM name
 # and the value is the VM reference. The VM name is unique. This
 # is either the UUID of the instance or UUID-rescue in the case
@@ -1048,23 +1052,16 @@ def propset_dict(propset):
     return dict([(prop.name, prop.val) for prop in propset])
 
 
-def _get_datastore_ref_and_name(data_stores, datastore_regex=None):
-    # selects the datastore with the most freespace
-    """Find a usable datastore in a given RetrieveResult object.
+def _select_datastore(data_stores, best_match, datastore_regex=None):
+    """Find the most preferable datastore in a given RetrieveResult object.
 
     :param data_stores: a RetrieveResult object from vSphere API call
+    :param best_match: the current best match for datastore
     :param datastore_regex: an optional regular expression to match names
     :return: datastore_ref, datastore_name, capacity, freespace
     """
-    DSRecord = collections.namedtuple(
-        'DSRecord', ['datastore', 'name', 'capacity', 'freespace'])
 
-    # we lean on checks performed in caller methods to validate the
-    # datastore reference is not None. If it is, the caller handles
-    # a None reference as appropriate in its context.
-    found_ds = DSRecord(datastore=None, name=None, capacity=None, freespace=0)
-
-    # datastores is actually a RetrieveResult object from vSphere API call
+    # data_stores is actually a RetrieveResult object from vSphere API call
     for obj_content in data_stores.objects:
         # the propset attribute "need not be set" by returning API
         if not hasattr(obj_content, 'propSet'):
@@ -1083,21 +1080,16 @@ def _get_datastore_ref_and_name(data_stores, datastore_regex=None):
                     name=ds_name,
                     capacity=propdict['summary.capacity'],
                     freespace=propdict['summary.freeSpace'])
-                # find the largest freespace to return
-                if new_ds.freespace > found_ds.freespace:
-                    found_ds = new_ds
+                # favor datastores with more free space
+                if new_ds.freespace > best_match.freespace:
+                    best_match = new_ds
 
-    #TODO(hartsocks): refactor driver to use DSRecord namedtuple
-    # using DSRecord through out will help keep related information
-    # together and improve readability and organisation of the code.
-    if found_ds.datastore is not None:
-        return (found_ds.datastore, found_ds.name,
-                    found_ds.capacity, found_ds.freespace)
+    return best_match
 
 
 def get_datastore_ref_and_name(session, cluster=None, host=None,
                                datastore_regex=None):
-    """Get the datastore list and choose the first local storage."""
+    """Get the datastore list and choose the most preferable one."""
     if cluster is None and host is None:
         data_stores = session._call_method(vim_util, "get_objects",
                     "Datastore", ["summary.type", "summary.name",
@@ -1124,27 +1116,25 @@ def get_datastore_ref_and_name(session, cluster=None, host=None,
                                 ["summary.type", "summary.name",
                                  "summary.capacity", "summary.freeSpace",
                                  "summary.accessible"])
+    best_match = DSRecord(datastore=None, name=None,
+                          capacity=None, freespace=0)
     while data_stores:
+        best_match = _select_datastore(data_stores, best_match,
+                                       datastore_regex)
         token = _get_token(data_stores)
-        results = _get_datastore_ref_and_name(data_stores, datastore_regex)
-        if results:
-            if token:
-                session._call_method(vim_util,
-                                     "cancel_retrieve",
-                                     token)
-            return results
-        if token:
-            data_stores = session._call_method(vim_util,
-                                               "continue_to_get_objects",
-                                               token)
-        else:
-            if datastore_regex:
-                raise exception.DatastoreNotFound(
-                _("Datastore regex %s did not match any datastores")
-                % datastore_regex.pattern)
-            else:
-                raise exception.DatastoreNotFound()
-    raise exception.DatastoreNotFound()
+        if not token:
+            break
+        data_stores = session._call_method(vim_util,
+                                           "continue_to_get_objects",
+                                           token)
+    if best_match.datastore:
+        return best_match
+    if datastore_regex:
+        raise exception.DatastoreNotFound(
+            _("Datastore regex %s did not match any datastores")
+            % datastore_regex.pattern)
+    else:
+        raise exception.DatastoreNotFound()
 
 
 def get_vmdk_backed_disk_uuid(hardware_devices, volume_uuid):
