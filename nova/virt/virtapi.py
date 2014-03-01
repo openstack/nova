@@ -40,13 +40,6 @@ class VirtAPI(object):
         """
         raise NotImplementedError()
 
-    def flavor_get(self, context, flavor_id):
-        """Get information about a flavor
-        :param context: security context
-        :param flavor_id: the id of the flavor in question
-        """
-        raise NotImplementedError()
-
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):
         """Get block device mappings for an instance
