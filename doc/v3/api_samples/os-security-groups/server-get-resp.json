@@ -47,7 +47,7 @@
         },
         "name": "new-server-test",
         "progress": 0,
-        "security_groups": [
+        "os-security-groups:security_groups": [
             {
                 "name": "test"
             }

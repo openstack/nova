@@ -58,7 +58,8 @@ class SecurityGroupsOutputController(wsgi.Controller):
                 instance = req.get_db_instance(server['id'])
                 groups = instance.get(key)
                 if groups:
-                    server[key] = [{"name": group["name"]} for group in groups]
+                    server[ATTRIBUTE_NAME] = [{"name": group["name"]}
+                                              for group in groups]
         else:
             # If method is a POST we get the security groups intended for an
             # instance from the request. The reason for this is if using
@@ -72,7 +73,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
                 for server in servers:
                     groups = sg_instance_bindings.get(server['id'])
                     if groups:
-                        server[key] = groups
+                        server[ATTRIBUTE_NAME] = groups
 
             # In this section of code len(servers) == 1 as you can only POST
             # one server in an API request.
@@ -81,7 +82,7 @@ class SecurityGroupsOutputController(wsgi.Controller):
                 req_obj = json.loads(req.body)
                 # Add security group to server, if no security group was in
                 # request add default since that is the group it is part of
-                servers[0][key] = req_obj['server'].get(
+                servers[0][ATTRIBUTE_NAME] = req_obj['server'].get(
                     ATTRIBUTE_NAME, [{'name': 'default'}])
 
     def _show(self, req, resp_obj):
