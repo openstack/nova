@@ -42,6 +42,7 @@ from nova.db import migration
 from nova.network import manager as network_manager
 from nova.objects import base as objects_base
 from nova.openstack.common.db.sqlalchemy import session
+from nova.openstack.common.fixture import logging as log_fixture
 from nova.openstack.common.fixture import moxstubout
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -224,6 +225,7 @@ class TestCase(testtools.TestCase):
         self.useFixture(fixtures.NestedTempfile())
         self.useFixture(fixtures.TempHomeDir())
         self.useFixture(TranslationFixture())
+        self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
         if os.environ.get('OS_STDOUT_CAPTURE') in _TRUE_VALUES:
             stdout = self.useFixture(fixtures.StringStream('stdout')).stream
