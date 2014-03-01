@@ -1959,7 +1959,7 @@ class ComputeManager(manager.Manager):
 
         try:
             db_inst = obj_base.obj_to_primitive(instance)
-            self.conductor_api.instance_info_cache_delete(context, db_inst)
+            instance.info_cache.delete()
             self._notify_about_instance_usage(context, instance,
                                               "delete.start")
             self._shutdown_instance(context, db_inst, bdms)
