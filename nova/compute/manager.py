@@ -2024,7 +2024,8 @@ class ComputeManager(manager.Manager):
         except Exception:
             # Because this allocation is async any failures are likely to occur
             # when the driver accesses network_info during spawn().
-            LOG.exception('Failed to allocate network(s)', instance=instance)
+            LOG.exception(_('Failed to allocate network(s)'),
+                          instance=instance)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)

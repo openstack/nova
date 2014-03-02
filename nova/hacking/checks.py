@@ -15,6 +15,8 @@
 
 import re
 
+import pep8
+
 """
 Guidelines for writing new hacking checks
 
@@ -50,6 +52,8 @@ asse_equal_end_with_none_re = re.compile(
 asse_equal_start_with_none_re = re.compile(
                            r"(.)*assertEqual\(None, (\w|\.|\'|\"|\[|\])+\)")
 conf_attribute_set_re = re.compile(r"CONF\.[a-z0-9_.]+\s*=\s*\w")
+log_translation = re.compile(
+    r"(.)*LOG\.(audit|error|info|warn|warning|critical|exception)\(\s*('|\")")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -260,6 +264,19 @@ def no_setting_conf_directly_in_tests(logical_line, filename):
                       "forbidden. Use self.flags(option=value) instead")
 
 
+def validate_log_translations(logical_line, physical_line, filename):
+    # Translations are not required in the test directory
+    # and the Xen utilities
+    if ("nova/tests" in filename or
+            "plugins/xenserver/xenapi/etc/xapi.d" in filename):
+        return
+    if pep8.noqa(physical_line):
+        return
+    msg = "N321: Log messages require translations!"
+    if log_translation.match(logical_line):
+        yield (0, msg)
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -274,3 +291,4 @@ def factory(register):
     register(assert_equal_none)
     register(no_translate_debug_logs)
     register(no_setting_conf_directly_in_tests)
+    register(validate_log_translations)

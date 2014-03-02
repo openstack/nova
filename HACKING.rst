@@ -33,6 +33,7 @@ Nova Specific Commandments
 - [N319] Validate that debug level logs are not translated.
 - [N320] Setting CONF.* attributes directly in tests is forbidden. Use
   self.flags(option=value) instead.
+- [N321] Validate that LOG messages, except debug ones, have translations
 
 Creating Unit Tests
 -------------------
