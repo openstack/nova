@@ -3004,7 +3004,6 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def change_instance_metadata(self, context, diff, instance):
         """Update the metadata published to the instance."""
@@ -3565,7 +3564,6 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def add_fixed_ip_to_instance(self, context, network_id, instance):
         """Calls network_api to add new fixed_ip to instance
@@ -3590,7 +3588,6 @@ class ComputeManager(manager.Manager):
 
     @object_compat
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def remove_fixed_ip_from_instance(self, context, address, instance):
         """Calls network_api to remove existing fixed_ip from instance
@@ -3894,7 +3891,6 @@ class ComputeManager(manager.Manager):
         instance.save(expected_task_state=task_states.SPAWNING)
         self._notify_about_instance_usage(context, instance, 'unshelve.end')
 
-    @reverts_task_state
     @wrap_instance_fault
     def reset_network(self, context, instance):
         """Reset networking on the given instance."""
@@ -4375,7 +4371,6 @@ class ComputeManager(manager.Manager):
             raise exception.NotFound(_("Host %s not found") % host)
 
     @wrap_exception()
-    @wrap_instance_fault
     def check_instance_shared_storage(self, ctxt, instance, data):
         """Check if the instance files are shared
 
