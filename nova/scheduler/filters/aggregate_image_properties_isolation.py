@@ -49,7 +49,7 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
 
         spec = filter_properties.get('request_spec', {})
         image_props = spec.get('image', {}).get('properties', {})
-        context = filter_properties['context'].elevated()
+        context = filter_properties['context']
         metadata = db.aggregate_metadata_get_by_host(context, host_state.host)
 
         for key, options in metadata.iteritems():

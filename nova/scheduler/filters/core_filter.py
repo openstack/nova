@@ -78,7 +78,7 @@ class AggregateCoreFilter(BaseCoreFilter):
     """
 
     def _get_cpu_allocation_ratio(self, host_state, filter_properties):
-        context = filter_properties['context'].elevated()
+        context = filter_properties['context']
         # TODO(uni): DB query in filter is a performance hit, especially for
         # system with lots of hosts. Will need a general solution here to fix
         # all filters with aggregate DB call things.
