@@ -2945,6 +2945,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
+    @wrap_instance_fault
     def rescue_instance(self, context, instance, rescue_password,
                         rescue_image_ref=None):
         """Rescue an instance on this host."""
