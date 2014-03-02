@@ -695,6 +695,14 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         # confirm compute_node_stats exists
         db_utils.get_table(engine, 'compute_node_stats')
 
+    def _check_244(self, engine, data):
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
+        self.assertEqual(64, volume_usage_cache.c.user_id.type.length)
+
+    def _post_downgrade_244(self, engine):
+        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
+        self.assertEqual(36, volume_usage_cache.c.user_id.type.length)
+
 
 class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     """Test sqlalchemy-migrate migrations."""
