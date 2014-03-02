@@ -23,6 +23,7 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 import nova.exception
+from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -150,8 +151,15 @@ class ServerGroupController(wsgi.Controller):
         server_group['id'] = group.uuid
         server_group['name'] = group.name
         server_group['policies'] = group.policies or []
-        server_group['members'] = group.members or []
         server_group['metadata'] = group.metadetails or {}
+        members = []
+        if group.members:
+            # Display the instances that are not deleted.
+            filters = {'uuid': group.members, 'deleted_at': None}
+            instances = instance_obj.InstanceList.get_by_filters(
+                context, filters=filters)
+            members = [instance.uuid for instance in instances]
+        server_group['members'] = members
         return server_group
 
     def _validate_policies(self, policies):

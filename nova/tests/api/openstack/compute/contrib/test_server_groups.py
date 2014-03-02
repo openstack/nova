@@ -18,8 +18,11 @@ import webob
 
 from nova.api.openstack.compute.contrib import server_groups
 from nova.api.openstack import wsgi
+from nova import context
 import nova.db
 from nova import exception
+from nova.objects import instance as instance_obj
+from nova.objects import instance_group as instance_group_obj
 from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -103,6 +106,53 @@ class ServerGroupTest(test.TestCase):
         self.assertTrue(uuidutils.is_uuid_like(res_dict['server_group']['id']))
         self.assertEqual(res_dict['server_group']['policies'], policies)
 
+    def _create_instance(self, context):
+        instance = instance_obj.Instance(image_ref=1, node='node1',
+                reservation_id='a', host='host1', project_id='fake',
+                vm_state='fake', system_metadata={'key': 'value'})
+        instance.create(context)
+        return instance
+
+    def _create_instance_group(self, context, members):
+        ig = instance_group_obj.InstanceGroup(name='fake_name',
+                  user_id='fake_user', project_id='fake',
+                  members=members)
+        ig.create(context)
+        return ig.uuid
+
+    def _create_groups_and_instances(self, ctx):
+        instances = [self._create_instance(ctx), self._create_instance(ctx)]
+        members = [instance.uuid for instance in instances]
+        ig_uuid = self._create_instance_group(ctx, members)
+        return (ig_uuid, instances, members)
+
+    def test_display_members(self):
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        res_dict = self.controller.show(req, ig_uuid)
+        result_members = res_dict['server_group']['members']
+        self.assertEqual(2, len(result_members))
+        for member in members:
+            self.assertIn(member, result_members)
+
+    def test_display_active_members_only(self):
+        ctx = context.RequestContext('fake_user', 'fake')
+        (ig_uuid, instances, members) = self._create_groups_and_instances(ctx)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+
+        # delete an instance
+        instances[1].destroy(ctx)
+        # check that the instance does not exist
+        self.assertRaises(exception.InstanceNotFound,
+                          instance_obj.Instance.get_by_uuid,
+                          ctx, instances[1].uuid)
+        res_dict = self.controller.show(req, ig_uuid)
+        result_members = res_dict['server_group']['members']
+        # check that only the active instance is displayed
+        self.assertEqual(1, len(result_members))
+        self.assertIn(instances[0].uuid, result_members)
+
     def test_create_server_group_with_illegal_name(self):
         # blank name
         sgroup = server_group_template(name='')
@@ -152,7 +202,7 @@ class ServerGroupTest(test.TestCase):
     def test_list_server_group_by_tenant(self):
         groups = []
         policies = ['anti-affinity']
-        members = ['1', '2']
+        members = []
         metadata = {'key1': 'value1'}
         names = ['default-x', 'test']
         sg1 = server_group_resp_template(id=str(1345),
@@ -182,7 +232,7 @@ class ServerGroupTest(test.TestCase):
         all_groups = []
         tenant_groups = []
         policies = ['anti-affinity']
-        members = ['1', '2']
+        members = []
         metadata = {'key1': 'value1'}
         names = ['default-x', 'test']
         sg1 = server_group_resp_template(id=str(1345),
