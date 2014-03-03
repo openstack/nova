@@ -3445,10 +3445,12 @@ class LibvirtDriver(driver.ComputeDriver):
         for dom_id in dom_ids:
             try:
                 dom = self._lookup_by_id(dom_id)
-                vcpus = dom.vcpus()
-                if vcpus is None:
-                    LOG.debug(_("couldn't obtain the vpu count from domain id:"
-                                " %s") % dom_id)
+                try:
+                    vcpus = dom.vcpus()
+                except libvirt.libvirtError as e:
+                    LOG.warn(_("couldn't obtain the vpu count from domain id:"
+                               " %(id)s, exception: %(ex)s") %
+                               {"id": dom_id, "ex": e})
                 else:
                     total += len(vcpus[1])
             except exception.InstanceNotFound:

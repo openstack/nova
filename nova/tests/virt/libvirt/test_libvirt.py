@@ -5080,7 +5080,7 @@ class LibvirtConnTestCase(test.TestCase):
 
             def vcpus(self):
                 if self._vcpus is None:
-                    return None
+                    raise libvirt.libvirtError("fake-error")
                 else:
                     return ([1] * self._vcpus, [True] * self._vcpus)
 
