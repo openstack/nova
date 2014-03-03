@@ -153,7 +153,6 @@ class QuotaSetsController(wsgi.Controller):
                 try:
                     value = utils.validate_integer(value, key)
                 except exception.InvalidInput as e:
-                    LOG.warn(e.format_message())
                     raise webob.exc.HTTPBadRequest(
                         explanation=e.format_message())
 
