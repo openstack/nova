@@ -2464,6 +2464,64 @@ class LibvirtDriver(driver.ComputeDriver):
         return ((not bool(instance.get('image_ref')))
                 or 'disk' not in disk_mapping)
 
+    def _inject_data(self, instance, network_info, admin_pass, files, suffix):
+        """Injects data in an disk image
+
+        Helper used for injecting data in a disk image file system.
+
+        Keyword arguments:
+          instance -- a dict that refers instance specifications
+          network_info -- a dict that refers network speficications
+          admin_pass -- a string used to set an admin password
+          files -- a list of files needs to be injected
+          suffix -- a string used as a image name suffix
+        """
+        # Handles the partition need to be used.
+        target_partition = None
+        if not instance['kernel_id']:
+            target_partition = CONF.libvirt.inject_partition
+            if target_partition == 0:
+                target_partition = None
+        if CONF.libvirt.virt_type == 'lxc':
+            target_partition = None
+
+        # Handles the key injection.
+        if CONF.libvirt.inject_key and instance.get('key_data'):
+            key = str(instance['key_data'])
+        else:
+            key = None
+
+        # Handles the admin password injection.
+        if not CONF.libvirt.inject_password:
+            admin_pass = None
+
+        # Handles the network injection.
+        net = netutils.get_injected_network_template(network_info)
+
+        # Handles the metadata injection
+        metadata = instance.get('metadata')
+
+        image_type = CONF.libvirt.images_type
+        if any((key, net, metadata, admin_pass, files)):
+            injection_path = self.image_backend.image(
+                instance,
+                'disk' + suffix,
+                image_type).path
+            img_id = instance['image_ref']
+
+            try:
+                disk.inject_data(injection_path,
+                                 key, net, metadata, admin_pass, files,
+                                 partition=target_partition,
+                                 use_cow=CONF.use_cow_images,
+                                 mandatory=('files',))
+            except Exception as e:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(_('Error injecting data into image '
+                                '%(img_id)s (%(e)s)'),
+                              {'img_id': img_id, 'e': e},
+                              instance=instance)
+
     def _create_image(self, context, instance,
                       disk_mapping, suffix='',
                       disk_images=None, network_info=None,
@@ -2621,58 +2679,11 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # File injection only if needed
         elif inject_files and CONF.libvirt.inject_partition != -2:
-
             if booted_from_volume:
                 LOG.warn(_('File injection into a boot from volume '
                            'instance is not supported'), instance=instance)
-
-            target_partition = None
-            if not instance['kernel_id']:
-                target_partition = CONF.libvirt.inject_partition
-                if target_partition == 0:
-                    target_partition = None
-            if CONF.libvirt.virt_type == 'lxc':
-                target_partition = None
-
-            if CONF.libvirt.inject_key and instance['key_data']:
-                key = str(instance['key_data'])
-            else:
-                key = None
-
-            net = netutils.get_injected_network_template(network_info)
-
-            metadata = instance.get('metadata')
-
-            if not CONF.libvirt.inject_password:
-                admin_pass = None
-
-            if any((key, net, metadata, admin_pass, files)):
-                # If we're not using config_drive, inject into root fs
-                injection_path = image('disk').path
-                img_id = instance['image_ref']
-
-                for inj, val in [('key', key),
-                                 ('net', net),
-                                 ('metadata', metadata),
-                                 ('admin_pass', admin_pass),
-                                 ('files', files)]:
-                    if val:
-                        LOG.info(_('Injecting %(inj)s into image '
-                                   '%(img_id)s'),
-                                 {'inj': inj, 'img_id': img_id},
-                                 instance=instance)
-                try:
-                    disk.inject_data(injection_path,
-                                     key, net, metadata, admin_pass, files,
-                                     partition=target_partition,
-                                     use_cow=CONF.use_cow_images,
-                                     mandatory=('files',))
-                except Exception as e:
-                    with excutils.save_and_reraise_exception():
-                        LOG.error(_('Error injecting data into image '
-                                    '%(img_id)s (%(e)s)'),
-                                  {'img_id': img_id, 'e': e},
-                                  instance=instance)
+            self._inject_data(
+                instance, network_info, admin_pass, files, suffix)
 
         if CONF.libvirt.virt_type == 'uml':
             libvirt_utils.chown(image('disk').path, 'root')

@@ -8295,6 +8295,127 @@ class LibvirtDriverTestCase(test.TestCase):
         instance['image_ref'] = 'uuid'
         self.assertFalse(func(instance, disk_mapping))
 
+    @mock.patch('nova.virt.netutils.get_injected_network_template')
+    @mock.patch('nova.virt.disk.api.inject_data')
+    def _test_inject_data(self, driver_params, disk_params,
+                          disk_inject_data, inj_network,
+                          called=True):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        class i(object):
+            path = '/path'
+
+        def fake_inj_network(*args, **kwds):
+            return args[0] or None
+        inj_network.side_effect = fake_inj_network
+
+        with mock.patch.object(
+                conn.image_backend,
+                'image',
+                return_value=i()):
+            self.flags(inject_partition=0, group='libvirt')
+
+            conn._inject_data(**driver_params)
+
+            if called:
+                disk_inject_data.assert_called_once_with(
+                    *disk_params,
+                    partition=None, mandatory=('files',), use_cow=True)
+
+            self.assertEqual(disk_inject_data.called, called)
+
+    def _test_inject_data_default_driver_params(self):
+        return {
+            'instance': {
+                'uuid': 'fake-uuid',
+                'id': 1,
+                'kernel_id': None,
+                'image_ref': 1,
+                'key_data': None,
+                'metadata': None
+            },
+            'network_info': None,
+            'admin_pass': None,
+            'files': None,
+            'suffix': ''
+        }
+
+    def test_inject_data_adminpass(self):
+        self.flags(inject_password=True, group='libvirt')
+        driver_params = self._test_inject_data_default_driver_params()
+        driver_params['admin_pass'] = 'foobar'
+        disk_params = [
+            '/path',  # injection_path
+            None,  # key
+            None,  # net
+            None,  # metadata
+            'foobar',  # admin_pass
+            None,  # files
+        ]
+        self._test_inject_data(driver_params, disk_params)
+
+        # Test with the configuration setted to false.
+        self.flags(inject_password=False, group='libvirt')
+        self._test_inject_data(driver_params, disk_params, called=False)
+
+    def test_inject_data_key(self):
+        driver_params = self._test_inject_data_default_driver_params()
+        driver_params['instance']['key_data'] = 'key-content'
+
+        self.flags(inject_key=True, group='libvirt')
+        disk_params = [
+            '/path',  # injection_path
+            'key-content',  # key
+            None,  # net
+            None,  # metadata
+            None,  # admin_pass
+            None,  # files
+        ]
+        self._test_inject_data(driver_params, disk_params)
+
+        # Test with the configuration setted to false.
+        self.flags(inject_key=False, group='libvirt')
+        self._test_inject_data(driver_params, disk_params, called=False)
+
+    def test_inject_data_metadata(self):
+        driver_params = self._test_inject_data_default_driver_params()
+        driver_params['instance']['metadata'] = 'data'
+        disk_params = [
+            '/path',  # injection_path
+            None,  # key
+            None,  # net
+            'data',  # metadata
+            None,  # admin_pass
+            None,  # files
+        ]
+        self._test_inject_data(driver_params, disk_params)
+
+    def test_inject_data_files(self):
+        driver_params = self._test_inject_data_default_driver_params()
+        driver_params['files'] = ['file1', 'file2']
+        disk_params = [
+            '/path',  # injection_path
+            None,  # key
+            None,  # net
+            None,  # metadata
+            None,  # admin_pass
+            ['file1', 'file2'],  # files
+        ]
+        self._test_inject_data(driver_params, disk_params)
+
+    def test_inject_data_net(self):
+        driver_params = self._test_inject_data_default_driver_params()
+        driver_params['network_info'] = {'net': 'eno1'}
+        disk_params = [
+            '/path',  # injection_path
+            None,  # key
+            {'net': 'eno1'},  # net
+            None,  # metadata
+            None,  # admin_pass
+            None,  # files
+        ]
+        self._test_inject_data(driver_params, disk_params)
+
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
