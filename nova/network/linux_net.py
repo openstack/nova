@@ -1304,8 +1304,8 @@ def _ovs_vsctl(args):
 
 
 def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
-    _ovs_vsctl(['--', '--may-exist', 'add-port',
-                bridge, dev,
+    _ovs_vsctl(['--', '--if-exists', 'del-port', dev, '--',
+                'add-port', bridge, dev,
                 '--', 'set', 'Interface', dev,
                 'external-ids:iface-id=%s' % iface_id,
                 'external-ids:iface-status=active',

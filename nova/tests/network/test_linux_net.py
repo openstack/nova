@@ -1035,8 +1035,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     def test_ovs_vif_port(self):
         calls = [
-                mock.call('ovs-vsctl', '--timeout=120', '--', '--may-exist',
-                          'add-port', 'fake-bridge', 'fake-dev',
+                mock.call('ovs-vsctl', '--timeout=120', '--', '--if-exists',
+                          'del-port', 'fake-dev', '--', 'add-port',
+                          'fake-bridge', 'fake-dev',
                           '--', 'set', 'Interface', 'fake-dev',
                           'external-ids:iface-id=fake-iface-id',
                           'external-ids:iface-status=active',
@@ -1049,8 +1050,9 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
     def test_ovs_vif_port_with_mtu(self):
         self.flags(network_device_mtu=10000)
         calls = [
-                mock.call('ovs-vsctl', '--timeout=120', '--', '--may-exist',
-                          'add-port', 'fake-bridge', 'fake-dev',
+                mock.call('ovs-vsctl', '--timeout=120', '--', '--if-exists',
+                          'del-port', 'fake-dev', '--', 'add-port',
+                          'fake-bridge', 'fake-dev',
                           '--', 'set', 'Interface', 'fake-dev',
                           'external-ids:iface-id=fake-iface-id',
                           'external-ids:iface-status=active',
