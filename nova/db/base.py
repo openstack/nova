@@ -32,6 +32,7 @@ class Base(object):
     """DB driver is injected in the init method."""
 
     def __init__(self, db_driver=None):
+        super(Base, self).__init__()
         if not db_driver:
             db_driver = CONF.db_driver
         self.db = importutils.import_module(db_driver)  # pylint: disable=C0103
