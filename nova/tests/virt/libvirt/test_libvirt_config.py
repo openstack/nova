@@ -1644,3 +1644,18 @@ class LibvirtConfigGuestControllerTest(LibvirtConfigBaseTest):
         xml = obj.to_xml()
         self.assertXmlEqual(xml, """
                 <controller type='scsi' index='0' model='virtio-scsi'/>""")
+
+
+class LibvirtConfigGuestWatchdogTest(LibvirtConfigBaseTest):
+    def test_config_watchdog(self):
+        obj = config.LibvirtConfigGuestWatchdog()
+        obj.action = 'none'
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, "<watchdog model='i6300esb' action='none'/>")
+
+    def test_config_watchdog_default_action(self):
+        obj = config.LibvirtConfigGuestWatchdog()
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, "<watchdog model='i6300esb' action='reset'/>")

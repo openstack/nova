@@ -102,6 +102,7 @@ from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
+from nova.virt import watchdog_actions
 from nova import volume
 from nova.volume import encryptors
 
@@ -3347,6 +3348,20 @@ class LibvirtDriver(driver.ComputeDriver):
             if len(pci_manager.get_instance_pci_devs(instance)) > 0:
                 raise exception.PciDeviceUnsupportedHypervisor(
                     type=CONF.libvirt.virt_type)
+
+        watchdog_action = 'disabled'
+        if (image_meta is not None and
+                image_meta.get('properties', {}).get('hw_watchdog_action')):
+            watchdog_action = image_meta['properties']['hw_watchdog_action']
+
+        # NB(sross): currently only actually supported by KVM/QEmu
+        if watchdog_action != 'disabled':
+            if watchdog_actions.is_valid_watchdog_action(watchdog_action):
+                bark = vconfig.LibvirtConfigGuestWatchdog()
+                bark.action = watchdog_action
+                guest.add_device(bark)
+            else:
+                raise exception.InvalidWatchdogAction(action=watchdog_action)
 
         return guest
 
