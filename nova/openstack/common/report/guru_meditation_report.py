@@ -97,7 +97,7 @@ class GuruMeditation(object):
             cls.persistent_sections = [[section_title, generator]]
 
     @classmethod
-    def setup_autorun(cls, version, signum=signal.SIGUSR1):
+    def setup_autorun(cls, version, signum=None):
         """Set Up Auto-Run
 
         This method sets up the Guru Meditation Report to automatically
@@ -107,7 +107,13 @@ class GuruMeditation(object):
         :param signum: the signal to associate with running the report
         """
 
-        signal.signal(signum, lambda *args: cls.handle_signal(version, *args))
+        if not signum and hasattr(signal, 'SIGUSR1'):
+            # SIGUSR1 is not supported on all platforms
+            signum = signal.SIGUSR1
+
+        if signum:
+            signal.signal(signum,
+                          lambda *args: cls.handle_signal(version, *args))
 
     @classmethod
     def handle_signal(cls, version, *args):
