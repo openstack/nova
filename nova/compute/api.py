@@ -55,6 +55,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_action
+from nova.objects import instance_group as instance_group_obj
 from nova.objects import instance_info_cache
 from nova.objects import keypair as keypair_obj
 from nova.objects import migration as migration_obj
@@ -873,6 +874,17 @@ class API(base.Base):
 
         return {}
 
+    @staticmethod
+    def _update_instance_group(context, instances, scheduler_hints):
+        if not scheduler_hints:
+            return
+        group_uuid = scheduler_hints.get('group')
+        if not group_uuid:
+            return
+        instance_uuids = [instance.uuid for instance in instances]
+        instance_group_obj.InstanceGroup.add_members(context, group_uuid,
+                instance_uuids)
+
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
                min_count, max_count,
@@ -948,6 +960,8 @@ class API(base.Base):
 
         filter_properties = self._build_filter_properties(context,
                 scheduler_hints, forced_host, forced_node, instance_type)
+
+        self._update_instance_group(context, instances, scheduler_hints)
 
         for instance in instances:
             self._record_action_start(context, instance,

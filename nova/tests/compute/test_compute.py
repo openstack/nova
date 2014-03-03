@@ -57,6 +57,7 @@ from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
+from nova.objects import instance_group as instance_group_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common.gettextutils import _
@@ -6852,6 +6853,24 @@ class ComputeAPITestCase(BaseTestCase):
                 self.assertEqual(ref[0]['hostname'], hostname)
             finally:
                 db.instance_destroy(self.context, ref[0]['uuid'])
+
+    def test_instance_create_adds_to_instance_group(self):
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        group = instance_group_obj.InstanceGroup(self.context)
+        group.uuid = str(uuid.uuid4())
+        group.create()
+
+        inst_type = flavors.get_default_flavor()
+        (refs, resv_id) = self.compute_api.create(
+            self.context, inst_type, self.fake_image['id'],
+            scheduler_hints={'group': group.uuid})
+
+        group = instance_group_obj.InstanceGroup.get_by_uuid(self.context,
+                group.uuid)
+        self.assertIn(refs[0]['uuid'], group.members)
+
+        db.instance_destroy(self.context, refs[0]['uuid'])
 
     def test_destroy_instance_disassociates_security_groups(self):
         # Make sure destroying disassociates security groups.
