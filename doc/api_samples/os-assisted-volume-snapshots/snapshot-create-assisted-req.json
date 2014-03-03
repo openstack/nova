@@ -1,10 +1,9 @@
 {
     "snapshot": {
-        "display_name": "snap-001",
-        "display_description": "Daily backup",
         "volume_id": "521752a6-acf6-4b2d-bc7a-119f9148cd8c",
-        "force": false,
-        "assisted": true,
-        "create_info": {}
+        "create_info": {
+            "snapshot_id": "421752a6-acf6-4b2d-bc7a-119f9148cd8c",
+            "type": "qcow",
+            "new_file": "new_file_name"}
      }
 }
