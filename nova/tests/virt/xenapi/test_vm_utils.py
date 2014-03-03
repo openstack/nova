@@ -35,6 +35,7 @@ from nova import test
 from nova.tests.virt.xenapi import stubs
 from nova.tests.virt.xenapi import test_xenapi
 from nova import utils
+from nova.virt.xenapi.client import session as xenapi_session
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
 from nova.virt.xenapi import vm_utils
@@ -64,14 +65,16 @@ def get_fake_connection_data(sr_type):
     return fakes[sr_type]
 
 
-def _get_fake_session_and_exception(error):
+def _get_fake_session(error=None):
     session = mock.Mock()
+    xenapi_session.apply_session_helpers(session)
 
-    class FakeException(Exception):
-        details = [error, "a", "b", "c"]
+    if error is not None:
+        class FakeException(Exception):
+            details = [error, "a", "b", "c"]
 
-    session.XenAPI.Failure = FakeException
-    session.call_xenapi.side_effect = FakeException
+        session.XenAPI.Failure = FakeException
+        session.call_xenapi.side_effect = FakeException
 
     return session
 
@@ -892,7 +895,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
 
     def test_unplug_vbd_already_detached_works(self):
         error = "DEVICE_ALREADY_DETACHED"
-        session = _get_fake_session_and_exception(error)
+        session = _get_fake_session(error)
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -900,7 +903,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(1, session.call_xenapi.call_count)
 
     def test_unplug_vbd_already_raises_unexpected_xenapi_error(self):
-        session = _get_fake_session_and_exception("")
+        session = _get_fake_session("")
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -909,7 +912,7 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self.assertEqual(1, session.call_xenapi.call_count)
 
     def _test_uplug_vbd_retries(self, mock_sleep, error):
-        session = _get_fake_session_and_exception(error)
+        session = _get_fake_session(error)
         vbd_ref = "vbd_ref"
         vm_ref = 'vm_ref'
 
@@ -1435,7 +1438,7 @@ class ScanSrTestCase(VMUtilsTestBase):
 class CreateVmTestCase(VMUtilsTestBase):
     def test_vss_provider(self, mock_extract):
         self.flags(vcpu_pin_set="2,3")
-        session = mock.Mock()
+        session = _get_fake_session()
         instance = {
             "uuid": "uuid", "os_type": "windows"
         }
@@ -1491,6 +1494,29 @@ class CreateVmTestCase(VMUtilsTestBase):
                           vm_utils.create_vm,
                           session, instance, "label",
                           "kernel", "ramdisk")
+
+    def test_destroy_vm(self, mock_extract):
+        session = mock.Mock()
+        instance = {
+            "uuid": "uuid",
+        }
+
+        vm_utils.destroy_vm(session, instance, "vm_ref")
+
+        session.VM.destroy.assert_called_once_with("vm_ref")
+
+    def test_destroy_vm_silently_fails(self, mock_extract):
+        session = mock.Mock()
+        exc = test.TestingException()
+        session.XenAPI.Failure = test.TestingException
+        session.VM.destroy.side_effect = exc
+        instance = {
+            "uuid": "uuid",
+        }
+
+        vm_utils.destroy_vm(session, instance, "vm_ref")
+
+        session.VM.destroy.assert_called_once_with("vm_ref")
 
 
 class DetermineVmModeTestCase(VMUtilsTestBase):
@@ -2028,7 +2054,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
 
     def _test_create_vm_record(self, mock_extract_flavor, instance,
                                is_viridian):
-        session = mock.Mock()
+        session = _get_fake_session()
         flavor = {"memory_mb": 1024, "vcpus": 1, "vcpu_weight": 2}
         mock_extract_flavor.return_value = flavor
 

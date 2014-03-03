@@ -28,6 +28,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import versionutils
 from nova import utils
+from nova.virt.xenapi.client import objects
 from nova.virt.xenapi import pool
 from nova.virt.xenapi import pool_states
 
@@ -50,6 +51,19 @@ xenapi_session_opts = [
 CONF = cfg.CONF
 CONF.register_opts(xenapi_session_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
+
+
+def apply_session_helpers(session):
+    session.VM = objects.VM(session)
+    session.SR = objects.SR(session)
+    session.VDI = objects.VDI(session)
+    session.VBD = objects.VBD(session)
+    session.PBD = objects.PBD(session)
+    session.PIF = objects.PIF(session)
+    session.VLAN = objects.VLAN(session)
+    session.host = objects.Host(session)
+    session.network = objects.Network(session)
+    session.pool = objects.Pool(session)
 
 
 class XenAPISession(object):
@@ -76,6 +90,8 @@ class XenAPISession(object):
             self._get_product_version_and_brand()
 
         self._verify_plugin_version()
+
+        apply_session_helpers(self)
 
     def _verify_plugin_version(self):
         requested_version = self.PLUGIN_REQUIRED_VERSION
