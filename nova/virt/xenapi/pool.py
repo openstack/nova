@@ -47,7 +47,7 @@ CONF.import_opt('host', 'nova.netconf')
 class ResourcePool(object):
     """Implements resource pool operations."""
     def __init__(self, session, virtapi):
-        host_rec = session.call_xenapi('host.get_record', session.host_ref)
+        host_rec = session.host.get_record(session.host_ref)
         self._host_name = host_rec['hostname']
         self._host_addr = host_rec['address']
         self._host_uuid = host_rec['uuid']
@@ -192,11 +192,11 @@ class ResourcePool(object):
             # guest instances, the eject will fail. That's a precaution
             # to deal with the fact that the admin should evacuate the host
             # first. The eject wipes out the host completely.
-            vm_ref = self._session.call_xenapi('VM.get_by_uuid', compute_uuid)
-            self._session.call_xenapi("VM.clean_shutdown", vm_ref)
+            vm_ref = self._session.VM.get_by_uuid(compute_uuid)
+            self._session.VM.clean_shutdown(vm_ref)
 
-            host_ref = self._session.call_xenapi('host.get_by_uuid', host_uuid)
-            self._session.call_xenapi("pool.eject", host_ref)
+            host_ref = self._session.host.get_by_uuid(host_uuid)
+            self._session.pool.eject(host_ref)
         except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-eject failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
@@ -206,9 +206,8 @@ class ResourcePool(object):
     def _init_pool(self, aggregate_id, aggregate_name):
         """Set the name label of a XenServer pool."""
         try:
-            pool_ref = self._session.call_xenapi("pool.get_all")[0]
-            self._session.call_xenapi("pool.set_name_label",
-                                      pool_ref, aggregate_name)
+            pool_ref = self._session.pool.get_all()[0]
+            self._session.pool.set_name_label(pool_ref, aggregate_name)
         except self._session.XenAPI.Failure as e:
             LOG.error(_("Unable to set up pool: %s."), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
@@ -218,8 +217,8 @@ class ResourcePool(object):
     def _clear_pool(self, aggregate_id):
         """Clear the name label of a XenServer pool."""
         try:
-            pool_ref = self._session.call_xenapi('pool.get_all')[0]
-            self._session.call_xenapi('pool.set_name_label', pool_ref, '')
+            pool_ref = self._session.pool.get_all()[0]
+            self._session.pool.set_name_label(pool_ref, '')
         except self._session.XenAPI.Failure as e:
             LOG.error(_("Pool-set_name_label failed: %s"), e)
             raise exception.AggregateError(aggregate_id=aggregate_id,
