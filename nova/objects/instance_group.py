@@ -23,7 +23,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.1: String attributes updated to support unicode
     # Version 1.2: Use list/dict helpers for policies, metadetails, members
     # Version 1.3: Make uuid a non-None real string
-    VERSION = '1.3'
+    # Version 1.4: Add add_members()
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(),
@@ -109,11 +110,18 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         db.instance_group_delete(context, self.uuid)
         self.obj_reset_changes()
 
+    @base.remotable_classmethod
+    def add_members(cls, context, group_uuid, instance_uuids):
+        members = db.instance_group_members_add(context, group_uuid,
+                instance_uuids)
+        return list(members)
+
 
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3
-    VERSION = '1.0'
+    # Version 1.1: InstanceGroup <= version 1.4
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
@@ -121,6 +129,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     child_versions = {
         '1.0': '1.3',
         # NOTE(danms): InstanceGroup was at 1.3 before we added this
+        '1.1': '1.4',
         }
 
     @base.remotable_classmethod

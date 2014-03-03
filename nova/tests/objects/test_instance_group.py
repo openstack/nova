@@ -209,6 +209,18 @@ class _TestInstanceGroupObjects(test.TestCase):
                 self.assertEqual(il.objects[i].uuid, groups[i]['uuid'])
                 self.assertEqual(il.objects[i].project_id, id)
 
+    def test_add_members(self):
+        instance_ids = ['fakeid1', 'fakeid2']
+        values = self._get_default_values()
+        group = self._create_instance_group(self.context, values)
+        members = instance_group.InstanceGroup.add_members(self.context,
+                group.uuid, instance_ids)
+        group = instance_group.InstanceGroup.get_by_uuid(self.context,
+                group.uuid)
+        for instance in instance_ids:
+            self.assertIn(instance, members)
+            self.assertIn(instance, group.members)
+
 
 class TestInstanceGroupObject(test_objects._LocalTest,
                               _TestInstanceGroupObjects):
