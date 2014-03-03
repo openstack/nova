@@ -8,3 +8,4 @@ sfdisk: CommandFilter, sfdisk, root
 dd: CommandFilter, dd, root
 mkswap: CommandFilter, mkswap, root
 blkid: CommandFilter, blkid, root
+mkfs: CommandFilter, mkfs, root
