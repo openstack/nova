@@ -631,6 +631,14 @@
             "name": "ExtendedServicesDelete",
             "namespace": "http://docs.openstack.org/compute/ext/extended_services_delete/api/v2",
             "updated": "2013-12-10T00:00:00+00:00"
+        },
+        {
+            "alias": "os-console-auth-tokens",
+            "description": "Console token authentication support.",
+            "links": [],
+            "name": "ConsoleAuthTokens",
+            "namespace": "http://docs.openstack.org/compute/ext/consoles-auth-tokens/api/v2",
+            "updated": "2013-08-13T00:00:00+00:00"
         }
     ]
 }

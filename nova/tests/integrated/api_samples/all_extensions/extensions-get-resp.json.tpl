@@ -105,6 +105,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-console-auth-tokens",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ConsoleAuthTokens",
+            "namespace": "http://docs.openstack.org/compute/ext/consoles-auth-tokens/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "OS-SCH-HNT",
             "description": "%(text)s",
             "links": [],
