@@ -8284,6 +8284,17 @@ class LibvirtDriverTestCase(test.TestCase):
         self.assertEqual(['/dev/vols/fake-uuid_foo',
                           '/dev/vols/instance-00000001_bar'], disks)
 
+    def test_is_booted_from_volume(self):
+        func = libvirt_driver.LibvirtDriver._is_booted_from_volume
+        instance, disk_mapping = {}, {}
+
+        self.assertTrue(func(instance, disk_mapping))
+        disk_mapping['disk'] = 'map'
+        self.assertTrue(func(instance, disk_mapping))
+
+        instance['image_ref'] = 'uuid'
+        self.assertFalse(func(instance, disk_mapping))
+
 
 class LibvirtVolumeUsageTestCase(test.TestCase):
     """Test for LibvirtDriver.get_all_volume_usage."""
