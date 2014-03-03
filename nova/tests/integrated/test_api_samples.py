@@ -3725,7 +3725,10 @@ class AssistedVolumeSnapshotsJsonTest(ApiSampleTestBaseV2):
         subs = {
             'snapshot_name': 'snap-001',
             'description': 'Daily backup',
-            'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c'
+            'volume_id': '521752a6-acf6-4b2d-bc7a-119f9148cd8c',
+            'snapshot_id': '421752a6-acf6-4b2d-bc7a-119f9148cd8c',
+            'type': 'qcow',
+            'new_file': 'new_file_name'
         }
         subs.update(self._get_regexes())
         response = self._create_assisted_snapshot(subs)
