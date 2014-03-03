@@ -391,7 +391,7 @@ class ServiceUnavailable(Invalid):
 
 
 class ComputeResourcesUnavailable(ServiceUnavailable):
-    msg_fmt = _("Insufficient compute resources.")
+    msg_fmt = _("Insufficient compute resources: %(reason)s.")
 
 
 class HypervisorUnavailable(NovaException):

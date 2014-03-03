@@ -29,6 +29,20 @@ CONF = cfg.CONF
 CONF.import_opt('shelved_offload_time', 'nova.compute.manager')
 
 
+def _fake_resources():
+    resources = {
+        'memory_mb': 2048,
+        'memory_mb_used': 0,
+        'free_ram_mb': 2048,
+        'local_gb': 20,
+        'local_gb_used': 0,
+        'free_disk_gb': 20,
+        'vcpus': 2,
+        'vcpus_used': 0
+    }
+    return resources
+
+
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def _shelve_instance(self, shelved_offload_time):
         CONF.set_override('shelved_offload_time', shelved_offload_time)
@@ -200,7 +214,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
-                claims.Claim(db_instance, self.rt))
+                claims.Claim(db_instance, self.rt, _fake_resources()))
         self.compute.driver.spawn(self.context, instance, image,
                 injected_files=[], admin_password=None,
                 network_info=[],
@@ -266,7 +280,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
         self.rt.instance_claim(self.context, instance, limits).AndReturn(
-                claims.Claim(db_instance, self.rt))
+                claims.Claim(db_instance, self.rt, _fake_resources()))
         self.compute.driver.spawn(self.context, instance, None,
                 injected_files=[], admin_password=None,
                 network_info=[],

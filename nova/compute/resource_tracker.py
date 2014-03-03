@@ -118,23 +118,19 @@ class ResourceTracker(object):
                     "MB"), {'flavor': instance_ref['memory_mb'],
                             'overhead': overhead['memory_mb']})
 
-        claim = claims.Claim(instance_ref, self, overhead=overhead)
+        claim = claims.Claim(instance_ref, self, self.compute_node,
+                             overhead=overhead, limits=limits)
 
-        if claim.test(self.compute_node, limits):
+        self._set_instance_host_and_node(context, instance_ref)
 
-            self._set_instance_host_and_node(context, instance_ref)
+        # Mark resources in-use and update stats
+        self._update_usage_from_instance(self.compute_node, instance_ref)
 
-            # Mark resources in-use and update stats
-            self._update_usage_from_instance(self.compute_node, instance_ref)
+        elevated = context.elevated()
+        # persist changes to the compute node:
+        self._update(elevated, self.compute_node)
 
-            elevated = context.elevated()
-            # persist changes to the compute node:
-            self._update(elevated, self.compute_node)
-
-            return claim
-
-        else:
-            raise exception.ComputeResourcesUnavailable()
+        return claim
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def resize_claim(self, context, instance, instance_type, limits=None):
@@ -164,25 +160,21 @@ class ResourceTracker(object):
 
         instance_ref = obj_base.obj_to_primitive(instance)
         claim = claims.ResizeClaim(instance_ref, instance_type, self,
-                                   overhead=overhead)
+                                   self.compute_node, overhead=overhead,
+                                   limits=limits)
 
-        if claim.test(self.compute_node, limits):
+        migration = self._create_migration(context, instance_ref,
+                                           instance_type)
+        claim.migration = migration
 
-            migration = self._create_migration(context, instance_ref,
-                                               instance_type)
-            claim.migration = migration
-
-            # Mark the resources in-use for the resize landing on this
-            # compute host:
-            self._update_usage_from_migration(context, instance_ref,
+        # Mark the resources in-use for the resize landing on this
+        # compute host:
+        self._update_usage_from_migration(context, instance_ref,
                                               self.compute_node, migration)
-            elevated = context.elevated()
-            self._update(elevated, self.compute_node)
+        elevated = context.elevated()
+        self._update(elevated, self.compute_node)
 
-            return claim
-
-        else:
-            raise exception.ComputeResourcesUnavailable()
+        return claim
 
     def _create_migration(self, context, instance, instance_type):
         """Create a migration record for the upcoming resize.  This should

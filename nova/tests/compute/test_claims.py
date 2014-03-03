@@ -15,9 +15,11 @@
 
 """Tests for resource tracker claims."""
 
+import re
 import uuid
 
 from nova.compute import claims
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova.pci import pci_manager
 from nova import test
@@ -45,11 +47,12 @@ class ClaimTestCase(test.NoDBTestCase):
         self.resources = self._fake_resources()
         self.tracker = DummyTracker()
 
-    def _claim(self, overhead=None, **kwargs):
+    def _claim(self, limits=None, overhead=None, **kwargs):
         instance = self._fake_instance(**kwargs)
         if overhead is None:
             overhead = {'memory_mb': 0}
-        return claims.Claim(instance, self.tracker, overhead=overhead)
+        return claims.Claim(instance, self.tracker, self.resources,
+                            overhead=overhead, limits=limits)
 
     def _fake_instance(self, **kwargs):
         instance = {
@@ -90,63 +93,90 @@ class ClaimTestCase(test.NoDBTestCase):
             resources.update(values)
         return resources
 
+    # TODO(lxsli): Remove once Py2.6 is deprecated
+    def assertRaisesRegexp(self, re_obj, e, fn, *a, **kw):
+        try:
+            fn(*a, **kw)
+            self.fail("Expected exception not raised")
+        except e as ee:
+            self.assertTrue(re.search(re_obj, str(ee)))
+
     def test_cpu_unlimited(self):
         claim = self._claim(vcpus=100000)
-        self.assertTrue(claim.test(self.resources))
 
     def test_memory_unlimited(self):
         claim = self._claim(memory_mb=99999999)
-        self.assertTrue(claim.test(self.resources))
 
     def test_disk_unlimited_root(self):
         claim = self._claim(root_gb=999999)
-        self.assertTrue(claim.test(self.resources))
 
     def test_disk_unlimited_ephemeral(self):
         claim = self._claim(ephemeral_gb=999999)
-        self.assertTrue(claim.test(self.resources))
 
     def test_cpu_oversubscription(self):
-        claim = self._claim(vcpus=8)
         limits = {'vcpu': 16}
-        self.assertTrue(claim.test(self.resources, limits))
+        claim = self._claim(limits, vcpus=8)
 
     def test_memory_with_overhead(self):
         overhead = {'memory_mb': 8}
-        claim = self._claim(memory_mb=2040, overhead=overhead)
         limits = {'memory_mb': 2048}
-        self.assertTrue(claim.test(self.resources, limits))
+        claim = self._claim(memory_mb=2040, limits=limits,
+                            overhead=overhead)
 
     def test_memory_with_overhead_insufficient(self):
         overhead = {'memory_mb': 9}
-        claim = self._claim(memory_mb=2040, overhead=overhead)
         limits = {'memory_mb': 2048}
-        self.assertFalse(claim.test(self.resources, limits))
+
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim, limits=limits, overhead=overhead,
+                          memory_mb=2040)
 
     def test_cpu_insufficient(self):
-        claim = self._claim(vcpus=17)
         limits = {'vcpu': 16}
-        self.assertFalse(claim.test(self.resources, limits))
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim, limits=limits, vcpus=17)
 
     def test_memory_oversubscription(self):
-        claim = self._claim(memory_mb=4096)
         limits = {'memory_mb': 8192}
-        self.assertTrue(claim.test(self.resources, limits))
+        claim = self._claim(memory_mb=4096)
 
     def test_memory_insufficient(self):
-        claim = self._claim(memory_mb=16384)
         limits = {'memory_mb': 8192}
-        self.assertFalse(claim.test(self.resources, limits))
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          self._claim, limits=limits, memory_mb=16384)
 
     def test_disk_oversubscription(self):
-        claim = self._claim(root_gb=10, ephemeral_gb=40)
         limits = {'disk_gb': 60}
-        self.assertTrue(claim.test(self.resources, limits))
+        claim = self._claim(root_gb=10, ephemeral_gb=40,
+                            limits=limits)
 
     def test_disk_insufficient(self):
-        claim = self._claim(root_gb=10, ephemeral_gb=40)
         limits = {'disk_gb': 45}
-        self.assertFalse(claim.test(self.resources, limits))
+        self.assertRaisesRegexp(re.compile("disk", re.IGNORECASE),
+                exception.ComputeResourcesUnavailable,
+                self._claim, limits=limits, root_gb=10, ephemeral_gb=40)
+
+    def test_disk_and_memory_insufficient(self):
+        limits = {'disk_gb': 45, 'memory_mb': 8192}
+        self.assertRaisesRegexp(re.compile("memory.*disk", re.IGNORECASE),
+                exception.ComputeResourcesUnavailable,
+                self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
+                memory_mb=16384)
+
+    def test_disk_and_cpu_insufficient(self):
+        limits = {'disk_gb': 45, 'vcpu': 16}
+        self.assertRaisesRegexp(re.compile("disk.*vcpus", re.IGNORECASE),
+                exception.ComputeResourcesUnavailable,
+                self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
+                vcpus=17)
+
+    def test_disk_and_cpu_and_memory_insufficient(self):
+        limits = {'disk_gb': 45, 'vcpu': 16, 'memory_mb': 8192}
+        pat = "memory.*disk.*vcpus"
+        self.assertRaisesRegexp(re.compile(pat, re.IGNORECASE),
+                exception.ComputeResourcesUnavailable,
+                self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
+                vcpus=17, memory_mb=16384)
 
     def test_pci_pass(self):
         dev_dict = {
@@ -159,7 +189,7 @@ class ClaimTestCase(test.NoDBTestCase):
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
         claim = self._claim()
         self._set_pci_request(claim)
-        self.assertTrue(claim._test_pci())
+        claim._test_pci()
 
     def _set_pci_request(self, claim):
         request = [{'count': 1,
@@ -180,7 +210,7 @@ class ClaimTestCase(test.NoDBTestCase):
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
         claim = self._claim()
         self._set_pci_request(claim)
-        self.assertFalse(claim._test_pci())
+        self.assertEqual("Claim pci failed.", claim._test_pci())
 
     def test_pci_pass_no_requests(self):
         dev_dict = {
@@ -193,7 +223,7 @@ class ClaimTestCase(test.NoDBTestCase):
         self.tracker.pci_tracker.set_hvdevs([dev_dict])
         claim = self._claim()
         self._set_pci_request(claim)
-        self.assertTrue(claim._test_pci())
+        claim._test_pci()
 
     def test_abort(self):
         claim = self._abort()
@@ -216,12 +246,13 @@ class ResizeClaimTestCase(ClaimTestCase):
         super(ResizeClaimTestCase, self).setUp()
         self.instance = self._fake_instance()
 
-    def _claim(self, overhead=None, **kwargs):
+    def _claim(self, limits=None, overhead=None, **kwargs):
         instance_type = self._fake_instance_type(**kwargs)
         if overhead is None:
             overhead = {'memory_mb': 0}
         return claims.ResizeClaim(self.instance, instance_type, self.tracker,
-                                  overhead=overhead)
+                                  self.resources, overhead=overhead,
+                                  limits=limits)
 
     def _set_pci_request(self, claim):
         request = [{'count': 1,
