@@ -56,6 +56,8 @@ _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 IMPL = db_api.DBAPI(backend_mapping=_BACKEND_MAPPING)
 LOG = logging.getLogger(__name__)
 
+# The maximum value a signed INT type may have
+MAX_INT = 0x7FFFFFFF
 
 ###################
 
