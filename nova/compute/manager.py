@@ -968,9 +968,10 @@ class ComputeManager(manager.Manager):
 
             if request_spec and request_spec.get('image'):
                 image_meta = request_spec['image']
-                extra_usage_info = {"image_name": image_meta['name']}
             else:
                 image_meta = {}
+
+            extra_usage_info = {"image_name": image_meta.get('name', '')}
 
             notify("start")  # notify that build is starting
 
