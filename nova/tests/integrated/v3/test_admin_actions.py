@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests.image import fake
 from nova.tests.integrated.v3 import test_servers
 
 
@@ -38,21 +37,6 @@ class AdminActionsSamplesJsonTest(test_servers.ServersSampleBase):
         # Get api samples to inject network info request.
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'admin-actions-inject-network-info', {})
-        self.assertEqual(response.status, 202)
-
-    def test_post_backup_server(self):
-        # Get api samples to backup server request.
-        def image_details(self, context, **kwargs):
-            """This stub is specifically used on the backup action."""
-            # NOTE(maurosr): I've added this simple stub cause backup action
-            # was trapped in infinite loop during fetch image phase since the
-            # fake Image Service always returns the same set of images
-            return []
-
-        self.stubs.Set(fake._FakeImageService, 'detail', image_details)
-
-        response = self._do_post('servers/%s/action' % self.uuid,
-                                 'admin-actions-backup-server', {})
         self.assertEqual(response.status, 202)
 
     def test_post_reset_state(self):
