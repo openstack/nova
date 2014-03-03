@@ -178,7 +178,8 @@ class FloatingIP(object):
                                                   address,
                                                   affect_auto_assigned=True)
                 except exception.FloatingIpNotAssociated:
-                    LOG.exception(_("Floating IP is not associated. Ignore."))
+                    LOG.info(_("Floating IP %s is not associated. Ignore."),
+                             address)
                 # deallocate if auto_assigned
                 if floating_ip.auto_assigned:
                     self.deallocate_floating_ip(context, address,
