@@ -1303,11 +1303,7 @@ class Controller(wsgi.Controller):
     @wsgi.action('rebuild')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
-        try:
-            body = body['rebuild']
-        except (KeyError, TypeError):
-            msg = _('Invalid request body')
-            raise exc.HTTPBadRequest(explanation=msg)
+        body = body['rebuild']
 
         try:
             image_href = body["imageRef"]
