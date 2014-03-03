@@ -58,6 +58,9 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
         self._assert_no_hosts('create')
         updates = self.obj_get_changes()
         payload = dict(updates)
@@ -68,6 +71,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                                                     "create.start",
                                                     payload)
         metadata = updates.pop('metadata', None)
+        updates.pop('id', None)
         db_aggregate = db.aggregate_create(context, updates, metadata=metadata)
         self._from_db_object(context, self, db_aggregate)
         payload['aggregate_id'] = self.id
