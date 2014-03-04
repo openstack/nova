@@ -124,11 +124,13 @@ class CreateImportSharedTestMixIn(object):
         self.assertKeyNameRaises(exception.InvalidKeypair, msg, name)
 
     def test_name_too_short(self):
-        msg = _('Keypair name must be between 1 and 255 characters long')
+        msg = _('Keypair name must be string and between 1 '
+                'and 255 characters long')
         self.assertInvalidKeypair(msg, '')
 
     def test_name_too_long(self):
-        msg = _('Keypair name must be between 1 and 255 characters long')
+        msg = _('Keypair name must be string and between 1 '
+                'and 255 characters long')
         self.assertInvalidKeypair(msg, 'x' * 256)
 
     def test_invalid_chars(self):
