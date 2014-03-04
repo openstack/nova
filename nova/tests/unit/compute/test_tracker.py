@@ -362,15 +362,14 @@ class TestUpdateAvailableResources(BaseTestCase):
             self.rt.update_available_resource(mock.sentinel.ctx)
         return sync_mock
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_no_instances_no_migrations_no_reserved(self, get_mock):
+    def test_no_instances_no_migrations_no_reserved(self, get_mock, migr_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         self._setup_rt()
 
         get_mock.return_value = []
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_mock.return_value = []
 
         sync_mock = self._update_available_resources()
@@ -408,16 +407,15 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_no_instances_no_migrations_reserved_disk_and_ram(
-            self, get_mock):
+            self, get_mock, migr_mock):
         self.flags(reserved_host_disk_mb=1024,
                    reserved_host_memory_mb=512)
         self._setup_rt()
 
         get_mock.return_value = []
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_mock.return_value = []
 
         sync_mock = self._update_available_resources()
@@ -445,15 +443,14 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_some_instances_no_migrations(self, get_mock):
+    def test_some_instances_no_migrations(self, get_mock, migr_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         self._setup_rt()
 
         get_mock.return_value = _INSTANCE_FIXTURES
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_mock.return_value = []
 
         sync_mock = self._update_available_resources()
@@ -492,15 +489,14 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_orphaned_instances_no_migrations(self, get_mock):
+    def test_orphaned_instances_no_migrations(self, get_mock, migr_mock):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         self._setup_rt()
 
         get_mock.return_value = []
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_mock.return_value = []
 
         # Orphaned instances are those that the virt driver has on
@@ -550,9 +546,11 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_no_instances_source_migration(self, get_mock, get_inst_mock):
+    def test_no_instances_source_migration(
+            self, get_mock, get_inst_mock, migr_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the source host not the destination host, and the resource
@@ -567,8 +565,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         self._setup_rt()
 
         get_mock.return_value = []
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_obj = _MIGRATION_FIXTURES['source-only']
         migr_mock.return_value = [migr_obj]
         # Migration.instance property is accessed in the migration
@@ -602,9 +598,11 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
-    def test_no_instances_dest_migration(self, get_mock, get_inst_mock):
+    def test_no_instances_dest_migration(
+            self, get_mock, get_inst_mock, migr_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host not the source host, and the resource
@@ -619,8 +617,6 @@ class TestUpdateAvailableResources(BaseTestCase):
         self._setup_rt()
 
         get_mock.return_value = []
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_obj = _MIGRATION_FIXTURES['dest-only']
         migr_mock.return_value = [migr_obj]
         inst_uuid = migr_obj.instance_uuid
@@ -651,10 +647,11 @@ class TestUpdateAvailableResources(BaseTestCase):
         sync_mock.assert_called_once_with(mock.sentinel.ctx,
                 expected_resources)
 
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
     @mock.patch('nova.objects.Instance.get_by_uuid')
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     def test_some_instances_source_and_dest_migration(
-            self, get_mock, get_inst_mock):
+            self, get_mock, get_inst_mock, migr_mock):
         # We test the behavior of update_available_resource() when
         # there is an active migration that involves this compute node
         # as the destination host AND the source host, and the resource
@@ -666,8 +663,6 @@ class TestUpdateAvailableResources(BaseTestCase):
                    reserved_host_memory_mb=0)
         self._setup_rt()
 
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
         migr_obj = _MIGRATION_FIXTURES['source-and-dest']
         migr_mock.return_value = [migr_obj]
         inst_uuid = migr_obj.instance_uuid
@@ -909,9 +904,6 @@ class TestInstanceClaim(BaseTestCase):
         self._setup_rt()
         self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
 
-        capi = self.cond_api_mock
-        migr_mock = capi.migration_get_in_progress_by_host_and_node
-        migr_mock.return_value = []
         # not using mock.sentinel.ctx because instance_claim calls #elevated
         self.ctx = mock.MagicMock()
         self.elevated = mock.MagicMock()
@@ -953,7 +945,8 @@ class TestInstanceClaim(BaseTestCase):
         self.assertIsInstance(claim, claims.NopClaim)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
-    def test_claim(self, pci_mock):
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_claim(self, migr_mock, pci_mock):
         self.assertFalse(self.rt.disabled)
 
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
@@ -974,7 +967,8 @@ class TestInstanceClaim(BaseTestCase):
             update_mock.assert_called_once_with(self.elevated, expected)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
-    def test_claim_limits(self, pci_mock):
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_claim_limits(self, migr_mock, pci_mock):
         self.assertFalse(self.rt.disabled)
 
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
@@ -993,7 +987,8 @@ class TestInstanceClaim(BaseTestCase):
                     self.ctx, self.instance, bad_limits)
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
-    def test_claim_numa(self, pci_mock):
+    @mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
+    def test_claim_numa(self, migr_mock, pci_mock):
         self.assertFalse(self.rt.disabled)
 
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
@@ -1016,6 +1011,7 @@ class TestInstanceClaim(BaseTestCase):
             self.assertEqualNUMAHostTopology(expected_numa, new_numa)
 
 
+@mock.patch('nova.objects.MigrationList.get_in_progress_by_host_and_node')
 @mock.patch('nova.objects.Instance.get_by_uuid')
 @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
 @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
@@ -1031,10 +1027,6 @@ class TestResizeClaim(BaseTestCase):
         self.flavor = _INSTANCE_TYPE_FIXTURES[1]
         self.limits = {}
 
-        capi = self.rt.conductor_api
-        self.get_migrs = capi.migration_get_in_progress_by_host_and_node
-        self.get_migrs.return_value = []
-
         # not using mock.sentinel.ctx because resize_claim calls #elevated
         self.ctx = mock.MagicMock()
         self.elevated = mock.MagicMock()
@@ -1042,21 +1034,27 @@ class TestResizeClaim(BaseTestCase):
 
         # Initialise extensible resource trackers
         self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        with mock.patch('nova.objects.InstanceList.get_by_host_and_node') \
-                as inst_list_mock:
+        with contextlib.nested(
+            mock.patch('nova.objects.InstanceList.get_by_host_and_node'),
+            mock.patch('nova.objects.MigrationList.'
+                       'get_in_progress_by_host_and_node')
+        ) as (inst_list_mock, migr_mock):
             inst_list_mock.return_value = objects.InstanceList(objects=[])
+            migr_mock.return_value = objects.MigrationList(objects=[])
             self.rt.update_available_resource(self.ctx)
 
-    def register_mocks(self, pci_mock, inst_list_mock, inst_by_uuid):
+    def register_mocks(self, pci_mock, inst_list_mock, inst_by_uuid,
+            migr_mock):
         pci_mock.return_value = objects.InstancePCIRequests(requests=[])
         self.inst_list_mock = inst_list_mock
         self.inst_by_uuid = inst_by_uuid
+        self.migr_mock = migr_mock
 
     def audit(self, rt, instances, migrations, migr_inst):
         self.inst_list_mock.return_value = \
                 objects.InstanceList(objects=instances)
-        rt.conductor_api.migration_get_in_progress_by_host_and_node \
-                .return_value = migrations
+        self.migr_mock.return_value = \
+                objects.MigrationList(objects=migrations)
         self.inst_by_uuid.return_value = migr_inst
         rt.update_available_resource(self.ctx)
 
@@ -1082,12 +1080,13 @@ class TestResizeClaim(BaseTestCase):
         expected['vcpus_used'] += flavor['vcpus']
 
     @mock.patch('nova.objects.Flavor.get_by_id')
-    def test_claim(self, flavor_mock, pci_mock, inst_list_mock, inst_by_uuid):
+    def test_claim(self, flavor_mock, pci_mock, inst_list_mock, inst_by_uuid,
+            migr_mock):
         """Resize self.instance and check that the expected quantities of each
         resource have been consumed.
         """
 
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid)
+        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock)
         self.driver_mock.get_host_ip_addr.return_value = "fake-ip"
         flavor_mock.return_value = objects.Flavor(**self.flavor)
 
@@ -1102,13 +1101,14 @@ class TestResizeClaim(BaseTestCase):
         self.assertIsInstance(claim, claims.ResizeClaim)
         self.assertEqual(expected, self.rt.compute_node)
 
-    def test_same_host(self, pci_mock, inst_list_mock, inst_by_uuid):
+    def test_same_host(self, pci_mock, inst_list_mock, inst_by_uuid,
+            migr_mock):
         """Resize self.instance to the same host but with a different flavor.
         Then abort the claim. Check that the same amount of resources are
         available afterwards as we started with.
         """
 
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid)
+        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock)
         migr_obj = _MIGRATION_FIXTURES['source-and-dest']
         self.instance = _MIGRATION_INSTANCE_FIXTURES[migr_obj['instance_uuid']]
 
@@ -1127,13 +1127,13 @@ class TestResizeClaim(BaseTestCase):
         self.assertEqual(expected, self.rt.compute_node)
 
     def test_revert_reserve_source(
-            self, pci_mock, inst_list_mock, inst_by_uuid):
+            self, pci_mock, inst_list_mock, inst_by_uuid, migr_mock):
         """Check that the source node of an instance migration reserves
         resources until the migration has completed, even if the migration is
         reverted.
         """
 
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid)
+        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock)
 
         # Get our migrations, instances and itypes in a row
         src_migr = _MIGRATION_FIXTURES['source-only']
@@ -1182,8 +1182,9 @@ class TestResizeClaim(BaseTestCase):
         self.audit(src_rt, [], [src_migr], src_instance)
         self.assertEqual(expected, src_rt.compute_node)
 
-    def test_dupe_filter(self, pci_mock, inst_list_mock, inst_by_uuid):
-        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid)
+    def test_dupe_filter(self, pci_mock, inst_list_mock, inst_by_uuid,
+            migr_mock):
+        self.register_mocks(pci_mock, inst_list_mock, inst_by_uuid, migr_mock)
 
         migr_obj = _MIGRATION_FIXTURES['source-and-dest']
         # This is good enough to prevent a lazy-load; value is unimportant

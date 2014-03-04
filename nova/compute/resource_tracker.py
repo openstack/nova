@@ -371,9 +371,8 @@ class ResourceTracker(object):
         self._update_usage_from_instances(context, resources, instances)
 
         # Grab all in-progress migrations:
-        capi = self.conductor_api
-        migrations = capi.migration_get_in_progress_by_host_and_node(context,
-                self.host, self.nodename)
+        migrations = objects.MigrationList.get_in_progress_by_host_and_node(
+                context, self.host, self.nodename)
 
         self._update_usage_from_migrations(context, resources, migrations)
 
@@ -615,13 +614,13 @@ class ResourceTracker(object):
         """Update usage for a single migration.  The record may
         represent an incoming or outbound migration.
         """
-        uuid = migration['instance_uuid']
+        uuid = migration.instance_uuid
         LOG.info(_LI("Updating from migration %s") % uuid)
 
-        incoming = (migration['dest_compute'] == self.host and
-                    migration['dest_node'] == self.nodename)
-        outbound = (migration['source_compute'] == self.host and
-                    migration['source_node'] == self.nodename)
+        incoming = (migration.dest_compute == self.host and
+                    migration.dest_node == self.nodename)
+        outbound = (migration.source_compute == self.host and
+                    migration.source_node == self.nodename)
         same_node = (incoming and outbound)
 
         record = self.tracked_instances.get(uuid, None)
@@ -631,24 +630,24 @@ class ResourceTracker(object):
             # same node resize. record usage for whichever instance type the
             # instance is *not* in:
             if (instance['instance_type_id'] ==
-                    migration['old_instance_type_id']):
+                    migration.old_instance_type_id):
                 itype = self._get_instance_type(context, instance, 'new_',
-                        migration['new_instance_type_id'])
+                        migration.new_instance_type_id)
             else:
                 # instance record already has new flavor, hold space for a
                 # possible revert to the old instance type:
                 itype = self._get_instance_type(context, instance, 'old_',
-                        migration['old_instance_type_id'])
+                        migration.old_instance_type_id)
 
         elif incoming and not record:
             # instance has not yet migrated here:
             itype = self._get_instance_type(context, instance, 'new_',
-                    migration['new_instance_type_id'])
+                    migration.new_instance_type_id)
 
         elif outbound and not record:
             # instance migrated, but record usage for a possible revert:
             itype = self._get_instance_type(context, instance, 'old_',
-                    migration['old_instance_type_id'])
+                    migration.old_instance_type_id)
 
         if image_meta is None:
             image_meta = utils.get_image_from_system_metadata(
@@ -684,14 +683,13 @@ class ResourceTracker(object):
         # do some defensive filtering against bad migrations records in the
         # database:
         for migration in migrations:
-
-            instance = migration['instance']
+            instance = migration.instance
 
             if not instance:
                 # migration referencing deleted instance
                 continue
 
-            uuid = instance['uuid']
+            uuid = instance.uuid
 
             # skip migration if instance isn't in a resize state:
             if not self._instance_in_resize_state(instance):
@@ -701,11 +699,11 @@ class ResourceTracker(object):
 
             # filter to most recently updated migration for each instance:
             m = filtered.get(uuid, None)
-            if not m or migration['updated_at'] >= m['updated_at']:
+            if not m or migration.updated_at >= m.updated_at:
                 filtered[uuid] = migration
 
         for migration in filtered.values():
-            instance = migration['instance']
+            instance = migration.instance
             try:
                 self._update_usage_from_migration(context, instance, None,
                                                   resources, migration)
