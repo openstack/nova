@@ -11,40 +11,40 @@
 # Auto-delete queues in amqp. (boolean value)
 #amqp_auto_delete=false
 
-# Size of RPC connection pool (integer value)
+# Size of RPC connection pool. (integer value)
 #rpc_conn_pool_size=30
 
-# Modules of exceptions that are permitted to be recreatedupon
-# receiving exception data from an rpc call. (list value)
+# Modules of exceptions that are permitted to be recreated
+# upon receiving exception data from an rpc call. (list value)
 #allowed_rpc_exception_modules=oslo.messaging.exceptions,nova.exception,cinder.exception,exceptions
 
-# Qpid broker hostname (string value)
+# Qpid broker hostname. (string value)
 #qpid_hostname=localhost
 
-# Qpid broker port (integer value)
+# Qpid broker port. (integer value)
 #qpid_port=5672
 
-# Qpid HA cluster host:port pairs (list value)
+# Qpid HA cluster host:port pairs. (list value)
 #qpid_hosts=$qpid_hostname:$qpid_port
 
-# Username for Qpid connection (string value)
+# Username for Qpid connection. (string value)
 #qpid_username=
 
-# Password for Qpid connection (string value)
+# Password for Qpid connection. (string value)
 #qpid_password=
 
-# Space separated list of SASL mechanisms to use for auth
+# Space separated list of SASL mechanisms to use for auth.
 # (string value)
 #qpid_sasl_mechanisms=
 
-# Seconds between connection keepalive heartbeats (integer
+# Seconds between connection keepalive heartbeats. (integer
 # value)
 #qpid_heartbeat=60
 
-# Transport to use, either 'tcp' or 'ssl' (string value)
+# Transport to use, either 'tcp' or 'ssl'. (string value)
 #qpid_protocol=tcp
 
-# Disable Nagle algorithm (boolean value)
+# Whether to disable the Nagle algorithm. (boolean value)
 #qpid_tcp_nodelay=true
 
 # The qpid topology version to use.  Version 1 is what was
@@ -57,52 +57,55 @@
 
 # SSL version to use (valid only if SSL enabled). valid values
 # are TLSv1, SSLv23 and SSLv3. SSLv2 may be available on some
-# distributions (string value)
+# distributions. (string value)
 #kombu_ssl_version=
 
-# SSL key file (valid only if SSL enabled) (string value)
+# SSL key file (valid only if SSL enabled). (string value)
 #kombu_ssl_keyfile=
 
-# SSL cert file (valid only if SSL enabled) (string value)
+# SSL cert file (valid only if SSL enabled). (string value)
 #kombu_ssl_certfile=
 
-# SSL certification authority file (valid only if SSL enabled)
-# (string value)
+# SSL certification authority file (valid only if SSL
+# enabled). (string value)
 #kombu_ssl_ca_certs=
 
-# The RabbitMQ broker address where a single node is used
+# The RabbitMQ broker address where a single node is used.
 # (string value)
 #rabbit_host=localhost
 
-# The RabbitMQ broker port where a single node is used
+# The RabbitMQ broker port where a single node is used.
 # (integer value)
 #rabbit_port=5672
 
-# RabbitMQ HA cluster host:port pairs (list value)
+# RabbitMQ HA cluster host:port pairs. (list value)
 #rabbit_hosts=$rabbit_host:$rabbit_port
 
-# Connect over SSL for RabbitMQ (boolean value)
+# Connect over SSL for RabbitMQ. (boolean value)
 #rabbit_use_ssl=false
 
-# The RabbitMQ userid (string value)
+# The RabbitMQ userid. (string value)
 #rabbit_userid=guest
 
-# The RabbitMQ password (string value)
+# The RabbitMQ password. (string value)
 #rabbit_password=guest
 
-# The RabbitMQ virtual host (string value)
+# the RabbitMQ login method (string value)
+#rabbit_login_method=AMQPLAIN
+
+# The RabbitMQ virtual host. (string value)
 #rabbit_virtual_host=/
 
-# How frequently to retry connecting with RabbitMQ (integer
+# How frequently to retry connecting with RabbitMQ. (integer
 # value)
 #rabbit_retry_interval=1
 
 # How long to backoff for between retries when connecting to
-# RabbitMQ (integer value)
+# RabbitMQ. (integer value)
 #rabbit_retry_backoff=2
 
 # Maximum number of RabbitMQ connection retries. Default is 0
-# (infinite retry count) (integer value)
+# (infinite retry count). (integer value)
 #rabbit_max_retries=0
 
 # Use HA queues in RabbitMQ (x-ha-policy: all). If you change
@@ -110,7 +113,7 @@
 # value)
 #rabbit_ha_queues=false
 
-# If passed, use a fake RabbitMQ provider (boolean value)
+# If passed, use a fake RabbitMQ provider. (boolean value)
 #fake_rabbit=false
 
 # ZeroMQ bind address. Should be a wildcard (*), an ethernet
@@ -118,20 +121,20 @@
 # to this address. (string value)
 #rpc_zmq_bind_address=*
 
-# MatchMaker driver (string value)
+# MatchMaker driver. (string value)
 #rpc_zmq_matchmaker=oslo.messaging._drivers.matchmaker.MatchMakerLocalhost
 
-# ZeroMQ receiver listening port (integer value)
+# ZeroMQ receiver listening port. (integer value)
 #rpc_zmq_port=9501
 
-# Number of ZeroMQ contexts, defaults to 1 (integer value)
+# Number of ZeroMQ contexts, defaults to 1. (integer value)
 #rpc_zmq_contexts=1
 
 # Maximum number of ingress messages to locally buffer per
 # topic. Default is unlimited. (integer value)
 #rpc_zmq_topic_backlog=<None>
 
-# Directory for holding IPC sockets (string value)
+# Directory for holding IPC sockets. (string value)
 #rpc_zmq_ipc_dir=/var/run/openstack
 
 # Name of this node. Must be a valid hostname, FQDN, or IP
@@ -143,33 +146,33 @@
 # by impl_zmq. (integer value)
 #rpc_cast_timeout=30
 
-# Heartbeat frequency (integer value)
+# Heartbeat frequency. (integer value)
 #matchmaker_heartbeat_freq=300
 
 # Heartbeat time-to-live. (integer value)
 #matchmaker_heartbeat_ttl=600
 
-# Host to locate redis (string value)
+# Host to locate redis. (string value)
 #host=127.0.0.1
 
 # Use this port to connect to redis host. (integer value)
 #port=6379
 
-# Password for Redis server. (optional) (string value)
+# Password for Redis server (optional). (string value)
 #password=<None>
 
-# Size of RPC greenthread pool (integer value)
+# Size of RPC greenthread pool. (integer value)
 #rpc_thread_pool_size=64
 
-# Driver or drivers to handle sending notifications (multi
+# Driver or drivers to handle sending notifications. (multi
 # valued)
 #notification_driver=
 
-# AMQP topic used for OpenStack notifications (list value)
+# AMQP topic used for OpenStack notifications. (list value)
 # Deprecated group/name - [rpc_notifier2]/topics
 #notification_topics=notifications
 
-# Seconds to wait for a response from a call (integer value)
+# Seconds to wait for a response from a call. (integer value)
 #rpc_response_timeout=60
 
 # A URL representing the messaging driver to use and its full
@@ -3034,7 +3037,7 @@
 # Options defined in oslo.messaging
 #
 
-# Matchmaker ring file (JSON) (string value)
+# Matchmaker ring file (JSON). (string value)
 # Deprecated group/name - [DEFAULT]/matchmaker_ringfile
 #ringfile=/etc/oslo/matchmaker_ring.json
 
@@ -3160,15 +3163,15 @@
 # Options defined in nova.openstack.common.sslutils
 #
 
-# CA certificate file to use to verify connecting clients
+# CA certificate file to use to verify connecting clients.
 # (string value)
 #ca_file=<None>
 
-# Certificate file to use when starting the server securely
+# Certificate file to use when starting the server securely.
 # (string value)
 #cert_file=<None>
 
-# Private key file to use when starting the server securely
+# Private key file to use when starting the server securely.
 # (string value)
 #key_file=<None>
 

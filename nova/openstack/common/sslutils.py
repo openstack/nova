@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2013 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -19,22 +17,22 @@ import ssl
 
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _  # noqa
+from nova.openstack.common.gettextutils import _
 
 
 ssl_opts = [
     cfg.StrOpt('ca_file',
                default=None,
                help="CA certificate file to use to verify "
-                    "connecting clients"),
+                    "connecting clients."),
     cfg.StrOpt('cert_file',
                default=None,
                help="Certificate file to use when starting "
-                    "the server securely"),
+                    "the server securely."),
     cfg.StrOpt('key_file',
                default=None,
                help="Private key file to use when starting "
-                    "the server securely"),
+                    "the server securely."),
 ]
 
 

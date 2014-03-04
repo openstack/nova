@@ -23,6 +23,7 @@ Usual usage in an openstack.common module:
 """
 
 import copy
+import functools
 import gettext
 import locale
 from logging import handlers
@@ -34,6 +35,17 @@ import six
 
 _localedir = os.environ.get('nova'.upper() + '_LOCALEDIR')
 _t = gettext.translation('nova', localedir=_localedir, fallback=True)
+
+# We use separate translation catalogs for each log level, so set up a
+# mapping between the log level name and the translator. The domain
+# for the log level is project_name + "-log-" + log_level so messages
+# for each level end up in their own catalog.
+_t_log_levels = dict(
+    (level, gettext.translation('nova' + '-log-' + level,
+                                localedir=_localedir,
+                                fallback=True))
+    for level in ['info', 'warning', 'error', 'critical']
+)
 
 _AVAILABLE_LANGUAGES = {}
 USE_LAZY = False
@@ -58,6 +70,28 @@ def _(msg):
         if six.PY3:
             return _t.gettext(msg)
         return _t.ugettext(msg)
+
+
+def _log_translation(msg, level):
+    """Build a single translation of a log message
+    """
+    if USE_LAZY:
+        return Message(msg, domain='nova' + '-log-' + level)
+    else:
+        translator = _t_log_levels[level]
+        if six.PY3:
+            return translator.gettext(msg)
+        return translator.ugettext(msg)
+
+# Translators for log levels.
+#
+# The abbreviated names are meant to reflect the usual use of a short
+# name like '_'. The "L" is for "log" and the other letter comes from
+# the level.
+_LI = functools.partial(_log_translation, level='info')
+_LW = functools.partial(_log_translation, level='warning')
+_LE = functools.partial(_log_translation, level='error')
+_LC = functools.partial(_log_translation, level='critical')
 
 
 def install(domain, lazy=False):
