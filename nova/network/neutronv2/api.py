@@ -416,6 +416,13 @@ class API(base.Base):
                         LOG.exception(_("Failed to delete neutron port %s"),
                                       port)
 
+        # NOTE(arosen): This clears out the network_cache only if the instance
+        # hasn't already been deleted. This is needed when an instance fails to
+        # launch and is rescheduled onto another compute node. If the instance
+        # has already been deleted this call does nothing.
+        update_instance_info_cache(self, context, instance,
+                                   network_model.NetworkInfo([]))
+
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None):
         """Allocate a port for the instance."""

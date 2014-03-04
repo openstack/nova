@@ -960,6 +960,7 @@ class TestNeutronv2(TestNeutronv2Base):
                           self.instance, requested_networks=requested_networks)
 
     def _deallocate_for_instance(self, number):
+        api = neutronapi.API()
         port_data = number == 1 and self.port_data1 or self.port_data2
         self.moxed_client.list_ports(
             device_id=self.instance['uuid']).AndReturn(
@@ -967,6 +968,10 @@ class TestNeutronv2(TestNeutronv2Base):
         for port in reversed(port_data):
             self.moxed_client.delete_port(port['id'])
 
+        self.mox.StubOutWithMock(api.db, 'instance_info_cache_update')
+        api.db.instance_info_cache_update(self.context,
+                                          self.instance['uuid'],
+                                          {'network_info': '[]'})
         self.mox.ReplayAll()
 
         api = neutronapi.API()
