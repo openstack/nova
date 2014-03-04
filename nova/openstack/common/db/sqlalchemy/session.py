@@ -612,7 +612,7 @@ def _is_db_connection_error(args):
     # NOTE(adam_g): This is currently MySQL specific and needs to be extended
     #               to support Postgres and others.
     # For the db2, the error code is -30081 since the db2 is still not ready
-    conn_err_codes = ('2002', '2003', '2006', '-30081')
+    conn_err_codes = ('2002', '2003', '2006', '2013', '-30081')
     for err_code in conn_err_codes:
         if args.find(err_code) != -1:
             return True
