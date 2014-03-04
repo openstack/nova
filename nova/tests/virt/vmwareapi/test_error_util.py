@@ -58,3 +58,26 @@ class ErrorUtilTestCase(test.NoDBTestCase):
         self.assertIsNone(
             error_util.FaultCheckers.retrievepropertiesex_fault_checker(
                 fake_objects))
+
+    def test_exception_summary_exception_as_list(self):
+        # assert that if a list is fed to the VimException object
+        # that it will error.
+        self.assertRaises(ValueError,
+                          error_util.VimException,
+                          [], ValueError('foo'))
+
+    def test_exception_summary_string(self):
+        e = error_util.VimException("string", ValueError("foo"))
+        string = str(e)
+        self.assertEqual("string: foo", string)
+
+    def test_vim_fault_exception_string(self):
+        self.assertRaises(ValueError,
+                          error_util.VimFaultException,
+                          "bad", ValueError("argument"))
+
+    def test_vim_fault_exception(self):
+        vfe = error_util.VimFaultException([ValueError("example")],
+                                           ValueError("cause"))
+        string = str(vfe)
+        self.assertEqual("cause", string)
