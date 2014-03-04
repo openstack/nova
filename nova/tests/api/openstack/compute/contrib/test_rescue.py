@@ -12,6 +12,7 @@
 #   License for the specific language governing permissions and limitations
 #   under the License.
 
+import mock
 from oslo.config import cfg
 import webob
 
@@ -128,3 +129,35 @@ class RescueTest(test.NoDBTestCase):
 
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 400)
+
+    @mock.patch('nova.compute.api.API.rescue')
+    def test_rescue_raises_not_implemented(self, rescue_mock):
+        body = dict(rescue=None)
+
+        def fake_rescue(*args, **kwargs):
+            raise NotImplementedError('not implemented')
+
+        rescue_mock.side_effect = fake_rescue
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 501)
+
+    @mock.patch('nova.compute.api.API.unrescue')
+    def test_unrescue_raises_not_implemented(self, unrescue_mock):
+        body = dict(unrescue=None)
+
+        def fake_unrescue(*args, **kwargs):
+            raise NotImplementedError('not implemented')
+
+        unrescue_mock.side_effect = fake_unrescue
+        req = webob.Request.blank('/v2/fake/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 501)
