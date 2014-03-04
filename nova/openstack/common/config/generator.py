@@ -1,4 +1,5 @@
 # Copyright 2012 SINA Corporation
+# Copyright 2014 Cisco Systems, Inc.
 # All Rights Reserved.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -40,6 +41,7 @@ BOOLOPT = "BoolOpt"
 INTOPT = "IntOpt"
 FLOATOPT = "FloatOpt"
 LISTOPT = "ListOpt"
+DICTOPT = "DictOpt"
 MULTISTROPT = "MultiStrOpt"
 
 OPT_TYPES = {
@@ -48,11 +50,12 @@ OPT_TYPES = {
     INTOPT: 'integer value',
     FLOATOPT: 'floating point value',
     LISTOPT: 'list value',
+    DICTOPT: 'dict value',
     MULTISTROPT: 'multi valued',
 }
 
 OPTION_REGEX = re.compile(r"(%s)" % "|".join([STROPT, BOOLOPT, INTOPT,
-                                              FLOATOPT, LISTOPT,
+                                              FLOATOPT, LISTOPT, DICTOPT,
                                               MULTISTROPT]))
 
 PY_EXT = ".py"
@@ -226,7 +229,7 @@ def _sanitize_default(name, value):
         return value.replace(BASEDIR, '')
     elif value == _get_my_ip():
         return '10.0.0.1'
-    elif value == socket.gethostname() and 'host' in name:
+    elif value in (socket.gethostname(), socket.getfqdn()) and 'host' in name:
         return 'nova'
     elif value.strip() != value:
         return '"%s"' % value
@@ -244,7 +247,8 @@ def _print_opt(opt):
     except (ValueError, AttributeError) as err:
         sys.stderr.write("%s\n" % str(err))
         sys.exit(1)
-    opt_help += ' (' + OPT_TYPES[opt_type] + ')'
+    opt_help = u'%s (%s)' % (opt_help,
+                             OPT_TYPES[opt_type])
     print('#', "\n# ".join(textwrap.wrap(opt_help, WORDWRAP_WIDTH)))
     if opt.deprecated_opts:
         for deprecated_opt in opt.deprecated_opts:
@@ -274,6 +278,11 @@ def _print_opt(opt):
         elif opt_type == LISTOPT:
             assert(isinstance(opt_default, list))
             print('#%s=%s' % (opt_name, ','.join(opt_default)))
+        elif opt_type == DICTOPT:
+            assert(isinstance(opt_default, dict))
+            opt_default_strlist = [str(key) + ':' + str(value)
+                                   for (key, value) in opt_default.items()]
+            print('#%s=%s' % (opt_name, ','.join(opt_default_strlist)))
         elif opt_type == MULTISTROPT:
             assert(isinstance(opt_default, list))
             if not opt_default:
