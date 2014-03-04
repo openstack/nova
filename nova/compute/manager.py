@@ -64,6 +64,7 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
+from nova.objects import instance_group as instance_group_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
@@ -1001,6 +1002,36 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(instance_uuid=instance['uuid'],
                     reason=msg)
 
+    def _validate_instance_group_policy(self, context, instance,
+            filter_properties):
+        # NOTE(russellb) Instance group policy is enforced by the scheduler.
+        # However, there is a race condition with the enforcement of
+        # anti-affinity.  Since more than one instance may be scheduled at the
+        # same time, it's possible that more than one instance with an
+        # anti-affinity policy may end up here.  This is a validation step to
+        # make sure that starting the instance here doesn't violate the policy.
+
+        scheduler_hints = filter_properties.get('scheduler_hints') or {}
+        group_uuid = scheduler_hints.get('group')
+        if not group_uuid:
+            return
+
+        @utils.synchronized(group_uuid)
+        def _do_validation(context, instance, group_uuid):
+            group = instance_group_obj.InstanceGroup.get_by_uuid(context,
+                                                                 group_uuid)
+            if 'anti-affinity' not in group.policies:
+                return
+
+            group_hosts = group.get_hosts(context, exclude=[instance['uuid']])
+            if self.host in group_hosts:
+                msg = _("Anti-affinity instance group policy was violated.")
+                raise exception.RescheduledException(
+                        instance_uuid=instance['uuid'],
+                        reason=msg)
+
+        _do_validation(context, instance, group_uuid)
+
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,
             node, instance, image_meta, legacy_bdm_in_spec):
@@ -1029,6 +1060,11 @@ class ComputeManager(manager.Manager):
         try:
             limits = filter_properties.get('limits', {})
             with rt.instance_claim(context, instance, limits):
+                # NOTE(russellb) It's important that this validation be done
+                # *after* the resource tracker instance claim, as that is where
+                # the host is set on the instance.
+                self._validate_instance_group_policy(context, instance,
+                        filter_properties)
                 macs = self.driver.macs_for_instance(instance)
                 dhcp_options = self.driver.dhcp_options_for_instance(instance)
 
