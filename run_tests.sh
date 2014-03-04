@@ -114,7 +114,7 @@ function run_tests {
       # provided.
       testrargs="discover ./nova/tests"
     fi
-    ${wrapper} python -m testtools.run $testropts $testrargs
+    ${wrapper} python -m nova.openstack.common.lockutils python -m testtools.run $testropts $testrargs
 
     # Short circuit because all of the testr and coverage stuff
     # below does not make sense when running testtools.run for
