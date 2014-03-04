@@ -834,8 +834,8 @@ class ComputeTaskManager(base.Base):
                             sys_meta['shelved_image_id'])
             except exception.ImageNotFound:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_('Unshelve attempted but vm_state not SHELVED '
-                                'or SHELVED_OFFLOADED'), instance=instance)
+                    LOG.error(_('Unshelve cannot find the image with id %s'),
+                              sys_meta['shelved_image_id'], instance=instance)
                     instance.vm_state = vm_states.ERROR
                     instance.save()
 
