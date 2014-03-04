@@ -14,7 +14,9 @@ import contextlib
 import copy
 
 import mock
+from oslo_utils import units
 
+from nova.compute import claims
 from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import resource_tracker
@@ -126,16 +128,50 @@ _MIGRATION_SYS_META = flavors.save_flavor_info(
 _MIGRATION_SYS_META = flavors.save_flavor_info(
         _MIGRATION_SYS_META, _INSTANCE_TYPE_FIXTURES[2], 'new_')
 
+_2MB = 2 * units.Mi / units.Ki
+
+_INSTANCE_NUMA_TOPOLOGIES = {
+    '2mb': objects.InstanceNUMATopology(cells=[
+        objects.InstanceNUMACell(
+            id=0, cpuset=set([1]), memory=_2MB, pagesize=0),
+        objects.InstanceNUMACell(
+            id=1, cpuset=set([3]), memory=_2MB, pagesize=0)]),
+}
+
+_NUMA_LIMIT_TOPOLOGIES = {
+    '2mb': objects.NUMATopologyLimits(id=0,
+                                      cpu_allocation_ratio=1.0,
+                                      ram_allocation_ratio=1.0),
+}
+
+_NUMA_PAGE_TOPOLOGIES = {
+    '2kb*8': objects.NUMAPagesTopology(size_kb=2, total=8, used=0)
+}
+
+_NUMA_HOST_TOPOLOGIES = {
+    '2mb': objects.NUMATopology(cells=[
+        objects.NUMACell(id=0, cpuset=set([1, 2]), memory=_2MB,
+                         cpu_usage=0, memory_usage=0,
+                         mempages=[_NUMA_PAGE_TOPOLOGIES['2kb*8']],
+                         siblings=[], pinned_cpus=set([])),
+        objects.NUMACell(id=1, cpuset=set([3, 4]), memory=_2MB,
+                         cpu_usage=0, memory_usage=0,
+                         mempages=[_NUMA_PAGE_TOPOLOGIES['2kb*8']],
+                         siblings=[], pinned_cpus=set([]))]),
+}
+
 
 _INSTANCE_FIXTURES = [
     objects.Instance(
         id=1,
+        host=None,  # prevent RT trying to lazy-load this
+        node=None,
         uuid='c17741a5-6f3d-44a8-ade8-773dc8c29124',
         memory_mb=128,
         vcpus=1,
         root_gb=1,
         ephemeral_gb=0,
-        numa_topology=None,
+        numa_topology=_INSTANCE_NUMA_TOPOLOGIES['2mb'],
         instance_type_id=1,
         vm_state=vm_states.ACTIVE,
         power_state=power_state.RUNNING,
@@ -145,6 +181,8 @@ _INSTANCE_FIXTURES = [
     ),
     objects.Instance(
         id=2,
+        host=None,
+        node=None,
         uuid='33805b54-dea6-47b8-acb2-22aeb1b57919',
         memory_mb=256,
         vcpus=2,
@@ -851,3 +889,118 @@ class TestSyncComputeNode(BaseTestCase):
         urs_mock.assert_called_once_with(mock.sentinel.ctx,
                                          ('fake-host', 'fake-node'),
                                          expected_resources)
+
+
+class TestInstanceClaim(BaseTestCase):
+
+    def setUp(self):
+        super(TestInstanceClaim, self).setUp()
+
+        self._setup_rt()
+        self.rt.compute_node = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+
+        capi = self.cond_api_mock
+        migr_mock = capi.migration_get_in_progress_by_host_and_node
+        migr_mock.return_value = []
+        # not using mock.sentinel.ctx because instance_claim calls #elevated
+        self.ctx = mock.MagicMock()
+        self.elevated = mock.MagicMock()
+        self.ctx.elevated.return_value = self.elevated
+
+        self.instance = copy.deepcopy(_INSTANCE_FIXTURES[0])
+
+    def assertEqualNUMAHostTopology(self, expected, got):
+        attrs = ('cpuset', 'memory', 'id', 'cpu_usage', 'memory_usage')
+        if None in (expected, got):
+            if expected != got:
+                raise AssertionError("Topologies don't match. Expected: "
+                                     "%(expected)s, but got: %(got)s" %
+                                     {'expected': expected, 'got': got})
+            else:
+                return
+
+        if len(expected) != len(got):
+            raise AssertionError("Topologies don't match due to different "
+                                 "number of cells. Expected: "
+                                 "%(expected)s, but got: %(got)s" %
+                                 {'expected': expected, 'got': got})
+        for exp_cell, got_cell in zip(expected.cells, got.cells):
+            for attr in attrs:
+                if getattr(exp_cell, attr) != getattr(got_cell, attr):
+                    raise AssertionError("Topologies don't match. Expected: "
+                                         "%(expected)s, but got: %(got)s" %
+                                         {'expected': expected, 'got': got})
+
+    def test_claim_disabled(self):
+        self.rt.compute_node = None
+        self.assertTrue(self.rt.disabled)
+
+        claim = self.rt.instance_claim(mock.sentinel.ctx, self.instance, None)
+
+        self.assertEqual(self.rt.host, self.instance.host)
+        self.assertEqual(self.rt.host, self.instance.launched_on)
+        self.assertEqual(self.rt.nodename, self.instance.node)
+        self.assertIsInstance(claim, claims.NopClaim)
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    def test_claim(self, pci_mock):
+        self.assertFalse(self.rt.disabled)
+
+        pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+
+        disk_used = self.instance.root_gb + self.instance.ephemeral_gb
+        expected = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        expected.update({
+            'local_gb_used': disk_used,
+            'memory_mb_used': self.instance.memory_mb,
+            'free_disk_gb': expected['local_gb'] - disk_used,
+            "free_ram_mb": expected['memory_mb'] - self.instance.memory_mb,
+            'running_vms': 1,
+            # 'vcpus_used': 0,  # vcpus are not claimed
+            'pci_stats': '[]',
+        })
+        with mock.patch.object(self.rt, '_update') as update_mock:
+            self.rt.instance_claim(self.ctx, self.instance, None)
+            update_mock.assert_called_once_with(self.elevated, expected)
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    def test_claim_limits(self, pci_mock):
+        self.assertFalse(self.rt.disabled)
+
+        pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+
+        good_limits = {
+            'memory_mb': _COMPUTE_NODE_FIXTURES[0]['memory_mb'],
+            'disk_gb': _COMPUTE_NODE_FIXTURES[0]['local_gb'],
+            'vcpu': _COMPUTE_NODE_FIXTURES[0]['vcpus'],
+        }
+        for key in good_limits.keys():
+            bad_limits = copy.deepcopy(good_limits)
+            bad_limits[key] = 0
+
+            self.assertRaises(exc.ComputeResourcesUnavailable,
+                    self.rt.instance_claim,
+                    self.ctx, self.instance, bad_limits)
+
+    @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid')
+    def test_claim_numa(self, pci_mock):
+        self.assertFalse(self.rt.disabled)
+
+        pci_mock.return_value = objects.InstancePCIRequests(requests=[])
+
+        self.instance.numa_topology = _INSTANCE_NUMA_TOPOLOGIES['2mb']
+        host_topology = _NUMA_HOST_TOPOLOGIES['2mb']
+        self.rt.compute_node['numa_topology'] = host_topology._to_json()
+        limits = {'numa_topology': _NUMA_LIMIT_TOPOLOGIES['2mb']}
+
+        expected_numa = copy.deepcopy(host_topology)
+        for cell in expected_numa.cells:
+            cell.memory_usage += _2MB
+            cell.cpu_usage += 1
+        with mock.patch.object(self.rt, '_update') as update_mock:
+            self.rt.instance_claim(self.ctx, self.instance, limits)
+            self.assertTrue(update_mock.called)
+            updated_compute_node = update_mock.call_args[0][1]
+            new_numa = updated_compute_node['numa_topology']
+            new_numa = objects.NUMATopology.obj_from_db_obj(new_numa)
+            self.assertEqualNUMAHostTopology(expected_numa, new_numa)
