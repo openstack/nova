@@ -70,6 +70,10 @@
 # enabled). (string value)
 #kombu_ssl_ca_certs=
 
+# How long to wait before reconnecting in response to an AMQP
+# consumer cancel notification. (floating point value)
+#kombu_reconnect_delay=1.0
+
 # The RabbitMQ broker address where a single node is used.
 # (string value)
 #rabbit_host=localhost
