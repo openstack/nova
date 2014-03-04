@@ -16,6 +16,7 @@ from nova import db
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
+from nova.objects import instance as instance_obj
 
 
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
@@ -24,7 +25,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.2: Use list/dict helpers for policies, metadetails, members
     # Version 1.3: Make uuid a non-None real string
     # Version 1.4: Add add_members()
-    VERSION = '1.4'
+    # Version 1.5: Add get_hosts()
+    VERSION = '1.5'
 
     fields = {
         'id': fields.IntegerField(),
@@ -116,12 +118,31 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
                 instance_uuids)
         return list(members)
 
+    @base.remotable
+    def get_hosts(self, context, exclude=None):
+        """Get a list of hosts for non-deleted instances in the group
+
+        This method allows you to get a list of the hosts where instances in
+        this group are currently running.  There's also an option to exclude
+        certain instance UUIDs from this calculation.
+
+        """
+        filter_uuids = self.members
+        if exclude:
+            filter_uuids = set(filter_uuids) - set(exclude)
+        filters = {'uuid': filter_uuids, 'deleted_at': None}
+        instances = instance_obj.InstanceList.get_by_filters(context,
+                                                             filters=filters)
+        return list(set([instance.host for instance in instances
+                         if instance.host]))
+
 
 class InstanceGroupList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceGroup <= version 1.3
     # Version 1.1: InstanceGroup <= version 1.4
-    VERSION = '1.1'
+    # Version 1.2: InstanceGroup <= version 1.5
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceGroup'),
@@ -130,6 +151,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         '1.0': '1.3',
         # NOTE(danms): InstanceGroup was at 1.3 before we added this
         '1.1': '1.4',
+        '1.2': '1.5',
         }
 
     @base.remotable_classmethod

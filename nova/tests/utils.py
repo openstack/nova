@@ -88,7 +88,10 @@ def get_test_instance(context=None, flavor=None, obj=False):
                      'image_ref': 'cedef40a-ed67-4d10-800e-17455edce175',
                      'instance_type_id': '5',
                      'system_metadata': metadata,
-                     'extra_specs': {}}
+                     'extra_specs': {},
+                     'user_id': context.user_id,
+                     'project_id': context.project_id,
+                     }
 
     if obj:
         instance = instance_obj.Instance(context, **test_instance)

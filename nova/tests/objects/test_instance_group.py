@@ -12,12 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.compute import flavors
 from nova import context
 from nova import db
 from nova import exception
 from nova.objects import instance_group
 from nova import test
 from nova.tests.objects import test_objects
+from nova.tests import utils as tests_utils
 
 
 class _TestInstanceGroupObjects(test.TestCase):
@@ -220,6 +222,58 @@ class _TestInstanceGroupObjects(test.TestCase):
         for instance in instance_ids:
             self.assertIn(instance, members)
             self.assertIn(instance, group.members)
+
+    def test_get_hosts(self):
+        instance1 = tests_utils.get_test_instance(self.context,
+                flavor=flavors.get_default_flavor(), obj=True)
+        instance1.host = 'hostA'
+        instance1.save()
+        instance2 = tests_utils.get_test_instance(self.context,
+                flavor=flavors.get_default_flavor(), obj=True)
+        instance2.host = 'hostB'
+        instance2.save()
+        instance3 = tests_utils.get_test_instance(self.context,
+                flavor=flavors.get_default_flavor(), obj=True)
+        instance3.host = 'hostB'
+        instance3.save()
+
+        instance_ids = [instance1.uuid, instance2.uuid, instance3.uuid]
+        values = self._get_default_values()
+        group = self._create_instance_group(self.context, values)
+        instance_group.InstanceGroup.add_members(self.context, group.uuid,
+                instance_ids)
+
+        group = instance_group.InstanceGroup.get_by_uuid(self.context,
+                group.uuid)
+        hosts = group.get_hosts(self.context)
+        self.assertEqual(2, len(hosts))
+        self.assertIn('hostA', hosts)
+        self.assertIn('hostB', hosts)
+        hosts = group.get_hosts(self.context, exclude=[instance1.uuid])
+        self.assertEqual(1, len(hosts))
+        self.assertIn('hostB', hosts)
+
+    def test_get_hosts_with_some_none(self):
+        instance1 = tests_utils.get_test_instance(self.context,
+                flavor=flavors.get_default_flavor(), obj=True)
+        instance1.host = None
+        instance1.save()
+        instance2 = tests_utils.get_test_instance(self.context,
+                flavor=flavors.get_default_flavor(), obj=True)
+        instance2.host = 'hostB'
+        instance2.save()
+
+        instance_ids = [instance1.uuid, instance2.uuid]
+        values = self._get_default_values()
+        group = self._create_instance_group(self.context, values)
+        instance_group.InstanceGroup.add_members(self.context, group.uuid,
+                instance_ids)
+
+        group = instance_group.InstanceGroup.get_by_uuid(self.context,
+                group.uuid)
+        hosts = group.get_hosts(self.context)
+        self.assertEqual(1, len(hosts))
+        self.assertIn('hostB', hosts)
 
 
 class TestInstanceGroupObject(test_objects._LocalTest,
