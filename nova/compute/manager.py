@@ -74,6 +74,7 @@ from nova.objects import quotas as quotas_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common.gettextutils import _LW
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import periodic_task
@@ -1973,10 +1974,18 @@ class ComputeManager(manager.Manager):
                 LOG.debug(e.format_message(), instance=instance)
                 self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
-        except (exception.VirtualInterfaceCreateException,
-                exception.VirtualInterfaceMacAddressException,
-                exception.FixedIpLimitExceeded,
+        except (exception.FixedIpLimitExceeded,
                 exception.NoMoreNetworks) as e:
+            LOG.warn(_LW('No more network or fixed IP to be allocated'),
+                     instance=instance)
+            self._notify_about_instance_usage(context, instance,
+                    'create.error', fault=e)
+            msg = _('Failed to allocate the network(s) with error %s, '
+                    'not rescheduling.') % e.format_message()
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
+                    reason=msg)
+        except (exception.VirtualInterfaceCreateException,
+                exception.VirtualInterfaceMacAddressException) as e:
             LOG.exception(_('Failed to allocate network(s)'),
                           instance=instance)
             self._notify_about_instance_usage(context, instance,
