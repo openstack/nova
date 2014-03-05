@@ -3213,25 +3213,24 @@ class ComputeTestCase(BaseTestCase):
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), [], [])
 
-    def test_run_instance_usage_notification(self):
+    def test_run_instance_usage_notification(self, request_spec={}):
         # Ensure run instance generates appropriate usage notification.
         instance = jsonutils.to_primitive(self._create_fake_instance())
         instance_uuid = instance['uuid']
-        request_spec = {'image': {'name': 'fake_name'}}
+        expected_image_name = request_spec.get('image', {}).get('name', '')
         self.compute.run_instance(self.context, instance, request_spec,
                 {}, [], None, None, True, None, False)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         inst_ref = db.instance_get_by_uuid(self.context, instance_uuid)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type, 'compute.instance.create.start')
-        self.assertEqual(msg.payload['image_name'], 'fake_name')
         # The last event is the one with the sugar in it.
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.create.end')
         payload = msg.payload
         self.assertEqual(payload['tenant_id'], self.project_id)
-        self.assertEqual(payload['image_name'], 'fake_name')
+        self.assertEqual(expected_image_name, payload['image_name'])
         self.assertEqual(payload['user_id'], self.user_id)
         self.assertEqual(payload['instance_id'], inst_ref['uuid'])
         self.assertEqual(payload['instance_type'], 'm1.tiny')
@@ -3250,6 +3249,15 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('Success', payload['message'])
         self.compute.terminate_instance(self.context,
                 self._objectify(inst_ref), [], [])
+
+    def test_run_instance_image_usage_notification(self):
+        request_spec = {'image': {'name': 'fake_name', 'key': 'value'}}
+        self.test_run_instance_usage_notification(request_spec=request_spec)
+
+    def test_run_instance_usage_notification_volume_meta(self):
+        # Volume's image metadata won't contain the image name
+        request_spec = {'image': {'key': 'value'}}
+        self.test_run_instance_usage_notification(request_spec=request_spec)
 
     def test_run_instance_end_notification_on_abort(self):
         # Test that an end notif is sent if the build is aborted
