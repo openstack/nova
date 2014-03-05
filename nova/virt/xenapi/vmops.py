@@ -329,8 +329,8 @@ class VMOps(object):
               name_label=None, rescue=False):
 
         if block_device_info:
-            LOG.debug(_("Block device information present: %s")
-                      % block_device_info, instance=instance)
+            LOG.debug(_("Block device information present: %s"),
+                      block_device_info, instance=instance)
         if block_device_info and not block_device_info['root_device_name']:
             block_device_info['root_device_name'] = self.default_root_dev
 
@@ -562,7 +562,7 @@ class VMOps(object):
         image_properties = image_meta.get("properties")
         device_id = vm_utils.get_vm_device_id(self._session, image_properties)
         use_pv_kernel = (mode == vm_mode.XEN)
-        LOG.debug(_("Using PV kernel: %s") % use_pv_kernel, instance=instance)
+        LOG.debug(_("Using PV kernel: %s"), use_pv_kernel, instance=instance)
         vm_ref = vm_utils.create_vm(self._session, instance, name_label,
                                     kernel_file, ramdisk_file,
                                     use_pv_kernel, device_id)
@@ -942,7 +942,7 @@ class VMOps(object):
                                          dest, sr_path, seq_num,
                                          ephemeral_disk_number)
 
-                LOG.debug(_("Read-only migrated for disk: %s") % userdevice,
+                LOG.debug(_("Read-only migrated for disk: %s"), userdevice,
                           instance=instance)
                 # This is recursive to simplify the taking and cleaning up
                 # of all the ephemeral disk snapshots
@@ -1711,7 +1711,7 @@ class VMOps(object):
             # NOTE(jk0): Windows hostnames can only be <= 15 chars.
             hostname = hostname[:15]
 
-        LOG.debug(_("Injecting hostname (%s) into xenstore") % hostname,
+        LOG.debug(_("Injecting hostname (%s) into xenstore"), hostname,
                   instance=instance)
 
         @utils.synchronized('xenstore-' + instance['uuid'])
