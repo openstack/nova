@@ -58,9 +58,14 @@ class RescueController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
+        rescue_image_ref = None
+        if body['rescue'] and 'image_ref' in body['rescue']:
+            rescue_image_ref = body['rescue']['image_ref']
+
         try:
             self.compute_api.rescue(context, instance,
-                                    rescue_password=password)
+                                    rescue_password=password,
+                                    rescue_image_ref=rescue_image_ref)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:

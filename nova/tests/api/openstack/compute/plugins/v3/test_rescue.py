@@ -26,7 +26,8 @@ CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
 
 
-def rescue(self, context, instance, rescue_password=None):
+def rescue(self, context, instance, rescue_password=None,
+           rescue_image_ref=None):
     pass
 
 
@@ -34,13 +35,14 @@ def unrescue(self, context, instance):
     pass
 
 
+def fake_compute_get(*args, **kwargs):
+    uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
+    return {'id': 1, 'uuid': uuid}
+
+
 class RescueTest(test.NoDBTestCase):
     def setUp(self):
         super(RescueTest, self).setUp()
-
-        def fake_compute_get(*args, **kwargs):
-            uuid = '70f6db34-de8d-4fbd-aafb-4065bdfa6114'
-            return {'id': 1, 'uuid': uuid}
 
         self.stubs.Set(compute.api.API, "get", fake_compute_get)
         self.stubs.Set(compute.api.API, "rescue", rescue)
@@ -63,6 +65,44 @@ class RescueTest(test.NoDBTestCase):
 
         resp = req.get_response(self.app)
         self.assertEqual(resp.status_int, 409)
+
+    @mock.patch('nova.compute.api.API.rescue')
+    def test_rescue_with_image_specified(self, mock_compute_api_rescue):
+        instance = fake_compute_get()
+        body = {"rescue": {"admin_password": "ABC123",
+                           "image_ref": "img-id"}}
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 202)
+        resp_json = jsonutils.loads(resp.body)
+        self.assertEqual("ABC123", resp_json['admin_password'])
+
+        mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
+                                                   rescue_password=u'ABC123',
+                                                   rescue_image_ref=u'img-id')
+
+    @mock.patch('nova.compute.api.API.rescue')
+    def test_rescue_without_image_specified(self, mock_compute_api_rescue):
+        instance = fake_compute_get()
+        body = {"rescue": {"admin_password": "ABC123"}}
+
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 202)
+        resp_json = jsonutils.loads(resp.body)
+        self.assertEqual("ABC123", resp_json['admin_password'])
+
+        mock_compute_api_rescue.assert_called_with(mock.ANY, instance,
+                                                   rescue_password=u'ABC123',
+                                                   rescue_image_ref=None)
 
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"admin_password": "AABBCC112233"}}
