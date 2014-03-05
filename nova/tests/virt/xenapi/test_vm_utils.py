@@ -149,11 +149,6 @@ class LookupTestCase(VMUtilsTestBase):
 
 class GenerateConfigDriveTestCase(VMUtilsTestBase):
     def test_no_admin_pass(self):
-        # This is here to avoid masking errors, it shouldn't be used normally
-        self.useFixture(fixtures.MonkeyPatch(
-                'nova.virt.xenapi.vm_utils.destroy_vdi', _fake_noop))
-
-        # Mocks
         instance = {}
 
         self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
@@ -199,6 +194,23 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
         # And the actual call we're testing
         vm_utils.generate_configdrive('session', instance, 'vm_ref',
                                       'userdevice', "nw_info")
+
+    @mock.patch.object(vm_utils, "destroy_vdi")
+    @mock.patch.object(vm_utils, "vdi_attached_here")
+    @mock.patch.object(vm_utils, "create_vdi")
+    @mock.patch.object(vm_utils, "safe_find_sr")
+    def test_vdi_cleaned_up(self, mock_find, mock_create_vdi, mock_attached,
+                            mock_destroy):
+        mock_create_vdi.return_value = 'vdi_ref'
+        mock_attached.side_effect = test.TestingException
+        mock_destroy.side_effect = volume_utils.StorageError
+
+        instance = {"uuid": "asdf"}
+        self.assertRaises(test.TestingException,
+                          vm_utils.generate_configdrive,
+                          'session', instance, 'vm_ref', 'userdevice',
+                          'nw_info')
+        mock_destroy.assert_called_once_with('session', 'vdi_ref')
 
 
 class XenAPIGetUUID(VMUtilsTestBase):
@@ -376,7 +388,8 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.session.call_xenapi("VDI.get_by_uuid", "vdi").AndReturn("ref")
 
         self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
-        vm_utils.destroy_vdi(self.session, "ref")
+        vm_utils.destroy_vdi(self.session,
+                             "ref").AndRaise(volume_utils.StorageError)
 
         self.mox.ReplayAll()
 
@@ -1110,7 +1123,8 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         self._expect_parted_calls()
         utils.execute('mkfs', '-t', 'ext4', '/dev/fakedev1',
             run_as_root=True).AndRaise(test.TestingException)
-        vm_utils.destroy_vdi(self.session, mox.IgnoreArg())
+        vm_utils.destroy_vdi(self.session,
+            mox.IgnoreArg()).AndRaise(volume_utils.StorageError)
 
         self.mox.ReplayAll()
         self.assertRaises(test.TestingException, vm_utils._generate_disk,
