@@ -20,6 +20,7 @@ ResourceMonitorBase provides the definition of minimum set of methods
 that needs to be implemented by Resource Monitor.
 """
 
+import functools
 import types
 
 import six
@@ -76,7 +77,7 @@ class ResourceMonitorBase(object):
         self._data = {}
 
     @classmethod
-    def add_timestamp(arg, func):
+    def add_timestamp(cls, func):
         """Decorator to indicate that a method needs to add a timestamp.
 
         When a function returning a value is decorated by the decorator,
@@ -88,8 +89,9 @@ class ResourceMonitorBase(object):
         If users hope to define how the timestamp is got by themselves,
         they should not use this decorator in their own classes.
         """
-        def wrapper(cls, **kwargs):
-            return func(cls, **kwargs), cls._data.get("timestamp", None)
+        @functools.wraps(func)
+        def wrapper(self, **kwargs):
+            return func(self, **kwargs), self._data.get("timestamp", None)
         return wrapper
 
     def _update_data(self):
