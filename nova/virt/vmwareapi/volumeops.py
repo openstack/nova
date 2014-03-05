@@ -66,7 +66,8 @@ class VMwareVolumeOps(object):
                     "disk %(vmdk_path)s or device %(device_name)s with type "
                     "%(disk_type)s"),
                   {'instance_name': instance_name, 'vmdk_path': vmdk_path,
-                   'device_name': device_name, 'disk_type': disk_type})
+                   'device_name': device_name, 'disk_type': disk_type},
+                  instance=instance)
         reconfig_task = self._session._call_method(
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
@@ -76,7 +77,8 @@ class VMwareVolumeOps(object):
                     "disk %(vmdk_path)s or device %(device_name)s with type "
                     "%(disk_type)s"),
                   {'instance_name': instance_name, 'vmdk_path': vmdk_path,
-                   'device_name': device_name, 'disk_type': disk_type})
+                   'device_name': device_name, 'disk_type': disk_type},
+                  instance=instance)
 
     def _update_volume_details(self, vm_ref, instance, volume_uuid):
         # Store the uuid of the volume_device
@@ -121,7 +123,8 @@ class VMwareVolumeOps(object):
         disk_key = device.key
         LOG.debug(_("Reconfiguring VM instance %(instance_name)s to detach "
                     "disk %(disk_key)s"),
-                  {'instance_name': instance_name, 'disk_key': disk_key})
+                  {'instance_name': instance_name, 'disk_key': disk_key},
+                  instance=instance)
         reconfig_task = self._session._call_method(
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
@@ -129,7 +132,8 @@ class VMwareVolumeOps(object):
         self._session._wait_for_task(reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(instance_name)s to detach "
                     "disk %(disk_key)s"),
-                  {'instance_name': instance_name, 'disk_key': disk_key})
+                  {'instance_name': instance_name, 'disk_key': disk_key},
+                  instance=instance)
 
     def discover_st(self, data):
         """Discover iSCSI targets."""
@@ -214,7 +218,8 @@ class VMwareVolumeOps(object):
 
         LOG.info(_("Mountpoint %(mountpoint)s attached to "
                    "instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name})
+                 {'mountpoint': mountpoint, 'instance_name': instance_name},
+                 instance=instance)
 
     def _attach_volume_iscsi(self, connection_info, instance, mountpoint):
         """Attach iscsi volume storage to VM instance."""
@@ -225,7 +230,8 @@ class VMwareVolumeOps(object):
                     "%(mountpoint)s"),
                   {'connection_info': connection_info,
                    'instance_name': instance_name,
-                   'mountpoint': mountpoint})
+                   'mountpoint': mountpoint},
+                  instance=instance)
 
         data = connection_info['data']
 
@@ -246,7 +252,8 @@ class VMwareVolumeOps(object):
                                device_name=device_name)
         LOG.info(_("Mountpoint %(mountpoint)s attached to "
                    "instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name})
+                 {'mountpoint': mountpoint, 'instance_name': instance_name},
+                 instance=instance)
 
     def attach_volume(self, connection_info, instance, mountpoint):
         """Attach volume storage to VM instance."""
@@ -376,7 +383,8 @@ class VMwareVolumeOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Detach Volume from VM
         LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s"),
-                  {'mountpoint': mountpoint, 'instance_name': instance_name})
+                  {'mountpoint': mountpoint, 'instance_name': instance_name},
+                  instance=instance)
         data = connection_info['data']
 
         device = self._get_vmdk_backed_disk_device(vm_ref, data)
@@ -388,7 +396,8 @@ class VMwareVolumeOps(object):
         self.detach_disk_from_vm(vm_ref, instance, device)
         LOG.info(_("Mountpoint %(mountpoint)s detached from "
                    "instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name})
+                 {'mountpoint': mountpoint, 'instance_name': instance_name},
+                 instance=instance)
 
     def _detach_volume_iscsi(self, connection_info, instance, mountpoint):
         """Detach volume storage to VM instance."""
@@ -396,7 +405,8 @@ class VMwareVolumeOps(object):
         vm_ref = vm_util.get_vm_ref(self._session, instance)
         # Detach Volume from VM
         LOG.debug(_("Detach_volume: %(instance_name)s, %(mountpoint)s"),
-                  {'mountpoint': mountpoint, 'instance_name': instance_name})
+                  {'mountpoint': mountpoint, 'instance_name': instance_name},
+                  instance=instance)
         data = connection_info['data']
 
         # Discover iSCSI Target
@@ -415,7 +425,8 @@ class VMwareVolumeOps(object):
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
         LOG.info(_("Mountpoint %(mountpoint)s detached from "
                    "instance %(instance_name)s"),
-                 {'mountpoint': mountpoint, 'instance_name': instance_name})
+                 {'mountpoint': mountpoint, 'instance_name': instance_name},
+                 instance=instance)
 
     def detach_volume(self, connection_info, instance, mountpoint):
         """Detach volume storage to VM instance."""
