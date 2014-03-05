@@ -45,7 +45,8 @@ LOG = logging.getLogger(__name__)
 
 vmwareapi_opts = [
     cfg.StrOpt('host_ip',
-               help='URL for connection to VMware ESX/VC host.'),
+               help='Hostname or IP address for connection to VMware ESX/VC '
+                    'host.'),
     cfg.StrOpt('host_username',
                help='Username for connection to VMware ESX/VC host.'),
     cfg.StrOpt('host_password',

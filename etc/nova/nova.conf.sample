@@ -3331,7 +3331,8 @@
 # Options defined in nova.virt.vmwareapi.driver
 #
 
-# URL for connection to VMware ESX/VC host. (string value)
+# Hostname or IP address for connection to VMware ESX/VC host.
+# (string value)
 #host_ip=<None>
 
 # Username for connection to VMware ESX/VC host. (string
