@@ -571,7 +571,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.23')
+    target = messaging.Target(version='3.24')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -2933,20 +2933,20 @@ class ComputeManager(manager.Manager):
                     instance=instance)
         self.driver.inject_file(instance, path, file_contents)
 
-    def _get_rescue_image(self, context, instance):
+    def _get_rescue_image(self, context, instance, rescue_image_ref=None):
         """Determine what image should be used to boot the rescue VM."""
-        system_meta = utils.instance_sys_meta(instance)
-
-        rescue_image_ref = system_meta.get('image_base_image_ref')
-
-        # 1. First try to use base image associated with instance's current
-        #    image.
-        #
-        # The idea here is to provide the customer with a rescue environment
-        # which they are familiar with. So, if they built their instance off of
-        # a Debian image, their rescue VM will also be Debian.
+        # 1. If rescue_image_ref is passed in, use that for rescue.
+        # 2. Else, use the base image associated with instance's current image.
+        #       The idea here is to provide the customer with a rescue
+        #       environment which they are familiar with.
+        #       So, if they built their instance off of a Debian image,
+        #       their rescue VM will also be Debian.
+        # 3. As a last resort, use instance's current image.
         if not rescue_image_ref:
-            # 2. As a last resort, use instance's current image
+            system_meta = utils.instance_sys_meta(instance)
+            rescue_image_ref = system_meta.get('image_base_image_ref')
+
+        if not rescue_image_ref:
             LOG.warn(_('Unable to find a different image to use for rescue VM,'
                        ' using instance\'s current image'))
             rescue_image_ref = instance['image_ref']
@@ -2964,10 +2964,9 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
-    def rescue_instance(self, context, instance, rescue_password):
-        """Rescue an instance on this host.
-        :param rescue_password: password to set on rescue instance
-        """
+    def rescue_instance(self, context, instance, rescue_password,
+                        rescue_image_ref=None):
+        """Rescue an instance on this host."""
         context = context.elevated()
         LOG.audit(_('Rescuing'), context=context, instance=instance)
 
@@ -2976,7 +2975,8 @@ class ComputeManager(manager.Manager):
 
         network_info = self._get_instance_nw_info(context, instance)
 
-        rescue_image_meta = self._get_rescue_image(context, instance)
+        rescue_image_meta = self._get_rescue_image(context, instance,
+                                                   rescue_image_ref)
 
         extra_usage_info = {'rescue_image_name':
                             rescue_image_meta.get('name', '')}

@@ -2571,7 +2571,8 @@ class API(base.Base):
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
                                     vm_states.ERROR])
-    def rescue(self, context, instance, rescue_password=None):
+    def rescue(self, context, instance, rescue_password=None,
+               rescue_image_ref=None):
         """Rescue the given instance."""
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
@@ -2593,7 +2594,7 @@ class API(base.Base):
         self._record_action_start(context, instance, instance_actions.RESCUE)
 
         self.compute_rpcapi.rescue_instance(context, instance=instance,
-                rescue_password=rescue_password)
+            rescue_password=rescue_password, rescue_image_ref=rescue_image_ref)
 
     @wrap_check_policy
     @check_instance_lock
