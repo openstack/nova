@@ -51,9 +51,7 @@ class PolicyFileTestCase(test.NoDBTestCase):
             policy.enforce(self.context, action, self.target)
             with open(tmpfilename, "w") as policyfile:
                 policyfile.write('{"example:test": "!"}')
-            # NOTE(vish): reset stored policy cache so we don't have to
-            # sleep(1)
-            policy._POLICY_CACHE = {}
+            policy._ENFORCER.load_rules(True)
             self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
                               self.context, action, self.target)
 
@@ -73,7 +71,10 @@ class PolicyTestCase(test.NoDBTestCase):
             "example:lowercase_admin": "role:admin or role:sysadmin",
             "example:uppercase_admin": "role:ADMIN or role:sysadmin",
         }
-        self.policy.set_rules(rules)
+        policy.reset()
+        policy.init()
+        policy.set_rules(dict((k, common_policy.parse_rule(v))
+                               for k, v in rules.items()))
         self.context = context.RequestContext('fake', 'fake', roles=['member'])
         self.target = {}
 
@@ -161,10 +162,10 @@ class DefaultPolicyTestCase(test.NoDBTestCase):
         self.context = context.RequestContext('fake', 'fake')
 
     def _set_rules(self, default_rule):
-        rules = common_policy.Rules(
-            dict((k, common_policy.parse_rule(v))
-                 for k, v in self.rules.items()), default_rule)
-        common_policy.set_rules(rules)
+        policy.reset()
+        rules = dict((k, common_policy.parse_rule(v))
+                     for k, v in self.rules.items())
+        policy.init(rules=rules, default_rule=default_rule, use_conf=False)
 
     def test_policy_called(self):
         self.assertRaises(exception.PolicyNotAuthorized, policy.enforce,
@@ -180,6 +181,10 @@ class DefaultPolicyTestCase(test.NoDBTestCase):
 
 
 class IsAdminCheckTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(IsAdminCheckTestCase, self).setUp()
+        policy.init()
+
     def test_init_true(self):
         check = policy.IsAdminCheck('is_admin', 'True')
 
@@ -197,14 +202,18 @@ class IsAdminCheckTestCase(test.NoDBTestCase):
     def test_call_true(self):
         check = policy.IsAdminCheck('is_admin', 'True')
 
-        self.assertEqual(check('target', dict(is_admin=True)), True)
-        self.assertEqual(check('target', dict(is_admin=False)), False)
+        self.assertEqual(check('target', dict(is_admin=True),
+                               policy._ENFORCER), True)
+        self.assertEqual(check('target', dict(is_admin=False),
+                               policy._ENFORCER), False)
 
     def test_call_false(self):
         check = policy.IsAdminCheck('is_admin', 'False')
 
-        self.assertEqual(check('target', dict(is_admin=True)), False)
-        self.assertEqual(check('target', dict(is_admin=False)), True)
+        self.assertEqual(check('target', dict(is_admin=True),
+                               policy._ENFORCER), False)
+        self.assertEqual(check('target', dict(is_admin=False),
+                               policy._ENFORCER), True)
 
 
 class AdminRolePolicyTestCase(test.NoDBTestCase):

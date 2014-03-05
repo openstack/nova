@@ -232,7 +232,7 @@ class SimpleTenantUsageTest(test.TestCase):
                     ["role:admin"], ["project_id:%(project_id)s"]
                     ])
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
 
         try:
             res = req.get_response(fakes.wsgi_app(

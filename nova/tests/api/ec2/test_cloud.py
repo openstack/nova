@@ -54,6 +54,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import policy as common_policy
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
+from nova import policy
 from nova import test
 from nova.tests.api.openstack.compute.contrib import (
     test_neutron_security_groups as test_neutron)
@@ -499,10 +500,9 @@ class CloudTestCase(test.TestCase):
         self.assertRaises(exception.MissingParameter, delete, self.context)
 
     def test_delete_security_group_policy_not_allowed(self):
-        rules = common_policy.Rules(
-                {'compute_extension:security_groups':
-                    common_policy.parse_rule('project_id:%(project_id)s')})
-        common_policy.set_rules(rules)
+        rules = {'compute_extension:security_groups':
+                    common_policy.parse_rule('project_id:%(project_id)s')}
+        policy.set_rules(rules)
 
         with mock.patch.object(self.cloud.security_group_api,
                 'get') as get:
@@ -513,10 +513,9 @@ class CloudTestCase(test.TestCase):
                     'fake-name', 'fake-id')
 
     def test_authorize_security_group_ingress_policy_not_allowed(self):
-        rules = common_policy.Rules(
-                {'compute_extension:security_groups':
-                    common_policy.parse_rule('project_id:%(project_id)s')})
-        common_policy.set_rules(rules)
+        rules = {'compute_extension:security_groups':
+                    common_policy.parse_rule('project_id:%(project_id)s')}
+        policy.set_rules(rules)
 
         with mock.patch.object(self.cloud.security_group_api,
                 'get') as get:
@@ -647,10 +646,9 @@ class CloudTestCase(test.TestCase):
         db.security_group_destroy(self.context, sec1['id'])
 
     def test_revoke_security_group_ingress_policy_not_allowed(self):
-        rules = common_policy.Rules(
-                {'compute_extension:security_groups':
-                    common_policy.parse_rule('project_id:%(project_id)s')})
-        common_policy.set_rules(rules)
+        rules = {'compute_extension:security_groups':
+                    common_policy.parse_rule('project_id:%(project_id)s')}
+        policy.set_rules(rules)
 
         with mock.patch.object(self.cloud.security_group_api,
                 'get') as get:
@@ -2277,7 +2275,7 @@ class CloudTestCase(test.TestCase):
             "compute:start":
                 common_policy.parse_rule("project_id:non_fake"),
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.cloud.start_instances,
                                 self.context, [instance_id])
@@ -2312,7 +2310,7 @@ class CloudTestCase(test.TestCase):
             "compute:stop":
                 common_policy.parse_rule("project_id:non_fake")
         }
-        common_policy.set_rules(common_policy.Rules(rules))
+        policy.set_rules(rules)
         exc = self.assertRaises(exception.PolicyNotAuthorized,
                                 self.cloud.stop_instances,
                                 self.context, [instance_id])
