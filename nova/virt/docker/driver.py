@@ -136,13 +136,13 @@ class DockerDriver(driver.ComputeDriver):
         hostname = socket.gethostname()
         memory = hostinfo.get_memory_usage()
         disk = hostinfo.get_disk_usage()
-        stats = self._get_available_resource(hostname)
+        stats = self.get_available_resource(hostname)
         stats['hypervisor_hostname'] = stats['hypervisor_hostname']
         stats['host_hostname'] = stats['hypervisor_hostname']
         stats['host_name_label'] = stats['hypervisor_hostname']
         return stats
 
-    def _get_available_resource(self, nodename):
+    def get_available_resource(self, nodename):
         if not hasattr(self, '_nodename'):
             self._nodename = nodename
         if nodename != self._nodename:
