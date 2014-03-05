@@ -48,6 +48,9 @@ vmwareapi_opts = [
     cfg.StrOpt('host_ip',
                help='Hostname or IP address for connection to VMware ESX/VC '
                     'host.'),
+    cfg.IntOpt('host_port',
+               default=443,
+               help='Port for connection to VMware ESX/VC host.'),
     cfg.StrOpt('host_username',
                help='Username for connection to VMware ESX/VC host.'),
     cfg.StrOpt('host_password',
@@ -787,11 +790,13 @@ class VMwareAPISession(object):
     """
 
     def __init__(self, host_ip=CONF.vmware.host_ip,
+                 host_port=CONF.vmware.host_port,
                  username=CONF.vmware.host_username,
                  password=CONF.vmware.host_password,
                  retry_count=CONF.vmware.api_retry_count,
                  scheme="https"):
         self._host_ip = host_ip
+        self._host_port = host_port
         self._host_username = username
         self._host_password = password
         self._api_retry_count = retry_count
@@ -802,7 +807,8 @@ class VMwareAPISession(object):
 
     def _get_vim_object(self):
         """Create the VIM Object instance."""
-        return vim.Vim(protocol=self._scheme, host=self._host_ip)
+        return vim.Vim(protocol=self._scheme, host=self._host_ip,
+                       port=self._host_port)
 
     def _create_session(self):
         """Creates a session with the VC/ESX host."""

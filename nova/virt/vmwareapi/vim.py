@@ -98,20 +98,22 @@ class Vim:
 
     def __init__(self,
                  protocol="https",
-                 host="localhost"):
+                 host="localhost",
+                 port=443):
         """Creates the necessary Communication interfaces and gets the
         ServiceContent for initiating SOAP transactions.
 
         protocol: http or https
-        host    : ESX IPAddress[:port] or ESX Hostname[:port]
+        host    : ESX IPAddress or Hostname
+        port    : port for connection
         """
         if not suds:
             raise Exception(_("Unable to import suds."))
 
         self._protocol = protocol
         self._host_name = host
-        self.wsdl_url = Vim.get_wsdl_url(protocol, host)
-        self.url = Vim.get_soap_url(protocol, host)
+        self.wsdl_url = Vim.get_wsdl_url(protocol, host, port)
+        self.url = Vim.get_soap_url(protocol, host, port)
         self.client = suds.client.Client(self.wsdl_url, location=self.url,
                                          plugins=[VIMMessagePlugin()])
         self._service_content = self.retrieve_service_content()
@@ -120,7 +122,7 @@ class Vim:
         return self.RetrieveServiceContent("ServiceInstance")
 
     @staticmethod
-    def get_wsdl_url(protocol, host_name):
+    def get_wsdl_url(protocol, host_name, port):
         """Allows override of the wsdl location, making this static
         means we can test the logic outside of the constructor
         without forcing the test environment to have multiple valid
@@ -128,6 +130,7 @@ class Vim:
 
         :param protocol: https or http
         :param host_name: localhost or other server name
+        :param port: port for connection
         :return: string to WSDL location for vSphere WS Management API
         """
         # optional WSDL location over-ride for work-arounds
@@ -135,21 +138,22 @@ class Vim:
             return CONF.vmware.wsdl_location
 
         # calculate default WSDL location if no override supplied
-        return Vim.get_soap_url(protocol, host_name) + "/vimService.wsdl"
+        return Vim.get_soap_url(protocol, host_name, port) + "/vimService.wsdl"
 
     @staticmethod
-    def get_soap_url(protocol, host_name):
+    def get_soap_url(protocol, host_name, port):
         """Calculates the location of the SOAP services
         for a particular server. Created as a static
         method for testing.
 
         :param protocol: https or http
         :param host_name: localhost or other vSphere server name
+        :param port: port for connection
         :return: the url to the active vSphere WS Management API
         """
         if utils.is_valid_ipv6(host_name):
-            return '%s://[%s]/sdk' % (protocol, host_name)
-        return '%s://%s/sdk' % (protocol, host_name)
+            return '%s://[%s]:%d/sdk' % (protocol, host_name, port)
+        return '%s://%s:%d/sdk' % (protocol, host_name, port)
 
     def get_service_content(self):
         """Gets the service content object."""
