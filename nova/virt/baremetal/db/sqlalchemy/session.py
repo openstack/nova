@@ -19,13 +19,13 @@
 
 from oslo.config import cfg
 
-from nova.openstack.common.db.sqlalchemy import session as nova_session
+from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova import paths
 
 opts = [
     cfg.StrOpt('sql_connection',
                default=('sqlite:///' +
-                        paths.state_path_def('baremetal_$sqlite_db')),
+                        paths.state_path_def('baremetal_nova.sqlite')),
                help='The SQLAlchemy connection string used to connect to the '
                     'bare-metal database'),
     ]
@@ -37,27 +37,30 @@ CONF = cfg.CONF
 CONF.register_group(baremetal_group)
 CONF.register_opts(opts, baremetal_group)
 
-CONF.import_opt('sqlite_db', 'nova.openstack.common.db.sqlalchemy.session')
 
-_ENGINE = None
-_MAKER = None
+_FACADE = None
+
+
+def _create_facade_lazily():
+    global _FACADE
+
+    if _FACADE is None:
+        _FACADE = db_session.EngineFacade(CONF.baremetal.sql_connection,
+                                          **dict(CONF.database.iteritems()))
+
+    return _FACADE
 
 
 def get_session(autocommit=True, expire_on_commit=False):
     """Return a SQLAlchemy session."""
-    global _MAKER
 
-    if _MAKER is None:
-        engine = get_engine()
-        _MAKER = nova_session.get_maker(engine, autocommit, expire_on_commit)
-
-    session = _MAKER()
-    return session
+    facade = _create_facade_lazily()
+    return facade.get_session(autocommit=autocommit,
+                              expire_on_commit=expire_on_commit)
 
 
 def get_engine():
     """Return a SQLAlchemy engine."""
-    global _ENGINE
-    if _ENGINE is None:
-        _ENGINE = nova_session.create_engine(CONF.baremetal.sql_connection)
-    return _ENGINE
+
+    facade = _create_facade_lazily()
+    return facade.get_engine()

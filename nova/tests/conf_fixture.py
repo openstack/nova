@@ -58,7 +58,7 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('network_size', 8)
         self.conf.set_default('num_networks', 2)
         self.conf.set_default('connection', "sqlite://", group='database')
-        self.conf.set_default('sqlite_synchronous', False)
+        self.conf.set_default('sqlite_synchronous', False, group='database')
         self.conf.set_default('use_ipv6', True)
         self.conf.set_default('verbose', True)
         self.conf.set_default('vlan_interface', 'eth0')

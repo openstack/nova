@@ -1551,17 +1551,6 @@
 
 
 #
-# Options defined in nova.openstack.common.db.sqlalchemy.session
-#
-
-# The file name to use with SQLite (string value)
-#sqlite_db=nova.sqlite
-
-# If True, SQLite uses synchronous mode (boolean value)
-#sqlite_synchronous=true
-
-
-#
 # Options defined in nova.openstack.common.eventlet_backdoor
 #
 
@@ -2125,7 +2114,7 @@
 
 # The SQLAlchemy connection string used to connect to the
 # bare-metal database (string value)
-#sql_connection=sqlite:///$state_path/baremetal_$sqlite_db
+#sql_connection=sqlite:///$state_path/baremetal_nova.sqlite
 
 
 #
@@ -2446,33 +2435,39 @@
 [database]
 
 #
-# Options defined in nova.openstack.common.db.api
+# Options defined in nova.db.sqlalchemy.api
 #
+
+# The SQLAlchemy connection string used to connect to the
+# slave database (string value)
+#slave_connection=<None>
+
+
+#
+# Options defined in nova.openstack.common.db.options
+#
+
+# The file name to use with SQLite (string value)
+#sqlite_db=nova.sqlite
+
+# If True, SQLite uses synchronous mode (boolean value)
+#sqlite_synchronous=true
 
 # The backend to use for db (string value)
 # Deprecated group/name - [DEFAULT]/db_backend
 #backend=sqlalchemy
-
-# Enable the experimental use of thread pooling for all DB API
-# calls (boolean value)
-# Deprecated group/name - [DEFAULT]/dbapi_use_tpool
-#use_tpool=false
-
-
-#
-# Options defined in nova.openstack.common.db.sqlalchemy.session
-#
 
 # The SQLAlchemy connection string used to connect to the
 # database (string value)
 # Deprecated group/name - [DEFAULT]/sql_connection
 # Deprecated group/name - [DATABASE]/sql_connection
 # Deprecated group/name - [sql]/connection
-#connection=sqlite:////nova/openstack/common/db/$sqlite_db
+#connection=<None>
 
-# The SQLAlchemy connection string used to connect to the
-# slave database (string value)
-#slave_connection=
+# The SQL mode to be used for MySQL sessions (default is
+# empty, meaning do not override any server-side SQL mode
+# setting) (string value)
+#mysql_sql_mode=<None>
 
 # Timeout before idle sql connections are reaped (integer
 # value)
@@ -2525,6 +2520,25 @@
 # (integer value)
 # Deprecated group/name - [DATABASE]/sqlalchemy_pool_timeout
 #pool_timeout=<None>
+
+# Enable the experimental use of database reconnect on
+# connection lost (boolean value)
+#use_db_reconnect=false
+
+# seconds between db connection retries (integer value)
+#db_retry_interval=1
+
+# Whether to increase interval between db connection retries,
+# up to db_max_retry_interval (boolean value)
+#db_inc_retry_interval=true
+
+# max seconds between db connection retries, if
+# db_inc_retry_interval is enabled (integer value)
+#db_max_retry_interval=10
+
+# maximum db connection retries before error is raised.
+# (setting -1 implies an infinite retry count) (integer value)
+#db_max_retries=20
 
 
 [docker]

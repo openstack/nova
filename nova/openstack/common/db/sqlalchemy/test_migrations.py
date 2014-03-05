@@ -21,12 +21,12 @@ import subprocess
 
 import lockfile
 from six import moves
+from six.moves.urllib import parse
 import sqlalchemy
 import sqlalchemy.exc
 
 from nova.openstack.common.db.sqlalchemy import utils
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common.py3kcompat import urlutils
+from nova.openstack.common.gettextutils import _LE
 from nova.openstack.common import test
 
 LOG = logging.getLogger(__name__)
@@ -60,10 +60,10 @@ def _set_db_lock(lock_path=None, lock_prefix=None):
                 path = lock_path or os.environ.get("NOVA_LOCK_PATH")
                 lock = lockfile.FileLock(os.path.join(path, lock_prefix))
                 with lock:
-                    LOG.debug(_('Got lock "%s"') % f.__name__)
+                    LOG.debug('Got lock "%s"' % f.__name__)
                     return f(*args, **kwargs)
             finally:
-                LOG.debug(_('Lock released "%s"') % f.__name__)
+                LOG.debug('Lock released "%s"' % f.__name__)
         return wrapper
     return decorator
 
@@ -153,7 +153,7 @@ class BaseMigrationTestCase(test.BaseTestCase):
     def _reset_databases(self):
         for key, engine in self.engines.items():
             conn_string = self.test_databases[key]
-            conn_pieces = urlutils.urlparse(conn_string)
+            conn_pieces = parse.urlparse(conn_string)
             engine.dispose()
             if conn_string.startswith('sqlite'):
                 # We can just delete the SQLite database, which is
@@ -264,6 +264,6 @@ class WalkVersionsMixin(object):
                 if check:
                     check(engine, data)
         except Exception:
-            LOG.error("Failed to migrate to version %s on engine %s" %
+            LOG.error(_LE("Failed to migrate to version %s on engine %s") %
                       (version, engine))
             raise

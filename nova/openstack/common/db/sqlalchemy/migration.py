@@ -51,11 +51,7 @@ import sqlalchemy
 from sqlalchemy.schema import UniqueConstraint
 
 from nova.openstack.common.db import exception
-from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common.gettextutils import _
-
-
-get_engine = db_session.get_engine
 
 
 def _get_unique_constraints(self, table):
@@ -172,11 +168,12 @@ def patch_migrate():
                                 sqlite.SQLiteConstraintGenerator)
 
 
-def db_sync(abs_path, version=None, init_version=0):
+def db_sync(engine, abs_path, version=None, init_version=0):
     """Upgrade or downgrade a database.
 
     Function runs the upgrade() or downgrade() functions in change scripts.
 
+    :param engine:       SQLAlchemy engine instance for a given database
     :param abs_path:     Absolute path to migrate repository.
     :param version:      Database will upgrade/downgrade until this version.
                          If None - database will update to the latest
@@ -190,18 +187,23 @@ def db_sync(abs_path, version=None, init_version=0):
             raise exception.DbMigrationError(
                 message=_("version should be an integer"))
 
-    current_version = db_version(abs_path, init_version)
+    current_version = db_version(engine, abs_path, init_version)
     repository = _find_migrate_repo(abs_path)
-    _db_schema_sanity_check()
+    _db_schema_sanity_check(engine)
     if version is None or version > current_version:
-        return versioning_api.upgrade(get_engine(), repository, version)
+        return versioning_api.upgrade(engine, repository, version)
     else:
-        return versioning_api.downgrade(get_engine(), repository,
+        return versioning_api.downgrade(engine, repository,
                                         version)
 
 
-def _db_schema_sanity_check():
-    engine = get_engine()
+def _db_schema_sanity_check(engine):
+    """Ensure all database tables were created with required parameters.
+
+    :param engine:  SQLAlchemy engine instance for a given database
+
+    """
+
     if engine.name == 'mysql':
         onlyutf8_sql = ('SELECT TABLE_NAME,TABLE_COLLATION '
                         'from information_schema.TABLES '
@@ -216,23 +218,23 @@ def _db_schema_sanity_check():
                                ) % ','.join(table_names))
 
 
-def db_version(abs_path, init_version):
+def db_version(engine, abs_path, init_version):
     """Show the current version of the repository.
 
+    :param engine:  SQLAlchemy engine instance for a given database
     :param abs_path: Absolute path to migrate repository
     :param version:  Initial database version
     """
     repository = _find_migrate_repo(abs_path)
     try:
-        return versioning_api.db_version(get_engine(), repository)
+        return versioning_api.db_version(engine, repository)
     except versioning_exceptions.DatabaseNotControlledError:
         meta = sqlalchemy.MetaData()
-        engine = get_engine()
         meta.reflect(bind=engine)
         tables = meta.tables
         if len(tables) == 0 or 'alembic_version' in tables:
-            db_version_control(abs_path, init_version)
-            return versioning_api.db_version(get_engine(), repository)
+            db_version_control(engine, abs_path, version=init_version)
+            return versioning_api.db_version(engine, repository)
         else:
             raise exception.DbMigrationError(
                 message=_(
@@ -241,17 +243,18 @@ def db_version(abs_path, init_version):
                     "manually."))
 
 
-def db_version_control(abs_path, version=None):
+def db_version_control(engine, abs_path, version=None):
     """Mark a database as under this repository's version control.
 
     Once a database is under version control, schema changes should
     only be done via change scripts in this repository.
 
+    :param engine:  SQLAlchemy engine instance for a given database
     :param abs_path: Absolute path to migrate repository
     :param version:  Initial database version
     """
     repository = _find_migrate_repo(abs_path)
-    versioning_api.version_control(get_engine(), repository, version)
+    versioning_api.version_control(engine, repository, version)
     return version
 
 

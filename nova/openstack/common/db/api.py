@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2013 Rackspace Hosting
 # All Rights Reserved.
 #
@@ -17,90 +15,148 @@
 
 """Multiple DB API backend support.
 
-Supported configuration options:
-
-The following two parameters are in the 'database' group:
-`backend`: DB backend name or full module path to DB backend module.
-`use_tpool`: Enable thread pooling of DB API calls.
-
 A DB backend module should implement a method named 'get_backend' which
 takes no arguments.  The method can return any object that implements DB
 API methods.
-
-*NOTE*: There are bugs in eventlet when using tpool combined with
-threading locks. The python logging module happens to use such locks.  To
-work around this issue, be sure to specify thread=False with
-eventlet.monkey_patch().
-
-A bug for eventlet has been filed here:
-
-https://bitbucket.org/eventlet/eventlet/issue/137/
 """
+
 import functools
+import logging
+import threading
+import time
 
-from oslo.config import cfg
-
+from nova.openstack.common.db import exception
+from nova.openstack.common.gettextutils import _LE
 from nova.openstack.common import importutils
-from nova.openstack.common import lockutils
 
 
-db_opts = [
-    cfg.StrOpt('backend',
-               default='sqlalchemy',
-               deprecated_name='db_backend',
-               deprecated_group='DEFAULT',
-               help='The backend to use for db'),
-    cfg.BoolOpt('use_tpool',
-                default=False,
-                deprecated_name='dbapi_use_tpool',
-                deprecated_group='DEFAULT',
-                help='Enable the experimental use of thread pooling for '
-                     'all DB API calls')
-]
+LOG = logging.getLogger(__name__)
 
-CONF = cfg.CONF
-CONF.register_opts(db_opts, 'database')
+
+def safe_for_db_retry(f):
+    """Enable db-retry for decorated function, if config option enabled."""
+    f.__dict__['enable_retry'] = True
+    return f
+
+
+class wrap_db_retry(object):
+    """Retry db.api methods, if DBConnectionError() raised
+
+    Retry decorated db.api methods. If we enabled `use_db_reconnect`
+    in config, this decorator will be applied to all db.api functions,
+    marked with @safe_for_db_retry decorator.
+    Decorator catchs DBConnectionError() and retries function in a
+    loop until it succeeds, or until maximum retries count will be reached.
+    """
+
+    def __init__(self, retry_interval, max_retries, inc_retry_interval,
+                 max_retry_interval):
+        super(wrap_db_retry, self).__init__()
+
+        self.retry_interval = retry_interval
+        self.max_retries = max_retries
+        self.inc_retry_interval = inc_retry_interval
+        self.max_retry_interval = max_retry_interval
+
+    def __call__(self, f):
+        @functools.wraps(f)
+        def wrapper(*args, **kwargs):
+            next_interval = self.retry_interval
+            remaining = self.max_retries
+
+            while True:
+                try:
+                    return f(*args, **kwargs)
+                except exception.DBConnectionError as e:
+                    if remaining == 0:
+                        LOG.exception(_LE('DB exceeded retry limit.'))
+                        raise exception.DBError(e)
+                    if remaining != -1:
+                        remaining -= 1
+                        LOG.exception(_LE('DB connection error.'))
+                    # NOTE(vsergeyev): We are using patched time module, so
+                    #                  this effectively yields the execution
+                    #                  context to another green thread.
+                    time.sleep(next_interval)
+                    if self.inc_retry_interval:
+                        next_interval = min(
+                            next_interval * 2,
+                            self.max_retry_interval
+                        )
+        return wrapper
 
 
 class DBAPI(object):
-    def __init__(self, backend_mapping=None):
-        if backend_mapping is None:
-            backend_mapping = {}
-        self.__backend = None
-        self.__backend_mapping = backend_mapping
+    def __init__(self, backend_name, backend_mapping=None, lazy=False,
+                 **kwargs):
+        """Initialize the chosen DB API backend.
 
-    @lockutils.synchronized('dbapi_backend', 'nova-')
-    def __get_backend(self):
-        """Get the actual backend.  May be a module or an instance of
-        a class.  Doesn't matter to us.  We do this synchronized as it's
-        possible multiple greenthreads started very quickly trying to do
-        DB calls and eventlet can switch threads before self.__backend gets
-        assigned.
+        :param backend_name: name of the backend to load
+        :type backend_name: str
+
+        :param backend_mapping: backend name -> module/class to load mapping
+        :type backend_mapping: dict
+
+        :param lazy: load the DB backend lazily on the first DB API method call
+        :type lazy: bool
+
+        Keyword arguments:
+
+        :keyword use_db_reconnect: retry DB transactions on disconnect or not
+        :type use_db_reconnect: bool
+
+        :keyword retry_interval: seconds between transaction retries
+        :type retry_interval: int
+
+        :keyword inc_retry_interval: increase retry interval or not
+        :type inc_retry_interval: bool
+
+        :keyword max_retry_interval: max interval value between retries
+        :type max_retry_interval: int
+
+        :keyword max_retries: max number of retries before an error is raised
+        :type max_retries: int
+
         """
-        if self.__backend:
-            # Another thread assigned it
-            return self.__backend
-        backend_name = CONF.database.backend
-        self.__use_tpool = CONF.database.use_tpool
-        if self.__use_tpool:
-            from eventlet import tpool
-            self.__tpool = tpool
-        # Import the untranslated name if we don't have a
-        # mapping.
-        backend_path = self.__backend_mapping.get(backend_name,
-                                                  backend_name)
-        backend_mod = importutils.import_module(backend_path)
-        self.__backend = backend_mod.get_backend()
-        return self.__backend
+
+        self._backend = None
+        self._backend_name = backend_name
+        self._backend_mapping = backend_mapping or {}
+        self._lock = threading.Lock()
+
+        if not lazy:
+            self._load_backend()
+
+        self.use_db_reconnect = kwargs.get('use_db_reconnect', False)
+        self.retry_interval = kwargs.get('retry_interval', 1)
+        self.inc_retry_interval = kwargs.get('inc_retry_interval', True)
+        self.max_retry_interval = kwargs.get('max_retry_interval', 10)
+        self.max_retries = kwargs.get('max_retries', 20)
+
+    def _load_backend(self):
+        with self._lock:
+            if not self._backend:
+                # Import the untranslated name if we don't have a mapping
+                backend_path = self._backend_mapping.get(self._backend_name,
+                                                         self._backend_name)
+                backend_mod = importutils.import_module(backend_path)
+                self._backend = backend_mod.get_backend()
 
     def __getattr__(self, key):
-        backend = self.__backend or self.__get_backend()
-        attr = getattr(backend, key)
-        if not self.__use_tpool or not hasattr(attr, '__call__'):
+        if not self._backend:
+            self._load_backend()
+
+        attr = getattr(self._backend, key)
+        if not hasattr(attr, '__call__'):
             return attr
+        # NOTE(vsergeyev): If `use_db_reconnect` option is set to True, retry
+        #                  DB API methods, decorated with @safe_for_db_retry
+        #                  on disconnect.
+        if self.use_db_reconnect and hasattr(attr, 'enable_retry'):
+            attr = wrap_db_retry(
+                retry_interval=self.retry_interval,
+                max_retries=self.max_retries,
+                inc_retry_interval=self.inc_retry_interval,
+                max_retry_interval=self.max_retry_interval)(attr)
 
-        def tpool_wrapper(*args, **kwargs):
-            return self.__tpool.execute(attr, *args, **kwargs)
-
-        functools.update_wrapper(tpool_wrapper, attr)
-        return tpool_wrapper
+        return attr

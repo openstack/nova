@@ -30,6 +30,7 @@ from sqlalchemy import func
 from sqlalchemy import Index
 from sqlalchemy import Integer
 from sqlalchemy import MetaData
+from sqlalchemy import or_
 from sqlalchemy.sql.expression import literal_column
 from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import select
@@ -37,7 +38,9 @@ from sqlalchemy import String
 from sqlalchemy import Table
 from sqlalchemy.types import NullType
 
-from nova.openstack.common.gettextutils import _
+from nova.openstack.common import context as request_context
+from nova.openstack.common.db.sqlalchemy import models
+from nova.openstack.common.gettextutils import _, _LI, _LW
 from nova.openstack.common import timeutils
 
 
@@ -93,7 +96,7 @@ def paginate_query(query, model, limit, sort_keys, marker=None,
     if 'id' not in sort_keys:
         # TODO(justinsb): If this ever gives a false-positive, check
         # the actual primary key, rather than assuming its id
-        LOG.warning(_('Id not in sort_keys; is sort_keys unique?'))
+        LOG.warning(_LW('Id not in sort_keys; is sort_keys unique?'))
 
     assert(not (sort_dir and sort_dirs))
 
@@ -152,6 +155,94 @@ def paginate_query(query, model, limit, sort_keys, marker=None,
 
     if limit is not None:
         query = query.limit(limit)
+
+    return query
+
+
+def _read_deleted_filter(query, db_model, read_deleted):
+    if 'deleted' not in db_model.__table__.columns:
+        raise ValueError(_("There is no `deleted` column in `%s` table. "
+                           "Project doesn't use soft-deleted feature.")
+                         % db_model.__name__)
+
+    default_deleted_value = db_model.__table__.c.deleted.default.arg
+    if read_deleted == 'no':
+        query = query.filter(db_model.deleted == default_deleted_value)
+    elif read_deleted == 'yes':
+        pass  # omit the filter to include deleted and active
+    elif read_deleted == 'only':
+        query = query.filter(db_model.deleted != default_deleted_value)
+    else:
+        raise ValueError(_("Unrecognized read_deleted value '%s'")
+                         % read_deleted)
+    return query
+
+
+def _project_filter(query, db_model, context, project_only):
+    if project_only and 'project_id' not in db_model.__table__.columns:
+        raise ValueError(_("There is no `project_id` column in `%s` table.")
+                         % db_model.__name__)
+
+    if request_context.is_user_context(context) and project_only:
+        if project_only == 'allow_none':
+            is_none = None
+            query = query.filter(or_(db_model.project_id == context.project_id,
+                                     db_model.project_id == is_none))
+        else:
+            query = query.filter(db_model.project_id == context.project_id)
+
+    return query
+
+
+def model_query(context, model, session, args=None, project_only=False,
+                read_deleted=None):
+    """Query helper that accounts for context's `read_deleted` field.
+
+    :param context:      context to query under
+
+    :param model:        Model to query. Must be a subclass of ModelBase.
+    :type model:         models.ModelBase
+
+    :param session:      The session to use.
+    :type session:       sqlalchemy.orm.session.Session
+
+    :param args:         Arguments to query. If None - model is used.
+    :type args:          tuple
+
+    :param project_only: If present and context is user-type, then restrict
+                         query to match the context's project_id. If set to
+                         'allow_none', restriction includes project_id = None.
+    :type project_only:  bool
+
+    :param read_deleted: If present, overrides context's read_deleted field.
+    :type read_deleted:   bool
+
+    Usage:
+        result = (utils.model_query(context, models.Instance, session=session)
+                       .filter_by(uuid=instance_uuid)
+                       .all())
+
+        query = utils.model_query(
+                    context, Node,
+                    session=session,
+                    args=(func.count(Node.id), func.sum(Node.ram))
+            ).filter_by(project_id=project_id)
+    """
+
+    if not read_deleted:
+        if hasattr(context, 'read_deleted'):
+            # NOTE(viktors): some projects use `read_deleted` attribute in
+            # their contexts instead of `show_deleted`.
+            read_deleted = context.read_deleted
+        else:
+            read_deleted = context.show_deleted
+
+    if not issubclass(model, models.ModelBase):
+        raise TypeError(_("model should be a subclass of ModelBase"))
+
+    query = session.query(model) if not args else session.query(*args)
+    query = _read_deleted_filter(query, model, read_deleted)
+    query = _project_filter(query, model, context, project_only)
 
     return query
 
@@ -276,8 +367,8 @@ def drop_old_duplicate_entries_from_table(migrate_engine, table_name,
 
         rows_to_delete_select = select([table.c.id]).where(delete_condition)
         for row in migrate_engine.execute(rows_to_delete_select).fetchall():
-            LOG.info(_("Deleting duplicated row with id: %(id)s from table: "
-                       "%(table)s") % dict(id=row[0], table=table_name))
+            LOG.info(_LI("Deleting duplicated row with id: %(id)s from table: "
+                         "%(table)s") % dict(id=row[0], table=table_name))
 
         if use_soft_delete:
             delete_statement = table.update().\

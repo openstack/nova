@@ -49,11 +49,14 @@ db_opts = [
 
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
+CONF.import_opt('backend', 'nova.openstack.common.db.options',
+                group='database')
 
 _BACKEND_MAPPING = {'sqlalchemy': 'nova.db.sqlalchemy.api'}
 
 
-IMPL = db_api.DBAPI(backend_mapping=_BACKEND_MAPPING)
+IMPL = db_api.DBAPI(CONF.database.backend, backend_mapping=_BACKEND_MAPPING,
+                    lazy=True)
 LOG = logging.getLogger(__name__)
 
 # The maximum value a signed INT type may have

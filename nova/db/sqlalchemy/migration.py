@@ -21,8 +21,8 @@ from migrate.versioning import api as versioning_api
 from migrate.versioning.repository import Repository
 import sqlalchemy
 
+from nova.db.sqlalchemy import api as db_session
 from nova import exception
-from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common.gettextutils import _
 
 INIT_VERSION = 215

@@ -70,21 +70,57 @@ db_opts = [
                     'Should be empty, "project" or "global".'),
 ]
 
+connection_opts = [
+    cfg.StrOpt('slave_connection',
+               secret=True,
+               help='The SQLAlchemy connection string used to connect to the '
+                    'slave database'),
+]
+
 CONF = cfg.CONF
 CONF.register_opts(db_opts)
+CONF.register_opts(connection_opts, group='database')
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
 CONF.import_opt('connection',
-                'nova.openstack.common.db.sqlalchemy.session',
+                'nova.openstack.common.db.options',
                 group='database')
-CONF.import_opt('slave_connection',
-                'nova.openstack.common.db.sqlalchemy.session',
-                group='database')
-
 
 LOG = logging.getLogger(__name__)
 
-get_engine = db_session.get_engine
-get_session = db_session.get_session
+
+_MASTER_FACADE = None
+_SLAVE_FACADE = None
+
+
+def _create_facade_lazily(use_slave=False):
+    global _MASTER_FACADE
+    global _SLAVE_FACADE
+
+    return_slave = use_slave and CONF.database.slave_connection
+    if not return_slave:
+        if _MASTER_FACADE is None:
+            _MASTER_FACADE = db_session.EngineFacade(
+                CONF.database.connection,
+                **dict(CONF.database.iteritems())
+            )
+        return _MASTER_FACADE
+    else:
+        if _SLAVE_FACADE is None:
+            _SLAVE_FACADE = db_session.EngineFacade(
+                CONF.database.slave_connection,
+                **dict(CONF.database.iteritems())
+            )
+        return _SLAVE_FACADE
+
+
+def get_engine(use_slave=False):
+    facade = _create_facade_lazily(use_slave)
+    return facade.get_engine()
+
+
+def get_session(use_slave=False, **kwargs):
+    facade = _create_facade_lazily(use_slave)
+    return facade.get_session(**kwargs)
 
 
 _SHADOW_TABLE_PREFIX = 'shadow_'
@@ -195,7 +231,7 @@ def model_query(context, model, *args, **kwargs):
     if CONF.database.slave_connection == '':
         use_slave = False
 
-    session = kwargs.get('session') or get_session(slave_session=use_slave)
+    session = kwargs.get('session') or get_session(use_slave=use_slave)
     read_deleted = kwargs.get('read_deleted') or context.read_deleted
     project_only = kwargs.get('project_only', False)
 
@@ -1818,7 +1854,7 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
     if CONF.database.slave_connection == '':
         use_slave = False
 
-    session = get_session(slave_session=use_slave)
+    session = get_session(use_slave=use_slave)
 
     if columns_to_join is None:
         columns_to_join = ['info_cache', 'security_groups']

@@ -45,7 +45,6 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
-from nova.openstack.common.db.sqlalchemy import session as db_session
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -59,8 +58,8 @@ CONF = cfg.CONF
 CONF.import_opt('reserved_host_memory_mb', 'nova.compute.resource_tracker')
 CONF.import_opt('reserved_host_disk_mb', 'nova.compute.resource_tracker')
 
-get_engine = db_session.get_engine
-get_session = db_session.get_session
+get_engine = sqlalchemy_api.get_engine
+get_session = sqlalchemy_api.get_session
 
 
 def _reservation_get(context, uuid):
@@ -1205,8 +1204,8 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         session = get_session()
         self.mox.StubOutWithMock(sqlalchemy_api, 'get_session')
-        sqlalchemy_api.get_session(slave_session=False).AndReturn(session)
-        sqlalchemy_api.get_session(slave_session=False).AndReturn(session)
+        sqlalchemy_api.get_session(use_slave=False).AndReturn(session)
+        sqlalchemy_api.get_session(use_slave=False).AndReturn(session)
         self.mox.ReplayAll()
 
         security_group = db.security_group_get(self.ctxt, sid,

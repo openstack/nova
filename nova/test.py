@@ -39,9 +39,9 @@ import testtools
 from nova import context
 from nova import db
 from nova.db import migration
+from nova.db.sqlalchemy import api as session
 from nova.network import manager as network_manager
 from nova.objects import base as objects_base
-from nova.openstack.common.db.sqlalchemy import session
 from nova.openstack.common.fixture import logging as log_fixture
 from nova.openstack.common.fixture import moxstubout
 from nova.openstack.common import log as logging
@@ -62,9 +62,10 @@ test_opts = [
 CONF = cfg.CONF
 CONF.register_opts(test_opts)
 CONF.import_opt('connection',
-                'nova.openstack.common.db.sqlalchemy.session',
+                'nova.openstack.common.db.options',
                 group='database')
-CONF.import_opt('sqlite_db', 'nova.openstack.common.db.sqlalchemy.session')
+CONF.import_opt('sqlite_db', 'nova.openstack.common.db.options',
+                group='database')
 CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
 CONF.set_override('use_stderr', False)
 
@@ -254,7 +255,7 @@ class TestCase(testtools.TestCase):
             if not _DB_CACHE:
                 _DB_CACHE = Database(session, migration,
                         sql_connection=CONF.database.connection,
-                        sqlite_db=CONF.sqlite_db,
+                        sqlite_db=CONF.database.sqlite_db,
                         sqlite_clean_db=CONF.sqlite_clean_db)
 
             self.useFixture(_DB_CACHE)
