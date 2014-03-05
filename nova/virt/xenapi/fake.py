@@ -63,6 +63,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
+from nova.virt.xenapi.client import session as xenapi_session
 
 
 _CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
@@ -472,6 +473,7 @@ class SessionBase(object):
 
     def __init__(self, uri):
         self._session = None
+        xenapi_session.apply_session_helpers(self)
 
     def pool_get_default_SR(self, _1, pool_ref):
         return _db_content['pool'].values()[0]['default-SR']

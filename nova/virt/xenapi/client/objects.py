@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova import utils
+
 
 class XenAPISessionObject(object):
     """Wrapper to make calling and mocking the session easier
@@ -70,6 +72,26 @@ class VBD(XenAPISessionObject):
     """Virtual block device."""
     def __init__(self, session):
         super(VBD, self).__init__(session, "VBD")
+
+    def plug(self, vbd_ref, vm_ref):
+        @utils.synchronized('xenapi-vbd-' + vm_ref)
+        def synchronized_plug():
+            self._call_method("plug", vbd_ref)
+
+        # NOTE(johngarbutt) we need to ensure there is only ever one
+        # VBD.unplug or VBD.plug happening at once per VM
+        # due to a bug in XenServer 6.1 and 6.2
+        synchronized_plug()
+
+    def unplug(self, vbd_ref, vm_ref):
+        @utils.synchronized('xenapi-vbd-' + vm_ref)
+        def synchronized_unplug():
+            self._call_method("unplug", vbd_ref)
+
+        # NOTE(johngarbutt) we need to ensure there is only ever one
+        # VBD.unplug or VBD.plug happening at once per VM
+        # due to a bug in XenServer 6.1 and 6.2
+        synchronized_unplug()
 
 
 class VDI(XenAPISessionObject):

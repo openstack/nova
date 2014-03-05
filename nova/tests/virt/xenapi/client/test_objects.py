@@ -16,6 +16,7 @@
 import mock
 
 from nova.tests.virt.xenapi import stubs
+from nova import utils
 from nova.virt.xenapi.client import objects
 
 
@@ -89,3 +90,31 @@ class ObjectsTestCase(stubs.XenAPITestBaseNoDB):
         pool = objects.Pool(self.session)
         pool.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("pool.get_X", "ref")
+
+
+class VBDTestCase(stubs.XenAPITestBaseNoDB):
+    def setUp(self):
+        super(VBDTestCase, self).setUp()
+        self.session = mock.Mock()
+        self.session.VBD = objects.VBD(self.session)
+
+    def test_plug(self):
+        self.session.VBD.plug("vbd_ref", "vm_ref")
+        self.session.call_xenapi.assert_called_once_with("VBD.plug", "vbd_ref")
+
+    @mock.patch.object(utils, 'synchronized')
+    def test_vbd_plug_check_synchronized(self, mock_synchronized):
+        session = mock.Mock()
+        self.session.VBD.plug("vbd_ref", "vm_ref")
+        mock_synchronized.assert_called_once_with("xenapi-vbd-vm_ref")
+
+    def test_unplug(self):
+        self.session.VBD.unplug("vbd_ref", "vm_ref")
+        self.session.call_xenapi.assert_called_once_with("VBD.unplug",
+                                                         "vbd_ref")
+
+    @mock.patch.object(utils, 'synchronized')
+    def test_vbd_plug_check_synchronized(self, mock_synchronized):
+        session = mock.Mock()
+        self.session.VBD.unplug("vbd_ref", "vm_ref")
+        mock_synchronized.assert_called_once_with("xenapi-vbd-vm_ref")

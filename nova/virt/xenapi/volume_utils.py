@@ -26,7 +26,6 @@ from oslo.config import cfg
 
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
-from nova import utils
 
 xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',
@@ -312,23 +311,3 @@ def _get_target_port(iscsi_string):
         return iscsi_string.split(':')[1]
 
     return CONF.xenserver.target_port
-
-
-def vbd_plug(session, vbd_ref, vm_ref):
-    @utils.synchronized('xenapi-events-' + vm_ref)
-    def synchronized_plug():
-        session.call_xenapi("VBD.plug", vbd_ref)
-
-    # NOTE(johngarbutt) we need to ensure there is only ever one VBD.plug
-    # happening at once per VM due to a bug in XenServer 6.1 and 6.2
-    synchronized_plug()
-
-
-def vbd_unplug(session, vbd_ref, vm_ref):
-    @utils.synchronized('xenapi-events-' + vm_ref)
-    def synchronized_unplug():
-        session.call_xenapi("VBD.unplug", vbd_ref)
-
-    # NOTE(johngarbutt) we need to ensure there is only ever one VBD.unplug
-    # happening at once per VM due to a bug in XenServer 6.1 and 6.2
-    synchronized_unplug()

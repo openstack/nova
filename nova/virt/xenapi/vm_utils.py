@@ -426,7 +426,7 @@ def unplug_vbd(session, vbd_ref, this_vm_ref):
             if num_attempt > 1:
                 greenthread.sleep(1)
 
-            volume_utils.vbd_unplug(session, vbd_ref, this_vm_ref)
+            session.VBD.unplug(vbd_ref, this_vm_ref)
             return
         except session.XenAPI.Failure as exc:
             err = len(exc.details) > 0 and exc.details[0]
@@ -2186,7 +2186,7 @@ def vdi_attached_here(session, vdi_ref, read_only=False):
                          read_only=read_only, bootable=False)
     try:
         LOG.debug(_('Plugging VBD %s ... '), vbd_ref)
-        volume_utils.vbd_plug(session, vbd_ref, this_vm_ref)
+        session.VBD.plug(vbd_ref, this_vm_ref)
         try:
             LOG.debug(_('Plugging VBD %s done.'), vbd_ref)
             orig_dev = session.call_xenapi("VBD.get_device", vbd_ref)
