@@ -34,16 +34,16 @@ from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import context
-from nova import db
 from nova import exception
 from nova.openstack.common import jsonutils
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.tests import fake_instance
 import nova.tests.image.fake
 from nova.tests import matchers
+from nova.tests import test_flavors
 from nova.tests import utils
-from nova.tests.virt.vmwareapi import db_fakes
 from nova.tests.virt.vmwareapi import stubs
 from nova import utils as nova_utils
 from nova.virt import driver as v_driver
@@ -277,7 +277,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.node_name = 'test_url'
         self.ds = 'ds1'
         self.context = context.RequestContext(self.user_id, self.project_id)
-        db_fakes.stub_out_db_instance_api(self.stubs)
         stubs.set_stubs(self.stubs)
         vmwareapi_fake.reset()
         self.conn = driver.VMwareESXDriver(fake.FakeVirtAPI)
@@ -350,12 +349,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.conn._wait_for_task, 'fake-ref')
         self.assertEqual(self.stop_called, 1)
 
-    def _create_instance_in_the_db(self, node=None, set_image_ref=True,
-                                   uuid=None):
+    def _get_instance_type_by_name(self, type):
+        for instance_type in test_flavors.DEFAULT_FLAVORS:
+            if instance_type['name'] == type:
+                return instance_type
+
+    def _create_instance(self, node=None, set_image_ref=True,
+                         uuid=None, instance_type='m1.large'):
         if not node:
             node = self.node_name
         if not uuid:
             uuid = uuidutils.generate_uuid()
+        self.type_data = self._get_instance_type_by_name(instance_type)
         values = {'name': 'fake_name',
                   'id': 1,
                   'uuid': uuid,
@@ -366,21 +371,25 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'mac_address': "de:ad:be:ef:be:ef",
                   'flavor': 'm1.large',
                   'node': node,
-                  'root_gb': 80,
-                  }
+                  'memory_mb': self.type_data['memory_mb'],
+                  'root_gb': self.type_data['root_gb'],
+                  'ephemeral_gb': self.type_data['ephemeral_gb'],
+                  'vcpus': self.type_data['vcpus'],
+                  'swap': self.type_data['swap'],
+        }
         if set_image_ref:
             values['image_ref'] = "fake_image_uuid"
         self.instance_node = node
         self.uuid = uuid
-        self.instance = db.instance_create(None, values)
+        self.instance = fake_instance.fake_instance_obj(
+                self.context, **values)
 
     def _create_vm(self, node=None, num_instances=1, uuid=None):
         """Create and spawn the VM."""
         if not node:
             node = self.node_name
-        self._create_instance_in_the_db(node=node, uuid=uuid)
+        self._create_instance(node=node, uuid=uuid)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
-        self.type_data = db.flavor_get_by_name(None, 'm1.large')
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
@@ -714,8 +723,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.assertTrue(self.exception)
 
     def _spawn_attach_volume_vmdk(self, set_image_ref=True):
-        self._create_instance_in_the_db(set_image_ref=set_image_ref)
-        self.type_data = db.flavor_get_by_name(None, 'm1.large')
+        self._create_instance(set_image_ref=set_image_ref)
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
         connection_info = self._test_vmdk_connection_info('vmdk')
@@ -748,8 +756,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._spawn_attach_volume_vmdk(set_image_ref=False)
 
     def test_spawn_attach_volume_iscsi(self):
-        self._create_instance_in_the_db()
-        self.type_data = db.flavor_get_by_name(None, 'm1.large')
+        self._create_instance()
         self.mox.StubOutWithMock(block_device, 'volume_in_mapping')
         self.mox.StubOutWithMock(v_driver, 'block_device_info_get_mapping')
         connection_info = self._test_vmdk_connection_info('iscsi')
@@ -824,7 +831,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._test_snapshot()
 
     def test_snapshot_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.snapshot,
                           self.context, self.instance, "Test-Snapshot",
                           lambda *args, **kwargs: None)
@@ -855,7 +862,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_reboot_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.reboot,
                           self.context, self.instance, self.network_info,
                           'SOFT')
@@ -893,7 +900,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.SUSPENDED)
 
     def test_suspend_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.suspend,
                           self.instance)
 
@@ -912,7 +919,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_resume_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.resume,
                           self.context, self.instance, self.network_info)
 
@@ -939,7 +946,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_power_on_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.power_on,
                           self.context, self.instance, self.network_info)
 
@@ -954,7 +961,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.SHUTDOWN)
 
     def test_power_off_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.power_off,
                           self.instance)
 
@@ -1035,7 +1042,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(len(instances), 0)
 
     def test_destroy_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertIsNone(self.conn.destroy(self.context, self.instance,
             self.network_info))
 
@@ -1235,7 +1242,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(info['password'], 'test_pass')
 
     def test_get_vnc_console_non_existent(self):
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(exception.InstanceNotFound,
                           self.conn.get_vnc_console,
                           self.context,
@@ -1640,7 +1647,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self._test_snapshot()
 
     def test_spawn_invalid_node(self):
-        self._create_instance_in_the_db(node='InvalidNodeName')
+        self._create_instance(node='InvalidNodeName')
         self.assertRaises(exception.NotFound, self.conn.spawn,
                           self.context, self.instance, self.image,
                           injected_files=[], admin_password=None,
@@ -1676,14 +1683,14 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_plug_vifs(self):
         # Check to make sure the method raises NotImplementedError.
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(NotImplementedError,
                           self.conn.plug_vifs,
                           instance=self.instance, network_info=None)
 
     def test_unplug_vifs(self):
         # Check to make sure the method raises NotImplementedError.
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(NotImplementedError,
                           self.conn.unplug_vifs,
                           instance=self.instance, network_info=None)
@@ -1712,12 +1719,12 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
     def test_pause(self):
         # Tests that the VMwareVCDriver does not implement the pause method.
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(NotImplementedError, self.conn.pause, self.instance)
 
     def test_unpause(self):
         # Tests that the VMwareVCDriver does not implement the unpause method.
-        self._create_instance_in_the_db()
+        self._create_instance()
         self.assertRaises(NotImplementedError, self.conn.unpause,
                           self.instance)
 
