@@ -45,7 +45,7 @@ metadata_proxy_opts = [
              'resolve instance ids.'),
      cfg.StrOpt(
          'neutron_metadata_proxy_shared_secret',
-         default='',
+         default='', secret=True,
          help='Shared secret to validate proxies Neutron metadata requests')
 ]
 
