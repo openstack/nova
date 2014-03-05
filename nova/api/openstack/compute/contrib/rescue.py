@@ -32,9 +32,10 @@ authorize = exts.extension_authorizer('compute', 'rescue')
 
 
 class RescueController(wsgi.Controller):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, ext_mgr, *args, **kwargs):
         super(RescueController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
+        self.ext_mgr = ext_mgr
 
     def _get_instance(self, context, instance_id, want_objects=False):
         try:
@@ -57,8 +58,12 @@ class RescueController(wsgi.Controller):
 
         instance = self._get_instance(context, id, want_objects=True)
         try:
+            rescue_image_ref = None
+            if self.ext_mgr.is_loaded("os-extended-rescue-with-image"):
+                if body['rescue'] and 'rescue_image_ref' in body['rescue']:
+                    rescue_image_ref = body['rescue']['rescue_image_ref']
             self.compute_api.rescue(context, instance,
-                                    rescue_password=password)
+                rescue_password=password, rescue_image_ref=rescue_image_ref)
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
@@ -105,6 +110,6 @@ class Rescue(exts.ExtensionDescriptor):
     updated = "2011-08-18T00:00:00+00:00"
 
     def get_controller_extensions(self):
-        controller = RescueController()
+        controller = RescueController(self.ext_mgr)
         extension = exts.ControllerExtension(self, 'servers', controller)
         return [extension]

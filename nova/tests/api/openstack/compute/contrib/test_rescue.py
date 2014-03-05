@@ -26,7 +26,8 @@ CONF = cfg.CONF
 CONF.import_opt('password_length', 'nova.utils')
 
 
-def rescue(self, context, instance, rescue_password=None):
+def rescue(self, context, instance, rescue_password=None,
+           rescue_image_ref=None):
     pass
 
 
@@ -53,7 +54,7 @@ class RescueTest(test.NoDBTestCase):
 
     def test_rescue_from_locked_server(self):
         def fake_rescue_from_locked_server(self, context,
-            instance, rescue_password=None):
+            instance, rescue_password=None, rescue_image_ref=None):
             raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
 
         self.stubs.Set(compute.api.API,

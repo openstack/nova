@@ -505,6 +505,14 @@
             "updated": "%(timestamp)s"
         },
         {
+            "alias": "os-extended-rescue-with-image",
+            "description": "%(text)s",
+            "links": [],
+            "name": "ExtendedRescueWithImage",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_rescue_with_image/api/v2",
+            "updated": "%(timestamp)s"
+        },
+        {
             "alias": "os-security-group-default-rules",
             "description": "%(text)s",
             "links": [],

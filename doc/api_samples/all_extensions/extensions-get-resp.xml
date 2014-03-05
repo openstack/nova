@@ -212,6 +212,9 @@
   <extension alias="os-rescue" updated="2011-08-18T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/rescue/api/v1.1" name="Rescue">
     <description>Instance rescue mode.</description>
   </extension>
+  <extension alias="os-extended-rescue-with-image" updated="2014-03-05T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/extended_rescue_with_image/api/v2" name="ExtendedRescueWithImage">
+    <description>Rescue instance with the image specified.</description>
+  </extension>
   <extension alias="os-security-group-default-rules" updated="2013-02-05T00:00:00+00:00" namespace="http://docs.openstack.org/compute/ext/securitygroupdefaultrules/api/v1.1" name="SecurityGroupDefaultRules">
     <description>Default rules for security group support.</description>
   </extension>

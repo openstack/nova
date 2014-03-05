@@ -1174,6 +1174,46 @@ class RescueXmlTest(RescueJsonTest):
     ctype = 'xml'
 
 
+class ExtendedRescueWithImageJsonTest(ServersSampleBase):
+    extension_name = ("nova.api.openstack.compute.contrib"
+                      ".extended_rescue_with_image.Extended_rescue_with_image")
+
+    def _get_flags(self):
+        f = super(ExtendedRescueWithImageJsonTest, self)._get_flags()
+        f['osapi_compute_extension'] = CONF.osapi_compute_extension[:]
+        # ExtendedRescueWithImage extension also needs Rescue to be loaded.
+        f['osapi_compute_extension'].append(
+            'nova.api.openstack.compute.contrib.rescue.Rescue')
+        return f
+
+    def _rescue(self, uuid):
+        req_subs = {
+            'password': 'MySecretPass',
+            'rescue_image_ref': fake.get_valid_image_id()
+        }
+        response = self._do_post('servers/%s/action' % uuid,
+                                 'server-rescue-req', req_subs)
+        self._verify_response('server-rescue', req_subs, response, 200)
+
+    def test_server_rescue(self):
+        uuid = self._post_server()
+
+        self._rescue(uuid)
+
+        # Do a server get to make sure that the 'RESCUE' state is set
+        response = self._do_get('servers/%s' % uuid)
+        subs = self._get_regexes()
+        subs['hostid'] = '[a-f0-9]+'
+        subs['id'] = uuid
+        subs['status'] = 'RESCUE'
+
+        self._verify_response('server-get-resp-rescue', subs, response, 200)
+
+
+class ExtendedRescueWithImageXmlTest(ExtendedRescueWithImageJsonTest):
+    ctype = 'xml'
+
+
 class ShelveJsonTest(ServersSampleBase):
     extension_name = "nova.api.openstack.compute.contrib.shelve.Shelve"
 
