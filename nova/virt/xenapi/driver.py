@@ -547,10 +547,10 @@ class XenAPIDriver(driver.ComputeDriver):
         :param dest: destination host
         :param post_method:
             post operation method.
-            expected nova.compute.manager.post_live_migration.
+            expected nova.compute.manager._post_live_migration.
         :param recover_method:
             recovery method when any exception occurs.
-            expected nova.compute.manager.recover_live_migration.
+            expected nova.compute.manager._rollback_live_migration.
         :param block_migration: if true, migrate VM disk.
         :param migrate_data: implementation specific params
         """
