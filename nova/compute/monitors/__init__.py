@@ -83,28 +83,20 @@ class ResourceMonitorBase(object):
         which means a timestamp should be added into the returned value.
         That is, a tuple (value, timestamp) is returned.
 
-        The timestamp is not the time when the function is called but probably
-        when the value the function returns was retrieved.
-        Actually the value is retrieved by the internal method
-        _update_data(). Because we don't allow _update_data() is called
-        so frequently. So, the value is read from the cache which was got in
-        the last call sometimes.
+        The timestamp is the time when we update the value in the _data.
 
-        If users want to use this decorator, they need to implement class
-        method _update_data() and variable _data.
         If users hope to define how the timestamp is got by themselves,
         they should not use this decorator in their own classes.
         """
         def wrapper(cls, **kwargs):
-            cls._update_data()
             return func(cls, **kwargs), cls._data.get("timestamp", None)
         return wrapper
 
     def _update_data(self):
         """Method to update the metrics data.
 
-        Each subclass should implement this method to update metrics.
-        It will be called in the decorator add_timestamp.
+        Each subclass can implement this method to update metrics
+        into _data. It will be called in get_metrics.
         """
         pass
 
@@ -129,6 +121,7 @@ class ResourceMonitorBase(object):
         :returns: a list to tell the current metrics
         """
         data = []
+        self._update_data()
         for name, func in self.metric_map.iteritems():
             ret = func(self, **kwargs)
             data.append(self._populate(name, ret[0], ret[1]))
