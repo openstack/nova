@@ -76,7 +76,7 @@ def load_image_handlers(driver):
     layer with more advanced functions.
     The handler's __init__() need do some re-preparing work if it needed,
     for example when nova-compute service restart or host reboot,
-    CinderImageHandler will need to re-preapre iscsi/fc link for volumes
+    CinderImageHandler will need to re-prepare iscsi/fc link for volumes
     those already be cached on compute host as template image previously.
     """
     global _IMAGE_HANDLERS, _IMAGE_HANDLERS_ASSO
@@ -171,6 +171,6 @@ def handle_image(context=None, image_id=None,
                         return
 
     if not handled:
-        LOG.error(_("Can't handle image: %(image_id)s %(target_path)s"),
+        LOG.error(_("Can not handle image: %(image_id)s %(target_path)s"),
                   {'image_id': image_id, 'target_path': target_path})
         raise exception.NoImageHandlerAvailable(image_id=image_id)
