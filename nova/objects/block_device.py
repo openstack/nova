@@ -175,7 +175,8 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
 class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: BlockDeviceMapping <= version 1.1
-    VERSION = '1.1'
+    # Version 1.2: Added use_slave to get_by_instance_uuid
+    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
@@ -183,12 +184,13 @@ class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     child_versions = {
         '1.0': '1.0',
         '1.1': '1.1',
+        '1.2': '1.1',
     }
 
     @base.remotable_classmethod
-    def get_by_instance_uuid(cls, context, instance_uuid):
+    def get_by_instance_uuid(cls, context, instance_uuid, use_slave=False):
         db_bdms = db.block_device_mapping_get_all_by_instance(
-                context, instance_uuid)
+                context, instance_uuid, use_slave=use_slave)
         return base.obj_make_list(
                 context, cls(), BlockDeviceMapping, db_bdms or [])
 

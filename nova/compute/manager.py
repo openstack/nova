@@ -657,7 +657,7 @@ class ComputeManager(manager.Manager):
             driver_uuids = self.driver.list_instance_uuids()
             filters['uuid'] = driver_uuids
             local_instances = instance_obj.InstanceList.get_by_filters(
-                context, filters)
+                context, filters, use_slave=True)
             return local_instances
         except NotImplementedError:
             pass
@@ -665,7 +665,8 @@ class ComputeManager(manager.Manager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
-        instances = instance_obj.InstanceList.get_by_filters(context, filters)
+        instances = instance_obj.InstanceList.get_by_filters(context, filters,
+                                                             use_slave=True)
         name_map = dict((instance.name, instance) for instance in instances)
         local_instances = []
         for driver_instance in driver_instances:
@@ -5345,7 +5346,8 @@ class ComputeManager(manager.Manager):
         with utils.temporary_mutation(context, read_deleted="yes"):
             for instance in self._running_deleted_instances(context):
                 bdms = (block_device_obj.BlockDeviceMappingList.
-                        get_by_instance_uuid(context, instance.uuid))
+                        get_by_instance_uuid(context, instance.uuid,
+                                             use_slave=True))
 
                 if action == "log":
                     LOG.warning(_("Detected instance with name label "

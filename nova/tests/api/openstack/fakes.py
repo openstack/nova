@@ -709,7 +709,7 @@ def stub_snapshot_get_all(self, context):
             stub_snapshot(102, project_id='superduperfake')]
 
 
-def stub_bdm_get_all_by_instance(context, instance_uuid):
+def stub_bdm_get_all_by_instance(context, instance_uuid, use_slave=False):
     return [fake_block_device.FakeDbBlockDeviceDict(
             {'id': 1, 'source_type': 'volume', 'destination_type': 'volume',
             'volume_id': 'volume_id1', 'instance_uuid': instance_uuid}),

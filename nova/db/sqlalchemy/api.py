@@ -3461,11 +3461,12 @@ def get_snapshot_uuid_by_ec2_id(context, ec2_id):
 
 
 def _block_device_mapping_get_query(context, session=None,
-        columns_to_join=None):
+        columns_to_join=None, use_slave=False):
     if columns_to_join is None:
         columns_to_join = []
 
-    query = model_query(context, models.BlockDeviceMapping, session=session)
+    query = model_query(context, models.BlockDeviceMapping,
+                        session=session, use_slave=use_slave)
 
     for column in columns_to_join:
         query = query.options(joinedload(column))
@@ -3546,8 +3547,9 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
 
 
 @require_context
-def block_device_mapping_get_all_by_instance(context, instance_uuid):
-    return _block_device_mapping_get_query(context).\
+def block_device_mapping_get_all_by_instance(context, instance_uuid,
+                                             use_slave=False):
+    return _block_device_mapping_get_query(context, use_slave=use_slave).\
                  filter_by(instance_uuid=instance_uuid).\
                  all()
 

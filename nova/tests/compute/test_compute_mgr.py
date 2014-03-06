@@ -472,7 +472,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           inst in driver_instances]},
                 'created_at', 'desc', columns_to_join=None,
                 limit=None, marker=None,
-                use_slave=False).AndReturn(
+                use_slave=True).AndReturn(
                         driver_instances)
 
         self.mox.ReplayAll()
@@ -513,7 +513,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 fake_context, filters,
                 'created_at', 'desc', columns_to_join=None,
                 limit=None, marker=None,
-                use_slave=False).AndReturn(all_instances)
+                use_slave=True).AndReturn(all_instances)
 
         self.mox.ReplayAll()
 

@@ -5599,9 +5599,9 @@ class ComputeTestCase(BaseTestCase):
         self.compute._shutdown_instance(ctxt, inst1, bdms, notify=False).\
                                         AndRaise(test.TestingException)
         block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
-                inst1.uuid).AndReturn(bdms)
+                inst1.uuid, use_slave=True).AndReturn(bdms)
         block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(ctxt,
-                inst2.uuid).AndReturn(bdms)
+                inst2.uuid, use_slave=True).AndReturn(bdms)
         self.compute._shutdown_instance(ctxt, inst2, bdms, notify=False).\
                                         AndReturn(None)
 
