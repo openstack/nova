@@ -383,6 +383,10 @@ class VIFTests(test.NoDBTestCase):
         vif2 = model.VIF(qbg_params=None)
         self.assertNotEqual(vif1, vif2)
 
+        vif1 = model.VIF(active=True)
+        vif2 = model.VIF(active=False)
+        self.assertNotEqual(vif1, vif2)
+
     def test_create_vif_with_type(self):
         vif_dict = dict(
             id=1,
