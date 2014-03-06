@@ -37,7 +37,8 @@ def _expected_cols(expected_attrs):
 
 class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add instance_uuid to get_by_volume_id method
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -120,13 +121,20 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
         self._from_db_object(context, self, updated)
 
     @base.remotable_classmethod
-    def get_by_volume_id(cls, context, volume_id, expected_attrs=None):
+    def get_by_volume_id(cls, context, volume_id,
+                         instance_uuid=None, expected_attrs=None):
         if expected_attrs is None:
             expected_attrs = []
         db_bdm = db.block_device_mapping_get_by_volume_id(
                 context, volume_id, _expected_cols(expected_attrs))
         if not db_bdm:
             raise exception.VolumeBDMNotFound(volume_id=volume_id)
+        # NOTE (ndipanov): Move this to the db layer into a
+        # get_by_instance_and_volume_id method
+        if instance_uuid and instance_uuid != db_bdm['instance_uuid']:
+            raise exception.InvalidVolume(
+                    reason=_("Volume does not belong to the "
+                             "requested instance."))
         return cls._from_db_object(context, cls(), db_bdm,
                                    expected_attrs=expected_attrs)
 
@@ -166,13 +174,15 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject):
 
 class BlockDeviceMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: BlockDeviceMapping <= version 1.1
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('BlockDeviceMapping'),
     }
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
     }
 
     @base.remotable_classmethod

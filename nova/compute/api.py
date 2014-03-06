@@ -3008,7 +3008,7 @@ class API(base.Base):
     @wrap_check_policy
     def volume_snapshot_create(self, context, volume_id, create_info):
         bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
-                context, volume_id, ['instance'])
+                context, volume_id, expected_attrs=['instance'])
         self.compute_rpcapi.volume_snapshot_create(context, bdm.instance,
                 volume_id, create_info)
         snapshot = {
@@ -3023,7 +3023,7 @@ class API(base.Base):
     def volume_snapshot_delete(self, context, volume_id, snapshot_id,
                                delete_info):
         bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
-                context, volume_id, ['instance'])
+                context, volume_id, expected_attrs=['instance'])
         self.compute_rpcapi.volume_snapshot_delete(context, bdm.instance,
                 volume_id, snapshot_id, delete_info)
 

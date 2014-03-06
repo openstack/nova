@@ -86,12 +86,22 @@ class _TestBlockDeviceMappingObject(object):
                           self.context, 'fake-volume-id')
 
     @mock.patch.object(db, 'block_device_mapping_get_by_volume_id')
+    def test_get_by_volume_instance_uuid_missmatch(self, get_by_vol_id):
+        fake_bdm_vol = self.fake_bdm(instance={'uuid': 'other-fake-instance'})
+        get_by_vol_id.return_value = fake_bdm_vol
+
+        self.assertRaises(exception.InvalidVolume,
+                          block_device_obj.BlockDeviceMapping.get_by_volume_id,
+                          self.context, 'fake-volume-id',
+                          instance_uuid='fake-instance')
+
+    @mock.patch.object(db, 'block_device_mapping_get_by_volume_id')
     def test_get_by_volume_id_with_expected(self, get_by_vol_id):
         get_by_vol_id.return_value = self.fake_bdm(
                 fake_instance.fake_db_instance())
 
         vol_bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
-                self.context, 'fake-volume-id', ['instance'])
+                self.context, 'fake-volume-id', expected_attrs=['instance'])
         for attr in block_device_obj.BLOCK_DEVICE_OPTIONAL_ATTRS:
             self.assertTrue(vol_bdm.obj_attr_is_set(attr))
         get_by_vol_id.assert_called_once_with(self.context, 'fake-volume-id',
