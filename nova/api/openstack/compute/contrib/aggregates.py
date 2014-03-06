@@ -127,6 +127,8 @@ class AggregateController(object):
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
+        except exception.AggregateNameExists as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.AggregateNotFound:
             LOG.info(_('Cannot update aggregate: %s'), id)
             raise exc.HTTPNotFound()

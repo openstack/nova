@@ -256,6 +256,17 @@ class AggregateTestCase(test.NoDBTestCase):
         self.assertRaises(exc.HTTPNotFound, self.controller.update,
                 self.req, "2", body=test_metadata)
 
+    def test_update_with_duplicated_name(self):
+        test_metadata = {"aggregate": {"name": "test_name"}}
+
+        def stub_update_aggregate(context, aggregate, metadata):
+            raise exception.AggregateNameExists(aggregate_name="test_name")
+
+        self.stubs.Set(self.controller.api, "update_aggregate",
+                       stub_update_aggregate)
+        self.assertRaises(exc.HTTPConflict, self.controller.update,
+                self.req, "2", body=test_metadata)
+
     def test_update_with_invalid_request(self):
         test_metadata = {"aggregate": 1}
         self.assertRaises(exc.HTTPBadRequest, self.controller.update,
