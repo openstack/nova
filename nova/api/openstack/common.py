@@ -538,10 +538,18 @@ class ViewBuilder(object):
                               items,
                               collection_name,
                               id_key="uuid"):
-        """Retrieve 'next' link, if applicable."""
+        """Retrieve 'next' link, if applicable. This is included if:
+        1) 'limit' param is specified and equals the number of items.
+        2) 'limit' param is specified but it exceeds CONF.osapi_max_limit,
+        in this case the number of items is CONF.osapi_max_limit.
+        3) 'limit' param is NOT specified but the number of items is
+        CONF.osapi_max_limit.
+        """
         links = []
-        limit = int(request.params.get("limit", 0))
-        if limit and limit == len(items):
+        max_items = min(
+            int(request.params.get("limit", CONF.osapi_max_limit)),
+            CONF.osapi_max_limit)
+        if max_items and max_items == len(items):
             last_item = items[-1]
             if id_key in last_item:
                 last_item_id = last_item[id_key]

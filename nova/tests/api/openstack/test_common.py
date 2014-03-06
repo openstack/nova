@@ -18,6 +18,8 @@ Test suites for 'common' code used throughout the OpenStack HTTP API.
 """
 
 from lxml import etree
+import mock
+from testtools import matchers
 import webob
 import webob.exc
 import xml.dom.minidom as minidom
@@ -373,6 +375,82 @@ class MiscFunctionsTest(test.TestCase):
                      task_states.RESIZE_MIGRATING,
                      task_states.RESIZE_PREP])
         self.assertEqual(expected, actual)
+
+
+class TestCollectionLinks(test.NoDBTestCase):
+    """Tests the _get_collection_links method."""
+
+    @mock.patch('nova.api.openstack.common.ViewBuilder._get_next_link')
+    def test_items_less_than_limit(self, href_link_mock):
+        items = [
+            {"uuid": "123"}
+        ]
+        req = mock.MagicMock()
+        params = mock.PropertyMock(return_value=dict(limit=10))
+        type(req).params = params
+
+        builder = common.ViewBuilder()
+        results = builder._get_collection_links(req, items, "ignored", "uuid")
+
+        href_link_mock.assert_not_called()
+        self.assertThat(results, matchers.HasLength(0))
+
+    @mock.patch('nova.api.openstack.common.ViewBuilder._get_next_link')
+    def test_items_equals_given_limit(self, href_link_mock):
+        items = [
+            {"uuid": "123"}
+        ]
+        req = mock.MagicMock()
+        params = mock.PropertyMock(return_value=dict(limit=1))
+        type(req).params = params
+
+        builder = common.ViewBuilder()
+        results = builder._get_collection_links(req, items,
+                                                mock.sentinel.coll_key,
+                                                "uuid")
+
+        href_link_mock.assert_called_once_with(req, "123",
+                                               mock.sentinel.coll_key)
+        self.assertThat(results, matchers.HasLength(1))
+
+    @mock.patch('nova.api.openstack.common.ViewBuilder._get_next_link')
+    def test_items_equals_default_limit(self, href_link_mock):
+        items = [
+            {"uuid": "123"}
+        ]
+        req = mock.MagicMock()
+        params = mock.PropertyMock(return_value=dict())
+        type(req).params = params
+        self.flags(osapi_max_limit=1)
+
+        builder = common.ViewBuilder()
+        results = builder._get_collection_links(req, items,
+                                                mock.sentinel.coll_key,
+                                                "uuid")
+
+        href_link_mock.assert_called_once_with(req, "123",
+                                               mock.sentinel.coll_key)
+        self.assertThat(results, matchers.HasLength(1))
+
+    @mock.patch('nova.api.openstack.common.ViewBuilder._get_next_link')
+    def test_items_equals_default_limit_with_given(self, href_link_mock):
+        items = [
+            {"uuid": "123"}
+        ]
+        req = mock.MagicMock()
+        # Given limit is greater then default max, only return default max
+        params = mock.PropertyMock(return_value=dict(limit=2))
+        type(req).params = params
+        self.flags(osapi_max_limit=1)
+
+        builder = common.ViewBuilder()
+        results = builder._get_collection_links(req, items,
+                                                mock.sentinel.coll_key,
+                                                "uuid")
+
+        href_link_mock.assert_called_once_with(req, "123",
+                                               mock.sentinel.coll_key)
+        self.assertThat(results, matchers.HasLength(1))
 
 
 class MetadataXMLDeserializationTest(test.TestCase):
