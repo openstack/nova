@@ -291,6 +291,8 @@ def inject_data(image, key=None, net=None, metadata=None, admin_password=None,
     if use_cow:
         fmt = "qcow2"
     try:
+        # Note(mrda): Test if the image exists first to short circuit errors
+        os.stat(image)
         fs = vfs.VFS.instance_for_image(image, fmt, partition)
         fs.setup()
     except Exception as e:
