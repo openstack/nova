@@ -1541,8 +1541,8 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                     "topology": {"cores": 16,
                                  "threads": 32}}
         self.assertEqual(stats['vcpus'], 32)
-        self.assertEqual(stats['local_gb'], 1024)
-        self.assertEqual(stats['local_gb_used'], 1024 - 500)
+        self.assertEqual(stats['local_gb'], 2048)
+        self.assertEqual(stats['local_gb_used'], 2048 - 600)
         self.assertEqual(stats['memory_mb'], 1000)
         self.assertEqual(stats['memory_mb_used'], 500)
         self.assertEqual(stats['hypervisor_type'], 'VMware vCenter Server')
@@ -1732,8 +1732,8 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         vmops = self.conn._resources[self.node_name]['vmops']
         self.assertEqual({}, vmops._datastore_dc_mapping)
         self._create_vm()
-        # currently there are 2 data stores
-        self.assertEqual(2, len(vmops._datastore_dc_mapping))
+        # currently there are 4 data stores
+        self.assertEqual(4, len(vmops._datastore_dc_mapping))
 
     def test_rollback_live_migration_at_destination(self):
         with mock.patch.object(self.conn, "destroy") as mock_destroy:

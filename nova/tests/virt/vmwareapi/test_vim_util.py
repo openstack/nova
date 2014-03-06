@@ -36,6 +36,12 @@ def _fake_get_object_properties_missing(vim, collector, mobj,
 
 class VMwareVIMUtilTestCase(test.NoDBTestCase):
 
+    def setUp(self):
+        super(VMwareVIMUtilTestCase, self).setUp()
+        fake.reset(vc=True)
+        self.vim = fake.FakeVim()
+        self.vim._login()
+
     def test_get_dynamic_properties_missing(self):
         self.useFixture(fixtures.MonkeyPatch(
                 'nova.virt.vmwareapi.vim_util.get_object_properties',
@@ -51,3 +57,15 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
         res = vim_util.get_dynamic_property('fake-vim', 'fake-obj',
                                             'fake-type', 'fake-property')
         self.assertIsNone(res)
+
+    def test_get_inner_objects(self):
+        property = ['summary.name']
+        # Get the fake datastores directly from the cluster
+        cluster_refs = fake._get_object_refs('ClusterComputeResource')
+        cluster = fake._get_object(cluster_refs[0])
+        expected_ds = cluster.datastore.ManagedObjectReference
+        # Get the fake datastores using inner objects utility method
+        result = vim_util.get_inner_objects(
+            self.vim, cluster_refs[0], 'datastore', 'Datastore', property)
+        datastores = [oc.obj for oc in result.objects]
+        self.assertEqual(expected_ds, datastores)
