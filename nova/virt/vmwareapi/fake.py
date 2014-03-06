@@ -1144,7 +1144,8 @@ class FakeVim(object):
                 task_mdo = create_task(method, state="success",
                                        result=result)
                 return task_mdo.obj
-        task_mdo = create_task(method, "error")
+        task_mdo = create_task(method, "error",
+                error_fault=FileNotFound())
         return task_mdo.obj
 
     def _move_file(self, method, *args, **kwargs):

@@ -90,24 +90,6 @@ def vm_ref_cache_from_name(func):
 VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 
 
-def build_datastore_path(datastore_name, path):
-    """Build the datastore compliant path."""
-    return "[%s] %s" % (datastore_name, path)
-
-
-def split_datastore_path(datastore_path):
-    """Split the VMware style datastore path to get the Datastore
-    name and the entity path.
-    """
-    spl = datastore_path.split('[', 1)[1].split(']', 1)
-    path = ""
-    if len(spl) == 1:
-        datastore_url = spl[0]
-    else:
-        datastore_url, path = spl
-    return datastore_url, path.strip()
-
-
 def get_vm_create_spec(client_factory, instance, name, data_store_name,
                        vif_infos, os_type="otherGuest"):
     """Builds the VM Create spec."""

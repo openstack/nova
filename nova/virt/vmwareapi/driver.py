@@ -896,7 +896,7 @@ class VMwareAPISession(object):
                 LOG.debug(_("Task [%(task_name)s] %(task_ref)s "
                             "status: success"),
                           {'task_name': task_name, 'task_ref': task_ref})
-                done.send("success")
+                done.send(task_info)
             else:
                 error_info = str(task_info.error.localizedMessage)
                 LOG.warn(_("Task [%(task_name)s] %(task_ref)s "
