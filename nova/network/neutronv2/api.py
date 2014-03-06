@@ -456,8 +456,6 @@ class API(base.Base):
            and update cache.
         """
         result = self._get_instance_nw_info(context, instance, networks)
-        update_instance_info_cache(self, context, instance, result,
-                                   update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None):
