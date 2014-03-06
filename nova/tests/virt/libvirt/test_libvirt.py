@@ -8240,6 +8240,21 @@ class LibvirtDriverTestCase(test.TestCase):
         self.libvirtconnection._wait_for_running({'name': 'else',
                                                   'uuid': 'other_uuid'})
 
+    def test_disk_size_from_instance_disk_info(self):
+        inst = {'root_gb': 10, 'ephemeral_gb': 20, 'swap_gb': 30}
+
+        info = {'path': '/path/disk'}
+        self.assertEqual(10 * units.Gi,
+            self.libvirtconnection._disk_size_from_instance(inst, info))
+
+        info = {'path': '/path/disk.local'}
+        self.assertEqual(20 * units.Gi,
+            self.libvirtconnection._disk_size_from_instance(inst, info))
+
+        info = {'path': '/path/disk.swap'}
+        self.assertEqual(0,
+            self.libvirtconnection._disk_size_from_instance(inst, info))
+
     def _test_finish_migration(self, power_on):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .finish_migration.
