@@ -5043,6 +5043,18 @@ def aggregate_host_get_by_metadata_key(context, key):
 @require_admin_context
 def aggregate_update(context, aggregate_id, values):
     session = get_session()
+
+    if "name" in values:
+        aggregate_by_name = (_aggregate_get_query(context,
+                                                  models.Aggregate,
+                                                  models.Aggregate.name,
+                                                  values['name'],
+                                                  session=session,
+                                                  read_deleted='no').first())
+        if aggregate_by_name and aggregate_by_name.id != aggregate_id:
+            # there is another aggregate with the new name
+            raise exception.AggregateNameExists(aggregate_name=values['name'])
+
     aggregate = (_aggregate_get_query(context,
                                      models.Aggregate,
                                      models.Aggregate.id,
