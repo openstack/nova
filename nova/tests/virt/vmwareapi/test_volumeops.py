@@ -67,3 +67,28 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
 
     def test_detach_without_destroy_disk_from_vm(self):
         self._test_detach_disk_from_vm(destroy_disk=False)
+
+    def _fake_call_get_dynamic_property(self, uuid, result):
+        def fake_call_method(vim, method, vm_ref, type, prop):
+            expected_prop = 'config.extraConfig["volume-%s"]' % uuid
+            self.assertEqual('VirtualMachine', type)
+            self.assertEqual(expected_prop, prop)
+            return result
+        return fake_call_method
+
+    def test_get_volume_uuid(self):
+        vm_ref = mock.Mock()
+        uuid = '1234'
+        opt_val = vmwareapi_fake.OptionValue('volume-%s' % uuid, 'volume-val')
+        fake_call = self._fake_call_get_dynamic_property(uuid, opt_val)
+        with mock.patch.object(self._session, "_call_method", fake_call):
+            val = self._volumeops._get_volume_uuid(vm_ref, uuid)
+            self.assertEqual('volume-val', val)
+
+    def test_get_volume_uuid_not_found(self):
+        vm_ref = mock.Mock()
+        uuid = '1234'
+        fake_call = self._fake_call_get_dynamic_property(uuid, None)
+        with mock.patch.object(self._session, "_call_method", fake_call):
+            val = self._volumeops._get_volume_uuid(vm_ref, uuid)
+            self.assertIsNone(val)

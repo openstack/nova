@@ -366,6 +366,15 @@ class VirtualPCNet32(DataObject):
         self.key = 4000
 
 
+class OptionValue(DataObject):
+    """OptionValue class."""
+
+    def __init__(self, key=None, value=None):
+        super(OptionValue, self).__init__()
+        self.key = key
+        self.value = value
+
+
 class VirtualMachine(ManagedObject):
     """Virtual Machine class."""
 
