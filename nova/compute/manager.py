@@ -4843,13 +4843,15 @@ class ComputeManager(manager.Manager):
                                                    last_refreshed=refreshed,
                                                    update_cells=update_cells)
 
-    def _get_host_volume_bdms(self, context, host):
+    def _get_host_volume_bdms(self, context):
         """Return all block device mappings on a compute host."""
         compute_host_bdms = []
-        instances = self.conductor_api.instance_get_all_by_host(context,
-                                                                self.host)
+        instances = instance_obj.InstanceList.get_by_host(context, self.host)
         for instance in instances:
-            instance_bdms = self._get_instance_volume_bdms(context, instance)
+            instance_bdms = [bdm for bdm in
+                             (block_device_obj.BlockDeviceMappingList.
+                              get_by_instance_uuid(context, instance.uuid))
+                             if bdm.is_volume]
             compute_host_bdms.append(dict(instance=instance,
                                           instance_bdms=instance_bdms))
 
@@ -4881,7 +4883,7 @@ class ComputeManager(manager.Manager):
             return
 
         self._last_vol_usage_poll = curr_time
-        compute_host_bdms = self._get_host_volume_bdms(context, self.host)
+        compute_host_bdms = self._get_host_volume_bdms(context)
         if not compute_host_bdms:
             return
 

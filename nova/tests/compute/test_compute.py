@@ -606,6 +606,27 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.compute._poll_bandwidth_usage(ctxt)
         self.mox.UnsetStubs()
 
+    @mock.patch.object(instance_obj.InstanceList, 'get_by_host')
+    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_get_host_volume_bdms(self, mock_get_by_inst, mock_get_by_host):
+        fake_instance = mock.Mock(uuid='fake-instance-uuid')
+        mock_get_by_host.return_value = [fake_instance]
+
+        volume_bdm = mock.Mock(id=1, is_volume=True)
+        not_volume_bdm = mock.Mock(id=2, is_volume=False)
+        mock_get_by_inst.return_value = [volume_bdm, not_volume_bdm]
+
+        expected_host_bdms = [{'instance': fake_instance,
+                               'instance_bdms': [volume_bdm]}]
+
+        got_host_bdms = self.compute._get_host_volume_bdms('fake-context')
+        mock_get_by_host.assert_called_once_with('fake-context',
+                                                 self.compute.host)
+        mock_get_by_inst.assert_called_once_with('fake-context',
+                                                 'fake-instance-uuid')
+        self.assertEqual(expected_host_bdms, got_host_bdms)
+
     def test_poll_volume_usage_disabled(self):
         ctxt = 'MockContext'
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
@@ -635,13 +656,12 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_poll_volume_usage_returns_no_vols(self):
         ctxt = 'MockContext'
-        self.compute.host = 'MockHost'
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute.driver, 'get_all_volume_usage')
         # Following methods are called.
         utils.last_completed_audit_period().AndReturn((0, 0))
-        self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([])
+        self.compute._get_host_volume_bdms(ctxt).AndReturn([])
         self.mox.ReplayAll()
 
         CONF.volume_usage_poll_interval = 10
@@ -651,7 +671,6 @@ class ComputeVolumeTestCase(BaseTestCase):
 
     def test_poll_volume_usage_with_data(self):
         ctxt = 'MockContext'
-        self.compute.host = 'MockHost'
         self.mox.StubOutWithMock(utils, 'last_completed_audit_period')
         self.mox.StubOutWithMock(self.compute, '_get_host_volume_bdms')
         self.mox.StubOutWithMock(self.compute, '_update_volume_usage_cache')
@@ -659,7 +678,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                        lambda x, y: [3, 4])
         # All the mocks are called
         utils.last_completed_audit_period().AndReturn((10, 20))
-        self.compute._get_host_volume_bdms(ctxt, 'MockHost').AndReturn([1, 2])
+        self.compute._get_host_volume_bdms(ctxt).AndReturn([1, 2])
         self.compute._update_volume_usage_cache(ctxt, [3, 4])
         self.mox.ReplayAll()
         CONF.volume_usage_poll_interval = 10
@@ -678,7 +697,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                  'connection_info': '{}', 'instance_uuid': instance['uuid'],
                  'source_type': 'volume', 'destination_type': 'volume',
                  'volume_id': 1})
-        legacy_bdm = {'id': 1, 'device_name': '/dev/vdb',
+        host_volume_bdms = {'id': 1, 'device_name': '/dev/vdb',
                'connection_info': '{}', 'instance_uuid': instance['uuid'],
                'volume_id': 1}
 
@@ -692,15 +711,16 @@ class ComputeVolumeTestCase(BaseTestCase):
             AndReturn(bdm)
         self.compute.driver.block_stats(instance['name'], 'vdb').\
             AndReturn([1L, 30L, 1L, 20L, None])
-        self.compute._get_host_volume_bdms(self.context, 'fake-mini').\
-            AndReturn(legacy_bdm)
-        self.compute.driver.get_all_volume_usage(self.context, legacy_bdm).\
-            AndReturn([{'volume': 1,
-                        'rd_req': 1,
-                        'rd_bytes': 10,
-                        'wr_req': 1,
-                        'wr_bytes': 5,
-                        'instance': instance}])
+        self.compute._get_host_volume_bdms(self.context).AndReturn(
+                host_volume_bdms)
+        self.compute.driver.get_all_volume_usage(
+                self.context, host_volume_bdms).AndReturn(
+                        [{'volume': 1,
+                          'rd_req': 1,
+                          'rd_bytes': 10,
+                          'wr_req': 1,
+                          'wr_bytes': 5,
+                          'instance': instance}])
         db.block_device_mapping_get_by_volume_id(self.context, 1, []).\
             AndReturn(bdm)
 
