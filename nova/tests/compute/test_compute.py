@@ -4552,12 +4552,25 @@ class ComputeTestCase(BaseTestCase):
                 self.context.elevated(),
                 instance.uuid, 'pre-migrating')
 
-        self.compute.resize_instance(self.context, instance=instance,
-                migration=migration, image={}, reservations=[],
-                instance_type=jsonutils.to_primitive(instance_type))
-        self.assertEqual(migration.dest_compute, instance.host)
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
+        with contextlib.nested(
+            mock.patch.object(block_device_obj.BlockDeviceMappingList,
+                'get_by_instance_uuid', return_value='fake_bdms'),
+            mock.patch.object(
+                self.compute, '_get_instance_volume_block_device_info',
+                return_value='fake_bdinfo'),
+            mock.patch.object(self.compute, '_terminate_volume_connections')
+        ) as (mock_get_by_inst_uuid, mock_get_instance_vol_bdinfo,
+                mock_terminate_vol_conn):
+            self.compute.resize_instance(self.context, instance=instance,
+                    migration=migration, image={}, reservations=[],
+                    instance_type=jsonutils.to_primitive(instance_type))
+            mock_get_instance_vol_bdinfo.assert_called_once_with(
+                    self.context, instance, bdms='fake_bdms')
+            mock_terminate_vol_conn.assert_called_once_with(self.context,
+                    instance, 'fake_bdms')
+            self.assertEqual(migration.dest_compute, instance.host)
+            self.compute.terminate_instance(self.context,
+                    self._objectify(instance), [], [])
 
     def _test_confirm_resize(self, power_on):
         # Common test case method for confirm_resize
