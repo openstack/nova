@@ -28,6 +28,7 @@ from nova.compute import task_states
 from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
+from nova.openstack.common.fixture import lockutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -250,7 +251,18 @@ class BareMetalDriver(driver.ComputeDriver):
             self._attach_block_devices(instance, block_device_info)
             self._start_firewall(instance, network_info)
 
-            self.driver.cache_images(
+            # Caching images is both CPU and I/O expensive. When running many
+            # machines from a single nova-compute server, deploys of multiple
+            # machines can easily thrash the nova-compute server - unlike a
+            # virt hypervisor which is limited by CPU for VMs, baremetal only
+            # uses CPU and I/O when deploying. By only downloading one image
+            # at a time we serialise rather than thrashing, which leads to a
+            # lower average time-to-complete during overload situations, and
+            # a (relatively) insignificant delay for compute servers which
+            # have sufficient IOPS to handle multiple concurrent image
+            # conversions.
+            with lockutils.LockFixture('nova-baremetal-cache-images'):
+                self.driver.cache_images(
                             context, node, instance,
                             admin_password=admin_password,
                             image_meta=image_meta,
