@@ -4308,14 +4308,18 @@ class ComputeTestCase(BaseTestCase):
     def test_reclaim_queued_deletes(self):
         self.flags(reclaim_instance_interval=3600)
         ctxt = context.get_admin_context()
+        instances = []
 
         # Active
-        self._create_fake_instance(params={'host': CONF.host})
+        instances.append(
+            self._create_fake_instance(params={'host': CONF.host}))
 
         # Deleted not old enough
-        self._create_fake_instance(params={'host': CONF.host,
-                                           'vm_state': vm_states.SOFT_DELETED,
-                                           'deleted_at': timeutils.utcnow()})
+        instances.append(
+            self._create_fake_instance(params={
+                                            'host': CONF.host,
+                                            'vm_state': vm_states.SOFT_DELETED,
+                                            'deleted_at': timeutils.utcnow()}))
 
         # Deleted old enough (only this one should be reclaimed)
         deleted_at = (timeutils.utcnow() -
@@ -4324,20 +4328,27 @@ class ComputeTestCase(BaseTestCase):
                 params={'host': CONF.host,
                         'vm_state': vm_states.SOFT_DELETED,
                         'deleted_at': deleted_at})
+        instances.append(instance)
 
         # Restoring
         # NOTE(hanlind): This specifically tests for a race condition
         # where restoring a previously soft deleted instance sets
         # deleted_at back to None, causing reclaim to think it can be
         # deleted, see LP #1186243.
-        self._create_fake_instance(
+        instances.append(
+            self._create_fake_instance(
                 params={'host': CONF.host,
                         'vm_state': vm_states.SOFT_DELETED,
-                        'task_state': task_states.RESTORING})
+                        'task_state': task_states.RESTORING}))
+
+        def fake_instance_get_all_by_host(*args, **kwargs):
+            return jsonutils.to_primitive(instances)
+
+        self.stubs.Set(self.compute.conductor_api, 'instance_get_all_by_host',
+                       fake_instance_get_all_by_host)
 
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
-        instance_ref = jsonutils.to_primitive(db.instance_get_by_uuid(
-                                          ctxt, instance['uuid']))
+        instance_ref = jsonutils.to_primitive(instance)
         self.compute._delete_instance(ctxt, instance_ref, [])
 
         self.mox.ReplayAll()
