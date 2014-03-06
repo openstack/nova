@@ -68,7 +68,7 @@ On Ubuntu Precise (12.04) you may also need to add the following packages::
 
 On Fedora-based distributions (e.g., Fedora/RHEL/CentOS/Scientific Linux)::
 
-  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel python-pip postgresql-devel
+  sudo yum install python-devel openssl-devel python-pip git gcc libxslt-devel mysql-devel python-pip postgresql-devel libffi-devel
   sudo pip-python install tox
 
 
