@@ -423,6 +423,19 @@ class TestBlockDeviceDict(test.NoDBTestCase):
         for legacy, expected in zip(got_legacy, self.legacy_mapping):
             self.assertThat(expected, matchers.IsSubDictOf(legacy))
 
+    def test_legacy_mapping_from_object_list(self):
+        bdm1 = block_device_obj.BlockDeviceMapping()
+        bdm1 = block_device_obj.BlockDeviceMapping._from_db_object(
+            None, bdm1, fake_block_device.FakeDbBlockDeviceDict(
+                self.new_mapping[0]))
+        bdm2 = block_device_obj.BlockDeviceMapping()
+        bdm2 = block_device_obj.BlockDeviceMapping._from_db_object(
+            None, bdm2, fake_block_device.FakeDbBlockDeviceDict(
+                self.new_mapping[1]))
+        bdmlist = block_device_obj.BlockDeviceMappingList()
+        bdmlist.objects = [bdm1, bdm2]
+        block_device.legacy_mapping(bdmlist)
+
     def test_image_mapping(self):
         removed_fields = ['id', 'instance_uuid', 'connection_info',
                           'device_name', 'created_at', 'updated_at',

@@ -86,7 +86,7 @@ class BlockDeviceDict(dict):
         self.update(
             dict((field, None)
                  for field in self._fields - do_not_default))
-        self.update(bdm_dict)
+        self.update(list(bdm_dict.iteritems()))
 
     def _validate(self, bdm_dict):
         """Basic data format validations."""
