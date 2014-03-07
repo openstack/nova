@@ -162,6 +162,33 @@ class DomainsController(wsgi.Controller):
         return ('reservation_id', 'name', 'status', 'image', 'flavor',
                 'ip', 'changes-since', 'all_tenants')
 
+    @wsgi.response(204)
+    def delete(self, req, id):
+        """Destroys a server."""
+        try:
+            self._delete(req.environ['nova.context'], req, id)
+        except exception.NotFound:
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'delete')
+
+    def _delete(self, context, req, instance_uuid):
+        instance = self._get_server(context, req, instance_uuid)
+        if CONF.reclaim_instance_interval:
+            try:
+                self.compute_api.soft_delete(context, instance)
+            except exception.InstanceInvalidState:
+                # Note(yufang521247): instance which has never been active
+                # is not allowed to be soft_deleted. Thus we have to call
+                # delete() to clean up the instance.
+                self.compute_api.delete(context, instance)
+        else:
+            self.compute_api.delete(context, instance)
+
 
 def remove_invalid_options(context, search_options, allowed_search_options):
     """Remove search options that are not valid for non-admin API/context."""
