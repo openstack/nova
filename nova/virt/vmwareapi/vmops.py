@@ -167,6 +167,10 @@ class VMwareVMOps(object):
                         "Exception: %(ex)s"),
                       {'ds': datastore_path, 'ex': e})
 
+    def _get_vmdk_path(self, ds_name, folder, name):
+        path = "%s/%s.vmdk" % (folder, name)
+        return ds_util.build_datastore_path(ds_name, path)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
@@ -197,6 +201,11 @@ class VMwareVMOps(object):
                     block_device_info)
             if block_device_mapping:
                 ebs_root = True
+
+        # Get the file_type from the disk format
+        # TODO(garyk): raise an error if disk format is not supported
+        is_iso = image_meta.get('disk_format') == 'iso'
+        file_type = 'iso' if is_iso else 'vmdk'
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()
@@ -320,7 +329,7 @@ class VMwareVMOps(object):
             vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port)
 
-        def _create_virtual_disk(folder, virtual_disk_path):
+        def _create_virtual_disk(virtual_disk_path, file_size_in_kb):
             """Create a virtual disk of the size of flat vmdk file."""
             # Create a Virtual Disk of the size of the flat vmdk file. This is
             # done just to generate the meta-data file whose specifics
@@ -328,20 +337,16 @@ class VMwareVMOps(object):
             # storage adapter type.
             # Here we assume thick provisioning and lsiLogic for the adapter
             # type
-            folder_path = ds_util.build_datastore_path(data_store_name,
-                                                       folder)
-            LOG.debug(_("Creating temporary folder %s"), folder_path)
-            ds_util.mkdir(self._session, folder_path, dc_info.ref)
             LOG.debug(_("Creating Virtual Disk of size  "
                       "%(vmdk_file_size_in_kb)s KB and adapter type "
                       "%(adapter_type)s on the ESX host local store "
-                      "%(data_store_name)s") %
-                       {"vmdk_file_size_in_kb": vmdk_file_size_in_kb,
+                      "%(data_store_name)s"),
+                       {"vmdk_file_size_in_kb": file_size_in_kb,
                         "adapter_type": adapter_type,
                         "data_store_name": data_store_name},
                       instance=instance)
             vmdk_create_spec = vm_util.get_vmdk_create_spec(client_factory,
-                                    vmdk_file_size_in_kb, adapter_type,
+                                    file_size_in_kb, adapter_type,
                                     disk_type)
             vmdk_create_task = self._session._call_method(
                 self._session._get_vim(),
@@ -359,19 +364,13 @@ class VMwareVMOps(object):
                          "data_store_name": data_store_name},
                       instance=instance)
 
-        def _fetch_image_on_datastore():
+        def _fetch_image_on_datastore(upload_name):
             """Fetch image from Glance to datastore."""
             LOG.debug(_("Downloading image file data %(image_ref)s to the "
                         "data store %(data_store_name)s") %
                         {'image_ref': instance['image_ref'],
                          'data_store_name': data_store_name},
                       instance=instance)
-            # For flat disk, upload the -flat.vmdk file whose meta-data file
-            # we just created above
-            # For sparse disk, upload the -sparse.vmdk file to be copied into
-            # a flat vmdk
-            upload_vmdk_name = sparse_uploaded_vmdk_name \
-                if disk_type == "sparse" else flat_uploaded_vmdk_name
             vmware_images.fetch_image(
                 context,
                 instance['image_ref'],
@@ -380,12 +379,12 @@ class VMwareVMOps(object):
                 data_center_name=dc_info.name,
                 datastore_name=data_store_name,
                 cookies=cookies,
-                file_path=upload_vmdk_name)
+                file_path=upload_name)
             LOG.debug(_("Downloaded image file data %(image_ref)s to "
-                        "%(upload_vmdk_name)s on the data store "
+                        "%(upload_name)s on the data store "
                         "%(data_store_name)s") %
                         {'image_ref': instance['image_ref'],
-                         'upload_vmdk_name': upload_vmdk_name,
+                         'upload_name': upload_name,
                          'data_store_name': data_store_name},
                       instance=instance)
 
@@ -436,16 +435,20 @@ class VMwareVMOps(object):
             upload_folder = '%s/%s' % (self._base_folder, upload_name)
 
             # The vmdk meta-data file
-            uploaded_vmdk_name = "%s/%s.vmdk" % (upload_folder, upload_name)
-            uploaded_vmdk_path = ds_util.build_datastore_path(data_store_name,
-                                                uploaded_vmdk_name)
+            uploaded_file_name = "%s/%s.%s" % (upload_folder, upload_name,
+                                               file_type)
+            uploaded_file_path = ds_util.build_datastore_path(data_store_name,
+                                                uploaded_file_name)
 
             session_vim = self._session._get_vim()
             cookies = session_vim.client.options.transport.cookiejar
 
+            upload_file_name = upload_name + ".%s" % file_type
+            # Check if the image exists in the datastore cache. If not the
+            # image will be uploaded and cached.
             if not (self._check_if_folder_file_exists(
                                         data_store_ref, data_store_name,
-                                        upload_folder, upload_name + ".vmdk")):
+                                        upload_folder, upload_file_name)):
                 # Upload will be done to the self._tmp_folder and then moved
                 # to the self._base_folder
                 tmp_upload_folder = '%s/%s' % (self._tmp_folder,
@@ -467,22 +470,34 @@ class VMwareVMOps(object):
                                                     data_store_name,
                                                     sparse_uploaded_vmdk_name)
 
-                vmdk_name = "%s/%s.vmdk" % (upload_folder, upload_name)
-                vmdk_path = ds_util.build_datastore_path(data_store_name,
-                                                         vmdk_name)
-                if disk_type != "sparse":
-                    # Create a flat virtual disk and retain the metadata file.
-                    _create_virtual_disk(upload_folder, vmdk_path)
-                    self._delete_datastore_file(instance,
-                                                flat_uploaded_vmdk_path,
-                                                dc_info.ref)
+                upload_file_name = "%s/%s.%s" % (upload_folder, upload_name,
+                                                 file_type)
+                upload_path = ds_util.build_datastore_path(data_store_name,
+                                                           upload_file_name)
+                if not is_iso:
+                    if disk_type != "sparse":
+                        # Create a flat virtual disk and retain the metadata
+                        # file. This will be done in the unique temporary
+                        # directory.
+                        ds_util.mkdir(self._session,
+                                      ds_util.build_datastore_path(
+                                          data_store_name, upload_folder),
+                                      dc_info.ref)
+                        _create_virtual_disk(upload_path,
+                                             vmdk_file_size_in_kb)
+                        self._delete_datastore_file(instance,
+                                                    flat_uploaded_vmdk_path,
+                                                    dc_info.ref)
+                        upload_file_name = flat_uploaded_vmdk_name
+                    else:
+                        upload_file_name = sparse_uploaded_vmdk_name
 
-                _fetch_image_on_datastore()
+                _fetch_image_on_datastore(upload_file_name)
 
-                if disk_type == "sparse":
+                if not is_iso and disk_type == "sparse":
                     # Copy the sparse virtual disk to a thin virtual disk.
                     disk_type = "thin"
-                    _copy_virtual_disk(sparse_uploaded_vmdk_path, vmdk_path)
+                    _copy_virtual_disk(sparse_uploaded_vmdk_path, upload_path)
                     self._delete_datastore_file(instance,
                                                 sparse_uploaded_vmdk_path,
                                                 dc_info.ref)
@@ -511,59 +526,60 @@ class VMwareVMOps(object):
                 if disk_type == "sparse":
                     disk_type = "thin"
 
-            # Extend the disk size if necessary
-            if not linked_clone:
-                # If we are not using linked_clone, copy the image from
-                # the cache into the instance directory.  If we are using
-                # linked clone it is references from the cache directory
-                dest_folder = instance['uuid']
-                dest_name = instance_name
-                dest_vmdk_name = "%s/%s.vmdk" % (dest_folder,
-                                                 dest_name)
-                dest_vmdk_path = ds_util.build_datastore_path(
-                    data_store_name, dest_vmdk_name)
-                _copy_virtual_disk(uploaded_vmdk_path, dest_vmdk_path)
-
+            if is_iso:
+                dest_vmdk_path = self._get_vmdk_path(data_store_name,
+                        instance['uuid'], instance_name)
+                # Create the blank virtual disk for the VM
+                _create_virtual_disk(dest_vmdk_path, root_gb_in_kb)
                 root_vmdk_path = dest_vmdk_path
-                if root_gb_in_kb > vmdk_file_size_in_kb:
-                    self._extend_virtual_disk(instance, root_gb_in_kb,
-                                              root_vmdk_path, dc_info.ref)
             else:
-                upload_folder = '%s/%s' % (self._base_folder, upload_name)
-                root_vmdk_name = "%s/%s.%s.vmdk" % (upload_folder, upload_name,
-                                                    root_gb)
-                root_vmdk_path = ds_util.build_datastore_path(data_store_name,
-                                                              root_vmdk_name)
-                if not self._check_if_folder_file_exists(
+                # Extend the disk size if necessary
+                if not linked_clone:
+                    # If we are not using linked_clone, copy the image from
+                    # the cache into the instance directory.  If we are using
+                    # linked clone it is references from the cache directory
+                    dest_vmdk_path = self._get_vmdk_path(data_store_name,
+                            instance['uuid'], instance_name)
+                    _copy_virtual_disk(uploaded_file_path, dest_vmdk_path)
+
+                    root_vmdk_path = dest_vmdk_path
+                    if root_gb_in_kb > vmdk_file_size_in_kb:
+                        self._extend_virtual_disk(instance, root_gb_in_kb,
+                                                  root_vmdk_path, dc_info.ref)
+                else:
+                    upload_folder = '%s/%s' % (self._base_folder, upload_name)
+                    root_vmdk_name = "%s/%s.%s.vmdk" % (upload_folder,
+                                                        upload_name,
+                                                        root_gb)
+                    root_vmdk_path = ds_util.build_datastore_path(
+                            data_store_name, root_vmdk_name)
+                    if not self._check_if_folder_file_exists(
                                         data_store_ref, data_store_name,
                                         upload_folder,
                                         upload_name + ".%s.vmdk" % root_gb):
-                    LOG.debug(_("Copying root disk of size %sGb"), root_gb)
-                    copy_spec = self.get_copy_virtual_disk_spec(
-                            client_factory, adapter_type, disk_type)
-                    vmdk_copy_task = self._session._call_method(
-                        self._session._get_vim(),
-                        "CopyVirtualDisk_Task",
-                        service_content.virtualDiskManager,
-                        sourceName=uploaded_vmdk_path,
-                        sourceDatacenter=dc_info.ref,
-                        destName=root_vmdk_path,
-                        destSpec=copy_spec)
-                    try:
-                        self._session._wait_for_task(vmdk_copy_task)
-                    except Exception as e:
-                        LOG.warning(_("Root disk file creation "
-                                      "failed - %s"), e)
-                    if root_gb_in_kb > vmdk_file_size_in_kb:
-                        self._extend_virtual_disk(instance, root_gb_in_kb,
-                                                  root_vmdk_path,
-                                                  dc_info.ref)
+                        LOG.debug(_("Copying root disk of size %sGb"), root_gb)
+                        try:
+                            _copy_virtual_disk(uploaded_file_path,
+                                               root_vmdk_path)
+                        except Exception as e:
+                            LOG.warning(_("Root disk file creation "
+                                          "failed - %s"), e)
+                        if root_gb_in_kb > vmdk_file_size_in_kb:
+                            self._extend_virtual_disk(instance, root_gb_in_kb,
+                                                      root_vmdk_path,
+                                                      dc_info.ref)
 
             # Attach the root disk to the VM.
             self._volumeops.attach_disk_to_vm(
                                 vm_ref, instance,
                                 adapter_type, disk_type, root_vmdk_path,
                                 root_gb_in_kb, linked_clone)
+
+            if is_iso:
+                self._attach_cdrom_to_vm(
+                    vm_ref, instance,
+                    data_store_ref,
+                    uploaded_file_path)
 
             if configdrive.required_by(instance):
                 uploaded_iso_path = self._create_config_drive(instance,
