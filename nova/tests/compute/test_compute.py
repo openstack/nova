@@ -5094,6 +5094,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(c, instance,
                                                         instance['host'],
                                                         teardown=True)
+        self.mox.StubOutWithMock(self.compute.instance_events,
+                                 'clear_events_for_instance')
+        self.compute.instance_events.clear_events_for_instance(
+            mox.IgnoreArg())
 
         # start test
         self.mox.ReplayAll()
@@ -5154,6 +5158,10 @@ class ComputeTestCase(BaseTestCase):
         self.compute.network_api.setup_networks_on_host(c, inst_ref,
                                                         self.compute.host,
                                                         teardown=True)
+        self.mox.StubOutWithMock(self.compute.instance_events,
+                                 'clear_events_for_instance')
+        self.compute.instance_events.clear_events_for_instance(
+            mox.IgnoreArg())
 
         # start test
         self.mox.ReplayAll()
@@ -5190,11 +5198,13 @@ class ComputeTestCase(BaseTestCase):
                               'post_live_migration_at_destination'),
             mock.patch.object(self.compute.driver, 'unplug_vifs'),
             mock.patch.object(self.compute.network_api,
-                              'setup_networks_on_host')
+                              'setup_networks_on_host'),
+            mock.patch.object(self.compute.instance_events,
+                              'clear_events_for_instance')
         ) as (
             post_live_migration, unfilter_instance,
             network_migrate_instance_start, post_live_migration_at_destination,
-            unplug_vifs, setup_networks_on_host
+            unplug_vifs, setup_networks_on_host, clear_events
         ):
             self.compute._post_live_migration(c, inst_ref, dest)
 
@@ -5210,6 +5220,7 @@ class ComputeTestCase(BaseTestCase):
             unplug_vifs.assert_has_calls([mock.call(inst_ref, [])])
             setup_networks_on_host.assert_has_calls([
                 mock.call(c, inst_ref, self.compute.host, teardown=True)])
+            clear_events.assert_called_once_with(inst_ref)
 
     def _begin_post_live_migration_at_destination(self):
         self.mox.StubOutWithMock(self.compute.network_api,

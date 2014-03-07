@@ -2118,6 +2118,11 @@ class ComputeManager(manager.Manager):
             reservations = None
 
         try:
+            events = self.instance_events.clear_events_for_instance(instance)
+            if events:
+                LOG.debug(_('Events pending at deletion: %(events)s'),
+                          {'events': ','.join(events.keys()),
+                           'instance': instance})
             db_inst = obj_base.obj_to_primitive(instance)
             instance.info_cache.delete()
             self._notify_about_instance_usage(context, instance,
@@ -3385,6 +3390,7 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
+            self.instance_events.clear_events_for_instance(instance)
 
     def _terminate_volume_connections(self, context, instance, bdms):
         connector = self.driver.get_volume_connector(instance)
@@ -4531,6 +4537,7 @@ class ComputeManager(manager.Manager):
         # NOTE(tr3buchet): tear down networks on source host
         self.network_api.setup_networks_on_host(ctxt, instance_ref,
                                                 self.host, teardown=True)
+        self.instance_events.clear_events_for_instance(instance_ref)
 
         self._notify_about_instance_usage(ctxt, instance_ref,
                                           "live_migration._post.end",
@@ -5367,6 +5374,7 @@ class ComputeManager(manager.Manager):
                                "'%s' which is marked as "
                                "DELETED but still present on host."),
                              instance['name'], instance=instance)
+                    self.instance_events.clear_events_for_instance(instance)
                     try:
                         self._shutdown_instance(context, instance, bdms,
                                                 notify=False)
