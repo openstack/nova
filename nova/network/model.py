@@ -81,7 +81,11 @@ class IP(Model):
                 raise exception.InvalidIpAddressError(msg)
 
     def __eq__(self, other):
-        return self['address'] == other['address']
+        keys = ['address', 'type', 'version']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def is_in_subnet(self, subnet):
         if self['address'] and subnet['cidr']:
@@ -119,6 +123,13 @@ class FixedIP(IP):
         fixed_ip['floating_ips'] = [IP.hydrate(floating_ip)
                                    for floating_ip in fixed_ip['floating_ips']]
         return fixed_ip
+
+    def __eq__(self, other):
+        keys = ['address', 'type', 'version', 'floating_ips']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
 
 class Route(Model):
@@ -158,7 +169,11 @@ class Subnet(Model):
             self['version'] = netaddr.IPNetwork(self['cidr']).version
 
     def __eq__(self, other):
-        return self['cidr'] == other['cidr']
+        keys = ['cidr', 'dns', 'gateway', 'ips', 'routes', 'version']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def add_route(self, new_route):
         if new_route not in self['routes']:
@@ -211,6 +226,13 @@ class Network(Model):
                                   for subnet in network['subnets']]
         return network
 
+    def __eq__(self, other):
+        keys = ['id', 'bridge', 'label', 'subnets']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 class VIF8021QbgParams(Model):
     """Represents the parameters for a 802.1qbg VIF."""
@@ -250,7 +272,12 @@ class VIF(Model):
         self._set_meta(kwargs)
 
     def __eq__(self, other):
-        return self['id'] == other['id']
+        keys = ['id', 'address', 'network', 'type', 'devname',
+                'ovs_interfaceid', 'qbh_params', 'qbg_params']
+        return all(self[k] == other[k] for k in keys)
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def fixed_ips(self):
         return [fixed_ip for subnet in self['network']['subnets']

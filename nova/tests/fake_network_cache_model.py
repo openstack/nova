@@ -20,7 +20,14 @@ def new_ip(ip_dict=None):
     new_ip = dict(address='192.168.1.100')
     ip_dict = ip_dict or {}
     new_ip.update(ip_dict)
-    return model.FixedIP(**new_ip)
+    return model.IP(**new_ip)
+
+
+def new_fixed_ip(ip_dict=None):
+    new_fixed_ip = dict(address='192.168.1.100')
+    ip_dict = ip_dict or {}
+    new_fixed_ip.update(ip_dict)
+    return model.FixedIP(**new_fixed_ip)
 
 
 def new_route(route_dict=None):
@@ -40,8 +47,8 @@ def new_subnet(subnet_dict=None):
         dns=[new_ip(dict(address='1.2.3.4')),
                 new_ip(dict(address='2.3.4.5'))],
         gateway=new_ip(dict(address='10.10.0.1')),
-        ips=[new_ip(dict(address='10.10.0.2')),
-                new_ip(dict(address='10.10.0.3'))],
+        ips=[new_fixed_ip(dict(address='10.10.0.2')),
+                new_fixed_ip(dict(address='10.10.0.3'))],
         routes=[new_route()])
     subnet_dict = subnet_dict or {}
     new_subnet.update(subnet_dict)

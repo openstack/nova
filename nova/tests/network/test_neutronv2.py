@@ -410,7 +410,8 @@ class TestNeutronv2Base(test.TestCase):
         self.assertEqual('my_mac%s' % id_suffix, nw_inf[index]['address'])
         self.assertEqual('10.0.%s.0/24' % id_suffix,
             nw_inf[index]['network']['subnets'][0]['cidr'])
-        self.assertTrue(model.IP(address='8.8.%s.1' % id_suffix) in
+        self.assertTrue(model.IP(address='8.8.%s.1' % id_suffix,
+                                 version=4, type='dns') in
                         nw_inf[index]['network']['subnets'][0]['dns'])
 
     def _get_instance_nw_info(self, number):
