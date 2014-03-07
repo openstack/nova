@@ -112,20 +112,17 @@ class NWFilterFirewall(base_firewall.FirewallDriver):
         LOG.info(_('Ensuring static filters'), instance=instance)
         self._ensure_static_filters()
 
-        allow_dhcp = False
+        nodhcp_base_filter = self.get_base_filter_list(instance, False)
+        dhcp_base_filter = self.get_base_filter_list(instance, True)
+
         for vif in network_info:
-            if not vif['network'] or not vif['network']['subnets']:
-                continue
+            _base_filter = nodhcp_base_filter
             for subnet in vif['network']['subnets']:
                 if subnet.get_meta('dhcp_server'):
-                    allow_dhcp = True
+                    _base_filter = dhcp_base_filter
                     break
-
-        base_filter = self.get_base_filter_list(instance, allow_dhcp)
-
-        for vif in network_info:
             self._define_filter(self._get_instance_filter_xml(instance,
-                                                              base_filter,
+                                                              _base_filter,
                                                               vif))
 
     def _get_instance_filter_parameters(self, vif):

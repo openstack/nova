@@ -7781,6 +7781,44 @@ class NWFilterTestCase(test.TestCase):
 
         db.instance_destroy(admin_ctxt, instance_ref['uuid'])
 
+    def test_multinic_base_filter_selection(self):
+        fakefilter = NWFilterFakes()
+        self.fw._conn.nwfilterDefineXML = fakefilter.filterDefineXMLMock
+        self.fw._conn.nwfilterLookupByName = fakefilter.nwfilterLookupByName
+
+        instance_ref = self._create_instance()
+        inst_id = instance_ref['id']
+        inst_uuid = instance_ref['uuid']
+
+        self.security_group = self.setup_and_return_security_group()
+
+        db.instance_add_security_group(self.context, inst_uuid,
+                                       self.security_group['id'])
+
+        instance = db.instance_get(self.context, inst_id)
+
+        network_info = _fake_network_info(self.stubs, 2)
+        network_info[0]['network']['subnets'][0]['meta']['dhcp_server'] = \
+            '1.1.1.1'
+
+        self.fw.setup_basic_filtering(instance, network_info)
+
+        def assert_filterref(instance, vif, expected=[]):
+            nic_id = vif['address'].replace(':', '')
+            filter_name = self.fw._instance_filter_name(instance, nic_id)
+            f = fakefilter.nwfilterLookupByName(filter_name)
+            tree = etree.fromstring(f.xml)
+            frefs = [fr.get('filter') for fr in tree.findall('filterref')]
+            self.assertTrue(set(expected) == set(frefs))
+
+        assert_filterref(instance, network_info[0], expected=['nova-base'])
+        assert_filterref(instance, network_info[1], expected=['nova-nodhcp'])
+
+        db.instance_remove_security_group(self.context, inst_uuid,
+                                          self.security_group['id'])
+        self.teardown_security_group()
+        db.instance_destroy(context.get_admin_context(), instance_ref['uuid'])
+
 
 class LibvirtUtilsTestCase(test.TestCase):
     def test_create_image(self):
