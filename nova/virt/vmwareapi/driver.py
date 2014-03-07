@@ -90,16 +90,15 @@ class VMwareESXDriver(driver.ComputeDriver):
     # valid vCenter calls. There are some small edge-case
     # exceptions regarding VNC, CIM, User management & SSO.
 
-    def _do_quality_warnings(self):
-        LOG.warning(_('The VMware ESX driver is not tested by the OpenStack '
-                      'project and thus its quality can not be ensured. For '
-                      'more information, see: https://wiki.openstack.org/wiki/'
-                      'HypervisorSupportMatrix'))
+    def _do_deprecation_warning(self):
+        LOG.warning(_('The VMware ESX driver is now deprecated and will be '
+                      'removed in the Juno release. The VC driver will remain '
+                      'and continue to be supported.'))
 
     def __init__(self, virtapi, read_only=False, scheme="https"):
         super(VMwareESXDriver, self).__init__(virtapi)
 
-        self._do_quality_warnings()
+        self._do_deprecation_warning()
 
         self._host_ip = CONF.vmware.host_ip
         if not (self._host_ip or CONF.vmware.host_username is None or
