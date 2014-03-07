@@ -163,7 +163,7 @@ class DomainsController(wsgi.Controller):
                 'ip', 'changes-since', 'all_tenants')
 
     @wsgi.response(204)
-    def delete(self, req, domain_id, server_id):
+    def delete(self, req, server_id):
         """Destroys a server."""
         try:
             self._delete(req.environ['nova.context'], req, server_id)
