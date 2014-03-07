@@ -83,6 +83,22 @@ class APIRouter(nova.api.openstack.APIRouter):
                             collection={'detail': 'GET'},
                             member={'action': 'POST'})
 
+        if init_only is None or 'domains' in init_only:
+            self.resources['domains'] = domains.create_resource(ext_mgr)
+
+            domains_controller = self.resources['domains']
+
+            mapper.resource("domain", "servers",
+                controller=domains_controller,
+                parent_resource=dict(member_name='domain',
+                collection_name='domains'))
+
+            mapper.connect("domains",
+                           "/domains/{domain_id}/servers",
+                           controller=domains_controller,
+                           action='index_domain',
+                           conditions={"method": ['GET']})
+
         if init_only is None or 'ips' in init_only:
             self.resources['ips'] = ips.create_resource()
             mapper.resource("ip", "ips", controller=self.resources['ips'],
@@ -121,22 +137,6 @@ class APIRouter(nova.api.openstack.APIRouter):
                            controller=image_metadata_controller,
                            action='update_all',
                            conditions={"method": ['PUT']})
-
-        if init_only is None or 'domains' in init_only:
-            self.resources['domains'] = domains.create_resource(ext_mgr)
-
-            domains_controller = self.resources['domains']
-
-            mapper.resource("domain", "servers",
-                controller=domains_controller,
-                parent_resource=dict(member_name='domain',
-                collection_name='domains'))
-
-            mapper.connect("domains",
-                           "/domains/{domain_id}/servers",
-                           controller=domains_controller,
-                           action='index_domain',
-                           conditions={"method": ['GET']})
 
         if init_only is None or 'server_metadata' in init_only:
             self.resources['server_metadata'] = \
