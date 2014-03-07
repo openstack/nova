@@ -290,6 +290,7 @@ class API(base.Base):
 
         touched_port_ids = []
         created_port_ids = []
+        ports_in_requested_order = []
         for network in nets:
             # If security groups are requested on an instance then the
             # network must has a subnet associated with it. Some plugins
@@ -317,11 +318,14 @@ class API(base.Base):
                 if port:
                     port_client.update_port(port['id'], port_req_body)
                     touched_port_ids.append(port['id'])
+                    ports_in_requested_order.append(port['id'])
                 else:
-                    created_port_ids.append(self._create_port(
+                    created_port = self._create_port(
                             port_client, instance, network_id,
                             port_req_body, fixed_ips.get(network_id),
-                            security_group_ids, available_macs, dhcp_opts))
+                            security_group_ids, available_macs, dhcp_opts)
+                    created_port_ids.append(created_port)
+                    ports_in_requested_order.append(created_port)
             except Exception:
                 with excutils.save_and_reraise_exception():
                     for port_id in touched_port_ids:
@@ -346,7 +350,8 @@ class API(base.Base):
                             msg = _("Failed to delete port %s")
                             LOG.exception(msg, port_id)
 
-        nw_info = self.get_instance_nw_info(context, instance, networks=nets)
+        nw_info = self.get_instance_nw_info(context, instance, networks=nets,
+                                            port_ids=ports_in_requested_order)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
@@ -440,22 +445,66 @@ class API(base.Base):
 
     @refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None,
-                             use_slave=False):
+                             port_ids=None, use_slave=False):
         """Return network information for specified instance
            and update cache.
         """
         # NOTE(geekinutah): It would be nice if use_slave had us call
         #                   special APIs that pummeled slaves instead of
         #                   the master. For now we just ignore this arg.
-        result = self._get_instance_nw_info(context, instance, networks)
+        result = self._get_instance_nw_info(context, instance, networks,
+                                            port_ids)
         return result
 
-    def _get_instance_nw_info(self, context, instance, networks=None):
+    def _get_instance_nw_info(self, context, instance, networks=None,
+                              port_ids=None):
         # keep this caching-free version of the get_instance_nw_info method
         # because it is used by the caching logic itself.
         LOG.debug(_('get_instance_nw_info() for %s'), instance['display_name'])
-        nw_info = self._build_network_info_model(context, instance, networks)
+        nw_info = self._build_network_info_model(context, instance, networks,
+                                                 port_ids)
         return network_model.NetworkInfo.hydrate(nw_info)
+
+    def _gather_port_ids_and_networks(self, context, instance, networks=None,
+                                      port_ids=None):
+        """Return an instance's complete list of port_ids and networks."""
+
+        if ((networks is None and port_ids is not None) or
+            (port_ids is None and networks is not None)):
+            message = ("This method needs to be called with either "
+                       "networks=None and port_ids=None or port_ids and "
+                       " networks as not none.")
+            raise exception.NovaException(message=message)
+
+        # Unfortunately, this is sometimes in unicode and sometimes not
+        if isinstance(instance['info_cache']['network_info'], six.text_type):
+            ifaces = jsonutils.loads(instance['info_cache']['network_info'])
+        else:
+            ifaces = instance['info_cache']['network_info']
+
+        # This code path is only done when refreshing the network_cache
+        if port_ids is None:
+            port_ids = [iface['id'] for iface in ifaces]
+            net_ids = [iface['network']['id'] for iface in ifaces]
+
+        if networks is None:
+            networks = self._get_available_networks(context,
+                                                    instance['project_id'],
+                                                    net_ids)
+        # an interface was added/removed from instance.
+        else:
+            # Since networks does not contain the existing networks on the
+            # instance we use their values from the cache and add it.
+            networks = networks + [
+                {'id': iface['network']['id'],
+                 'name': iface['network']['label'],
+                 'tenant_id': iface['network']['meta']['tenant_id']}
+                for iface in ifaces]
+
+            # Include existing interfaces so they are not removed from the db.
+            port_ids = [iface['id'] for iface in ifaces] + port_ids
+
+        return networks, port_ids
 
     @refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
@@ -1011,67 +1060,54 @@ class API(base.Base):
             network['should_create_bridge'] = should_create_bridge
         return network, ovs_interfaceid
 
-    def _build_network_info_model(self, context, instance, networks=None):
-        # Note(arosen): on interface-attach networks only contains the
-        # network that the interface is being attached to.
+    def _build_network_info_model(self, context, instance, networks=None,
+                                  port_ids=None):
+        """Return list of ordered VIFs attached to instance.
+
+        :param context - request context.
+        :param instance - instance we are returning network info for.
+        :param networks - List of networks being attached to an instance.
+                          If value is None this value will be populated
+                          from the existing cached value.
+        :param port_ids - List of port_ids that are being attached to an
+                          instance in order of attachment. If value is None
+                          this value will be populated from the existing
+                          cached value.
+        """
 
         search_opts = {'tenant_id': instance['project_id'],
                        'device_id': instance['uuid'], }
         client = neutronv2.get_client(context, admin=True)
         data = client.list_ports(**search_opts)
-        ports = data.get('ports', [])
+
+        current_neutron_ports = data.get('ports', [])
+        networks, port_ids = self._gather_port_ids_and_networks(
+                context, instance, networks, port_ids)
         nw_info = network_model.NetworkInfo()
 
-        # Unfortunately, this is sometimes in unicode and sometimes not
-        if isinstance(instance['info_cache']['network_info'], six.text_type):
-            ifaces = jsonutils.loads(instance['info_cache']['network_info'])
-        else:
-            ifaces = instance['info_cache']['network_info']
+        for current_neutron_port in current_neutron_ports:
+            if current_neutron_port['id'] in port_ids:
+                network_IPs = self._nw_info_get_ips(client,
+                                                    current_neutron_port)
+                subnets = self._nw_info_get_subnets(context,
+                                                    current_neutron_port,
+                                                    network_IPs)
 
-        if networks is None:
-            net_ids = [iface['network']['id'] for iface in ifaces]
-            networks = self._get_available_networks(context,
-                                                    instance['project_id'],
-                                                    net_ids)
+                devname = "tap" + current_neutron_port['id']
+                devname = devname[:network_model.NIC_NAME_LEN]
 
-        # ensure ports are in preferred network order, and filter out
-        # those not attached to one of the provided list of networks
-        else:
-            # Include existing interfaces so they are not removed from the db.
-            # Needed when interfaces are added to existing instances.
-            for iface in ifaces:
+                network, ovs_interfaceid = (
+                    self._nw_info_build_network(current_neutron_port,
+                                                networks, subnets))
+
                 nw_info.append(network_model.VIF(
-                    id=iface['id'],
-                    address=iface['address'],
-                    network=iface['network'],
-                    type=iface['type'],
-                    ovs_interfaceid=iface['ovs_interfaceid'],
-                    devname=iface['devname']))
+                    id=current_neutron_port['id'],
+                    address=current_neutron_port['mac_address'],
+                    network=network,
+                    type=current_neutron_port.get('binding:vif_type'),
+                    ovs_interfaceid=ovs_interfaceid,
+                    devname=devname))
 
-            net_ids = [n['id'] for n in networks]
-
-        ports = [port for port in ports if port['network_id'] in net_ids]
-        _ensure_requested_network_ordering(lambda x: x['network_id'],
-                                           ports, net_ids)
-
-        for port in ports:
-            network_IPs = self._nw_info_get_ips(client, port)
-            subnets = self._nw_info_get_subnets(context, port, network_IPs)
-
-            devname = "tap" + port['id']
-            devname = devname[:network_model.NIC_NAME_LEN]
-
-            network, ovs_interfaceid = self._nw_info_build_network(port,
-                                                                   networks,
-                                                                   subnets)
-
-            nw_info.append(network_model.VIF(
-                id=port['id'],
-                address=port['mac_address'],
-                network=network,
-                type=port.get('binding:vif_type'),
-                ovs_interfaceid=ovs_interfaceid,
-                devname=devname))
         return nw_info
 
     def _get_subnets_from_port(self, context, port):
