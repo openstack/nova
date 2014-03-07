@@ -53,6 +53,7 @@ import sqlalchemy.exc
 
 import nova.db.sqlalchemy.migrate_repo
 from nova.db.sqlalchemy import utils as db_utils
+from nova.openstack.common.db.sqlalchemy import utils as oslodbutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
@@ -64,46 +65,19 @@ import nova.virt.baremetal.db.sqlalchemy.migrate_repo
 LOG = logging.getLogger(__name__)
 
 
-def _get_connect_string(backend, user, passwd, database):
-    """Try to get a connection with a very specific set of values, if we get
-    these then we'll run the tests, otherwise they are skipped
-    """
-    if backend == "postgres":
-        backend = "postgresql+psycopg2"
-    elif backend == "mysql":
-        backend = "mysql+mysqldb"
-    else:
-        raise Exception("Unrecognized backend: '%s'" % backend)
-
-    return ("%s://%s:%s@localhost/%s" % (backend, user, passwd, database))
-
-
-def _is_backend_avail(backend, user, passwd, database):
-    try:
-        connect_uri = _get_connect_string(backend, user, passwd, database)
-        engine = sqlalchemy.create_engine(connect_uri)
-        connection = engine.connect()
-    except Exception:
-        # intentionally catch all to handle exceptions even if we don't
-        # have any backend code loaded.
-        return False
-    else:
-        connection.close()
-        engine.dispose()
-        return True
-
-
 def _have_mysql(user, passwd, database):
     present = os.environ.get('NOVA_TEST_MYSQL_PRESENT')
     if present is None:
-        return _is_backend_avail('mysql', user, passwd, database)
+        return oslodbutils.is_backend_avail('mysql+mysqldb', database,
+                                            user, passwd)
     return present.lower() in ('', 'true')
 
 
 def _have_postgresql(user, passwd, database):
     present = os.environ.get('NOVA_TEST_POSTGRESQL_PRESENT')
     if present is None:
-        return _is_backend_avail('postgres', user, passwd, database)
+        return oslodbutils.is_backend_avail('postgresql+psycopg2', database,
+                                            user, passwd)
     return present.lower() in ('', 'true')
 
 
@@ -157,8 +131,8 @@ class CommonTestsMixIn(object):
         """Test that we can trigger a mysql connection failure and we fail
         gracefully to ensure we don't break people without mysql
         """
-        if _is_backend_avail('mysql', "openstack_cifail", self.PASSWD,
-                             self.DATABASE):
+        if oslodbutils.is_backend_avail('mysql+mysqldb', self.DATABASE,
+                                        "openstack_cifail", self.PASSWD):
             self.fail("Shouldn't have connected")
 
     def test_postgresql_opportunistically(self):
@@ -168,8 +142,8 @@ class CommonTestsMixIn(object):
         """Test that we can trigger a postgres connection failure and we fail
         gracefully to ensure we don't break people without postgres
         """
-        if _is_backend_avail('postgres', "openstack_cifail", self.PASSWD,
-                             self.DATABASE):
+        if oslodbutils.is_backend_avail('postgresql+psycopg2', self.DATABASE,
+                                        "openstack_cifail", self.PASSWD):
             self.fail("Shouldn't have connected")
 
 
@@ -403,8 +377,8 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
             self.skipTest("mysql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _get_connect_string("mysql", self.USER, self.PASSWD,
-                self.DATABASE)
+        connect_string = oslodbutils.get_connect_string(
+            "mysql+mysqldb", self.DATABASE, self.USER, self.PASSWD)
         (user, password, database, host) = \
                 get_mysql_connection_info(urlparse.urlparse(connect_string))
         engine = sqlalchemy.create_engine(connect_string)
@@ -442,8 +416,8 @@ class BaseWalkMigrationTestCase(BaseMigrationTestCase):
             self.skipTest("postgresql not available")
         # add this to the global lists to make reset work with it, it's removed
         # automatically in tearDown so no need to clean it up here.
-        connect_string = _get_connect_string("postgres", self.USER,
-                self.PASSWD, self.DATABASE)
+        connect_string = oslodbutils.get_connect_string(
+            "postgresql+psycopg2", self.DATABASE, self.USER, self.PASSWD)
         engine = sqlalchemy.create_engine(connect_string)
         (user, password, database, host) = \
                 get_pgsql_connection_info(urlparse.urlparse(connect_string))
@@ -579,26 +553,26 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
             self.migration_api = temp.versioning_api
 
     def assertColumnExists(self, engine, table, column):
-        t = db_utils.get_table(engine, table)
+        t = oslodbutils.get_table(engine, table)
         self.assertIn(column, t.c)
 
     def assertColumnNotExists(self, engine, table, column):
-        t = db_utils.get_table(engine, table)
+        t = oslodbutils.get_table(engine, table)
         self.assertNotIn(column, t.c)
 
     def assertTableNotExists(self, engine, table):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          db_utils.get_table, engine, table)
+                          oslodbutils.get_table, engine, table)
 
     def assertIndexExists(self, engine, table, index):
-        t = db_utils.get_table(engine, table)
+        t = oslodbutils.get_table(engine, table)
         index_names = [idx.name for idx in t.indexes]
         self.assertIn(index, index_names)
 
     def assertIndexMembers(self, engine, table, index, members):
         self.assertIndexExists(engine, table, index)
 
-        t = db_utils.get_table(engine, table)
+        t = oslodbutils.get_table(engine, table)
         index_columns = None
         for idx in t.indexes:
             if idx.name == index:
@@ -608,7 +582,7 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(sorted(members), sorted(index_columns))
 
     def _check_227(self, engine, data):
-        table = db_utils.get_table(engine, 'project_user_quotas')
+        table = oslodbutils.get_table(engine, 'project_user_quotas')
 
         # Insert fake_quotas with the longest resource name.
         fake_quotas = {'id': 5,
@@ -625,7 +599,7 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _check_228(self, engine, data):
         self.assertColumnExists(engine, 'compute_nodes', 'metrics')
 
-        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
         self.assertIsInstance(compute_nodes.c.metrics.type,
                               sqlalchemy.types.Text)
 
@@ -635,7 +609,7 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _check_229(self, engine, data):
         self.assertColumnExists(engine, 'compute_nodes', 'extra_resources')
 
-        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
         self.assertIsInstance(compute_nodes.c.extra_resources.type,
                               sqlalchemy.types.Text)
 
@@ -648,7 +622,8 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
             self.assertColumnExists(engine, table_name, 'host')
             self.assertColumnExists(engine, table_name, 'details')
 
-        action_events = db_utils.get_table(engine, 'instance_actions_events')
+        action_events = oslodbutils.get_table(engine,
+                                              'instance_actions_events')
         self.assertIsInstance(action_events.c.host.type,
                               sqlalchemy.types.String)
         self.assertIsInstance(action_events.c.details.type,
@@ -663,7 +638,7 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _check_231(self, engine, data):
         self.assertColumnExists(engine, 'instances', 'ephemeral_key_uuid')
 
-        instances = db_utils.get_table(engine, 'instances')
+        instances = oslodbutils.get_table(engine, 'instances')
         self.assertIsInstance(instances.c.ephemeral_key_uuid.type,
                               sqlalchemy.types.String)
         self.assertTrue(db_utils.check_shadow_table(engine, 'instances'))
@@ -682,25 +657,27 @@ class TestNovaMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _check_233(self, engine, data):
         self.assertColumnExists(engine, 'compute_nodes', 'stats')
 
-        compute_nodes = db_utils.get_table(engine, 'compute_nodes')
+        compute_nodes = oslodbutils.get_table(engine, 'compute_nodes')
         self.assertIsInstance(compute_nodes.c.stats.type,
                               sqlalchemy.types.Text)
 
-        self.assertRaises(sqlalchemy.exc.NoSuchTableError, db_utils.get_table,
-                          engine, 'compute_node_stats')
+        self.assertRaises(sqlalchemy.exc.NoSuchTableError,
+                          oslodbutils.get_table, engine, 'compute_node_stats')
 
     def _post_downgrade_233(self, engine):
         self.assertColumnNotExists(engine, 'compute_nodes', 'stats')
 
         # confirm compute_node_stats exists
-        db_utils.get_table(engine, 'compute_node_stats')
+        oslodbutils.get_table(engine, 'compute_node_stats')
 
     def _check_244(self, engine, data):
-        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = oslodbutils.get_table(
+            engine, 'volume_usage_cache')
         self.assertEqual(64, volume_usage_cache.c.user_id.type.length)
 
     def _post_downgrade_244(self, engine):
-        volume_usage_cache = db_utils.get_table(engine, 'volume_usage_cache')
+        volume_usage_cache = oslodbutils.get_table(
+            engine, 'volume_usage_cache')
         self.assertEqual(36, volume_usage_cache.c.user_id.type.length)
 
 
@@ -740,27 +717,27 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
     def _pre_upgrade_002(self, engine):
         data = [{'id': 1, 'key': 'fake-key', 'image_path': '/dev/null',
                  'pxe_config_path': '/dev/null/', 'root_mb': 0, 'swap_mb': 0}]
-        table = db_utils.get_table(engine, 'bm_deployments')
+        table = oslodbutils.get_table(engine, 'bm_deployments')
         engine.execute(table.insert(), data)
         return data
 
     def _check_002(self, engine, data):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          db_utils.get_table, engine, 'bm_deployments')
+                          oslodbutils.get_table, engine, 'bm_deployments')
 
     def _post_downgrade_004(self, engine):
-        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         self.assertNotIn(u'instance_name', [c.name for c in bm_nodes.columns])
 
     def _check_005(self, engine, data):
-        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         columns = [c.name for c in bm_nodes.columns]
         self.assertNotIn(u'prov_vlan_id', columns)
         self.assertNotIn(u'registration_status', columns)
 
     def _pre_upgrade_006(self, engine):
-        nodes = db_utils.get_table(engine, 'bm_nodes')
-        ifs = db_utils.get_table(engine, 'bm_interfaces')
+        nodes = oslodbutils.get_table(engine, 'bm_nodes')
+        ifs = oslodbutils.get_table(engine, 'bm_interfaces')
         # node 1 has two different addresses in bm_nodes and bm_interfaces
         engine.execute(nodes.insert(),
                        [{'id': 1,
@@ -779,7 +756,7 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
                          'address': 'cc:cc:cc:cc:cc:cc'}])
 
     def _check_006(self, engine, data):
-        ifs = db_utils.get_table(engine, 'bm_interfaces')
+        ifs = oslodbutils.get_table(engine, 'bm_interfaces')
         rows = ifs.select().\
                     where(ifs.c.bm_node_id == 1).\
                     execute().\
@@ -793,7 +770,7 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(rows[0]['address'], 'cc:cc:cc:cc:cc:cc')
 
     def _post_downgrade_006(self, engine):
-        ifs = db_utils.get_table(engine, 'bm_interfaces')
+        ifs = oslodbutils.get_table(engine, 'bm_interfaces')
         rows = ifs.select().where(ifs.c.bm_node_id == 1).execute().fetchall()
         self.assertEqual(len(rows), 1)
         self.assertEqual(rows[0]['address'], 'bb:bb:bb:bb:bb:bb')
@@ -802,26 +779,26 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         self.assertEqual(len(rows), 0)
 
     def _check_007(self, engine, data):
-        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         columns = [c.name for c in bm_nodes.columns]
         self.assertNotIn(u'prov_mac_address', columns)
 
     def _check_008(self, engine, data):
         self.assertRaises(sqlalchemy.exc.NoSuchTableError,
-                          db_utils.get_table, engine, 'bm_pxe_ips')
+                          oslodbutils.get_table, engine, 'bm_pxe_ips')
 
     def _post_downgrade_008(self, engine):
-        db_utils.get_table(engine, 'bm_pxe_ips')
+        oslodbutils.get_table(engine, 'bm_pxe_ips')
 
     def _pre_upgrade_010(self, engine):
-        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         data = [{'id': 10, 'prov_mac_address': 'cc:cc:cc:cc:cc:cc'}]
         engine.execute(bm_nodes.insert(), data)
 
         return data
 
     def _check_010(self, engine, data):
-        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         self.assertIn('preserve_ephemeral', bm_nodes.columns)
 
         default = engine.execute(
@@ -833,7 +810,7 @@ class TestBaremetalMigrations(BaseWalkMigrationTestCase, CommonTestsMixIn):
         bm_nodes.delete().where(bm_nodes.c.id == data[0]['id']).execute()
 
     def _post_downgrade_010(self, engine):
-        bm_nodes = db_utils.get_table(engine, 'bm_nodes')
+        bm_nodes = oslodbutils.get_table(engine, 'bm_nodes')
         self.assertNotIn('preserve_ephemeral', bm_nodes.columns)
 
 
