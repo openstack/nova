@@ -926,7 +926,7 @@ class API(base.Base):
                 return []
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('Unable to access floating IP %(fixed_ip)s '
-                                'for port %(port_id)'),
+                                'for port %(port_id)s'),
                               {'fixed_ip': fixed_ip, 'port_id': port})
         return data['floatingips']
 
