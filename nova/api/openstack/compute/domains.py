@@ -163,10 +163,10 @@ class DomainsController(wsgi.Controller):
                 'ip', 'changes-since', 'all_tenants')
 
     @wsgi.response(204)
-    def delete(self, req, id):
+    def delete(self, req, domain_id, server_id):
         """Destroys a server."""
         try:
-            self._delete(req.environ['nova.context'], req, id)
+            self._delete(req.environ['nova.context'], req, server_id)
         except exception.NotFound:
             msg = _("Instance could not be found")
             raise exc.HTTPNotFound(explanation=msg)
@@ -188,6 +188,17 @@ class DomainsController(wsgi.Controller):
                 self.compute_api.delete(context, instance)
         else:
             self.compute_api.delete(context, instance)
+
+    def _get_server(self, context, req, instance_uuid):
+        """Utility function for looking up an instance by uuid."""
+        try:
+            instance = self.compute_api.get(context, instance_uuid,
+                                            want_objects=True)
+        except exception.NotFound:
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
+        req.cache_db_instance(instance)
+        return instance
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):
