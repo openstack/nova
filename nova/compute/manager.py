@@ -34,6 +34,7 @@ import time
 import traceback
 import uuid
 
+import eventlet.event
 from eventlet import greenthread
 from oslo.config import cfg
 from oslo import messaging
@@ -385,6 +386,75 @@ def _get_image_meta(context, image_ref):
     return image_service.show(context, image_id)
 
 
+class InstanceEvents(object):
+    def __init__(self):
+        self._events = {}
+
+    @staticmethod
+    def _lock_name(instance):
+        return '%s-%s' % (instance.uuid, 'events')
+
+    def prepare_for_instance_event(self, instance, event_name):
+        """Prepare to receive an event for an instance.
+
+        This will register an event for the given instance that we will
+        wait on later. This should be called before initiating whatever
+        action will trigger the event. The resulting eventlet.event.Event
+        object should be wait()'d on to ensure completion.
+
+        :param instance: the instance for which the event will be generated
+        :param event_name: the name of the event we're expecting
+        :returns: an event object that should be wait()'d on
+        """
+        @utils.synchronized(self._lock_name)
+        def _create_or_get_event():
+            if instance.uuid not in self._events:
+                self._events.setdefault(instance.uuid, {})
+                return self._events[instance.uuid].setdefault(
+                    event_name, eventlet.event.Event())
+        LOG.debug(_('Preparing to wait for external event %(event)s '
+                    'for instance %(uuid)s'), {'event': event_name,
+                                               'uuid': instance.uuid})
+        return _create_or_get_event()
+
+    def pop_instance_event(self, instance, event):
+        """Remove a pending event from the wait list.
+
+        This will remove a pending event from the wait list so that it
+        can be used to signal the waiters to wake up.
+
+        :param instance: the instance for which the event was generated
+        :param event: the nova.objects.external_event.InstanceExternalEvent
+                      that describes the event
+        :returns: the eventlet.event.Event object on which the waiters
+                  are blocked
+        """
+        @utils.synchronized(self._lock_name)
+        def _pop_event():
+            events = self._events.get(instance.uuid)
+            if not events:
+                return None
+            _event = events.pop(event.key, None)
+            if not events:
+                del self._events[instance.uuid]
+            return _event
+        return _pop_event()
+
+    def clear_events_for_instance(self, instance):
+        """Remove all pending events for an instance.
+
+        This will remove all events currently pending for an instance
+        and return them (indexed by event name).
+
+        :param instance: the instance for which events should be purged
+        :returns: a dictionary of {event_name: eventlet.event.Event}
+        """
+        @utils.synchronized(self._lock_name)
+        def _clear_events():
+            return self._events.pop(instance.uuid, {})
+        return _clear_events()
+
+
 class ComputeVirtAPI(virtapi.VirtAPI):
     def __init__(self, compute):
         super(ComputeVirtAPI, self).__init__()
@@ -412,7 +482,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.22')
+    target = messaging.Target(version='3.23')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -435,6 +505,7 @@ class ComputeManager(manager.Manager):
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self._resource_tracker_dict = {}
+        self.instance_events = InstanceEvents()
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -5333,6 +5404,27 @@ class ComputeManager(manager.Manager):
                                     self.conductor_api.aggregate_host_add,
                                     aggregate, host,
                                     isinstance(e, exception.AggregateError))
+
+    def _process_instance_event(self, instance, event):
+        _event = self.instance_events.pop_instance_event(instance, event)
+        if _event:
+            LOG.debug(_('Processing event %(event)s'),
+                      {'event': event.key, 'instance': instance})
+            _event.send(event)
+
+    @wrap_exception()
+    def external_instance_event(self, context, instances, events):
+        # NOTE(danms): Some event types are handled by the manager, such
+        # as when we're asked to update the instance's info_cache. If it's
+        # not one of those, look for some thread(s) waiting for the event and
+        # unblock them if so.
+        for event in events:
+            instance = [inst for inst in instances
+                        if inst.uuid == event.instance_uuid][0]
+            if event.name == 'network-changed':
+                self.network_api.get_instance_nw_info(context, instance)
+            else:
+                self._process_instance_event(instance, event)
 
     @periodic_task.periodic_task(spacing=CONF.image_cache_manager_interval,
                                  external_process_ok=True)

@@ -31,6 +31,7 @@ from nova import db
 from nova import exception
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import external_event as external_event_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
@@ -1713,6 +1714,25 @@ class _ComputeAPIUnitTestMixIn(object):
                                                          instance)
         self.assertEqual(instance.task_state, task_states.RESTORING)
         self.assertEqual(1, quota_commit.call_count)
+
+    def test_external_instance_event(self):
+        instances = [
+            instance_obj.Instance(uuid='uuid1', host='host1'),
+            instance_obj.Instance(uuid='uuid2', host='host1'),
+            instance_obj.Instance(uuid='uuid3', host='host2'),
+            ]
+        events = [
+            external_event_obj.InstanceExternalEvent(instance_uuid='uuid1'),
+            external_event_obj.InstanceExternalEvent(instance_uuid='uuid2'),
+            external_event_obj.InstanceExternalEvent(instance_uuid='uuid3'),
+            ]
+        self.compute_api.compute_rpcapi = mock.MagicMock()
+        self.compute_api.external_instance_event(self.context,
+                                                 instances, events)
+        method = self.compute_api.compute_rpcapi.external_instance_event
+        method.assert_any_call(self.context, instances[0:2], events[0:2])
+        method.assert_any_call(self.context, instances[2:], events[2:])
+        self.assertEqual(2, method.call_count)
 
 
 class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):

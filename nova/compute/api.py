@@ -3041,6 +3041,30 @@ class API(base.Base):
         self.compute_rpcapi.volume_snapshot_delete(context, bdm.instance,
                 volume_id, snapshot_id, delete_info)
 
+    def external_instance_event(self, context, instances, events):
+        # NOTE(danms): The external API consumer just provides events,
+        # but doesn't know where they go. We need to collate lists
+        # by the host the affected instance is on and dispatch them
+        # according to host
+        instances_by_host = {}
+        events_by_host = {}
+        hosts_by_instance = {}
+        for instance in instances:
+            instances_on_host = instances_by_host.get(instance.host, [])
+            instances_on_host.append(instance)
+            instances_by_host[instance.host] = instances_on_host
+            hosts_by_instance[instance.uuid] = instance.host
+
+        for event in events:
+            host = hosts_by_instance[event.instance_uuid]
+            events_on_host = events_by_host.get(host, [])
+            events_on_host.append(event)
+            events_by_host[host] = events_on_host
+
+        for host in instances_by_host:
+            self.compute_rpcapi.external_instance_event(
+                context, instances_by_host[host], events_by_host[host])
+
 
 class HostAPI(base.Base):
     """Sub-set of the Compute Manager API for managing host operations."""

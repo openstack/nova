@@ -15,6 +15,7 @@
 import contextlib
 import time
 
+from eventlet import event as eventlet_event
 import mock
 import mox
 from oslo.config import cfg
@@ -30,6 +31,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import external_event as external_event_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import uuidutils
@@ -864,6 +866,54 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 test.TestingException,
                 self._test_check_can_live_migrate_destination,
                 do_raise=True)
+
+    def test_prepare_for_instance_event(self):
+        inst_obj = instance_obj.Instance(uuid='foo')
+        result = self.compute.instance_events.prepare_for_instance_event(
+            inst_obj, 'test-event')
+        self.assertIn('foo', self.compute.instance_events._events)
+        self.assertIn('test-event',
+                      self.compute.instance_events._events['foo'])
+        self.assertEqual(
+            result,
+            self.compute.instance_events._events['foo']['test-event'])
+        self.assertTrue(hasattr(result, 'send'))
+
+    def test_process_instance_event(self):
+        event = eventlet_event.Event()
+        self.compute.instance_events._events = {
+            'foo': {
+                'test-event': event,
+                }
+            }
+        inst_obj = instance_obj.Instance(uuid='foo')
+        event_obj = external_event_obj.InstanceExternalEvent(name='test-event',
+                                                             tag=None)
+        self.compute._process_instance_event(inst_obj, event_obj)
+        self.assertTrue(event.ready())
+        self.assertEqual(event_obj, event.wait())
+        self.assertEqual({}, self.compute.instance_events._events)
+
+    def test_external_instance_event(self):
+        instances = [
+            instance_obj.Instance(uuid='uuid1'),
+            instance_obj.Instance(uuid='uuid2')]
+        events = [
+            external_event_obj.InstanceExternalEvent(name='network-changed',
+                                                     instance_uuid='uuid1'),
+            external_event_obj.InstanceExternalEvent(name='foo',
+                                                     instance_uuid='uuid2')]
+
+        @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
+        @mock.patch.object(self.compute, '_process_instance_event')
+        def do_test(_process_instance_event, get_instance_nw_info):
+            self.compute.external_instance_event(self.context,
+                                                 instances, events)
+            get_instance_nw_info.assert_called_once_with(self.context,
+                                                         instances[0])
+            _process_instance_event.assert_called_once_with(instances[1],
+                                                            events[1])
+        do_test()
 
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
