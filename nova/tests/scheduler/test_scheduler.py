@@ -17,6 +17,8 @@
 Tests For Scheduler
 """
 
+import mock
+
 import mox
 from oslo.config import cfg
 from oslo import messaging
@@ -554,3 +556,29 @@ class SchedulerInstanceGroupData(test.TestCase):
                                metadata=None, members=None):
         return db.instance_group_create(context, values, policies=policies,
                                         metadata=metadata, members=members)
+
+
+class SchedulerV3PassthroughTestCase(test.TestCase):
+    def setUp(self):
+        super(SchedulerV3PassthroughTestCase, self).setUp()
+        self.manager = manager.SchedulerManager()
+        self.proxy = manager._SchedulerManagerV3Proxy(self.manager)
+
+    def test_select_destination(self):
+        with mock.patch.object(self.manager, 'select_destinations'
+                ) as select_destinations:
+            self.proxy.select_destinations(None, None, None)
+            select_destinations.assert_called_once()
+
+    def test_run_instance(self):
+        with mock.patch.object(self.manager, 'run_instance'
+                ) as run_instance:
+            self.proxy.run_instance(None, None, None, None, None, None, None,
+                    None)
+            run_instance.assert_called_once()
+
+    def test_prep_resize(self):
+        with mock.patch.object(self.manager, 'prep_resize'
+                ) as prep_resize:
+            self.proxy.prep_resize(None, None, None, None, None, None, None)
+            prep_resize.assert_called_once()

@@ -78,16 +78,19 @@ class SchedulerAPI(object):
 
         ... - Deprecated live_migration() call, moved to conductor
         ... - Deprecated select_hosts()
+
+        3.0 - Removed backwards compat
     '''
 
     VERSION_ALIASES = {
         'grizzly': '2.6',
         'havana': '2.9',
+        'icehouse': '3.0',
     }
 
     def __init__(self):
         super(SchedulerAPI, self).__init__()
-        target = messaging.Target(topic=CONF.scheduler_topic, version='2.0')
+        target = messaging.Target(topic=CONF.scheduler_topic, version='3.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.scheduler,
                                                CONF.upgrade_levels.scheduler)
         serializer = objects_base.NovaObjectSerializer()
@@ -95,24 +98,21 @@ class SchedulerAPI(object):
                                      serializer=serializer)
 
     def select_destinations(self, ctxt, request_spec, filter_properties):
-        cctxt = self.client.prepare(version='2.7')
+        cctxt = self.client.prepare()
         return cctxt.call(ctxt, 'select_destinations',
             request_spec=request_spec, filter_properties=filter_properties)
 
     def run_instance(self, ctxt, request_spec, admin_password,
             injected_files, requested_networks, is_first_time,
             filter_properties, legacy_bdm_in_spec=True):
-        version = '2.0'
         msg_kwargs = {'request_spec': request_spec,
                       'admin_password': admin_password,
                       'injected_files': injected_files,
                       'requested_networks': requested_networks,
                       'is_first_time': is_first_time,
-                      'filter_properties': filter_properties}
-        if self.client.can_send_version('2.9'):
-            version = '2.9'
-            msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
-        cctxt = self.client.prepare(version=version)
+                      'filter_properties': filter_properties,
+                      'legacy_bdm_in_spec': legacy_bdm_in_spec}
+        cctxt = self.client.prepare()
         cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def prep_resize(self, ctxt, instance, instance_type, image,
@@ -121,8 +121,9 @@ class SchedulerAPI(object):
         instance_type_p = jsonutils.to_primitive(instance_type)
         reservations_p = jsonutils.to_primitive(reservations)
         image_p = jsonutils.to_primitive(image)
-        self.client.cast(ctxt, 'prep_resize',
-                         instance=instance_p, instance_type=instance_type_p,
-                         image=image_p, request_spec=request_spec,
-                         filter_properties=filter_properties,
-                         reservations=reservations_p)
+        cctxt = self.client.prepare()
+        cctxt.cast(ctxt, 'prep_resize',
+                   instance=instance_p, instance_type=instance_type_p,
+                   image=image_p, request_spec=request_spec,
+                   filter_properties=filter_properties,
+                   reservations=reservations_p)
