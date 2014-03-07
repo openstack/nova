@@ -1179,8 +1179,8 @@ class ComputeManager(manager.Manager):
             LOG.debug(_("No node specified, defaulting to %s"), node)
 
         network_info = None
-        bdms = self.conductor_api.block_device_mapping_get_all_by_instance(
-            context, instance, legacy=False)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
 
         # b64 decode the files to inject:
         injected_files_orig = injected_files
@@ -1292,9 +1292,9 @@ class ComputeManager(manager.Manager):
             LOG.debug(_("Clean up resource before rescheduling."),
                       instance=instance)
             if bdms is None:
-                capi = self.conductor_api
-                bdms = capi.block_device_mapping_get_all_by_instance(context,
-                                                                     instance)
+                bdms = (block_device_obj.BlockDeviceMappingList.
+                        get_by_instance_uuid(context, instance.uuid))
+
             self._shutdown_instance(context, instance,
                                     bdms, requested_networks)
             self._cleanup_volumes(context, instance['uuid'], bdms)
@@ -1504,7 +1504,6 @@ class ComputeManager(manager.Manager):
 
     def _default_device_names_for_instance(self, instance,
                                            root_device_name,
-                                           update_function,
                                            *block_device_lists):
         try:
             self.driver.default_device_names_for_instance(instance,
@@ -1512,8 +1511,7 @@ class ComputeManager(manager.Manager):
                                                           *block_device_lists)
         except NotImplementedError:
             compute_utils.default_device_names_for_instance(
-                instance, root_device_name,
-                update_function, *block_device_lists)
+                instance, root_device_name, *block_device_lists)
 
     def _default_block_device_names(self, context, instance,
                                     image_meta, block_devices):
@@ -1532,13 +1530,13 @@ class ComputeManager(manager.Manager):
         update_instance = False
         update_root_bdm = False
 
-        if root_bdm['device_name']:
-            root_device_name = root_bdm['device_name']
+        if root_bdm.device_name:
+            root_device_name = root_bdm.device_name
             instance['root_device_name'] = root_device_name
             update_instance = True
         elif instance['root_device_name']:
             root_device_name = instance['root_device_name']
-            root_bdm['device_name'] = root_device_name
+            root_bdm.device_name = root_device_name
             update_root_bdm = True
         else:
             root_device_name = self._default_root_device_name(instance,
@@ -1546,18 +1544,17 @@ class ComputeManager(manager.Manager):
                                                               root_bdm)
 
             instance['root_device_name'] = root_device_name
-            root_bdm['device_name'] = root_device_name
+            root_bdm.device_name = root_device_name
             update_instance = update_root_bdm = True
 
         if update_instance:
             self._instance_update(context, instance['uuid'],
                                   root_device_name=root_device_name)
         if update_root_bdm:
-            self.conductor_api.block_device_mapping_update(
-                context, root_bdm['id'], {'device_name': root_device_name})
+            root_bdm.save()
 
         def _is_mapping(bdm):
-            return (bdm['source_type'] in ('image', 'volume', 'snapshot') and
+            return (bdm.source_type in ('image', 'volume', 'snapshot') and
                     driver_block_device.is_implemented(bdm))
 
         ephemerals = filter(block_device.new_format_is_ephemeral,
@@ -1566,14 +1563,8 @@ class ComputeManager(manager.Manager):
                       block_devices)
         block_device_mapping = filter(_is_mapping, block_devices)
 
-        def _update_bdm(bdm_for_update):
-            self.conductor_api.block_device_mapping_update(
-                context, bdm_for_update['id'],
-                {'device_name': bdm_for_update['device_name']})
-
         self._default_device_names_for_instance(instance,
                                                 root_device_name,
-                                                _update_bdm,
                                                 ephemerals,
                                                 swap,
                                                 block_device_mapping)
@@ -1996,15 +1987,6 @@ class ComputeManager(manager.Manager):
     def _shutdown_instance(self, context, instance,
                            bdms, requested_networks=None, notify=True):
         """Shutdown an instance on this host."""
-        # TODO(ndipanov): Remove this once all code using this method is
-        # converted to BDM objects. Currently this means only
-        # _reschedule_or_error
-        if (bdms and
-            any(not isinstance(bdm, block_device_obj.BlockDeviceMapping)
-                for bdm in bdms)):
-            bdms = (block_device_obj.BlockDeviceMappingList.
-                    get_by_instance_uuid(context, instance.uuid))
-
         context = context.elevated()
         LOG.audit(_('%(action_str)s instance') % {'action_str': 'Terminating'},
                   context=context, instance=instance)
@@ -2067,8 +2049,8 @@ class ComputeManager(manager.Manager):
         for bdm in bdms:
             LOG.debug(_("terminating bdm %s") % bdm,
                       instance_uuid=instance_uuid)
-            if bdm['volume_id'] and bdm['delete_on_termination']:
-                self.volume_api.delete(context, bdm['volume_id'])
+            if bdm.volume_id and bdm.delete_on_termination:
+                self.volume_api.delete(context, bdm.volume_id)
             # NOTE(vish): bdms will be deleted on instance destroy
 
     @hooks.add_hook("delete_instance")

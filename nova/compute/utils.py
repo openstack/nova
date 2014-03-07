@@ -151,23 +151,22 @@ def get_device_name_for_instance(context, instance, bdms, device):
 
 
 def default_device_names_for_instance(instance, root_device_name,
-                                      update_function, *block_device_lists):
+                                      *block_device_lists):
     """Generate missing device names for an instance."""
 
-    dev_list = [bdm['device_name']
+    dev_list = [bdm.device_name
                 for bdm in itertools.chain(*block_device_lists)
-                if bdm['device_name']]
+                if bdm.device_name]
     if root_device_name not in dev_list:
         dev_list.append(root_device_name)
 
     for bdm in itertools.chain(*block_device_lists):
-        dev = bdm.get('device_name')
+        dev = bdm.device_name
         if not dev:
             dev = get_next_device_name(instance, dev_list,
                                        root_device_name)
-            bdm['device_name'] = dev
-            if update_function:
-                update_function(bdm)
+            bdm.device_name = dev
+            bdm.save()
             dev_list.append(dev)
 
 

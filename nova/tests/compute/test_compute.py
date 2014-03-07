@@ -6490,13 +6490,14 @@ class ComputeTestCase(BaseTestCase):
     def _get_instance_and_bdm_for_dev_defaults_tests(self):
         instance = self._create_fake_instance(
             params={'root_device_name': '/dev/vda'})
-        block_device_mapping = [
-            {'id': 3, 'instance_uuid': 'fake-instance',
-             'device_name': '/dev/vda',
-             'source_type': 'volume',
-             'destination_type': 'volume',
-             'image_id': 'fake-image-id-1',
-             'boot_index': 0}]
+        block_device_mapping = block_device_obj.block_device_make_list(
+                self.context, [fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 3, 'instance_uuid': 'fake-instance',
+                     'device_name': '/dev/vda',
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'image_id': 'fake-image-id-1',
+                     'boot_index': 0})])
 
         return instance, block_device_mapping
 
@@ -6509,9 +6510,8 @@ class ComputeTestCase(BaseTestCase):
         self.compute._instance_update(self.context, instance['uuid'],
                                       root_device_name='/dev/vda')
         self.compute._default_device_names_for_instance(instance,
-                                                        '/dev/vda',
-                                                        mox.IgnoreArg(),
-                                                        [], [], bdms)
+                                                        '/dev/vda', [], [],
+                                                        [bdm for bdm in bdms])
         self.mox.ReplayAll()
         self.compute._default_block_device_names(self.context,
                                                  instance,
@@ -6520,16 +6520,14 @@ class ComputeTestCase(BaseTestCase):
     def test_default_block_device_names_empty_root_device(self):
         instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
         bdms[0]['device_name'] = None
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'block_device_mapping_update')
+        self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_device_names_for_instance')
-        self.compute.conductor_api.block_device_mapping_update(
-            self.context, bdms[0]['id'], {'device_name': '/dev/vda'})
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping, 'save')
+        bdms[0].save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
-                                                        '/dev/vda',
-                                                        mox.IgnoreArg(),
-                                                        [], [], bdms)
+                                                        '/dev/vda', [], [],
+                                                        [bdm for bdm in bdms])
         self.mox.ReplayAll()
         self.compute._default_block_device_names(self.context,
                                                  instance,
@@ -6540,8 +6538,7 @@ class ComputeTestCase(BaseTestCase):
         instance['root_device_name'] = None
         bdms[0]['device_name'] = None
         self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'block_device_mapping_update')
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMapping, 'save')
         self.mox.StubOutWithMock(self.compute,
                                  '_default_root_device_name')
         self.mox.StubOutWithMock(self.compute,
@@ -6551,55 +6548,14 @@ class ComputeTestCase(BaseTestCase):
                                                bdms[0]).AndReturn('/dev/vda')
         self.compute._instance_update(self.context, instance['uuid'],
                                       root_device_name='/dev/vda')
-        self.compute.conductor_api.block_device_mapping_update(
-            self.context, bdms[0]['id'], {'device_name': '/dev/vda'})
+        bdms[0].save().AndReturn(None)
         self.compute._default_device_names_for_instance(instance,
-                                                        '/dev/vda',
-                                                        mox.IgnoreArg(),
-                                                        [], [], bdms)
+                                                        '/dev/vda', [], [],
+                                                        [bdm for bdm in bdms])
         self.mox.ReplayAll()
         self.compute._default_block_device_names(self.context,
                                                  instance,
                                                  {}, bdms)
-
-    def test_default_block_device_names_calls_db_update(self):
-        instance, bdms = self._get_instance_and_bdm_for_dev_defaults_tests()
-        instance['root_device_name'] = None
-        bdms[0]['device_name'] = None
-        bdms.append({'id': 4, 'instance_uuid': 'fake-instance',
-                     'source_type': 'volume', 'device_name': None,
-                     'destination_type': 'volume',
-                     'volume_id': 'fake-volume-id-1'})
-
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'default_root_device_name')
-        self.mox.StubOutWithMock(compute_utils, 'get_next_device_name')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
-        self.mox.StubOutWithMock(self.compute.driver,
-                                 'default_device_names_for_instance')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'block_device_mapping_update')
-
-        self.compute.driver.default_root_device_name(
-                instance, {}, bdms[0]).AndRaise(NotImplementedError)
-        compute_utils.get_next_device_name(instance, []).AndReturn('/dev/vda')
-        self.compute._instance_update(self.context, instance['uuid'],
-                                      root_device_name='/dev/vda')
-        self.compute.conductor_api.block_device_mapping_update(
-                self.context, 3, {'device_name': '/dev/vda'})
-        self.compute.driver.default_device_names_for_instance(
-                instance, '/dev/vda', [], [], bdms).AndRaise(
-                        NotImplementedError)
-        compute_utils.get_next_device_name(
-                instance, ['/dev/vda'], '/dev/vda').AndReturn('/dev/vdb')
-        self.compute.conductor_api.block_device_mapping_update(
-                self.context, 4, {'device_name': '/dev/vdb'})
-        self.mox.ReplayAll()
-
-        self.compute._default_block_device_names(self.context,
-                                                 instance,
-                                                 {}, bdms)
-        self.assertEqual(bdms[1]['device_name'], '/dev/vdb')
 
     def test_reserve_block_device_name(self):
         instance = self._create_fake_instance_obj(
@@ -7299,9 +7255,10 @@ class ComputeAPITestCase(BaseTestCase):
         mock_get_vol.return_value = {'id': volume['id'], 'status': "in-use"}
         mock_get_bdms.return_value = bdms
 
-        self.compute.run_instance(self.context,
-                                  volume_backed_inst_1, {}, {}, None, None,
-                                  None, True, None, False)
+        with mock.patch.object(self.compute, '_prep_block_device'):
+            self.compute.run_instance(self.context,
+                                      volume_backed_inst_1, {}, {}, None, None,
+                                      None, True, None, False)
 
         self.assertRaises(exception.InstanceNotRescuable,
                           self.compute_api.rescue, self.context,
@@ -7327,9 +7284,10 @@ class ComputeAPITestCase(BaseTestCase):
         mock_get_vol.return_value = {'id': volume['id'], 'status': "in-use"}
         mock_get_bdms.return_value = bdms
 
-        self.compute.run_instance(self.context,
-                                  volume_backed_inst_2, {}, {}, None, None,
-                                  None, True, None, False)
+        with mock.patch.object(self.compute, '_prep_block_device'):
+            self.compute.run_instance(self.context,
+                                      volume_backed_inst_2, {}, {}, None, None,
+                                      None, True, None, False)
 
         self.assertRaises(exception.InstanceNotRescuable,
                           self.compute_api.rescue, self.context,
@@ -10016,15 +9974,21 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         """Basic sanity check to make sure _reschedule_or_error is called
         when a build fails.
         """
+        self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
+                                 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute, '_spawn')
         self.mox.StubOutWithMock(self.compute, '_reschedule_or_error')
 
+        bdms = block_device_obj.block_device_make_list(self.context, [])
+
+        block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                mox.IgnoreArg(), self.instance.uuid).AndReturn(bdms)
         self.compute._spawn(mox.IgnoreArg(), self.instance, mox.IgnoreArg(),
                 [], mox.IgnoreArg(), [], None, set_access_ip=False).AndRaise(
                         test.TestingException("BuildError"))
         self.compute._reschedule_or_error(mox.IgnoreArg(), self.instance,
                 mox.IgnoreArg(), None, None, None,
-                False, None, {}, [], False).AndReturn(True)
+                False, None, {}, bdms, False).AndReturn(True)
 
         self.mox.ReplayAll()
         self.compute._run_instance(self.context, None, {}, None, None, None,
