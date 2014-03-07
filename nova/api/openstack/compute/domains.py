@@ -178,6 +178,9 @@ class DomainsController(wsgi.Controller):
 
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
+
+        if instance.project_domain_id != context.domain_id:
+                raise exc.HTTPNotFound(_("Instance not found."))
         if CONF.reclaim_instance_interval:
             try:
                 self.compute_api.soft_delete(context, instance)
