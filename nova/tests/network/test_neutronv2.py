@@ -186,6 +186,8 @@ class TestNeutronv2Base(test.TestCase):
                            'device_id': self.instance2['uuid'],
                            'device_owner': 'compute:nova',
                            'id': 'my_portid1',
+                           'status': 'DOWN',
+                           'admin_state_up': True,
                            'fixed_ips': [{'ip_address': self.port_address,
                                           'subnet_id': 'my_subid1'}],
                            'mac_address': 'my_mac1', }]
@@ -193,12 +195,16 @@ class TestNeutronv2Base(test.TestCase):
                              'fixed_ip_address': self.port_address,
                              'floating_ip_address': '172.0.1.2'}]
         self.dhcp_port_data1 = [{'fixed_ips': [{'ip_address': '10.0.1.9',
-                                               'subnet_id': 'my_subid1'}]}]
+                                               'subnet_id': 'my_subid1'}],
+                                 'status': 'ACTIVE',
+                                 'admin_state_up': True}]
         self.port_address2 = '10.0.2.2'
         self.port_data2 = []
         self.port_data2.append(self.port_data1[0])
         self.port_data2.append({'network_id': 'my_netid2',
                                 'device_id': self.instance['uuid'],
+                                'admin_state_up': True,
+                                'status': 'ACTIVE',
                                 'device_owner': 'compute:nova',
                                 'id': 'my_portid2',
                                 'fixed_ips':
@@ -212,6 +218,8 @@ class TestNeutronv2Base(test.TestCase):
                                  'floating_ip_address': '172.0.2.2'})
         self.port_data3 = [{'network_id': 'my_netid1',
                            'device_id': 'device_id3',
+                           'status': 'DOWN',
+                           'admin_state_up': True,
                            'device_owner': 'compute:nova',
                            'id': 'my_portid3',
                            'fixed_ips': [],  # no fixed ip
@@ -1867,16 +1875,39 @@ class TestNeutronv2(TestNeutronv2Base):
         fake_inst = {'project_id': 'fake', 'uuid': 'uuid',
                      'info_cache': {'network_info': []}}
         fake_ports = [
+            # admin_state_up=True and status='ACTIVE' thus vif.active=True
             {'id': 'port0',
              'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'ACTIVE',
              'fixed_ips': [{'ip_address': '1.1.1.1'}],
              'mac_address': 'de:ad:be:ef:00:01',
              'binding:vif_type': model.VIF_TYPE_BRIDGE,
              },
+            # admin_state_up=False and status='DOWN' thus vif.active=True
+            {'id': 'port1',
+             'network_id': 'net-id',
+             'admin_state_up': False,
+             'status': 'DOWN',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:02',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             },
+            # admin_state_up=True and status='DOWN' thus vif.active=False
+             {'id': 'port2',
+             'network_id': 'net-id',
+             'admin_state_up': True,
+             'status': 'DOWN',
+             'fixed_ips': [{'ip_address': '1.1.1.1'}],
+             'mac_address': 'de:ad:be:ef:00:03',
+             'binding:vif_type': model.VIF_TYPE_BRIDGE,
+             },
             # This does not match the networks we provide below,
             # so it should be ignored (and is here to verify that)
-            {'id': 'port1',
+            {'id': 'port3',
              'network_id': 'other-net-id',
+             'admin_state_up': True,
+             'status': 'DOWN',
              },
             ]
         fake_subnets = [model.Subnet(cidr='1.0.0.0/8')]
@@ -1891,25 +1922,40 @@ class TestNeutronv2(TestNeutronv2Base):
         self.moxed_client.list_ports(
             tenant_id='fake', device_id='uuid').AndReturn(
                 {'ports': fake_ports})
+
         self.mox.StubOutWithMock(api, '_get_floating_ips_by_fixed_and_port')
-        api._get_floating_ips_by_fixed_and_port(
-            self.moxed_client, '1.1.1.1', 'port0').AndReturn(
-                [{'floating_ip_address': '10.0.0.1'}])
         self.mox.StubOutWithMock(api, '_get_subnets_from_port')
-        api._get_subnets_from_port(self.context, fake_ports[0]).AndReturn(
-            fake_subnets)
+        requested_port_ids = ['port0', 'port1', 'port2']
+        for requested_port_id in requested_port_ids:
+            api._get_floating_ips_by_fixed_and_port(
+                self.moxed_client, '1.1.1.1', requested_port_id).AndReturn(
+                    [{'floating_ip_address': '10.0.0.1'}])
+        for index in range(len(requested_port_ids)):
+            api._get_subnets_from_port(self.context, fake_ports[index]
+                ).AndReturn(fake_subnets)
+
         self.mox.ReplayAll()
         neutronv2.get_client('fake')
-        nw_info = api._build_network_info_model(self.context, fake_inst,
-                                                fake_nets,
-                                                [fake_ports[0]['id']])
-        self.assertEqual(len(nw_info), 1)
-        self.assertEqual(nw_info[0]['id'], 'port0')
-        self.assertEqual(nw_info[0]['address'], 'de:ad:be:ef:00:01')
-        self.assertEqual(nw_info[0]['devname'], 'tapport0')
-        self.assertIsNone(nw_info[0]['ovs_interfaceid'])
-        self.assertEqual(nw_info[0]['type'], model.VIF_TYPE_BRIDGE)
-        self.assertEqual(nw_info[0]['network']['bridge'], 'brqnet-id')
+        nw_infos = api._build_network_info_model(self.context, fake_inst,
+                                                 fake_nets,
+                                                 [fake_ports[0]['id'],
+                                                  fake_ports[1]['id'],
+                                                  fake_ports[2]['id']])
+        self.assertEqual(len(nw_infos), 3)
+        index = 0
+        for nw_info in nw_infos:
+            self.assertEqual(nw_info['id'], fake_ports[index]['id'])
+            self.assertEqual(nw_info['address'],
+                             fake_ports[index]['mac_address'])
+            self.assertEqual(nw_info['devname'], 'tapport' + str(index))
+            self.assertIsNone(nw_info['ovs_interfaceid'])
+            self.assertEqual(nw_info['type'], model.VIF_TYPE_BRIDGE)
+            self.assertEqual(nw_info['network']['bridge'], 'brqnet-id')
+            index += 1
+
+        self.assertEqual(nw_infos[0]['active'], True)
+        self.assertEqual(nw_infos[1]['active'], True)
+        self.assertEqual(nw_infos[2]['active'], False)
 
     def test_get_all_empty_list_networks(self):
         api = neutronapi.API()

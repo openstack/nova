@@ -1087,6 +1087,11 @@ class API(base.Base):
 
         for current_neutron_port in current_neutron_ports:
             if current_neutron_port['id'] in port_ids:
+                vif_active = False
+                if (current_neutron_port['admin_state_up'] is False
+                    or current_neutron_port['status'] == 'ACTIVE'):
+                    vif_active = True
+
                 network_IPs = self._nw_info_get_ips(client,
                                                     current_neutron_port)
                 subnets = self._nw_info_get_subnets(context,
@@ -1106,7 +1111,8 @@ class API(base.Base):
                     network=network,
                     type=current_neutron_port.get('binding:vif_type'),
                     ovs_interfaceid=ovs_interfaceid,
-                    devname=devname))
+                    devname=devname,
+                    active=vif_active))
 
         return nw_info
 
