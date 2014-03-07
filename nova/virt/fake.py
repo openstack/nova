@@ -23,6 +23,8 @@ semantics of real hypervisor connections.
 
 """
 
+import contextlib
+
 from oslo.config import cfg
 
 from nova import block_device
@@ -486,3 +488,10 @@ class FakeVirtAPI(virtapi.VirtAPI):
         if legacy:
             bdms = block_device.legacy_mapping(bdms)
         return bdms
+
+    @contextlib.contextmanager
+    def wait_for_instance_event(self, instance, event_names, deadline=300,
+                                error_callback=None):
+        # NOTE(danms): Don't actually wait for any events, just
+        # fall through
+        yield
