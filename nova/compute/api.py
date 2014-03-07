@@ -2939,14 +2939,6 @@ class API(base.Base):
         uuids = [instance['uuid'] for instance in instances]
         return self.db.instance_fault_get_by_instance_uuids(context, uuids)
 
-    def get_instance_bdms(self, context, instance, legacy=True):
-        """Get all bdm tables for specified instance."""
-        bdms = self.db.block_device_mapping_get_all_by_instance(context,
-                instance['uuid'])
-        if legacy:
-            return block_device.legacy_mapping(bdms)
-        return bdms
-
     def is_volume_backed_instance(self, context, instance, bdms=None):
         if not instance['image_ref']:
             return True

@@ -23,6 +23,7 @@ from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
 from nova import exception
+from nova.objects import block_device as block_device_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import volume
@@ -45,7 +46,8 @@ class ExtendedVolumesController(wsgi.Controller):
         self.volume_api = volume.API()
 
     def _extend_server(self, context, server, instance):
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
         volume_ids = [bdm['volume_id'] for bdm in bdms if bdm['volume_id']]
         key = "%s:volumes_attached" % ExtendedVolumes.alias
         server[key] = [{'id': volume_id} for volume_id in volume_ids]
@@ -68,11 +70,12 @@ class ExtendedVolumesController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, id,
                                        want_objects=True)
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         found = False
         try:
             for bdm in bdms:
-                if bdm['volume_id'] != old_volume_id:
+                if bdm.volume_id != old_volume_id:
                     continue
                 try:
                     self.compute_api.swap_volume(context, instance, old_volume,
@@ -174,13 +177,15 @@ class ExtendedVolumesController(wsgi.Controller):
                   {"volume_id": volume_id,
                    "server_id": id,
                    "context": context})
-        instance = common.get_instance(self.compute_api, context, server_id)
+        instance = common.get_instance(self.compute_api, context, server_id,
+                                       want_objects=True)
         try:
             volume = self.volume_api.get(context, volume_id)
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         if not bdms:
             msg = _("Volume %(volume_id)s is not attached to the "
                     "instance %(server_id)s") % {'server_id': server_id,
@@ -189,7 +194,7 @@ class ExtendedVolumesController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
         for bdm in bdms:
-            if bdm['volume_id'] != volume_id:
+            if bdm.volume_id != volume_id:
                 continue
             try:
                 self.compute_api.detach_volume(context, instance, volume)

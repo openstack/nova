@@ -42,6 +42,7 @@ from nova.network import api as network_api
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import quota
+from nova.tests import fake_block_device
 from nova.tests import fake_network
 from nova.tests.glance import stubs as glance_stubs
 from nova.tests.objects import test_keypair
@@ -709,8 +710,12 @@ def stub_snapshot_get_all(self, context):
 
 
 def stub_bdm_get_all_by_instance(context, instance_uuid):
-    return [{'source_type': 'volume', 'volume_id': 'volume_id1'},
-            {'source_type': 'volume', 'volume_id': 'volume_id2'}]
+    return [fake_block_device.FakeDbBlockDeviceDict(
+            {'id': 1, 'source_type': 'volume', 'destination_type': 'volume',
+            'volume_id': 'volume_id1', 'instance_uuid': instance_uuid}),
+            fake_block_device.FakeDbBlockDeviceDict(
+            {'id': 2, 'source_type': 'volume', 'destination_type': 'volume',
+            'volume_id': 'volume_id2', 'instance_uuid': instance_uuid})]
 
 
 def fake_get_available_languages(domain):

@@ -24,6 +24,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
+from nova.objects import block_device as block_device_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
@@ -354,7 +355,8 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
 
         if not bdms:
             LOG.debug(_("Instance %s is not attached."), server_id)
@@ -363,8 +365,8 @@ class VolumeAttachmentController(wsgi.Controller):
         assigned_mountpoint = None
 
         for bdm in bdms:
-            if bdm['volume_id'] == volume_id:
-                assigned_mountpoint = bdm['device_name']
+            if bdm.volume_id == volume_id:
+                assigned_mountpoint = bdm.device_name
                 break
 
         if assigned_mountpoint is None:
@@ -459,11 +461,12 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
         found = False
         try:
             for bdm in bdms:
-                if bdm['volume_id'] != old_volume_id:
+                if bdm.volume_id != old_volume_id:
                     continue
                 try:
                     self.compute_api.swap_volume(context, instance, old_volume,
@@ -501,7 +504,8 @@ class VolumeAttachmentController(wsgi.Controller):
 
         volume = self.volume_api.get(context, volume_id)
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
         if not bdms:
             LOG.debug(_("Instance %s is not attached."), server_id)
             raise exc.HTTPNotFound()
@@ -509,7 +513,7 @@ class VolumeAttachmentController(wsgi.Controller):
         found = False
         try:
             for bdm in bdms:
-                if bdm['volume_id'] != volume_id:
+                if bdm.volume_id != volume_id:
                     continue
                 try:
                     self.compute_api.detach_volume(context, instance, volume)
@@ -540,15 +544,16 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.NotFound:
             raise exc.HTTPNotFound()
 
-        bdms = self.compute_api.get_instance_bdms(context, instance)
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance['uuid'])
         limited_list = common.limited(bdms, req)
         results = []
 
         for bdm in limited_list:
-            if bdm['volume_id']:
-                results.append(entity_maker(bdm['volume_id'],
-                        bdm['instance_uuid'],
-                        bdm['device_name']))
+            if bdm.volume_id:
+                results.append(entity_maker(bdm.volume_id,
+                                            bdm.instance_uuid,
+                                            bdm.device_name))
 
         return {'volumeAttachments': results}
 
