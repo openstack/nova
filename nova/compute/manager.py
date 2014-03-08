@@ -474,12 +474,6 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         return self._compute.conductor_api.agent_build_get_by_triple(
             context, hypervisor, os, architecture)
 
-    def block_device_mapping_get_all_by_instance(self, context, instance,
-                                                 legacy=True):
-        capi = self._compute.conductor_api
-        return capi.block_device_mapping_get_all_by_instance(context, instance,
-                                                             legacy=legacy)
-
     def _default_error_callback(self, event_name, instance):
         raise exception.NovaException(_('Instance event failed'))
 

@@ -42,15 +42,6 @@ class VirtAPI(object):
         """
         raise NotImplementedError()
 
-    def block_device_mapping_get_all_by_instance(self, context, instance,
-                                                 legacy=True):
-        """Get block device mappings for an instance
-        :param context: security context
-        :param instance: the instance we're getting bdms for
-        :param legacy: get bdm info in legacy format (or not)
-        """
-        raise NotImplementedError()
-
     @contextlib.contextmanager
     def wait_for_instance_event(self, instance, event_names, deadline=300,
                                 error_callback=None):

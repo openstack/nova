@@ -27,7 +27,6 @@ import contextlib
 
 from oslo.config import cfg
 
-from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
 from nova import db
@@ -480,14 +479,6 @@ class FakeVirtAPI(virtapi.VirtAPI):
     def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
         return db.agent_build_get_by_triple(context,
                                             hypervisor, os, architecture)
-
-    def block_device_mapping_get_all_by_instance(self, context, instance,
-                                                 legacy=True):
-        bdms = db.block_device_mapping_get_all_by_instance(context,
-                                                           instance['uuid'])
-        if legacy:
-            bdms = block_device.legacy_mapping(bdms)
-        return bdms
 
     @contextlib.contextmanager
     def wait_for_instance_event(self, instance, event_names, deadline=300,
