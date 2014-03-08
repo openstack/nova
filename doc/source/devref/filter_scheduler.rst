@@ -77,7 +77,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |AggregateCoreFilter| - filters hosts by CPU core number with per-aggregate
   ``cpu_allocation_ratio`` setting. If no per-aggregate value is found, it will
   fall back to the global default ``cpu_allocation_ratio``. If more than one value
-  is found for a host (meaning the host is in two differenet aggregate with
+  is found for a host (meaning the host is in two different aggregate with
   different ratio settings), the minimum value will be used.
 * |IsolatedHostsFilter| - filter based on ``image_isolated``, ``host_isolated``
   and ``restrict_isolated_hosts_to_isolated_images`` flags.
@@ -87,7 +87,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |AggregateRamFilter| - filters hosts by RAM with per-aggregate
   ``ram_allocation_ratio`` setting. If no per-aggregate value is found, it will
   fall back to the global default ``ram_allocation_ratio``. If more than one value
-  is found for a host (meaning the host is in two differenet aggregate with
+  is found for a host (meaning the host is in two different aggregate with
   different ratio settings), the minimum value will be used.
 * |SimpleCIDRAffinityFilter| - allows to put a new instance on a host within
   the same IP block.
