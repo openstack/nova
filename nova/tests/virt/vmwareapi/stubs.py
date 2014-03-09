@@ -41,7 +41,7 @@ def fake_temp_method_exception():
 
 
 def fake_temp_session_exception():
-    raise error_util.SessionConnectionException([],
+    raise error_util.SessionConnectionException("it's a fake!",
             "Session Exception")
 
 
