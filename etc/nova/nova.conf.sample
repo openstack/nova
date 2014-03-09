@@ -2197,8 +2197,8 @@
 # initramfs via cmdline. (boolean value)
 #pxe_network_config=false
 
-# This gets passed to Neutron as the bootfile dhcp parameter
-# when the dhcp_options_enabled is set. (string value)
+# This gets passed to Neutron as the bootfile dhcp parameter.
+# (string value)
 #pxe_bootfile_name=pxelinux.0
 
 
