@@ -814,6 +814,15 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def refresh_instance_security_rules(self, instance):
+        """Refresh security group rules
+
+        Gets called when an instance gets added to or removed from
+        the security group the instance is a member of or if the
+        group gains or looses a rule.
+        """
+        raise NotImplementedError()
+
     def reset_network(self, instance):
         """reset networking for specified instance."""
         # TODO(Vek): Need to pass context in for access to auth_token

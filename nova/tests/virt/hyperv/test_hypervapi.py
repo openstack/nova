@@ -1648,6 +1648,11 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
             mock_destroy.assert_called_once_with(self._context,
                     self._test_spawn_instance, [], None)
 
+    def test_refresh_instance_security_rules(self):
+        self.assertRaises(NotImplementedError,
+                          self._conn.refresh_instance_security_rules,
+                          instance=None)
+
     def test_get_rdp_console(self):
         self.flags(my_ip="192.168.1.1")
 
