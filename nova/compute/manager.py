@@ -225,6 +225,36 @@ wrap_exception = functools.partial(exception.wrap_exception,
                                    get_notifier=get_notifier)
 
 
+def errors_out_migration(function):
+    """Decorator to error out migration on failure."""
+
+    @functools.wraps(function)
+    def decorated_function(self, context, *args, **kwargs):
+        try:
+            return function(self, context, *args, **kwargs)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                # Find migration argument. The argument cannot be
+                # defined by position because the wrapped functions
+                # do not have the same signature.
+                for arg in args:
+                    if not isinstance(arg, migration_obj.Migration):
+                        continue
+                    status = arg.status
+                    if status not in ['migrating', 'post-migrating']:
+                        continue
+                    arg.status = 'error'
+                    try:
+                        arg.save(context.elevated())
+                    except Exception:
+                        LOG.debug(_('Error setting migration status '
+                                    'for instance %s.') %
+                                  arg.instance_uuid, exc_info=True)
+                    break
+
+    return decorated_function
+
+
 def reverts_task_state(function):
     """Decorator to revert task_state on failure."""
 
@@ -3297,6 +3327,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
+    @errors_out_migration
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
                         reservations, migration, instance_type):
@@ -3433,6 +3464,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
+    @errors_out_migration
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
                       reservations, migration):
