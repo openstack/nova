@@ -31,7 +31,7 @@ xenapi_volume_utils_opts = [
     cfg.IntOpt('introduce_vdi_retry_wait',
                default=20,
                help='Number of seconds to wait for an SR to settle '
-                    'if the VDI does not exist when first introduced '),
+                    'if the VDI does not exist when first introduced'),
     ]
 
 CONF = cfg.CONF
