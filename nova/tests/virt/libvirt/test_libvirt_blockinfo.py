@@ -26,6 +26,7 @@ from nova.objects import block_device as block_device_obj
 from nova import test
 from nova.tests import fake_block_device
 import nova.tests.image.fake
+from nova.virt import block_device as driver_block_device
 from nova.virt.libvirt import blockinfo
 
 
@@ -682,6 +683,26 @@ class LibvirtBlockInfoTest(test.TestCase):
                  'vdb': {'dev': 'vdb'},
                  'vdc': {'dev': 'vdc'}}, 'ide')
             self.assertEqual(expected, got)
+
+    def test_get_device_name(self):
+        bdm_obj = block_device_obj.BlockDeviceMapping(self.context,
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {'id': 3, 'instance_uuid': 'fake-instance',
+                 'device_name': '/dev/vda',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'volume_id': 'fake-volume-id-1',
+                 'boot_index': 0}))
+        self.assertEqual('/dev/vda', blockinfo.get_device_name(bdm_obj))
+
+        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm_obj)
+        self.assertEqual('/dev/vda', blockinfo.get_device_name(driver_bdm))
+
+        bdm_obj.device_name = None
+        self.assertEqual(None, blockinfo.get_device_name(bdm_obj))
+
+        driver_bdm = driver_block_device.DriverVolumeBlockDevice(bdm_obj)
+        self.assertEqual(None, blockinfo.get_device_name(driver_bdm))
 
     @mock.patch('nova.virt.libvirt.blockinfo.find_disk_dev_for_disk_bus',
                 return_value='vda')
