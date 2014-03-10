@@ -25,7 +25,8 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     # Version 1.1: Added get_by_service_id()
     # Version 1.2: String attributes updated to support unicode
     # Version 1.3: Added stats field
-    VERSION = '1.3'
+    # Version 1.4: Added host ip field
+    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -47,11 +48,14 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         'disk_available_least': fields.IntegerField(nullable=True),
         'metrics': fields.StringField(nullable=True),
         'stats': fields.DictOfNullableStringsField(nullable=True),
+        'host_ip': fields.IPAddressField(nullable=True),
         }
 
     def obj_make_compatible(self, primitive, target_version):
         target_version = (int(target_version.split('.')[0]),
                           int(target_version.split('.')[1]))
+        if target_version < (1, 4) and 'host_ip' in primitive:
+            del primitive['host_ip']
         if target_version < (1, 3) and 'stats' in primitive:
             # pre 1.3 version does not have a stats field
             del primitive['stats']
@@ -86,6 +90,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         if stats is not None:
             updates['stats'] = jsonutils.dumps(stats)
 
+    def _convert_host_ip_to_db_format(self, updates):
+        host_ip = updates.pop('host_ip', None)
+        if host_ip:
+            updates['host_ip'] = str(host_ip)
+
     @base.remotable
     def create(self, context):
         if self.obj_attr_is_set('id'):
@@ -93,6 +102,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                                               reason='already created')
         updates = self.obj_get_changes()
         self._convert_stats_to_db_format(updates)
+        self._convert_host_ip_to_db_format(updates)
 
         db_compute = db.compute_node_create(context, updates)
         self._from_db_object(context, self, db_compute)
@@ -104,6 +114,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         updates = self.obj_get_changes()
         updates.pop('id', None)
         self._convert_stats_to_db_format(updates)
+        self._convert_host_ip_to_db_format(updates)
 
         db_compute = db.compute_node_update(context, self.id, updates)
         self._from_db_object(context, self, db_compute)
@@ -125,7 +136,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     #              ComputeNode <= version 1.2
     # Version 1.1 ComputeNode version 1.3
     # Version 1.2 Add get_by_service()
-    VERSION = '1.2'
+    # Version 1.3 ComputeNode version 1.4
+    VERSION = '1.3'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -134,6 +146,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         # NOTE(danms): ComputeNode was at 1.2 before we added this
         '1.1': '1.3',
         '1.2': '1.3',
+        '1.3': '1.4',
         }
 
     @base.remotable_classmethod
