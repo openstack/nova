@@ -228,10 +228,9 @@ class VMOps(object):
                                           admin_password)
 
             self.power_on(instance)
-        except Exception as ex:
-            LOG.exception(ex)
-            self.destroy(instance)
-            raise vmutils.HyperVException(_('Spawn instance failed'))
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self.destroy(instance)
 
     def create_instance(self, instance, network_info, block_device_info,
                         root_vhd_path, eph_vhd_path):
@@ -354,10 +353,10 @@ class VMOps(object):
 
             if destroy_disks:
                 self._delete_disk_files(instance_name)
-        except Exception as ex:
-            LOG.exception(ex)
-            raise vmutils.HyperVException(_('Failed to destroy instance: %s') %
-                                          instance_name)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.exception(_('Failed to destroy instance: %s'),
+                              instance_name)
 
     def reboot(self, instance, network_info, reboot_type):
         """Reboot the specified instance."""
@@ -407,9 +406,8 @@ class VMOps(object):
             LOG.debug(_("Successfully changed state of VM %(vm_name)s"
                         " to: %(req_state)s"),
                       {'vm_name': vm_name, 'req_state': req_state})
-        except Exception as ex:
-            LOG.exception(ex)
-            msg = (_("Failed to change vm state of %(vm_name)s"
-                     " to %(req_state)s") %
-                   {'vm_name': vm_name, 'req_state': req_state})
-            raise vmutils.HyperVException(msg)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_("Failed to change vm state of %(vm_name)s"
+                            " to %(req_state)s"),
+                          {'vm_name': vm_name, 'req_state': req_state})

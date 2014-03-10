@@ -1299,7 +1299,7 @@ class HyperVAPITestCase(HyperVAPIBaseTestCase):
         mount_point = '/dev/sdc'
 
         def fake_login_storage_target(connection_info):
-            raise Exception('Fake connection exception')
+            raise vmutils.HyperVException('Fake connection exception')
 
         self.stubs.Set(self._conn._volumeops, '_login_storage_target',
                        fake_login_storage_target)

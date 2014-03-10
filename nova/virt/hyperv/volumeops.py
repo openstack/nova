@@ -22,11 +22,11 @@ import time
 from oslo.config import cfg
 
 from nova import exception
+from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt import driver
 from nova.virt.hyperv import utilsfactory
-from nova.virt.hyperv import vmutils
 
 LOG = logging.getLogger(__name__)
 
@@ -141,12 +141,12 @@ class VolumeOps(object):
                                                       ctrller_path,
                                                       slot,
                                                       mounted_disk_path)
-        except Exception as exn:
-            LOG.exception(_('Attach volume failed: %s'), exn)
-            if target_iqn:
-                self._volutils.logout_storage_target(target_iqn)
-            raise vmutils.HyperVException(_('Unable to attach volume '
-                                            'to instance %s') % instance_name)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_('Unable to attach volume to instance %s'),
+                          instance_name)
+                if target_iqn:
+                    self._volutils.logout_storage_target(target_iqn)
 
     def _get_free_controller_slot(self, scsi_controller_path):
         #Slots starts from 0, so the length of the disks gives us the free slot
