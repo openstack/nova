@@ -41,7 +41,7 @@ class VimException(Exception):
         if isinstance(exception_summary, list):
             # we need this to protect against developers using
             # this method like VimFaultException
-            raise ValueError("exception_summary must not be a list")
+            raise ValueError(_("exception_summary must not be a list"))
 
         self.exception_summary = str(exception_summary)
         self.exception_obj = excep
@@ -71,7 +71,7 @@ class VimFaultException(Exception):
     def __init__(self, fault_list, excep):
         Exception.__init__(self)
         if not isinstance(fault_list, list):
-            raise ValueError("fault_list must be a list")
+            raise ValueError(_("fault_list must be a list"))
         self.fault_list = fault_list
         self.exception_obj = excep
 
