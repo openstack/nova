@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova.api.openstack import compute
 from nova.compute import api as compute_api
 from nova import exception
@@ -34,22 +36,16 @@ def fake_instance_get(self, _context, instance_uuid, want_objects=False):
     return {'uuid': instance_uuid}
 
 
-def fake_instance_get_instance_not_found(self, _context, instance_uuid,
-        want_objects=False):
-    raise exception.InstanceNotFound(instance_id=instance_uuid)
-
-
 class ServerDiagnosticsTest(test.NoDBTestCase):
 
     def setUp(self):
         super(ServerDiagnosticsTest, self).setUp()
-        self.stubs.Set(compute_api.API, 'get_diagnostics',
-                       fake_get_diagnostics)
-        self.stubs.Set(compute_api.API, 'get', fake_instance_get)
-
         self.router = compute.APIRouterV3(init_only=('servers',
                                                      'os-server-diagnostics'))
 
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                       fake_get_diagnostics)
+    @mock.patch.object(compute_api.API, 'get', fake_instance_get)
     def test_get_diagnostics(self):
         req = fakes.HTTPRequestV3.blank(
             '/servers/%s/os-server-diagnostics' % UUID)
@@ -57,10 +53,22 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
         output = jsonutils.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
 
-    def test_get_diagnostics_with_non_existed_instance(self):
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                fake_get_diagnostics)
+    @mock.patch.object(compute_api.API, 'get',
+                side_effect=exception.InstanceNotFound(instance_id=UUID))
+    def test_get_diagnostics_with_non_existed_instance(self, mock_get):
         req = fakes.HTTPRequestV3.blank(
             '/servers/%s/os-server-diagnostics' % UUID)
-        self.stubs.Set(compute_api.API, 'get',
-                       fake_instance_get_instance_not_found)
         res = req.get_response(self.router)
         self.assertEqual(res.status_int, 404)
+
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                side_effect=exception.InstanceInvalidState('fake message'))
+    @mock.patch.object(compute_api.API, 'get', fake_instance_get)
+    def test_get_diagnostics_raise_conflict_on_invalid_state(self,
+                                                  mock_get_diagnostics):
+        req = fakes.HTTPRequestV3.blank(
+            '/servers/%s/os-server-diagnostics' % UUID)
+        res = req.get_response(self.router)
+        self.assertEqual(409, res.status_int)

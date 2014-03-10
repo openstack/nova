@@ -3701,6 +3701,12 @@ class ComputeManager(manager.Manager):
             LOG.audit(_("Retrieving diagnostics"), context=context,
                       instance=instance)
             return self.driver.get_diagnostics(instance)
+        else:
+            raise exception.InstanceInvalidState(
+                attr='power_state',
+                instance_uuid=instance.uuid,
+                state=instance.power_state,
+                method='get_diagnostics')
 
     @wrap_exception()
     @reverts_task_state
