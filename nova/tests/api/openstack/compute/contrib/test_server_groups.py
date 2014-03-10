@@ -96,7 +96,7 @@ class ServerGroupTest(test.TestCase):
     def test_create_server_group_normal(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         sgroup = server_group_template()
-        policies = ['test_policy']
+        policies = ['anti-affinity']
         sgroup['policies'] = policies
         res_dict = self.controller.create(req, {'server_group': sgroup})
         self.assertEqual(res_dict['server_group']['name'], 'test')
@@ -122,6 +122,22 @@ class ServerGroupTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
+    def test_create_server_group_conflicting_policies(self):
+        sgroup = server_group_template()
+        policies = ['anti-affinity', 'affinity']
+        sgroup['policies'] = policies
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+    def test_create_server_group_not_supported(self):
+        sgroup = server_group_template()
+        policies = ['storage-affinity', 'anti-affinity', 'rack-affinity']
+        sgroup['policies'] = policies
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
     def test_create_server_group_with_no_body(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest,
@@ -135,7 +151,7 @@ class ServerGroupTest(test.TestCase):
 
     def test_list_server_group_by_tenant(self):
         groups = []
-        policies = ['test_policy']
+        policies = ['anti-affinity']
         members = ['1', '2']
         metadata = {'key1': 'value1'}
         names = ['default-x', 'test']
@@ -165,7 +181,7 @@ class ServerGroupTest(test.TestCase):
     def test_list_server_group_all(self):
         all_groups = []
         tenant_groups = []
-        policies = ['test_policy']
+        policies = ['anti-affinity']
         members = ['1', '2']
         metadata = {'key1': 'value1'}
         names = ['default-x', 'test']
