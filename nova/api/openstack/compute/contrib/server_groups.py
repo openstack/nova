@@ -161,8 +161,6 @@ class ServerGroupController(wsgi.Controller):
         'anti-affinity' and 'affinity' in the same group.
         :param policies:     the given policies of the server_group
         """
-        if not policies:
-            return
         if ('anti-affinity' in policies and
             'affinity' in policies):
             msg = _("Conflicting policies configured!")
@@ -183,22 +181,26 @@ class ServerGroupController(wsgi.Controller):
 
         subbody = dict(body[entity_name])
 
-        policies = subbody.get('policies')
-        # Validate that the policies do not contradict one another
-        self._validate_policies(policies)
-
         expected_fields = ['name', 'policies']
         for field in expected_fields:
             value = subbody.pop(field, None)
             if not value:
                 msg = _("'%s' is either missing or empty.") % field
                 raise nova.exception.InvalidInput(reason=msg)
-            if isinstance(value, basestring):
+            if field == 'name':
                 utils.check_string_length(value, field,
-                            min_length=1, max_length=255)
-            elif isinstance(value, list):
-                [utils.check_string_length(v, field,
-                            min_length=1, max_length=255) for v in value]
+                                          min_length=1, max_length=255)
+                if not common.VALID_NAME_REGEX.search(value):
+                    msg = _("Invalid format for name: '%s'") % value
+                    raise nova.exception.InvalidInput(reason=msg)
+            elif field == 'policies':
+                if isinstance(value, list):
+                    [utils.check_string_length(v, field,
+                        min_length=1, max_length=255) for v in value]
+                    self._validate_policies(value)
+                else:
+                    msg = _("'%s' is not a list") % value
+                    raise nova.exception.InvalidInput(reason=msg)
 
         if subbody:
             msg = _("unsupported fields: %s") % subbody.keys()

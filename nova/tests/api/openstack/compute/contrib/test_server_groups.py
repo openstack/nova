@@ -105,19 +105,66 @@ class ServerGroupTest(test.TestCase):
 
     def test_create_server_group_with_illegal_name(self):
         # blank name
-        sgroup = server_group_template(name='')
+        sgroup = server_group_template(name='', policies=['test_policy'])
         req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # name with length 256
-        sgroup = server_group_template(name='1234567890' * 26)
+        sgroup = server_group_template(name='1234567890' * 26,
+                                       policies=['test_policy'])
         req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
 
         # non-string name
-        sgroup = server_group_template(name=12)
+        sgroup = server_group_template(name=12, policies=['test_policy'])
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+        # name with leading spaces
+        sgroup = server_group_template(name='  leading spaces',
+                                       policies=['test_policy'])
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+        # name with trailing spaces
+        sgroup = server_group_template(name='trailing space ',
+                                       policies=['test_policy'])
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+        # name with all spaces
+        sgroup = server_group_template(name='    ',
+                                       policies=['test_policy'])
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+    def test_create_server_group_with_illegal_policies(self):
+        # blank policy
+        sgroup = server_group_template(name='fake-name', policies='')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+        # policy as integer
+        sgroup = server_group_template(name='fake-name', policies=7)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+        # policy as string
+        sgroup = server_group_template(name='fake-name', policies='invalid')
+        req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
+                          req, {'server_group': sgroup})
+
+        # policy as None
+        sgroup = server_group_template(name='fake-name', policies=None)
         req = fakes.HTTPRequest.blank('/v2/fake/os-server-groups')
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.create,
                           req, {'server_group': sgroup})
