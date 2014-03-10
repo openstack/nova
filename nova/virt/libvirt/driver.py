@@ -1158,7 +1158,15 @@ class LibvirtDriver(driver.ComputeDriver):
         return connector
 
     def _cleanup_resize(self, instance, network_info):
-        target = libvirt_utils.get_instance_path(instance) + "_resize"
+        # NOTE(wangpan): we get the pre-grizzly instance path firstly,
+        #                so the backup dir of pre-grizzly instance can
+        #                be deleted correctly with grizzly or later nova.
+        pre_grizzly_name = libvirt_utils.get_instance_path(instance,
+                                                           forceold=True)
+        target = pre_grizzly_name + '_resize'
+        if not os.path.exists(target):
+            target = libvirt_utils.get_instance_path(instance) + '_resize'
+
         if os.path.exists(target):
             # Deletion can fail over NFS, so retry the deletion as required.
             # Set maximum attempt as 5, most test can remove the directory

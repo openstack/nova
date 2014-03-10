@@ -8744,7 +8744,8 @@ class LibvirtDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(utils, 'execute')
 
-        libvirt_utils.get_instance_path(ins_ref).AndReturn('/fake/inst')
+        libvirt_utils.get_instance_path(ins_ref,
+                forceold=True).AndReturn('/fake/inst')
         utils.execute('rm', '-rf', '/fake/inst_resize', delay_on_retry=True,
                       attempts=5)
 
@@ -8779,7 +8780,8 @@ class LibvirtDriverTestCase(test.TestCase):
         self.mox.StubOutWithMock(libvirt_utils, 'get_instance_path')
         self.mox.StubOutWithMock(utils, 'execute')
 
-        libvirt_utils.get_instance_path(ins_ref).AndReturn('/fake/inst')
+        libvirt_utils.get_instance_path(ins_ref,
+                forceold=True).AndReturn('/fake/inst')
         utils.execute('rm', '-rf', '/fake/inst_resize', delay_on_retry=True,
                       attempts=5)
 
