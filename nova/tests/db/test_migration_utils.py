@@ -166,49 +166,50 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             test_table.drop()
 
     def test_util_drop_unique_constraint_with_not_supported_sqlite_type(self):
-        if 'sqlite' in self.engines:
-            engine = self.engines['sqlite']
-            meta = MetaData(bind=engine)
+        if 'sqlite' not in self.engines:
+            self.skipTest('sqlite is not configured')
+        engine = self.engines['sqlite']
+        meta = MetaData(bind=engine)
 
-            table_name = ("test_util_drop_unique_constraint_with_not_supported"
-                          "_sqlite_type")
-            uc_name = 'uniq_foo'
-            values = [
-                {'id': 1, 'a': 3, 'foo': 10},
-                {'id': 2, 'a': 2, 'foo': 20},
-                {'id': 3, 'a': 1, 'foo': 30}
-            ]
+        table_name = ("test_util_drop_unique_constraint_with_not_supported"
+                      "_sqlite_type")
+        uc_name = 'uniq_foo'
+        values = [
+            {'id': 1, 'a': 3, 'foo': 10},
+            {'id': 2, 'a': 2, 'foo': 20},
+            {'id': 3, 'a': 1, 'foo': 30}
+        ]
 
-            test_table = Table(table_name, meta,
-                                Column('id', Integer, primary_key=True,
-                                      nullable=False),
-                               Column('a', Integer),
-                               Column('foo', CustomType, default=0),
-                               UniqueConstraint('a', name='uniq_a'),
-                               UniqueConstraint('foo', name=uc_name))
-            test_table.create()
+        test_table = Table(table_name, meta,
+                            Column('id', Integer, primary_key=True,
+                                  nullable=False),
+                           Column('a', Integer),
+                           Column('foo', CustomType, default=0),
+                           UniqueConstraint('a', name='uniq_a'),
+                           UniqueConstraint('foo', name=uc_name))
+        test_table.create()
 
-            engine.execute(test_table.insert(), values)
-            warnings.simplefilter("ignore", SAWarning)
-            # NOTE(boris-42): Missing info about column `foo` that has
-            #                 unsupported type CustomType.
-            self.assertRaises(exception.NovaException,
-                              utils.drop_unique_constraint,
-                              engine, table_name, uc_name, 'foo')
+        engine.execute(test_table.insert(), values)
+        warnings.simplefilter("ignore", SAWarning)
+        # NOTE(boris-42): Missing info about column `foo` that has
+        #                 unsupported type CustomType.
+        self.assertRaises(exception.NovaException,
+                          utils.drop_unique_constraint,
+                          engine, table_name, uc_name, 'foo')
 
-            # NOTE(boris-42): Wrong type of foo instance. it should be
-            #                 instance of sqlalchemy.Column.
-            self.assertRaises(exception.NovaException,
-                              utils.drop_unique_constraint,
-                              engine, table_name, uc_name, 'foo',
-                              foo=Integer())
+        # NOTE(boris-42): Wrong type of foo instance. it should be
+        #                 instance of sqlalchemy.Column.
+        self.assertRaises(exception.NovaException,
+                          utils.drop_unique_constraint,
+                          engine, table_name, uc_name, 'foo',
+                          foo=Integer())
 
-            foo = Column('foo', CustomType, default=0)
-            utils.drop_unique_constraint(engine, table_name, uc_name, 'foo',
-                                         foo=foo)
+        foo = Column('foo', CustomType, default=0)
+        utils.drop_unique_constraint(engine, table_name, uc_name, 'foo',
+                                     foo=foo)
 
-            s = test_table.select().order_by(test_table.c.id)
-            rows = engine.execute(s).fetchall()
+        s = test_table.select().order_by(test_table.c.id)
+        rows = engine.execute(s).fetchall()
 
         for i in xrange(0, len(values)):
             v = values[i]
@@ -384,8 +385,10 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
             table.drop()
             shadow_table.drop()
 
-    def test_check_shadow_table_with_unsupported_type(self):
-        table_name = 'test_check_shadow_table_with_unsupported_type'
+    def test_check_shadow_table_with_unsupported_sqlite_type(self):
+        if 'sqlite' not in self.engines:
+            self.skipTest('sqlite is not configured')
+        table_name = 'test_check_shadow_table_with_unsupported_sqlite_type'
         engine = self.engines['sqlite']
         meta = MetaData(bind=engine)
 
