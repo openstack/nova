@@ -238,16 +238,16 @@ class GlanceImageService(object):
         self._download_handlers = {}
         download_modules = image_xfers.load_transfer_modules()
 
-        for scheme in download_modules:
-            if scheme in CONF.allowed_direct_url_schemes:
-                mod = download_modules[scheme]
-                try:
-                    self._download_handlers[scheme] = mod.get_download_hander()
-                except Exception as ex:
-                    msg = _('When loading the module %(module_str)s the '
-                            'following error occurred: %(ex)s')\
-                            % {'module_str': str(mod), 'ex': ex}
-                    LOG.error(msg)
+        for scheme, mod in download_modules.iteritems():
+            if scheme not in CONF.allowed_direct_url_schemes:
+                continue
+
+            try:
+                self._download_handlers[scheme] = mod.get_download_handler()
+            except Exception as ex:
+                fmt = _('When loading the module %(module_str)s the '
+                         'following error occurred: %(ex)s')
+                LOG.error(fmt % {'module_str': str(mod), 'ex': ex})
 
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
