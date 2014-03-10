@@ -851,24 +851,50 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertIsInstance(cfg.devices[7],
                               vconfig.LibvirtConfigGuestVideo)
 
-        self.assertIsInstance(cfg.clock,
-                              vconfig.LibvirtConfigGuestClock)
-        self.assertEqual(cfg.clock.offset, "utc")
-        self.assertEqual(len(cfg.clock.timers), 3)
-        self.assertIsInstance(cfg.clock.timers[0],
-                              vconfig.LibvirtConfigGuestTimer)
-        self.assertIsInstance(cfg.clock.timers[1],
-                              vconfig.LibvirtConfigGuestTimer)
-        self.assertIsInstance(cfg.clock.timers[2],
-                              vconfig.LibvirtConfigGuestTimer)
-        self.assertEqual(cfg.clock.timers[0].name, "pit")
-        self.assertEqual(cfg.clock.timers[0].tickpolicy,
-                         "delay")
-        self.assertEqual(cfg.clock.timers[1].name, "rtc")
-        self.assertEqual(cfg.clock.timers[1].tickpolicy,
-                         "catchup")
-        self.assertEqual(cfg.clock.timers[2].name, "hpet")
-        self.assertEqual(cfg.clock.timers[2].present, False)
+    def test_get_guest_config_clock(self):
+        self.flags(virt_type='kvm', group='libvirt')
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+        image_meta = {}
+        hpet_map = {
+            "x86_64": True,
+            "i686": True,
+            "ppc": False,
+            "ppc64": False,
+            "armv7": False,
+            "aarch64": False,
+            }
+
+        for arch, expect_hpet in hpet_map.items():
+            with mock.patch.object(libvirt_driver.libvirt_utils,
+                                   'get_arch',
+                                   return_value=arch):
+                cfg = conn.get_guest_config(instance_ref, [],
+                                            image_meta,
+                                            disk_info)
+                self.assertIsInstance(cfg.clock,
+                                      vconfig.LibvirtConfigGuestClock)
+                self.assertEqual(cfg.clock.offset, "utc")
+                self.assertIsInstance(cfg.clock.timers[0],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertIsInstance(cfg.clock.timers[1],
+                                      vconfig.LibvirtConfigGuestTimer)
+                self.assertEqual(cfg.clock.timers[0].name, "pit")
+                self.assertEqual(cfg.clock.timers[0].tickpolicy,
+                                      "delay")
+                self.assertEqual(cfg.clock.timers[1].name, "rtc")
+                self.assertEqual(cfg.clock.timers[1].tickpolicy,
+                                      "catchup")
+                if expect_hpet:
+                    self.assertEqual(3, len(cfg.clock.timers))
+                    self.assertIsInstance(cfg.clock.timers[2],
+                                          vconfig.LibvirtConfigGuestTimer)
+                    self.assertEqual('hpet', cfg.clock.timers[2].name)
+                    self.assertFalse(cfg.clock.timers[2].present)
+                else:
+                    self.assertEqual(2, len(cfg.clock.timers))
 
     def test_get_guest_config_windows(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

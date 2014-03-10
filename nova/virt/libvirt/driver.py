@@ -3190,13 +3190,17 @@ class LibvirtDriver(driver.ComputeDriver):
             tmrtc.name = "rtc"
             tmrtc.tickpolicy = "catchup"
 
-            tmhpet = vconfig.LibvirtConfigGuestTimer()
-            tmhpet.name = "hpet"
-            tmhpet.present = False
-
             clk.add_timer(tmpit)
             clk.add_timer(tmrtc)
-            clk.add_timer(tmhpet)
+
+            arch = libvirt_utils.get_arch(image_meta)
+            if arch in ("i686", "x86_64"):
+                # NOTE(rfolco): HPET is a hardware timer for x86 arch.
+                # qemu -no-hpet is not supported on non-x86 targets.
+                tmhpet = vconfig.LibvirtConfigGuestTimer()
+                tmhpet.name = "hpet"
+                tmhpet.present = False
+                clk.add_timer(tmhpet)
 
         for cfg in self.get_guest_storage_config(instance,
                                                  image_meta,
