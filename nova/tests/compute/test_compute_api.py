@@ -398,6 +398,10 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_reboot_soft_rebooting(self):
         self._test_reboot_type_fails('SOFT', task_state=task_states.REBOOTING)
 
+    def test_reboot_soft_rebooting_hard(self):
+        self._test_reboot_type_fails('SOFT',
+                                     task_state=task_states.REBOOTING_HARD)
+
     def test_reboot_soft_rescued(self):
         self._test_reboot_type_fails('SOFT', vm_state=vm_states.RESCUED)
 
