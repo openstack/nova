@@ -17,6 +17,7 @@ from webob import exc
 
 from oslo.config import cfg
 
+from nova.api.openstack.compute import ips
 from nova.api.openstack import extensions
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
@@ -56,6 +57,64 @@ LOG = logging.getLogger(__name__)
 authorizer = extensions.core_authorizer('compute:v3', 'domains')
 
 
+def make_server(elem, detailed=False):
+    elem.set('name')
+    elem.set('id')
+
+    if detailed:
+        elem.set('userId', 'user_id')
+        elem.set('tenantId', 'tenant_id')
+        elem.set('updated')
+        elem.set('created')
+        elem.set('hostId')
+        elem.set('accessIPv4')
+        elem.set('accessIPv6')
+        elem.set('status')
+        elem.set('progress')
+        elem.set('reservation_id')
+
+        # Attach image node
+        image = xmlutil.SubTemplateElement(elem, 'image', selector='image')
+        image.set('id')
+        xmlutil.make_links(image, 'links')
+
+        # Attach flavor node
+        flavor = xmlutil.SubTemplateElement(elem, 'flavor', selector='flavor')
+        flavor.set('id')
+        xmlutil.make_links(flavor, 'links')
+
+        # Attach fault node
+        make_fault(elem)
+
+        # Attach metadata node
+        elem.append(common.MetadataTemplate())
+
+        # Attach addresses node
+        elem.append(ips.AddressesTemplate())
+
+    xmlutil.make_links(elem, 'links')
+
+
+def make_fault(elem):
+    fault = xmlutil.SubTemplateElement(elem, 'fault', selector='fault')
+    fault.set('code')
+    fault.set('created')
+    msg = xmlutil.SubTemplateElement(fault, 'message')
+    msg.text = 'message'
+    det = xmlutil.SubTemplateElement(fault, 'details')
+    det.text = 'details'
+
+
+server_nsmap = {None: xmlutil.XMLNS_V11, 'atom': xmlutil.XMLNS_ATOM}
+
+
+class ServerTemplate(xmlutil.TemplateBuilder):
+    def construct(self):
+        root = xmlutil.TemplateElement('server', selector='server')
+        make_server(root, detailed=True)
+        return xmlutil.MasterTemplate(root, 1, nsmap=server_nsmap)
+
+
 class DomainsController(wsgi.Controller):
 
     _view_builder_class = views_servers.ViewBuilder
@@ -72,6 +131,19 @@ class DomainsController(wsgi.Controller):
         except exception.Invalid as err:
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
+
+    @wsgi.serializers(xml=ServerTemplate)
+    def show(self, req, id):
+        """Returns server details by server id."""
+        try:
+            context = req.environ['nova.context']
+            instance = self.compute_api.get(context, id,
+                                            want_objects=True)
+            req.cache_db_instance(instance)
+            return self._view_builder.show(req, instance)
+        except exception.NotFound:
+            msg = _("Instance could not be found")
+            raise exc.HTTPNotFound(explanation=msg)
 
     def detail_domain(self, req):
         """Returns a list of server details for a given user."""

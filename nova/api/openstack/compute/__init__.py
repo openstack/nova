@@ -56,9 +56,6 @@ class APIRouter(nova.api.openstack.APIRouter):
 
     def _setup_routes(self, mapper, ext_mgr, init_only):
 
-        LOG.debug(('INIT_ONLY: %s'), init_only)
-        print "INIT_ONLY", init_only  # REMOVER
-
         if init_only is None or 'versions' in init_only:
             self.resources['versions'] = versions.create_resource()
             mapper.connect("versions", "/",
@@ -92,6 +89,7 @@ class APIRouter(nova.api.openstack.APIRouter):
             #    controller=domains_controller,
             #    parent_resource=dict(member_name='domain',
             #    collection_name='domains'))
+
             mapper.connect("domains",
                "/domains/{domain_id}/servers/{server_id}",
                controller=domains_controller,
@@ -103,6 +101,12 @@ class APIRouter(nova.api.openstack.APIRouter):
                            controller=domains_controller,
                            action='index_domain',
                            conditions={"method": ['GET']})
+
+            mapper.connect("domains",
+               "/domains/{domain_id}/servers/{server_id}",
+               controller=domains_controller,
+               action='get',
+               conditions={"method": ['GET']})
 
         if init_only is None or 'ips' in init_only:
             self.resources['ips'] = ips.create_resource()
