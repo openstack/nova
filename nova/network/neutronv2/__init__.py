@@ -17,7 +17,6 @@ from neutronclient.common import exceptions
 from neutronclient.v2_0 import client as clientv20
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import local
 from nova.openstack.common import log as logging
 
@@ -42,9 +41,6 @@ def _get_client(token=None):
             params['tenant_id'] = CONF.neutron_admin_tenant_id
         else:
             params['tenant_name'] = CONF.neutron_admin_tenant_name
-            LOG.warning(_("Using neutron_admin_tenant_name for authentication "
-                          "is deprecated and will be removed in the next "
-                          "release.  Use neutron_admin_tenant_id instead."))
         params['password'] = CONF.neutron_admin_password
         params['auth_url'] = CONF.neutron_admin_auth_url
         params['auth_strategy'] = CONF.neutron_auth_strategy

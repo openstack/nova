@@ -51,10 +51,10 @@ neutron_opts = [
     cfg.StrOpt('neutron_admin_tenant_id',
                help='Tenant id for connecting to neutron in admin context'),
     cfg.StrOpt('neutron_admin_tenant_name',
-               help='DEPRECATED: Tenant name for connecting to neutron in '
-                    'admin context.  This option is deprecated.  Please use '
-                    'neutron_admin_tenant_id instead. Note that with Keystone '
-                    'V3 tenant names may not be unique.'),
+               help='Tenant name for connecting to neutron in admin context. '
+                    'This option is mutually exclusive with '
+                    'neutron_admin_tenant_id. Note that with Keystone V3 '
+                    'tenant names are only unique within a domain.'),
     cfg.StrOpt('neutron_region_name',
                help='Region name for connecting to neutron in admin context'),
     cfg.StrOpt('neutron_admin_auth_url',
