@@ -1080,10 +1080,18 @@ class VMOps(object):
             vm_utils.update_vdi_virtual_size(self._session, instance,
                                              vdi_ref, new_root_gb)
 
+        ephemeral_vdis = vdis.get('ephemerals')
+        if not ephemeral_vdis:
+            # NOTE(johngarbutt) no existing (migrated) ephemeral disks
+            # to resize, so nothing more to do here.
+            return
+
         total_ephemeral_gb = instance['ephemeral_gb']
         if total_ephemeral_gb:
             sizes = vm_utils.get_ephemeral_disk_sizes(total_ephemeral_gb)
-            ephemeral_vdis = vdis.get('ephemerals')
+            # resize existing (migrated) ephemeral disks,
+            # and add any extra disks if required due to a
+            # larger total_ephemeral_gb (resize down is not supported).
             for userdevice, new_size in enumerate(sizes,
                                                   start=int(DEVICE_EPHEMERAL)):
                 vdi = ephemeral_vdis.get(str(userdevice))

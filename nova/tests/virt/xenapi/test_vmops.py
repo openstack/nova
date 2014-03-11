@@ -850,6 +850,14 @@ class ResizeVdisTestCase(VMOpsTestBase):
         self.vmops._resize_up_vdis(instance, {"root": {}})
         self.assertFalse(mock_resize.called)
 
+    def test_resize_up_vdis_no_vdis_like_initial_spawn(self, mock_resize):
+        instance = {"root_gb": 0, "ephemeral_gb": 3000}
+        vdis = {}
+
+        self.vmops._resize_up_vdis(instance, vdis)
+
+        self.assertFalse(mock_resize.called)
+
     @mock.patch.object(vm_utils, 'get_ephemeral_disk_sizes')
     def test_resize_up_vdis_ephemeral(self, mock_sizes, mock_resize):
         mock_sizes.return_value = [2000, 1000]
