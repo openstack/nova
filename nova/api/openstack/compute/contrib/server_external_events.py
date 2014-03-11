@@ -109,7 +109,8 @@ class ServerExternalEventsController(wsgi.Controller):
                     instances[event.instance_uuid] = instance
                 except exception.InstanceNotFound:
                     LOG.debug(_('Dropping event %(name)s:%(tag)s for unknown '
-                                'instance %(instance_uuid)s'), event)
+                                'instance %(instance_uuid)s'),
+                                dict(event.iteritems()))
                     _event['status'] = 'failed'
                     _event['code'] = 404
                     result = 207
