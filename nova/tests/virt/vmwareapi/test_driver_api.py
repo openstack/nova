@@ -213,6 +213,33 @@ class VMwareSessionTestCase(test.NoDBTestCase):
                               stubs, 'fake_session_file_exception',
                               *args, **kwargs)
 
+    def test_call_method_session_no_permission_exception(self):
+
+        def _fake_create_session(self):
+            session = vmwareapi_fake.DataObject()
+            session.key = 'fake_key'
+            session.userName = 'fake_username'
+            self._session = session
+
+        with contextlib.nested(
+            mock.patch.object(driver.VMwareAPISession, '_is_vim_object',
+                              self._fake_is_vim_object),
+            mock.patch.object(driver.VMwareAPISession, '_create_session',
+                              _fake_create_session),
+        ) as (_fake_vim, _fake_create):
+            api_session = driver.VMwareAPISession()
+            args = ()
+            kwargs = {}
+            e = self.assertRaises(error_util.NoPermissionException,
+                                  api_session._call_method,
+                                  stubs, 'fake_session_permission_exception',
+                                  *args, **kwargs)
+            fault_string = 'Permission to perform this operation was denied.'
+            details = {'privilegeId': 'Resource.AssignVMToPool',
+                       'object': 'domain-c7'}
+            exception_string = '%s %s' % (fault_string, details)
+            self.assertEqual(exception_string, str(e))
+
 
 class VMwareAPIConfTestCase(test.NoDBTestCase):
     """Unit tests for VMWare API configurations."""
