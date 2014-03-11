@@ -237,6 +237,24 @@ def ec2_vol_id_to_uuid(ec2_id):
 _ms_time_regex = re.compile('^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3,6}Z$')
 
 
+def status_to_ec2_attach_status(volume):
+    """Get the corresponding EC2 attachment state.
+
+    According to EC2 API, the valid attachment status in response is:
+    attaching | attached | detaching | detached
+    """
+    volume_status = volume.get('status')
+    attach_status = volume.get('attach_status')
+    if volume_status in ('attaching', 'detaching'):
+        ec2_attach_status = volume_status
+    elif attach_status in ('attached', 'detached'):
+        ec2_attach_status = attach_status
+    else:
+        msg = _("Unacceptable attach status:%s for ec2 API.") % attach_status
+        raise exception.Invalid(msg)
+    return ec2_attach_status
+
+
 def is_ec2_timestamp_expired(request, expires=None):
     """Checks the timestamp or expiry time included in an EC2 request
     and returns true if the request is expired

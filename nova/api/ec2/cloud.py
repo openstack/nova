@@ -886,13 +886,14 @@ class CloudController(object):
                   context=context)
 
         self.compute_api.attach_volume(context, instance, volume_id, device)
-
         volume = self.volume_api.get(context, volume_id)
+        ec2_attach_status = ec2utils.status_to_ec2_attach_status(volume)
+
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
                 'instanceId': ec2utils.id_to_ec2_inst_id(instance_uuid),
                 'requestId': context.request_id,
-                'status': volume['attach_status'],
+                'status': ec2_attach_status,
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def _get_instance_from_volume(self, context, volume):
@@ -912,13 +913,15 @@ class CloudController(object):
         instance = self._get_instance_from_volume(context, volume)
 
         self.compute_api.detach_volume(context, instance, volume)
+        resp_volume = self.volume_api.get(context, volume_id)
+        ec2_attach_status = ec2utils.status_to_ec2_attach_status(resp_volume)
 
         return {'attachTime': volume['attach_time'],
                 'device': volume['mountpoint'],
                 'instanceId': ec2utils.id_to_ec2_inst_id(
-                                    volume['instance_uuid']),
+                    volume['instance_uuid']),
                 'requestId': context.request_id,
-                'status': volume['attach_status'],
+                'status': ec2_attach_status,
                 'volumeId': ec2utils.id_to_ec2_vol_id(volume_id)}
 
     def _format_kernel_id(self, context, instance_ref, result, key):
