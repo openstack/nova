@@ -307,6 +307,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid, expected_attrs=None, use_slave=False):
+        LOG.debug("get_by_uuid")
         if expected_attrs is None:
             expected_attrs = ['info_cache', 'security_groups']
         columns_to_join = _expected_cols(expected_attrs)
@@ -318,6 +319,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_id(cls, context, inst_id, expected_attrs=None):
+        LOG.debug("get_by_id")
         if expected_attrs is None:
             expected_attrs = ['info_cache', 'security_groups']
         columns_to_join = _expected_cols(expected_attrs)
