@@ -213,7 +213,7 @@ libvirt_opts = [
     cfg.ListOpt('disk_cachemodes',
                  default=[],
                  help='Specific cachemodes to use for different disk types '
-                      'e.g: ["file=directsync","block=none"]'),
+                      'e.g: file=directsync,block=none'),
     cfg.StrOpt('vcpu_pin_set',
                 help='Which pcpus can be used by vcpus of instance '
                      'e.g: "4-12,^8,15"'),
