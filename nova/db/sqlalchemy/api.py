@@ -190,7 +190,7 @@ def model_query(context, model, *args, **kwargs):
             parameter that is a subclass of NovaBase and corresponds to the
             model parameter.
     """
-
+    LOG.debug("model_query")
     use_slave = kwargs.get('use_slave') or False
     if CONF.database.slave_connection == '':
         use_slave = False
@@ -1667,6 +1667,7 @@ def _instance_get_by_uuid(context, uuid, session=None,
 @require_context
 def instance_get(context, instance_id, columns_to_join=None):
     try:
+        LOG.debug("instance_get")
         result = _build_instance_get(context, columns_to_join=columns_to_join
                                      ).filter_by(id=instance_id).first()
 
