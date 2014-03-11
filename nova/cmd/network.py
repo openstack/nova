@@ -17,12 +17,16 @@
 """Starter script for Nova Network."""
 
 import sys
+import traceback
 
 from oslo.config import cfg
 
 from nova.conductor import rpcapi as conductor_rpcapi
 from nova import config
+import nova.db.api
+from nova import exception
 from nova.objects import base as objects_base
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import service
@@ -34,6 +38,21 @@ CONF.import_opt('network_topic', 'nova.network.rpcapi')
 CONF.import_opt('use_local', 'nova.conductor.api', group='conductor')
 
 
+def block_db_access():
+    class NoDB(object):
+        def __getattr__(self, attr):
+            return self
+
+        def __call__(self, *args, **kwargs):
+            stacktrace = "".join(traceback.format_stack())
+            LOG = logging.getLogger('nova.network')
+            LOG.error(_('No db access allowed in nova-network: %s'),
+                      stacktrace)
+            raise exception.DBNotAllowed('nova-network')
+
+    nova.db.api.IMPL = NoDB()
+
+
 def main():
     config.parse_args(sys.argv)
     logging.setup("nova")
@@ -42,6 +61,7 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     if not CONF.conductor.use_local:
+        block_db_access()
         objects_base.NovaObject.indirection_api = \
             conductor_rpcapi.ConductorAPI()
 
