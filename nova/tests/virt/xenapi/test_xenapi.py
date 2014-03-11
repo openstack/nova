@@ -301,6 +301,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
                    group='xenserver')
+        # Disable conductor so we don't wait on a reply that will never come
+        self.flags(use_local=True, group='conductor')
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', 'fake_br1')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
