@@ -359,26 +359,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self._test_init_instance_reverts_crashed_migrations(old_vm_state=None)
 
     def test_init_instance_sets_building_error(self):
-        with mock.patch.object(self.compute, '_instance_update'
-             ) as _instance_update:
-            instance = instance_obj.Instance(self.context)
-            instance.uuid = 'foo'
-            instance.vm_state = vm_states.BUILDING
-            instance.task_state = None
+        instance = instance_obj.Instance(self.context)
+        instance.uuid = 'foo'
+        instance.vm_state = vm_states.BUILDING
+        instance.task_state = None
+        with mock.patch.object(instance, 'save') as save:
             self.compute._init_instance(self.context, instance)
-            call = mock.call(self.context, 'foo',
-                             task_state=None,
-                             vm_state=vm_states.ERROR)
-            _instance_update.assert_has_calls([call])
+            save.assert_called_once_with()
+        self.assertIsNone(instance.task_state)
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
 
     def _test_init_instance_sets_building_tasks_error(self, instance):
-        with mock.patch.object(self.compute, '_instance_update'
-             ) as _instance_update:
+        with mock.patch.object(instance, 'save') as save:
             self.compute._init_instance(self.context, instance)
-            call = mock.call(self.context, 'foo',
-                             task_state=None,
-                             vm_state=vm_states.ERROR)
-            _instance_update.assert_has_calls([call])
+            save.assert_called_once_with()
+        self.assertIsNone(instance.task_state)
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
 
     def test_init_instance_sets_building_tasks_error_scheduling(self):
         instance = instance_obj.Instance(self.context)
@@ -409,11 +405,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self._test_init_instance_sets_building_tasks_error(instance)
 
     def _test_init_instance_cleans_image_states(self, instance):
-        with mock.patch.object(self.compute, '_instance_update'
-             ) as _instance_update:
-                self.compute._init_instance(self.context, instance)
-                call = mock.call(self.context, 'foo', task_state=None)
-                _instance_update.assert_has_calls([call])
+        with mock.patch.object(instance, 'save') as save:
+            self.compute._get_power_state = mock.Mock()
+            instance.info_cache = None
+            instance.power_state = power_state.RUNNING
+            self.compute._init_instance(self.context, instance)
+            save.assert_called_once_with()
+        self.assertIsNone(instance.task_state)
 
     def test_init_instance_cleans_image_state_pending_upload(self):
         instance = instance_obj.Instance(self.context)

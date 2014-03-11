@@ -812,9 +812,9 @@ class ComputeManager(manager.Manager):
             # instance has already been scheduled to this particular host.
             LOG.debug(_("Instance failed to spawn correctly, "
                         "setting to ERROR state"), instance=instance)
-            instance = self._instance_update(context, instance.uuid,
-                                             task_state=None,
-                                             vm_state=vm_states.ERROR)
+            instance.task_state = None
+            instance.vm_state = vm_states.ERROR
+            instance.save()
             return
 
         if (instance.vm_state != vm_states.ERROR and
@@ -825,8 +825,8 @@ class ComputeManager(manager.Manager):
             LOG.debug(_("Instance in transitional state %s at start-up "
                         "clearing task state"),
                         instance['task_state'], instance=instance)
-            instance = self._instance_update(context, instance.uuid,
-                                   task_state=None)
+            instance.task_state = None
+            instance.save()
 
         if instance.task_state == task_states.DELETING:
             try:
