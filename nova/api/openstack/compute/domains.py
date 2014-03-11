@@ -133,11 +133,11 @@ class DomainsController(wsgi.Controller):
         return servers
 
     @wsgi.serializers(xml=ServerTemplate)
-    def show(self, req, id):
+    def show(self, req, server_id):
         """Returns server details by server id."""
         try:
             context = req.environ['nova.context']
-            instance = self.compute_api.get(context, id,
+            instance = self.compute_api.get(context, server_id,
                                             want_objects=True)
             req.cache_db_instance(instance)
             return self._view_builder.show(req, instance)
