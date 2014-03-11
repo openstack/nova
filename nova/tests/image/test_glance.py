@@ -767,6 +767,129 @@ def _create_failing_glance_client(info):
     return MyGlanceStubClient()
 
 
+class TestIsImageAvailable(test.NoDBTestCase):
+    """Tests the internal _is_image_available method on the Glance service."""
+
+    class ImageSpecV2(object):
+        visibility = None
+        properties = None
+
+    class ImageSpecV1(object):
+        is_public = None
+        properties = None
+
+    def test_auth_token_override(self):
+        ctx = mock.MagicMock(auth_token=True)
+        img = mock.MagicMock()
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+        img.assert_not_called()
+
+    def test_admin_override(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=True)
+        img = mock.MagicMock()
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+        img.assert_not_called()
+
+    def test_v2_visibility(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=False)
+        # We emulate warlock validation that throws an AttributeError
+        # if you try to call is_public on an image model returned by
+        # a call to V2 image.get(). Here, the ImageSpecV2 does not have
+        # an is_public attribute and MagicMock will throw an AttributeError.
+        img = mock.MagicMock(visibility='PUBLIC',
+                             spec=TestIsImageAvailable.ImageSpecV2)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+    def test_v1_is_public(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=False)
+        img = mock.MagicMock(is_public=True,
+                             spec=TestIsImageAvailable.ImageSpecV1)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+    def test_project_is_owner(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=False,
+                             project_id='123')
+        props = {
+            'owner_id': '123'
+        }
+        img = mock.MagicMock(visibility='private', properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV2)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+        ctx.reset_mock()
+        img = mock.MagicMock(is_public=False, properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV1)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+    def test_project_context_matches_project_prop(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=False,
+                             project_id='123')
+        props = {
+            'project_id': '123'
+        }
+        img = mock.MagicMock(visibility='private', properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV2)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+        ctx.reset_mock()
+        img = mock.MagicMock(is_public=False, properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV1)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+    def test_no_user_in_props(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=False,
+                             project_id='123')
+        props = {
+        }
+        img = mock.MagicMock(visibility='private', properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV2)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertFalse(res)
+
+        ctx.reset_mock()
+        img = mock.MagicMock(is_public=False, properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV1)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertFalse(res)
+
+    def test_user_matches_context(self):
+        ctx = mock.MagicMock(auth_token=False, is_admin=False,
+                             user_id='123')
+        props = {
+            'user_id': '123'
+        }
+        img = mock.MagicMock(visibility='private', properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV2)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+        ctx.reset_mock()
+        img = mock.MagicMock(is_public=False, properties=props,
+                             spec=TestIsImageAvailable.ImageSpecV1)
+
+        res = glance.GlanceImageService._is_image_available(ctx, img)
+        self.assertTrue(res)
+
+
 class TestGlanceClientWrapper(test.NoDBTestCase):
 
     def setUp(self):
