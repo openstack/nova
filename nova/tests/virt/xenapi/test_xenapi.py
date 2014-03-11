@@ -1221,7 +1221,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
 
     def test_rescue(self):
-        instance = self._create_instance()
+        instance = self._create_instance(spawn=False)
+        xenapi_fake.create_vm(instance['name'], 'Running')
+
         session = get_session()
         vm_ref = vm_utils.lookup(session, instance['name'])
 
@@ -1241,10 +1243,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         rescue_ref = vm_utils.lookup(session, rescue_name)
         rescue_vm = xenapi_fake.get_record('VM', rescue_ref)
 
-        vdi_uuids = []
-        for vbd_uuid in rescue_vm["VBDs"]:
-            vdi_uuids.append(xenapi_fake.get_record('VBD', vbd_uuid)["VDI"])
-        self.assertNotIn("swap", vdi_uuids)
+        vdi_refs = []
+        for vbd_ref in rescue_vm['VBDs']:
+            vdi_refs.append(xenapi_fake.get_record('VBD', vbd_ref)['VDI'])
+        self.assertNotIn(swap_vdi_ref, vdi_refs)
+        self.assertIn(root_vdi_ref, vdi_refs)
 
     def test_rescue_preserve_disk_on_failure(self):
         # test that the original disk is preserved if rescue setup fails
