@@ -524,12 +524,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         This method is called by the native event thread to
         put events on the queue for later dispatch by the
-        green thread.
+        green thread. Any use of logging APIs is forbidden.
         """
 
         if self._event_queue is None:
-            LOG.debug(_("Event loop thread is not active, "
-                        "discarding event %s") % event)
             return
 
         # Queue the event...
@@ -557,12 +555,30 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Process as many events as possible without
         # blocking
+        last_close_event = None
         while not self._event_queue.empty():
             try:
                 event = self._event_queue.get(block=False)
-                self.emit_event(event)
+                if isinstance(event, virtevent.LifecycleEvent):
+                    self.emit_event(event)
+                elif 'conn' in event and 'reason' in event:
+                    last_close_event = event
             except native_Queue.Empty:
                 pass
+        if last_close_event is None:
+            return
+        conn = last_close_event['conn']
+        # get_new_connection may already have disabled the host,
+        # in which case _wrapped_conn is None.
+        with self._wrapped_conn_lock:
+            if conn == self._wrapped_conn:
+                reason = last_close_event['reason']
+                _error = _("Connection to libvirt lost: %s") % reason
+                LOG.warn(_error)
+                self._wrapped_conn = None
+                # Disable compute service to avoid
+                # new instances of being scheduled on this host.
+                self._set_host_enabled(False, disable_reason=_error)
 
     def _init_events_pipe(self):
         """Create a self-pipe for the native thread to synchronize on.
@@ -703,14 +719,8 @@ class LibvirtDriver(driver.ComputeDriver):
     _conn = property(_get_connection)
 
     def _close_callback(self, conn, reason, opaque):
-        with self._wrapped_conn_lock:
-            if conn == self._wrapped_conn:
-                _error = _("Connection to libvirt lost: %s") % reason
-                LOG.warn(_error)
-                self._wrapped_conn = None
-                # Disable compute service to avoid
-                # new instances of being scheduled on this host.
-                self._set_host_enabled(False, disable_reason=_error)
+        close_info = {'conn': conn, 'reason': reason}
+        self._queue_event(close_info)
 
     @staticmethod
     def _test_connection(conn):
