@@ -651,8 +651,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
-            ('mount', '-t', 'nfs', export_string, export_mnt_base)]
-        self.assertEqual(self.executes, expected_commands)
+            ('mount', '-t', 'nfs', export_string, export_mnt_base),
+            ('umount', export_mnt_base)]
+        self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_nfs_driver_with_opts(self):
         mnt_base = '/mnt'
@@ -676,9 +677,10 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'nfs', '-o', 'intr,nfsvers=3',
-             export_string, export_mnt_base)
+             export_string, export_mnt_base),
+            ('umount', export_mnt_base),
         ]
-        self.assertEqual(self.executes, expected_commands)
+        self.assertEqual(expected_commands, self.executes)
 
     def aoe_connection(self, shelf, lun):
         return {
@@ -722,8 +724,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
 
         expected_commands = [
             ('mkdir', '-p', export_mnt_base),
-            ('mount', '-t', 'glusterfs', export_string, export_mnt_base)]
-        self.assertEqual(self.executes, expected_commands)
+            ('mount', '-t', 'glusterfs', export_string, export_mnt_base),
+            ('umount', export_mnt_base)]
+        self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_glusterfs_driver_qcow2(self):
         libvirt_driver = volume.LibvirtGlusterfsVolumeDriver(self.fake_conn)
@@ -768,7 +771,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'glusterfs',
              '-o', 'backupvolfile-server=192.168.1.2',
-             export_string, export_mnt_base)]
+             export_string, export_mnt_base),
+            ('umount', export_mnt_base),
+        ]
         self.assertEqual(self.executes, expected_commands)
 
     def test_libvirt_glusterfs_libgfapi(self):

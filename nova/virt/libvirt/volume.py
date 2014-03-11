@@ -664,6 +664,21 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         conf.driver_format = connection_info['data'].get('format', 'raw')
         return conf
 
+    def disconnect_volume(self, connection_info, disk_dev):
+        """Disconnect the volume."""
+
+        export = connection_info['data']['export']
+        mount_path = os.path.join(CONF.libvirt.nfs_mount_point_base,
+                                  utils.get_hash_str(export))
+
+        try:
+            utils.execute('umount', mount_path, run_as_root=True)
+        except processutils.ProcessExecutionError as exc:
+            if 'target is busy' in exc.message:
+                LOG.debug(_("The NFS share %s is still in use."), export)
+            else:
+                LOG.exception(_("Couldn't unmount the NFS share %s"), export)
+
     def _ensure_mounted(self, nfs_export, options=None):
         """@type nfs_export: string
            @type options: string
@@ -794,6 +809,25 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
         conf.driver_format = connection_info['data'].get('format', 'raw')
 
         return conf
+
+    def disconnect_volume(self, connection_info, disk_dev):
+        """Disconnect the volume."""
+
+        if 'gluster' in CONF.libvirt.qemu_allowed_storage_drivers:
+            return
+
+        export = connection_info['data']['export']
+        mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
+                                  utils.get_hash_str(export))
+
+        try:
+            utils.execute('umount', mount_path, run_as_root=True)
+        except processutils.ProcessExecutionError as exc:
+            if 'target is busy' in exc.message:
+                LOG.debug(_("The GlusterFS share %s is still in use."), export)
+            else:
+                LOG.exception(_("Couldn't unmount the GlusterFS share %s"),
+                              export)
 
     def _ensure_mounted(self, glusterfs_export, options=None):
         """@type glusterfs_export: string
