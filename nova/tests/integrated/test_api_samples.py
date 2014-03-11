@@ -3797,7 +3797,8 @@ class AssistedVolumeSnapshotsXmlTest(AssistedVolumeSnapshotsJsonTest):
 class VolumeAttachmentsSampleBase(ServersSampleBase):
     def _stub_db_bdms_get_all_by_instance(self, server_id):
 
-        def fake_bdms_get_all_by_instance(context, instance_uui):
+        def fake_bdms_get_all_by_instance(context, instance_uuid,
+                                          use_slave=False):
             bdms = [
                 fake_block_device.FakeDbBlockDeviceDict(
                 {'id': 1, 'volume_id': 'a26887c6-c47b-4654-abb5-dfadf7d3f803',

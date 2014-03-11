@@ -71,7 +71,7 @@ class ComputeValidateDeviceTestCase(test.TestCase):
         self.data = []
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
-                       lambda context, instance: self.data)
+                       lambda context, instance, use_slave=False: self.data)
 
     def _update_flavor(self, flavor_info):
         self.flavor = {

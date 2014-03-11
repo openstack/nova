@@ -1183,10 +1183,12 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
     return IMPL.block_device_mapping_update_or_create(context, values, legacy)
 
 
-def block_device_mapping_get_all_by_instance(context, instance_uuid):
+def block_device_mapping_get_all_by_instance(context, instance_uuid,
+                                             use_slave=False):
     """Get all block device mapping belonging to an instance."""
     return IMPL.block_device_mapping_get_all_by_instance(context,
-                                                         instance_uuid)
+                                                         instance_uuid,
+                                                         use_slave)
 
 
 def block_device_mapping_get_by_volume_id(context, volume_id,

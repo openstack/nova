@@ -201,7 +201,7 @@ class MetadataTestCase(test.TestCase):
                          'default_ephemeral_device': None,
                          'default_swap_device': None})
 
-        def fake_bdm_get(ctxt, uuid):
+        def fake_bdm_get(ctxt, uuid, use_slave=False):
             return [fake_block_device.FakeDbBlockDeviceDict(
                     {'volume_id': 87654321,
                      'snapshot_id': None,
