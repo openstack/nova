@@ -35,7 +35,6 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 from nova import utils
 from nova.virt import imagecache
-from nova.virt import imagehandler
 from nova.virt.libvirt import utils as virtutils
 
 LOG = logging.getLogger(__name__)
@@ -420,7 +419,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         return inner_verify_checksum()
 
-    def _remove_base_file(self, context, image_id, base_file):
+    def _remove_base_file(self, base_file):
         """Remove a single base file if it is old enough.
 
         Returns nothing.
@@ -438,17 +437,12 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             maxage = CONF.remove_unused_original_minimum_age_seconds
 
         if age < maxage:
-            LOG.info(_('Base file too young to remove: %s'), base_file)
+            LOG.info(_('Base file too young to remove: %s'),
+                     base_file)
         else:
             LOG.info(_('Removing base file: %s'), base_file)
             try:
-                for handler_context in imagehandler.handle_image(
-                                                    target_path=base_file):
-                    (handler, loc, image_meta) = handler_context
-                    # The loop will stop when the handle function
-                    # returns success.
-                    handler.remove_image(context, image_id, image_meta,
-                                         base_file, location=loc)
+                os.remove(base_file)
                 signature = get_info_filename(base_file)
                 if os.path.exists(signature):
                     os.remove(signature)
@@ -516,8 +510,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                             'use'),
                           {'id': img_id,
                            'base_file': base_file})
-                self.removable_base_files.append({'image_id': img_id,
-                                                  'file': base_file})
+                self.removable_base_files.append(base_file)
 
             else:
                 LOG.debug(_('image %(id)s at (%(base_file)s): image is in '
@@ -550,10 +543,9 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                 self.active_base_files.append(backing_path)
 
         # Anything left is an unknown base image
-        for img_file in self.unexplained_images:
-            LOG.warning(_('Unknown base file: %s'), img_file)
-            self.removable_base_files.append({'image_id': None,
-                                              'file': img_file})
+        for img in self.unexplained_images:
+            LOG.warning(_('Unknown base file: %s'), img)
+            self.removable_base_files.append(img)
 
         # Dump these lists
         if self.active_base_files:
@@ -564,13 +556,12 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                      ' '.join(self.corrupt_base_files))
 
         if self.removable_base_files:
-            base_files = [entry['file'] for entry in self.removable_base_files]
-            LOG.info(_('Removable base files: %s'), ' '.join(base_files))
+            LOG.info(_('Removable base files: %s'),
+                     ' '.join(self.removable_base_files))
 
             if self.remove_unused_base_images:
-                for entry in self.removable_base_files:
-                    self._remove_base_file(context,
-                                           entry['image_id'], entry['file'])
+                for base_file in self.removable_base_files:
+                    self._remove_base_file(base_file)
 
         # That's it
         LOG.debug(_('Verification complete'))

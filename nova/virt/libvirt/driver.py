@@ -2524,18 +2524,13 @@ class LibvirtDriver(driver.ComputeDriver):
             if size == 0 or suffix == '.rescue':
                 size = None
 
-            disk_image = image('disk')
-            imagehandler_args = dict(
-                 backend_location=disk_image.backend_location(),
-                 backend_type=CONF.libvirt.images_type)
-            disk_image.cache(fetch_func=libvirt_utils.fetch_image,
-                             filename=root_fname,
-                             size=size,
-                             context=context,
-                             image_id=disk_images['image_id'],
-                             user_id=instance['user_id'],
-                             project_id=instance['project_id'],
-                             imagehandler_args=imagehandler_args)
+            image('disk').cache(fetch_func=libvirt_utils.fetch_image,
+                                context=context,
+                                filename=root_fname,
+                                size=size,
+                                image_id=disk_images['image_id'],
+                                user_id=instance['user_id'],
+                                project_id=instance['project_id'])
 
         # Lookup the filesystem type if required
         os_type_with_default = disk.get_fs_type_for_os_type(
@@ -4385,29 +4380,21 @@ class LibvirtDriver(driver.ComputeDriver):
         timer.start(interval=0.5).wait()
 
     def _fetch_instance_kernel_ramdisk(self, context, instance):
-        """Fetch kernel and ramdisk for instance."""
+        """Download kernel and ramdisk for instance in instance directory."""
+        instance_dir = libvirt_utils.get_instance_path(instance)
         if instance['kernel_id']:
-            disk_images = {'kernel_id': instance['kernel_id'],
-                           'ramdisk_id': instance['ramdisk_id']}
-
-            image = self.image_backend.image(instance, 'kernel', 'raw')
-            fname = imagecache.get_cache_fname(disk_images, 'kernel_id')
-            image.cache(fetch_func=libvirt_utils.fetch_image,
-                                context=context,
-                                filename=fname,
-                                image_id=disk_images['kernel_id'],
-                                user_id=instance['user_id'],
-                                project_id=instance['project_id'])
-
+            libvirt_utils.fetch_image(context,
+                                      os.path.join(instance_dir, 'kernel'),
+                                      instance['kernel_id'],
+                                      instance['user_id'],
+                                      instance['project_id'])
             if instance['ramdisk_id']:
-                image = self.image_backend.image(instance, 'ramdisk', 'raw')
-                fname = imagecache.get_cache_fname(disk_images, 'ramdisk_id')
-                image.cache(fetch_func=libvirt_utils.fetch_image,
-                                     context=context,
-                                     filename=fname,
-                                     image_id=disk_images['ramdisk_id'],
-                                     user_id=instance['user_id'],
-                                     project_id=instance['project_id'])
+                libvirt_utils.fetch_image(context,
+                                          os.path.join(instance_dir,
+                                                       'ramdisk'),
+                                          instance['ramdisk_id'],
+                                          instance['user_id'],
+                                          instance['project_id'])
 
     def rollback_live_migration_at_destination(self, context, instance,
                                                network_info,
