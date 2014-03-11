@@ -2541,18 +2541,6 @@
 #db_max_retries=20
 
 
-[docker]
-
-#
-# Options defined in nova.virt.docker.driver
-#
-
-# Default TCP port to find the docker-registry container
-# (integer value)
-# Deprecated group/name - [DEFAULT]/docker_registry_default_port
-#registry_default_port=5042
-
-
 [hyperv]
 
 #
