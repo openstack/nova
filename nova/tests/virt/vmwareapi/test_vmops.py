@@ -136,7 +136,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                        mock_exists):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         ops._create_folder_if_missing = mock.Mock()
-        ops._check_if_folder_file_exists(mock.Mock(), "datastore",
+        ops._check_if_folder_file_exists(mock.Mock(), mock.Mock(), "datastore",
                                          "folder", "some_file")
         ops._create_folder_if_missing.assert_called_once()
 
@@ -144,6 +144,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_check_if_folder_file_exists_no_existing(self, mock_exists):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         ops._create_folder_if_missing = mock.Mock()
-        ops._check_if_folder_file_exists(mock.Mock(), "datastore",
+        ops._check_if_folder_file_exists(mock.Mock(), mock.Mock(), "datastore",
                                          "folder", "some_file")
         ops._create_folder_if_missing.assert_called_once()

@@ -53,12 +53,12 @@ def reset(vc=False):
     create_network()
     create_host_network_system()
     create_host_storage_system()
-    create_host()
     ds_ref1 = create_datastore('ds1', 1024, 500)
+    create_host(ds_ref=ds_ref1)
     ds_ref3 = create_datastore('ds3', 1024, 100)
     if vc:
-        create_host()
         ds_ref2 = create_datastore('ds2', 1024, 500)
+        create_host(ds_ref=ds_ref2)
         ds_ref4 = create_datastore('ds4', 1024, 100)
     create_datacenter('dc1', [ds_ref1, ds_ref3])
     if vc:
@@ -637,7 +637,7 @@ class HostStorageSystem(ManagedObject):
 class HostSystem(ManagedObject):
     """Host System class."""
 
-    def __init__(self, name="ha-host", connected=True):
+    def __init__(self, name="ha-host", connected=True, ds_ref=None):
         super(HostSystem, self).__init__("host")
         self.set("name", name)
         if _db_content.get("HostNetworkSystem", None) is None:
@@ -649,6 +649,12 @@ class HostSystem(ManagedObject):
         self.set("configManager.networkSystem", host_net_sys)
         host_storage_sys_key = _get_object_refs('HostStorageSystem')[0]
         self.set("configManager.storageSystem", host_storage_sys_key)
+
+        if not ds_ref:
+            ds_ref = create_datastore('local-host-%s' % name, 500, 500)
+        datastores = DataObject()
+        datastores.ManagedObjectReference = [ds_ref]
+        self.set("datastore", datastores)
 
         summary = DataObject()
         hardware = DataObject()
@@ -837,8 +843,8 @@ def create_host_storage_system():
     _create_object("HostStorageSystem", host_storage_system)
 
 
-def create_host():
-    host_system = HostSystem()
+def create_host(ds_ref=None):
+    host_system = HostSystem(ds_ref=ds_ref)
     _create_object('HostSystem', host_system)
 
 
@@ -895,11 +901,12 @@ def _remove_file(file_path):
         _db_content.get("files").remove(file_path)
     else:
         # Removes the files in the folder and the folder too from the db
+        to_delete = set()
         for file in _db_content.get("files"):
             if file.find(file_path) != -1:
-                lst_files = _db_content.get("files")
-                if lst_files and lst_files.count(file):
-                    lst_files.remove(file)
+                to_delete.add(file)
+        for file in to_delete:
+            _db_content.get("files").remove(file)
 
 
 def fake_plug_vifs(*args, **kwargs):
@@ -1134,18 +1141,45 @@ class FakeVim(object):
 
     def _search_ds(self, method, *args, **kwargs):
         """Searches the datastore for a file."""
+        # TODO(garyk): add support for spec parameter
         ds_path = kwargs.get("datastorePath")
         if _db_content.get("files", None) is None:
             raise exception.NoFilesFound()
+        matched_files = set()
+        # Check if we are searching for a file or a directory
+        directory = False
+        dname = '%s/' % ds_path
         for file in _db_content.get("files"):
-            if file.find(ds_path) != -1:
-                result = DataObject()
-                result.path = ds_path
-                task_mdo = create_task(method, state="success",
-                                       result=result)
-                return task_mdo.obj
-        task_mdo = create_task(method, "error",
-                error_fault=FileNotFound())
+            if file == dname:
+                directory = True
+                break
+        # A directory search implies that we must return all
+        # subdirectories
+        if directory:
+            for file in _db_content.get("files"):
+                if file.find(ds_path) != -1:
+                    if not file.endswith(ds_path):
+                        path = file.lstrip(dname).split('/')
+                        if path:
+                            matched_files.add(path[0])
+            if not matched_files:
+                matched_files.add('/')
+        else:
+            for file in _db_content.get("files"):
+                if file.find(ds_path) != -1:
+                    matched_files.add(ds_path)
+        if matched_files:
+            result = DataObject()
+            result.path = ds_path
+            result.file = []
+            for file in matched_files:
+                matched = DataObject()
+                matched.path = file
+                result.file.append(matched)
+            task_mdo = create_task(method, "success", result=result)
+        else:
+            task_mdo = create_task(method, "error",
+                    error_fault=FileNotFound())
         return task_mdo.obj
 
     def _move_file(self, method, *args, **kwargs):
@@ -1170,7 +1204,9 @@ class FakeVim(object):
         ds_path = kwargs.get("name")
         if _db_content.get("files", None) is None:
             raise exception.NoFilesFound()
-        _db_content["files"].append(ds_path)
+        if get_file(ds_path):
+            raise error_util.FileAlreadyExistsException()
+        _db_content["files"].append('%s/' % ds_path)
 
     def _set_power_state(self, method, vm_ref, pwr_state="poweredOn"):
         """Sets power state for the VM."""

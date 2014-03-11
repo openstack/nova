@@ -33,6 +33,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
+from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova.openstack.common import units
@@ -42,6 +43,7 @@ from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
+from nova.virt.vmwareapi import imagecache
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
@@ -62,7 +64,9 @@ CONF = cfg.CONF
 CONF.register_group(vmware_group)
 CONF.register_opts(vmware_vif_opts, vmware_group)
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
+CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
 CONF.import_opt('vnc_enabled', 'nova.vnc')
+CONF.import_opt('my_ip', 'nova.netconf')
 
 LOG = logging.getLogger(__name__)
 
@@ -91,7 +95,13 @@ class VMwareVMOps(object):
         self._volumeops = volumeops
         self._cluster = cluster
         self._datastore_regex = datastore_regex
-        self._base_folder = CONF.image_cache_subdirectory_name
+        # Ensure that the base folder is unique per compute node
+        if CONF.remove_unused_base_images:
+            self._base_folder = '%s%s' % (CONF.my_ip,
+                                          CONF.image_cache_subdirectory_name)
+        else:
+            # Aging disable ensures backward compatibility
+            self._base_folder = CONF.image_cache_subdirectory_name
         self._tmp_folder = 'vmware_temp'
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
@@ -99,6 +109,8 @@ class VMwareVMOps(object):
         self._is_neutron = utils.is_neutron()
         self._datastore_dc_mapping = {}
         self._datastore_browser_mapping = {}
+        self._imagecache = imagecache.ImageCacheManager(self._session,
+                                                        self._base_folder)
 
     def list_instances(self):
         """Lists the VM instances that are registered with the ESX host."""
@@ -443,10 +455,27 @@ class VMwareVMOps(object):
             session_vim = self._session._get_vim()
             cookies = session_vim.client.options.transport.cookiejar
 
+            ds_browser = self._get_ds_browser(data_store_ref)
             upload_file_name = upload_name + ".%s" % file_type
+
+            # Check if the timestamp file exists - if so then delete it. This
+            # will ensure that the aging will not delete a cache image if it
+            # is going to be used now.
+            if CONF.remove_unused_base_images:
+                ds_path = ds_util.build_datastore_path(data_store_name,
+                                                       self._base_folder)
+                path = self._imagecache.timestamp_folder_get(ds_path,
+                                                             upload_name)
+                # Lock to ensure that the spawn will not try and access a image
+                # that is currently being deleted on the datastore.
+                with lockutils.lock(path, lock_file_prefix='nova-vmware-ts',
+                                    external=True):
+                    self._imagecache.timestamp_cleanup(dc_info.ref, ds_browser,
+                            data_store_ref, data_store_name, path)
+
             # Check if the image exists in the datastore cache. If not the
             # image will be uploaded and cached.
-            if not (self._check_if_folder_file_exists(
+            if not (self._check_if_folder_file_exists(ds_browser,
                                         data_store_ref, data_store_name,
                                         upload_folder, upload_file_name)):
                 # Upload will be done to the self._tmp_folder and then moved
@@ -553,7 +582,7 @@ class VMwareVMOps(object):
                                                         root_gb)
                     root_vmdk_path = ds_util.build_datastore_path(
                             data_store_name, root_vmdk_name)
-                    if not self._check_if_folder_file_exists(
+                    if not self._check_if_folder_file_exists(ds_browser,
                                         data_store_ref, data_store_name,
                                         upload_folder,
                                         upload_name + ".%s.vmdk" % root_gb):
@@ -1584,11 +1613,10 @@ class VMwareVMOps(object):
         """Check that the temp folder exists."""
         self._create_folder_if_missing(ds_name, ds_ref, self._tmp_folder)
 
-    def _check_if_folder_file_exists(self, ds_ref, ds_name,
+    def _check_if_folder_file_exists(self, ds_browser, ds_ref, ds_name,
                                      folder_name, file_name):
         # Ensure that the cache folder exists
         self.check_cache_folder(ds_name, ds_ref)
-        ds_browser = self._get_ds_browser(ds_ref)
         # Check if the file exists or not.
         folder_path = ds_util.build_datastore_path(ds_name, folder_name)
         file_exists = ds_util.file_exists(self._session, ds_browser,
@@ -1601,6 +1629,20 @@ class VMwareVMOps(object):
         # the NIC configuration inside the VM
         client_factory = self._session._get_vim().client.factory
         self._set_machine_id(client_factory, instance, network_info)
+
+    def manage_image_cache(self, context, instances):
+        if not CONF.remove_unused_base_images:
+            LOG.debug(_("Image aging disabled. Aging will not be done."))
+            return
+
+        datastores = vm_util.get_available_datastores(self._session,
+                                                      self._cluster,
+                                                      self._datastore_regex)
+        datastores_info = []
+        for ds in datastores:
+            ds_info = self.get_datacenter_ref_and_name(ds['ref'])
+            datastores_info.append((ds, ds_info))
+        self._imagecache.update(context, instances, datastores_info)
 
 
 class VMwareVCVMOps(VMwareVMOps):
