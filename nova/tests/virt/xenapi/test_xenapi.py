@@ -1813,7 +1813,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         def fake_get_partitions(partition):
-            return [(1, 2, 3, 4), (1, 2, 3, 4)]
+            return [(1, 2, 3, 4, "", ""), (1, 2, 3, 4, "", "")]
 
         self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
 
@@ -1831,7 +1831,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         def fake_get_partitions(partition):
-            return [(1, 2, 3, "ext2")]
+            return [(1, 2, 3, "ext2", "", "boot")]
 
         self.stubs.Set(vm_utils, '_get_partitions', fake_get_partitions)
 
@@ -2223,7 +2223,8 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def assertIsPartitionCalled(self, called):
         marker = {"partition_called": False}
 
-        def fake_resize_part_and_fs(dev, start, old, new):
+        def fake_resize_part_and_fs(dev, start, old_sectors, new_sectors,
+                                    flags):
             marker["partition_called"] = True
         self.stubs.Set(vm_utils, "_resize_part_and_fs",
                        fake_resize_part_and_fs)
@@ -2253,12 +2254,36 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.assertIsPartitionCalled(False)
 
     @stub_vm_utils_with_vdi_attached_here
-    def test_instance_auto_disk_config_doesnt_pass_fail_safes(self):
+    def test_instance_auto_disk_config_fails_safe_two_partitions(self):
         # Should not partition unless fail safes pass.
         self.instance_values['auto_disk_config'] = True
 
         def fake_get_partitions(dev):
-            return [(1, 0, 100, 'ext4'), (2, 100, 200, 'ext4')]
+            return [(1, 0, 100, 'ext4', "", ""), (2, 100, 200, 'ext4' "", "")]
+        self.stubs.Set(vm_utils, "_get_partitions",
+                       fake_get_partitions)
+
+        self.assertIsPartitionCalled(False)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_instance_auto_disk_config_fails_safe_badly_numbered(self):
+        # Should not partition unless fail safes pass.
+        self.instance_values['auto_disk_config'] = True
+
+        def fake_get_partitions(dev):
+            return [(2, 100, 200, 'ext4', "", "")]
+        self.stubs.Set(vm_utils, "_get_partitions",
+                       fake_get_partitions)
+
+        self.assertIsPartitionCalled(False)
+
+    @stub_vm_utils_with_vdi_attached_here
+    def test_instance_auto_disk_config_fails_safe_bad_fstype(self):
+        # Should not partition unless fail safes pass.
+        self.instance_values['auto_disk_config'] = True
+
+        def fake_get_partitions(dev):
+            return [(1, 100, 200, 'asdf', "", "")]
         self.stubs.Set(vm_utils, "_get_partitions",
                        fake_get_partitions)
 
@@ -2272,7 +2297,7 @@ class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
         self.instance_values['auto_disk_config'] = True
 
         def fake_get_partitions(dev):
-            return [(1, 0, 100, 'ext4')]
+            return [(1, 0, 100, 'ext4', "", "boot")]
         self.stubs.Set(vm_utils, "_get_partitions",
                        fake_get_partitions)
 
