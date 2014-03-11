@@ -51,8 +51,14 @@ def fake_temp_session_exception():
 
 def fake_session_file_exception():
     fault_list = [error_util.FILE_ALREADY_EXISTS]
-    raise error_util.VimFaultException(fault_list,
-                                       Exception('fake'))
+    raise error_util.VimFaultException(fault_list, 'fake')
+
+
+def fake_session_permission_exception():
+    fault_list = [error_util.NO_PERMISSION]
+    fault_string = 'Permission to perform this operation was denied.'
+    details = {'privilegeId': 'Resource.AssignVMToPool', 'object': 'domain-c7'}
+    raise error_util.VimFaultException(fault_list, fault_string, details)
 
 
 def set_stubs(stubs):

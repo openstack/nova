@@ -885,7 +885,8 @@ class VMwareAPISession(object):
                     # errors. e.g, InvalidArgument fault.
                     # Raise specific exceptions here if possible
                     if excep.fault_list:
-                        raise error_util.get_fault_class(excep.fault_list[0])
+                        fault = excep.fault_list[0]
+                        raise error_util.get_fault_class(fault)(str(excep))
                     break
             except error_util.SessionOverLoadException as excep:
                 # For exceptions which may come because of session overload,
