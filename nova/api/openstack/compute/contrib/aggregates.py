@@ -75,6 +75,9 @@ class AggregateController(object):
         avail_zone = host_aggregate.get("availability_zone")
         try:
             utils.check_string_length(name, "Aggregate name", 1, 255)
+            if avail_zone is not None:
+                utils.check_string_length(avail_zone, "Availability_zone", 1,
+                                          255)
         except exception.InvalidInput as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
@@ -118,12 +121,15 @@ class AggregateController(object):
             if key not in ["name", "availability_zone"]:
                 raise exc.HTTPBadRequest()
 
-        if 'name' in updates:
-            try:
+        try:
+            if 'name' in updates:
                 utils.check_string_length(updates['name'], "Aggregate name", 1,
                                           255)
-            except exception.InvalidInput as e:
-                raise exc.HTTPBadRequest(explanation=e.format_message())
+            if updates.get("availability_zone") is not None:
+                utils.check_string_length(updates['availability_zone'],
+                                          "Availability_zone", 1, 255)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
@@ -208,6 +214,17 @@ class AggregateController(object):
             metadata = body["metadata"]
         except KeyError:
             raise exc.HTTPBadRequest()
+
+        # The metadata should be a dict
+        if not isinstance(metadata, dict):
+            msg = _('The value of metadata must be a dict')
+            raise exc.HTTPBadRequest(explanation=msg)
+        try:
+            for key, value in metadata.items():
+                utils.check_string_length(key, "metadata.key", 1, 255)
+                utils.check_string_length(value, "metadata.value", 0, 255)
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         try:
             aggregate = self.api.update_aggregate_metadata(context,
                                                            id, metadata)

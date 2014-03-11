@@ -151,6 +151,37 @@ class AggregateTestCase(test.NoDBTestCase):
                                      {"name": "x" * 256,
                                       "availability_zone": "nova1"}})
 
+    def test_create_with_availability_zone_too_long(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
+                          self.req, {"aggregate":
+                                     {"name": "test",
+                                      "availability_zone": "x" * 256}})
+
+    def test_create_with_null_availability_zone(self):
+        aggregate = {"name": "aggregate1",
+                     "id": "1",
+                     "availability_zone": None}
+
+        def stub_create_aggregate(context, name, az_name):
+            self.assertEqual(context, self.context, "context")
+            self.assertEqual("aggregate1", name, "name")
+            self.assertIsNone(az_name, "availability_zone")
+            return aggregate
+        self.stubs.Set(self.controller.api, 'create_aggregate',
+                       stub_create_aggregate)
+
+        result = self.controller.create(self.req,
+                                        {"aggregate":
+                                         {"name": "aggregate1",
+                                          "availability_zone": None}})
+        self.assertEqual(aggregate, result["aggregate"])
+
+    def test_create_with_empty_availability_zone(self):
+        self.assertRaises(exc.HTTPBadRequest, self.controller.create,
+                          self.req, {"aggregate":
+                                     {"name": "test",
+                                      "availability_zone": ""}})
+
     def test_create_with_extra_invalid_arg(self):
         self.assertRaises(exc.HTTPBadRequest, self.controller.create,
                           self.req, dict(name="test",
@@ -252,6 +283,34 @@ class AggregateTestCase(test.NoDBTestCase):
         test_metadata = {"aggregate": {"name": "x" * 256}}
         self.assertRaises(exc.HTTPBadRequest, self.controller.update,
                           self.req, "2", body=test_metadata)
+
+    def test_update_with_availability_zone_too_long(self):
+        test_metadata = {"aggregate": {"availability_zone": "x" * 256}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+                          self.req, "2", body=test_metadata)
+
+    def test_update_with_empty_availability_zone(self):
+        test_metadata = {"aggregate": {"availability_zone": ""}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.update,
+                          self.req, "2", body=test_metadata)
+
+    def test_update_with_null_availability_zone(self):
+        body = {"aggregate": {"availability_zone": None}}
+        aggre = {"name": "aggregate1",
+                     "id": "1",
+                     "availability_zone": None}
+
+        def stub_update_aggregate(context, aggregate, values):
+            self.assertEqual(context, self.context, "context")
+            self.assertEqual("1", aggregate, "aggregate")
+            self.assertIsNone(values["availability_zone"], "availability_zone")
+            return aggre
+        self.stubs.Set(self.controller.api, "update_aggregate",
+                       stub_update_aggregate)
+
+        result = self.controller.update(self.req, "1", body=body)
+
+        self.assertEqual(aggre, result["aggregate"])
 
     def test_update_with_bad_aggregate(self):
         test_metadata = {"aggregate": {"name": "test_name"}}
@@ -454,6 +513,26 @@ class AggregateTestCase(test.NoDBTestCase):
 
     def test_set_metadata_with_extra_params(self):
         body = {"metadata": {"foo": "bar"}, "asdf": {"foo": "bar"}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                          self.req, "1", body=body)
+
+    def test_set_metadata_with_empty_key(self):
+        body = {"set_metadata": {"metadata": {"": "value"}}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                          self.req, "1", body=body)
+
+    def test_set_metadata_with_key_too_long(self):
+        body = {"set_metadata": {"metadata": {"x" * 256: "value"}}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                          self.req, "1", body=body)
+
+    def test_set_metadata_with_value_too_long(self):
+        body = {"set_metadata": {"metadata": {"key": "x" * 256}}}
+        self.assertRaises(exc.HTTPBadRequest, self.controller.action,
+                          self.req, "1", body=body)
+
+    def test_set_metadata_with_string(self):
+        body = {"set_metadata": {"metadata": "test"}}
         self.assertRaises(exc.HTTPBadRequest, self.controller.action,
                           self.req, "1", body=body)
 
