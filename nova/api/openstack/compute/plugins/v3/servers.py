@@ -525,6 +525,8 @@ class ServersController(wsgi.Controller):
                 exception.InstanceUserDataMalformed,
                 exception.PortNotFound,
                 exception.SecurityGroupNotFound,
+                exception.PortRequiresFixedIP,
+                exception.NetworkRequiresSubnet,
                 exception.NetworkNotFound) as error:
             raise exc.HTTPBadRequest(explanation=error.format_message())
         except (exception.PortInUse,
