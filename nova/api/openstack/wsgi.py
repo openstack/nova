@@ -40,14 +40,6 @@ XMLNS_ATOM = 'http://www.w3.org/2005/Atom'
 
 LOG = logging.getLogger(__name__)
 
-# The vendor content types should serialize identically to the non-vendor
-# content types. So to avoid littering the code with both options, we
-# map the vendor to the other when looking up the type
-_CONTENT_TYPE_MAP = {
-    'application/vnd.openstack.compute+json': 'application/json',
-    'application/vnd.openstack.compute+xml': 'application/xml',
-}
-
 SUPPORTED_CONTENT_TYPES = (
     'application/json',
     'application/vnd.openstack.compute+json',
@@ -946,7 +938,11 @@ class Resource(wsgi.Application):
                     "%(body)s") % {'action': action,
                                    'body': unicode(body, 'utf-8')}
             LOG.debug(logging.mask_password(msg))
-        LOG.debug(_("Calling method %s") % str(meth))
+        LOG.debug(_("Calling method '%(meth)s' (Content-type='%(ctype)s', "
+                    "Accept='%(accept)s')"),
+                  {'meth': str(meth),
+                   'ctype': content_type,
+                   'accept': accept})
 
         # Now, deserialize the request body...
         try:
