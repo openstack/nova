@@ -156,3 +156,14 @@ class VMOpsTestCase(test.NoDBTestCase):
             self.assertRaises(vmutils.HyperVException,
                               self._vmops.get_console_output,
                               fake_vm)
+
+    def test_list_instance_uuids(self):
+        fake_uuid = '4f54fb69-d3a2-45b7-bb9b-b6e6b3d893b3'
+        with mock.patch.object(self._vmops._vmutils,
+                               'list_instance_notes') as mock_list_notes:
+            mock_list_notes.return_value = [('fake_name', [fake_uuid])]
+
+            response = self._vmops.list_instance_uuids()
+            mock_list_notes.assert_called_once_with()
+
+        self.assertEqual(response, [fake_uuid])
