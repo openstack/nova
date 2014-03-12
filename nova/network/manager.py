@@ -52,6 +52,7 @@ import netaddr
 from oslo.config import cfg
 from oslo import messaging
 
+from nova import conductor
 from nova import context
 from nova import exception
 from nova import ipv6
@@ -61,7 +62,6 @@ from nova.network import driver
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
-from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import dns_domain as dns_domain_obj
 from nova.objects import fixed_ip as fixed_ip_obj
@@ -295,8 +295,7 @@ class NetworkManager(manager.Manager):
                 CONF.floating_ip_dns_manager)
         self.network_api = network_api.API()
         self.network_rpcapi = network_rpcapi.NetworkAPI()
-        self.security_group_api = (
-            openstack_driver.get_openstack_security_group_driver())
+        self.conductor_api = conductor.API()
 
         self.servicegroup_api = servicegroup.API()
 
@@ -401,8 +400,8 @@ class NetworkManager(manager.Manager):
         groups = instance.security_groups
         group_ids = [group.id for group in groups]
 
-        self.security_group_api.trigger_members_refresh(admin_context,
-                                                        group_ids)
+        self.conductor_api.security_groups_trigger_members_refresh(
+            admin_context, group_ids)
 
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         # NOTE(jkoelker) This is just a stub function. Managers supporting
