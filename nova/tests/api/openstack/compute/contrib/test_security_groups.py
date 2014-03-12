@@ -14,6 +14,7 @@
 #    under the License.
 
 from lxml import etree
+import mock
 import mox
 from oslo.config import cfg
 import webob
@@ -379,6 +380,24 @@ class TestSecurityGroups(test.TestCase):
         res_dict = self.server_controller.index(req, FAKE_UUID1)
 
         self.assertEqual(res_dict, expected)
+
+    @mock.patch('nova.db.instance_get_by_uuid')
+    @mock.patch('nova.db.security_group_get_by_instance', return_value=[])
+    def test_get_security_group_empty_for_instance(self, mock_sec_group,
+                                                   mock_db_get_ins):
+        expected = {'security_groups': []}
+
+        def return_instance(context, server_id,
+                            columns_to_join=None, use_slave=False):
+            self.assertEqual(server_id, FAKE_UUID1)
+            return return_server_by_uuid(context, server_id)
+        mock_db_get_ins.side_effect = return_instance
+        req = fakes.HTTPRequest.blank('/v2/%s/servers/%s/os-security-groups' %
+                                      ('fake', FAKE_UUID1))
+        res_dict = self.server_controller.index(req, FAKE_UUID1)
+        self.assertEqual(expected, res_dict)
+        mock_sec_group.assert_called_once_with(req.environ['nova.context'],
+                                               FAKE_UUID1)
 
     def test_get_security_group_by_instance_non_existing(self):
         self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)

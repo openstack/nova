@@ -3921,6 +3921,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         groups = instance.get('security_groups')
         if groups:
             return [{'name': group['name']} for group in groups]
+        return []
 
     def populate_security_groups(self, instance, security_groups):
         if not security_groups:

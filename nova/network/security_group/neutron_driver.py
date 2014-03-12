@@ -380,7 +380,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         servers = [{'id': instance_uuid}]
         sg_bindings = self.get_instances_security_groups_bindings(
                                   context, servers, detailed)
-        return sg_bindings.get(instance_uuid)
+        return sg_bindings.get(instance_uuid, [])
 
     def _has_security_group_requirements(self, port):
         port_security_enabled = port.get('port_security_enabled', True)
