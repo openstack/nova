@@ -165,7 +165,7 @@ class FileTransfer(xfer_base.TransferBase):
                  {'source_file': source_file, 'module_str': str(self)})
 
 
-def get_download_hander(**kwargs):
+def get_download_handler(**kwargs):
     return FileTransfer()
 
 
