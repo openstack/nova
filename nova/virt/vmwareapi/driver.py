@@ -361,7 +361,8 @@ class VMwareVCDriver(VMwareESXDriver):
     # hypervisor host machines and their guests. This fact can
     # subtly alter how vSphere and OpenStack interoperate.
 
-    def _do_quality_warnings(self):
+    def _do_deprecation_warning(self):
+        # Driver validated by VMware's Minesweeper CI
         pass
 
     def __init__(self, virtapi, read_only=False, scheme="https"):
