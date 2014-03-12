@@ -434,7 +434,18 @@ class GlanceImageService(object):
         if hasattr(context, 'auth_token') and context.auth_token:
             return True
 
-        if image.is_public or context.is_admin:
+        def _is_image_public(image):
+            # NOTE(jaypipes) V2 Glance API replaced the is_public attribute
+            # with a visibility attribute. We do this here to prevent the
+            # glanceclient for a V2 image model from throwing an
+            # exception from warlock when trying to access an is_public
+            # attribute.
+            if hasattr(image, 'visibility'):
+                return str(image.visibility).lower() == 'public'
+            else:
+                return image.is_public
+
+        if context.is_admin or _is_image_public(image):
             return True
 
         properties = image.properties
