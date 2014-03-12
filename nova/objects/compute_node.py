@@ -51,7 +51,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         target_version = (int(target_version.split('.')[0]),
                           int(target_version.split('.')[1]))
-        if target_version < (1, 3):
+        if target_version < (1, 3) and 'stats' in primitive:
             # pre 1.3 version does not have a stats field
             del primitive['stats']
 
@@ -65,8 +65,6 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         stats = db_compute['stats']
         if stats:
             compute['stats'] = jsonutils.loads(stats)
-        else:
-            compute['stats'] = {}
 
         compute._context = context
         compute.obj_reset_changes()
@@ -82,6 +80,11 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
         db_compute = db.compute_node_get_by_service_id(context, service_id)
         return cls._from_db_object(context, cls(), db_compute)
 
+    def _convert_stats_to_db_format(self, updates):
+        stats = updates.pop('stats', None)
+        if stats is not None:
+            updates['stats'] = jsonutils.dumps(stats)
+
     @base.remotable
     def create(self, context):
         if self.obj_attr_is_set('id'):
@@ -89,18 +92,18 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
                                               reason='already created')
         updates = self.obj_get_changes()
         updates.pop('id', None)
+        self._convert_stats_to_db_format(updates)
+
         db_compute = db.compute_node_create(context, updates)
         self._from_db_object(context, self, db_compute)
 
     @base.remotable
     def save(self, context, prune_stats=False):
         # NOTE(belliott) ignore prune_stats param, no longer relevant
+
         updates = self.obj_get_changes()
         updates.pop('id', None)
-
-        stats = updates.pop('stats', None)
-        if stats is not None:
-            updates['stats'] = jsonutils.dumps(stats)
+        self._convert_stats_to_db_format(updates)
 
         db_compute = db.compute_node_update(context, self.id, updates)
         self._from_db_object(context, self, db_compute)

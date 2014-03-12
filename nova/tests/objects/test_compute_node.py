@@ -16,10 +16,13 @@ from nova import db
 from nova import exception
 from nova.objects import compute_node
 from nova.objects import service
+from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.tests.objects import test_objects
 
 NOW = timeutils.utcnow().replace(microsecond=0)
+fake_stats = {'num_foo': '10'}
+fake_stats_db_format = jsonutils.dumps(fake_stats)
 fake_compute_node = {
     'created_at': NOW,
     'updated_at': None,
@@ -43,8 +46,8 @@ fake_compute_node = {
     'cpu_info': 'Schmintel i786',
     'disk_available_least': 256,
     'metrics': '',
-    'stats': '{}',
-}
+    'stats': fake_stats_db_format,
+    }
 
 
 class _TestComputeNodeObject(object):
@@ -67,11 +70,16 @@ class _TestComputeNodeObject(object):
 
     def test_create(self):
         self.mox.StubOutWithMock(db, 'compute_node_create')
-        db.compute_node_create(self.context, {'service_id': 456}).AndReturn(
-            fake_compute_node)
+        db.compute_node_create(
+            self.context,
+            {
+                'service_id': 456,
+                'stats': fake_stats_db_format
+            }).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
         compute.service_id = 456
+        compute.stats = fake_stats
         compute.create(self.context)
         self.compare_obj(compute, fake_compute_node,
                          comparators={'stats': self.json_comparator})
@@ -89,12 +97,17 @@ class _TestComputeNodeObject(object):
 
     def test_save(self):
         self.mox.StubOutWithMock(db, 'compute_node_update')
-        db.compute_node_update(self.context, 123, {'vcpus_used': 3}).\
-                AndReturn(fake_compute_node)
+        db.compute_node_update(
+            self.context, 123,
+            {
+                'vcpus_used': 3,
+                'stats': fake_stats_db_format
+            }).AndReturn(fake_compute_node)
         self.mox.ReplayAll()
         compute = compute_node.ComputeNode()
         compute.id = 123
         compute.vcpus_used = 3
+        compute.stats = fake_stats
         compute.save(self.context)
         self.compare_obj(compute, fake_compute_node,
                          comparators={'stats': self.json_comparator})
