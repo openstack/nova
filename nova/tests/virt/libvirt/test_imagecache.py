@@ -31,9 +31,6 @@ from nova.openstack.common import processutils
 from nova import test
 from nova.tests import fake_instance
 from nova import utils
-from nova.virt import fake
-from nova.virt import imagehandler
-from nova.virt.libvirt import driver as libvirt_driver
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import utils as virtutils
 
@@ -63,8 +60,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                                          'instance-00000002',
                                          'instance-00000003',
                                          'banana-42-hamster'])
-        imagehandler.load_image_handlers(libvirt_driver.LibvirtDriver(
-                                                  fake.FakeVirtAPI(), False))
 
     def test_read_stored_checksum_missing(self):
         self.stubs.Set(os.path, 'exists', lambda x: False)
@@ -340,7 +335,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     def test_remove_base_file(self):
         with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
-            image_cache_manager._remove_base_file(None, None, fname)
+            image_cache_manager._remove_base_file(fname)
             info_fname = imagecache.get_info_filename(fname)
 
             # Files are initially too new to delete
@@ -349,7 +344,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             # Old files get cleaned up though
             os.utime(fname, (-1, time.time() - 3601))
-            image_cache_manager._remove_base_file(None, None, fname)
+            image_cache_manager._remove_base_file(fname)
 
             self.assertFalse(os.path.exists(fname))
             self.assertFalse(os.path.exists(info_fname))
@@ -358,7 +353,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         with self._make_base_file() as fname:
             image_cache_manager = imagecache.ImageCacheManager()
             image_cache_manager.originals = [fname]
-            image_cache_manager._remove_base_file(None, None, fname)
+            image_cache_manager._remove_base_file(fname)
             info_fname = imagecache.get_info_filename(fname)
 
             # Files are initially too new to delete
@@ -367,14 +362,14 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             # This file should stay longer than a resized image
             os.utime(fname, (-1, time.time() - 3601))
-            image_cache_manager._remove_base_file(None, None, fname)
+            image_cache_manager._remove_base_file(fname)
 
             self.assertTrue(os.path.exists(fname))
             self.assertTrue(os.path.exists(info_fname))
 
             # Originals don't stay forever though
             os.utime(fname, (-1, time.time() - 3600 * 25))
-            image_cache_manager._remove_base_file(None, None, fname)
+            image_cache_manager._remove_base_file(fname)
 
             self.assertFalse(os.path.exists(fname))
             self.assertFalse(os.path.exists(info_fname))
@@ -390,7 +385,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             fname = os.path.join(tmpdir, 'aaa')
             image_cache_manager = imagecache.ImageCacheManager()
-            image_cache_manager._remove_base_file(None, None, fname)
+            image_cache_manager._remove_base_file(fname)
 
     def test_remove_base_file_oserror(self):
         with intercept_log_messages() as stream:
@@ -407,7 +402,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
                 # This will raise an OSError because of file permissions
                 image_cache_manager = imagecache.ImageCacheManager()
-                image_cache_manager._remove_base_file(None, None, fname)
+                image_cache_manager._remove_base_file(fname)
 
                 self.assertTrue(os.path.exists(fname))
                 self.assertNotEqual(stream.getvalue().find('Failed to remove'),
@@ -425,7 +420,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
             self.assertEqual(image_cache_manager.unexplained_images, [])
             self.assertEqual(image_cache_manager.removable_base_files,
-                             [{'image_id': img, 'file': fname}])
+                             [fname])
             self.assertEqual(image_cache_manager.corrupt_base_files, [])
 
     def test_handle_base_image_used(self):
@@ -669,12 +664,6 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
 
         self.stubs.Set(os, 'remove', lambda x: remove(x))
 
-        def fake_remove_image(*args, **kwargs):
-            return True
-
-        self.stubs.Set(imagehandler.download.DownloadImageHandler,
-                       '_remove_image', fake_remove_image)
-
         # And finally we can make the call we're actually testing...
         # The argument here should be a context, but it is mocked out
         image_cache_manager.update(None, all_instances)
@@ -687,13 +676,11 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(len(image_cache_manager.active_base_files),
                          len(active))
 
-        removable_base_files = [entry['file'] for entry in
-                                image_cache_manager.removable_base_files]
         for rem in [fq_path('e97222e91fc4241f49a7f520d1dcf446751129b3_sm'),
                     fq_path('e09c675c2d1cfac32dae3c2d83689c8c94bc693b_sm'),
                     fq_path(hashed_42),
                     fq_path('%s_10737418240' % hashed_1)]:
-            self.assertIn(rem, removable_base_files)
+            self.assertIn(rem, image_cache_manager.removable_base_files)
 
         # Ensure there are no "corrupt" images as well
         self.assertEqual(len(image_cache_manager.corrupt_base_files), 0)

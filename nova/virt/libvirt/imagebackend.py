@@ -122,10 +122,6 @@ class Image(object):
         """
         pass
 
-    def backend_location(self):
-        """Return where the data is stored by this image backend."""
-        return self.path
-
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
             extra_specs, hypervisor_version):
         """Get `LibvirtConfigGuestDisk` filled for this image.
@@ -540,9 +536,6 @@ class Rbd(Image):
             hosts.append(host.strip('[]'))
             ports.append(port)
         return hosts, ports
-
-    def backend_location(self):
-        return self.pool, self.rbd_name
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
             extra_specs, hypervisor_version):

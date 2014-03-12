@@ -1999,17 +1999,6 @@
 
 
 #
-# Options defined in nova.virt.imagehandler
-#
-
-# Specifies which image handler extension names to use for
-# handling images. The first extension in the list which can
-# handle the image with a suitable location will be used.
-# (list value)
-#image_handlers=download
-
-
-#
 # Options defined in nova.virt.images
 #
 

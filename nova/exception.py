@@ -1520,8 +1520,3 @@ class RequestedVRamTooHigh(NovaException):
 
 class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
-
-
-class NoImageHandlerAvailable(NovaException):
-    msg_fmt = _("No image handlers specified in the configuration "
-                "are available for image %(image_id)s.")

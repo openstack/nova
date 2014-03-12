@@ -292,7 +292,7 @@ class GlanceImageService(object):
         base_image_meta = self._translate_from_glance(image)
         return base_image_meta
 
-    def get_locations(self, context, image_id):
+    def _get_locations(self, context, image_id):
         """Returns the direct url representing the backend storage location,
         or None if this attribute is not shown by Glance.
         """
@@ -324,7 +324,7 @@ class GlanceImageService(object):
     def download(self, context, image_id, data=None, dst_path=None):
         """Calls out to Glance for data and writes data."""
         if CONF.allowed_direct_url_schemes and dst_path is not None:
-            locations = self.get_locations(context, image_id)
+            locations = self._get_locations(context, image_id)
             for entry in locations:
                 loc_url = entry['url']
                 loc_meta = entry['metadata']

@@ -29,7 +29,6 @@ from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.virt import event as virtevent
-from nova.virt import imagehandler
 
 driver_opts = [
     cfg.StrOpt('compute_driver',
@@ -132,7 +131,6 @@ class ComputeDriver(object):
     def __init__(self, virtapi):
         self.virtapi = virtapi
         self._compute_event_callback = None
-        imagehandler.load_image_handlers(self)
 
     def init_host(self, host):
         """Initialize anything that is necessary for the driver to function,
