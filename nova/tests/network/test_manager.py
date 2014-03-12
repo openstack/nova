@@ -35,11 +35,11 @@ from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import floating_ip as floating_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
+from nova.objects import quotas as quotas_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
-from nova import quota
 from nova import test
 from nova.tests import fake_instance
 from nova.tests import fake_ldap
@@ -360,7 +360,8 @@ class FlatNetworkTestCase(test.TestCase):
 
         self.network.validate_networks(self.context, requested_networks)
 
-    def test_add_fixed_ip_instance_using_id_without_vpn(self):
+    @mock.patch('nova.objects.quotas.Quotas.reserve')
+    def test_add_fixed_ip_instance_using_id_without_vpn(self, reserve):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -370,7 +371,6 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
@@ -388,15 +388,12 @@ class FlatNetworkTestCase(test.TestCase):
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
 
-        quota.QUOTAS.reserve(mox.IgnoreArg(),
-                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
-
+        inst = fake_inst(display_name=HOST, uuid=FAKEUUID)
         db.instance_get_by_uuid(self.context,
                                 mox.IgnoreArg(), use_slave=False,
                                 columns_to_join=['info_cache',
                                                  'security_groups']
-                                ).AndReturn(fake_inst(display_name=HOST,
-                                                      uuid=FAKEUUID))
+                                ).AndReturn(inst)
 
         db.network_get(mox.IgnoreArg(),
                        mox.IgnoreArg(),
@@ -410,8 +407,14 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
                                               networks[0]['id'])
+        exp_project, exp_user = quotas_obj.ids_from_instance(self.context,
+                                                             inst)
+        reserve.assert_called_once_with(self.context, fixed_ips=1,
+                                        project_id=exp_project,
+                                        user_id=exp_user)
 
-    def test_add_fixed_ip_instance_using_uuid_without_vpn(self):
+    @mock.patch('nova.objects.quotas.Quotas.reserve')
+    def test_add_fixed_ip_instance_using_uuid_without_vpn(self, reserve):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -421,7 +424,6 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db,
                               'virtual_interface_get_by_instance_and_network')
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
 
@@ -439,15 +441,12 @@ class FlatNetworkTestCase(test.TestCase):
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
 
-        quota.QUOTAS.reserve(mox.IgnoreArg(),
-                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
-
+        inst = fake_inst(display_name=HOST, uuid=FAKEUUID)
         db.instance_get_by_uuid(self.context,
                                 mox.IgnoreArg(), use_slave=False,
                                 columns_to_join=['info_cache',
                                                  'security_groups']
-                                ).AndReturn(fake_inst(display_name=HOST,
-                                                      uuid=FAKEUUID))
+                                ).AndReturn(inst)
 
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()
@@ -460,6 +459,11 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
                                               networks[0]['uuid'])
+        exp_project, exp_user = quotas_obj.ids_from_instance(self.context,
+                                                             inst)
+        reserve.assert_called_once_with(self.context, fixed_ips=1,
+                                        project_id=exp_project,
+                                        user_id=exp_user)
 
     def test_mini_dns_driver(self):
         zone1 = "example.org"
@@ -505,7 +509,8 @@ class FlatNetworkTestCase(test.TestCase):
         addresses = driver.get_entries_by_address("10.0.0.10", zone1)
         self.assertEqual(len(addresses), 0)
 
-    def test_instance_dns(self):
+    @mock.patch('nova.objects.quotas.Quotas.reserve')
+    def test_instance_dns(self, reserve):
         self.stubs.Set(self.network,
                 '_do_trigger_security_group_members_refresh_for_instance',
                 lambda *a, **kw: None)
@@ -519,7 +524,6 @@ class FlatNetworkTestCase(test.TestCase):
         self.mox.StubOutWithMock(db, 'fixed_ip_update')
         self.mox.StubOutWithMock(db, 'instance_get_by_uuid')
         self.mox.StubOutWithMock(self.network, 'get_instance_nw_info')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
 
         db.fixed_ip_associate_pool(mox.IgnoreArg(),
                                    mox.IgnoreArg(),
@@ -534,15 +538,12 @@ class FlatNetworkTestCase(test.TestCase):
                            mox.IgnoreArg(),
                            mox.IgnoreArg())
 
-        quota.QUOTAS.reserve(mox.IgnoreArg(),
-                             fixed_ips=mox.IgnoreArg()).AndReturn(None)
-
+        inst = fake_inst(display_name=HOST, uuid=FAKEUUID)
         db.instance_get_by_uuid(self.context,
                                 mox.IgnoreArg(), use_slave=False,
                                 columns_to_join=['info_cache',
                                                  'security_groups']
-                                ).AndReturn(fake_inst(display_name=HOST,
-                                                      uuid=FAKEUUID))
+                                ).AndReturn(inst)
 
         db.network_get_by_uuid(mox.IgnoreArg(),
                                mox.IgnoreArg()
@@ -565,6 +566,11 @@ class FlatNetworkTestCase(test.TestCase):
                                               self.network.instance_dns_domain)
         self.assertEqual(len(addresses), 1)
         self.assertEqual(addresses[0], fixedip['address'])
+        exp_project, exp_user = quotas_obj.ids_from_instance(self.context,
+                                                             inst)
+        reserve.assert_called_once_with(self.context, fixed_ips=1,
+                                        project_id=exp_project,
+                                        user_id=exp_user)
 
     def test_allocate_floating_ip(self):
         self.assertIsNone(self.network.allocate_floating_ip(self.context,
@@ -599,6 +605,37 @@ class FlatNetworkTestCase(test.TestCase):
         self.assertEqual(res[0]['id'], 1)
         self.assertEqual(res[1]['id'], 0)
 
+    @mock.patch('nova.objects.instance.Instance.get_by_uuid')
+    @mock.patch('nova.objects.quotas.Quotas.reserve')
+    @mock.patch('nova.objects.quotas.ids_from_instance')
+    def test_allocate_calculates_quota_auth(self, util_method, reserve,
+                                            get_by_uuid):
+        inst = instance_obj.Instance()
+        get_by_uuid.return_value = inst
+        reserve.side_effect = exception.OverQuota(overs='testing')
+        util_method.return_value = ('foo', 'bar')
+        self.assertRaises(exception.FixedIpLimitExceeded,
+                          self.network.allocate_fixed_ip,
+                          self.context, 123, None)
+        util_method.assert_called_once_with(self.context, inst)
+
+    @mock.patch('nova.objects.fixed_ip.FixedIP.get_by_address')
+    @mock.patch('nova.objects.quotas.Quotas.reserve')
+    @mock.patch('nova.objects.quotas.ids_from_instance')
+    def test_deallocate_calculates_quota_auth(self, util_method, reserve,
+                                              get_by_address):
+        inst = instance_obj.Instance(uuid='fake-uuid')
+        fip = fixed_ip_obj.FixedIP(instance_uuid='fake-uuid',
+                                   virtual_interface_id=1)
+        get_by_address.return_value = fip
+        util_method.return_value = ('foo', 'bar')
+        # This will fail right after the reserve call when it tries
+        # to look up the fake instance we created above
+        self.assertRaises(exception.InstanceNotFound,
+                          self.network.deallocate_fixed_ip,
+                          self.context, '1.2.3.4', instance=inst)
+        util_method.assert_called_once_with(self.context, inst)
+
 
 class VlanNetworkTestCase(test.TestCase):
     def setUp(self):
@@ -612,8 +649,8 @@ class VlanNetworkTestCase(test.TestCase):
                                                 is_admin=True)
 
     def test_quota_driver_type(self):
-        self.assertEqual(quota.NoopQuotaDriver,
-                         type(self.network.quotas._driver))
+        self.assertEqual(quotas_obj.QuotasNoOp,
+                         self.network.quotas_cls)
 
     def test_vpn_allocate_fixed_ip(self):
         self.mox.StubOutWithMock(db, 'fixed_ip_associate')

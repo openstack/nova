@@ -98,3 +98,15 @@ class Quotas(base.NovaObject):
                               user_id=self.user_id)
         self.reservations = None
         self.obj_reset_changes()
+
+
+class QuotasNoOp(Quotas):
+    def reserve(context, expire=None, project_id=None, user_id=None,
+                **deltas):
+        pass
+
+    def commit(self, context=None):
+        pass
+
+    def rollback(self, context=None):
+        pass
