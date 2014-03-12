@@ -876,7 +876,10 @@ class ServersControllerTest(ControllerTest):
                          limit=None, marker=None, want_objects=False):
             self.assertIsNotNone(search_opts)
             self.assertIn('task_state', search_opts)
-            self.assertEqual(search_opts['task_state'], [task_state])
+            self.assertEqual([task_states.REBOOT_PENDING,
+                              task_states.REBOOT_STARTED,
+                              task_states.REBOOTING],
+                             search_opts['task_state'])
             db_list = [fakes.stub_instance(100, uuid=server_uuid,
                                                 task_state=task_state)]
             return instance_obj._make_instance_list(

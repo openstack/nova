@@ -59,7 +59,11 @@ _STATE_MAP = {
     vm_states.ACTIVE: {
         'default': 'ACTIVE',
         task_states.REBOOTING: 'REBOOT',
+        task_states.REBOOT_PENDING: 'REBOOT',
+        task_states.REBOOT_STARTED: 'REBOOT',
         task_states.REBOOTING_HARD: 'HARD_REBOOT',
+        task_states.REBOOT_PENDING_HARD: 'HARD_REBOOT',
+        task_states.REBOOT_STARTED_HARD: 'HARD_REBOOT',
         task_states.UPDATING_PASSWORD: 'PASSWORD',
         task_states.REBUILDING: 'REBUILD',
         task_states.REBUILD_BLOCK_DEVICE_MAPPING: 'REBUILD',

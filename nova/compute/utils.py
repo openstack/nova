@@ -23,6 +23,8 @@ from oslo.config import cfg
 
 from nova import block_device
 from nova.compute import flavors
+from nova.compute import power_state
+from nova.compute import task_states
 from nova import exception
 from nova.network import model as network_model
 from nova import notifications
@@ -446,6 +448,16 @@ def usage_volume_info(vol_usage):
                 vol_usage['curr_write_bytes'])
 
     return usage_info
+
+
+def get_reboot_type(task_state, current_power_state):
+    """Checks if the current instance state requires a HARD reboot."""
+    if current_power_state != power_state.RUNNING:
+        return 'HARD'
+    soft_types = [task_states.REBOOT_STARTED, task_states.REBOOT_PENDING,
+                  task_states.REBOOTING]
+    reboot_type = 'SOFT' if task_state in soft_types else 'HARD'
+    return reboot_type
 
 
 class EventReporter(object):
