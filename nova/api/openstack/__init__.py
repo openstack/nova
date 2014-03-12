@@ -146,6 +146,8 @@ class APIMapper(routes.Mapper):
 
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
+        LOG.debug(kwargs)
+        LOG.debug(parent_resource)
         if 'domains' in  kwargs:
             kwargs['path_prefix'] = '{domain_id}/'
         if 'parent_resource' not in kwargs:
