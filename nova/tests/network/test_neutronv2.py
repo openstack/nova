@@ -1269,16 +1269,6 @@ class TestNeutronv2(TestNeutronv2Base):
                               (None, None, port_b['id'])]
         self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
         self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
-
-        search_opts = {'id': [port_a['network_id'], port_b['network_id']]}
-        self.moxed_client.list_networks(
-            **search_opts).AndReturn({'networks': self.nets2})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
-                    {'ports': []})
-        self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
-                    {'quota': {'port': 50}})
-
         self.mox.ReplayAll()
 
         api = neutronapi.API()
@@ -1304,6 +1294,44 @@ class TestNeutronv2(TestNeutronv2Base):
         max_count = api.validate_networks(self.context,
                                           requested_networks, 1)
         self.assertEqual(max_count, 0)
+
+    def test_validate_networks_with_ports_and_networks(self):
+        # Test validation for a request for one instance needing
+        # one port allocated via nova with another port being passed in.
+        port_b = self.port_data2[1]
+        port_b['device_id'] = None
+        port_b['device_owner'] = None
+        requested_networks = [('my_netid1', 'test', None),
+                              (None, None, port_b['id'])]
+        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
+        ids = ['my_netid1']
+        self.moxed_client.list_networks(
+            id=mox.SameElementsAs(ids)).AndReturn(
+                {'networks': self.nets1})
+        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
+                    {'ports': self.port_data2})
+        self.moxed_client.show_quota(
+            tenant_id='my_tenantid').AndReturn(
+                    {'quota': {'port': 5}})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        max_count = api.validate_networks(self.context,
+                                          requested_networks, 1)
+        self.assertEqual(max_count, 1)
+
+    def test_validate_networks_one_port_and_no_networks(self):
+        # Test that show quota is not called if no networks are
+        # passed in and only ports.
+        port_b = self.port_data2[1]
+        port_b['device_id'] = None
+        port_b['device_owner'] = None
+        requested_networks = [(None, None, port_b['id'])]
+        self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        max_count = api.validate_networks(self.context,
+                                          requested_networks, 1)
+        self.assertEqual(max_count, 1)
 
     def test_validate_networks_some_quota(self):
         # Test validation for a request for two instance needing
@@ -1348,10 +1376,6 @@ class TestNeutronv2(TestNeutronv2Base):
         self.assertEqual(max_count, 2)
 
     def test_validate_networks_no_quota_but_ports_supplied(self):
-        # Test validation for a request for one instance needing
-        # two ports, where the quota is 2 and 2 ports are in use
-        # but the request includes a port to be used
-        #  => instances which can be created = 1
         port_a = self.port_data3[0]
         port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
                                'subnet_id': 'subnet_id'}
@@ -1365,15 +1389,6 @@ class TestNeutronv2(TestNeutronv2Base):
                               (None, None, port_b['id'])]
         self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
         self.moxed_client.show_port(port_b['id']).AndReturn({'port': port_b})
-
-        search_opts = {'id': [port_a['network_id'], port_b['network_id']]}
-        self.moxed_client.list_networks(
-            **search_opts).AndReturn({'networks': self.nets2})
-        self.moxed_client.list_ports(tenant_id='my_tenantid').AndReturn(
-                    {'ports': self.port_data2})
-        self.moxed_client.show_quota(
-            tenant_id='my_tenantid').AndReturn(
-                    {'quota': {'port': 2}})
 
         self.mox.ReplayAll()
 

@@ -602,7 +602,8 @@ class API(base_api.NetworkAPI):
                 ports_needed_per_instance = 1
 
         else:
-            net_ids = []
+            instance_on_net_ids = []
+            net_ids_requested = []
 
             for (net_id, _i, port_id) in requested_networks:
                 if port_id:
@@ -624,46 +625,50 @@ class API(base_api.NetworkAPI):
                     net_id = port['network_id']
                 else:
                     ports_needed_per_instance += 1
+                    net_ids_requested.append(net_id)
 
-                if net_id in net_ids:
+                if net_id in instance_on_net_ids:
                     raise exception.NetworkDuplicated(network_id=net_id)
-                net_ids.append(net_id)
+                instance_on_net_ids.append(net_id)
 
             # Now check to see if all requested networks exist
-            nets = self._get_available_networks(context,
-                                    context.project_id, net_ids,
-                                    neutron=neutron)
-            for net in nets:
-                if not net.get('subnets'):
-                    raise exception.NetworkRequiresSubnet(
-                        network_uuid=net['id'])
+            if net_ids_requested:
+                nets = self._get_available_networks(
+                    context, context.project_id, net_ids_requested,
+                    neutron=neutron)
 
-            if len(nets) != len(net_ids):
-                requsted_netid_set = set(net_ids)
-                returned_netid_set = set([net['id'] for net in nets])
-                lostid_set = requsted_netid_set - returned_netid_set
-                id_str = ''
-                for _id in lostid_set:
-                    id_str = id_str and id_str + ', ' + _id or _id
-                raise exception.NetworkNotFound(network_id=id_str)
+                for net in nets:
+                    if not net.get('subnets'):
+                        raise exception.NetworkRequiresSubnet(
+                            network_uuid=net['id'])
+
+                if len(nets) != len(net_ids_requested):
+                    requested_netid_set = set(net_ids_requested)
+                    returned_netid_set = set([net['id'] for net in nets])
+                    lostid_set = requested_netid_set - returned_netid_set
+                    id_str = ''
+                    for _id in lostid_set:
+                        id_str = id_str and id_str + ', ' + _id or _id
+                    raise exception.NetworkNotFound(network_id=id_str)
 
         # Note(PhilD): Ideally Nova would create all required ports as part of
         # network validation, but port creation requires some details
         # from the hypervisor.  So we just check the quota and return
         # how many of the requested number of instances can be created
-
-        ports = neutron.list_ports(tenant_id=context.project_id)['ports']
-        quotas = neutron.show_quota(tenant_id=context.project_id)['quota']
-        if quotas.get('port') == -1:
-            # Unlimited Port Quota
-            return num_instances
-        else:
-            free_ports = quotas.get('port') - len(ports)
-            ports_needed = ports_needed_per_instance * num_instances
-            if free_ports >= ports_needed:
+        if ports_needed_per_instance:
+            ports = neutron.list_ports(tenant_id=context.project_id)['ports']
+            quotas = neutron.show_quota(tenant_id=context.project_id)['quota']
+            if quotas.get('port') == -1:
+                # Unlimited Port Quota
                 return num_instances
             else:
-                return free_ports // ports_needed_per_instance
+                free_ports = quotas.get('port') - len(ports)
+                ports_needed = ports_needed_per_instance * num_instances
+                if free_ports >= ports_needed:
+                    return num_instances
+                else:
+                    return free_ports // ports_needed_per_instance
+        return num_instances
 
     def _get_instance_uuids_by_ip(self, context, address):
         """Retrieve instance uuids associated with the given ip address.
