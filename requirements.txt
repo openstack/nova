@@ -19,7 +19,7 @@ suds>=0.4
 paramiko>=1.9.0
 pyasn1
 Babel>=1.3
-iso8601>=0.1.8
+iso8601>=0.1.9
 jsonschema>=2.0.0,<3.0.0
 python-cinderclient>=1.0.6
 python-neutronclient>=2.3.4,<3
