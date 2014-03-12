@@ -210,3 +210,13 @@ class TestNeutronDriver(test.NoDBTestCase):
         result = sg_api.get_instances_security_groups_bindings(
                                   self.context, servers)
         self.assertEqual(result, sg_bindings)
+
+    def test_instance_empty_security_groups(self):
+
+        port_list = {'ports': [{'id': 1, 'device_id': '1',
+                     'security_groups': []}]}
+        self.moxed_client.list_ports(device_id=['1']).AndReturn(port_list)
+        self.mox.ReplayAll()
+        sg_api = neutron_driver.SecurityGroupAPI()
+        result = sg_api.get_instance_security_groups(self.context, '1')
+        self.assertEqual([], result)
