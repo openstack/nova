@@ -204,7 +204,8 @@ class Image(object):
                                            'path': self.path})
         return can_fallocate
 
-    def verify_base_size(self, base, size, base_size=0):
+    @staticmethod
+    def verify_base_size(base, size, base_size=0):
         """Check that the base image is not larger than size.
            Since images can't be generally shrunk, enforce this
            constraint taking account of virtual image size.
@@ -223,7 +224,7 @@ class Image(object):
             return
 
         if size and not base_size:
-            base_size = self.get_disk_size(base)
+            base_size = disk.get_disk_size(base)
 
         if size < base_size:
             msg = _('%(base)s virtual size %(base_size)s '
@@ -232,9 +233,6 @@ class Image(object):
                               'base_size': base_size,
                               'size': size})
             raise exception.FlavorDiskTooSmall()
-
-    def get_disk_size(self, name):
-        disk.get_disk_size(name)
 
     def snapshot_extract(self, target, out_format):
         raise NotImplementedError()
@@ -491,35 +489,30 @@ class Rbd(Image):
         return False
 
     def check_image_exists(self):
-        return self.driver.exists(self.rbd_name)
+        rbd_volumes = libvirt_utils.list_rbd_volumes(self.pool)
+        for vol in rbd_volumes:
+            if vol.startswith(self.rbd_name):
+                return True
 
-    def get_disk_size(self, name):
-        """Returns the size of the virtual disk in bytes.
-
-        The name argument is ignored since this backend already knows
-        its name, and callers may pass a non-existent local file path.
-        """
-        return self.driver.size(self.rbd_name)
+        return False
 
     def create_image(self, prepare_template, base, size, *args, **kwargs):
-
-        if not self.check_image_exists():
+        if not os.path.exists(base):
             prepare_template(target=base, max_size=size, *args, **kwargs)
         else:
             self.verify_base_size(base, size)
 
-        # prepare_template() may have cloned the image into a new rbd
-        # image already instead of downloading it locally
-        if not self.check_image_exists():
-            # keep using the command line import instead of librbd since it
-            # detects zeroes to preserve sparseness in the image
-            args = ['--pool', self.pool, base, self.rbd_name]
-            if self.driver.supports_layering():
-                args += ['--new-format']
-                args += self.driver.ceph_args()
-                libvirt_utils.import_rbd_image(*args)
+        # keep using the command line import instead of librbd since it
+        # detects zeroes to preserve sparseness in the image
+        args = ['--pool', self.pool, base, self.rbd_name]
+        if self.driver.supports_layering():
+            args += ['--new-format']
+        args += self.driver.ceph_args()
+        libvirt_utils.import_rbd_image(*args)
 
-        if size and size > self.get_disk_size(self.rbd_name):
+        base_size = disk.get_disk_size(base)
+
+        if size and size > base_size:
             self.driver.resize(self.rbd_name, size)
 
     def snapshot_extract(self, target, out_format):
