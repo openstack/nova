@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+
 import iso8601
 import mock
 import netaddr
@@ -44,6 +46,8 @@ fake_fixed_ip = {
 class _TestFixedIPObject(object):
     def _compare(self, obj, db_obj):
         for field in obj.fields:
+            if field is 'virtual_interface':
+                continue
             if field in fixed_ip.FIXED_IP_OPTIONAL_ATTRS:
                 if obj.obj_attr_is_set(field) and db_obj[field] is not None:
                     obj_val = obj[field].uuid
@@ -253,6 +257,38 @@ class _TestFixedIPObject(object):
         bulk.assert_called_once_with(self.context,
                                      [{'address': '192.168.1.1'},
                                       {'address': '192.168.1.2'}])
+
+    @mock.patch('nova.db.network_get_associated_fixed_ips')
+    def test_get_by_network(self, get):
+        info = {'address': '1.2.3.4',
+                'instance_uuid': 'fake-uuid',
+                'network_id': 0,
+                'vif_id': 1,
+                'vif_address': 'de:ad:be:ee:f0:00',
+                'instance_hostname': 'fake-host',
+                'instance_updated': datetime.datetime(1955, 11, 5),
+                'instance_created': datetime.datetime(1955, 11, 5),
+                'allocated': True,
+                'leased': True,
+                }
+        get.return_value = [info]
+        fixed_ips = fixed_ip.FixedIPList.get_by_network(
+            self.context, {'id': 0}, host='fake-host')
+        get.assert_called_once_with(self.context, 0, host='fake-host')
+        self.assertEqual(1, len(fixed_ips))
+        fip = fixed_ips[0]
+        self.assertEqual('1.2.3.4', str(fip.address))
+        self.assertEqual('fake-uuid', fip.instance_uuid)
+        self.assertEqual(0, fip.network_id)
+        self.assertEqual(1, fip.virtual_interface_id)
+        self.assertTrue(fip.allocated)
+        self.assertTrue(fip.leased)
+        self.assertEqual('fake-uuid', fip.instance.uuid)
+        self.assertEqual('fake-host', fip.instance.hostname)
+        self.assertIsInstance(fip.instance.created_at, datetime.datetime)
+        self.assertIsInstance(fip.instance.updated_at, datetime.datetime)
+        self.assertEqual(1, fip.virtual_interface.id)
+        self.assertEqual(info['vif_address'], fip.virtual_interface.address)
 
 
 class TestFixedIPObject(test_objects._LocalTest,

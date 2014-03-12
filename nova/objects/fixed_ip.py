@@ -18,6 +18,7 @@ from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
+from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import timeutils
 
 
@@ -26,7 +27,8 @@ FIXED_IP_OPTIONAL_ATTRS = ['instance', 'network']
 
 class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added virtual_interface field
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -40,6 +42,8 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         'host': fields.StringField(nullable=True),
         'instance': fields.ObjectField('Instance', nullable=True),
         'network': fields.ObjectField('Network', nullable=True),
+        'virtual_interface': fields.ObjectField('VirtualInterface',
+                                                nullable=True),
         }
 
     @property
@@ -54,6 +58,11 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         if expected_attrs is None:
             expected_attrs = []
         for field in fixedip.fields:
+            if field == 'virtual_interface':
+                # NOTE(danms): This field is only set when doing a
+                # FixedIPList.get_by_network() because it's a relatively
+                # special-case thing, so skip it here
+                continue
             if field not in FIXED_IP_OPTIONAL_ATTRS:
                 fixedip[field] = db_fixedip[field]
         # NOTE(danms): Instance could be deleted, and thus None
@@ -155,13 +164,15 @@ class FixedIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
 class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added get_by_network()
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('FixedIP'),
         }
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
         }
 
     @obj_base.remotable_classmethod
@@ -183,6 +194,38 @@ class FixedIPList(obj_base.ObjectListBase, obj_base.NovaObject):
     def get_by_virtual_interface_id(cls, context, vif_id):
         db_fixedips = db.fixed_ips_by_virtual_interface(context, vif_id)
         return obj_base.obj_make_list(context, cls(), FixedIP, db_fixedips)
+
+    @obj_base.remotable_classmethod
+    def get_by_network(cls, context, network, host=None):
+        ipinfo = db.network_get_associated_fixed_ips(context,
+                                                     network['id'],
+                                                     host=host)
+        if not ipinfo:
+            return []
+
+        fips = cls(context=context, objects=[])
+
+        for info in ipinfo:
+            inst = instance_obj.Instance(context=context,
+                                         uuid=info['instance_uuid'],
+                                         hostname=info['instance_hostname'],
+                                         created_at=info['instance_created'],
+                                         updated_at=info['instance_updated'])
+            vif = vif_obj.VirtualInterface(context=context,
+                                           id=info['vif_id'],
+                                           address=info['vif_address'])
+            fip = FixedIP(context=context,
+                          address=info['address'],
+                          instance_uuid=info['instance_uuid'],
+                          network_id=info['network_id'],
+                          virtual_interface_id=info['vif_id'],
+                          allocated=info['allocated'],
+                          leased=info['leased'],
+                          instance=inst,
+                          virtual_interface=vif)
+            fips.objects.append(fip)
+        fips.obj_reset_changes()
+        return fips
 
     @obj_base.remotable_classmethod
     def bulk_create(self, context, fixed_ips):
