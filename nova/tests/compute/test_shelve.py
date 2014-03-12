@@ -224,6 +224,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 {'power_state': 123,
                  'vm_state': vm_states.ACTIVE,
                  'task_state': None,
+                 'image_ref': instance['image_ref'],
                  'key_data': None,
                  'auto_disk_config': False,
                  'expected_task_state': task_states.SPAWNING,
