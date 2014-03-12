@@ -374,7 +374,7 @@ def get_networks_for_instance(context, instance):
 
 
 def raise_http_conflict_for_instance_invalid_state(exc, action):
-    """Return a webob.exc.HTTPConflict instance containing a message
+    """Raises a webob.exc.HTTPConflict instance containing a message
     appropriate to return via the API based on the original
     InstanceInvalidState exception.
     """
