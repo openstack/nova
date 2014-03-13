@@ -87,15 +87,30 @@ class APIRouter(nova.api.openstack.APIRouter):
 
             # map.extend(routes, "/domains")
 
-            mapper.resource("domain", "domains",
-                            controller=domains_controller,
-                            parent_resource=dict(member_name='domain',
-                                                 collection_name='domains'),
-                            member={'action': 'POST'})
+            mapper.resource("domain", "servers",
+                controller=self.resources['domains'],
+                #collection={'detail': 'GET'},
+                path_prefix="/domains",
+                member={'action': 'POST'})
+
+            # mapper.resource("action", "domains",
+            #                controller=domains_controller,
+            #                parent_resource=dict(member_name='domain',
+            #                                      collection_name='domains'),
+            #               /servers/:server_id",
+                            #member={'action': 'POST'})
             # mapper.resource("domain", "servers",
             #    controller=domains_controller,
             #    parent_resource=dict(member_name='domain',
             #    collection_name='domains'))
+
+            #===========================================================
+            # mapper.connect("domains",
+            #    "/domains/{domain_id}/servers/{server_id}/action",
+            #    controller=domains_controller,
+            #    action='default',
+            #    conditions={"method": ['POST']})
+            #===========================================================
 
             mapper.connect("domains",
                "/domains/{domain_id}/servers/{server_id}",
