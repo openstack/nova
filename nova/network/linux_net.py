@@ -26,8 +26,8 @@ import netaddr
 from oslo.config import cfg
 import six
 
-from nova import db
 from nova import exception
+from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import excutils
 from nova.openstack.common import fileutils
@@ -880,13 +880,13 @@ def get_dhcp_leases(context, network_ref):
     host = None
     if network_ref['multi_host']:
         host = CONF.host
-    for data in db.network_get_associated_fixed_ips(context,
-                                                    network_ref['id'],
-                                                    host=host):
+    for fixedip in fixed_ip_obj.FixedIPList.get_by_network(context,
+                                                           network_ref,
+                                                           host=host):
         # NOTE(cfb): Don't return a lease entry if the IP isn't
         #            already leased
-        if data['allocated'] and data['leased']:
-            hosts.append(_host_lease(data))
+        if fixedip.allocated and fixedip.leased:
+            hosts.append(_host_lease(fixedip))
 
     return '\n'.join(hosts)
 
@@ -898,21 +898,21 @@ def get_dhcp_hosts(context, network_ref):
     if network_ref['multi_host']:
         host = CONF.host
     macs = set()
-    for data in db.network_get_associated_fixed_ips(context,
-                                                    network_ref['id'],
-                                                    host=host):
-        if data['vif_address'] not in macs:
-            hosts.append(_host_dhcp(data))
-            macs.add(data['vif_address'])
+    for fixedip in fixed_ip_obj.FixedIPList.get_by_network(context,
+                                                           network_ref,
+                                                           host=host):
+        if fixedip.virtual_interface.address not in macs:
+            hosts.append(_host_dhcp(fixedip))
+            macs.add(fixedip.virtual_interface.address)
     return '\n'.join(hosts)
 
 
 def get_dns_hosts(context, network_ref):
     """Get network's DNS hosts in hosts format."""
     hosts = []
-    for data in db.network_get_associated_fixed_ips(context,
-                                                    network_ref['id']):
-        hosts.append(_host_dns(data))
+    for fixedip in fixed_ip_obj.FixedIPList.get_by_network(context,
+                                                           network_ref):
+        hosts.append(_host_dns(fixedip))
     return '\n'.join(hosts)
 
 
@@ -966,12 +966,10 @@ def get_dhcp_opts(context, network_ref):
     host = None
     if network_ref['multi_host']:
         host = CONF.host
-    data = db.network_get_associated_fixed_ips(context,
-                                               network_ref['id'],
-                                               host=host)
-
-    if data:
-        instance_set = set([datum['instance_uuid'] for datum in data])
+    fixedips = fixed_ip_obj.FixedIPList.get_by_network(context, network_ref,
+                                                       host=host)
+    if fixedips:
+        instance_set = set([fixedip.instance_uuid for fixedip in fixedips])
         default_gw_vif = {}
         for instance_uuid in instance_set:
             vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
@@ -980,12 +978,13 @@ def get_dhcp_opts(context, network_ref):
                 #offer a default gateway to the first virtual interface
                 default_gw_vif[instance_uuid] = vifs[0].id
 
-        for datum in data:
-            instance_uuid = datum['instance_uuid']
+        for fixedip in fixedips:
+            instance_uuid = fixedip.instance_uuid
             if instance_uuid in default_gw_vif:
                 # we don't want default gateway for this fixed ip
-                if default_gw_vif[instance_uuid] != datum['vif_id']:
-                    hosts.append(_host_dhcp_opts(datum))
+                if (default_gw_vif[instance_uuid] !=
+                        fixedip.virtual_interface_id):
+                    hosts.append(_host_dhcp_opts(fixedip))
     return '\n'.join(hosts)
 
 
@@ -1157,44 +1156,44 @@ interface %s
     _execute(*cmd, run_as_root=True)
 
 
-def _host_lease(data):
+def _host_lease(fixedip):
     """Return a host string for an address in leasefile format."""
     timestamp = timeutils.utcnow()
     seconds_since_epoch = calendar.timegm(timestamp.utctimetuple())
     return '%d %s %s %s *' % (seconds_since_epoch + CONF.dhcp_lease_time,
-                              data['vif_address'],
-                              data['address'],
-                              data['instance_hostname'] or '*')
+                              fixedip.virtual_interface.address,
+                              fixedip.address,
+                              fixedip.instance.hostname or '*')
 
 
 def _host_dhcp_network(data):
-    return 'NW-%s' % data['vif_id']
+    return 'NW-%s' % data.virtual_interface_id
 
 
-def _host_dhcp(data):
+def _host_dhcp(fixedip):
     """Return a host string for an address in dhcp-host format."""
     if CONF.use_single_default_gateway:
-        return '%s,%s.%s,%s,%s' % (data['vif_address'],
-                               data['instance_hostname'],
+        return '%s,%s.%s,%s,%s' % (fixedip.virtual_interface.address,
+                               fixedip.instance.hostname,
                                CONF.dhcp_domain,
-                               data['address'],
-                               'net:' + _host_dhcp_network(data))
+                               fixedip.address,
+                               'net:' + _host_dhcp_network(fixedip))
     else:
-        return '%s,%s.%s,%s' % (data['vif_address'],
-                               data['instance_hostname'],
+        return '%s,%s.%s,%s' % (fixedip.virtual_interface.address,
+                               fixedip.instance.hostname,
                                CONF.dhcp_domain,
-                               data['address'])
+                               fixedip.address)
 
 
-def _host_dns(data):
-    return '%s\t%s.%s' % (data['address'],
-                          data['instance_hostname'],
+def _host_dns(fixedip):
+    return '%s\t%s.%s' % (fixedip.address,
+                          fixedip.instance.hostname,
                           CONF.dhcp_domain)
 
 
-def _host_dhcp_opts(data):
+def _host_dhcp_opts(fixedip):
     """Return an empty gateway option."""
-    return '%s,%s' % (_host_dhcp_network(data), 3)
+    return '%s,%s' % (_host_dhcp_network(fixedip), 3)
 
 
 def _execute(*cmd, **kwargs):

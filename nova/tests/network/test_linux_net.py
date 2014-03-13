@@ -15,6 +15,7 @@
 
 import calendar
 import contextlib
+import datetime
 import os
 
 import mock
@@ -26,6 +27,7 @@ from nova import db
 from nova import exception
 from nova.network import driver
 from nova.network import linux_net
+from nova.objects import fixed_ip as fixed_ip_obj
 from nova.openstack.common import fileutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -43,15 +45,15 @@ instances = {'00000000-0000-0000-0000-0000000000000000':
                  {'id': 0,
                   'uuid': '00000000-0000-0000-0000-0000000000000000',
                   'host': 'fake_instance00',
-                  'created_at': 'fakedate',
-                  'updated_at': 'fakedate',
+                  'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
+                  'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
                   'hostname': 'fake_instance00'},
              '00000000-0000-0000-0000-0000000000000001':
                  {'id': 1,
                   'uuid': '00000000-0000-0000-0000-0000000000000001',
                   'host': 'fake_instance01',
-                  'created_at': 'fakedate',
-                  'updated_at': 'fakedate',
+                  'created_at': datetime.datetime(1955, 11, 5, 0, 0, 0),
+                  'updated_at': datetime.datetime(1985, 10, 26, 1, 35, 0),
                   'hostname': 'fake_instance01'}}
 
 
@@ -432,22 +434,25 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
 
     def test_dhcp_opts_not_default_gateway_network(self):
         expected = "NW-0,3"
-        data = get_associated(self.context, 0)[0]
-        actual = self.driver._host_dhcp_opts(data)
+        fixedip = fixed_ip_obj.FixedIPList.get_by_network(self.context,
+                                                          {'id': 0})[0]
+        actual = self.driver._host_dhcp_opts(fixedip)
         self.assertEqual(actual, expected)
 
     def test_host_dhcp_without_default_gateway_network(self):
         expected = ','.join(['DE:AD:BE:EF:00:00',
                              'fake_instance00.novalocal',
                              '192.168.0.100'])
-        data = get_associated(self.context, 0)[0]
-        actual = self.driver._host_dhcp(data)
+        fixedip = fixed_ip_obj.FixedIPList.get_by_network(self.context,
+                                                          {'id': 0})[0]
+        actual = self.driver._host_dhcp(fixedip)
         self.assertEqual(actual, expected)
 
     def test_host_dns_without_default_gateway_network(self):
         expected = "192.168.0.100\tfake_instance00.novalocal"
-        data = get_associated(self.context, 0)[0]
-        actual = self.driver._host_dns(data)
+        fixedip = fixed_ip_obj.FixedIPList.get_by_network(self.context,
+                                                          {'id': 0})[0]
+        actual = self.driver._host_dns(fixedip)
         self.assertEqual(actual, expected)
 
     def test_linux_bridge_driver_plug(self):
