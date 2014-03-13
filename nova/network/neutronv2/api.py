@@ -425,12 +425,7 @@ class API(base_api.NetworkAPI):
                             msg = _LE("Failed to update port %s")
                             LOG.exception(msg, port_id)
 
-                    for port_id in created_port_ids:
-                        try:
-                            neutron.delete_port(port_id)
-                        except Exception:
-                            msg = _LE("Failed to delete port %s")
-                            LOG.exception(msg, port_id)
+                    self._delete_ports(neutron, instance, created_port_ids)
 
         nw_info = self.get_instance_nw_info(context, instance,
                                             networks=nets_in_requested_order,
@@ -475,6 +470,22 @@ class API(base_api.NetworkAPI):
         if self._has_port_binding_extension(context):
             port_req_body['port']['binding:host_id'] = instance.get('host')
 
+    def _delete_ports(self, neutron, instance, ports, raise_if_fail=False):
+        exceptions = []
+        for port in ports:
+            try:
+                neutron.delete_port(port)
+            except neutronv2.exceptions.NeutronClientException as e:
+                if e.status_code == 404:
+                    LOG.warning(_LW("Port %s does not exist"), port)
+                else:
+                    exceptions.append(e)
+                    LOG.warning(
+                        _LW("Failed to delete port %s for instance."),
+                        port, instance=instance, exc_info=True)
+        if len(exceptions) > 0 and raise_if_fail:
+            raise exceptions[0]
+
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
         LOG.debug('deallocate_for_instance()', instance=instance)
@@ -499,16 +510,7 @@ class API(base_api.NetworkAPI):
                 LOG.info(_('Unable to reset device ID for port %s'), port,
                          instance=instance)
 
-        for port in ports:
-            try:
-                neutron.delete_port(port)
-            except neutron_client_exc.NeutronClientException as e:
-                if e.status_code == 404:
-                    LOG.warning(_LW("Port %s does not exist"), port)
-                else:
-                    with excutils.save_and_reraise_exception():
-                        LOG.exception(_LE("Failed to delete neutron port %s"),
-                                      port)
+        self._delete_ports(neutron, instance, ports, raise_if_fail=True)
 
         # NOTE(arosen): This clears out the network_cache only if the instance
         # hasn't already been deleted. This is needed when an instance fails to
