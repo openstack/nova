@@ -44,6 +44,7 @@ from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
+from nova.tests.objects import test_flavor
 from nova.tests.objects import test_migration
 from nova.tests.objects import test_service
 
@@ -1698,6 +1699,52 @@ class _ComputeAPIUnitTestMixIn(object):
                           image_id,
                           "new password",
                           auto_disk_config=True)
+
+    @mock.patch.object(instance_obj.Instance, 'save')
+    @mock.patch.object(instance_obj.Instance, 'get_flavor')
+    @mock.patch.object(block_device_obj.BlockDeviceMappingList,
+            'get_by_instance_uuid')
+    @mock.patch.object(compute_api.API, '_get_image')
+    @mock.patch.object(compute_api.API, '_check_auto_disk_config')
+    @mock.patch.object(compute_api.API, '_checks_for_create_and_rebuild')
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def test_rebuild(self, _record_action_start,
+            _checks_for_create_and_rebuild, _check_auto_disk_config,
+            _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save):
+        orig_system_metadata = {}
+        instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE, cell_name='fake-cell',
+                launched_at=timeutils.utcnow(),
+                system_metadata=orig_system_metadata,
+                expected_attrs=['system_metadata'])
+        get_flavor.return_value = test_flavor.fake_flavor
+        flavor = instance.get_flavor()
+        image_href = ''
+        image = {"min_ram": 10, "min_disk": 1,
+                 "properties": {'architecture': 'x86_64'}}
+        admin_pass = ''
+        files_to_inject = []
+        bdms = []
+
+        _get_image.return_value = (None, image)
+        bdm_get_by_instance_uuid.return_value = bdms
+
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                'rebuild_instance') as rebuild_instance:
+            self.compute_api.rebuild(self.context, instance, image_href,
+                    admin_pass, files_to_inject)
+
+            rebuild_instance.assert_called_once_with(self.context,
+                    instance=instance, new_pass=admin_pass,
+                    injected_files=files_to_inject, image_ref=image_href,
+                    orig_image_ref=image_href,
+                    orig_sys_metadata=orig_system_metadata, bdms=bdms,
+                    preserve_ephemeral=False, kwargs={})
+
+        _check_auto_disk_config.assert_called_once_with(image=image)
+        _checks_for_create_and_rebuild.assert_called_once_with(self.context,
+                None, image, flavor, {}, [])
+        self.assertNotEqual(orig_system_metadata, instance.system_metadata)
 
     @mock.patch('nova.quota.QUOTAS.commit')
     @mock.patch('nova.quota.QUOTAS.reserve')
