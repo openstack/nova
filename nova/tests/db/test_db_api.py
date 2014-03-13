@@ -4058,10 +4058,19 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
 class InstanceDestroyConstraints(test.TestCase):
 
-    def test_destroy_with_equal_any_constraint_met(self):
+    def test_destroy_with_equal_any_constraint_met_single_value(self):
         ctx = context.get_admin_context()
         instance = db.instance_create(ctx, {'task_state': 'deleting'})
         constraint = db.constraint(task_state=db.equal_any('deleting'))
+        db.instance_destroy(ctx, instance['uuid'], constraint)
+        self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
+                          ctx, instance['uuid'])
+
+    def test_destroy_with_equal_any_constraint_met(self):
+        ctx = context.get_admin_context()
+        instance = db.instance_create(ctx, {'task_state': 'deleting'})
+        constraint = db.constraint(task_state=db.equal_any('deleting',
+                                                           'error'))
         db.instance_destroy(ctx, instance['uuid'], constraint)
         self.assertRaises(exception.InstanceNotFound, db.instance_get_by_uuid,
                           ctx, instance['uuid'])
