@@ -3787,7 +3787,7 @@ class ComputeManager(manager.Manager):
         potentially large download of an image.
 
         :param context: request context
-        :param instance: an Instance dict
+        :param instance: nova.objects.instance.Instance
         """
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.start')
