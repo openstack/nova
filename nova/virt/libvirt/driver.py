@@ -92,6 +92,7 @@ from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import imagebackend
 from nova.virt.libvirt import imagecache
 from nova.virt.libvirt import lvm
+from nova.virt.libvirt import rbd
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import netutils
 from nova.virt import watchdog_actions
@@ -1099,17 +1100,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._cleanup_rbd(instance)
 
     def _cleanup_rbd(self, instance):
-        pool = CONF.libvirt.images_rbd_pool
-        volumes = libvirt_utils.list_rbd_volumes(pool)
-        pattern = instance['uuid']
-
-        def belongs_to_instance(disk):
-            return disk.startswith(pattern)
-
-        volumes = filter(belongs_to_instance, volumes)
-
-        if volumes:
-            libvirt_utils.remove_rbd_volumes(pool, *volumes)
+        driver = rbd.RBDDriver(
+                pool=CONF.libvirt.images_rbd_pool,
+                ceph_conf=CONF.libvirt.images_rbd_ceph_conf,
+                rbd_user=CONF.libvirt.rbd_user)
+        driver.cleanup_volumes(instance)
 
     def _cleanup_lvm(self, instance):
         """Delete all LVM disks for given instance object."""

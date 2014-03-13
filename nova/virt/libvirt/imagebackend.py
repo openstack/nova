@@ -558,16 +558,9 @@ class Rbd(Image):
         else:
             self.verify_base_size(base, size)
 
-        # keep using the command line import instead of librbd since it
-        # detects zeroes to preserve sparseness in the image
-        args = ['--pool', self.pool, base, self.rbd_name]
-        if self.driver.supports_layering():
-            args += ['--new-format']
-        args += self.driver.ceph_args()
-        libvirt_utils.import_rbd_image(*args)
+        self.driver.import_image(base, self.rbd_name)
 
         base_size = disk.get_disk_size(base)
-
         if size and size > base_size:
             self.driver.resize(self.rbd_name, size)
 
