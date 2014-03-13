@@ -818,6 +818,9 @@ class _TargetedMessageMethods(_BaseMessageMethods):
             # of vm_state and task_state unless it's a forced reset
             # via admin API.
             instance.obj_reset_changes(['vm_state', 'task_state'])
+        # NOTE(alaski): A cell should be authoritative for its system_metadata
+        # and metadata so we don't want to sync it down from the api.
+        instance.obj_reset_changes(['metadata', 'system_metadata'])
         instance.save(message.ctxt, expected_vm_state=expected_vm_state,
                       expected_task_state=expected_task_state)
 
