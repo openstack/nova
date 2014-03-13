@@ -965,27 +965,6 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug(_("Did hard reboot of VM"), instance=instance)
 
-    def _delete(self, instance, network_info):
-        """Destroy a VM instance. Steps followed are:
-        1. Power off the VM, if it is in poweredOn state.
-        2. Destroy the VM.
-        """
-        try:
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
-            self.power_off(instance)
-            try:
-                LOG.debug(_("Destroying the VM"), instance=instance)
-                destroy_task = self._session._call_method(
-                    self._session._get_vim(),
-                    "Destroy_Task", vm_ref)
-                self._session._wait_for_task(destroy_task)
-                LOG.debug(_("Destroyed the VM"), instance=instance)
-            except Exception as excep:
-                LOG.warn(_("In vmwareapi:vmops:delete, got this exception"
-                           " while destroying the VM: %s") % str(excep))
-        except Exception as exc:
-            LOG.exception(exc, instance=instance)
-
     def destroy(self, instance, network_info, destroy_disks=True,
                 instance_name=None):
         """Destroy a VM instance. Steps followed are:
