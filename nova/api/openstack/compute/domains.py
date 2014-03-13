@@ -329,26 +329,3 @@ def remove_invalid_options(context, search_options, allowed_search_options):
 
 def create_resource(ext_mgr):
     return wsgi.Resource(DomainsController(ext_mgr))
-
-
-class Domains(extensions.ExtensionDescriptor):
-    """Domain Quotas management support."""
-
-    name = "Domains"
-    alias = "domains"
-    namespace = ("http://docs.openstack.org/compute/ext/"
-                 "domains/api/v1.1"
-                )
-    updated = "2014-02-26T00:00:00+00:00"
-
-    def get_resources(self):
-        LOG.debug("Entrou no get_resources")
-
-        resources = []
-
-        res = extensions.ResourceExtension('domains',
-                                    DomainsController(self.ext_mgr),
-                                    member_actions={'defaults': 'GET'})
-        resources.append(res)
-
-        return resources
