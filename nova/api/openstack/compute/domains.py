@@ -13,11 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import six
 from webob import exc
 
 from oslo.config import cfg
 
 from nova.api.openstack.compute import ips
+from nova.api.openstack.compute.servers import ActionDeserializer
+from nova.api.openstack.compute.servers import FullServerTemplate
+
 from nova.api.openstack import extensions
 from nova.api.openstack import common
 from nova.api.openstack import wsgi
@@ -274,6 +278,39 @@ class DomainsController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
         req.cache_db_instance(instance)
         return instance
+
+    @wsgi.response(202)
+    @wsgi.serializers(xml=FullServerTemplate)
+    @wsgi.deserializers(xml=ActionDeserializer)
+    @wsgi.action('reboot')
+    def _action_reboot(self, req, id, body):
+        if 'reboot' in body and 'type' in body['reboot']:
+            if not isinstance(body['reboot']['type'], six.string_types):
+                msg = _("Argument 'type' for reboot must be a string")
+                LOG.error(msg)
+                raise exc.HTTPBadRequest(explanation=msg)
+            valid_reboot_types = ['HARD', 'SOFT']
+            reboot_type = body['reboot']['type'].upper()
+            if not valid_reboot_types.count(reboot_type):
+                msg = _("Argument 'type' for reboot is not HARD or SOFT")
+                LOG.error(msg)
+                raise exc.HTTPBadRequest(explanation=msg)
+        else:
+            msg = _("Missing argument 'type' for reboot")
+            LOG.error(msg)
+            raise exc.HTTPBadRequest(explanation=msg)
+
+        context = req.environ['nova.context']
+        instance = self._get_server(context, req, id)
+
+        try:
+            self.compute_api.reboot(context, instance, reboot_type)
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'reboot')
+        return webob.Response(status_int=202)
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

@@ -85,6 +85,10 @@ class APIRouter(nova.api.openstack.APIRouter):
 
             domains_controller = self.resources['domains']
 
+            mapper.resource("domain", "domains",
+                            controller=domains_controller,
+                            collection={'detail': 'GET'},
+                            member={'action': 'POST'})
             # mapper.resource("domain", "servers",
             #    controller=domains_controller,
             #    parent_resource=dict(member_name='domain',
