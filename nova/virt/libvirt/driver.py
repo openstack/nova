@@ -878,8 +878,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # If the instance is already shut off, we get this:
                     # Code=55 Error=Requested operation is not valid:
                     # domain is not running
-                    (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
-                    state = LIBVIRT_POWER_STATE[state]
+                    state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
                     if state == power_state.SHUTDOWN:
                         is_okay = True
                 elif errcode == libvirt.VIR_ERR_OPERATION_TIMEOUT:
@@ -1482,8 +1481,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         snapshot_name = uuid.uuid4().hex
 
-        (state, _max_mem, _mem, _cpus, _t) = virt_dom.info()
-        state = LIBVIRT_POWER_STATE[state]
+        state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
 
         # NOTE(rmk): Live snapshots require QEMU 1.3 and Libvirt 1.0.0.
         #            These restrictions can be relaxed as other configurations
@@ -1985,8 +1983,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :returns: True if the reboot succeeded
         """
         dom = self._lookup_by_name(instance["name"])
-        (state, _max_mem, _mem, _cpus, _t) = dom.info()
-        state = LIBVIRT_POWER_STATE[state]
+        state = LIBVIRT_POWER_STATE[dom.info()[0]]
         old_domid = dom.ID()
         # NOTE(vish): This check allows us to reboot an instance that
         #             is already shutdown.
@@ -1999,8 +1996,7 @@ class LibvirtDriver(driver.ComputeDriver):
             pci_manager.get_instance_pci_devs(instance))
         for x in xrange(CONF.libvirt.wait_soft_reboot_seconds):
             dom = self._lookup_by_name(instance["name"])
-            (state, _max_mem, _mem, _cpus, _t) = dom.info()
-            state = LIBVIRT_POWER_STATE[state]
+            state = LIBVIRT_POWER_STATE[dom.info()[0]]
             new_domid = dom.ID()
 
             # NOTE(ivoks): By checking domain IDs, we make sure we are
@@ -3475,12 +3471,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
         """
         virt_dom = self._lookup_by_name(instance['name'])
-        (state, max_mem, mem, num_cpu, cpu_time) = virt_dom.info()
-        return {'state': LIBVIRT_POWER_STATE[state],
-                'max_mem': max_mem,
-                'mem': mem,
-                'num_cpu': num_cpu,
-                'cpu_time': cpu_time,
+        dom_info = virt_dom.info()
+        return {'state': LIBVIRT_POWER_STATE[dom_info[0]],
+                'max_mem': dom_info[1],
+                'mem': dom_info[2],
+                'num_cpu': dom_info[3],
+                'cpu_time': dom_info[4],
                 'id': virt_dom.ID()}
 
     def _create_domain(self, xml=None, domain=None,
