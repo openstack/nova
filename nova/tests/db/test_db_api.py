@@ -5684,6 +5684,13 @@ class ComputeNodeTestCase(test.TestCase, ModelsObjectComparatorMixin):
         for k, v in stats.iteritems():
             self.assertEqual(v, self.item[k])
 
+    def test_compute_node_statistics_disabled_service(self):
+        serv = db.service_get_by_host_and_topic(
+            self.ctxt, 'host1', CONF.compute_topic)
+        db.service_update(self.ctxt, serv['id'], {'disabled': True})
+        stats = db.compute_node_statistics(self.ctxt)
+        self.assertEqual(stats.pop('count'), 0)
+
     def test_compute_node_not_found(self):
         self.assertRaises(exception.ComputeHostNotFound, db.compute_node_get,
                           self.ctxt, 100500)
