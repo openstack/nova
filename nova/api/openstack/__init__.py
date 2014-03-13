@@ -147,16 +147,20 @@ class APIMapper(routes.Mapper):
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
         LOG.debug("kwargs: %s ", kwargs)
-        if 'domains' in  kwargs:
-            kwargs['path_prefix'] = '{domain_id}/'
+
         if 'parent_resource' not in kwargs:
             kwargs['path_prefix'] = '{project_id}/'
         else:
             parent_resource = kwargs['parent_resource']
             p_collection = parent_resource['collection_name']
-            p_member = parent_resource['member_name']
-            kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
-                                                                p_member)
+            if p_collection == "domains":
+                p_member = parent_resource['member_name']
+                kwargs['path_prefix'] = 'domains/{domain_id}/%s/:%s_id' \
+                                            % (p_collection, p_member)
+            else:
+                p_member = parent_resource['member_name']
+                kwargs['path_prefix'] = '{project_id}/%s/:%s_id' \
+                                            % (p_collection, p_member)
         routes.Mapper.resource(self, member_name,
                                      collection_name,
                                      **kwargs)
