@@ -190,7 +190,7 @@ class XenAPIBasedAgent(object):
             compute_utils.add_instance_fault_from_exc(
                     ctxt, capi, self.instance, error, exc_info=exc_info)
         except Exception:
-            pass
+            LOG.debug(_("Error setting instance fault."), exc_info=True)
 
     def _call_agent(self, method, addl_args=None, timeout=None,
                     success_codes=None, ignore_errors=True):
