@@ -783,6 +783,7 @@ class Resource(wsgi.Application):
         """Registers controller extensions with this resource."""
 
         extensions = getattr(controller, 'wsgi_extensions', [])
+        LOG.debug(extensions)
         for method_name, action_name in extensions:
             # Look up the extending method
             extension = getattr(controller, method_name)
@@ -820,6 +821,8 @@ class Resource(wsgi.Application):
             del args['format']
         except KeyError:
             pass
+
+        LOG.debug("args: %s", args)
 
         return args
 
