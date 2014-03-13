@@ -143,6 +143,9 @@
   <extension alias="os-extended-services-delete" updated="2013-12-10T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_services_delete/api/v2" name="ExtendedServicesDelete">
     <description>Extended services deletion support.</description>
   </extension>
+  <extension alias="os-hypervisor-status" updated="2014-04-17T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/hypervisor_status/api/v1.1" name="HypervisorStatus">
+    <description>Show hypervisor status.</description>
+  </extension>
   <extension alias="os-extended-volumes" updated="2013-06-07T00:00:00Z" namespace="http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1" name="ExtendedVolumes">
     <description>Extended Volumes support.</description>
   </extension>

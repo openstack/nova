@@ -23,6 +23,7 @@ from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
 from nova.i18n import _
+from nova import servicegroup
 
 
 authorize = extensions.extension_authorizer('compute', 'hypervisors')
@@ -31,6 +32,8 @@ authorize = extensions.extension_authorizer('compute', 'hypervisors')
 def make_hypervisor(elem, detail):
     elem.set('hypervisor_hostname')
     elem.set('id')
+    elem.set('state')
+    elem.set('status')
     if detail:
         elem.set('vcpus')
         elem.set('memory_mb')
@@ -52,6 +55,7 @@ def make_hypervisor(elem, detail):
                                              selector='service')
         service.set('id')
         service.set('host')
+        service.set('disabled_reason')
 
 
 class HypervisorIndexTemplate(xmlutil.TemplateBuilder):
@@ -128,6 +132,7 @@ class HypervisorsController(object):
 
     def __init__(self, ext_mgr):
         self.host_api = compute.HostAPI()
+        self.servicegroup_api = servicegroup.API()
         super(HypervisorsController, self).__init__()
         self.ext_mgr = ext_mgr
 
@@ -136,6 +141,13 @@ class HypervisorsController(object):
             'id': hypervisor['id'],
             'hypervisor_hostname': hypervisor['hypervisor_hostname'],
             }
+
+        ext_status_loaded = self.ext_mgr.is_loaded('os-hypervisor-status')
+        if ext_status_loaded:
+            alive = self.servicegroup_api.service_is_up(hypervisor['service'])
+            hyp_dict['state'] = 'up' if alive else "down"
+            hyp_dict['status'] = (
+                'disabled' if hypervisor['service']['disabled'] else 'enabled')
 
         if detail and not servers:
             fields = ('vcpus', 'memory_mb', 'local_gb', 'vcpus_used',
@@ -153,6 +165,9 @@ class HypervisorsController(object):
                 'id': hypervisor['service_id'],
                 'host': hypervisor['service']['host'],
                 }
+            if ext_status_loaded:
+                hyp_dict['service'].update(
+                    disabled_reason=hypervisor['service']['disabled_reason'])
 
         if servers:
             hyp_dict['servers'] = [dict(name=serv['name'], uuid=serv['uuid'])

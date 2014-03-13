@@ -3,6 +3,8 @@
         "cpu_info": "?",
         "current_workload": 0,
         "disk_available_least": 0,
+        "state": "up",
+        "status": "enabled",
         "host_ip": "%(ip)s",
         "free_disk_gb": 1028,
         "free_ram_mb": 7680,
@@ -17,7 +19,8 @@
         "running_vms": 0,
         "service": {
             "host": "%(host_name)s",
-            "id": 2
+            "id": 2,
+            "disabled_reason": null
         },
         "vcpus": 1,
         "vcpus_used": 0

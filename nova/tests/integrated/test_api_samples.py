@@ -1771,7 +1771,7 @@ class ServicesJsonTest(ApiSampleTestBaseV2):
                 'status': 'disabled',
                 'state': 'up'}
         subs.update(self._get_regexes())
-        return self._verify_response('services-get-resp',
+        self._verify_response('services-get-resp',
                                      subs, response, 200)
 
     def test_service_disable_log_reason(self):
@@ -3584,6 +3584,12 @@ class HypervisorsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
                       "Hypervisors")
 
+    def setUp(self):
+        super(HypervisorsSampleJsonTests, self).setUp()
+        mock.patch("nova.servicegroup.API.service_is_up",
+                   return_value=True).start()
+        self.addCleanup(mock.patch.stopall)
+
     def test_hypervisors_list(self):
         response = self._do_get('os-hypervisors')
         self._verify_response('hypervisors-list-resp', {}, response, 200)
@@ -3646,9 +3652,31 @@ class ExtendedHypervisorsJsonTest(ApiSampleTestBaseV2):
 
 
 class ExtendedHypervisorsXmlTest(ExtendedHypervisorsJsonTest):
+    ctype = "xml"
+
+
+class HypervisorStatusJsonTest(ApiSampleTestBaseV2):
+    extends_name = ("nova.api.openstack.compute.contrib."
+                    "hypervisors.Hypervisors")
+    extension_name = ("nova.api.openstack.compute.contrib."
+                      "hypervisor_status.Hypervisor_status")
+
+    def test_hypervisors_show_with_status(self):
+        hypervisor_id = 1
+        subs = {
+            'hypervisor_id': hypervisor_id
+        }
+        response = self._do_get('os-hypervisors/%s' % hypervisor_id)
+        subs.update(self._get_regexes())
+        self._verify_response('hypervisors-show-with-status-resp',
+                              subs, response, 200)
+
+
+class HypervisorStatusXmlTest(HypervisorStatusJsonTest):
     ctype = 'xml'
 
 
+@mock.patch("nova.servicegroup.API.service_is_up", return_value=True)
 class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
     extension_name = ("nova.api.openstack.compute.contrib.hypervisors."
                       "Hypervisors")
@@ -3657,9 +3685,11 @@ class HypervisorsCellsSampleJsonTests(ApiSampleTestBaseV2):
         self.flags(enable=True, cell_type='api', group='cells')
         super(HypervisorsCellsSampleJsonTests, self).setUp()
 
-    def test_hypervisor_uptime(self):
-        fake_hypervisor = {'service': {'host': 'fake-mini'}, 'id': 1,
-                           'hypervisor_hostname': 'fake-mini'}
+    def test_hypervisor_uptime(self, mocks):
+        fake_hypervisor = {'service': {'host': 'fake-mini',
+                                       'disabled': False,
+                                       'disabled_reason': None},
+                           'id': 1, 'hypervisor_hostname': 'fake-mini'}
 
         def fake_get_host_uptime(self, context, hyp):
             return (" 08:32:11 up 93 days, 18:25, 12 users,  load average:"
