@@ -49,7 +49,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.network_info = utils.get_test_network_info()
         self.image = {
             'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',
-            'disk_format': 'vhd',
+            'disk_format': 'vmdk',
             'size': 512,
         }
         self.node_name = '%s(%s)' % (self.conn.dict_mors.keys()[0],

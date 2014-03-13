@@ -183,6 +183,12 @@ class VMwareVMOps(object):
         path = "%s/%s.vmdk" % (folder, name)
         return ds_util.build_datastore_path(ds_name, path)
 
+    def _get_disk_format(self, image_meta):
+        disk_format = image_meta.get('disk_format')
+        if disk_format not in ['iso', 'vmdk']:
+            raise exception.InvalidDiskFormat(disk_format=disk_format)
+        return (disk_format, disk_format == 'iso')
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info, block_device_info=None,
               instance_name=None, power_on=True):
@@ -214,10 +220,7 @@ class VMwareVMOps(object):
             if block_device_mapping:
                 ebs_root = True
 
-        # Get the file_type from the disk format
-        # TODO(garyk): raise an error if disk format is not supported
-        is_iso = image_meta.get('disk_format') == 'iso'
-        file_type = 'iso' if is_iso else 'vmdk'
+        (file_type, is_iso) = self._get_disk_format(image_meta)
 
         client_factory = self._session._get_vim().client.factory
         service_content = self._session._get_vim().get_service_content()

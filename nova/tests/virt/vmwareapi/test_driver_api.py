@@ -731,6 +731,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertRaises(exception.InstanceUnacceptable,
                           self._create_vm)
 
+    def test_spawn_invalid_disk_format(self):
+        self._create_instance()
+        self.image['disk_format'] = 'invalid'
+        self.assertRaises(exception.InvalidDiskFormat,
+                          self.conn.spawn, self.context,
+                          self.instance, self.image,
+                          injected_files=[], admin_password=None,
+                          network_info=self.network_info,
+                          block_device_info=None)
+
     def test_spawn_with_move_file_exists_exception(self):
         # The test will validate that the spawn completes
         # successfully. The "MoveDatastoreFile_Task" will
