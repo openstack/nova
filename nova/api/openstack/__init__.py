@@ -146,21 +146,34 @@ class APIMapper(routes.Mapper):
 
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
-        LOG.debug("kwargs: %s ", kwargs)
-
         if 'parent_resource' not in kwargs:
             kwargs['path_prefix'] = '{project_id}/'
         else:
             parent_resource = kwargs['parent_resource']
             p_collection = parent_resource['collection_name']
-            if p_collection == "domains":
-                p_member = parent_resource['member_name']
-                kwargs['path_prefix'] = 'domains/{domain_id}/%s/:%s_id' \
-                                            % (p_collection, p_member)
-            else:
-                p_member = parent_resource['member_name']
-                kwargs['path_prefix'] = '{project_id}/%s/:%s_id' \
-                                            % (p_collection, p_member)
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
+                                                                p_member)
+        routes.Mapper.resource(self, member_name,
+                                     collection_name,
+                                     **kwargs)
+
+
+class DomainMapper(APIMapper):
+    def resource(self, member_name, collection_name, **kwargs):
+        if 'parent_resource' not in kwargs:
+            kwargs['path_prefix'] = 'domains/{domain_id}/'
+        else:
+            parent_resource = kwargs['parent_resource']
+            p_collection = parent_resource['collection_name']
+            p_member = parent_resource['member_name']
+            kwargs['path_prefix'] = 'domains/{domain_id}/%s/:%s_id' \
+                                    % (p_collection, p_member)
+            routes.Mapper.resource(self, member_name,
+                                         collection_name,
+                                         **kwargs)
+            kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
+                                                                p_member)
         routes.Mapper.resource(self, member_name,
                                      collection_name,
                                      **kwargs)
@@ -197,7 +210,7 @@ class APIRouter(base_wsgi.Router):
             else:
                 raise Exception(_("Must specify an ExtensionManager class"))
 
-        mapper = ProjectMapper()
+        mapper = DomainMapper()
         self.resources = {}
         self._setup_routes(mapper, ext_mgr, init_only)
         self._setup_ext_routes(mapper, ext_mgr, init_only)
