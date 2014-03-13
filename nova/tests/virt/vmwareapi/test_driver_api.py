@@ -34,6 +34,7 @@ from nova import block_device
 from nova.compute import api as compute_api
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova.openstack.common import jsonutils
@@ -1190,6 +1191,31 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
+
+    def destroy_rescued(self, fake_method):
+        self._rescue()
+        with (
+            mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
+                              fake_method)
+        ):
+            self.instance['vm_state'] = vm_states.RESCUED
+            self.conn.destroy(self.context, self.instance, self.network_info)
+            inst_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
+            self.assertFalse(vmwareapi_fake.get_file(inst_path))
+            rescue_file_path = '[%s] %s-rescue/%s-rescue.vmdk' % (self.ds,
+                                                                  self.uuid,
+                                                                  self.uuid)
+            self.assertFalse(vmwareapi_fake.get_file(rescue_file_path))
+
+    def test_destroy_rescued(self):
+        def fake_detach_disk_from_vm(*args, **kwargs):
+            pass
+        self.destroy_rescued(fake_detach_disk_from_vm)
+
+    def test_destroy_rescued_with_exception(self):
+        def fake_detach_disk_from_vm(*args, **kwargs):
+            raise exception.NovaException('Here is my fake exception')
+        self.destroy_rescued(fake_detach_disk_from_vm)
 
     def test_destroy(self):
         self._create_vm()

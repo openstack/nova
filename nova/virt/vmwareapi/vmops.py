@@ -29,6 +29,7 @@ from nova.api.metadata import base as instance_metadata
 from nova import compute
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_states
 from nova import context as nova_context
 from nova import exception
 from nova.network import model as network_model
@@ -966,13 +967,9 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug(_("Did hard reboot of VM"), instance=instance)
 
-    def destroy(self, instance, network_info, destroy_disks=True,
-                instance_name=None):
-        """Destroy a VM instance. Steps followed are:
-        1. Power off the VM, if it is in poweredOn state.
-        2. Un-register a VM.
-        3. Delete the contents of the folder holding the VM related data.
-        """
+    def _destroy_instance(self, instance, network_info, destroy_disks=True,
+                          instance_name=None):
+        # Destroy a VM instance
         # Get the instance name. In some cases this may differ from the 'uuid',
         # for example when the spawn of a rescue instance takes place.
         if not instance_name:
@@ -1010,8 +1007,9 @@ class VMwareVMOps(object):
                                            "UnregisterVM", vm_ref)
                 LOG.debug(_("Unregistered the VM"), instance=instance)
             except Exception as excep:
-                LOG.warn(_("In vmwareapi:vmops:destroy, got this exception"
-                           " while un-registering the VM: %s") % str(excep))
+                LOG.warn(_("In vmwareapi:vmops:_destroy_instance, got this "
+                           "exception while un-registering the VM: %s"),
+                         excep)
             # Delete the folder holding the VM related content on
             # the datastore.
             if destroy_disks and datastore_name:
@@ -1034,14 +1032,38 @@ class VMwareVMOps(object):
                                {'datastore_name': datastore_name},
                               instance=instance)
                 except Exception as excep:
-                    LOG.warn(_("In vmwareapi:vmops:destroy, "
-                                 "got this exception while deleting"
-                                 " the VM contents from the disk: %s")
-                                 % str(excep))
+                    LOG.warn(_("In vmwareapi:vmops:_destroy_instance, "
+                                "got this exception while deleting "
+                                "the VM contents from the disk: %s"),
+                             excep)
         except Exception as exc:
             LOG.exception(exc, instance=instance)
         finally:
             vm_util.vm_ref_cache_delete(instance_name)
+
+    def destroy(self, instance, network_info, destroy_disks=True):
+        """Destroy a VM instance.
+
+        Steps followed for each VM are:
+        1. Power off, if it is in poweredOn state.
+        2. Un-register.
+        3. Delete the contents of the folder holding the VM related data.
+        """
+        # If there is a rescue VM then we need to destroy that one too.
+        LOG.debug(_("Destroying instance"), instance=instance)
+        if instance['vm_state'] == vm_states.RESCUED:
+            LOG.debug(_("Rescue VM configured"), instance=instance)
+            try:
+                self.unrescue(instance, power_on=False)
+                LOG.debug(_("Rescue VM destroyed"), instance=instance)
+            except Exception:
+                rescue_name = instance['uuid'] + self._rescue_suffix
+                self._destroy_instance(instance, network_info,
+                                       destroy_disks=destroy_disks,
+                                       instance_name=rescue_name)
+        self._destroy_instance(instance, network_info,
+                               destroy_disks=destroy_disks)
+        LOG.debug(_("Instance destroyed"), instance=instance)
 
     def pause(self, instance):
         msg = _("pause not supported for vmwareapi")
@@ -1120,7 +1142,7 @@ class VMwareVMOps(object):
                                 adapter_type, disk_type, vmdk_path)
         self._power_on(instance, vm_ref=rescue_vm_ref)
 
-    def unrescue(self, instance):
+    def unrescue(self, instance, power_on=True):
         """Unrescue the specified instance."""
         # Get the original vmdk_path
         vm_ref = vm_util.get_vm_ref(self._session, instance)
@@ -1142,8 +1164,9 @@ class VMwareVMOps(object):
         device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
         self._power_off_vm_ref(vm_rescue_ref)
         self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
-        self.destroy(r_instance, None, instance_name=instance_name)
-        self._power_on(instance)
+        self._destroy_instance(r_instance, None, instance_name=instance_name)
+        if power_on:
+            self._power_on(instance)
 
     def _power_off_vm_ref(self, vm_ref):
         """Power off the specifed vm.
