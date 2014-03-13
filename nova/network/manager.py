@@ -68,6 +68,7 @@ from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.objects import network as network_obj
+from nova.objects import quotas as quotas_obj
 from nova.objects import service as service_obj
 from nova.objects import virtual_interface as vif_obj
 from nova.openstack.common import excutils
@@ -78,7 +79,6 @@ from nova.openstack.common import periodic_task
 from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
-from nova import quota
 from nova import servicegroup
 from nova import utils
 
@@ -307,7 +307,7 @@ class NetworkManager(manager.Manager):
         l3_lib = kwargs.get("l3_lib", CONF.l3_lib)
         self.l3driver = importutils.import_object(l3_lib)
 
-        self.quotas = quota.QUOTAS
+        self.quotas_cls = quotas_obj.Quotas
 
         super(NetworkManager, self).__init__(service_name='network',
                                              *args, **kwargs)
@@ -847,10 +847,18 @@ class NetworkManager(manager.Manager):
         #             network_get_by_compute_host
         address = None
 
+        # NOTE(vish) This db query could be removed if we pass az and name
+        #            (or the whole instance object).
+        instance = instance_obj.Instance.get_by_uuid(context, instance_id)
+
         # Check the quota; can't put this in the API because we get
         # called into from other places
+        quotas = self.quotas_cls()
+        quota_project, quota_user = quotas_obj.ids_from_instance(context,
+                                                                 instance)
         try:
-            reservations = self.quotas.reserve(context, fixed_ips=1)
+            quotas.reserve(context, fixed_ips=1, project_id=quota_project,
+                           user_id=quota_user)
         except exception.OverQuota:
             LOG.warn(_("Quota exceeded for %s, tried to allocate "
                        "fixed IP"), context.project_id)
@@ -874,9 +882,6 @@ class NetworkManager(manager.Manager):
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
 
-            # NOTE(vish) This db query could be removed if we pass az and name
-            #            (or the whole instance object).
-            instance = instance_obj.Instance.get_by_uuid(context, instance_id)
             name = instance.display_name
 
             if self._validate_instance_zone_for_dns_domain(context, instance):
@@ -887,12 +892,12 @@ class NetworkManager(manager.Manager):
                     self.instance_dns_domain)
             self._setup_network_on_host(context, network)
 
-            self.quotas.commit(context, reservations)
+            quotas.commit(context)
             return address
 
         except Exception:
             with excutils.save_and_reraise_exception():
-                self.quotas.rollback(context, reservations)
+                quotas.rollback(context)
 
     def deallocate_fixed_ip(self, context, address, host=None, teardown=True,
             instance=None):
@@ -911,13 +916,13 @@ class NetworkManager(manager.Manager):
             instance = instance_obj.Instance.get_by_uuid(
                 context.elevated(read_deleted='yes'), instance_uuid)
 
-        project_id = instance.project_id
+        quotas = self.quotas_cls()
+        quota_project, quota_user = quotas_obj.ids_from_instance(context,
+                                                                 instance)
         try:
-            reservations = self.quotas.reserve(context,
-                                               project_id=project_id,
-                                               fixed_ips=-1)
+            quotas.reserve(context, fixed_ips=-1, project_id=quota_project,
+                           user_id=quota_user)
         except Exception:
-            reservations = None
             LOG.exception(_("Failed to update usages deallocating "
                             "fixed IP"))
 
@@ -976,8 +981,7 @@ class NetworkManager(manager.Manager):
                 self._teardown_network_on_host(context, network)
 
         # Commit the reservations
-        if reservations:
-            self.quotas.commit(context, reservations, project_id=project_id)
+        quotas.commit(context)
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
@@ -1718,8 +1722,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                                           *args, **kwargs)
         # NOTE(cfb) VlanManager doesn't enforce quotas on fixed IP addresses
         #           because a project is assigned an entire network.
-        self.quotas = quota.QuotaEngine(
-                quota_driver_class='nova.quota.NoopQuotaDriver')
+        self.quotas_cls = quotas_obj.QuotasNoOp
 
     def init_host(self):
         """Do any initialization that needs to be run if this is a
