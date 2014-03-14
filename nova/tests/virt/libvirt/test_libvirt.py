@@ -33,6 +33,7 @@ from xml.dom import minidom
 
 from nova.api.ec2 import cloud
 from nova.compute import flavors
+from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_mode
@@ -40,6 +41,7 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.network import model as network_model
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import pci_device as pci_device_obj
@@ -207,6 +209,9 @@ class FakeVirtDomain(object):
         pass
 
     def blockJobInfo(self, path, flags):
+        pass
+
+    def resume(self):
         pass
 
 
@@ -5288,7 +5293,7 @@ class LibvirtConnTestCase(test.TestCase):
                                 disk_info_json)
         conn._create_domain_and_network(self.context, dummyxml, instance,
                                         network_info, block_device_info,
-                                        reboot=True)
+                                        reboot=True, vifs_already_plugged=True)
         self.mox.ReplayAll()
 
         conn._hard_reboot(self.context, instance, network_info,
@@ -5393,7 +5398,8 @@ class LibvirtConnTestCase(test.TestCase):
             _create_domain_and_network.assert_has_calls([mock.call(
                                         self.context, dummyxml,
                                         instance, network_info,
-                                        block_device_info=block_device_info)])
+                                        block_device_info=block_device_info,
+                                        vifs_already_plugged=True)])
             _attach_pci_devices.assert_has_calls([mock.call('fake_dom',
                                                  'fake_pci_devs')])
 
@@ -6777,6 +6783,115 @@ class LibvirtConnTestCase(test.TestCase):
                                         block_device_info=block_device_info)
         self.assertTrue('fake' in self.resultXML)
 
+    def _test_create_with_network_events(self, neutron_failure=None):
+        self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
+                   group='libvirt')
+        generated_events = []
+
+        def wait_timeout():
+            event = mock.MagicMock()
+            if neutron_failure == 'timeout':
+                raise eventlet.timeout.Timeout()
+            elif neutron_failure == 'error':
+                event.status = 'failed'
+            else:
+                event.status = 'completed'
+            return event
+
+        def fake_prepare(instance, event_name):
+            m = mock.MagicMock()
+            m.instance = instance
+            m.event_name = event_name
+            m.wait.side_effect = wait_timeout
+            generated_events.append(m)
+            return m
+
+        virtapi = manager.ComputeVirtAPI(mock.MagicMock())
+        prepare = virtapi._compute.instance_events.prepare_for_instance_event
+        prepare.side_effect = fake_prepare
+        conn = libvirt_driver.LibvirtDriver(virtapi, False)
+
+        instance = instance_obj.Instance(id=1, uuid='fake-uuid')
+        vifs = [{'id': 'vif1', 'active': False},
+                {'id': 'vif2', 'active': False}]
+
+        @mock.patch.object(conn, 'plug_vifs')
+        @mock.patch.object(conn, 'firewall_driver')
+        @mock.patch.object(conn, '_create_domain')
+        @mock.patch.object(conn, 'cleanup')
+        def test_create(cleanup, create, fw_driver, plug_vifs):
+            domain = conn._create_domain_and_network(self.context, 'xml',
+                                                     instance, vifs)
+            plug_vifs.assert_called_with(instance, vifs)
+            self.assertEqual(libvirt.VIR_DOMAIN_START_PAUSED,
+                             create.call_args_list[0][1]['launch_flags'])
+            domain.resume.assert_called_once_with()
+            if neutron_failure and CONF.vif_plugging_is_fatal:
+                cleanup.assert_called_once_with(self.context,
+                                                instance, network_info=vifs,
+                                                block_device_info=None)
+
+        test_create()
+
+        if utils.is_neutron() and CONF.vif_plugging_timeout:
+            prepare.assert_has_calls([
+                mock.call(instance, 'network-vif-plugged-vif1'),
+                mock.call(instance, 'network-vif-plugged-vif2')])
+            for event in generated_events:
+                if neutron_failure and generated_events.index(event) != 0:
+                    self.assertEqual(0, event.call_count)
+                elif (neutron_failure == 'error' and
+                          not CONF.vif_plugging_is_fatal):
+                    event.wait.assert_called_once_with()
+        else:
+            self.assertEqual(0, prepare.call_count)
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron(self, is_neutron):
+        self._test_create_with_network_events()
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron_nowait(self, is_neutron):
+        self.flags(vif_plugging_timeout=0)
+        self._test_create_with_network_events()
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron_failed_nonfatal_timeout(
+            self, is_neutron):
+        self.flags(vif_plugging_is_fatal=False)
+        self._test_create_with_network_events(neutron_failure='timeout')
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron_failed_fatal_timeout(
+            self, is_neutron):
+        self.assertRaises(exception.VirtualInterfaceCreateException,
+                          self._test_create_with_network_events,
+                          neutron_failure='timeout')
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron_failed_nonfatal_error(
+            self, is_neutron):
+        self.flags(vif_plugging_is_fatal=False)
+        self._test_create_with_network_events(neutron_failure='error')
+
+    @mock.patch('nova.utils.is_neutron', return_value=True)
+    def test_create_with_network_events_neutron_failed_fatal_error(
+            self, is_neutron):
+        self.assertRaises(exception.VirtualInterfaceCreateException,
+                          self._test_create_with_network_events,
+                          neutron_failure='error')
+
+    @mock.patch('nova.utils.is_neutron', return_value=False)
+    def test_create_with_network_events_non_neutron(self, is_neutron):
+        self._test_create_with_network_events()
+
+    def test_get_neutron_events(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        network_info = [network_model.VIF(id='1'),
+                        network_model.VIF(id='2', active=True)]
+        events = conn._get_neutron_events(network_info)
+        self.assertEqual([('network-vif-plugged', '1')], events)
+
 
 class HostStateTestCase(test.TestCase):
 
@@ -7975,10 +8090,11 @@ class LibvirtDriverTestCase(test.TestCase):
                               block_device_info=None, inject_files=True):
             self.assertFalse(inject_files)
 
-        def fake_create_domain(xml, instance=None, power_on=True):
+        def fake_create_domain(xml, instance=None, launch_flags=0,
+                               power_on=True):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
-            return None
+            return mock.MagicMock()
 
         def fake_enable_hairpin(instance):
             pass
@@ -8014,7 +8130,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
         self.libvirtconnection.finish_migration(
                       context.get_admin_context(), None, ins_ref,
-                      disk_info_text, None, None, None, None, power_on)
+                      disk_info_text, [], None, None, None, power_on)
         self.assertTrue(self.fake_create_domain_called)
 
     def test_finish_migration_power_on(self):
@@ -8036,10 +8152,11 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_plug_vifs(instance, network_info):
             pass
 
-        def fake_create_domain(xml, instance=None, power_on=True):
+        def fake_create_domain(xml, instance=None, launch_flags=0,
+                               power_on=True):
             self.fake_create_domain_called = True
             self.assertEqual(powered_on, power_on)
-            return None
+            return mock.MagicMock()
 
         def fake_enable_hairpin(instance):
             pass
@@ -8079,7 +8196,7 @@ class LibvirtDriverTestCase(test.TestCase):
 
             self.libvirtconnection.finish_revert_migration(
                                        context.get_admin_context(), ins_ref,
-                                       None, None, power_on)
+                                       [], None, power_on)
             self.assertTrue(self.fake_create_domain_called)
 
     def test_finish_revert_migration_power_on(self):

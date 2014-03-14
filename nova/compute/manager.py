@@ -1319,7 +1319,8 @@ class ComputeManager(manager.Manager):
             raise exception.BuildAbortException(
                 instance_uuid=instance['uuid'],
                 reason=msg)
-        except exception.UnexpectedTaskStateError as e:
+        except (exception.UnexpectedTaskStateError,
+                exception.VirtualInterfaceCreateException) as e:
             # Don't try to reschedule, just log and reraise.
             with excutils.save_and_reraise_exception():
                 LOG.debug(e.format_message(), instance=instance)
@@ -2033,6 +2034,10 @@ class ComputeManager(manager.Manager):
                         ' not rescheduling')
                 LOG.exception(msg, instance=instance)
 
+    @messaging.expected_exceptions(exception.BuildAbortException,
+                                   exception.UnexpectedTaskStateError,
+                                   exception.VirtualInterfaceCreateException,
+                                   exception.RescheduledException)
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event

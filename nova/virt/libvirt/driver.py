@@ -265,6 +265,8 @@ CONF.import_opt('live_migration_retry_count', 'nova.compute.manager')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')
 CONF.import_opt('server_proxyclient_address', 'nova.spice', group='spice')
 CONF.import_opt('vcpu_pin_set', 'nova.virt.cpu')
+CONF.import_opt('vif_plugging_is_fatal', 'nova.virt.driver')
+CONF.import_opt('vif_plugging_timeout', 'nova.virt.driver')
 
 DEFAULT_FIREWALL_DRIVER = "%s.%s" % (
     libvirt_firewall.__name__,
@@ -2074,7 +2076,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # Initialize all the necessary networking, block devices and
         # start the instance.
         self._create_domain_and_network(context, xml, instance, network_info,
-                                        block_device_info, reboot=True)
+                                        block_device_info, reboot=True,
+                                        vifs_already_plugged=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance))
 
@@ -2124,7 +2127,8 @@ class LibvirtDriver(driver.ComputeDriver):
         xml = self._get_existing_domain_xml(instance, network_info,
                                             block_device_info)
         dom = self._create_domain_and_network(context, xml, instance,
-                           network_info, block_device_info=block_device_info)
+                           network_info, block_device_info=block_device_info,
+                           vifs_already_plugged=True)
         self._attach_pci_devices(dom,
             pci_manager.get_instance_pci_devs(instance))
 
@@ -3529,9 +3533,25 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return domain
 
+    def _neutron_failed_callback(self, event_name, instance):
+        LOG.error(_('Neutron Reported failure on event '
+                    '%(event)s for instance %(uuid)s'),
+                  {'event': event_name, 'uuid': instance.uuid})
+        if CONF.vif_plugging_is_fatal:
+            raise exception.NovaException()
+
+    def _get_neutron_events(self, network_info):
+        # NOTE(danms): We need to collect any VIFs that are currently
+        # down that we expect a down->up event for. Anything that is
+        # already up will not undergo that transition, and for
+        # anything that might be stale (cache-wise) assume it's
+        # already up so we don't block on it.
+        return [('network-vif-plugged', vif['id'])
+                for vif in network_info if vif.get('active', True) is False]
+
     def _create_domain_and_network(self, context, xml, instance, network_info,
                                    block_device_info=None, power_on=True,
-                                   reboot=False):
+                                   reboot=False, vifs_already_plugged=False):
 
         """Do required network setup and create domain."""
         block_device_mapping = driver.block_device_info_get_mapping(
@@ -3561,12 +3581,45 @@ class LibvirtDriver(driver.ComputeDriver):
                                                            encryption)
                     encryptor.attach_volume(context, **encryption)
 
-        self.plug_vifs(instance, network_info)
-        self.firewall_driver.setup_basic_filtering(instance, network_info)
-        self.firewall_driver.prepare_instance_filter(instance, network_info)
-        domain = self._create_domain(xml, instance=instance, power_on=power_on)
+        timeout = CONF.vif_plugging_timeout
+        if utils.is_neutron() and not vifs_already_plugged and timeout:
+            events = self._get_neutron_events(network_info)
+        else:
+            events = []
 
-        self.firewall_driver.apply_instance_filter(instance, network_info)
+        try:
+            with self.virtapi.wait_for_instance_event(
+                    instance, events, deadline=timeout,
+                    error_callback=self._neutron_failed_callback):
+                self.plug_vifs(instance, network_info)
+                self.firewall_driver.setup_basic_filtering(instance,
+                                                           network_info)
+                self.firewall_driver.prepare_instance_filter(instance,
+                                                             network_info)
+                domain = self._create_domain(
+                    xml, instance=instance,
+                    launch_flags=libvirt.VIR_DOMAIN_START_PAUSED,
+                    power_on=power_on)
+
+                self.firewall_driver.apply_instance_filter(instance,
+                                                           network_info)
+        except exception.NovaException:
+            # Neutron reported failure and we didn't swallow it, so
+            # bail here
+            domain.destroy()
+            self.cleanup(context, instance, network_info=network_info,
+                         block_device_info=block_device_info)
+            raise exception.VirtualInterfaceCreateException()
+        except eventlet.timeout.Timeout:
+            # We never heard from Neutron
+            LOG.warn(_('Timeout waiting for vif plugging callback for '
+                       'instance %(uuid)s'), {'uuid': instance['uuid']})
+            if CONF.vif_plugging_is_fatal:
+                domain.destroy()
+                self.cleanup(context, instance, network_info=network_info,
+                             block_device_info=block_device_info)
+                raise exception.VirtualInterfaceCreateException()
+        domain.resume()
         return domain
 
     def get_all_block_devices(self):
