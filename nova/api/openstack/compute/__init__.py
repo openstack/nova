@@ -134,7 +134,7 @@ class APIRouter(nova.api.openstack.APIRouter):
                conditions={"method": ['GET']})
 
             mapper.connect("domains",
-               "/domains/{domain_id}/servers/{server_id}/action",
+               "/domains/{domain_id}/servers/{id}/action",
                controller=domains_controller,
                action='action',
                conditions={"method": ['POST']})
