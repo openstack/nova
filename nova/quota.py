@@ -92,6 +92,8 @@ class DbQuotaDriver(object):
     quota information.  The default driver utilizes the local
     database.
     """
+    UNLIMITED_VALUE = -1
+
     def get_by_project_and_user(self, context, project_id, user_id, resource):
         """Get a specific quota by project and user."""
 
@@ -273,6 +275,30 @@ class DbQuotaDriver(object):
                                     defaults=defaults, usages=project_usages,
                                     remains=remains)
 
+    def _is_unlimited_value(self, v):
+        """A helper method to check for unlimited value.
+        """
+
+        return v <= self.UNLIMITED_VALUE
+
+    def _sum_quota_values(self, v1, v2):
+        """A helper method that handles unlimited values when performing
+        sum operation.
+        """
+
+        if self._is_unlimited_value(v1) or self._is_unlimited_value(v2):
+            return self.UNLIMITED_VALUE
+        return v1 + v2
+
+    def _sub_quota_values(self, v1, v2):
+        """A helper method that handles unlimited values when performing
+        subtraction operation.
+        """
+
+        if self._is_unlimited_value(v1) or self._is_unlimited_value(v2):
+            return self.UNLIMITED_VALUE
+        return v1 - v2
+
     def get_settable_quotas(self, context, resources, project_id,
                             user_id=None):
         """Given a list of resources, retrieve the range of settable quotas for
@@ -283,6 +309,7 @@ class DbQuotaDriver(object):
         :param project_id: The ID of the project to return quotas for.
         :param user_id: The ID of the user to return quotas for.
         """
+
         settable_quotas = {}
         db_proj_quotas = db.quota_get_all_by_project(context, project_id)
         project_quotas = self.get_project_quotas(context, resources,
@@ -297,17 +324,18 @@ class DbQuotaDriver(object):
                                                project_quotas=db_proj_quotas,
                                                user_quotas=setted_quotas)
             for key, value in user_quotas.items():
-                maximum = project_quotas[key]['remains'] +\
-                        setted_quotas.get(key, 0)
-                settable_quotas[key] = dict(
-                        minimum=value['in_use'] + value['reserved'],
-                        maximum=maximum
-                        )
+                maximum = \
+                    self._sum_quota_values(project_quotas[key]['remains'],
+                                           setted_quotas.get(key, 0))
+                minimum = value['in_use'] + value['reserved']
+                settable_quotas[key] = {'minimum': minimum, 'maximum': maximum}
         else:
             for key, value in project_quotas.items():
-                minimum = max(int(value['limit'] - value['remains']),
-                              int(value['in_use'] + value['reserved']))
-                settable_quotas[key] = dict(minimum=minimum, maximum=-1)
+                minimum = \
+                    max(int(self._sub_quota_values(value['limit'],
+                                                   value['remains'])),
+                        int(value['in_use'] + value['reserved']))
+                settable_quotas[key] = {'minimum': minimum, 'maximum': -1}
         return settable_quotas
 
     def _get_quotas(self, context, resources, keys, has_sync, project_id=None,

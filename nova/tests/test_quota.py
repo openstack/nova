@@ -1590,14 +1590,20 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.calls.append('get_project_quotas')
             result = {}
             for k, v in resources.items():
+                limit = v.default
+                reserved = 0
                 if k == 'instances':
                     remains = v.default - 5
                     in_use = 1
+                elif k == 'cores':
+                    remains = -1
+                    in_use = 5
+                    limit = -1
                 else:
                     remains = v.default
                     in_use = 0
-                result[k] = {'limit': v.default, 'in_use': in_use,
-                             'reserved': 0, 'remains': remains}
+                result[k] = {'limit': limit, 'in_use': in_use,
+                             'reserved': reserved, 'remains': remains}
             return result
 
         def fake_get_user_quotas(context, resources, project_id, user_id,
@@ -1607,17 +1613,21 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.calls.append('get_user_quotas')
             result = {}
             for k, v in resources.items():
+                reserved = 0
                 if k == 'instances':
                     in_use = 1
+                elif k == 'cores':
+                    in_use = 5
+                    reserved = 10
                 else:
                     in_use = 0
                 result[k] = {'limit': v.default,
-                             'in_use': in_use, 'reserved': 0}
+                             'in_use': in_use, 'reserved': reserved}
             return result
 
         def fake_qgabpau(context, project_id, user_id):
             self.calls.append('quota_get_all_by_project_and_user')
-            return {'instances': 2}
+            return {'instances': 2, 'cores': -1}
 
         self.stubs.Set(self.driver, 'get_project_quotas',
                        fake_get_project_quotas)
@@ -1643,8 +1653,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                     'maximum': 7,
                     },
                 'cores': {
-                    'minimum': 0,
-                    'maximum': 20,
+                    'minimum': 15,
+                    'maximum': -1,
                     },
                 'ram': {
                     'minimum': 0,
@@ -1703,7 +1713,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                     'maximum': -1,
                     },
                 'cores': {
-                    'minimum': 0,
+                    'minimum': 5,
                     'maximum': -1,
                     },
                 'ram': {
@@ -1745,6 +1755,68 @@ class DbQuotaDriverTestCase(test.TestCase):
                 'key_pairs': {
                     'minimum': 0,
                     'maximum': -1,
+                    },
+                })
+
+    def test_get_settable_quotas_by_user_with_unlimited_value(self):
+        self._stub_get_settable_quotas()
+        result = self.driver.get_settable_quotas(
+            FakeContext('test_project', 'test_class'),
+            quota.QUOTAS._resources, 'test_project', user_id='test_user')
+
+        self.assertEqual(self.calls, [
+                'get_project_quotas',
+                'quota_get_all_by_project_and_user',
+                'get_user_quotas',
+                ])
+        self.assertEqual(result, {
+                'instances': {
+                    'minimum': 1,
+                    'maximum': 7,
+                    },
+                'cores': {
+                    'minimum': 15,
+                    'maximum': -1,
+                    },
+                'ram': {
+                    'minimum': 0,
+                    'maximum': 50 * 1024,
+                    },
+                'floating_ips': {
+                    'minimum': 0,
+                    'maximum': 10,
+                    },
+                'fixed_ips': {
+                    'minimum': 0,
+                    'maximum': 10,
+                    },
+                'metadata_items': {
+                    'minimum': 0,
+                    'maximum': 128,
+                    },
+                'injected_files': {
+                    'minimum': 0,
+                    'maximum': 5,
+                    },
+                'injected_file_content_bytes': {
+                    'minimum': 0,
+                    'maximum': 10 * 1024,
+                    },
+                'injected_file_path_bytes': {
+                    'minimum': 0,
+                    'maximum': 255,
+                    },
+                'security_groups': {
+                    'minimum': 0,
+                    'maximum': 10,
+                    },
+                'security_group_rules': {
+                    'minimum': 0,
+                    'maximum': 20,
+                    },
+                'key_pairs': {
+                    'minimum': 0,
+                    'maximum': 100,
                     },
                 })
 
