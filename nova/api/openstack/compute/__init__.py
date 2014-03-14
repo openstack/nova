@@ -90,7 +90,7 @@ class APIRouter(nova.api.openstack.APIRouter):
             mapper.resource("server", "servers",
                             controller=self.resources['servers'],
                             path_prefix='domains/{domain_id}/servers/' \
-                            '{server_id}',
+                            ':server_id',
                             member={'action': 'POST'})
 
             # map.extend(routes, "/domains")
