@@ -51,6 +51,10 @@ CONF.register_opts(osapi_opts)
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
+# NOTE(cyeoh): A common regexp for acceptable names (user supplied)
+# that we want all new extensions to conform to unless there is a very
+# good reason not to.
+VALID_NAME_REGEX = re.compile("^(?! )[\w. _-]+(?<! )$", re.UNICODE)
 
 XML_NS_V11 = 'http://docs.openstack.org/compute/api/v1.1'
 
