@@ -1737,9 +1737,8 @@ class ComputeManager(manager.Manager):
         if set_access_ip:
             _set_access_ip_values()
 
-        if network_info is not None:
-            network_info.wait(do_raise=True)
-
+        network_info.wait(do_raise=True)
+        instance.info_cache.network_info = network_info
         instance.save(expected_task_state=task_states.SPAWNING)
         return instance
 
