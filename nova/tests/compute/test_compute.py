@@ -9031,6 +9031,7 @@ class ComputeAPITestCase(BaseTestCase):
             return False
 
         def fake_rebuild_instance(*args, **kwargs):
+            self.assertIn('info_cache', kwargs['instance'])
             db.instance_update(self.context, instance_uuid,
                                {'host': kwargs['host']})
 
