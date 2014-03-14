@@ -72,6 +72,7 @@ class SchedulerManager(manager.Manager):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
+        self.additional_endpoints.append(_SchedulerManagerV3Proxy(self))
 
     def create_volume(self, context, volume_id, snapshot_id,
                       reservations=None, image_id=None):
@@ -296,3 +297,32 @@ class SchedulerManager(manager.Manager):
         dests = self.driver.select_destinations(context, request_spec,
             filter_properties)
         return jsonutils.to_primitive(dests)
+
+
+class _SchedulerManagerV3Proxy(object):
+
+    target = messaging.Target(version='3.0')
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def select_destinations(self, ctxt, request_spec, filter_properties):
+        return self.manager.select_destinations(ctxt,
+                request_spec=request_spec, filter_properties=filter_properties)
+
+    def run_instance(self, ctxt, request_spec, admin_password,
+            injected_files, requested_networks, is_first_time,
+            filter_properties, legacy_bdm_in_spec):
+        return self.manager.run_instance(ctxt, request_spec=request_spec,
+                admin_password=admin_password, injected_files=injected_files,
+                requested_networks=requested_networks,
+                is_first_time=is_first_time,
+                filter_properties=filter_properties,
+                legacy_bdm_in_spec=legacy_bdm_in_spec)
+
+    def prep_resize(self, ctxt, instance, instance_type, image,
+            request_spec, filter_properties, reservations):
+        return self.manager.prep_resize(ctxt, instance=instance,
+                instance_type=instance_type, image=image,
+                request_spec=request_spec, filter_properties=filter_properties,
+                reservations=reservations)

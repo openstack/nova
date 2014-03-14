@@ -49,8 +49,7 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
             prepare_kwargs['fanout'] = True
         if expected_version:
             prepare_kwargs['version'] = expected_version
-        if prepare_kwargs:
-            rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
+        rpcapi.client.prepare(**prepare_kwargs).AndReturn(rpcapi.client)
 
         rpc_method = getattr(rpcapi.client, rpc_method)
 
@@ -70,7 +69,7 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
                 admin_password='pw', injected_files='fake_injected_files',
                 requested_networks='fake_requested_networks',
                 is_first_time=True, filter_properties='fake_filter_properties',
-                legacy_bdm_in_spec=False, version='2.9')
+                legacy_bdm_in_spec=False)
 
     def test_prep_resize(self):
         self._test_scheduler_api('prep_resize', rpc_method='cast',
@@ -82,5 +81,4 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
     def test_select_destinations(self):
         self._test_scheduler_api('select_destinations', rpc_method='call',
                 request_spec='fake_request_spec',
-                filter_properties='fake_prop',
-                version='2.7')
+                filter_properties='fake_prop')
