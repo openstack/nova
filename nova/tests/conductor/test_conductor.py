@@ -198,13 +198,6 @@ class _BaseTestCase(object):
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
 
-    def test_aggregate_get(self):
-        aggregate_ref = self._setup_aggregate_with_host()
-        aggregate = self.conductor.aggregate_get(self.context,
-                                                 aggregate_ref['id'])
-        self.assertEqual(jsonutils.to_primitive(aggregate_ref), aggregate)
-        db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
-
     def test_aggregate_get_by_host(self):
         self._setup_aggregate_with_host()
         aggregates = self.conductor.aggregate_get_by_host(self.context, 'bar')

@@ -206,6 +206,8 @@ class ConductorManager(manager.Manager):
         self.db.aggregate_host_delete(context.elevated(),
                 aggregate['id'], host)
 
+    # NOTE(russellb): This method is now deprecated and can be removed in
+    # version 2.0 of the RPC API
     @messaging.expected_exceptions(exception.AggregateNotFound)
     def aggregate_get(self, context, aggregate_id):
         aggregate = self.db.aggregate_get(context.elevated(), aggregate_id)
