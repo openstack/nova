@@ -33,6 +33,7 @@ from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
+from nova.conductor import api as conductor_api
 from nova import context
 from nova import crypto
 from nova import db
@@ -990,6 +991,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         xenapi_fake.reset_table('network')
         # Instance id = 2 will use vlan network (see db/fakes.py)
         ctxt = self.context.elevated()
+        self.network.conductor_api = conductor_api.LocalAPI()
         instance = self._create_instance(2, False)
         networks = self.network.db.network_get_all(ctxt)
         with mock.patch('nova.objects.network.Network._from_db_object'):
