@@ -510,12 +510,8 @@ class ServerMetaDataTest(BaseTest):
     def test_invalid_metadata_items_on_update_item(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        data = {"metadata": {}}
-        for num in range(CONF.quota_metadata_items + 1):
-            data['metadata']['key%i' % num] = "blah"
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'PUT'
-        req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
 
         #test for long key
