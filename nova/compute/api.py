@@ -3015,7 +3015,8 @@ class API(base.Base):
                 host_name, block_migration=block_migration,
                 disk_over_commit=disk_over_commit)
 
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED,
+                                    vm_states.ERROR])
     def evacuate(self, context, instance, host, on_shared_storage,
                  admin_password=None):
         """Running evacuate to target host.

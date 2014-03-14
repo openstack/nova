@@ -130,6 +130,9 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
     def test_evacuate(self):
         self.skipTest("Test is incompatible with cells.")
 
+    def test_error_evacuate(self):
+        self.skipTest("Test is incompatible with cells.")
+
     def test_delete_instance_no_cell(self):
         cells_rpcapi = self.compute_api.cells_rpcapi
         self.mox.StubOutWithMock(cells_rpcapi,
