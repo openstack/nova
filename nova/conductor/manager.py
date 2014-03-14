@@ -130,6 +130,8 @@ class ConductorManager(manager.Manager):
         notifications.send_update(context, old_ref, instance_ref, service)
         return jsonutils.to_primitive(instance_ref)
 
+    # NOTE(russellb): This method is now deprecated and can be removed in
+    # version 2.0 of the RPC API
     @messaging.expected_exceptions(exception.InstanceNotFound)
     def instance_get(self, context, instance_id):
         return jsonutils.to_primitive(

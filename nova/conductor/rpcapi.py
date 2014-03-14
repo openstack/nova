@@ -128,6 +128,7 @@ class ConductorAPI(object):
     ...  - Remove instance_type_get()
     ...  - Remove aggregate_get()
     ...  - Remove aggregate_get_by_host()
+    ...  - Remove instance_get()
     """
 
     VERSION_ALIASES = {
@@ -153,10 +154,6 @@ class ConductorAPI(object):
                           instance_uuid=instance_uuid,
                           updates=updates_p,
                           service=service)
-
-    def instance_get(self, context, instance_id):
-        cctxt = self.client.prepare(version='1.24')
-        return cctxt.call(context, 'instance_get', instance_id=instance_id)
 
     def instance_get_by_uuid(self, context, instance_uuid,
                              columns_to_join=None):
