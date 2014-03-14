@@ -14,6 +14,7 @@
 #    under the License.
 
 import six
+import webob
 from webob import exc
 
 from oslo.config import cfg
@@ -22,9 +23,6 @@ from nova.api.openstack.compute import ips
 from nova.api.openstack.compute.servers import ActionDeserializer
 from nova.api.openstack.compute.servers import FullServerTemplate
 
-from nova.api.openstack import extensions
-from nova.api.openstack import common
-from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import exception
 from nova.openstack.common.gettextutils import _
