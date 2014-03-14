@@ -156,11 +156,6 @@ class ProjectMapper(APIMapper):
             parent_resource = kwargs['parent_resource']
             p_collection = parent_resource['collection_name']
             p_member = parent_resource['member_name']
-            kwargs['path_prefix'] = 'domains/{domain_id}/%s/:%s_id' \
-                                    % (p_collection, p_member)
-            routes.Mapper.resource(self, member_name,
-                                         collection_name,
-                                        **kwargs)
             kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
                                                                 p_member)
         routes.Mapper.resource(self, member_name,
