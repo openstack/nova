@@ -213,6 +213,8 @@ class ConductorManager(manager.Manager):
         aggregate = self.db.aggregate_get(context.elevated(), aggregate_id)
         return jsonutils.to_primitive(aggregate)
 
+    # NOTE(russellb): This method is now deprecated and can be removed in
+    # version 2.0 of the RPC API
     def aggregate_get_by_host(self, context, host, key=None):
         aggregates = self.db.aggregate_get_by_host(context.elevated(),
                                                    host, key)

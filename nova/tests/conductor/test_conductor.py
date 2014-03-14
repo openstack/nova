@@ -198,11 +198,6 @@ class _BaseTestCase(object):
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
 
-    def test_aggregate_get_by_host(self):
-        self._setup_aggregate_with_host()
-        aggregates = self.conductor.aggregate_get_by_host(self.context, 'bar')
-        self.assertEqual(aggregates[0]['availability_zone'], 'foo')
-
     def test_aggregate_metadata_get_by_host(self):
         self.mox.StubOutWithMock(db, 'aggregate_metadata_get_by_host')
         db.aggregate_metadata_get_by_host(self.context, 'host',
