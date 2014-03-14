@@ -2702,21 +2702,13 @@ class API(base.Base):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)
 
-    @wrap_check_policy
-    @check_instance_lock
-    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                                    vm_states.SUSPENDED, vm_states.STOPPED,
-                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
-                          task_state=None)
-    def attach_volume(self, context, instance, volume_id, device=None,
-                      disk_bus=None, device_type=None):
-        """Attach an existing volume to an existing instance."""
-        # NOTE(vish): Fail fast if the device is not going to pass. This
-        #             will need to be removed along with the test if we
-        #             change the logic in the manager for what constitutes
-        #             a valid device.
-        if device and not block_device.match_device(device):
-            raise exception.InvalidDevicePath(path=device)
+    def _attach_volume(self, context, instance, volume_id, device,
+                       disk_bus, device_type):
+        """Attach an existing volume to an existing instance.
+
+        This method is separated to make it possible for cells version
+        to override it.
+        """
         # NOTE(vish): This is done on the compute host because we want
         #             to avoid a race where two devices are requested at
         #             the same time. When db access is removed from
@@ -2739,9 +2731,29 @@ class API(base.Base):
 
         return device
 
+    @wrap_check_policy
+    @check_instance_lock
+    @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
+                                    vm_states.SUSPENDED, vm_states.STOPPED,
+                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
+                          task_state=[None])
+    def attach_volume(self, context, instance, volume_id, device=None,
+                       disk_bus=None, device_type=None):
+        """Attach an existing volume to an existing instance."""
+        # NOTE(vish): Fail fast if the device is not going to pass. This
+        #             will need to be removed along with the test if we
+        #             change the logic in the manager for what constitutes
+        #             a valid device.
+        if device and not block_device.match_device(device):
+            raise exception.InvalidDevicePath(path=device)
+        return self._attach_volume(context, instance, volume_id, device,
+                                   disk_bus, device_type)
+
     def _detach_volume(self, context, instance, volume):
-        """Detach volume from instance.  This method is separated to make
-        it easier for cells version to override.
+        """Detach volume from instance.
+
+        This method is separated to make it easier for cells version
+        to override.
         """
         self.volume_api.check_detach(context, volume)
         self.volume_api.begin_detaching(context, volume['id'])
@@ -2753,7 +2765,7 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.SUSPENDED, vm_states.STOPPED,
                                     vm_states.RESIZED, vm_states.SOFT_DELETED],
-                          task_state=None)
+                          task_state=[None])
     def detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
         if volume['attach_status'] == 'detached':
@@ -2770,7 +2782,7 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.SUSPENDED, vm_states.STOPPED,
                                     vm_states.RESIZED, vm_states.SOFT_DELETED],
-                          task_state=None)
+                          task_state=[None])
     def swap_volume(self, context, instance, old_volume, new_volume):
         """Swap volume attached to an instance."""
         if old_volume['attach_status'] == 'detached':
