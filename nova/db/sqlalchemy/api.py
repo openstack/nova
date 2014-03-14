@@ -658,6 +658,7 @@ def _update_stats(context, new_stats, compute_id, session, prune_stats=False):
 
 
 @require_admin_context
+@_retry_on_deadlock
 def compute_node_update(context, compute_id, values, prune_stats=False):
     """Updates the ComputeNode record with the most recent data."""
     stats = values.pop('stats', {})
