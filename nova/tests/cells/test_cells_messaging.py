@@ -1145,7 +1145,10 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         instance.task_state = 'meow'
         instance.vm_state = 'wuff'
         instance.user_data = 'foo'
-        self.assertEqual(set(['user_data', 'vm_state', 'task_state']),
+        instance.metadata = {'meta': 'data'}
+        instance.system_metadata = {'system': 'metadata'}
+        self.assertEqual(set(['user_data', 'vm_state', 'task_state',
+                              'metadata', 'system_metadata']),
                          instance.obj_what_changed())
 
         self.mox.StubOutWithMock(instance, 'save')
