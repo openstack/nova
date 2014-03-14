@@ -158,21 +158,6 @@ class LocalAPI(object):
         return self._manager.block_device_mapping_get_all_by_instance(
             context, instance, legacy)
 
-    def block_device_mapping_destroy(self, context, bdms):
-        return self._manager.block_device_mapping_destroy(context, bdms=bdms)
-
-    def block_device_mapping_destroy_by_instance_and_device(self, context,
-                                                            instance,
-                                                            device_name):
-        return self._manager.block_device_mapping_destroy(
-            context, instance=instance, device_name=device_name)
-
-    def block_device_mapping_destroy_by_instance_and_volume(self, context,
-                                                            instance,
-                                                            volume_id):
-        return self._manager.block_device_mapping_destroy(
-            context, instance=instance, volume_id=volume_id)
-
     def vol_get_usage_by_time(self, context, start_time):
         return self._manager.vol_get_usage_by_time(context, start_time)
 

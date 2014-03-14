@@ -130,6 +130,7 @@ class ConductorAPI(object):
     ...  - Remove aggregate_get_by_host()
     ...  - Remove instance_get()
     ...  - Remove migration_update()
+    ...  - Remove block_device_mapping_destroy()
     """
 
     VERSION_ALIASES = {
@@ -249,16 +250,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare(version=version)
         return cctxt.call(context, 'block_device_mapping_get_all_by_instance',
                           instance=instance_p, **kwargs)
-
-    def block_device_mapping_destroy(self, context, bdms=None,
-                                     instance=None, volume_id=None,
-                                     device_name=None):
-        bdms_p = jsonutils.to_primitive(bdms)
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.14')
-        return cctxt.call(context, 'block_device_mapping_destroy',
-                          bdms=bdms_p, instance=instance_p,
-                          volume_id=volume_id, device_name=device_name)
 
     def instance_get_all_by_filters(self, context, filters, sort_key,
                                     sort_dir, columns_to_join=None,

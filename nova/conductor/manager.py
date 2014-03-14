@@ -308,6 +308,8 @@ class ConductorManager(manager.Manager):
             bdms = block_device.legacy_mapping(bdms)
         return jsonutils.to_primitive(bdms)
 
+    # NOTE(russellb) This method can be removed in 2.0 of this API.  It is
+    # deprecated in favor of the method in the base API.
     def block_device_mapping_destroy(self, context, bdms=None,
                                      instance=None, volume_id=None,
                                      device_name=None):
