@@ -129,6 +129,7 @@ class ConductorAPI(object):
     ...  - Remove aggregate_get()
     ...  - Remove aggregate_get_by_host()
     ...  - Remove instance_get()
+    ...  - Remove migration_update()
     """
 
     VERSION_ALIASES = {
@@ -173,13 +174,6 @@ class ConductorAPI(object):
         return cctxt.call(context,
                           'migration_get_in_progress_by_host_and_node',
                           host=host, node=node)
-
-    def migration_update(self, context, migration, status):
-        migration_p = jsonutils.to_primitive(migration)
-        cctxt = self.client.prepare(version='1.1')
-        return cctxt.call(context, 'migration_update',
-                          migration=migration_p,
-                          status=status)
 
     def aggregate_host_add(self, context, aggregate, host):
         aggregate_p = jsonutils.to_primitive(aggregate)

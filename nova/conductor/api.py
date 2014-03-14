@@ -107,9 +107,6 @@ class LocalAPI(object):
         return self._manager.migration_get_in_progress_by_host_and_node(
             context, host, node)
 
-    def migration_update(self, context, migration, status):
-        return self._manager.migration_update(context, migration, status)
-
     def aggregate_host_add(self, context, aggregate, host):
         return self._manager.aggregate_host_add(context, aggregate, host)
 
