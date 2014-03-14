@@ -87,11 +87,6 @@ class APIRouter(nova.api.openstack.APIRouter):
 
             # kwargs['path_prefix'] = 'domains/{domain_id}/%s/:%s_id' \
             #                        % (p_collection, p_member)
-            mapper.resource("server", "servers",
-                            controller=self.resources['domains'],
-                            path_prefix='domains/{domain_id}/servers/' \
-                            ':server_id',
-                            member={'action': 'POST'})
 
             # map.extend(routes, "/domains")
 
@@ -137,6 +132,11 @@ class APIRouter(nova.api.openstack.APIRouter):
                controller=domains_controller,
                action='show',
                conditions={"method": ['GET']})
+
+            mapper.resource("server", "servers",
+                            controller=self.resources['domains'],
+                            path_prefix='/domains/{domain_id}',
+                            member={'action': 'POST'})
 
         if init_only is None or 'ips' in init_only:
             self.resources['ips'] = ips.create_resource()
