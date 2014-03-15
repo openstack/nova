@@ -13,7 +13,6 @@
 # under the License.
 
 from eventlet import tpool
-import guestfs
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
