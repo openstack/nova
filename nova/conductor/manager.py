@@ -189,6 +189,8 @@ class ConductorManager(manager.Manager):
         migration_ref = self.db.migration_create(context.elevated(), values)
         return jsonutils.to_primitive(migration_ref)
 
+    # NOTE(russellb): This method is now deprecated and can be removed in
+    # version 2.0 of the RPC API
     @messaging.expected_exceptions(exception.MigrationNotFound)
     def migration_update(self, context, migration, status):
         migration_ref = self.db.migration_update(context.elevated(),

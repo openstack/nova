@@ -149,15 +149,6 @@ class _BaseTestCase(object):
             self.context, 'fake-host', 'fake-node')
         self.assertEqual(result, 'fake-result')
 
-    def test_migration_update(self):
-        migration = db.migration_create(self.context.elevated(),
-                {'instance_uuid': 'fake-uuid',
-                 'status': 'migrating'})
-        migration_p = jsonutils.to_primitive(migration)
-        migration = self.conductor.migration_update(self.context, migration_p,
-                                                    'finished')
-        self.assertEqual(migration['status'], 'finished')
-
     def test_instance_get_by_uuid(self):
         orig_instance = self._create_fake_instance()
         copy_instance = self.conductor.instance_get_by_uuid(
