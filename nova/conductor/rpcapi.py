@@ -127,6 +127,7 @@ class ConductorAPI(object):
     1.64 - Added use_slave to instance_get_all_filters()
     ...  - Remove instance_type_get()
     ...  - Remove aggregate_get()
+    ...  - Remove aggregate_get_by_host()
     """
 
     VERSION_ALIASES = {
@@ -196,10 +197,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'aggregate_host_delete',
                           aggregate=aggregate_p,
                           host=host)
-
-    def aggregate_get_by_host(self, context, host, key=None):
-        cctxt = self.client.prepare(version='1.7')
-        return cctxt.call(context, 'aggregate_get_by_host', host=host, key=key)
 
     def aggregate_metadata_get_by_host(self, context, host, key):
         cctxt = self.client.prepare(version='1.42')
