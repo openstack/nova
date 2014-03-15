@@ -126,6 +126,7 @@ class ConductorAPI(object):
            in compute_node_update()
     1.64 - Added use_slave to instance_get_all_filters()
     ...  - Remove instance_type_get()
+    ...  - Remove aggregate_get()
     """
 
     VERSION_ALIASES = {
@@ -195,10 +196,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'aggregate_host_delete',
                           aggregate=aggregate_p,
                           host=host)
-
-    def aggregate_get(self, context, aggregate_id):
-        cctxt = self.client.prepare(version='1.11')
-        return cctxt.call(context, 'aggregate_get', aggregate_id=aggregate_id)
 
     def aggregate_get_by_host(self, context, host, key=None):
         cctxt = self.client.prepare(version='1.7')

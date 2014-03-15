@@ -119,9 +119,6 @@ class LocalAPI(object):
     def aggregate_host_delete(self, context, aggregate, host):
         return self._manager.aggregate_host_delete(context, aggregate, host)
 
-    def aggregate_get(self, context, aggregate_id):
-        return self._manager.aggregate_get(context, aggregate_id)
-
     def aggregate_get_by_host(self, context, host, key=None):
         return self._manager.aggregate_get_by_host(context, host, key)
 
