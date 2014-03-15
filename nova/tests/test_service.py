@@ -21,6 +21,7 @@ Unit Tests for remote procedure calls using queue
 import sys
 import testtools
 
+import mock
 import mox
 from oslo.config import cfg
 
@@ -252,6 +253,28 @@ class ServiceTestCase(test.TestCase):
         serv.start()
 
         serv.stop()
+
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.conductor.api.LocalAPI.service_get_by_args')
+    def test_parent_graceful_shutdown_with_cleanup_host(self,
+                                                        mock_svc_get_by_args,
+                                                        mock_API):
+        mock_svc_get_by_args.return_value = {'id': 'some_value'}
+        mock_manager = mock.Mock()
+
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.test_service.FakeManager')
+
+        serv.manager = mock_manager
+        serv.manager.additional_endpoints = []
+
+        serv.start()
+        serv.manager.init_host.assert_called_with()
+
+        serv.stop()
+        serv.manager.cleanup_host.assert_called_with()
 
 
 class TestWSGIService(test.TestCase):

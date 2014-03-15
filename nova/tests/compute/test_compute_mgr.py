@@ -212,6 +212,21 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    @mock.patch('nova.objects.instance.InstanceList')
+    def test_cleanup_host(self, mock_instance_list):
+        # just testing whether the cleanup_host method
+        # when fired will invoke the underlying driver's
+        # equivalent method.
+
+        mock_instance_list.get_by_host.return_value = []
+
+        with mock.patch.object(self.compute, 'driver') as mock_driver:
+            self.compute.init_host()
+            mock_driver.init_host.assert_called_once()
+
+            self.compute.cleanup_host()
+            mock_driver.cleanup_host.assert_called_once()
+
     def test_init_host_with_deleted_migration(self):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host

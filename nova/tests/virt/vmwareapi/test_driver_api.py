@@ -1748,6 +1748,41 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         super(VMwareAPIVCDriverTestCase, self).tearDown()
         vmwareapi_fake.cleanup()
 
+    def _setup_mocks_for_session(self, mock_init):
+        mock_init.return_value = None
+
+        vcdriver = driver.VMwareVCDriver(None, False)
+        vcdriver._session = mock.Mock()
+        return vcdriver
+
+    @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.__init__')
+    def test_init_host_and_cleanup_host(self, mock_init):
+        vcdriver = self._setup_mocks_for_session(mock_init)
+        vcdriver.init_host("foo")
+        vcdriver._session._create_session.assert_called_once()
+
+        vcdriver.cleanup_host("foo")
+        vcdriver._session.vim.client.service.Logout.assert_called_once()
+
+    @mock.patch('nova.virt.vmwareapi.driver.LOG')
+    @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.__init__')
+    def test_cleanup_host_with_no_login(self, mock_init, mock_logger):
+        vcdriver = self._setup_mocks_for_session(mock_init)
+        vcdriver.init_host("foo")
+        vcdriver._session._create_session.assert_called_once()
+
+        # Not logged in...
+        # observe that no exceptions were thrown
+        mock_sc = mock.Mock()
+        vcdriver._session.vim.retrieve_service_content.return_value = mock_sc
+        web_fault = suds.WebFault(mock.Mock(), mock.Mock())
+        vcdriver._session.vim.client.service.Logout.side_effect = web_fault
+        vcdriver.cleanup_host("foo")
+
+        # assert that the mock Logout method was never called
+        vcdriver._session.vim.client.service.Logout.assert_called_once()
+        mock_logger.debug.assert_called_once()
+
     def test_datastore_regex_configured(self):
         for node in self.conn._resources.keys():
             self.assertEqual(self.conn._datastore_regex,

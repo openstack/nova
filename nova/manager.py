@@ -89,6 +89,13 @@ class Manager(base.Base, periodic_task.PeriodicTasks):
         """
         pass
 
+    def cleanup_host(self):
+        """Hook to do cleanup work when the service shuts down.
+
+        Child classes should override this method.
+        """
+        pass
+
     def pre_start_hook(self):
         """Hook to provide the manager the ability to do additional
         start-up work before any RPC queues/consumers are created. This is

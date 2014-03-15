@@ -149,6 +149,12 @@ class ComputeDriver(object):
         # TODO(Vek): Need to pass context in for access to auth_token
         raise NotImplementedError()
 
+    def cleanup_host(self, host):
+        """Clean up anything that is necessary for the driver gracefully stop,
+        including ending remote sessions. This is optional.
+        """
+        pass
+
     def get_info(self, instance):
         """Get the current status of an instance, by name (not ID!)
 

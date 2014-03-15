@@ -24,6 +24,7 @@ import time
 
 from eventlet import event
 from oslo.config import cfg
+import suds
 
 from nova import exception
 from nova.openstack.common.gettextutils import _
@@ -143,9 +144,21 @@ class VMwareESXDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
-        """Do the initialization that needs to be done."""
-        # FIXME(sateesh): implement this
-        pass
+        vim = self._session.vim
+        if vim is None:
+            self._session._create_session()
+
+    def cleanup_host(self, host):
+        # NOTE(hartsocks): we lean on the init_host to force the vim object
+        # to not be None.
+        vim = self._session.vim
+        service_content = vim.get_service_content()
+        session_manager = service_content.sessionManager
+        try:
+            vim.client.service.Logout(session_manager)
+        except suds.WebFault:
+            LOG.debug(_("No vSphere session was open during cleanup_host."))
+            pass
 
     def list_instances(self):
         """List VM instances."""
