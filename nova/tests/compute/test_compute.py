@@ -1726,40 +1726,6 @@ class ComputeTestCase(BaseTestCase):
         instances = db.instance_get_all(self.context)
         LOG.info(_("Running instances: %s"), instances)
         self.assertEqual(len(instances), 1)
-
-        # Make it look like this is no instance
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-        self.compute._get_instance_nw_info(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(
-                    exception.NetworkNotFound(network_id='fake')
-                )
-        self.mox.ReplayAll()
-
-        self.compute.terminate_instance(self.context,
-                self._objectify(instance), [], [])
-
-        instances = db.instance_get_all(self.context)
-        LOG.info(_("After terminating instances: %s"), instances)
-        self.assertEqual(len(instances), 0)
-
-    def test_terminate_no_fixed_ips(self):
-        # This is as reported in LP bug 1192893
-        instance = jsonutils.to_primitive(self._create_fake_instance())
-
-        self.compute.run_instance(self.context, instance, {}, {}, [], None,
-                None, True, None, False)
-
-        instances = db.instance_get_all(self.context)
-        LOG.info(_("Running instances: %s"), instances)
-        self.assertEqual(len(instances), 1)
-
-        self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
-        self.compute._get_instance_nw_info(
-                mox.IgnoreArg(),
-                mox.IgnoreArg()).AndRaise(
-                    exception.NoMoreFixedIps()
-                )
         self.mox.ReplayAll()
 
         self.compute.terminate_instance(self.context,

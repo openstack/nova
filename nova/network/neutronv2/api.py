@@ -19,9 +19,9 @@ import time
 
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo.config import cfg
-import six
 
 from nova.compute import flavors
+from nova.compute import utils as compute_utils
 from nova import conductor
 from nova import exception
 from nova.network import base_api
@@ -31,7 +31,6 @@ from nova.network.neutronv2 import constants
 from nova.network.security_group import openstack_driver
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import uuidutils
 
@@ -488,12 +487,7 @@ class API(base_api.NetworkAPI):
                        " networks as not none.")
             raise exception.NovaException(message=message)
 
-        # Unfortunately, this is sometimes in unicode and sometimes not
-        if isinstance(instance['info_cache']['network_info'], six.text_type):
-            ifaces = jsonutils.loads(instance['info_cache']['network_info'])
-        else:
-            ifaces = instance['info_cache']['network_info']
-
+        ifaces = compute_utils.get_nw_info_for_instance(instance)
         # This code path is only done when refreshing the network_cache
         if port_ids is None:
             port_ids = [iface['id'] for iface in ifaces]
