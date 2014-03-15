@@ -428,6 +428,7 @@ class UsageInfoTestCase(test.TestCase):
         inst['ami_launch_index'] = 0
         inst['root_gb'] = 0
         inst['ephemeral_gb'] = 0
+        inst['info_cache'] = {'network_info': '[]'}
         inst.update(params)
         return db.instance_create(self.context, inst)['id']
 
@@ -472,7 +473,7 @@ class UsageInfoTestCase(test.TestCase):
         # Ensure 'exists' notification generates appropriate usage data.
         instance_id = self._create_instance()
         instance = instance_obj.Instance.get_by_id(self.context, instance_id,
-                expected_attrs=['metadata', 'system_metadata'])
+                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         # Set some system metadata
         sys_metadata = {'image_md_key1': 'val1',
                         'image_md_key2': 'val2',

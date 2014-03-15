@@ -2096,12 +2096,7 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(context, instance,
                                               "shutdown.start")
 
-        # get network info before tearing down
-        try:
-            network_info = self._get_instance_nw_info(context, instance)
-        except (exception.NetworkNotFound, exception.NoMoreFixedIps,
-                exception.InstanceInfoCacheNotFound):
-            network_info = network_model.NetworkInfo()
+        network_info = compute_utils.get_nw_info_for_instance(instance)
 
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
