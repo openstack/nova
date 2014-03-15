@@ -17,6 +17,7 @@ import uuid
 import warnings
 
 from migrate.changeset import UniqueConstraint
+import sqlalchemy
 from sqlalchemy.dialects import mysql
 from sqlalchemy import Boolean, Index, Integer, DateTime, String
 from sqlalchemy import MetaData, Table, Column, ForeignKey
@@ -30,6 +31,9 @@ from nova.db.sqlalchemy import api as db
 from nova.db.sqlalchemy import utils
 from nova import exception
 from nova.tests.db import test_migrations
+
+
+SA_VERSION = tuple(map(int, sqlalchemy.__version__.split('.')))
 
 
 class CustomType(UserDefinedType):
@@ -191,18 +195,21 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
         engine.execute(test_table.insert(), values)
         warnings.simplefilter("ignore", SAWarning)
-        # NOTE(boris-42): Missing info about column `foo` that has
-        #                 unsupported type CustomType.
-        self.assertRaises(exception.NovaException,
-                          utils.drop_unique_constraint,
-                          engine, table_name, uc_name, 'foo')
 
-        # NOTE(boris-42): Wrong type of foo instance. it should be
-        #                 instance of sqlalchemy.Column.
-        self.assertRaises(exception.NovaException,
-                          utils.drop_unique_constraint,
-                          engine, table_name, uc_name, 'foo',
-                          foo=Integer())
+        # reflection of custom types has been fixed upstream
+        if SA_VERSION < (0, 9, 0):
+            # NOTE(boris-42): Missing info about column `foo` that has
+            #                 unsupported type CustomType.
+            self.assertRaises(exception.NovaException,
+                              utils.drop_unique_constraint,
+                              engine, table_name, uc_name, 'foo')
+
+            # NOTE(boris-42): Wrong type of foo instance. it should be
+            #                 instance of sqlalchemy.Column.
+            self.assertRaises(exception.NovaException,
+                              utils.drop_unique_constraint,
+                              engine, table_name, uc_name, 'foo',
+                              foo=Integer())
 
         foo = Column('foo', CustomType, default=0)
         utils.drop_unique_constraint(engine, table_name, uc_name, 'foo',
@@ -448,9 +455,12 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                           Column('id', Integer, primary_key=True),
                           Column('a', CustomType))
             table.create()
-            self.assertRaises(exception.NovaException,
-                              utils.create_shadow_table,
-                              engine, table_name=table_name)
+
+            # reflection of custom types has been fixed upstream
+            if SA_VERSION < (0, 9, 0):
+                self.assertRaises(exception.NovaException,
+                                  utils.create_shadow_table,
+                                  engine, table_name=table_name)
 
             shadow_table = utils.create_shadow_table(engine,
                 table_name=table_name,
@@ -575,9 +585,11 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                           Column('deleted', Boolean))
             table.create()
 
-            self.assertRaises(exception.NovaException,
-                              utils.change_deleted_column_type_to_id_type,
-                              engine, table_name)
+            # reflection of custom types has been fixed upstream
+            if SA_VERSION < (0, 9, 0):
+                self.assertRaises(exception.NovaException,
+                                  utils.change_deleted_column_type_to_id_type,
+                                  engine, table_name)
 
             fooColumn = Column('foo', CustomType())
             utils.change_deleted_column_type_to_id_type(engine, table_name,
@@ -585,8 +597,10 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
             table = utils.get_table(engine, table_name)
             # NOTE(boris-42): There is no way to check has foo type CustomType.
-            #                 but sqlalchemy will set it to NullType.
-            self.assertIsInstance(table.c.foo.type, NullType)
+            #                 but sqlalchemy will set it to NullType. This has
+            #                 been fixed upstream in recent SA versions
+            if SA_VERSION < (0, 9, 0):
+                self.assertIsInstance(table.c.foo.type, NullType)
             self.assertIsInstance(table.c.deleted.type, Integer)
             table.drop()
 
@@ -620,9 +634,11 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
                           Column('deleted', Integer))
             table.create()
 
-            self.assertRaises(exception.NovaException,
-                              utils.change_deleted_column_type_to_boolean,
-                              engine, table_name)
+            # reflection of custom types has been fixed upstream
+            if SA_VERSION < (0, 9, 0):
+                self.assertRaises(exception.NovaException,
+                                  utils.change_deleted_column_type_to_boolean,
+                                  engine, table_name)
 
             fooColumn = Column('foo', CustomType())
             utils.change_deleted_column_type_to_boolean(engine, table_name,
@@ -630,8 +646,10 @@ class TestMigrationUtils(test_migrations.BaseMigrationTestCase):
 
             table = utils.get_table(engine, table_name)
             # NOTE(boris-42): There is no way to check has foo type CustomType.
-            #                 but sqlalchemy will set it to NullType.
-            self.assertIsInstance(table.c.foo.type, NullType)
+            #                 but sqlalchemy will set it to NullType. This has
+            #                 been fixed upstream in recent SA versions.
+            if SA_VERSION < (0, 9, 0):
+                self.assertIsInstance(table.c.foo.type, NullType)
             self.assertIsInstance(table.c.deleted.type, Boolean)
             table.drop()
 
