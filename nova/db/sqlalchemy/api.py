@@ -394,7 +394,9 @@ class EqualityCondition(object):
         self.values = values
 
     def clauses(self, field):
-        return or_([field == value for value in self.values])
+        # method signature requires us to return an iterable even if for OR
+        # operator this will actually be a single clause
+        return [or_(*[field == value for value in self.values])]
 
 
 class InequalityCondition(object):
