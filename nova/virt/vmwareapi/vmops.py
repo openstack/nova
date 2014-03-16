@@ -559,11 +559,14 @@ class VMwareVMOps(object):
                     disk_type = "thin"
 
             if is_iso:
-                dest_vmdk_path = self._get_vmdk_path(data_store_name,
-                        instance['uuid'], instance_name)
-                # Create the blank virtual disk for the VM
-                _create_virtual_disk(dest_vmdk_path, root_gb_in_kb)
-                root_vmdk_path = dest_vmdk_path
+                if root_gb_in_kb:
+                    dest_vmdk_path = self._get_vmdk_path(data_store_name,
+                            instance['uuid'], instance_name)
+                    # Create the blank virtual disk for the VM
+                    _create_virtual_disk(dest_vmdk_path, root_gb_in_kb)
+                    root_vmdk_path = dest_vmdk_path
+                else:
+                    root_vmdk_path = None
             else:
                 # Extend the disk size if necessary
                 if not linked_clone:
@@ -602,10 +605,11 @@ class VMwareVMOps(object):
                                                       dc_info.ref)
 
             # Attach the root disk to the VM.
-            self._volumeops.attach_disk_to_vm(
-                                vm_ref, instance,
-                                adapter_type, disk_type, root_vmdk_path,
-                                root_gb_in_kb, linked_clone)
+            if root_vmdk_path:
+                self._volumeops.attach_disk_to_vm(
+                                    vm_ref, instance,
+                                    adapter_type, disk_type, root_vmdk_path,
+                                    root_gb_in_kb, linked_clone)
 
             if is_iso:
                 self._attach_cdrom_to_vm(

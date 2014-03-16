@@ -369,6 +369,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         for instance_type in test_flavors.DEFAULT_FLAVORS:
             if instance_type['name'] == type:
                 return instance_type
+        if type == 'm1.micro':
+            return {'memory_mb': 128, 'root_gb': 0, 'deleted_at': None,
+                    'name': 'm1.micro', 'deleted': 0, 'created_at': None,
+                    'ephemeral_gb': 0, 'updated_at': None,
+                    'disabled': False, 'vcpus': 1, 'extra_specs': {},
+                    'swap': 0, 'rxtx_factor': 1.0, 'is_public': True,
+                    'flavorid': '1', 'vcpu_weight': None, 'id': 2}
 
     def _create_instance(self, node=None, set_image_ref=True,
                          uuid=None, instance_type='m1.large'):
@@ -385,7 +392,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'kernel_id': "fake_kernel_uuid",
                   'ramdisk_id': "fake_ramdisk_uuid",
                   'mac_address': "de:ad:be:ef:be:ef",
-                  'flavor': 'm1.large',
+                  'flavor': instance_type,
                   'node': node,
                   'memory_mb': self.type_data['memory_mb'],
                   'root_gb': self.type_data['root_gb'],
@@ -400,11 +407,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(
                 self.context, **values)
 
-    def _create_vm(self, node=None, num_instances=1, uuid=None):
+    def _create_vm(self, node=None, num_instances=1, uuid=None,
+                   instance_type='m1.large'):
         """Create and spawn the VM."""
         if not node:
             node = self.node_name
-        self._create_instance(node=node, uuid=uuid)
+        self._create_instance(node=node, uuid=uuid,
+                              instance_type=instance_type)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
         self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=[], admin_password=None,
@@ -521,14 +530,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertTrue(vmwareapi_fake.get_file(file))
         self.assertTrue(vmwareapi_fake.get_file(root))
 
-    def test_iso_disk_type_created(self):
+    def _iso_disk_type_created(self, instance_type='m1.large'):
         self.image['disk_format'] = 'iso'
-        self._create_vm()
+        self._create_vm(instance_type=instance_type)
         file = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' %
                 self.ds)
         self.assertTrue(vmwareapi_fake.get_file(file))
+
+    def test_iso_disk_type_created(self):
+        self._iso_disk_type_created()
         vmdk_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
         self.assertTrue(vmwareapi_fake.get_file(vmdk_file_path))
+
+    def test_iso_disk_type_created_with_root_gb_0(self):
+        self._iso_disk_type_created(instance_type='m1.micro')
+        vmdk_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
+        self.assertFalse(vmwareapi_fake.get_file(vmdk_file_path))
 
     def test_iso_disk_cdrom_attach(self):
         self.iso_path = (
