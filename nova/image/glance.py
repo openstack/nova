@@ -579,8 +579,6 @@ def get_remote_image_service(context, image_href):
     :returns: a tuple of the form (image_service, image_id)
 
     """
-    # Calling out to another service may take a while, so lets log this
-    LOG.debug(_("fetching image %s from glance") % image_href)
     #NOTE(bcwaldon): If image_href doesn't look like a URI, assume its a
     # standalone image ID
     if '/' not in str(image_href):
