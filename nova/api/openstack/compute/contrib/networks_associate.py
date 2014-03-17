@@ -39,6 +39,10 @@ class NetworkAssociateActionController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
+        except NotImplementedError:
+            msg = _('Disassociate host is not implemented by the configured '
+                    'Network API')
+            raise exc.HTTPNotImplemented(explanation=msg)
         return exc.HTTPAccepted()
 
     @wsgi.action("disassociate_project")
@@ -51,6 +55,11 @@ class NetworkAssociateActionController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
+        except NotImplementedError:
+            msg = _('Disassociate project is not implemented by the '
+                    'configured Network API')
+            raise exc.HTTPNotImplemented(explanation=msg)
+
         return exc.HTTPAccepted()
 
     @wsgi.action("associate_host")
@@ -64,6 +73,11 @@ class NetworkAssociateActionController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
+        except NotImplementedError:
+            msg = _('Associate host is not implemented by the configured '
+                    'Network API')
+            raise exc.HTTPNotImplemented(explanation=msg)
+
         return exc.HTTPAccepted()
 
 

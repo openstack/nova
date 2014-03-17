@@ -77,6 +77,10 @@ class NetworkController(wsgi.Controller):
         except exception.NetworkNotFound:
             msg = _("Network not found")
             raise exc.HTTPNotFound(explanation=msg)
+        except NotImplementedError:
+            msg = _('Disassociate network is not implemented by the '
+                    'configured Network API')
+            raise exc.HTTPNotImplemented(explanation=msg)
         return exc.HTTPAccepted()
 
     def show(self, req, id):

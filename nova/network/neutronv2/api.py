@@ -94,6 +94,7 @@ update_instance_info_cache = network_api.update_instance_cache_with_nw_info
 
 class API(base.Base):
     """API for interacting with the neutron 2.x API."""
+    _sentinel = object()
 
     def __init__(self):
         super(API, self).__init__()
@@ -749,6 +750,11 @@ class API(base.Base):
 
     def disassociate(self, context, network_uuid):
         """Disassociate a network for client."""
+        raise NotImplementedError()
+
+    def associate(self, context, network_uuid, host=_sentinel,
+                  project=_sentinel):
+        """Associate a network for client."""
         raise NotImplementedError()
 
     def get_fixed_ip(self, context, id):
