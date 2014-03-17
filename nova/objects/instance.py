@@ -372,6 +372,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
     def _save_security_groups(self, context):
         for secgroup in self.security_groups:
             secgroup.save(context)
+        self.security_groups.obj_reset_changes()
 
     def _save_fault(self, context):
         # NOTE(danms): I don't think we need to worry about this, do we?

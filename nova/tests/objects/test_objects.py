@@ -605,6 +605,23 @@ class _TestObject(object):
         self.assertEqual(obj.bar, 'meow')
         self.assertRemotes()
 
+    def test_changed_with_sub_object(self):
+        class ParentObject(base.NovaObject):
+            fields = {'foo': fields.IntegerField(),
+                      'bar': fields.ObjectField('MyObj'),
+                      }
+        obj = ParentObject()
+        self.assertEqual(set(), obj.obj_what_changed())
+        obj.foo = 1
+        self.assertEqual(set(['foo']), obj.obj_what_changed())
+        bar = MyObj()
+        obj.bar = bar
+        self.assertEqual(set(['foo', 'bar']), obj.obj_what_changed())
+        obj.obj_reset_changes()
+        self.assertEqual(set(), obj.obj_what_changed())
+        bar.foo = 1
+        self.assertEqual(set(['bar']), obj.obj_what_changed())
+
     def test_static_result(self):
         obj = MyObj.query(self.context)
         self.assertEqual(obj.bar, 'bar')
@@ -798,6 +815,24 @@ class TestObjectListBase(test.TestCase):
             for obj_class in obj_classes:
                 if issubclass(obj_class, base.ObjectListBase):
                     self._test_object_list_version_mappings(obj_class)
+
+    def test_list_changes(self):
+        class Foo(base.ObjectListBase, base.NovaObject):
+            fields = {'objects': fields.ListOfObjectsField('Bar')}
+
+        class Bar(base.NovaObject):
+            fields = {'foo': fields.StringField()}
+
+        obj = Foo(objects=[])
+        self.assertEqual(set(['objects']), obj.obj_what_changed())
+        obj.objects.append(Bar(foo='test'))
+        self.assertEqual(set(['objects']), obj.obj_what_changed())
+        obj.obj_reset_changes()
+        # This should still look dirty because the child is dirty
+        self.assertEqual(set(['objects']), obj.obj_what_changed())
+        obj.objects[0].obj_reset_changes()
+        # This should now look clean because the child is clean
+        self.assertEqual(set(), obj.obj_what_changed())
 
 
 class TestObjectSerializer(_BaseTestCase):

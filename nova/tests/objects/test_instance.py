@@ -91,8 +91,8 @@ class _TestInstanceObject(object):
                         {'uuid': 'fake-uuid',
                          'access_ip_v4': '1.2.3.4',
                          'access_ip_v6': '::1'},
-                    'nova_object.changes': ['access_ip_v4', 'uuid',
-                                            'access_ip_v6']}
+                    'nova_object.changes': ['uuid', 'access_ip_v6',
+                                            'access_ip_v4']}
         self.assertEqual(primitive, expected)
         inst2 = instance.Instance.obj_from_primitive(primitive)
         self.assertIsInstance(inst2.access_ip_v4, netaddr.IPAddress)
