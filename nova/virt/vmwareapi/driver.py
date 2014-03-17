@@ -808,16 +808,8 @@ class VMwareAPISession(object):
 
     def __del__(self):
         """Logs-out the session."""
-        # Logout to avoid un-necessary increase in session count at the
-        # ESX host
-        try:
-            # May not have been able to connect to VC, so vim is still None
-            if self.vim:
-                self.vim.Logout(self.vim.get_service_content().sessionManager)
-        except Exception as excep:
-            # It is just cautionary on our part to do a logout in del just
-            # to ensure that the session is not left active.
-            LOG.debug(excep)
+        if hasattr(self, 'vim') and self.vim:
+            self.vim.Logout(self.vim.get_service_content().sessionManager)
 
     def _is_vim_object(self, module):
         """Check if the module is a VIM Object instance."""

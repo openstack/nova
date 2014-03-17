@@ -93,8 +93,10 @@ class Vim:
         self.url = Vim.get_soap_url(protocol, host)
         self.client = suds.client.Client(self.wsdl_url, location=self.url,
                                          plugins=[VIMMessagePlugin()])
-        self._service_content = self.RetrieveServiceContent(
-                                        "ServiceInstance")
+        self._service_content = self.retrieve_service_content()
+
+    def retrieve_service_content(self):
+        return self.RetrieveServiceContent("ServiceInstance")
 
     @staticmethod
     def get_wsdl_url(protocol, host_name):
@@ -162,7 +164,9 @@ class Vim:
                 return response
             # Catch the VimFaultException that is raised by the fault
             # check of the SOAP response
-            except error_util.VimFaultException as excep:
+            except error_util.VimFaultException:
+                raise
+            except suds.MethodNotFound:
                 raise
             except suds.WebFault as excep:
                 doc = excep.document
