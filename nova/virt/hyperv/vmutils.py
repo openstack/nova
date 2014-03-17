@@ -54,6 +54,11 @@ class HyperVAuthorizationException(HyperVException):
         super(HyperVException, self).__init__(message)
 
 
+class UnsupportedConfigDriveFormatException(HyperVException):
+    def __init__(self, message=None):
+        super(HyperVException, self).__init__(message)
+
+
 class VMUtils(object):
 
     # These constants can be overridden by inherited classes

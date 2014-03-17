@@ -276,8 +276,9 @@ class VMOps(object):
 
     def _create_config_drive(self, instance, injected_files, admin_password):
         if CONF.config_drive_format != 'iso9660':
-            vmutils.HyperVException(_('Invalid config_drive_format "%s"') %
-                                    CONF.config_drive_format)
+            raise vmutils.UnsupportedConfigDriveFormatException(
+                _('Invalid config_drive_format "%s"') %
+                CONF.config_drive_format)
 
         LOG.info(_('Using config drive for instance'), instance=instance)
 
