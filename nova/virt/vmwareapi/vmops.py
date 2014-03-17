@@ -571,7 +571,7 @@ class VMwareVMOps(object):
                     # the cache into the instance directory.  If we are using
                     # linked clone it is references from the cache directory
                     dest_vmdk_path = self._get_vmdk_path(data_store_name,
-                            instance['uuid'], instance_name)
+                            instance_name, instance_name)
                     _copy_virtual_disk(uploaded_file_path, dest_vmdk_path)
 
                     root_vmdk_path = dest_vmdk_path
