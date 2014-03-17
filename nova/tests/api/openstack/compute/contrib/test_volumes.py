@@ -17,6 +17,7 @@
 import datetime
 
 from lxml import etree
+import mock
 from oslo.config import cfg
 import webob
 from webob import exc
@@ -376,6 +377,20 @@ class VolumeAttachTests(test.TestCase):
                           req,
                           FAKE_UUID,
                           FAKE_UUID_C)
+
+    @mock.patch('nova.objects.block_device.BlockDeviceMapping.is_root',
+                 new_callable=mock.PropertyMock)
+    def test_detach_vol_root(self, mock_isroot):
+        req = webob.Request.blank('/v2/servers/id/os-volume_attachments/uuid')
+        req.method = 'DELETE'
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        mock_isroot.return_value = True
+        self.assertRaises(exc.HTTPForbidden,
+                          self.attachments.delete,
+                          req,
+                          FAKE_UUID,
+                          FAKE_UUID_A)
 
     def test_detach_volume_from_locked_server(self):
         def fake_detach_volume_from_locked_server(self, context,
