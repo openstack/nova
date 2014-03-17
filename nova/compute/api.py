@@ -59,6 +59,7 @@ from nova.objects import instance_group as instance_group_obj
 from nova.objects import instance_info_cache
 from nova.objects import keypair as keypair_obj
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as security_group_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
@@ -1541,15 +1542,14 @@ class API(base.Base):
             LOG.info(_('Migration %s may have been confirmed during delete') %
                     migration.id, context=context, instance=instance)
             return
-        downsize_reservations = self._reserve_quota_delta(context,
-                                                          deltas)
+        quotas = self._reserve_quota_delta(context, deltas)
 
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
 
         self.compute_rpcapi.confirm_resize(context,
                 instance, migration,
-                src_host, downsize_reservations,
+                src_host, quotas.reservations,
                 cast=False)
 
     def _create_reservations(self, context, old_instance, new_instance_type_id,
@@ -2173,22 +2173,21 @@ class API(base.Base):
 
         # reverse quota reservation for increased resource usage
         deltas = self._reverse_upsize_quota_delta(context, migration)
-        reservations = self._reserve_quota_delta(context, deltas)
+        quotas = self._reserve_quota_delta(context, deltas)
 
         instance.task_state = task_states.RESIZE_REVERTING
         try:
             instance.save(expected_task_state=[None])
         except Exception:
             with excutils.save_and_reraise_exception():
-                QUOTAS.rollback(context, reservations)
+                quotas.rollback(context)
 
         migration.status = 'reverting'
         migration.save()
         # With cells, the best we can do right now is commit the reservations
         # immediately...
-        if CONF.cells.enable and reservations:
-            QUOTAS.commit(context, reservations)
-            reservations = []
+        if CONF.cells.enable:
+            quotas.commit(context)
 
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
@@ -2196,7 +2195,7 @@ class API(base.Base):
         self.compute_rpcapi.revert_resize(context, instance,
                                           migration,
                                           migration.dest_compute,
-                                          reservations)
+                                          quotas.reservations or [])
 
     @wrap_check_policy
     @check_instance_lock
@@ -2211,15 +2210,14 @@ class API(base.Base):
 
         # reserve quota only for any decrease in resource usage
         deltas = self._downsize_quota_delta(context, instance)
-        reservations = self._reserve_quota_delta(context, deltas)
+        quotas = self._reserve_quota_delta(context, deltas)
 
         migration.status = 'confirming'
         migration.save()
         # With cells, the best we can do right now is commit the reservations
         # immediately...
-        if CONF.cells.enable and reservations:
-            QUOTAS.commit(context, reservations)
-            reservations = []
+        if CONF.cells.enable:
+            quotas.commit(context)
 
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
@@ -2228,7 +2226,7 @@ class API(base.Base):
                                            instance,
                                            migration,
                                            migration.source_compute,
-                                           reservations)
+                                           quotas.reservations or [])
 
     @staticmethod
     def _resize_quota_delta(context, new_flavor,
@@ -2285,19 +2283,28 @@ class API(base.Base):
 
     @staticmethod
     def _reserve_quota_delta(context, deltas, project_id=None):
-        if not deltas:
-            return
-        return QUOTAS.reserve(context, project_id=project_id, **deltas)
+        """If there are deltas to reserve, construct a Quotas object and
+        reserve the deltas for the given project.
+
+        @param context:    The nova request context.
+        @param deltas:     A dictionary of the proposed delta changes.
+        @param project_id: Specify the project_id if current context
+                           is admin and admin wants to impact on
+                           common user's tenant.
+        @return: nova.objects.quotas.Quotas
+        """
+        quotas = quotas_obj.Quotas()
+        if deltas:
+            quotas.reserve(context, project_id=project_id, **deltas)
+        return quotas
 
     @staticmethod
-    def _resize_cells_support(context, reservations, instance,
+    def _resize_cells_support(context, quotas, instance,
                               current_instance_type, new_instance_type):
         """Special API cell logic for resize."""
-        if reservations:
-            # With cells, the best we can do right now is commit the
-            # reservations immediately...
-            QUOTAS.commit(context, reservations,
-                          project_id=instance.project_id)
+        # With cells, the best we can do right now is commit the
+        # reservations immediately...
+        quotas.commit(context)
         # NOTE(johannes/comstud): The API cell needs a local migration
         # record for later resize_confirm and resize_reverts to deal
         # with quotas.  We don't need source and/or destination
@@ -2363,9 +2370,10 @@ class API(base.Base):
         deltas = self._upsize_quota_delta(context, new_instance_type,
                                           current_instance_type)
         try:
-            reservations = self._reserve_quota_delta(context, deltas,
-                                                     project_id=instance[
-                                                         'project_id'])
+            project_id, user_id = quotas_obj.ids_from_instance(context,
+                                                               instance)
+            quotas = self._reserve_quota_delta(context, deltas,
+                                               project_id=project_id)
         except exception.OverQuota as exc:
             quotas = exc.kwargs['quotas']
             overs = exc.kwargs['overs']
@@ -2399,17 +2407,17 @@ class API(base.Base):
 
         if self.cell_type == 'api':
             # Commit reservations early and create migration record.
-            self._resize_cells_support(context, reservations, instance,
+            self._resize_cells_support(context, quotas, instance,
                                        current_instance_type,
                                        new_instance_type)
-            reservations = []
 
         self._record_action_start(context, instance, instance_actions.RESIZE)
 
         scheduler_hint = {'filter_properties': filter_properties}
         self.compute_task_api.resize_instance(context, instance,
                 extra_instance_updates, scheduler_hint=scheduler_hint,
-                flavor=new_instance_type, reservations=reservations)
+                flavor=new_instance_type,
+                reservations=quotas.reservations or [])
 
     @wrap_check_policy
     @check_instance_lock

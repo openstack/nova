@@ -35,6 +35,7 @@ from nova.objects import external_event as external_event_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -418,13 +419,15 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst.uuid, 'finished').AndReturn(migration)
         self.compute_api._downsize_quota_delta(self.context, inst
                                                ).AndReturn('deltas')
+        fake_quotas = quotas_obj.Quotas.from_reservations(self.context,
+                                                          ['rsvs'])
         self.compute_api._reserve_quota_delta(self.context, 'deltas'
-                                              ).AndReturn('rsvs')
+                                              ).AndReturn(fake_quotas)
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
         self.compute_api.compute_rpcapi.confirm_resize(
             self.context, inst, migration,
-            migration['source_compute'], 'rsvs', cast=False)
+            migration['source_compute'], fake_quotas.reservations, cast=False)
 
     def _test_delete_shelved_part(self, inst):
         image_service = self.compute_api.image_service
@@ -786,7 +789,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_downsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(fake_mig, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'confirm_resize')
@@ -800,9 +802,10 @@ class _ComputeAPIUnitTestMixIn(object):
                                                fake_inst).AndReturn('deltas')
 
         resvs = ['resvs']
+        fake_quotas = quotas_obj.Quotas.from_reservations(self.context, resvs)
 
         self.compute_api._reserve_quota_delta(self.context,
-                                              'deltas').AndReturn(resvs)
+                                              'deltas').AndReturn(fake_quotas)
 
         def _check_mig(expected_task_state=None):
             self.assertEqual('confirming', fake_mig.status)
@@ -810,14 +813,14 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_mig.save().WithSideEffects(_check_mig)
 
         if self.cell_type:
-            quota.QUOTAS.commit(self.context, resvs)
-            resvs = []
+            fake_quotas.commit(self.context)
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'confirmResize')
 
         self.compute_api.compute_rpcapi.confirm_resize(
-                self.context, fake_inst, fake_mig, 'compute-source', resvs)
+                self.context, fake_inst, fake_mig, 'compute-source',
+                [] if self.cell_type else fake_quotas.reservations)
 
         self.mox.ReplayAll()
 
@@ -848,7 +851,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
         self.mox.StubOutWithMock(fake_mig, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'revert_resize')
@@ -861,9 +863,10 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, fake_mig).AndReturn('deltas')
 
         resvs = ['resvs']
+        fake_quotas = quotas_obj.Quotas.from_reservations(self.context, resvs)
 
         self.compute_api._reserve_quota_delta(self.context,
-                                              'deltas').AndReturn(resvs)
+                                              'deltas').AndReturn(fake_quotas)
 
         def _check_state(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_REVERTING,
@@ -878,14 +881,14 @@ class _ComputeAPIUnitTestMixIn(object):
         fake_mig.save().WithSideEffects(_check_mig)
 
         if self.cell_type:
-            quota.QUOTAS.commit(self.context, resvs)
-            resvs = []
+            fake_quotas.commit(self.context)
 
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'revertResize')
 
         self.compute_api.compute_rpcapi.revert_resize(
-                self.context, fake_inst, fake_mig, 'compute-dest', resvs)
+                self.context, fake_inst, fake_mig, 'compute-dest',
+                [] if self.cell_type else fake_quotas.reservations)
 
         self.mox.ReplayAll()
 
@@ -908,7 +911,6 @@ class _ComputeAPIUnitTestMixIn(object):
                                  '_reverse_upsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         self.context.elevated().AndReturn(self.context)
         migration_obj.Migration.get_by_instance_and_status(
@@ -918,14 +920,15 @@ class _ComputeAPIUnitTestMixIn(object):
         self.compute_api._reverse_upsize_quota_delta(
             self.context, fake_mig).AndReturn(delta)
         resvs = ['resvs']
+        fake_quotas = quotas_obj.Quotas.from_reservations(self.context, resvs)
         self.compute_api._reserve_quota_delta(
-            self.context, delta).AndReturn(resvs)
+            self.context, delta).AndReturn(fake_quotas)
 
         exc = exception.UnexpectedTaskStateError(
             actual=task_states.RESIZE_REVERTING, expected=None)
         fake_inst.save(expected_task_state=[None]).AndRaise(exc)
 
-        quota.QUOTAS.rollback(self.context, resvs)
+        fake_quotas.rollback(self.context)
 
         self.mox.ReplayAll()
         self.assertRaises(exception.UnexpectedTaskStateError,
@@ -955,7 +958,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.compute_api, '_upsize_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
@@ -976,12 +978,16 @@ class _ComputeAPIUnitTestMixIn(object):
         if (self.cell_type == 'compute' or
                 not (flavor_id_passed and same_flavor)):
             resvs = ['resvs']
+            project_id, user_id = quotas_obj.ids_from_instance(self.context,
+                                                               fake_inst)
+            fake_quotas = quotas_obj.Quotas.from_reservations(self.context,
+                                                              resvs)
 
             self.compute_api._upsize_quota_delta(
                     self.context, new_flavor,
                     current_flavor).AndReturn('deltas')
             self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                    project_id=fake_inst['project_id']).AndReturn(resvs)
+                    project_id=project_id).AndReturn(fake_quotas)
 
             def _check_state(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_PREP,
@@ -1001,10 +1007,10 @@ class _ComputeAPIUnitTestMixIn(object):
             if not flavor_id_passed and not allow_mig_same_host:
                 filter_properties['ignore_hosts'].append(fake_inst['host'])
 
+            expected_reservations = fake_quotas.reservations
             if self.cell_type == 'api':
-                quota.QUOTAS.commit(self.context, resvs,
-                                    project_id=fake_inst['project_id'])
-                resvs = []
+                fake_quotas.commit(self.context)
+                expected_reservations = []
                 mig = migration_obj.Migration()
 
                 def _get_migration():
@@ -1033,7 +1039,7 @@ class _ComputeAPIUnitTestMixIn(object):
             self.compute_api.compute_task_api.resize_instance(
                     self.context, fake_inst, extra_kwargs,
                     scheduler_hint=scheduler_hint,
-                    flavor=new_flavor, reservations=resvs)
+                    flavor=new_flavor, reservations=expected_reservations)
 
         self.mox.ReplayAll()
 
