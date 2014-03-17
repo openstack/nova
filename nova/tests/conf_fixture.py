@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import os
-
 from oslo.config import cfg
 
 
@@ -43,8 +41,6 @@ class ConfFixture(config_fixture.Config):
     """Fixture to manage global conf settings."""
     def setUp(self):
         super(ConfFixture, self).setUp()
-        self.conf.set_default('state_path', os.path.abspath(
-            os.path.join(os.path.dirname(__file__), '..', '..')))
         self.conf.set_default('api_paste_config',
                               paths.state_path_def('etc/nova/api-paste.ini'))
         self.conf.set_default('host', 'fake-mini')
