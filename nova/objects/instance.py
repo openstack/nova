@@ -307,13 +307,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, uuid, expected_attrs=None, use_slave=False):
-        LOG.debug("get_by_uuid")
+        LOG.debug("get_by_uuid")  # TRUTA
         if expected_attrs is None:
             expected_attrs = ['info_cache', 'security_groups']
+        LOG.debug("expected_attrs: %s", expected_attrs)
         columns_to_join = _expected_cols(expected_attrs)
+        LOG.debug("columns_to_join: %s", columns_to_join)
         db_inst = db.instance_get_by_uuid(context, uuid,
                                           columns_to_join=columns_to_join,
                                           use_slave=use_slave)
+        LOG.debug("db_inst: %s", db_inst)
         return cls._from_db_object(context, cls(), db_inst,
                                    expected_attrs)
 
