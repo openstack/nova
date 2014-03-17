@@ -1207,6 +1207,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_rescue(self):
         self._rescue()
+        inst_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
+        self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
+        rescue_file_path = '[%s] %s-rescue/%s-rescue.vmdk' % (self.ds,
+                                                              self.uuid,
+                                                              self.uuid)
+        self.assertTrue(vmwareapi_fake.get_file(rescue_file_path))
 
     def test_rescue_with_config_drive(self):
         self.flags(force_config_drive=True)
