@@ -1489,6 +1489,17 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             instance_update.assert_has_calls(mock.call(self.context,
                 self.instance['uuid'], mock.ANY, 'conductor'))
 
+    @mock.patch('nova.compute.manager.ComputeManager._get_power_state')
+    def test_spawn_waits_for_network_and_saves_info_cache(self, gps):
+        inst = mock.MagicMock()
+        network_info = mock.MagicMock()
+        with mock.patch.object(self.compute, 'driver'):
+            self.compute._spawn(self.context, inst, {}, network_info, None,
+                                None, None)
+        network_info.wait.assert_called_once_with(do_raise=True)
+        self.assertEqual(network_info, inst.info_cache.network_info)
+        inst.save.assert_called_with(expected_task_state=task_states.SPAWNING)
+
     def test_reschedule_on_resources_unavailable(self):
         reason = 'resource unavailable'
         exc = exception.ComputeResourcesUnavailable(reason=reason)
