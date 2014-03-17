@@ -323,7 +323,7 @@ class _BaseTestCase(object):
                                AndReturn('fake-result')
         self.mox.ReplayAll()
         result = self.conductor.compute_node_update(self.context, node,
-                                                    {'fake': 'values'}, False)
+                                                    {'fake': 'values'})
         self.assertEqual(result, 'fake-result')
 
     def test_compute_node_update_with_non_json_stats(self):
@@ -335,7 +335,7 @@ class _BaseTestCase(object):
                                ).AndReturn('fake-result')
         self.mox.ReplayAll()
         self.conductor.compute_node_update(self.context, node,
-                                           fake_input, False)
+                                           fake_input)
 
     def test_compute_node_delete(self):
         node = {'id': 'fake-id'}
@@ -1720,3 +1720,65 @@ class ConductorLocalComputeTaskAPITestCase(ConductorTaskAPITestCase):
         super(ConductorLocalComputeTaskAPITestCase, self).setUp()
         self.conductor = conductor_api.LocalComputeTaskAPI()
         self.conductor_manager = self.conductor._manager._target
+
+
+class ConductorV2ManagerProxyTestCase(test.NoDBTestCase):
+    def test_v2_manager_proxy(self):
+        manager = conductor_manager.ConductorManager()
+        proxy = conductor_manager._ConductorManagerV2Proxy(manager)
+        ctxt = context.get_admin_context()
+
+        methods = [
+            # (method, number_of_args)
+            ('instance_update', 3),
+            ('instance_get_by_uuid', 2),
+            ('migration_get_in_progress_by_host_and_node', 2),
+            ('aggregate_host_add', 2),
+            ('aggregate_host_delete', 2),
+            ('aggregate_metadata_get_by_host', 2),
+            ('bw_usage_update', 9),
+            ('provider_fw_rule_get_all', 0),
+            ('agent_build_get_by_triple', 3),
+            ('block_device_mapping_update_or_create', 2),
+            ('block_device_mapping_get_all_by_instance', 2),
+            ('instance_get_all_by_filters', 5),
+            ('instance_get_active_by_window_joined', 4),
+            ('instance_destroy', 1),
+            ('instance_info_cache_delete', 1),
+            ('vol_get_usage_by_time', 1),
+            ('vol_usage_update', 8),
+            ('service_get_all_by', 3),
+            ('instance_get_all_by_host', 3),
+            ('instance_fault_create', 1),
+            ('action_event_start', 1),
+            ('action_event_finish', 1),
+            ('service_create', 1),
+            ('service_destroy', 1),
+            ('compute_node_create', 1),
+            ('compute_node_update', 2),
+            ('compute_node_delete', 1),
+            ('service_update', 2),
+            ('task_log_get', 5),
+            ('task_log_begin_task', 6),
+            ('task_log_end_task', 6),
+            ('notify_usage_exists', 5),
+            ('security_groups_trigger_handler', 2),
+            ('security_groups_trigger_members_refresh', 1),
+            ('network_migrate_instance_start', 2),
+            ('network_migrate_instance_finish', 2),
+            ('quota_commit', 3),
+            ('quota_rollback', 3),
+            ('get_ec2_ids', 1),
+            ('compute_unrescue', 1),
+            ('object_class_action', 5),
+            ('object_action', 4),
+            ('object_backport', 2),
+        ]
+
+        for method, num_args in methods:
+            args = []
+            for _i in xrange(num_args):
+                args.append(None)
+            with mock.patch.object(manager, method) as mock_method:
+                getattr(proxy, method)(ctxt, *args)
+                mock_method.assert_called_once()
