@@ -1115,7 +1115,7 @@ class ComputeManager(manager.Manager):
                                                              instance)
         return network_info
 
-    def _await_block_device_map_created(self, context, vol_id, max_tries=60,
+    def _await_block_device_map_created(self, context, vol_id, max_tries=180,
                                         wait_between=1):
         # TODO(yamahata): creating volume simultaneously
         #                 reduces creation time?
