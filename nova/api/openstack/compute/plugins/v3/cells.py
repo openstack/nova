@@ -108,21 +108,24 @@ class CellsController(object):
         items = [_scrub_cell(item, detail=detail) for item in items]
         return dict(cells=items)
 
-    @extensions.expected_errors(())
+    @extensions.expected_errors(501)
+    @common.check_cells_enabled
     def index(self, req):
         """Return all cells in brief."""
         ctxt = req.environ['nova.context']
         authorize(ctxt)
         return self._get_cells(ctxt, req)
 
-    @extensions.expected_errors(())
+    @extensions.expected_errors(501)
+    @common.check_cells_enabled
     def detail(self, req):
         """Return all cells in detail."""
         ctxt = req.environ['nova.context']
         authorize(ctxt)
         return self._get_cells(ctxt, req, detail=True)
 
-    @extensions.expected_errors(())
+    @extensions.expected_errors(501)
+    @common.check_cells_enabled
     def info(self, req):
         """Return name and capabilities for this cell."""
         context = req.environ['nova.context']
@@ -140,7 +143,8 @@ class CellsController(object):
                 'capabilities': cell_capabs}
         return dict(cell=cell)
 
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((404, 501))
+    @common.check_cells_enabled
     def capacities(self, req, id=None):
         """Return capacities for a given cell or all cells."""
         # TODO(kaushikc): return capacities as a part of cell info and
@@ -155,7 +159,8 @@ class CellsController(object):
 
         return dict(cell={"capacities": capacities})
 
-    @extensions.expected_errors(404)
+    @extensions.expected_errors((404, 501))
+    @common.check_cells_enabled
     def show(self, req, id):
         """Return data about the given cell name.  'id' is a cell name."""
         context = req.environ['nova.context']
@@ -166,7 +171,8 @@ class CellsController(object):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
-    @extensions.expected_errors((403, 404))
+    @extensions.expected_errors((403, 404, 501))
+    @common.check_cells_enabled
     @wsgi.response(204)
     def delete(self, req, id):
         """Delete a child or parent cell entry.  'id' is a cell name."""
@@ -242,7 +248,8 @@ class CellsController(object):
         # Now set the transport URL
         cell['transport_url'] = str(transport_url)
 
-    @extensions.expected_errors((400, 403))
+    @extensions.expected_errors((400, 403, 501))
+    @common.check_cells_enabled
     @wsgi.response(201)
     def create(self, req, body):
         """Create a child cell entry."""
@@ -265,7 +272,8 @@ class CellsController(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
-    @extensions.expected_errors((400, 403, 404))
+    @extensions.expected_errors((400, 403, 404, 501))
+    @common.check_cells_enabled
     def update(self, req, id, body):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']
@@ -297,7 +305,8 @@ class CellsController(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
-    @extensions.expected_errors(400)
+    @extensions.expected_errors((400, 501))
+    @common.check_cells_enabled
     @wsgi.response(204)
     def sync_instances(self, req, body):
         """Tell all cells to sync instance info."""

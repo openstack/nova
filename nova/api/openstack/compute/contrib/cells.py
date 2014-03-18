@@ -200,6 +200,7 @@ class Controller(object):
         return dict(cells=items)
 
     @wsgi.serializers(xml=CellsTemplate)
+    @common.check_cells_enabled
     def index(self, req):
         """Return all cells in brief."""
         ctxt = req.environ['nova.context']
@@ -207,6 +208,7 @@ class Controller(object):
         return self._get_cells(ctxt, req)
 
     @wsgi.serializers(xml=CellsTemplate)
+    @common.check_cells_enabled
     def detail(self, req):
         """Return all cells in detail."""
         ctxt = req.environ['nova.context']
@@ -214,6 +216,7 @@ class Controller(object):
         return self._get_cells(ctxt, req, detail=True)
 
     @wsgi.serializers(xml=CellTemplate)
+    @common.check_cells_enabled
     def info(self, req):
         """Return name and capabilities for this cell."""
         context = req.environ['nova.context']
@@ -232,6 +235,7 @@ class Controller(object):
         return dict(cell=cell)
 
     @wsgi.serializers(xml=CellTemplate)
+    @common.check_cells_enabled
     def capacities(self, req, id=None):
         """Return capacities for a given cell or all cells."""
         # TODO(kaushikc): return capacities as a part of cell info and
@@ -251,6 +255,7 @@ class Controller(object):
         return dict(cell={"capacities": capacities})
 
     @wsgi.serializers(xml=CellTemplate)
+    @common.check_cells_enabled
     def show(self, req, id):
         """Return data about the given cell name.  'id' is a cell name."""
         context = req.environ['nova.context']
@@ -261,6 +266,7 @@ class Controller(object):
             raise exc.HTTPNotFound()
         return dict(cell=_scrub_cell(cell))
 
+    @common.check_cells_enabled
     def delete(self, req, id):
         """Delete a child or parent cell entry.  'id' is a cell name."""
         context = req.environ['nova.context']
@@ -337,6 +343,7 @@ class Controller(object):
 
     @wsgi.serializers(xml=CellTemplate)
     @wsgi.deserializers(xml=CellDeserializer)
+    @common.check_cells_enabled
     def create(self, req, body):
         """Create a child cell entry."""
         context = req.environ['nova.context']
@@ -360,6 +367,7 @@ class Controller(object):
 
     @wsgi.serializers(xml=CellTemplate)
     @wsgi.deserializers(xml=CellDeserializer)
+    @common.check_cells_enabled
     def update(self, req, id, body):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']
@@ -391,6 +399,7 @@ class Controller(object):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
+    @common.check_cells_enabled
     def sync_instances(self, req, body):
         """Tell all cells to sync instance info."""
         context = req.environ['nova.context']
