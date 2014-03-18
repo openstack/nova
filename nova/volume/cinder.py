@@ -26,7 +26,6 @@ from cinderclient import service_catalog
 from cinderclient.v1 import client as cinder_client
 from oslo.config import cfg
 
-from nova.db import base
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -199,7 +198,7 @@ def translate_snapshot_exception(method):
     return wrapper
 
 
-class API(base.Base):
+class API(object):
     """API for interacting with the volume manager."""
 
     @translate_volume_exception
