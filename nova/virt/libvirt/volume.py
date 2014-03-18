@@ -227,7 +227,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
         return self._run_iscsiadm(iscsi_properties, iscsi_command, **kwargs)
 
     def _get_target_portals_from_iscsiadm_output(self, output):
-        return [line.split()[0] for line in output.splitlines()]
+        # return both portals and iqns
+        return [line.split() for line in output.splitlines()]
 
     @utils.synchronized('connect_volume')
     def connect_volume(self, connection_info, disk_info):
@@ -253,9 +254,10 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                           check_exit_code=[0, 255])[0] \
                 or ""
 
-            for ip in self._get_target_portals_from_iscsiadm_output(out):
+            for ip, iqn in self._get_target_portals_from_iscsiadm_output(out):
                 props = iscsi_properties.copy()
                 props['target_portal'] = ip
+                props['target_iqn'] = iqn
                 self._connect_to_iscsi_portal(props)
 
             self._rescan_iscsi()
@@ -346,17 +348,42 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 if mpdev:
                     devices.append(mpdev)
 
+        # Do a discovery to find all targets.
+        # Targets for multiple paths for the same multipath device
+        # may not be the same.
+        out = self._run_iscsiadm_bare(['-m',
+                                      'discovery',
+                                      '-t',
+                                      'sendtargets',
+                                      '-p',
+                                      iscsi_properties['target_portal']],
+                                      check_exit_code=[0, 255])[0] \
+            or ""
+
+        ips_iqns = self._get_target_portals_from_iscsiadm_output(out)
+
         if not devices:
             # disconnect if no other multipath devices
-            self._disconnect_mpath(iscsi_properties)
+            self._disconnect_mpath(iscsi_properties, ips_iqns)
             return
 
+        # Get a target for all other multipath devices
         other_iqns = [self._get_multipath_iqn(device)
                       for device in devices]
+        # Get all the targets for the current multipath device
+        current_iqns = [iqn for ip, iqn in ips_iqns]
 
-        if iscsi_properties['target_iqn'] not in other_iqns:
+        in_use = False
+        for current in current_iqns:
+            if current in other_iqns:
+                in_use = True
+                break
+
+        # If no other multipath device attached has the same iqn
+        # as the current device
+        if not in_use:
             # disconnect if no other multipath devices with same iqn
-            self._disconnect_mpath(iscsi_properties)
+            self._disconnect_mpath(iscsi_properties, ips_iqns)
             return
 
         # else do not disconnect iscsi portals,
@@ -451,13 +478,11 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
             return []
         return [entry for entry in devices if entry.startswith("ip-")]
 
-    def _disconnect_mpath(self, iscsi_properties):
-        entries = self._get_iscsi_devices()
-        ips = [ip.split("-")[1] for ip in entries
-               if iscsi_properties['target_iqn'] in ip]
-        for ip in ips:
+    def _disconnect_mpath(self, iscsi_properties, ips_iqns):
+        for ip, iqn in ips_iqns:
             props = iscsi_properties.copy()
             props['target_portal'] = ip
+            props['target_iqn'] = iqn
             self._disconnect_from_iscsi_portal(props)
 
         self._rescan_multipath()
@@ -526,9 +551,10 @@ class LibvirtISERVolumeDriver(LibvirtISCSIVolumeDriver):
                                           iser_properties['target_portal']],
                                           check_exit_code=[0, 255])[0] or ""
 
-            for ip in self._get_target_portals_from_iscsiadm_output(out):
+            for ip, iqn in self._get_target_portals_from_iscsiadm_output(out):
                 props = iser_properties.copy()
                 props['target_portal'] = ip
+                props['target_iqn'] = iqn
                 self._connect_to_iser_portal(props)
 
             self._rescan_iscsi()
