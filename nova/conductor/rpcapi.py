@@ -131,16 +131,19 @@ class ConductorAPI(object):
     ...  - Remove instance_get()
     ...  - Remove migration_update()
     ...  - Remove block_device_mapping_destroy()
+
+    2.0  - Drop backwards compatibility
     """
 
     VERSION_ALIASES = {
         'grizzly': '1.48',
         'havana': '1.58',
+        'icehouse': '2.0',
     }
 
     def __init__(self):
         super(ConductorAPI, self).__init__()
-        target = messaging.Target(topic=CONF.conductor.topic, version='1.0')
+        target = messaging.Target(topic=CONF.conductor.topic, version='2.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.conductor,
                                                CONF.upgrade_levels.conductor)
         serializer = objects_base.NovaObjectSerializer()
@@ -151,7 +154,7 @@ class ConductorAPI(object):
     def instance_update(self, context, instance_uuid, updates,
                         service=None):
         updates_p = jsonutils.to_primitive(updates)
-        cctxt = self.client.prepare(version='1.38')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_update',
                           instance_uuid=instance_uuid,
                           updates=updates_p,
@@ -159,39 +162,34 @@ class ConductorAPI(object):
 
     def instance_get_by_uuid(self, context, instance_uuid,
                              columns_to_join=None):
-        if self.client.can_send_version('1.49'):
-            version = '1.49'
-            kwargs = {'instance_uuid': instance_uuid,
-                      'columns_to_join': columns_to_join}
-        else:
-            version = '1.2'
-            kwargs = {'instance_uuid': instance_uuid}
-        cctxt = self.client.prepare(version=version)
+        kwargs = {'instance_uuid': instance_uuid,
+                  'columns_to_join': columns_to_join}
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_get_by_uuid', **kwargs)
 
     def migration_get_in_progress_by_host_and_node(self, context,
                                                    host, node):
-        cctxt = self.client.prepare(version='1.31')
+        cctxt = self.client.prepare()
         return cctxt.call(context,
                           'migration_get_in_progress_by_host_and_node',
                           host=host, node=node)
 
     def aggregate_host_add(self, context, aggregate, host):
         aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(version='1.3')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'aggregate_host_add',
                           aggregate=aggregate_p,
                           host=host)
 
     def aggregate_host_delete(self, context, aggregate, host):
         aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare(version='1.3')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'aggregate_host_delete',
                           aggregate=aggregate_p,
                           host=host)
 
     def aggregate_metadata_get_by_host(self, context, host, key):
-        cctxt = self.client.prepare(version='1.42')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'aggregate_metadata_get_by_host',
                           host=host,
                           key=key)
@@ -203,89 +201,64 @@ class ConductorAPI(object):
         msg_kwargs = dict(uuid=uuid, mac=mac, start_period=start_period,
                           bw_in=bw_in, bw_out=bw_out, last_ctr_in=last_ctr_in,
                           last_ctr_out=last_ctr_out,
-                          last_refreshed=last_refreshed)
+                          last_refreshed=last_refreshed,
+                          update_cells=update_cells)
 
-        if self.client.can_send_version('1.54'):
-            version = '1.54'
-            msg_kwargs['update_cells'] = update_cells
-        else:
-            version = '1.5'
-
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'bw_usage_update', **msg_kwargs)
 
     def provider_fw_rule_get_all(self, context):
-        cctxt = self.client.prepare(version='1.9')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'provider_fw_rule_get_all')
 
     def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
-        cctxt = self.client.prepare(version='1.10')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'agent_build_get_by_triple',
                           hypervisor=hypervisor, os=os,
                           architecture=architecture)
 
     def block_device_mapping_update_or_create(self, context, values,
                                               create=None):
-        cctxt = self.client.prepare(version='1.12')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'block_device_mapping_update_or_create',
                           values=values, create=create)
 
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):
         instance_p = jsonutils.to_primitive(instance)
-        if self.client.can_send_version('1.51'):
-            version = '1.51'
-            kwargs = {'legacy': legacy}
-        elif legacy:
-            # If the remote side is >= 1.51, it defaults to legacy=True.
-            # If it's older, it only understands the legacy format.
-            version = '1.13'
-            kwargs = {}
-        else:
-            # If we require new style data, but can't ask for it, then we must
-            # fail here.
-            raise messaging.RPCVersionCapError(
-                vesion='1.51', version_cap=self.client.version_cap)
-
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'block_device_mapping_get_all_by_instance',
-                          instance=instance_p, **kwargs)
+                          instance=instance_p, legacy=legacy)
 
     def instance_get_all_by_filters(self, context, filters, sort_key,
                                     sort_dir, columns_to_join=None,
                                     use_slave=False):
         msg_kwargs = dict(filters=filters, sort_key=sort_key,
-                          sort_dir=sort_dir, columns_to_join=columns_to_join)
-
-        if self.client.can_send_version('1.64'):
-            version = '1.64'
-            msg_kwargs['use_slave'] = use_slave
-        else:
-            version = '1.47'
-
-        cctxt = self.client.prepare(version=version)
+                          sort_dir=sort_dir, columns_to_join=columns_to_join,
+                          use_slave=use_slave)
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_get_all_by_filters', **msg_kwargs)
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):
-        cctxt = self.client.prepare(version='1.35')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_get_active_by_window_joined',
                           begin=begin, end=end, project_id=project_id,
                           host=host)
 
     def instance_destroy(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.61')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_destroy', instance=instance_p)
 
     def instance_info_cache_delete(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.17')
+        cctxt = self.client.prepare()
         cctxt.call(context, 'instance_info_cache_delete', instance=instance_p)
 
     def vol_get_usage_by_time(self, context, start_time):
         start_time_p = jsonutils.to_primitive(start_time)
-        cctxt = self.client.prepare(version='1.19')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'vol_get_usage_by_time',
                           start_time=start_time_p)
 
@@ -293,7 +266,7 @@ class ConductorAPI(object):
                          wr_bytes, instance, last_refreshed=None,
                          update_totals=False):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.19')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'vol_usage_update',
                           vol_id=vol_id, rd_req=rd_req,
                           rd_bytes=rd_bytes, wr_req=wr_req,
@@ -302,76 +275,69 @@ class ConductorAPI(object):
                           update_totals=update_totals)
 
     def service_get_all_by(self, context, topic=None, host=None, binary=None):
-        cctxt = self.client.prepare(version='1.28')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'service_get_all_by',
                           topic=topic, host=host, binary=binary)
 
     def instance_get_all_by_host(self, context, host, node=None,
                                  columns_to_join=None):
-        cctxt = self.client.prepare(version='1.47')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_get_all_by_host',
                           host=host, node=node,
                           columns_to_join=columns_to_join)
 
     def instance_fault_create(self, context, values):
-        cctxt = self.client.prepare(version='1.36')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'instance_fault_create', values=values)
 
     def action_event_start(self, context, values):
         values_p = jsonutils.to_primitive(values)
-        cctxt = self.client.prepare(version='1.25')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'action_event_start', values=values_p)
 
     def action_event_finish(self, context, values):
         values_p = jsonutils.to_primitive(values)
-        cctxt = self.client.prepare(version='1.25')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'action_event_finish', values=values_p)
 
     def service_create(self, context, values):
-        cctxt = self.client.prepare(version='1.27')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'service_create', values=values)
 
     def service_destroy(self, context, service_id):
-        cctxt = self.client.prepare(version='1.29')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'service_destroy', service_id=service_id)
 
     def compute_node_create(self, context, values):
-        cctxt = self.client.prepare(version='1.33')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'compute_node_create', values=values)
 
-    def compute_node_update(self, context, node, values, prune_stats=False):
+    def compute_node_update(self, context, node, values):
         node_p = jsonutils.to_primitive(node)
-        if self.client.can_send_version('1.63'):
-            version = '1.63'
-        else:
-            version = '1.33'
-            if 'stats' in values:
-                values['stats'] = jsonutils.loads(values['stats'])
-        cctxt = self.client.prepare(version=version)
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'compute_node_update',
-                          node=node_p, values=values,
-                          prune_stats=prune_stats)
+                          node=node_p, values=values)
 
     def compute_node_delete(self, context, node):
         node_p = jsonutils.to_primitive(node)
-        cctxt = self.client.prepare(version='1.44')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'compute_node_delete', node=node_p)
 
     def service_update(self, context, service, values):
         service_p = jsonutils.to_primitive(service)
-        cctxt = self.client.prepare(version='1.34')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'service_update',
                           service=service_p, values=values)
 
     def task_log_get(self, context, task_name, begin, end, host, state=None):
-        cctxt = self.client.prepare(version='1.37')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'task_log_get',
                           task_name=task_name, begin=begin, end=end,
                           host=host, state=state)
 
     def task_log_begin_task(self, context, task_name, begin, end, host,
                             task_items=None, message=None):
-        cctxt = self.client.prepare(version='1.37')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'task_log_begin_task',
                           task_name=task_name,
                           begin=begin, end=end, host=host,
@@ -379,7 +345,7 @@ class ConductorAPI(object):
 
     def task_log_end_task(self, context, task_name, begin, end, host, errors,
                           message=None):
-        cctxt = self.client.prepare(version='1.37')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'task_log_end_task',
                           task_name=task_name, begin=begin, end=end,
                           host=host, errors=errors, message=message)
@@ -390,7 +356,7 @@ class ConductorAPI(object):
         instance_p = jsonutils.to_primitive(instance)
         system_metadata_p = jsonutils.to_primitive(system_metadata)
         extra_usage_info_p = jsonutils.to_primitive(extra_usage_info)
-        cctxt = self.client.prepare(version='1.39')
+        cctxt = self.client.prepare()
         return cctxt.call(
             context, 'notify_usage_exists',
             instance=instance_p,
@@ -401,33 +367,33 @@ class ConductorAPI(object):
 
     def security_groups_trigger_handler(self, context, event, args):
         args_p = jsonutils.to_primitive(args)
-        cctxt = self.client.prepare(version='1.40')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'security_groups_trigger_handler',
                           event=event, args=args_p)
 
     def security_groups_trigger_members_refresh(self, context, group_ids):
-        cctxt = self.client.prepare(version='1.40')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'security_groups_trigger_members_refresh',
                           group_ids=group_ids)
 
     def network_migrate_instance_start(self, context, instance, migration):
         instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration)
-        cctxt = self.client.prepare(version='1.41')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'network_migrate_instance_start',
                           instance=instance_p, migration=migration_p)
 
     def network_migrate_instance_finish(self, context, instance, migration):
         instance_p = jsonutils.to_primitive(instance)
         migration_p = jsonutils.to_primitive(migration)
-        cctxt = self.client.prepare(version='1.41')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'network_migrate_instance_finish',
                           instance=instance_p, migration=migration_p)
 
     def quota_commit(self, context, reservations, project_id=None,
                      user_id=None):
         reservations_p = jsonutils.to_primitive(reservations)
-        cctxt = self.client.prepare(version='1.45')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'quota_commit',
                           reservations=reservations_p,
                           project_id=project_id, user_id=user_id)
@@ -435,36 +401,36 @@ class ConductorAPI(object):
     def quota_rollback(self, context, reservations, project_id=None,
                        user_id=None):
         reservations_p = jsonutils.to_primitive(reservations)
-        cctxt = self.client.prepare(version='1.45')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'quota_rollback',
                           reservations=reservations_p,
                           project_id=project_id, user_id=user_id)
 
     def get_ec2_ids(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.42')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'get_ec2_ids',
                           instance=instance_p)
 
     def compute_unrescue(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare(version='1.48')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'compute_unrescue', instance=instance_p)
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):
-        cctxt = self.client.prepare(version='1.50')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'object_class_action',
                           objname=objname, objmethod=objmethod,
                           objver=objver, args=args, kwargs=kwargs)
 
     def object_action(self, context, objinst, objmethod, args, kwargs):
-        cctxt = self.client.prepare(version='1.50')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'object_action', objinst=objinst,
                           objmethod=objmethod, args=args, kwargs=kwargs)
 
     def object_backport(self, context, objinst, target_version):
-        cctxt = self.client.prepare(version='1.62')
+        cctxt = self.client.prepare()
         return cctxt.call(context, 'object_backport', objinst=objinst,
                           target_version=target_version)
 

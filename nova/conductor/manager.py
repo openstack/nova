@@ -89,6 +89,7 @@ class ConductorManager(manager.Manager):
         self.quotas = quota.QUOTAS
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.additional_endpoints.append(self.compute_task_mgr)
+        self.additional_endpoints.append(_ConductorManagerV2Proxy(self))
 
     @property
     def network_api(self):
@@ -867,3 +868,179 @@ class ComputeTaskManager(base.Base):
                 del(sys_meta[key])
         instance.system_metadata = sys_meta
         instance.save()
+
+
+class _ConductorManagerV2Proxy(object):
+
+    target = messaging.Target(version='2.0')
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def instance_update(self, context, instance_uuid, updates,
+                        service):
+        return self.manager.instance_update(context, instance_uuid, updates,
+                service)
+
+    def instance_get_by_uuid(self, context, instance_uuid,
+                             columns_to_join):
+        return self.manager.instance_get_by_uuid(context, instance_uuid,
+                columns_to_join)
+
+    def migration_get_in_progress_by_host_and_node(self, context,
+                                                   host, node):
+        return self.manager.migration_get_in_progress_by_host_and_node(context,
+                host, node)
+
+    def aggregate_host_add(self, context, aggregate, host):
+        return self.manager.aggregate_host_add(context, aggregate, host)
+
+    def aggregate_host_delete(self, context, aggregate, host):
+        return self.manager.aggregate_host_delete(context, aggregate, host)
+
+    def aggregate_metadata_get_by_host(self, context, host, key):
+        return self.manager.aggregate_metadata_get_by_host(context, host, key)
+
+    def bw_usage_update(self, context, uuid, mac, start_period,
+                        bw_in, bw_out, last_ctr_in, last_ctr_out,
+                        last_refreshed, update_cells):
+        return self.manager.bw_usage_update(context, uuid, mac, start_period,
+                bw_in, bw_out, last_ctr_in, last_ctr_out, last_refreshed,
+                update_cells)
+
+    def provider_fw_rule_get_all(self, context):
+        return self.manager.provider_fw_rule_get_all(context)
+
+    def agent_build_get_by_triple(self, context, hypervisor, os, architecture):
+        return self.manager.agent_build_get_by_triple(context, hypervisor, os,
+                architecture)
+
+    def block_device_mapping_update_or_create(self, context, values, create):
+        return self.manager.block_device_mapping_update_or_create(context,
+                values, create)
+
+    def block_device_mapping_get_all_by_instance(self, context, instance,
+                                                 legacy):
+        return self.manager.block_device_mapping_get_all_by_instance(context,
+                instance, legacy)
+
+    def instance_get_all_by_filters(self, context, filters, sort_key,
+                                    sort_dir, columns_to_join, use_slave):
+        return self.manager.instance_get_all_by_filters(context, filters,
+                sort_key, sort_dir, columns_to_join, use_slave)
+
+    def instance_get_active_by_window_joined(self, context, begin, end,
+                                             project_id, host):
+        return self.manager.instance_get_active_by_window_joined(context,
+                begin, end, project_id, host)
+
+    def instance_destroy(self, context, instance):
+        return self.manager.instance_destroy(context, instance)
+
+    def instance_info_cache_delete(self, context, instance):
+        return self.manager.instance_info_cache_delete(context, instance)
+
+    def vol_get_usage_by_time(self, context, start_time):
+        return self.manager.vol_get_usage_by_time(context, start_time)
+
+    def vol_usage_update(self, context, vol_id, rd_req, rd_bytes, wr_req,
+                         wr_bytes, instance, last_refreshed, update_totals):
+        return self.manager.vol_usage_update(context, vol_id, rd_req, rd_bytes,
+                wr_req, wr_bytes, instance, last_refreshed, update_totals)
+
+    def service_get_all_by(self, context, topic, host, binary):
+        return self.manager.service_get_all_by(context, topic, host, binary)
+
+    def instance_get_all_by_host(self, context, host, node, columns_to_join):
+        return self.manager.instance_get_all_by_host(context, host, node,
+                columns_to_join)
+
+    def instance_fault_create(self, context, values):
+        return self.manager.instance_fault_create(context, values)
+
+    def action_event_start(self, context, values):
+        return self.manager.action_event_start(context, values)
+
+    def action_event_finish(self, context, values):
+        return self.manager.action_event_finish(context, values)
+
+    def service_create(self, context, values):
+        return self.manager.service_create(context, values)
+
+    def service_destroy(self, context, service_id):
+        return self.manager.service_destroy(context, service_id)
+
+    def compute_node_create(self, context, values):
+        return self.manager.compute_node_create(context, values)
+
+    def compute_node_update(self, context, node, values):
+        return self.manager.compute_node_update(context, node, values)
+
+    def compute_node_delete(self, context, node):
+        return self.manager.compute_node_delete(context, node)
+
+    def service_update(self, context, service, values):
+        return self.manager.service_update(context, service, values)
+
+    def task_log_get(self, context, task_name, begin, end, host, state):
+        return self.manager.task_log_get(context, task_name, begin, end, host,
+                state)
+
+    def task_log_begin_task(self, context, task_name, begin, end, host,
+                            task_items, message):
+        return self.manager.task_log_begin_task(context, task_name, begin, end,
+                host, task_items, message)
+
+    def task_log_end_task(self, context, task_name, begin, end, host, errors,
+                          message):
+        return self.manager.task_log_end_task(context, task_name, begin, end,
+                host, errors, message)
+
+    def notify_usage_exists(self, context, instance, current_period,
+                            ignore_missing_network_data,
+                            system_metadata, extra_usage_info):
+        return self.manager.notify_usage_exists(context, instance,
+                current_period, ignore_missing_network_data, system_metadata,
+                extra_usage_info)
+
+    def security_groups_trigger_handler(self, context, event, args):
+        return self.manager.security_groups_trigger_handler(context, event,
+                args)
+
+    def security_groups_trigger_members_refresh(self, context, group_ids):
+        return self.manager.security_groups_trigger_members_refresh(context,
+                group_ids)
+
+    def network_migrate_instance_start(self, context, instance, migration):
+        return self.manager.network_migrate_instance_start(context, instance,
+                migration)
+
+    def network_migrate_instance_finish(self, context, instance, migration):
+        return self.manager.network_migrate_instance_finish(context, instance,
+                migration)
+
+    def quota_commit(self, context, reservations, project_id, user_id):
+        return self.manager.quota_commit(context, reservations, project_id,
+                user_id)
+
+    def quota_rollback(self, context, reservations, project_id, user_id):
+        return self.manager.quota_rollback(context, reservations, project_id,
+                user_id)
+
+    def get_ec2_ids(self, context, instance):
+        return self.manager.get_ec2_ids(context, instance)
+
+    def compute_unrescue(self, context, instance):
+        return self.manager.compute_unrescue(context, instance)
+
+    def object_class_action(self, context, objname, objmethod, objver,
+                            args, kwargs):
+        return self.manager.object_class_action(context, objname, objmethod,
+                objver, args, kwargs)
+
+    def object_action(self, context, objinst, objmethod, args, kwargs):
+        return self.manager.object_action(context, objinst, objmethod, args,
+                kwargs)
+
+    def object_backport(self, context, objinst, target_version):
+        return self.manager.object_backport(context, objinst, target_version)
