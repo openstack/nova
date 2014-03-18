@@ -4361,7 +4361,6 @@ class LibvirtDriver(driver.ComputeDriver):
             nova.db.sqlalchemy.models.Instance object
             instance object that is migrated.
         :param dest: destination host
-        :param block_migration: destination host
         :param post_method:
             post operation method.
             expected nova.compute.manager.post_live_migration.
@@ -4393,6 +4392,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param recover_method:
             recovery method when any exception occurs.
             expected nova.compute.manager.recover_live_migration.
+        :param block_migration: if true, do block migration.
         :param migrate_data: implementation specific params
         """
 
