@@ -161,8 +161,8 @@ class AgentController(object):
                                                  'url': url,
                                                  'md5hash': md5hash})
             agent['agent_id'] = agent_build_ref.id
-        except Exception as ex:
-            raise webob.exc.HTTPServerError(str(ex))
+        except exception.AgentBuildExists as ex:
+            raise webob.exc.HTTPServerError(explanation=ex.format_message())
         return {'agent': agent}
 
 
