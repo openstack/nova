@@ -293,12 +293,12 @@ def get_vm_extra_config_spec(client_factory, extra_opts):
     return config_spec
 
 
-def get_vmdk_path_and_adapter_type(hardware_devices):
+def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
     """Gets the vmdk file path and the storage adapter type."""
     if hardware_devices.__class__.__name__ == "ArrayOfVirtualDevice":
         hardware_devices = hardware_devices.VirtualDevice
     vmdk_file_path = None
-    vmdk_controler_key = None
+    vmdk_controller_key = None
     disk_type = None
     unit_number = 0
 
@@ -307,8 +307,12 @@ def get_vmdk_path_and_adapter_type(hardware_devices):
         if device.__class__.__name__ == "VirtualDisk":
             if device.backing.__class__.__name__ == \
                     "VirtualDiskFlatVer2BackingInfo":
-                vmdk_file_path = device.backing.fileName
-                vmdk_controler_key = device.controllerKey
+                if uuid:
+                    if uuid in device.backing.fileName:
+                        vmdk_file_path = device.backing.fileName
+                else:
+                    vmdk_file_path = device.backing.fileName
+                vmdk_controller_key = device.controllerKey
                 if getattr(device.backing, 'thinProvisioned', False):
                     disk_type = "thin"
                 else:
@@ -327,9 +331,9 @@ def get_vmdk_path_and_adapter_type(hardware_devices):
         elif device.__class__.__name__ == "VirtualLsiLogicSASController":
             adapter_type_dict[device.key] = "lsiLogicsas"
 
-    adapter_type = adapter_type_dict.get(vmdk_controler_key, "")
+    adapter_type = adapter_type_dict.get(vmdk_controller_key, "")
 
-    return (vmdk_file_path, vmdk_controler_key, adapter_type,
+    return (vmdk_file_path, vmdk_controller_key, adapter_type,
             disk_type, unit_number)
 
 
