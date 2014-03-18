@@ -466,6 +466,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         for ps in (power_state.SHUTDOWN, power_state.CRASHED,
                    power_state.SUSPENDED):
             self._test_sync_to_stop(power_state.RUNNING, vm_states.ACTIVE, ps)
+
+        for ps in (power_state.SHUTDOWN, power_state.CRASHED):
+            self._test_sync_to_stop(power_state.PAUSED, vm_states.PAUSED, ps,
+                                    force=True)
+
         self._test_sync_to_stop(power_state.SHUTDOWN, vm_states.STOPPED,
                                 power_state.RUNNING, force=True)
 
