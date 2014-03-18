@@ -2451,7 +2451,7 @@ class ComputeManager(manager.Manager):
                                ' existing disk'))
                 else:
                     image_ref = orig_image_ref = instance.image_ref
-                    LOG.info(_("disk not on shared storagerebuilding from:"
+                    LOG.info(_("disk not on shared storage, rebuilding from:"
                                " '%s'") % str(image_ref))
 
                 # NOTE(mriedem): On a recreate (evacuate), we need to update
