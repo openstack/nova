@@ -272,10 +272,12 @@ def _make_image_fixtures():
     for status in ('queued', 'saving', 'active', 'killed',
                    'deleted', 'pending_delete'):
         deleted = False if status != 'deleted' else True
+        deleted_at = NOW_GLANCE_FORMAT if deleted else None
+
         add_fixture(id=image_id, name='%s snapshot' % status,
                     is_public=False, status=status,
                     properties=snapshot_properties, size='25165824',
-                    deleted=deleted)
+                    deleted=deleted, deleted_at=deleted_at)
         image_id += 1
 
     # Image without a name
