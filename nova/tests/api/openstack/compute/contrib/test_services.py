@@ -233,9 +233,6 @@ class ServicesTest(test.TestCase):
 
     def test_services_detail(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequest()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -271,9 +268,6 @@ class ServicesTest(test.TestCase):
 
     def test_service_detail_with_host(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequestWithHost()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -295,9 +289,6 @@ class ServicesTest(test.TestCase):
 
     def test_service_detail_with_service(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequestWithService()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -319,9 +310,6 @@ class ServicesTest(test.TestCase):
 
     def test_service_detail_with_host_service(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequestWithHostService()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -336,41 +324,38 @@ class ServicesTest(test.TestCase):
 
     def test_services_detail_with_delete_extension(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
-        with mock.patch.object(self.controller.host_api, 'service_get_all',
-                               side_effect=fake_host_api_service_get_all):
-            req = FakeRequest()
-            res_dict = self.controller.index(req)
-            response = {'services': [
-                {'binary': 'nova-scheduler',
-                 'host': 'host1',
-                 'id': 1,
-                 'zone': 'internal',
-                 'status': 'disabled',
-                 'state': 'up',
-                 'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
-                {'binary': 'nova-compute',
-                 'host': 'host1',
-                 'id': 2,
-                 'zone': 'nova',
-                 'status': 'disabled',
-                 'state': 'up',
-                 'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
-                {'binary': 'nova-scheduler',
-                 'host': 'host2',
-                 'id': 3,
-                 'zone': 'internal',
-                 'status': 'enabled',
-                 'state': 'down',
-                 'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
-                {'binary': 'nova-compute',
-                 'host': 'host2',
-                 'id': 4,
-                 'zone': 'nova',
-                 'status': 'disabled',
-                 'state': 'down',
-                 'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
-            self.assertEqual(res_dict, response)
+        req = FakeRequest()
+        res_dict = self.controller.index(req)
+        response = {'services': [
+            {'binary': 'nova-scheduler',
+             'host': 'host1',
+             'id': 1,
+             'zone': 'internal',
+             'status': 'disabled',
+             'state': 'up',
+             'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)},
+            {'binary': 'nova-compute',
+             'host': 'host1',
+             'id': 2,
+             'zone': 'nova',
+             'status': 'disabled',
+             'state': 'up',
+             'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5)},
+            {'binary': 'nova-scheduler',
+             'host': 'host2',
+             'id': 3,
+             'zone': 'internal',
+             'status': 'enabled',
+             'state': 'down',
+             'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34)},
+            {'binary': 'nova-compute',
+             'host': 'host2',
+             'id': 4,
+             'zone': 'nova',
+             'status': 'disabled',
+             'state': 'down',
+             'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38)}]}
+        self.assertEqual(res_dict, response)
 
     def test_services_enable(self):
         def _service_update(context, service_id, values):
@@ -442,7 +427,6 @@ class ServicesTest(test.TestCase):
 
     def test_services_disable_log_reason(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
         req = \
             fakes.HTTPRequest.blank('v2/fakes/os-services/disable-log-reason')
         body = {'host': 'host1',
@@ -456,7 +440,6 @@ class ServicesTest(test.TestCase):
 
     def test_mandatory_reason_field(self):
         self.ext_mgr.extensions['os-extended-services'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
         req = \
             fakes.HTTPRequest.blank('v2/fakes/os-services/disable-log-reason')
         body = {'host': 'host1',
@@ -475,7 +458,6 @@ class ServicesTest(test.TestCase):
 
     def test_services_delete(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
 
         request = fakes.HTTPRequest.blank('/v2/fakes/os-services/1',
                                           use_admin_context=True)
@@ -490,7 +472,6 @@ class ServicesTest(test.TestCase):
 
     def test_services_delete_not_found(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
-        self.controller = services.ServiceController(self.ext_mgr)
 
         request = fakes.HTTPRequest.blank('/v2/fakes/os-services/abc',
                                           use_admin_context=True)

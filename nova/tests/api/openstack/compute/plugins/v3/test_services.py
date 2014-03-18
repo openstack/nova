@@ -146,8 +146,6 @@ class ServicesTest(test.TestCase):
         self.stubs.Set(db, "service_update", fake_service_update)
 
     def test_services_list(self):
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequest()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -186,8 +184,6 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_list_with_host(self):
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequestWithHost()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -210,8 +206,6 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_list_with_service(self):
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequestWithService()
         res_dict = self.controller.index(req)
         response = {'services': [
@@ -234,8 +228,6 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_list_with_host_service(self):
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
         req = FakeRequestWithHostService()
         res_dict = self.controller.index(req)
         response = {'services': [
