@@ -782,7 +782,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
         ctx = mock.MagicMock(auth_token=True)
         img = mock.MagicMock()
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
         img.assert_not_called()
 
@@ -790,7 +790,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
         ctx = mock.MagicMock(auth_token=False, is_admin=True)
         img = mock.MagicMock()
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
         img.assert_not_called()
 
@@ -803,7 +803,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
         img = mock.MagicMock(visibility='PUBLIC',
                              spec=TestIsImageAvailable.ImageSpecV2)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
     def test_v1_is_public(self):
@@ -811,7 +811,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
         img = mock.MagicMock(is_public=True,
                              spec=TestIsImageAvailable.ImageSpecV1)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
     def test_project_is_owner(self):
@@ -823,14 +823,14 @@ class TestIsImageAvailable(test.NoDBTestCase):
         img = mock.MagicMock(visibility='private', properties=props,
                              spec=TestIsImageAvailable.ImageSpecV2)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
         ctx.reset_mock()
         img = mock.MagicMock(is_public=False, properties=props,
                              spec=TestIsImageAvailable.ImageSpecV1)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
     def test_project_context_matches_project_prop(self):
@@ -842,14 +842,14 @@ class TestIsImageAvailable(test.NoDBTestCase):
         img = mock.MagicMock(visibility='private', properties=props,
                              spec=TestIsImageAvailable.ImageSpecV2)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
         ctx.reset_mock()
         img = mock.MagicMock(is_public=False, properties=props,
                              spec=TestIsImageAvailable.ImageSpecV1)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
     def test_no_user_in_props(self):
@@ -860,14 +860,14 @@ class TestIsImageAvailable(test.NoDBTestCase):
         img = mock.MagicMock(visibility='private', properties=props,
                              spec=TestIsImageAvailable.ImageSpecV2)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertFalse(res)
 
         ctx.reset_mock()
         img = mock.MagicMock(is_public=False, properties=props,
                              spec=TestIsImageAvailable.ImageSpecV1)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertFalse(res)
 
     def test_user_matches_context(self):
@@ -879,14 +879,14 @@ class TestIsImageAvailable(test.NoDBTestCase):
         img = mock.MagicMock(visibility='private', properties=props,
                              spec=TestIsImageAvailable.ImageSpecV2)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
         ctx.reset_mock()
         img = mock.MagicMock(is_public=False, properties=props,
                              spec=TestIsImageAvailable.ImageSpecV1)
 
-        res = glance.GlanceImageService._is_image_available(ctx, img)
+        res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
 
 
