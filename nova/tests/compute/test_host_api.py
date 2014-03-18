@@ -349,9 +349,10 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
 
     def test_service_get_all_no_zones(self):
         services = [dict(test_service.fake_service,
-                         id=1, topic='compute', host='host1'),
+                         id='cell1@1', topic='compute', host='host1'),
                     dict(test_service.fake_service,
-                         id=2, topic='compute', host='host2')]
+                         id='cell1@2', topic='compute', host='host2')]
+        exp_services = [s.copy() for s in services]
 
         fake_filters = {'host': 'host1'}
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
@@ -361,22 +362,21 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
                                                filters=fake_filters)
-        self._compare_objs(result, services)
+        self._compare_objs(result, exp_services)
 
-    def test_service_get_all(self):
+    def _test_service_get_all(self, fake_filters, **kwargs):
         services = [dict(test_service.fake_service,
-                         id=1, key1='val1', key2='val2', topic='compute',
-                         host='host1'),
+                         id='cell1@1', key1='val1', key2='val2',
+                         topic='compute', host='host1'),
                     dict(test_service.fake_service,
-                         id=2, key1='val2', key3='val3', topic='compute',
-                         host='host2')]
+                         id='cell1@2', key1='val2', key3='val3',
+                         topic='compute', host='host2')]
         exp_services = []
         for service in services:
             exp_service = {}
             exp_service.update(availability_zone='nova', **service)
             exp_services.append(exp_service)
 
-        fake_filters = {'key1': 'val1'}
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
                                  'service_get_all')
         self.host_api.cells_rpcapi.service_get_all(self.ctxt,
@@ -384,22 +384,17 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.mox.ReplayAll()
         result = self.host_api.service_get_all(self.ctxt,
                                                filters=fake_filters,
-                                               set_zones=True)
+                                               **kwargs)
         self.mox.VerifyAll()
         self._compare_objs(result, exp_services)
 
-        # Test w/ zone filter but no set_zones arg.
-        self.mox.ResetAll()
+    def test_service_get_all(self):
         fake_filters = {'availability_zone': 'nova'}
-        # Zone filter is done client-size, so should be stripped
-        # from this call.
-        self.host_api.cells_rpcapi.service_get_all(self.ctxt,
-                filters={}).AndReturn(services)
-        self.mox.ReplayAll()
-        result = self.host_api.service_get_all(self.ctxt,
-                                               filters=fake_filters)
-        self.mox.VerifyAll()
-        self._compare_objs(result, exp_services)
+        self._test_service_get_all(fake_filters)
+
+    def test_service_get_all_set_zones(self):
+        fake_filters = {'key1': 'val1'}
+        self._test_service_get_all(fake_filters, set_zones=True)
 
     def test_service_get_by_compute_host(self):
         self.mox.StubOutWithMock(self.host_api.cells_rpcapi,
