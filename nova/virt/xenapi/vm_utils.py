@@ -1641,7 +1641,7 @@ def determine_disk_image_type(image_meta):
     2. If we're not using Glance, then we need to deduce this based on
        whether a kernel_id is specified.
     """
-    if not image_meta:
+    if not image_meta or 'disk_format' not in image_meta:
         return None
 
     disk_format = image_meta['disk_format']

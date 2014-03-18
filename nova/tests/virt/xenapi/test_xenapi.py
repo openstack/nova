@@ -84,6 +84,7 @@ IMAGE_RAW = '4'
 IMAGE_VHD = '5'
 IMAGE_ISO = '6'
 IMAGE_IPXE_ISO = '7'
+IMAGE_FROM_VOLUME = '8'
 
 IMAGE_FIXTURES = {
     IMAGE_MACHINE: {
@@ -121,6 +122,10 @@ IMAGE_FIXTURES = {
                        'disk_format': 'iso',
                        'container_format': 'bare',
                        'properties': {'ipxe_boot': 'true'}},
+    },
+    IMAGE_FROM_VOLUME: {
+        'image_meta': {'name': 'fake_ipxe_iso',
+                       'properties': {'foo': 'bar'}},
     },
 }
 
@@ -885,9 +890,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self._test_spawn(None, None, None,
                          block_device_info=dev_info)
 
+    def test_spawn_boot_from_volume_no_glance_image_meta(self):
+        dev_info = get_fake_device_info()
+        self._test_spawn(IMAGE_FROM_VOLUME, None, None,
+                         block_device_info=dev_info)
+
     def test_spawn_boot_from_volume_with_image_meta(self):
         dev_info = get_fake_device_info()
-        self._test_spawn(None, None, None,
+        self._test_spawn(IMAGE_VHD, None, None,
                          block_device_info=dev_info)
 
     def test_spawn_netinject_file(self):
