@@ -23,12 +23,19 @@ The VMware API VM utility module to build SOAP object specs.
 import collections
 import copy
 
+from oslo.config import cfg
+
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt.vmwareapi import vim_util
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+# the config key which stores the VNC port
+VNC_CONFIG_KEY = 'config.extraConfig["RemoteDisplay.vnc.port"]'
 
 
 def build_datastore_path(datastore_name, path):
@@ -598,6 +605,45 @@ def get_vnc_config_spec(client_factory, port, password):
         extras.append(opt_pass)
     virtual_machine_config_spec.extraConfig = extras
     return virtual_machine_config_spec
+
+
+@utils.synchronized('vmware.get_vnc_port')
+def get_vnc_port(session):
+    """Return VNC port for an VM or None if there is no available port."""
+    min_port = CONF.vmware.vnc_port
+    port_total = CONF.vmware.vnc_port_total
+    allocated_ports = _get_allocated_vnc_ports(session)
+    max_port = min_port + port_total
+    for port in range(min_port, max_port):
+        if port not in allocated_ports:
+            return port
+    raise exception.ConsolePortRangeExhausted(min_port=min_port,
+                                              max_port=max_port)
+
+
+def _get_allocated_vnc_ports(session):
+    """Return an integer set of all allocated VNC ports."""
+    # TODO(rgerganov): bug #1256944
+    # The VNC port should be unique per host, not per vCenter
+    vnc_ports = set()
+    result = session._call_method(vim_util, "get_objects",
+                                  "VirtualMachine", [VNC_CONFIG_KEY])
+    while result:
+        for obj in result.objects:
+            if not hasattr(obj, 'propSet'):
+                continue
+            dynamic_prop = obj.propSet[0]
+            option_value = dynamic_prop.val
+            vnc_port = option_value.value
+            vnc_ports.add(int(vnc_port))
+        token = _get_token(result)
+        if token:
+            result = session._call_method(vim_util,
+                                          "continue_to_get_objects",
+                                          token)
+        else:
+            break
+    return vnc_ports
 
 
 def search_datastore_spec(client_factory, file_name):

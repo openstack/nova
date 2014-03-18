@@ -21,6 +21,7 @@
 Test suite for VMwareAPI.
 """
 
+import collections
 import contextlib
 import copy
 
@@ -977,11 +978,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def _test_get_vnc_console(self):
         self._create_vm()
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
-        fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
+        OptionValue = collections.namedtuple('OptionValue', ['key', 'value'])
+        opt_val = OptionValue(key='', value=5906)
+        fake_vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
         vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], self.vnc_host)
-        self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
-                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)
+        self.assertEqual(vnc_dict['host'], self.vnc_host)
+        self.assertEqual(vnc_dict['port'], 5906)
 
     def test_get_vnc_console(self):
         self._test_get_vnc_console()
@@ -989,6 +991,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_get_vnc_console_with_password(self):
         self.flags(vnc_password='vmware', group='vmware')
         self._test_get_vnc_console()
+
+    def test_get_vnc_console_noport(self):
+        self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.conn.get_vnc_console,
+                          self.instance)
 
     def test_host_ip_addr(self):
         self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
