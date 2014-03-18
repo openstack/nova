@@ -162,7 +162,7 @@ class InterfaceAttachTests(test.NoDBTestCase):
                        fake_detach_interface)
         attachments = attach_interfaces.InterfaceAttachmentController()
         req = webob.Request.blank('/v2/fake/os-interfaces/delete')
-        req.method = 'POST'
+        req.method = 'DELETE'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
@@ -175,7 +175,7 @@ class InterfaceAttachTests(test.NoDBTestCase):
                        fake_detach_interface)
         attachments = attach_interfaces.InterfaceAttachmentController()
         req = webob.Request.blank('/v2/fake/os-interfaces/delete')
-        req.method = 'POST'
+        req.method = 'DELETE'
         req.body = jsonutils.dumps({})
         req.headers['content-type'] = 'application/json'
         req.environ['nova.context'] = self.context
