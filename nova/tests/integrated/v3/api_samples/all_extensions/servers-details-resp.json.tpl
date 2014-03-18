@@ -63,7 +63,7 @@
             "os-server-usage:launched_at": "%(timestamp)s",
             "os-server-usage:terminated_at": null,
             "progress": 0,
-            "security_groups": [
+            "os-security-groups:security_groups": [
                 {
                     "name": "default"
                 }

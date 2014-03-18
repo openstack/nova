@@ -134,7 +134,7 @@ class SecurityGroupsOutputTest(test.TestCase):
         return jsonutils.loads(body).get('servers')
 
     def _get_groups(self, server):
-        return server.get('security_groups')
+        return server.get('os-security-groups:security_groups')
 
     def test_create(self):
         url = '/v3/servers'

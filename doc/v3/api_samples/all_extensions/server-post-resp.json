@@ -14,7 +14,7 @@
         ],
         "os-access-ips:access_ip_v4": "",
         "os-access-ips:access_ip_v6": "",
-        "security_groups": [
+        "os-security-groups:security_groups": [
             {
                 "name": "default"
             }
