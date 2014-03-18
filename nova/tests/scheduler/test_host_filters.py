@@ -805,7 +805,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
         self.assertTrue(filt_cls.host_passes(host, filter_properties))
 
     def _do_test_compute_filter_extra_specs(self, ecaps, especs, passes):
-        """In real Openstack runtime environment,compute capabilities
+        """In real OpenStack runtime environment,compute capabilities
         value may be number, so we should use number to do unit test.
         """
         self._stub_service_is_up(True)
