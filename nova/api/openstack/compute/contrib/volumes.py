@@ -393,8 +393,11 @@ class VolumeAttachmentController(wsgi.Controller):
 
         if not self.is_valid_body(body, 'volumeAttachment'):
             raise exc.HTTPUnprocessableEntity()
-
-        volume_id = body['volumeAttachment']['volumeId']
+        try:
+            volume_id = body['volumeAttachment']['volumeId']
+        except KeyError:
+            msg = _("volumeId must be specified.")
+            raise exc.HTTPBadRequest(explanation=msg)
         device = body['volumeAttachment'].get('device')
 
         self._validate_volume_id(volume_id)
@@ -451,7 +454,11 @@ class VolumeAttachmentController(wsgi.Controller):
         old_volume_id = id
         old_volume = self.volume_api.get(context, old_volume_id)
 
-        new_volume_id = body['volumeAttachment']['volumeId']
+        try:
+            new_volume_id = body['volumeAttachment']['volumeId']
+        except KeyError:
+            msg = _("volumeId must be specified.")
+            raise exc.HTTPBadRequest(explanation=msg)
         self._validate_volume_id(new_volume_id)
         new_volume = self.volume_api.get(context, new_volume_id)
 
