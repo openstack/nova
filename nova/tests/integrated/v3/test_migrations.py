@@ -36,7 +36,9 @@ class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 'old_instance_type_id': 1,
                 'new_instance_type_id': 2,
                 'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
-                'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2)
+                'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
+                'deleted_at': None,
+                'deleted': False
             },
             {
                 'id': 5678,
@@ -50,7 +52,9 @@ class MigrationsSamplesJsonTest(api_sample_base.ApiSampleTestBaseV3):
                 'old_instance_type_id': 5,
                 'new_instance_type_id': 6,
                 'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
-                'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2)
+                'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
+                'deleted_at': None,
+                'deleted': False
             }
         ]
         return fake_migrations

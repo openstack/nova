@@ -12,6 +12,7 @@
 
 from nova.api.openstack import extensions
 from nova import compute
+from nova.objects import base as obj_base
 
 
 ALIAS = "os-migrations"
@@ -20,6 +21,19 @@ ALIAS = "os-migrations"
 def authorize(context, action_name):
     action = 'v3:%s:%s' % (ALIAS, action_name)
     extensions.extension_authorizer('compute', action)(context)
+
+
+def output(migrations_obj):
+    """Returns the desired output of the API from an object.
+
+    From a MigrationsList's object this method returns a list of
+    primitive objects with the only necessary fields.
+    """
+    objects = obj_base.obj_to_primitive(migrations_obj)
+    for obj in objects:
+        del obj['deleted']
+        del obj['deleted_at']
+    return objects
 
 
 class MigrationsController(object):
@@ -33,7 +47,7 @@ class MigrationsController(object):
         context = req.environ['nova.context']
         authorize(context, "index")
         migrations = self.compute_api.get_migrations(context, req.GET)
-        return {'migrations': migrations}
+        return {'migrations': output(migrations)}
 
 
 class Migrations(extensions.V3APIExtensionBase):
