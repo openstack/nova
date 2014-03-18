@@ -95,6 +95,7 @@ class CellsTest(BaseCellsTest):
         self.ext_mgr = self.mox.CreateMock(extensions.ExtensionManager)
         self.controller = cells_ext.Controller(self.ext_mgr)
         self.context = context.get_admin_context()
+        self.flags(enable=True, group='cells')
 
     def _get_request(self, resource):
         return fakes.HTTPRequest.blank('/v2/fake/' + resource)
@@ -453,6 +454,36 @@ class CellsTest(BaseCellsTest):
         body = {'foo': 'meow'}
         self.assertRaises(exc.HTTPBadRequest,
                 self.controller.sync_instances, req, body=body)
+
+    def test_cells_disabled(self):
+        self.flags(enable=False, group='cells')
+
+        req = self._get_request("cells")
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.index, req)
+
+        req = self._get_request("cells/detail")
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.detail, req)
+
+        req = self._get_request("cells/cell1")
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.show, req)
+
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.delete, req, 'cell999')
+
+        req = self._get_request("cells/cells")
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.create, req, {})
+
+        req = self._get_request("cells/capacities")
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.capacities, req)
+
+        req = self._get_request("cells/sync_instances")
+        self.assertRaises(exc.HTTPNotImplemented,
+                self.controller.sync_instances, req, {})
 
 
 class TestCellsXMLSerializer(BaseCellsTest):

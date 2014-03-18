@@ -51,6 +51,8 @@ CONF.register_opts(osapi_opts)
 LOG = logging.getLogger(__name__)
 QUOTAS = quota.QUOTAS
 
+CONF.import_opt('enable', 'nova.cells.opts', group='cells')
+
 # NOTE(cyeoh): A common regexp for acceptable names (user supplied)
 # that we want all new extensions to conform to unless there is a very
 # good reason not to.
@@ -581,3 +583,13 @@ def get_instance(compute_api, context, instance_id, want_objects=False,
                                expected_attrs=expected_attrs)
     except exception.InstanceNotFound as e:
         raise exc.HTTPNotFound(explanation=e.format_message())
+
+
+def check_cells_enabled(function):
+    @functools.wraps(function)
+    def inner(*args, **kwargs):
+        if not CONF.cells.enable:
+            msg = _("Cells is not enabled.")
+            raise webob.exc.HTTPNotImplemented(explanation=msg)
+        return function(*args, **kwargs)
+    return inner
