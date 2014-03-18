@@ -91,3 +91,9 @@ class VMwareVIMUtilTestCase(test.NoDBTestCase):
                 'name1': 'value1',
                 'name2': 'value2'
             })
+
+    @mock.patch.object(vim_util, 'get_object_properties', return_value=None)
+    def test_get_dynamic_properties_no_objects(self, mock_get_object_props):
+        res = vim_util.get_dynamic_properties('fake-vim', 'fake-obj',
+                                              'fake-type', 'fake-property')
+        self.assertEqual({}, res)
