@@ -170,7 +170,8 @@ class ServiceController(object):
             disabled = True
             status = "disabled"
         else:
-            raise webob.exc.HTTPNotFound("Unknown action")
+            msg = _("Unknown action")
+            raise webob.exc.HTTPNotFound(explanation=msg)
         try:
             host = body['host']
             binary = body['binary']
@@ -204,7 +205,8 @@ class ServiceController(object):
         try:
             self.host_api.service_update(context, host, binary, status_detail)
         except exception.ServiceNotFound:
-            raise webob.exc.HTTPNotFound(_("Unknown service"))
+            msg = _("Unknown service")
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
         return ret_value
 

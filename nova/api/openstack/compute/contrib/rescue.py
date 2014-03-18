@@ -42,7 +42,7 @@ class RescueController(wsgi.Controller):
                                         want_objects=want_objects)
         except exception.InstanceNotFound:
             msg = _("Server not found")
-            raise exc.HTTPNotFound(msg)
+            raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.action('rescue')
     def _rescue(self, req, id, body):

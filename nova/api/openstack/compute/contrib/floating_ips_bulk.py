@@ -114,7 +114,8 @@ class FloatingIPBulkController(object):
         authorize(context)
 
         if id != "delete":
-            raise webob.exc.HTTPNotFound("Unknown action")
+            msg = _("Unknown action")
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
         try:
             ip_range = body['ip_range']

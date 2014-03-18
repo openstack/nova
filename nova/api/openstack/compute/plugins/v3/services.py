@@ -121,7 +121,8 @@ class ServiceController(wsgi.Controller):
             disabled = True
             status = "disabled"
         else:
-            raise webob.exc.HTTPNotFound("Unknown action")
+            msg = _("Unknown action")
+            raise webob.exc.HTTPNotFound(explanation=msg)
         try:
             host = body['service']['host']
             binary = body['service']['binary']

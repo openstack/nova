@@ -41,7 +41,8 @@ class ConsoleOutputController(wsgi.Controller):
         try:
             instance = self.compute_api.get(context, id)
         except exception.NotFound:
-            raise webob.exc.HTTPNotFound(_('Instance not found'))
+            msg = _('Instance not found')
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
         try:
             length = body['os-getConsoleOutput'].get('length')
@@ -65,7 +66,8 @@ class ConsoleOutputController(wsgi.Controller):
                                                          instance,
                                                          length)
         except exception.NotFound:
-            raise webob.exc.HTTPNotFound(_('Unable to get console'))
+            msg = _('Unable to get console')
+            raise webob.exc.HTTPNotFound(explanation=msg)
         except exception.InstanceNotReady as e:
             raise webob.exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
