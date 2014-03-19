@@ -877,6 +877,20 @@ class API(base_api.NetworkAPI):
         return [self._format_floating_ip_model(fip, pool_dict, port_dict)
                 for fip in fips]
 
+    def get_floating_ips(self, context, all_tenants=False):
+        client = neutronv2.get_client(context)
+        project_id = context.project_id
+        if all_tenants:
+            fips = client.list_floatingips()['floatingips']
+            port_dict = self._setup_ports_dict(client)
+        else:
+            fips = client.list_floatingips(
+                tenant_id=project_id)['floatingips']
+            port_dict = self._setup_ports_dict(client, project_id)
+        pool_dict = self._setup_pools_dict(client)
+        return [self._format_floating_ip_model(fip, pool_dict, port_dict)
+                for fip in fips]
+
     def get_floating_ips_by_fixed_address(self, context, fixed_address):
         raise NotImplementedError()
 

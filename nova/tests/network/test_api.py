@@ -155,6 +155,24 @@ class ApiTestCase(test.TestCase):
     def test_associate_unassociated_floating_ip(self):
         self._do_test_associate_floating_ip(None)
 
+    def test_get_floating_ips(self):
+        self.mox.StubOutWithMock(self.network_api.db, 'floating_ip_get_all')
+        self.network_api.db.floating_ip_get_all(self.context).AndReturn(
+            ['project1-floating-ip', 'project2-floating-ip'])
+        self.mox.StubOutWithMock(self.network_api.db,
+                                 'floating_ip_get_all_by_project')
+        self.network_api.db.\
+            floating_ip_get_all_by_project(self.context,
+                                           self.context.project_id).\
+            AndReturn(['project1-floating-ip'])
+        self.mox.ReplayAll()
+        floating_ips = self.network_api.get_floating_ips(self.context)
+        floating_ips_all = self.network_api.get_floating_ips(self.context,
+                                                             all_tenants=True)
+        self.assertEqual(['project1-floating-ip'], floating_ips)
+        self.assertEqual(['project1-floating-ip', 'project2-floating-ip'],
+                         floating_ips_all)
+
     def test_get_floating_ip_invalid_id(self):
         self.assertRaises(exception.InvalidID,
                           self.network_api.get_floating_ip,

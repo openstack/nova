@@ -1212,7 +1212,7 @@ class CloudController(object):
                                                                        address)
                 floatings.append(floating)
         else:
-            floatings = self.network_api.get_floating_ips_by_project(context)
+            floatings = self.network_api.get_floating_ips(context)
         addresses = [self._format_address(context, f) for f in floatings]
         return {'addressesSet': addresses}
 
