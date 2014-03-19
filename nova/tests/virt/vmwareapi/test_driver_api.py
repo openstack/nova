@@ -1229,6 +1229,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
                                    'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
         self.stubs.Set(self.conn._volumeops, "attach_disk_to_vm",
                        fake_attach_disk_to_vm)
         self.conn.rescue(self.context, self.instance, self.network_info,
