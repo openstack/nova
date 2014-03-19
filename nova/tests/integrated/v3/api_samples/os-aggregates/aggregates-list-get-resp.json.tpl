@@ -3,7 +3,7 @@
         {
             "availability_zone": "nova",
             "created_at": "%(strtime)s",
-            "deleted": 0,
+            "deleted": false,
             "deleted_at": null,
             "hosts": [],
             "id": 1,
