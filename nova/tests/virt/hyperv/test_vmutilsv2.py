@@ -240,25 +240,30 @@ class VMUtilsV2TestCase(test.NoDBTestCase):
         mock_svc.RemoveResourceSettings.assert_called_with(
             [self._FAKE_RES_PATH])
 
-    def test_enable_vm_metrics_collection(self):
+    @mock.patch('nova.virt.hyperv.vmutils.VMUtils._get_vm_disks')
+    def test_enable_vm_metrics_collection(self, mock_get_vm_disks):
         self._lookup_vm()
         mock_svc = self._vmutils._conn.Msvm_MetricService()[0]
 
         metric_def = mock.MagicMock()
+        mock_disk = mock.MagicMock()
+        mock_disk.path_.return_value = self._FAKE_RES_PATH
+        mock_get_vm_disks.return_value = ([mock_disk], [mock_disk])
 
-        fake_metric_def_paths = ["fake_0", "fake_1", "fake_2"]
+        fake_metric_def_paths = ["fake_0", None]
+        fake_metric_resource_paths = [self._FAKE_VM_PATH, self._FAKE_RES_PATH]
+
         metric_def.path_.side_effect = fake_metric_def_paths
-
         self._vmutils._conn.CIM_BaseMetricDefinition.return_value = [
             metric_def]
 
         self._vmutils.enable_vm_metrics_collection(self._FAKE_VM_NAME)
 
         calls = []
-        for fake_metric_def_path in fake_metric_def_paths:
+        for i in range(len(fake_metric_def_paths)):
             calls.append(mock.call(
-                Subject=self._FAKE_VM_PATH,
-                Definition=fake_metric_def_path,
+                Subject=fake_metric_resource_paths[i],
+                Definition=fake_metric_def_paths[i],
                 MetricCollectionEnabled=self._vmutils._METRIC_ENABLED))
 
         mock_svc.ControlMetrics.assert_has_calls(calls, any_order=True)
