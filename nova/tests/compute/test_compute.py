@@ -60,6 +60,7 @@ from nova.objects import compute_node as compute_node_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_action as instance_action_obj
 from nova.objects import instance_group as instance_group_obj
+from nova.objects import instance_info_cache
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common.gettextutils import _
@@ -8742,12 +8743,14 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_interface(self):
         nwinfo, port_id = self.test_attach_interface()
-        self.stubs.Set(self.compute, '_get_instance_nw_info',
-                       lambda *a, **k: nwinfo)
         self.stubs.Set(self.compute.network_api,
                        'deallocate_port_for_instance',
                        lambda a, b, c: [])
         instance = instance_obj.Instance()
+        instance.info_cache = instance_info_cache.InstanceInfoCache.new(
+            self.context, 'fake-uuid')
+        instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
+            nwinfo)
         self.compute.detach_interface(self.context, instance, port_id)
         self.assertEqual(self.compute.driver._interfaces, {})
 
