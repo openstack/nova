@@ -144,8 +144,9 @@ class VMwareVolumeOps(object):
         if device_name:
             LOG.debug(_("Storage target found. No need to discover"))
             return (device_name, uuid)
-        # Rescan iSCSI HBA
-        volume_util.rescan_iscsi_hba(self._session, self._cluster)
+        # Rescan iSCSI HBA with iscsi target host
+        volume_util.rescan_iscsi_hba(self._session, self._cluster,
+                                     target_portal)
         # Find iSCSI Target again
         device_name, uuid = volume_util.find_st(self._session, data,
                                                 self._cluster)

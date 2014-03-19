@@ -1289,6 +1289,18 @@ class FakeVim(object):
         host_mdo = _db_content["HostSystem"][_host_sk]
         host_mdo._add_port_group(kwargs.get("portgrp"))
 
+    def _add_iscsi_send_tgt(self, method, *args, **kwargs):
+        """Adds a iscsi send target to the hba."""
+        send_targets = kwargs.get('targets')
+        host_storage_sys = _get_objects('HostStorageSystem').objects[0]
+        iscsi_hba_array = host_storage_sys.get('storageDeviceInfo'
+                                               '.hostBusAdapter')
+        iscsi_hba = iscsi_hba_array.HostHostBusAdapter[0]
+        if hasattr(iscsi_hba, 'configuredSendTarget'):
+            iscsi_hba.configuredSendTarget.extend(send_targets)
+        else:
+            iscsi_hba.configuredSendTarget = send_targets
+
     def __getattr__(self, attr_name):
         if attr_name != "Login":
             self._check_session()
@@ -1387,4 +1399,9 @@ class FakeVim(object):
         elif attr_name == "EnterMaintenanceMode_Task":
             return lambda *args, **kwargs: self._just_return_task(attr_name)
         elif attr_name == "ExitMaintenanceMode_Task":
+            return lambda *args, **kwargs: self._just_return_task(attr_name)
+        elif attr_name == "AddInternetScsiSendTargets":
+            return lambda *args, **kwargs: self._add_iscsi_send_tgt(attr_name,
+                                                *args, **kwargs)
+        elif attr_name == "RescanHba":
             return lambda *args, **kwargs: self._just_return_task(attr_name)
