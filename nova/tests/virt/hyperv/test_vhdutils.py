@@ -24,6 +24,7 @@ class VHDUtilsTestCase(test.NoDBTestCase):
     """Unit tests for the Hyper-V VHDUtils class."""
 
     _FAKE_VHD_PATH = "C:\\fake_path.vhdx"
+    _FAKE_PARENT_PATH = "C:\\fake_parent_path.vhdx"
     _FAKE_FORMAT = 3
     _FAKE_MAK_INTERNAL_SIZE = 1000
     _FAKE_JOB_PATH = 'fake_job_path'
@@ -51,6 +52,26 @@ class VHDUtilsTestCase(test.NoDBTestCase):
             Path=self._FAKE_VHD_PATH,
             MaxInternalSize=self._FAKE_MAK_INTERNAL_SIZE)
 
+    def test_create_differencing_vhd(self):
+        mock_img_svc = self._vhdutils._conn.Msvm_ImageManagementService()[0]
+        mock_img_svc.CreateDifferencingVirtualHardDisk.return_value = (
+            self._FAKE_JOB_PATH, self._FAKE_RET_VAL)
+
+        self._vhdutils.create_differencing_vhd(self._FAKE_VHD_PATH,
+                                               self._FAKE_PARENT_PATH)
+
+        mock_img_svc.CreateDifferencingVirtualHardDisk.assert_called_once_with(
+            Path=self._FAKE_VHD_PATH,
+            ParentPath=self._FAKE_PARENT_PATH)
+
+    def test_create_differencing_vhd_with_new_size(self):
+        fake_new_size = 1024
+        self.assertRaises(vmutils.HyperVException,
+                          self._vhdutils.create_differencing_vhd,
+                          self._FAKE_VHD_PATH,
+                          self._FAKE_PARENT_PATH,
+                          fake_new_size)
+
     def test_get_internal_vhd_size_by_file_size_fixed(self):
         vhdutil = vhdutils.VHDUtils()
         root_vhd_size = 1 * 1024 ** 3
@@ -76,15 +97,24 @@ class VHDUtilsTestCase(test.NoDBTestCase):
         expected_vhd_size = 20 * 1024 ** 3 - 43008
         self.assertEqual(expected_vhd_size, real_size)
 
-    def test_get_internal_vhd_size_by_file_size_unsupported(self):
+    def test_get_internal_vhd_size_by_file_size_differencing(self):
+        # For differencing images, the internal size of the parent vhd
+        # is returned
         vhdutil = vhdutils.VHDUtils()
         root_vhd_size = 20 * 1024 ** 3
         vhdutil.get_vhd_info = mock.MagicMock()
-        vhdutil.get_vhd_info.return_value = {'Type': 5}
+        vhdutil.get_vhd_parent_path = mock.MagicMock()
+        vhdutil.get_vhd_parent_path.return_value = self._FAKE_VHD_PATH
+        vhdutil.get_vhd_info.side_effect = [
+            {'Type': 4}, {'Type': constants.VHD_TYPE_DYNAMIC}]
 
-        self.assertRaises(vmutils.HyperVException,
-                          vhdutil.get_internal_vhd_size_by_file_size,
-                          None, root_vhd_size)
+        vhdutil._get_vhd_dynamic_blk_size = mock.MagicMock()
+        vhdutil._get_vhd_dynamic_blk_size.return_value = 2097152
+
+        real_size = vhdutil.get_internal_vhd_size_by_file_size(None,
+                                                               root_vhd_size)
+        expected_vhd_size = 20 * 1024 ** 3 - 43008
+        self.assertEqual(expected_vhd_size, real_size)
 
     def test_get_vhd_format_vhdx(self):
         with mock.patch('nova.virt.hyperv.vhdutils.open',
