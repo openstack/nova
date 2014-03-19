@@ -67,7 +67,7 @@ pxe_opts = [
                 default=False),
     cfg.StrOpt('pxe_bootfile_name',
                help='This gets passed to Neutron as the bootfile dhcp '
-               'parameter when the dhcp_options_enabled is set.',
+               'parameter.',
                default='pxelinux.0'),
     ]
 
