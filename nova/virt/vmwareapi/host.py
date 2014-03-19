@@ -146,12 +146,11 @@ class VCState(object):
     """Manages information about the VC host this compute
     node is running on.
     """
-    def __init__(self, session, host_name, cluster, datastore_regex):
+    def __init__(self, session, host_name, cluster):
         super(VCState, self).__init__()
         self._session = session
         self._host_name = host_name
         self._cluster = cluster
-        self._datastore_regex = datastore_regex
         self._stats = {}
         self.update_status()
 
@@ -165,9 +164,15 @@ class VCState(object):
 
     def update_status(self):
         """Update the current state of the cluster."""
-        # Get cpu, memory stats, disk from the cluster
-        stats = vm_util.get_stats_from_cluster(self._session, self._cluster,
-                                               self._datastore_regex)
+        # Get the datastore in the cluster
+        try:
+            ds = vm_util.get_datastore_ref_and_name(self._session,
+                                                    self._cluster)
+        except exception.DatastoreNotFound:
+            ds = (None, None, 0, 0)
+
+        # Get cpu, memory stats from the cluster
+        stats = vm_util.get_stats_from_cluster(self._session, self._cluster)
         about_info = self._session._call_method(vim_util, "get_about_info")
         data = {}
         data["vcpus"] = stats['cpu']['vcpus']
@@ -175,8 +180,8 @@ class VCState(object):
                             "model": stats['cpu']['model'],
                             "topology": {"cores": stats['cpu']['cores'],
                                          "threads": stats['cpu']['vcpus']}}
-        data["disk_total"] = stats['disk']['total']
-        data["disk_available"] = stats['disk']['free']
+        data["disk_total"] = ds[2] / units.Gi
+        data["disk_available"] = ds[3] / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]
         data["host_memory_total"] = stats['mem']['total']
         data["host_memory_free"] = stats['mem']['free']
