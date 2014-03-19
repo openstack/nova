@@ -26,9 +26,10 @@ There are also "opportunistic" tests for both mysql and postgresql in here,
 which allows testing against all 3 databases (sqlite in memory, mysql, pg) in
 a properly configured unit test environment.
 
-For the opportunistic testing you need to set up a db named 'openstack_citest'
-with user 'openstack_citest' and password 'openstack_citest' on localhost.
-The test will then use that db and u/p combo to run the tests.
+For the opportunistic testing you need to set up db's named 'openstack_citest'
+and 'openstack_baremetal_citest' with user 'openstack_citest' and password
+'openstack_citest' on localhost. The test will then use that db and u/p combo
+to run the tests.
 
 For postgres on Ubuntu this can be done with the following commands:
 
