@@ -175,7 +175,7 @@ def get_dynamic_properties(vim, mobj, type, property_names):
     """Gets the specified properties of the Managed Object."""
     obj_content = get_object_properties(vim, None, mobj, type, property_names)
     if hasattr(obj_content, 'token'):
-        vim.CancelRetrievePropertiesEx(token=obj_content.token)
+        cancel_retrieve(vim, obj_content.token)
     property_dict = {}
     if obj_content.objects:
         if hasattr(obj_content.objects[0], 'propSet'):

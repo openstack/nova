@@ -115,8 +115,10 @@ def _convert_to_array_of_opt_val(optvals):
 class FakeRetrieveResult(object):
     """Object to retrieve a ObjectContent list."""
 
-    def __init__(self):
+    def __init__(self, token=None):
         self.objects = []
+        if token is not None:
+            self.token = token
 
     def add_object(self, object):
         self.objects.append(object)
