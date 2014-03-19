@@ -478,7 +478,6 @@ def _inject_file_into_fs(fs, path, contents, append=False):
 def _inject_metadata_into_fs(metadata, fs):
     LOG.debug(_("Inject metadata fs=%(fs)s metadata=%(metadata)s"),
               {'fs': fs, 'metadata': metadata})
-    metadata = dict([(m['key'], m['value']) for m in metadata])
     _inject_file_into_fs(fs, 'meta.js', jsonutils.dumps(metadata))
 
 
