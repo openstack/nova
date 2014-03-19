@@ -39,7 +39,8 @@ EXPECTED_NET_UUIDS = ['00000000-0000-0000-0000-00000000000000001',
                       '11111111-1111-1111-1111-11111111111111112']
 
 
-def compute_api_get(self, context, instance_id):
+def compute_api_get(self, context, instance_id, expected_attrs=None,
+                    want_objects=False):
     return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 

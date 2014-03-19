@@ -19,6 +19,9 @@ import webob
 from nova.api.openstack.compute.contrib import virtual_interfaces
 from nova.api.openstack import wsgi
 from nova import compute
+from nova.compute import api as compute_api
+from nova import context
+from nova import exception
 from nova import network
 from nova.openstack.common import jsonutils
 from nova import test
@@ -28,7 +31,8 @@ from nova.tests.api.openstack import fakes
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
 
 
-def compute_api_get(self, context, instance_id):
+def compute_api_get(self, context, instance_id, expected_attrs=None,
+                    want_objects=False):
     return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 
@@ -37,6 +41,11 @@ def get_vifs_by_instance(self, context, instance_id):
              'address': '00-00-00-00-00-00'},
             {'uuid': '11111111-1111-1111-1111-11111111111111111',
              'address': '11-11-11-11-11-11'}]
+
+
+class FakeRequest(object):
+    def __init__(self, context):
+        self.environ = {'nova.context': context}
 
 
 class ServerVirtualInterfaceTest(test.NoDBTestCase):
@@ -65,6 +74,22 @@ class ServerVirtualInterfaceTest(test.NoDBTestCase):
                         {'id': '11111111-1111-1111-1111-11111111111111111',
                          'mac_address': '11-11-11-11-11-11'}]}
         self.assertEqual(res_dict, response)
+
+    def test_vif_instance_not_found(self):
+        self.mox.StubOutWithMock(compute_api.API, 'get')
+        fake_context = context.RequestContext('fake', 'fake')
+        fake_req = FakeRequest(fake_context)
+
+        compute_api.API.get(fake_context, 'fake_uuid',
+                            expected_attrs=None,
+                            want_objects=False).AndRaise(
+            exception.InstanceNotFound(instance_id='instance-0000'))
+
+        self.mox.ReplayAll()
+        self.assertRaises(
+            webob.exc.HTTPNotFound,
+            virtual_interfaces.ServerVirtualInterfaceController().index,
+            fake_req, 'fake_uuid')
 
 
 class ServerVirtualInterfaceSerializerTest(test.NoDBTestCase):
