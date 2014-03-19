@@ -1520,3 +1520,8 @@ class RequestedVRamTooHigh(NovaException):
 
 class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
+
+
+class NoBlockMigrationForConfigDriveInLibVirt(NovaException):
+    msg_fmt = _("Block migration of instances with config drives is not "
+                "supported in libvirt.")

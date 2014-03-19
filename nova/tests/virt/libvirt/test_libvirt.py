@@ -62,6 +62,7 @@ from nova.tests.objects import test_pci_device
 from nova.tests.virt.libvirt import fake_libvirt_utils
 from nova import utils
 from nova import version
+from nova.virt import configdrive
 from nova.virt.disk import api as disk
 from nova.virt import driver
 from nova.virt import event as virtevent
@@ -4062,6 +4063,25 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         result = conn.pre_live_migration(c, inst_ref, vol, nw_info, None)
         self.assertIsNone(result)
+
+    def test_pre_live_migration_block_with_config_drive_mocked(self):
+        # Creating testdata
+        vol = {'block_device_mapping': [
+                  {'connection_info': 'dummy', 'mount_device': '/dev/sda'},
+                  {'connection_info': 'dummy', 'mount_device': '/dev/sdb'}]}
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        def fake_true(*args, **kwargs):
+            return True
+
+        self.stubs.Set(configdrive, 'required_by', fake_true)
+
+        inst_ref = {'id': 'foo'}
+        c = context.get_admin_context()
+
+        self.assertRaises(exception.NoBlockMigrationForConfigDriveInLibVirt,
+                          conn.pre_live_migration, c, inst_ref, vol, None,
+                          None, {'is_shared_storage': False})
 
     def test_pre_live_migration_vol_backed_works_correctly_mocked(self):
         # Creating testdata, using temp dir.
