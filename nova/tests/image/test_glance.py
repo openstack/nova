@@ -237,51 +237,6 @@ class TestGlanceImageService(test.NoDBTestCase):
                           self.context,
                           'bad image id')
 
-    def test_detail_private_image(self):
-        fixture = self._make_fixture(name='test image')
-        fixture['is_public'] = False
-        properties = {'owner_id': 'proj1'}
-        fixture['properties'] = properties
-
-        self.service.create(self.context, fixture)['id']
-
-        proj = self.context.project_id
-        self.context.project_id = 'proj1'
-
-        image_metas = self.service.detail(self.context)
-
-        self.context.project_id = proj
-
-        self.assertEqual(1, len(image_metas))
-        self.assertEqual(image_metas[0]['name'], 'test image')
-        self.assertEqual(image_metas[0]['is_public'], False)
-
-    def test_detail_passes_through_to_client(self):
-        fixture = self._make_fixture(name='image10', is_public=True)
-        image_id = self.service.create(self.context, fixture)['id']
-        image_metas = self.service.detail(self.context)
-        expected = [
-            {
-                'id': image_id,
-                'name': 'image10',
-                'is_public': True,
-                'size': None,
-                'min_disk': None,
-                'min_ram': None,
-                'disk_format': None,
-                'container_format': None,
-                'checksum': None,
-                'created_at': self.NOW_DATETIME,
-                'updated_at': self.NOW_DATETIME,
-                'deleted_at': None,
-                'deleted': None,
-                'status': None,
-                'properties': {},
-                'owner': None,
-            },
-        ]
-        self.assertEqual(image_metas, expected)
-
     def test_show_makes_datetimes(self):
         fixture = self._make_datetime_fixture()
         image_id = self.service.create(self.context, fixture)['id']
@@ -296,51 +251,6 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
         self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
-    def test_detail_marker(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.detail(self.context, marker=ids[1])
-        self.assertEqual(len(image_metas), 8)
-        i = 2
-        for meta in image_metas:
-            expected = {
-                'id': ids[i],
-                'status': None,
-                'is_public': None,
-                'name': 'TestImage %d' % (i),
-                'properties': {},
-                'size': None,
-                'min_disk': None,
-                'min_ram': None,
-                'disk_format': None,
-                'container_format': None,
-                'checksum': None,
-                'created_at': self.NOW_DATETIME,
-                'updated_at': self.NOW_DATETIME,
-                'deleted_at': None,
-                'deleted': None,
-                'owner': None,
-            }
-
-            self.assertThat(meta, matchers.DictMatches(expected))
-            i = i + 1
-
-    def test_detail_limit(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.detail(self.context, limit=5)
-        self.assertEqual(len(image_metas), 5)
-
     def test_page_size(self):
         with mock.patch.object(glance.GlanceClientWrapper, 'call') as a_mock:
             self.service.detail(self.context, page_size=5)
@@ -348,62 +258,6 @@ class TestGlanceImageService(test.NoDBTestCase):
             a_mock.assert_called_with(self.context, 1, 'list',
                                       filters={'is_public': 'none'},
                                       page_size=5)
-
-    def test_detail_default_limit(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.detail(self.context)
-        for i, meta in enumerate(image_metas):
-            self.assertEqual(meta['name'], 'TestImage %d' % (i))
-
-    def test_detail_marker_and_limit(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        image_metas = self.service.detail(self.context, marker=ids[3], limit=5)
-        self.assertEqual(len(image_metas), 5)
-        i = 4
-        for meta in image_metas:
-            expected = {
-                'id': ids[i],
-                'status': None,
-                'is_public': None,
-                'name': 'TestImage %d' % (i),
-                'properties': {},
-                'size': None,
-                'min_disk': None,
-                'min_ram': None,
-                'disk_format': None,
-                'container_format': None,
-                'checksum': None,
-                'created_at': self.NOW_DATETIME,
-                'updated_at': self.NOW_DATETIME,
-                'deleted_at': None,
-                'deleted': None,
-                'owner': None,
-            }
-            self.assertThat(meta, matchers.DictMatches(expected))
-            i = i + 1
-
-    def test_detail_invalid_marker(self):
-        fixtures = []
-        ids = []
-        for i in range(10):
-            fixture = self._make_fixture(name='TestImage %d' % (i))
-            fixtures.append(fixture)
-            ids.append(self.service.create(self.context, fixture)['id'])
-
-        self.assertRaises(exception.Invalid, self.service.detail,
-                          self.context, marker='invalidmarker')
 
     def test_update(self):
         fixture = self._make_fixture(name='test image')
@@ -911,6 +765,89 @@ class TestShow(test.NoDBTestCase):
             is_avail_mock.assert_not_called()
             trans_from_mock.assert_not_called()
             reraise_mock.assert_called_once_with(mock.sentinel.image_id)
+
+
+class TestDetail(test.NoDBTestCase):
+
+    """Tests the show method of the GlanceImageService."""
+
+    @mock.patch('nova.image.glance._extract_query_params')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_success_available(self, is_avail_mock, trans_from_mock,
+                                      ext_query_mock):
+        params = {}
+        is_avail_mock.return_value = True
+        ext_query_mock.return_value = params
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        images = service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 1, 'list')
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        trans_from_mock.assert_called_once_with(mock.sentinel.images_0)
+        self.assertEqual([mock.sentinel.trans_from], images)
+
+    @mock.patch('nova.image.glance._extract_query_params')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_success_unavailable(self, is_avail_mock, trans_from_mock,
+                                        ext_query_mock):
+        params = {}
+        is_avail_mock.return_value = False
+        ext_query_mock.return_value = params
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        images = service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 1, 'list')
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        trans_from_mock.assert_not_called()
+        self.assertEqual([], images)
+
+    @mock.patch('nova.image.glance._extract_query_params')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_params_passed(self, is_avail_mock, _trans_from_mock,
+                                  ext_query_mock):
+        params = dict(limit=10)
+        ext_query_mock.return_value = params
+        client = mock.MagicMock()
+        client.call.return_value = [mock.sentinel.images_0]
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        images = service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 1, 'list', limit=10)
+
+    @mock.patch('nova.image.glance._reraise_translated_exception')
+    @mock.patch('nova.image.glance._extract_query_params')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_detail_client_failure(self, is_avail_mock, trans_from_mock,
+                                   ext_query_mock, reraise_mock):
+        params = {}
+        ext_query_mock.return_value = params
+        raised = exception.NotAuthorized()
+        client = mock.MagicMock()
+        client.call.side_effect = glanceclient.exc.Forbidden
+        ctx = mock.sentinel.ctx
+        reraise_mock.side_effect = raised
+        service = glance.GlanceImageService(client)
+
+        with testtools.ExpectedException(exception.NotAuthorized):
+            service.detail(ctx, **params)
+
+        client.call.assert_called_once_with(ctx, 1, 'list')
+        is_avail_mock.assert_not_called()
+        trans_from_mock.assert_not_called()
+        reraise_mock.assert_called_once_with()
 
 
 class TestGlanceClientWrapper(test.NoDBTestCase):
