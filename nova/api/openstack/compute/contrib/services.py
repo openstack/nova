@@ -204,9 +204,8 @@ class ServiceController(object):
 
         try:
             self.host_api.service_update(context, host, binary, status_detail)
-        except exception.ServiceNotFound:
-            msg = _("Unknown service")
-            raise webob.exc.HTTPNotFound(explanation=msg)
+        except exception.HostBinaryNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return ret_value
 

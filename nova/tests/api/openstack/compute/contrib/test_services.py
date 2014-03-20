@@ -106,7 +106,7 @@ def fake_service_get_by_host_binary(context, host, binary):
     for service in fake_services_list:
         if service['host'] == host and service['binary'] == binary:
             return service
-    return None
+    raise exception.HostBinaryNotFound(host=host, binary=binary)
 
 
 def fake_service_get_by_id(value):
@@ -386,6 +386,24 @@ class ServicesTest(test.TestCase):
         self.assertEqual(res_dict['service']['status'], 'enabled')
         self.assertNotIn('disabled_reason', res_dict['service'])
 
+    def test_services_enable_with_invalid_host(self):
+        body = {'host': 'invalid', 'binary': 'nova-compute'}
+        req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.update,
+                          req,
+                          "enable",
+                          body)
+
+    def test_services_enable_with_invalid_binary(self):
+        body = {'host': 'host1', 'binary': 'invalid'}
+        req = fakes.HTTPRequest.blank('/v2/fake/os-services/enable')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.update,
+                          req,
+                          "enable",
+                          body)
+
     # This test is just to verify that the servicegroup API gets used when
     # calling this API.
     def test_services_with_exception(self):
@@ -403,6 +421,24 @@ class ServicesTest(test.TestCase):
 
         self.assertEqual(res_dict['service']['status'], 'disabled')
         self.assertNotIn('disabled_reason', res_dict['service'])
+
+    def test_services_disable_with_invalid_host(self):
+        body = {'host': 'invalid', 'binary': 'nova-compute'}
+        req = fakes.HTTPRequest.blank('/v2/fake/os-services/disable')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.update,
+                          req,
+                          "disable",
+                          body)
+
+    def test_services_disable_with_invalid_binary(self):
+        body = {'host': 'host1', 'binary': 'invalid'}
+        req = fakes.HTTPRequestV3.blank('/v2/fake/os-services/disable')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.update,
+                          req,
+                          "disable",
+                          body)
 
     def test_services_disable_log_reason(self):
         self.ext_mgr.extensions['os-extended-services'] = True
