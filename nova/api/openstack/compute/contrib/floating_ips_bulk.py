@@ -50,13 +50,16 @@ class FloatingIPBulkController(object):
     def _get_floating_ip_info(self, context, host=None):
         floating_ip_info = {"floating_ip_info": []}
 
-        try:
-            if host is None:
+        if host is None:
+            try:
                 floating_ips = db.floating_ip_get_all(context)
-            else:
+            except exception.NoFloatingIpsDefined:
+                return floating_ip_info
+        else:
+            try:
                 floating_ips = db.floating_ip_get_all_by_host(context, host)
-        except exception.NoFloatingIpsDefined:
-            return floating_ip_info
+            except exception.FloatingIpNotFoundForHost as e:
+                raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         for floating_ip in floating_ips:
             instance_uuid = None

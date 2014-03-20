@@ -77,6 +77,14 @@ class FloatingIPBulk(test.TestCase):
 
         self.assertEqual(res_dict, response)
 
+    def test_list_ip_by_host(self):
+        ip_range = '192.168.1.1/28'
+        self._setup_floating_ips(ip_range)
+        req = fakes.HTTPRequest.blank('/v2/fake/os-floating-ips-bulk',
+                                      use_admin_context=True)
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller.show, req, 'host')
+
     def test_delete_ips(self):
         ip_range = '192.168.1.0/20'
         self._setup_floating_ips(ip_range)
