@@ -4491,6 +4491,12 @@ class LibvirtDriver(driver.ComputeDriver):
             instance_relative_path = migrate_data.get('instance_relative_path')
 
         if not is_shared_storage:
+            # NOTE(mikal): block migration of instances using config drive is
+            # not supported because of a bug in libvirt (read only devices
+            # are not copied by libvirt). See bug/1246201
+            if configdrive.required_by(instance):
+                raise exception.NoBlockMigrationForConfigDriveInLibVirt()
+
             # NOTE(mikal): this doesn't use libvirt_utils.get_instance_path
             # because we are ensuring that the same instance directory name
             # is used as was at the source
