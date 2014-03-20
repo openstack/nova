@@ -146,10 +146,6 @@ class APIMapper(routes.Mapper):
 
 class ProjectMapper(APIMapper):
     def resource(self, member_name, collection_name, **kwargs):
-        LOG.debug(_('TRUTA MEMBER_NAME: %s'),
-                  member_name)
-        LOG.debug(_('TRUTA collection_name: %s'),
-          collection_name)
         if 'parent_resource' not in kwargs:
             kwargs['path_prefix'] = '{project_id}/'
         else:
@@ -158,7 +154,6 @@ class ProjectMapper(APIMapper):
             p_member = parent_resource['member_name']
             kwargs['path_prefix'] = '{project_id}/%s/:%s_id' % (p_collection,
                                                                 p_member)
-            LOG.debug(_('TRUTA kwargs: %s'),
                       kwargs)
         routes.Mapper.resource(self, member_name,
                                      collection_name,

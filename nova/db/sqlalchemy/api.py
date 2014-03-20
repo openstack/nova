@@ -1652,13 +1652,11 @@ def instance_get_by_uuid(context, uuid, columns_to_join=None, use_slave=False):
 
 def _instance_get_by_uuid(context, uuid, session=None,
                           columns_to_join=None, use_slave=False):
-    LOG.debug("_instance_get_by_uuid: ")  # TRUTA
     result = _build_instance_get(context, session=session,
                                  columns_to_join=columns_to_join,
                                  use_slave=use_slave).\
                 filter_by(uuid=uuid).\
                 first()
-    LOG.debug("result: %s", result)
 
     if not result:
         raise exception.InstanceNotFound(instance_id=uuid)
