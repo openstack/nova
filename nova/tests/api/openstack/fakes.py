@@ -342,7 +342,7 @@ class HTTPRequest(os_wsgi.Request):
         use_admin_context = kwargs.pop('use_admin_context', False)
         out = os_wsgi.Request.blank(*args, **kwargs)
         out.environ['nova.context'] = FakeRequestContext('fake_user', 'fake',
-                is_admin=use_admin_context)
+                is_admin=use_admin_context, domain_id='fake_domain')
         return out
 
 
@@ -439,6 +439,7 @@ def get_fake_uuid(token=0):
 
 def fake_instance_get(**kwargs):
     def _return_server(context, uuid, columns_to_join=None, use_slave=False):
+        print context
         return stub_instance(1, **kwargs)
     return _return_server
 
@@ -492,12 +493,15 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
                   limit=None, marker=None,
                   launched_at=timeutils.utcnow(),
                   terminated_at=timeutils.utcnow(),
-                  availability_zone='', locked_by=None, cleaned=False):
+                  availability_zone='', locked_by=None, cleaned=False,
+                  project_domain_id=None):
 
     if user_id is None:
         user_id = 'fake_user'
     if project_id is None:
         project_id = 'fake_project'
+    if project_domain_id is None:
+        project_domain_id = 'fake_domain'
 
     if metadata:
         metadata = [{'key': k, 'value': v} for k, v in metadata.items()]
@@ -538,6 +542,7 @@ def stub_instance(id, user_id=None, project_id=None, host=None,
         "deleted": None,
         "user_id": user_id,
         "project_id": project_id,
+        "project_domain_id": project_domain_id,
         "image_ref": image_ref,
         "kernel_id": "",
         "ramdisk_id": "",

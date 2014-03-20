@@ -30,6 +30,7 @@ import webob
 from nova.api.openstack import compute
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import domains
 from nova.api.openstack.compute import views
 from nova.api.openstack import extensions
 from nova.api.openstack import xmlutil
@@ -288,6 +289,7 @@ class ServersControllerTest(ControllerTest):
                 "id": uuid,
                 "user_id": "fake_user",
                 "tenant_id": "fake_project",
+                "project_domain_id": "fake_domain",
                 "updated": "2010-11-11T11:00:00Z",
                 "created": "2010-10-10T12:00:00Z",
                 "progress": progress,
@@ -3146,17 +3148,6 @@ class ServersControllerCreateTest(test.TestCase):
         robj = self.controller.create(self.req, self.body)
         self.assertEqual(robj['Location'], selfhref)
 
-    def _do_test_create_instance_above_quota(self, resource, allowed, quota,
-                                             expected_msg):
-        fakes.stub_out_instance_quota(self.stubs, allowed, quota, resource)
-        self.body['server']['flavorRef'] = 3
-        self.req.body = jsonutils.dumps(self.body)
-        try:
-            server = self.controller.create(self.req, self.body).obj['server']
-            self.fail('expected quota to be exceeded')
-        except webob.exc.HTTPRequestEntityTooLarge as e:
-            self.assertEqual(e.explanation, expected_msg)
-
     def test_create_instance_above_quota_instances(self):
         msg = _('Quota exceeded for instances: Requested 1, but'
                 ' already used 10 of 10 instances')
@@ -4104,7 +4095,7 @@ class ServersViewBuilderTest(test.TestCase):
         self.assertNotIn('fault', output['server'])
 
     def test_build_server_detail_active_status(self):
-        #set the power state of the instance to running
+        # set the power state of the instance to running
         self.instance['vm_state'] = vm_states.ACTIVE
         self.instance['progress'] = 100
 
@@ -4755,3 +4746,157 @@ class ServersUnprocessableEntityTestCase(test.TestCase):
     def test_create_update_malformed_entity(self):
         body = {'server': 'string'}
         self._unprocessable_server_update(body=body)
+
+
+class ServersDomainsControllerTest(ControllerTest):
+
+    def setUp(self):
+        super(ServersDomainsControllerTest, self).setUp()
+        nova_utils.reset_is_neutron()
+        self.controller = domains.DomainsController(self.ext_mgr)
+        self.server_delete_called = False
+
+        def instance_destroy_mock(*args, **kwargs):
+            self.server_delete_called = True
+            deleted_at = timeutils.utcnow()
+            return fake_instance.fake_db_instance(deleted_at=deleted_at)
+
+        self.stubs.Set(db, 'instance_destroy', instance_destroy_mock)
+
+    def test_get_server_list(self):
+#==================================================
+#         def fake_get_all(compute_self, context, search_opts=None,
+#                          sort_key=None, sort_dir='desc',
+#                          limit=None, marker=None, want_objects=False,
+#                          columns_to_join=None, use_slave=None):
+#             db_list = [fakes.stub_instance(100)]
+#             return instance_obj._make_instance_list(
+#                 context, instance_obj.InstanceList(), db_list, FIELDS)
+#
+#         self.stubs.Set(db, 'instance_get_all_by_filters',
+#            fake_get_all)
+#===========================================
+        req = fakes.HTTPRequest.blank('domains/fake/servers')
+        res_dict = self.controller.index(req)
+
+        self.assertEqual(len(res_dict['servers']), 5)
+        for i, s in enumerate(res_dict['servers']):
+            self.assertEqual(s['id'], fakes.get_fake_uuid(i))
+            self.assertEqual(s['name'], 'server%d' % (i + 1))
+            self.assertIsNone(s.get('image', None))
+
+            expected_links = [
+                {
+                    "rel": "self",
+                    "href": "http://localhost/v2/fake/servers/%s" % s['id'],
+                },
+                {
+                    "rel": "bookmark",
+                    "href": "http://localhost/fake/servers/%s" % s['id'],
+                },
+            ]
+
+            self.assertEqual(s['links'], expected_links)
+
+    def _get_server_data_dict(self, uuid, image_bookmark, flavor_bookmark,
+                              status="ACTIVE", progress=100):
+        return {
+            "server": {
+                "id": uuid,
+                "user_id": "fake_user",
+                "tenant_id": "fake_project",
+                "project_domain_id": "fake_domain",
+                "updated": "2010-11-11T11:00:00Z",
+                "created": "2010-10-10T12:00:00Z",
+                "progress": progress,
+                "name": "server1",
+                "status": status,
+                "accessIPv4": "",
+                "accessIPv6": "",
+                "hostId": '',
+                "image": {
+                    "id": "10",
+                    "links": [
+                        {
+                            "rel": "bookmark",
+                            "href": image_bookmark,
+                        },
+                    ],
+                },
+                "flavor": {
+                    "id": "1",
+                  "links": [
+                                            {
+                          "rel": "bookmark",
+                          "href": flavor_bookmark,
+                      },
+                  ],
+                },
+                "addresses": {
+                    'test1': [
+                        {'version': 4, 'addr': '192.168.1.100'},
+                        {'version': 6, 'addr': '2001:db8:0:1::1'}
+                    ]
+                },
+                "metadata": {
+                    "seq": "1",
+                },
+                "links": [
+                    {
+                        "rel": "self",
+                        "href": "http://localhost/v2/fake/servers/%s" % uuid,
+                    },
+                    {
+                        "rel": "bookmark",
+                        "href": "http://localhost/fake/servers/%s" % uuid,
+                    },
+                ],
+            }
+        }
+
+    def test_get_server_list_empty(self):
+        self.stubs.Set(db, 'instance_get_all_by_filters',
+                       return_servers_empty)
+
+        req = fakes.HTTPRequest.blank('/domains/fake/servers')
+        res_dict = self.controller.index(req)
+
+        num_servers = len(res_dict['servers'])
+        self.assertEqual(0, num_servers)
+
+    def test_get_server_by_id(self):
+        self.flags(use_ipv6=True)
+        image_bookmark = "http://localhost/fake/images/10"
+        flavor_bookmark = "http://localhost/fake/flavors/1"
+
+        uuid = FAKE_UUID
+        req = fakes.HTTPRequest.blank('/v2/domains/fake/servers/%s' % uuid)
+        res_dict = self.controller.show(req, uuid)
+
+        expected_server = self._get_server_data_dict(uuid,
+                                                     image_bookmark,
+                                                     flavor_bookmark,
+                                                     status="BUILD",
+                                                     progress=0)
+        self.assertThat(res_dict, matchers.DictMatches(expected_server))
+
+    def _create_delete_request(self, uuid):
+        fakes.stub_out_instance_quota(self.stubs, 0, 10)
+        req = fakes.HTTPRequest.blank('/v2/domains/fake/servers/%s' % uuid)
+        req.method = 'DELETE'
+        return req
+
+    def _delete_server_instance(self, uuid=FAKE_UUID):
+        req = self._create_delete_request(uuid)
+        self.stubs.Set(db, 'instance_get_by_uuid',
+                fakes.fake_instance_get(vm_state=vm_states.ACTIVE, uuid=uuid))
+        self.controller.delete(req, uuid)
+
+    def test_delete_server_instance(self):
+        self._delete_server_instance()
+        self.assertTrue(self.server_delete_called)
+
+    def test_delete_server_instance_not_found(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self._delete_server_instance,
+                          uuid='non-existent-uuid')

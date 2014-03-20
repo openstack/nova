@@ -48,6 +48,7 @@ def fake_db_instance(**updates):
         'uuid': str(uuid.uuid4()),
         'user_id': 'fake-user',
         'project_id': 'fake-project',
+        'project_domain_id': 'fake-domain',
         'host': 'fake-host',
         'created_at': datetime.datetime(1955, 11, 5),
         'pci_devices': [],

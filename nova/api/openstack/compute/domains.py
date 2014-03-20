@@ -24,28 +24,12 @@ from nova.api.openstack.compute.servers import ActionDeserializer
 from nova.api.openstack.compute.servers import FullServerTemplate
 
 from nova.api.openstack import xmlutil
-from nova import exception
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova import quota
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
-from nova.compute import flavors
-from nova import exception
-from nova.image import glance
-from nova.objects import block_device as block_device_obj
-from nova.objects import instance as instance_obj
-from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
-from nova.openstack.common import strutils
 from nova.openstack.common import timeutils
-from nova.openstack.common import uuidutils
-from nova import policy
-from nova import utils
-
 
 CONF = cfg.CONF
 CONF.import_opt('enable_instance_password',
@@ -126,7 +110,7 @@ class DomainsController(wsgi.Controller):
         self.compute_api = compute.API()
         self.ext_mgr = ext_mgr
 
-    def index_domain(self, req):
+    def index(self, req):
         """Returns a list of server names and ids for a given user."""
         try:
             servers = self._get_servers_domain(req, is_detail=False)
@@ -252,9 +236,13 @@ class DomainsController(wsgi.Controller):
 
     def _delete(self, context, req, instance_uuid):
         instance = self._get_server(context, req, instance_uuid)
+        if instance.project_domain_id is None:
+                raise exc.HTTPNotFound(_("instance.project_domain_id is None"))
+        if context.domain_id is None:
+                raise exc.HTTPNotFound(_("|context.domain_id is None."))
 
         if instance.project_domain_id != context.domain_id:
-                raise exc.HTTPNotFound(_("Instance not found."))
+                raise exc.HTTPNotFound(_("Instance not found in this domain."))
         if CONF.reclaim_instance_interval:
             try:
                 self.compute_api.soft_delete(context, instance)

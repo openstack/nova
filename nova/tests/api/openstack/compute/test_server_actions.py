@@ -21,6 +21,7 @@ from oslo.config import cfg
 import webob
 
 from nova.api.openstack.compute import servers
+from nova.api.openstack.compute import domains
 from nova.compute import api as compute_api
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -74,6 +75,11 @@ class MockSetAdminPassword(object):
         self.password = password
 
 
+class FakeExtManager(object):
+    def is_loaded(self, ext):
+        return False
+
+
 class ServerActionsControllerTest(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     image_href = 'http://localhost/v2/fake/images/%s' % image_uuid
@@ -100,10 +106,6 @@ class ServerActionsControllerTest(test.TestCase):
         self.uuid = FAKE_UUID
         self.url = '/v2/fake/servers/%s/action' % self.uuid
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
-
-        class FakeExtManager(object):
-            def is_loaded(self, ext):
-                return False
 
         self.controller = servers.Controller(ext_mgr=FakeExtManager())
         self.compute_api = self.controller.compute_api
@@ -1234,6 +1236,26 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequest.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_create_image,
+                          req, FAKE_UUID, body)
+
+    def test_reboot_hard_token_domain(self):
+        self.controller = domains.DomainsController(ext_mgr=FakeExtManager())
+        body = dict(reboot=dict(type="HARD"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.controller._action_reboot(req, FAKE_UUID, body)
+
+    def test_reboot_soft_token_domain(self):
+        self.controller = domains.DomainsController(ext_mgr=FakeExtManager())
+        body = dict(reboot=dict(type="SOFT"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.controller._action_reboot(req, FAKE_UUID, body)
+
+    def test_reboot_incorrect_type_token_domain(self):
+        self.controller = domains.DomainsController(ext_mgr=FakeExtManager())
+        body = dict(reboot=dict(type="NOT_A_TYPE"))
+        req = fakes.HTTPRequest.blank(self.url)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_reboot,
                           req, FAKE_UUID, body)
 
 
