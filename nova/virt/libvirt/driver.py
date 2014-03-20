@@ -3769,7 +3769,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def get_vcpu_used(self):
         """Get vcpu usage number of physical computer.
 
-        :returns: The total number of vcpu that currently used.
+        :returns: The total number of vcpu(s) that are currently being used.
 
         """
 
@@ -3788,7 +3788,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                " %(id)s, exception: %(ex)s") %
                                {"id": dom_id, "ex": e})
                 else:
-                    total += len(vcpus[1])
+                    if vcpus is not None and len(vcpus) > 1:
+                        total += len(vcpus[1])
+
             except exception.InstanceNotFound:
                 LOG.info(_("libvirt can't find a domain with id: %s") % dom_id)
                 continue
