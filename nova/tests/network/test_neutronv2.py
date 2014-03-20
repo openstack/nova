@@ -166,11 +166,13 @@ class TestNeutronv2Base(test.TestCase):
                          'security_groups': []}
         self.nets1 = [{'id': 'my_netid1',
                       'name': 'my_netname1',
+                      'subnets': ['mysubnid1'],
                       'tenant_id': 'my_tenantid'}]
         self.nets2 = []
         self.nets2.append(self.nets1[0])
         self.nets2.append({'id': 'my_netid2',
                            'name': 'my_netname2',
+                           'subnets': ['mysubnid2'],
                            'tenant_id': 'my_tenantid'})
         self.nets3 = self.nets2 + [{'id': 'my_netid3',
                                     'name': 'my_netname3',
@@ -1183,8 +1185,37 @@ class TestNeutronv2(TestNeutronv2Base):
                           api.validate_networks,
                           self.context, requested_networks, 1)
 
+    def test_validate_networks_port_no_subnet_id(self):
+        port_a = self.port_data3[0]
+        port_a['device_id'] = None
+        port_a['device_owner'] = None
+
+        requested_networks = [(None, None, port_a['id'])]
+        self.moxed_client.show_port(port_a['id']).AndReturn({'port': port_a})
+
+        self.mox.ReplayAll()
+
+        api = neutronapi.API()
+        self.assertRaises(exception.PortRequiresFixedIP,
+                          api.validate_networks,
+                          self.context, requested_networks, 1)
+
+    def test_validate_networks_no_subnet_id(self):
+        requested_networks = [('his_netid4', None, None)]
+        ids = ['his_netid4']
+        self.moxed_client.list_networks(
+            id=mox.SameElementsAs(ids)).AndReturn(
+                {'networks': self.nets4})
+        self.mox.ReplayAll()
+        api = neutronapi.API()
+        self.assertRaises(exception.NetworkRequiresSubnet,
+                          api.validate_networks,
+                          self.context, requested_networks, 1)
+
     def test_validate_networks_ports_in_same_network(self):
         port_a = self.port_data3[0]
+        port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
+                               'subnet_id': 'subnet_id'}
         port_b = self.port_data1[0]
         self.assertEqual(port_a['network_id'], port_b['network_id'])
         for port in [port_a, port_b]:
@@ -1205,6 +1236,8 @@ class TestNeutronv2(TestNeutronv2Base):
 
     def test_validate_networks_ports_not_in_same_network(self):
         port_a = self.port_data3[0]
+        port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
+                               'subnet_id': 'subnet_id'}
         port_b = self.port_data2[1]
         self.assertNotEqual(port_a['network_id'], port_b['network_id'])
         for port in [port_a, port_b]:
@@ -1299,6 +1332,8 @@ class TestNeutronv2(TestNeutronv2Base):
         # but the request includes a port to be used
         #  => instances which can be created = 1
         port_a = self.port_data3[0]
+        port_a['fixed_ips'] = {'ip_address': '10.0.0.2',
+                               'subnet_id': 'subnet_id'}
         port_b = self.port_data2[1]
         self.assertNotEqual(port_a['network_id'], port_b['network_id'])
         for port in [port_a, port_b]:

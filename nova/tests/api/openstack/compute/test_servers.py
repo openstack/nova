@@ -2131,6 +2131,32 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPConflict,
                           self._test_create_extra, params)
 
+    def test_create_instance_with_port_with_no_fixed_ips(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        port_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'port': port_id}]
+        params = {'networks': requested_networks}
+
+        def fake_create(*args, **kwargs):
+            raise exception.PortRequiresFixedIP(port_id=port_id)
+
+        self.stubs.Set(compute_api.API, 'create', fake_create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
+    def test_create_instance_with_network_with_no_subnet(self):
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+        requested_networks = [{'uuid': network}]
+        params = {'networks': requested_networks}
+
+        def fake_create(*args, **kwargs):
+            raise exception.NetworkRequiresSubnet(network_uuid=network)
+
+        self.stubs.Set(compute_api.API, 'create', fake_create)
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self._test_create_extra, params)
+
     def test_create_instance_with_access_ip(self):
         # proper local hrefs must start with 'http://localhost/v2/'
         image_href = 'http://localhost/v2/fake/images/%s' % self.image_uuid

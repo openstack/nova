@@ -612,6 +612,8 @@ class API(base.Base):
                         raise exception.PortNotFound(port_id=port_id)
                     if port.get('device_id', None):
                         raise exception.PortInUse(port_id=port_id)
+                    if not port.get('fixed_ips'):
+                        raise exception.PortRequiresFixedIP(port_id=port_id)
                     net_id = port['network_id']
                 else:
                     ports_needed_per_instance += 1
@@ -624,6 +626,10 @@ class API(base.Base):
             nets = self._get_available_networks(context,
                                     context.project_id, net_ids,
                                     neutron=neutron)
+            for net in nets:
+                if not net.get('subnets'):
+                    raise exception.NetworkRequiresSubnet(
+                        network_uuid=net['id'])
 
             if len(nets) != len(net_ids):
                 requsted_netid_set = set(net_ids)

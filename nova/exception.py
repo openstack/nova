@@ -612,12 +612,21 @@ class NetworkAmbiguous(Invalid):
                 "network ID(s) to select which one(s) to connect to,")
 
 
+class NetworkRequiresSubnet(Invalid):
+    msg_fmt = _("Network %(network_uuid)s requires a subnet in order to boot"
+                " instances on.")
+
+
 class DatastoreNotFound(NotFound):
     msg_fmt = _("Could not find the datastore reference(s) which the VM uses.")
 
 
 class PortInUse(Invalid):
     msg_fmt = _("Port %(port_id)s is still in use.")
+
+
+class PortRequiresFixedIP(Invalid):
+    msg_fmt = _("Port %(port_id)s requires a FixedIP in order to be used.")
 
 
 class PortNotUsable(Invalid):
