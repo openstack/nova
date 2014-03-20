@@ -1,0 +1,4 @@
+To open VNC ports on your ESX host, use the openstackvncfirewall.zip
+file from the following github repo
+
+git clone https://github.com/openstack-vmwareapi-team/Tools.git
