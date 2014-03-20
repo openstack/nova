@@ -28,6 +28,7 @@ from nova.cells import utils as cells_utils
 from nova import context
 from nova import exception
 from nova import manager
+from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
@@ -71,7 +72,7 @@ class CellsManager(manager.Manager):
     Scheduling requests get passed to the scheduler class.
     """
 
-    target = oslo_messaging.Target(version='1.26')
+    target = oslo_messaging.Target(version='1.27')
 
     def __init__(self, *args, **kwargs):
         LOG.warn(_('The cells feature of Nova is considered experimental '
@@ -233,6 +234,9 @@ class CellsManager(manager.Manager):
         an instance was in, but the instance was requested to be
         deleted or soft_deleted.  So, we'll broadcast this everywhere.
         """
+        if isinstance(instance, dict):
+            instance = instance_obj.Instance._from_db_object(ctxt,
+                    instance_obj.Instance(), instance)
         self.msg_runner.instance_delete_everywhere(ctxt, instance,
                                                    delete_type)
 

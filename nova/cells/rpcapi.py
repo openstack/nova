@@ -89,6 +89,7 @@ class CellsAPI(object):
 
         1.25 - Adds rebuild_instance()
         1.26 - Adds service_delete()
+        1.27 - Updates instance_delete_everywhere() for instance objects
     '''
 
     VERSION_ALIASES = {
@@ -168,9 +169,14 @@ class CellsAPI(object):
         """
         if not CONF.cells.enable:
             return
-        instance_p = jsonutils.to_primitive(instance)
-        self.client.cast(ctxt, 'instance_delete_everywhere',
-                         instance=instance_p, delete_type=delete_type)
+        if self.client.can_send_version('1.27'):
+            version = '1.27'
+        else:
+            version = '1.0'
+            instance = jsonutils.to_primitive(instance)
+        cctxt = self.client.prepare(version=version)
+        cctxt.cast(ctxt, 'instance_delete_everywhere', instance=instance,
+                delete_type=delete_type)
 
     def instance_fault_create_at_top(self, ctxt, instance_fault):
         """Create an instance fault at the top."""

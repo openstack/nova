@@ -22,6 +22,7 @@ import six
 from nova.cells import rpcapi as cells_rpcapi
 from nova import exception
 from nova import test
+from nova.tests import fake_instance
 
 CONF = cfg.CONF
 CONF.import_opt('topic', 'nova.cells.opts', group='cells')
@@ -40,10 +41,15 @@ class CellsAPITestCase(test.NoDBTestCase):
     def _stub_rpc_method(self, rpc_method, result):
         call_info = {}
 
+        orig_prepare = self.cells_rpcapi.client.prepare
+
         def fake_rpc_prepare(**kwargs):
             if 'version' in kwargs:
                 call_info['version'] = kwargs.pop('version')
             return self.cells_rpcapi.client
+
+        def fake_csv(version):
+            return orig_prepare(version).can_send_version()
 
         def fake_rpc_method(ctxt, method, **kwargs):
             call_info['context'] = ctxt
@@ -52,6 +58,7 @@ class CellsAPITestCase(test.NoDBTestCase):
             return result
 
         self.stubs.Set(self.cells_rpcapi.client, 'prepare', fake_rpc_prepare)
+        self.stubs.Set(self.cells_rpcapi.client, 'can_send_version', fake_csv)
         self.stubs.Set(self.cells_rpcapi.client, rpc_method, fake_rpc_method)
 
         return call_info
@@ -195,18 +202,18 @@ class CellsAPITestCase(test.NoDBTestCase):
                 expected_args)
 
     def test_instance_delete_everywhere(self):
-        fake_instance = {'uuid': 'fake-uuid'}
+        instance = fake_instance.fake_instance_obj(self.fake_context)
 
         call_info = self._stub_rpc_method('cast', None)
 
         self.cells_rpcapi.instance_delete_everywhere(
-                self.fake_context, fake_instance,
+                self.fake_context, instance,
                 'fake-type')
 
-        expected_args = {'instance': fake_instance,
+        expected_args = {'instance': instance,
                          'delete_type': 'fake-type'}
         self._check_result(call_info, 'instance_delete_everywhere',
-                expected_args)
+                expected_args, version='1.27')
 
     def test_instance_fault_create_at_top(self):
         fake_instance_fault = {'id': 2,
