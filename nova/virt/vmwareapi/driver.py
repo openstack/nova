@@ -706,6 +706,27 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         return _vmops.get_diagnostics(instance)
 
+    def host_power_action(self, host, action):
+        """Host operations not supported by VC driver.
+
+        This needs to override the ESX driver implementation.
+        """
+        raise NotImplementedError()
+
+    def host_maintenance_mode(self, host, mode):
+        """Host operations not supported by VC driver.
+
+        This needs to override the ESX driver implementation.
+        """
+        raise NotImplementedError()
+
+    def set_host_enabled(self, host, enabled):
+        """Host operations not supported by VC driver.
+
+        This needs to override the ESX driver implementation.
+        """
+        raise NotImplementedError()
+
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
