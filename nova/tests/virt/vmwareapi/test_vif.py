@@ -22,6 +22,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import test
 from nova.tests import matchers
+from nova.tests import utils
 from nova.tests.virt.vmwareapi import test_vm_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake
@@ -322,3 +323,20 @@ class VMwareVifTestCase(test.NoDBTestCase):
         ) as (_get_host, _call_method, _get_name):
             vif.get_neutron_network(self.session, 'network_name',
                                     'cluster', 'vif')
+
+    def test_get_vif_info_none(self):
+        vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
+                                    'is_neutron', 'fake_model', None)
+        self.assertEqual([], vif_info)
+
+    @mock.patch.object(vif, 'get_network_ref', return_value='fake_ref')
+    def test_get_vif_info(self, mock_get_network_ref):
+        network_info = utils.get_test_network_info()
+        vif_info = vif.get_vif_info('fake_session', 'fake_cluster',
+                                    'is_neutron', 'fake_model', network_info)
+        expected = [{'iface_id': 'vif-xxx-yyy-zzz',
+                     'mac_address': 'fake',
+                     'network_name': 'fake',
+                     'network_ref': 'fake_ref',
+                     'vif_model': 'fake_model'}]
+        self.assertEqual(expected, vif_info)

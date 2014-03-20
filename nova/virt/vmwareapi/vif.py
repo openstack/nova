@@ -32,6 +32,9 @@ vmwareapi_vif_opts = [
     cfg.StrOpt('vlan_interface',
                default='vmnic0',
                help='Physical ethernet adapter name for vlan networking'),
+    cfg.StrOpt('integration_bridge',
+               default='br-int',
+               help='Name of Integration Bridge'),
 ]
 
 CONF.register_opts(vmwareapi_vif_opts, 'vmware')
@@ -149,3 +152,20 @@ def get_network_ref(session, cluster, vif, is_neutron):
         network_ref = ensure_vlan_bridge(session, vif, cluster=cluster,
                                          create_vlan=create_vlan)
     return network_ref
+
+
+def get_vif_info(session, cluster, is_neutron, vif_model, network_info):
+    vif_infos = []
+    if not network_info:
+        return vif_infos
+    for vif in network_info:
+        mac_address = vif['address']
+        net_name = vif['network']['bridge'] or CONF.vmware.integration_bridge
+        network_ref = get_network_ref(session, cluster, vif, is_neutron)
+        vif_infos.append({'network_name': net_name,
+                          'mac_address': mac_address,
+                          'network_ref': network_ref,
+                          'iface_id': vif['id'],
+                          'vif_model': vif_model
+                         })
+    return vif_infos
