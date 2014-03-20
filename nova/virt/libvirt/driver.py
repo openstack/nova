@@ -2458,6 +2458,16 @@ class LibvirtDriver(driver.ComputeDriver):
         if os.path.exists(disk_config):
             libvirt_utils.chown(disk_config, os.getuid())
 
+    @staticmethod
+    def _is_booted_from_volume(instance, disk_mapping):
+        """Determines whether the VM is booting from volume
+
+        Determines whether the disk mapping indicates that the VM
+        is booting from a volume.
+        """
+        return ((not bool(instance.get('image_ref')))
+                or 'disk' not in disk_mapping)
+
     def _create_image(self, context, instance,
                       disk_mapping, suffix='',
                       disk_images=None, network_info=None,
@@ -2466,10 +2476,8 @@ class LibvirtDriver(driver.ComputeDriver):
         if not suffix:
             suffix = ''
 
-        booted_from_volume = (
-            (not bool(instance.get('image_ref')))
-            or 'disk' not in disk_mapping
-        )
+        booted_from_volume = self._is_booted_from_volume(
+            instance, disk_mapping)
 
         def image(fname, image_type=CONF.libvirt.images_type):
             return self.image_backend.image(instance,
