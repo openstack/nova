@@ -17,6 +17,7 @@
 import collections
 import re
 
+import contextlib
 import mock
 
 from nova import exception
@@ -38,6 +39,9 @@ class fake_session(object):
         # return fake objects in circular manner
         self.ind = (self.ind + 1) % len(self.ret)
         return self.ret[self.ind - 1]
+
+    def _wait_for_task(self):
+        pass
 
     def _get_vim(self):
         fake_vim = fake.DataObject()
@@ -631,6 +635,48 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected = re.sub(r'\s+', '', expected)
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
+
+    def test_create_vm(self):
+
+        method_list = ['CreateVM_Task', 'get_dynamic_property']
+
+        def fake_call_method(module, method, *args, **kwargs):
+            expected_method = method_list.pop(0)
+            self.assertEqual(expected_method, method)
+            if (expected_method == 'CreateVM_Task'):
+                return 'fake_create_vm_task'
+            elif (expected_method == 'get_dynamic_property'):
+                task_info = mock.Mock(state="success", result="fake_vm_ref")
+                return task_info
+            else:
+                self.fail('Should not get here....')
+
+        def fake_wait_for_task(self, *args):
+            task_info = mock.Mock(state="success", result="fake_vm_ref")
+            return task_info
+
+        session = fake_session()
+        fake_instance = mock.MagicMock()
+        fake_call_mock = mock.Mock(side_effect=fake_call_method)
+        fake_wait_mock = mock.Mock(side_effect=fake_wait_for_task)
+        with contextlib.nested(
+                mock.patch.object(session, '_wait_for_task',
+                                  fake_wait_mock),
+                mock.patch.object(session, '_call_method',
+                                  fake_call_mock)
+        ) as (wait_for_task, call_method):
+            vm_ref = vm_util.create_vm(
+                session,
+                fake_instance,
+                'fake_vm_folder',
+                'fake_config_spec',
+                'fake_res_pool_ref')
+            self.assertEqual('fake_vm_ref', vm_ref)
+
+            call_method.assert_called_once_with(mock.ANY, 'CreateVM_Task',
+                'fake_vm_folder', config='fake_config_spec',
+                pool='fake_res_pool_ref')
+            wait_for_task.assert_called_once_with('fake_create_vm_task')
 
     def test_convert_vif_model(self):
         expected = "VirtualE1000"

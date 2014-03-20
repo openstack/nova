@@ -1098,7 +1098,7 @@ class FakeVim(object):
         _create_object("VirtualMachine", virtual_machine)
         res_pool = _get_object(pool)
         res_pool.vm.ManagedObjectReference.append(virtual_machine.obj)
-        task_mdo = create_task(method, "success")
+        task_mdo = create_task(method, "success", result=virtual_machine.obj)
         return task_mdo.obj
 
     def _reconfig_vm(self, method, *args, **kwargs):
