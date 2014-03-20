@@ -28,6 +28,7 @@ from nova.api.openstack import common
 from nova.api.openstack.compute.views import servers as views_servers
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.openstack.common import log as logging
 from nova import compute
 from nova.openstack.common import timeutils
 
