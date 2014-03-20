@@ -109,12 +109,12 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         nova_rule['protocol'] = rule['protocol']
         if (nova_rule['protocol'] and rule.get('port_range_min') is None and
                 rule.get('port_range_max') is None):
-            if nova_rule['protocol'].upper() == 'ICMP':
-                nova_rule['from_port'] = -1
-                nova_rule['to_port'] = -1
-            elif rule['protocol'].upper() in ['TCP', 'UDP']:
+            if rule['protocol'].upper() in ['TCP', 'UDP']:
                 nova_rule['from_port'] = 1
                 nova_rule['to_port'] = 65535
+            else:
+                nova_rule['from_port'] = -1
+                nova_rule['to_port'] = -1
         else:
             nova_rule['from_port'] = rule.get('port_range_min')
             nova_rule['to_port'] = rule.get('port_range_max')

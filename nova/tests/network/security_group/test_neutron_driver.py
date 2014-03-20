@@ -82,6 +82,39 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.assertRaises(exception.SecurityGroupLimitExceeded,
                           sg_api.add_rules, self.context, None, name, [vals])
 
+    def test_list_security_group_with_no_port_range_and_not_tcp_udp_icmp(self):
+        sg1 = {'description': 'default',
+               'id': '07f1362f-34f6-4136-819a-2dcde112269e',
+               'name': 'default',
+               'tenant_id': 'c166d9316f814891bcb66b96c4c891d6',
+               'security_group_rules':
+                   [{'direction': 'ingress',
+                     'ethertype': 'IPv4',
+                     'id': '0a4647f1-e1aa-488d-90e1-97a7d0293beb',
+                      'port_range_max': None,
+                      'port_range_min': None,
+                      'protocol': '51',
+                      'remote_group_id': None,
+                      'remote_ip_prefix': None,
+                      'security_group_id':
+                           '07f1362f-34f6-4136-819a-2dcde112269e',
+                      'tenant_id': 'c166d9316f814891bcb66b96c4c891d6'}]}
+
+        self.moxed_client.list_security_groups().AndReturn(
+            {'security_groups': [sg1]})
+        self.mox.ReplayAll()
+        sg_api = neutron_driver.SecurityGroupAPI()
+        result = sg_api.list(self.context)
+        expected = [{'rules':
+            [{'from_port': -1, 'protocol': '51', 'to_port': -1,
+              'parent_group_id': '07f1362f-34f6-4136-819a-2dcde112269e',
+              'cidr': '0.0.0.0/0', 'group_id': None,
+              'id': '0a4647f1-e1aa-488d-90e1-97a7d0293beb'}],
+            'project_id': 'c166d9316f814891bcb66b96c4c891d6',
+            'id': '07f1362f-34f6-4136-819a-2dcde112269e',
+            'name': 'default', 'description': 'default'}]
+        self.assertEqual(expected, result)
+
     def test_instances_security_group_bindings(self):
         server_id = 'c5a20e8d-c4b0-47cf-9dca-ebe4f758acb1'
         port1_id = '4c505aec-09aa-47bc-bcc0-940477e84dc0'
