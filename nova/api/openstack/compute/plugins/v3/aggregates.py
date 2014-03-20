@@ -111,7 +111,7 @@ class AggregateController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return self._marshall_aggregate(aggregate)
 
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors((400, 404, 409))
     def update(self, req, id, body):
         """Updates the name and/or availability_zone of given aggregate."""
         context = _get_context(req)
@@ -136,6 +136,8 @@ class AggregateController(wsgi.Controller):
 
         try:
             aggregate = self.api.update_aggregate(context, id, updates)
+        except exception.AggregateNameExists as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except exception.InvalidAggregateAction as e:

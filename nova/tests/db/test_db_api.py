@@ -528,6 +528,17 @@ class AggregateDBApiTestCase(test.TestCase):
         self.assertRaises(exception.AggregateNotFound,
                           db.aggregate_update, ctxt, aggregate_id, new_values)
 
+    def test_aggregate_update_raise_name_exist(self):
+        ctxt = context.get_admin_context()
+        _create_aggregate(context=ctxt, values={'name': 'test1'},
+                          metadata={'availability_zone': 'fake_avail_zone'})
+        _create_aggregate(context=ctxt, values={'name': 'test2'},
+                          metadata={'availability_zone': 'fake_avail_zone'})
+        aggregate_id = 1
+        new_values = {'name': 'test2'}
+        self.assertRaises(exception.AggregateNameExists,
+                          db.aggregate_update, ctxt, aggregate_id, new_values)
+
     def test_aggregate_get_all(self):
         ctxt = context.get_admin_context()
         counter = 3
