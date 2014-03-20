@@ -128,7 +128,7 @@ class ServerExternalEventsController(wsgi.Controller):
                                                      accepted)
         else:
             msg = _('No instances found for any event')
-            raise webob.exc.HTTPNotFound(msg)
+            raise webob.exc.HTTPNotFound(explanation=msg)
 
         # FIXME(cyeoh): This needs some infrastructure support so that
         # we have a general way to do this

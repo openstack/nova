@@ -71,7 +71,7 @@ class InstanceActionsController(wsgi.Controller):
                                                           id)
         if action is None:
             msg = _("Action %s not found") % id
-            raise exc.HTTPNotFound(msg)
+            raise exc.HTTPNotFound(explanation=msg)
 
         action_id = action['id']
         action = self._format_action(action)
