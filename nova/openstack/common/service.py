@@ -44,7 +44,7 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import threadgroup
 
 
-rpc = importutils.try_import('nova.openstack.common.rpc')
+rpc = importutils.try_import('nova.rpc')
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
