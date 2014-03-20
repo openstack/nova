@@ -21,6 +21,7 @@ import copy
 import datetime
 import functools
 import iso8601
+import mock
 import os
 import string
 import tempfile
@@ -481,6 +482,34 @@ class CloudTestCase(test.TestCase):
         delete = self.cloud.delete_security_group
         self.assertRaises(exception.MissingParameter, delete, self.context)
 
+    def test_delete_security_group_policy_not_allowed(self):
+        rules = common_policy.Rules(
+                {'compute_extension:security_groups':
+                    common_policy.parse_rule('project_id:%(project_id)s')})
+        common_policy.set_rules(rules)
+
+        with mock.patch.object(self.cloud.security_group_api,
+                'get') as get:
+            get.return_value = {'project_id': 'invalid'}
+
+            self.assertRaises(exception.PolicyNotAuthorized,
+                    self.cloud.delete_security_group, self.context,
+                    'fake-name', 'fake-id')
+
+    def test_authorize_security_group_ingress_policy_not_allowed(self):
+        rules = common_policy.Rules(
+                {'compute_extension:security_groups':
+                    common_policy.parse_rule('project_id:%(project_id)s')})
+        common_policy.set_rules(rules)
+
+        with mock.patch.object(self.cloud.security_group_api,
+                'get') as get:
+            get.return_value = {'project_id': 'invalid'}
+
+            self.assertRaises(exception.PolicyNotAuthorized,
+                    self.cloud.authorize_security_group_ingress, self.context,
+                    'fake-name', 'fake-id')
+
     def test_authorize_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
         sec = db.security_group_create(self.context, kwargs)
@@ -584,6 +613,20 @@ class CloudTestCase(test.TestCase):
         db.security_group_destroy(self.context, sec3['id'])
         db.security_group_destroy(self.context, sec2['id'])
         db.security_group_destroy(self.context, sec1['id'])
+
+    def test_revoke_security_group_ingress_policy_not_allowed(self):
+        rules = common_policy.Rules(
+                {'compute_extension:security_groups':
+                    common_policy.parse_rule('project_id:%(project_id)s')})
+        common_policy.set_rules(rules)
+
+        with mock.patch.object(self.cloud.security_group_api,
+                'get') as get:
+            get.return_value = {'project_id': 'invalid'}
+
+            self.assertRaises(exception.PolicyNotAuthorized,
+                    self.cloud.revoke_security_group_ingress, self.context,
+                    'fake-name', 'fake-id')
 
     def test_revoke_security_group_ingress(self):
         kwargs = {'project_id': self.context.project_id, 'name': 'test'}
