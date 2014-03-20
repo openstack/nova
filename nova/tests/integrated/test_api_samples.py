@@ -1182,26 +1182,25 @@ class ShelveJsonTest(ServersSampleBase):
         # Don't offload instance, so we can test the offload call.
         CONF.set_override('shelved_offload_time', -1)
 
-    def _test_server_action(self, uuid, action):
+    def _test_server_action(self, uuid, template, action):
         response = self._do_post('servers/%s/action' % uuid,
-                                 'os-shelve',
-                                 {'action': action})
+                                 template, {'action': action})
         self.assertEqual(response.status, 202)
         self.assertEqual(response.read(), "")
 
     def test_shelve(self):
         uuid = self._post_server()
-        self._test_server_action(uuid, 'shelve')
+        self._test_server_action(uuid, 'os-shelve', 'shelve')
 
     def test_shelve_offload(self):
         uuid = self._post_server()
-        self._test_server_action(uuid, 'shelve')
-        self._test_server_action(uuid, 'shelveOffload')
+        self._test_server_action(uuid, 'os-shelve', 'shelve')
+        self._test_server_action(uuid, 'os-shelve-offload', 'shelveOffload')
 
     def test_unshelve(self):
         uuid = self._post_server()
-        self._test_server_action(uuid, 'shelve')
-        self._test_server_action(uuid, 'unshelve')
+        self._test_server_action(uuid, 'os-shelve', 'shelve')
+        self._test_server_action(uuid, 'os-unshelve', 'unshelve')
 
 
 class ShelveXmlTest(ShelveJsonTest):
