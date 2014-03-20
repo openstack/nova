@@ -169,12 +169,6 @@ class XenAPIDriver(driver.ComputeDriver):
         return self._host_state
 
     def init_host(self, host):
-        LOG.warning(_('The xenapi driver does not meet the Nova project\'s '
-                      'requirements for quality verification and is planned '
-                      'for removal. This may change, but users should plan '
-                      'accordingly. Additional details here: '
-                      'https://wiki.openstack.org/wiki/HypervisorSupportMatrix'
-                      '/DeprecationPlan'))
         if CONF.xenserver.check_host:
             vm_utils.ensure_correct_host(self._session)
 
