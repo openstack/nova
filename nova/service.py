@@ -315,6 +315,7 @@ class Service(service.Service):
     def stop(self):
         try:
             self.rpcserver.stop()
+            self.rpcserver.wait()
         except Exception:
             pass
 
