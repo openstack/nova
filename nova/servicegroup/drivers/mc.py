@@ -60,7 +60,7 @@ class MemcachedDriver(api.ServiceGroupDriver):
         report_interval = service.report_interval
         if report_interval:
             service.tg.add_timer(report_interval, self._report_state,
-                                 report_interval, service)
+                                 api.INITIAL_REPORTING_DELAY, service)
 
     def is_up(self, service_ref):
         """Moved from nova.utils
