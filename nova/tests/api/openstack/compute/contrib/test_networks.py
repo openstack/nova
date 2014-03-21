@@ -28,6 +28,7 @@ import nova.context
 from nova import exception
 from nova import test
 from nova.tests.api.openstack import fakes
+import nova.utils
 
 CONF = cfg.CONF
 
@@ -202,6 +203,7 @@ class NetworksTest(test.NoDBTestCase):
         self.associate_controller = networks_associate\
             .NetworkAssociateActionController(self.fake_network_api)
         fakes.stub_out_networking(self.stubs)
+        nova.utils.reset_is_neutron()
         fakes.stub_out_rate_limiting(self.stubs)
 
     @staticmethod
@@ -347,3 +349,41 @@ class NetworksTest(test.NoDBTestCase):
         res_dict = self.controller.create(req, large_network)
         self.assertEqual(res_dict['network']['cidr'],
                          large_network['network']['cidr'])
+
+    def test_network_neutron_associate_not_implemented(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        assoc_ctrl = networks_associate.NetworkAssociateActionController()
+
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          assoc_ctrl._associate_host,
+                          req, uuid, {'associate_host': "TestHost"})
+
+    def test_network_neutron_disassociate_project_not_implemented(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        assoc_ctrl = networks_associate.NetworkAssociateActionController()
+
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          assoc_ctrl._disassociate_project_only,
+                          req, uuid, {'disassociate_project': None})
+
+    def test_network_neutron_disassociate_host_not_implemented(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        assoc_ctrl = networks_associate.NetworkAssociateActionController()
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          assoc_ctrl._disassociate_host_only,
+                          req, uuid, {'disassociate_host': None})
+
+    def test_network_neutron_disassociate_not_implemented(self):
+        uuid = FAKE_NETWORKS[1]['uuid']
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
+        controller = networks.NetworkController()
+        req = fakes.HTTPRequest.blank('/v2/1234/os-networks/%s/action' % uuid)
+        self.assertRaises(webob.exc.HTTPNotImplemented,
+                          controller._disassociate_host_and_project,
+                          req, uuid, {'disassociate': None})

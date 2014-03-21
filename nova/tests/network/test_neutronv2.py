@@ -2126,6 +2126,12 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                           api.migrate_instance_finish,
                           self.context, self.instance, migration)
 
+    def test_associate_not_implemented(self):
+        api = neutronapi.API()
+        self.assertRaises(NotImplementedError,
+                          api.associate,
+                          self.context, 'id')
+
 
 class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
     def setUp(self):
