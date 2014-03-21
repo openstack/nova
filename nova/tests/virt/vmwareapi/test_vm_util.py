@@ -115,10 +115,6 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.ObjectContent("prop_list_host1",
                                                    prop_list_host_2))
 
-        fake_datastores = fake.FakeRetrieveResult()
-        fake_datastores.add_object(fake.Datastore("fake-ds0"))
-        fake_datastores.add_object(fake.Datastore("fake-ds1"))
-
         respool_resource_usage = fake.DataObject()
         respool_resource_usage.maxUsage = 5368709120
         respool_resource_usage.overallUsage = 2147483648
@@ -129,26 +125,20 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 return prop_dict
             elif "get_properties_for_a_collection_of_objects" in args:
                 return fake_objects
-            elif "get_dynamic_property" in args:
+            else:
                 return respool_resource_usage
-            elif "get_inner_objects" in args:
-                return fake_datastores
         with mock.patch.object(fake_session, '_call_method',
                                fake_call_method):
             result = vm_util.get_stats_from_cluster(session, "cluster1")
             cpu_info = {}
             mem_info = {}
-            disk_info = {}
             cpu_info['vcpus'] = 16
             cpu_info['cores'] = 8
             cpu_info['vendor'] = ["Intel"]
             cpu_info['model'] = ["Intel(R) Xeon(R)"]
             mem_info['total'] = 5120
             mem_info['free'] = 3072
-            disk_info['free'] = 1000
-            disk_info['total'] = 2048
-            expected_stats = {'cpu': cpu_info, 'mem': mem_info,
-                              'disk': disk_info}
+            expected_stats = {'cpu': cpu_info, 'mem': mem_info}
             self.assertEqual(expected_stats, result)
 
     def test_get_datastore_ref_and_name_with_token(self):

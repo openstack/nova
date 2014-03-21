@@ -494,8 +494,7 @@ class VMwareVCDriver(VMwareESXDriver):
             name = self.dict_mors.get(node)['name']
             nodename = self._create_nodename(node, name)
             _vc_state = host.VCState(self._session, nodename,
-                                     self.dict_mors.get(node)['cluster_mor'],
-                                     self._datastore_regex)
+                                     self.dict_mors.get(node)['cluster_mor'])
             self._resources[nodename] = {'vmops': _vmops,
                                          'volumeops': _volumeops,
                                          'vcstate': _vc_state,

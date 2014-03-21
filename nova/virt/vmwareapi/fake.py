@@ -55,18 +55,16 @@ def reset(vc=False):
     create_host_storage_system()
     ds_ref1 = create_datastore('ds1', 1024, 500)
     create_host(ds_ref=ds_ref1)
-    ds_ref3 = create_datastore('ds3', 1024, 100)
     if vc:
         ds_ref2 = create_datastore('ds2', 1024, 500)
         create_host(ds_ref=ds_ref2)
-        ds_ref4 = create_datastore('ds4', 1024, 100)
-    create_datacenter('dc1', [ds_ref1, ds_ref3])
+    create_datacenter('dc1', ds_ref1)
     if vc:
-        create_datacenter('dc2', [ds_ref2, ds_ref4])
+        create_datacenter('dc2', ds_ref2)
     create_res_pool()
     if vc:
-        create_cluster('test_cluster', [ds_ref1, ds_ref3])
-        create_cluster('test_cluster2', [ds_ref2, ds_ref4])
+        create_cluster('test_cluster', ds_ref1)
+        create_cluster('test_cluster2', ds_ref2)
 
 
 def cleanup():
@@ -799,7 +797,7 @@ class HostSystem(ManagedObject):
 class Datacenter(ManagedObject):
     """Datacenter class."""
 
-    def __init__(self, name="ha-datacenter", ds_refs=None):
+    def __init__(self, name="ha-datacenter", ds_ref=None):
         super(Datacenter, self).__init__("dc")
         self.set("name", name)
         self.set("vmFolder", "vm_folder_ref")
@@ -810,7 +808,7 @@ class Datacenter(ManagedObject):
         network_do.ManagedObjectReference = [net_ref]
         self.set("network", network_do)
         datastore = DataObject()
-        datastore.ManagedObjectReference = ds_refs
+        datastore.ManagedObjectReference = [ds_ref]
         self.set("datastore", datastore)
 
 
@@ -850,8 +848,8 @@ def create_host(ds_ref=None):
     _create_object('HostSystem', host_system)
 
 
-def create_datacenter(name, ds_refs=None):
-    data_center = Datacenter(name, ds_refs)
+def create_datacenter(name, ds_ref=None):
+    data_center = Datacenter(name, ds_ref)
     _create_object('Datacenter', data_center)
 
 
@@ -871,12 +869,11 @@ def create_network():
     _create_object('Network', network)
 
 
-def create_cluster(name, ds_refs):
+def create_cluster(name, ds_ref):
     cluster = ClusterComputeResource(name=name)
     cluster._add_host(_get_object_refs("HostSystem")[0])
     cluster._add_host(_get_object_refs("HostSystem")[1])
-    for ds_ref in ds_refs:
-        cluster._add_datastore(ds_ref)
+    cluster._add_datastore(ds_ref)
     cluster._add_root_resource_pool(_get_object_refs("ResourcePool")[0])
     _create_object('ClusterComputeResource', cluster)
 
@@ -1248,26 +1245,11 @@ class FakeVim(object):
         for obj in objs:
             try:
                 obj_ref = obj.obj
+                # This means that we are doing a search for the managed
+                # data objects of the type in the inventory
                 if obj_ref == "RootFolder":
-                # This means that we are retrieving props for all managed
-                # data objects of the specified 'type' in the entire inventory.
-                # This gets invoked by vim_util.get_objects.
                     mdo_refs = _db_content[type]
-                elif obj_ref.type != type:
-                # This means that we are retrieving props for the managed
-                # data objects in the parent object's 'path' property.
-                # This gets invoked by vim_util.get_inner_objects
-                # eg. obj_ref = <ManagedObjectReference of a cluster>
-                #     type = 'DataStore'
-                #     path = 'datastore'
-                # the above will retrieve all datastores in the given cluster.
-                    parent_mdo = _db_content[obj_ref.type][obj_ref]
-                    path = obj.selectSet[0].path
-                    mdo_refs = parent_mdo.get(path).ManagedObjectReference
                 else:
-                # This means that we are retrieving props of the given managed
-                # data object. This gets invoked by
-                # vim_util.get_properties_for_a_collection_of_objects.
                     mdo_refs = [obj_ref]
 
                 for mdo_ref in mdo_refs:
