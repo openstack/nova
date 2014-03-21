@@ -695,7 +695,8 @@ class Controller(wsgi.Controller):
                 #if the fixed IP address is not provided then
                 #it will use one of the available IP address from the network
                 address = network.get('fixed_ip', None)
-                if address is not None and not utils.is_valid_ipv4(address):
+                if address is not None and not utils.is_valid_ip_address(
+                        address):
                     msg = _("Invalid fixed IP address (%s)") % address
                     raise exc.HTTPBadRequest(explanation=msg)
 

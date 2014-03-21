@@ -296,6 +296,15 @@ class IPV6Address(IPAddress):
         return result
 
 
+class IPV4AndV6Address(IPAddress):
+    @staticmethod
+    def coerce(obj, attr, value):
+        result = IPAddress.coerce(obj, attr, value)
+        if result.version != 4 and result.version != 6:
+            raise ValueError(_('Network "%s" is not valid') % value)
+        return result
+
+
 class IPNetwork(IPAddress):
     @staticmethod
     def coerce(obj, attr, value):
