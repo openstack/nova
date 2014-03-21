@@ -1374,14 +1374,7 @@ class API(base.Base):
                 context, instance.uuid)
         reservations = None
 
-        if context.is_admin and context.project_id != instance.project_id:
-            project_id = instance.project_id
-        else:
-            project_id = context.project_id
-        if context.user_id != instance.user_id:
-            user_id = instance.user_id
-        else:
-            user_id = context.user_id
+        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
 
         # At these states an instance has a snapshot associate.
         if instance['vm_state'] in (vm_states.SHELVED,
