@@ -29,6 +29,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import manager
+from nova import rpc
 from nova import service
 from nova import test
 from nova.tests import utils
@@ -275,6 +276,22 @@ class ServiceTestCase(test.TestCase):
 
         serv.stop()
         serv.manager.cleanup_host.assert_called_with()
+
+    @mock.patch('nova.servicegroup.API')
+    @mock.patch('nova.conductor.api.LocalAPI.service_get_by_args')
+    @mock.patch.object(rpc, 'get_server')
+    def test_service_stop_waits_for_rpcserver(
+            self, mock_rpc, mock_svc_get_by_args, mock_API):
+        mock_svc_get_by_args.return_value = {'id': 'some_value'}
+        serv = service.Service(self.host,
+                               self.binary,
+                               self.topic,
+                               'nova.tests.test_service.FakeManager')
+        serv.start()
+        serv.stop()
+        serv.rpcserver.start.assert_called_once_with()
+        serv.rpcserver.stop.assert_called_once_with()
+        serv.rpcserver.wait.assert_called_once_with()
 
 
 class TestWSGIService(test.TestCase):
