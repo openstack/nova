@@ -547,6 +547,12 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.connection.refresh_security_group_members(1)
 
     @catch_notimplementederror
+    def test_refresh_instance_security_rules(self):
+        # FIXME: Create security group and add the instance to it
+        instance_ref, network_info = self._get_running_instance()
+        self.connection.refresh_instance_security_rules(instance_ref)
+
+    @catch_notimplementederror
     def test_refresh_provider_fw_rules(self):
         instance_ref, network_info = self._get_running_instance()
         self.connection.refresh_provider_fw_rules()
