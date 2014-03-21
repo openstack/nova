@@ -21,6 +21,7 @@ from nova.compute import task_states
 from nova import exception
 from nova.pci import pci_manager
 from nova import test
+from nova.tests import fake_instance
 from nova.tests.virt.xenapi import stubs
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
@@ -837,8 +838,44 @@ class BootableTestCase(VMOpsTestBase):
         self.assertIn('start', blocked)
 
 
-@mock.patch.object(vm_utils, 'update_vdi_virtual_size')
+@mock.patch.object(vm_utils, 'update_vdi_virtual_size', autospec=True)
 class ResizeVdisTestCase(VMOpsTestBase):
+    def test_dont_resize_root_volumes_osvol_false(self, mock_resize):
+        instance = fake_instance.fake_db_instance(root_gb=20)
+        vdis = {'root': {'osvol': False, 'ref': 'vdi_ref'}}
+        self.vmops._resize_up_vdis(instance, vdis)
+        self.assertTrue(mock_resize.called)
+
+    def test_dont_resize_root_volumes_osvol_true(self, mock_resize):
+        instance = fake_instance.fake_db_instance(root_gb=20)
+        vdis = {'root': {'osvol': True}}
+        self.vmops._resize_up_vdis(instance, vdis)
+        self.assertFalse(mock_resize.called)
+
+    def test_dont_resize_root_volumes_no_osvol(self, mock_resize):
+        instance = fake_instance.fake_db_instance(root_gb=20)
+        vdis = {'root': {}}
+        self.vmops._resize_up_vdis(instance, vdis)
+        self.assertFalse(mock_resize.called)
+
+    @mock.patch.object(vm_utils, 'get_ephemeral_disk_sizes')
+    def test_ensure_ephemeral_resize_with_root_volume(self, mock_sizes,
+                                                       mock_resize):
+        mock_sizes.return_value = [2000, 1000]
+        instance = fake_instance.fake_db_instance(root_gb=20, ephemeral_gb=20)
+        ephemerals = {"4": {"ref": 4}, "5": {"ref": 5}}
+        vdis = {'root': {'osvol': True, 'ref': 'vdi_ref'},
+                'ephemerals': ephemerals}
+        with mock.patch.object(vm_utils, 'generate_single_ephemeral',
+                               autospec=True) as g:
+            self.vmops._resize_up_vdis(instance, vdis)
+            self.assertEqual([mock.call(self.vmops._session, instance, 4,
+                                        2000),
+                              mock.call(self.vmops._session, instance, 5,
+                                        1000)],
+                             mock_resize.call_args_list)
+            self.assertFalse(g.called)
+
     def test_resize_up_vdis_root(self, mock_resize):
         instance = {"root_gb": 20, "ephemeral_gb": 0}
         self.vmops._resize_up_vdis(instance, {"root": {"ref": "vdi_ref"}})
