@@ -81,9 +81,6 @@ class FakeModel(dict):
     def __init__(self, *args, **kwargs):
         self.update(kwargs)
 
-        def __getattr__(self, name):
-            return self[name]
-
 
 class FakeNetworkManager(network_manager.NetworkManager):
     """This NetworkManager doesn't call the base class so we can bypass all
