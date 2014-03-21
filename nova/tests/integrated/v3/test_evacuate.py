@@ -58,4 +58,4 @@ class EvacuateJsonTest(test_servers.ServersSampleBase):
         response = self._do_post('servers/%s/action' % uuid,
                                  'server-evacuate-req', req_subs)
         subs = self._get_regexes()
-        self._verify_response('server-evacuate-resp', subs, response, 200)
+        self._verify_response('server-evacuate-resp', subs, response, 202)

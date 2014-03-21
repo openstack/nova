@@ -13,6 +13,7 @@
 #   under the License.
 
 
+from oslo.config import cfg
 from webob import exc
 
 from nova.api.openstack import common
@@ -27,6 +28,10 @@ from nova.openstack.common import log as logging
 from nova.openstack.common import strutils
 from nova import utils
 
+CONF = cfg.CONF
+CONF.import_opt('enable_instance_password',
+                'nova.api.openstack.compute.servers')
+
 LOG = logging.getLogger(__name__)
 ALIAS = "os-evacuate"
 authorize = extensions.extension_authorizer('compute', 'v3:' + ALIAS)
@@ -38,6 +43,7 @@ class EvacuateController(wsgi.Controller):
         self.compute_api = compute.API()
         self.host_api = compute.HostAPI()
 
+    @wsgi.response(202)
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
     @validation.schema(evacuate.evacuate)
@@ -81,7 +87,10 @@ class EvacuateController(wsgi.Controller):
         except exception.ComputeServiceInUse as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
-        return {'admin_password': password}
+        if CONF.enable_instance_password:
+            return {'admin_password': password}
+        else:
+            return {}
 
 
 class Evacuate(extensions.V3APIExtensionBase):
