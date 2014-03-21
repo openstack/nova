@@ -236,6 +236,7 @@ class BaseTestCase(test.TestCase):
             'cleaned': None,
             'deleted_at': None,
             'id': 333,
+            'project_domain_id': 'domain',
             'disable_terminate': None,
             'hostname': None,
             'display_description': None,

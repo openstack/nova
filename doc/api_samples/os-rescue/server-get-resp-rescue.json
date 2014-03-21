@@ -47,6 +47,7 @@
         "name": "new-server-test",
         "status": "RESCUE",
         "tenant_id": "openstack",
+        "project_domain_id": "",
         "updated": "2012-09-19T09:22:27Z",
         "user_id": "fake"
     }

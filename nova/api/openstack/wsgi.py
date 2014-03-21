@@ -978,14 +978,15 @@ class Resource(wsgi.Application):
         action_args.update(contents)
 
         project_id = action_args.pop("project_id", None)
-        domain_id = action_args.pop("domain_id", None)
-
-        LOG.debug(_("Project id: %s") % project_id)
-        LOG.debug(_("domain_id: %s") % domain_id)
+        # In order to disambiguate  the case of os-floating-ip-dns
+        #    and other calls
+        if "/domains/" in request.url:
+            domain_id = action_args.pop("domain_id", None)
+        else:
+            domain_id = None
 
         context = request.environ.get('nova.context')
 
-        LOG.debug(_("context.domain_id: %s") % context.domain_id)
         if (context and domain_id and (domain_id != context.domain_id)):
             msg = _("Malformed request URL: URL's domain_id '%(domain_id)s'"
                     " doesn't match Context's domain_id"
@@ -1095,7 +1096,6 @@ class Resource(wsgi.Application):
 
     def dispatch(self, method, request, action_args):
         """Dispatch a call to the action-specific method."""
-
         return method(req=request, **action_args)
 
 

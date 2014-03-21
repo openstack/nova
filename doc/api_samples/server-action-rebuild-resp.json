@@ -49,6 +49,7 @@
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
+        "project_domain_id": "",
         "updated": "2012-09-12T17:20:37Z",
         "user_id": "fake"
     }

@@ -37,6 +37,7 @@
             "accessIPv4": "",
             "accessIPv6": "",
             "tenant_id": "openstack",
+            "project_domain_id": "",
             "progress": 0,
             "flavor": {
                 "id": "1",

@@ -272,6 +272,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             'timestamp': '\d{4}-[0,1]\d-[0-3]\d[ ,T]'
                          '\d{2}:\d{2}:\d{2}'
                          '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|)',
+            'project_domain_id': '[0-9a-za-z]{1,32}',
             'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
             'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]{1,4}',
@@ -312,6 +313,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         return self._get_response(url, method, body)
 
     def _do_put(self, url, name, subs):
+        print 'url no put: ', url
         return self._do_post(url, name, subs, method='PUT')
 
     def _do_delete(self, url):

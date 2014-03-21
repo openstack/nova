@@ -39,6 +39,7 @@
             "accessIPv6": "",
             "OS-EXT-STS:vm_state": "active",
             "tenant_id": "openstack",
+            "project_domain_id": "",
             "progress": 0,
             "OS-EXT-STS:power_state": 1,
             "flavor": {

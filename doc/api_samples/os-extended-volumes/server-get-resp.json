@@ -48,6 +48,7 @@
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
+        "project_domain_id": "",
         "updated": "2013-02-07T19:35:10Z",
         "user_id": "fake",
         "os-extended-volumes:volumes_attached": [

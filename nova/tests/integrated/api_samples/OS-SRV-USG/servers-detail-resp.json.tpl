@@ -39,6 +39,7 @@
             "accessIPv6": "",
             "OS-SRV-USG:terminated_at": null,
             "tenant_id": "openstack",
+            "project_domain_id": "",
             "progress": 0,
             "flavor": {
                 "id": "1",

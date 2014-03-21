@@ -46,6 +46,7 @@
         },
         "name": "new-server-test",
         "progress": 0,
+        "project_domain_id": "",
         "status": "ACTIVE",
         "tenant_id": "openstack",
         "updated": "%(timestamp)s",

@@ -22,14 +22,18 @@ def upgrade(migrate_engine):
     # migrate_engine to your metadata
     meta = MetaData()
     meta.bind = migrate_engine
-    project_table = Table('instances', meta, autoload=True)
+    instance_table = Table('instances', meta, autoload=True)
+    shadow_instances = Table('shadow_instances', meta, autoload=True)
     parent_project_id = Column('project_domain_id', String(255))
-    project_table.create_column(parent_project_id)
+    instance_table.create_column(parent_project_id)
+    shadow_instances.create_column(parent_project_id.copy())
 
 
 def downgrade(migrate_engine):
     meta = MetaData()
     meta.bind = migrate_engine
     # Operations to reverse the above upgrade go here.
-    project_table = Table('instances', meta, autoload=True)
-    project_table.drop_column('project_domain_id')
+    instance_table = Table('instances', meta, autoload=True)
+    shadow_instances = Table('shadow_instances', meta, autoload=True)
+    instance_table.drop_column('project_domain_id')
+    shadow_instances.drop_column('project_domain_id')
