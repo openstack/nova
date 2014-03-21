@@ -820,6 +820,7 @@ class ComputeVolumeTestCase(BaseTestCase):
 
         volume_id = '55555555-aaaa-bbbb-cccc-555555555555'
         snapshot_id = '66666666-aaaa-bbbb-cccc-555555555555'
+        image_id = '77777777-aaaa-bbbb-cccc-555555555555'
 
         instance = self._create_fake_instance()
         instance_type = {'swap': 1, 'ephemeral_gb': 2}
@@ -944,6 +945,20 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.compute_api._validate_bdm,
                           self.context, instance, instance_type,
                           mappings + additional_swap)
+
+        image_no_size = [
+            {
+                'device_name': '/dev/sda4',
+                'source_type': 'image',
+                'image_id': image_id,
+                'destination_type': 'volume',
+                'boot_index': -1,
+                'volume_size': None,
+            }]
+        self.assertRaises(exception.InvalidBDM,
+                          self.compute_api._validate_bdm,
+                          self.context, instance, instance_type,
+                          mappings + image_no_size)
 
     def test_validate_bdm_media_service_exceptions(self):
         instance_type = {'swap': 1, 'ephemeral_gb': 1}
