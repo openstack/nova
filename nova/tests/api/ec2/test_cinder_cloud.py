@@ -691,7 +691,6 @@ class CinderCloudTestCase(test.TestCase):
         {'deviceName': '/dev/sdb2', 'ebs': {'snapshotId':
                                             'vol-00053977'}},
         {'deviceName': '/dev/sdb3', 'virtualName': 'ephemeral5'},
-        # {'deviceName': '/dev/sdb4', 'noDevice': True},
 
         {'deviceName': '/dev/sdc0', 'virtualName': 'swap'},
         {'deviceName': '/dev/sdc1', 'ebs': {'snapshotId':
@@ -699,7 +698,6 @@ class CinderCloudTestCase(test.TestCase):
         {'deviceName': '/dev/sdc2', 'ebs': {'snapshotId':
                                             'vol-00bc614e'}},
         {'deviceName': '/dev/sdc3', 'virtualName': 'ephemeral6'},
-        # {'deviceName': '/dev/sdc4', 'noDevice': True}
         ]
 
     _expected_root_device_name2 = '/dev/sdb1'
@@ -965,14 +963,6 @@ class CinderCloudTestCase(test.TestCase):
         vol = self.volume_api.get(admin_ctxt, vol1_id)
         self._assert_volume_detached(vol)
         self.assertFalse(vol['deleted'])
-        #db.volume_destroy(self.context, vol1_id)
-
-        ##admin_ctxt = context.get_admin_context(read_deleted="only")
-        ##vol = db.volume_get(admin_ctxt, vol2_id)
-        ##self.assertTrue(vol['deleted'])
-
-        #for snapshot_id in (ec2_snapshot1_id, ec2_snapshot2_id):
-        #    self.cloud.delete_snapshot(self.context, snapshot_id)
 
     def test_create_image(self):
         # Make sure that CreateImage works.
