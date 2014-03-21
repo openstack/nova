@@ -163,6 +163,7 @@ log_opts = [
                     'qpid=WARN',
                     'sqlalchemy=WARN',
                     'suds=INFO',
+                    'oslo.messaging=INFO',
                     'iso8601=WARN',
                 ],
                 help='list of logger=LEVEL pairs'),
