@@ -2690,7 +2690,7 @@ class ComputeManager(manager.Manager):
         """Snapshot an instance on this host.
 
         :param context: security context
-        :param instance: an Instance dict
+        :param instance: a nova.objects.instance.Instance object
         :param image_id: glance.db.sqlalchemy.models.Image.Id
         """
         # NOTE(dave-mcnally) the task state will already be set by the api
@@ -3820,7 +3820,7 @@ class ComputeManager(manager.Manager):
         """Unshelve the instance.
 
         :param context: request context
-        :param instance: an Instance dict
+        :param instance: a nova.objects.instance.Instance object
         :param image: an image to build from.  If None we assume a
             volume backed instance.
         :param filter_properties: dict containing limits, retry info etc.
@@ -4750,7 +4750,7 @@ class ComputeManager(manager.Manager):
         """Cleaning up image directory that is created pre_live_migration.
 
         :param context: security context
-        :param instance: an Instance dict sent over rpc
+        :param instance: a nova.objects.instance.Instance object sent over rpc
         """
         network_info = self._get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
