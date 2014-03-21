@@ -119,15 +119,6 @@ def fake_bdms_get_all_by_instance(context, instance_uuid, use_slave=False):
              'volume_size': 1})]
 
 
-def fake_volume_actions_to_locked_server(self, context, instance, volume):
-    raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
-
-def fake_volume_actions_to_locked_server(self, context, instance, volume_id,
-                                         device=None):
-    raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
-
 class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):
