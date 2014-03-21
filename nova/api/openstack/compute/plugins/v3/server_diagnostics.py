@@ -33,7 +33,7 @@ class ServerDiagnosticsController(object):
         try:
             instance = compute_api.get(context, server_id, want_objects=True)
         except exception.InstanceNotFound as e:
-            raise webob.exc.HTTPNotFound(e.format_message())
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return compute_api.get_diagnostics(context, instance)
 
