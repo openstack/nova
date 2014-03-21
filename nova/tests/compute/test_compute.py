@@ -210,6 +210,8 @@ class BaseTestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
+        self.none_quotas = quotas_obj.Quotas.from_reservations(
+                self.context, None)
 
         def fake_show(meh, context, id):
             if id:
@@ -3527,8 +3529,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_cleanup_volumes',
                        fake_cleanup_volumes)
 
-        self.compute._delete_instance(self.context, instance=instance,
-                                      bdms={})
+        self.compute._delete_instance(self.context, instance, [],
+                                      self.none_quotas)
 
     def test_delete_instance_keeps_net_on_power_off_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -3544,8 +3546,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(exception.InstancePowerOffFailure,
                           self.compute._delete_instance,
                           self.context,
-                          instance=instance,
-                          bdms={})
+                          instance,
+                          [],
+                          self.none_quotas)
 
     def test_delete_instance_loses_net_on_other_fail(self):
         self.mox.StubOutWithMock(self.compute.driver, 'destroy')
@@ -3563,8 +3566,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertRaises(test.TestingException,
                           self.compute._delete_instance,
                           self.context,
-                          instance=instance,
-                          bdms={})
+                          instance,
+                          [],
+                          self.none_quotas)
 
     def test_delete_instance_deletes_console_auth_tokens(self):
         instance = self._create_fake_instance_obj()
@@ -3579,8 +3583,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cauth_rpcapi, 'delete_tokens_for_instance',
                        fake_delete_tokens)
 
-        self.compute._delete_instance(self.context, instance=instance,
-                                      bdms={})
+        self.compute._delete_instance(self.context, instance, [],
+                                      self.none_quotas)
 
         self.assertTrue(self.tokens_deleted)
 
@@ -3598,8 +3602,8 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(cells_rpcapi, 'consoleauth_delete_tokens',
                        fake_delete_tokens)
 
-        self.compute._delete_instance(self.context, instance=instance,
-                                      bdms={})
+        self.compute._delete_instance(self.context, instance,
+                                      [], self.none_quotas)
 
         self.assertTrue(self.tokens_deleted)
 
@@ -3848,39 +3852,29 @@ class ComputeTestCase(BaseTestCase):
             else:
                 self._test_state_revert(instance, *operation)
 
-    def _ensure_quota_reservations_committed(self, expect_project=False,
-                                             expect_user=False):
+    def _ensure_quota_reservations_committed(self, instance):
         """Mock up commit of quota reservations."""
         reservations = list('fake_res')
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'commit')
         nova.quota.QUOTAS.commit(mox.IgnoreArg(), reservations,
-                                 project_id=(expect_project and
-                                             self.context.project_id or
-                                             None),
-                                 user_id=(expect_user and
-                                          self.context.user_id or
-                                          None))
+                                 project_id=instance['project_id'],
+                                 user_id=instance['user_id'])
         self.mox.ReplayAll()
         return reservations
 
-    def _ensure_quota_reservations_rolledback(self, expect_project=False,
-                                              expect_user=False):
+    def _ensure_quota_reservations_rolledback(self, instance):
         """Mock up rollback of quota reservations."""
         reservations = list('fake_res')
         self.mox.StubOutWithMock(nova.quota.QUOTAS, 'rollback')
         nova.quota.QUOTAS.rollback(mox.IgnoreArg(), reservations,
-                                   project_id=(expect_project and
-                                               self.context.project_id or
-                                               None),
-                                   user_id=(expect_user and
-                                            self.context.user_id or
-                                            None))
+                                   project_id=instance['project_id'],
+                                   user_id=instance['user_id'])
         self.mox.ReplayAll()
         return reservations
 
     def test_quotas_successful_delete(self):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-        resvs = self._ensure_quota_reservations_committed(True, True)
+        resvs = self._ensure_quota_reservations_committed(instance)
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), bdms=[], reservations=resvs)
 
@@ -3893,7 +3887,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_shutdown_instance',
                        fake_shutdown_instance)
 
-        resvs = self._ensure_quota_reservations_rolledback(True, True)
+        resvs = self._ensure_quota_reservations_rolledback(instance)
         self.assertRaises(test.TestingException,
                           self.compute.terminate_instance,
                           self.context, self._objectify(instance),
@@ -3902,7 +3896,7 @@ class ComputeTestCase(BaseTestCase):
     def test_quotas_successful_soft_delete(self):
         instance = self._objectify(self._create_fake_instance(
                 params=dict(task_state=task_states.SOFT_DELETING)))
-        resvs = self._ensure_quota_reservations_committed(True, True)
+        resvs = self._ensure_quota_reservations_committed(instance)
         self.compute.soft_delete_instance(self.context, instance,
                                           reservations=resvs)
 
@@ -3916,7 +3910,7 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.driver, 'soft_delete',
                        fake_soft_delete)
 
-        resvs = self._ensure_quota_reservations_rolledback(True, True)
+        resvs = self._ensure_quota_reservations_rolledback(instance)
         self.assertRaises(test.TestingException,
                           self.compute.soft_delete_instance,
                           self.context, instance,
@@ -3927,7 +3921,7 @@ class ComputeTestCase(BaseTestCase):
             params=dict(vm_state=vm_states.SOFT_DELETED)))
         # Termination should be successful, but quota reservations
         # rolled back because the instance was in SOFT_DELETED state.
-        resvs = self._ensure_quota_reservations_rolledback()
+        resvs = self._ensure_quota_reservations_rolledback(instance)
         self.compute.terminate_instance(self.context,
                 self._objectify(instance), bdms=[], reservations=resvs)
 
@@ -4056,7 +4050,7 @@ class ComputeTestCase(BaseTestCase):
                 self.context, instance, 'finish_resize.end',
                 network_info='fake-nwinfo1')
         # NOTE(comstud): This actually does the mox.ReplayAll()
-        reservations = self._ensure_quota_reservations_committed()
+        reservations = self._ensure_quota_reservations_committed(instance)
 
         self.compute.finish_resize(self.context,
                 migration=migration,
@@ -4192,7 +4186,7 @@ class ComputeTestCase(BaseTestCase):
         instance.task_state = task_states.RESIZE_MIGRATED
         instance.save()
 
-        reservations = self._ensure_quota_reservations_committed()
+        reservations = self._ensure_quota_reservations_committed(instance)
 
         # new initialize connection
         new_connection_data = dict(orig_connection_data)
@@ -4241,9 +4235,9 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        reservations = self._ensure_quota_reservations_rolledback()
-
         instance = self._create_fake_instance_obj()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
+
         instance_type = flavors.get_default_flavor()
 
         self.compute.prep_resize(self.context, instance=instance,
@@ -4461,7 +4455,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance = self._create_fake_instance_obj()
 
-        reservations = self._ensure_quota_reservations_rolledback()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
@@ -4484,7 +4478,7 @@ class ComputeTestCase(BaseTestCase):
         """
         instance = self._create_fake_instance_obj()
 
-        reservations = self._ensure_quota_reservations_rolledback()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
@@ -4513,7 +4507,7 @@ class ComputeTestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         instance_type = flavors.get_default_flavor()
 
-        reservations = self._ensure_quota_reservations_rolledback()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
@@ -4554,7 +4548,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance = self._create_fake_instance_obj()
         instance_type = flavors.get_default_flavor()
-        reservations = self._ensure_quota_reservations_rolledback()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
                 None, True, None, False)
@@ -4661,7 +4655,7 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        reservations = self._ensure_quota_reservations_committed()
+        reservations = self._ensure_quota_reservations_committed(instance)
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
@@ -4767,7 +4761,7 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        reservations = self._ensure_quota_reservations_committed()
+        reservations = self._ensure_quota_reservations_committed(instance)
 
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
@@ -4910,8 +4904,8 @@ class ComputeTestCase(BaseTestCase):
         """Ensure instance fails to migrate when source and destination are
         the same host.
         """
-        reservations = self._ensure_quota_reservations_rolledback()
         instance = self._create_fake_instance_obj()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
         instance_p = obj_base.obj_to_primitive(instance)
         self.compute.run_instance(self.context, instance_p, {}, {}, None, None,
                 None, True, None, False)
@@ -4933,9 +4927,9 @@ class ComputeTestCase(BaseTestCase):
                 'migrate_disk_and_power_off',
                 raise_migration_failure)
 
-        reservations = self._ensure_quota_reservations_rolledback()
-
         instance = self._create_fake_instance_obj()
+        reservations = self._ensure_quota_reservations_rolledback(instance)
+
         instance_type = flavors.get_default_flavor()
 
         instance_p = obj_base.obj_to_primitive(instance)
@@ -6340,7 +6334,7 @@ class ComputeTestCase(BaseTestCase):
         # Deleted old enough (only this one should be reclaimed)
         deleted_at = (timeutils.utcnow() -
                       datetime.timedelta(hours=1, minutes=5))
-        instance = self._create_fake_instance(
+        self._create_fake_instance(
                 params={'host': CONF.host,
                         'vm_state': vm_states.SOFT_DELETED,
                         'deleted_at': deleted_at})
@@ -6356,7 +6350,9 @@ class ComputeTestCase(BaseTestCase):
                         'task_state': task_states.RESTORING})
 
         self.mox.StubOutWithMock(self.compute, '_delete_instance')
-        self.compute._delete_instance(ctxt, mox.IsA(instance_obj.Instance), [])
+        self.compute._delete_instance(
+                ctxt, mox.IsA(instance_obj.Instance), [],
+                mox.IsA(quotas_obj.Quotas))
 
         self.mox.ReplayAll()
 
@@ -6399,14 +6395,15 @@ class ComputeTestCase(BaseTestCase):
         block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance1.uuid).AndReturn([])
         self.compute._delete_instance(ctxt, instance1,
-                                      None).AndRaise(test.TestingException)
+                                      [], self.none_quotas).AndRaise(
+                                              test.TestingException)
 
         # The second instance delete that follows.
         self.compute._deleted_old_enough(instance2, 3600).AndReturn(True)
         block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 ctxt, instance2.uuid).AndReturn([])
         self.compute._delete_instance(ctxt, instance2,
-                                      None)
+                                      [], self.none_quotas)
 
         self.mox.ReplayAll()
 
@@ -10092,7 +10089,7 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
 
         try:
             raise test.TestingException("Original")
-        except Exception:
+        except test.TestingException:
             exc_info = sys.exc_info()
             compute_utils.add_instance_fault_from_exc(self.context,
                     self.compute.conductor_api,
@@ -10222,7 +10219,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                 mox.IgnoreArg()).AndRaise(test.TestingException("Original"))
 
         self.compute._reschedule_resize_or_reraise(mox.IgnoreArg(), None,
-                inst_obj, mox.IgnoreArg(), self.instance_type, [], {},
+                inst_obj, mox.IgnoreArg(), self.instance_type,
+                mox.IgnoreArg(), {},
                 {})
 
         self.mox.ReplayAll()
@@ -10255,8 +10253,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, instance, exc_info, self.instance_type, None,
-                    {}, {})
+                    None, instance, exc_info, self.instance_type,
+                    self.none_quotas, {}, {})
 
     def test_reschedule_false(self):
         """Original exception should be raised if the resize is not
@@ -10278,8 +10276,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, instance, exc_info, self.instance_type, None,
-                    {}, {})
+                    None, instance, exc_info, self.instance_type,
+                    self.none_quotas, {}, {})
 
     def test_reschedule_true(self):
         # If rescheduled, the original resize exception should be logged.
@@ -10301,8 +10299,9 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             self.compute._log_original_error(exc_info, instance.uuid)
             self.mox.ReplayAll()
 
-            self.compute._reschedule_resize_or_reraise(self.context, None,
-                    instance, exc_info, self.instance_type, None, {}, {})
+            self.compute._reschedule_resize_or_reraise(
+                    self.context, None, instance, exc_info,
+                    self.instance_type, self.none_quotas, {}, {})
 
 
 class ComputeInactiveImageTestCase(BaseTestCase):
