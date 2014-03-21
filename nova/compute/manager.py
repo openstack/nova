@@ -4788,39 +4788,77 @@ class ComputeManager(manager.Manager):
         if not heal_interval:
             return
 
-        instance_uuids = getattr(self, '_instance_uuids_to_heal', None)
+        instance_uuids = getattr(self, '_instance_uuids_to_heal', [])
         instance = None
 
-        while not instance or instance['host'] != self.host:
-            if instance_uuids:
+        LOG.debug(_('Starting heal instance info cache'))
+
+        if not instance_uuids:
+            # The list of instances to heal is empty so rebuild it
+            LOG.debug(_('Rebuilding the list of instances to heal'))
+            db_instances = instance_obj.InstanceList.get_by_host(
+                context, self.host, expected_attrs=[], use_slave=True)
+            for inst in db_instances:
+                # We don't want to refersh the cache for instances
+                # which are building or deleting so don't put them
+                # in the list. If they are building they will get
+                # added to the list next time we build it.
+                if (inst.vm_state == vm_states.BUILDING):
+                    LOG.debug(_('Skipping network cache update for instance '
+                                'because it is Building.'), instance=inst)
+                    continue
+                if (inst.task_state == task_states.DELETING):
+                    LOG.debug(_('Skipping network cache update for instance '
+                                'because it is being deleted.'), instance=inst)
+                    continue
+
+                if not instance:
+                    # Save the first one we find so we don't
+                    # have to get it again
+                    instance = inst
+                else:
+                    instance_uuids.append(inst['uuid'])
+
+            self._instance_uuids_to_heal = instance_uuids
+        else:
+            # Find the next valid instance on the list
+            while instance_uuids:
                 try:
-                    instance = instance_obj.Instance.get_by_uuid(
-                        context, instance_uuids.pop(0),
-                        expected_attrs=['system_metadata'],
-                        use_slave=True)
+                    inst = instance_obj.Instance.get_by_uuid(
+                            context, instance_uuids.pop(0),
+                            expected_attrs=['system_metadata'],
+                            use_slave=True)
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue
-            else:
-                # No more in our copy of uuids.  Pull from the DB.
-                db_instances = instance_obj.InstanceList.get_by_host(
-                    context, self.host, expected_attrs=[], use_slave=True)
-                if not db_instances:
-                    # None.. just return.
-                    return
-                instance = db_instances[0]
-                instance_uuids = [inst['uuid'] for inst in db_instances[1:]]
-                self._instance_uuids_to_heal = instance_uuids
 
-        # We have an instance now and it's ours
-        try:
-            # Call to network API to get instance info.. this will
-            # force an update to the instance's info_cache
-            self._get_instance_nw_info(context, instance, use_slave=True)
-            LOG.debug(_('Updated the info_cache for instance'),
-                      instance=instance)
-        except Exception:
-            LOG.debug(_("An error occurred"), exc_info=True)
+                # Check the instance hasn't been migrated
+                if inst.host != self.host:
+                    LOG.debug(_('Skipping network cache update for instance '
+                                'because it has been migrated to another '
+                                'host.'), instance=inst)
+                # Check the instance isn't being deleting
+                elif inst.task_state == task_states.DELETING:
+                    LOG.debug(_('Skipping network cache update for instance '
+                                'because it is being deleted.'), instance=inst)
+                else:
+                    instance = inst
+                    break
+
+        if instance:
+            # We have an instance now to refresh
+            try:
+                # Call to network API to get instance info.. this will
+                # force an update to the instance's info_cache
+                self._get_instance_nw_info(context, instance, use_slave=True)
+                LOG.debug(_('Updated the network info_cache for instance'),
+                          instance=instance)
+            except Exception:
+                LOG.error(_('An error occurred while refreshing the network '
+                            'cache.'), instance=instance, exc_info=True)
+        else:
+            LOG.debug(_("Didn't find any instances for network info cache "
+                        "update."))
 
     @periodic_task.periodic_task
     def _poll_rebooting_instances(self, context):

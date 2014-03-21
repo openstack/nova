@@ -5731,7 +5731,7 @@ class ComputeTestCase(BaseTestCase):
 
         instance_map = {}
         instances = []
-        for x in xrange(5):
+        for x in xrange(8):
             inst_uuid = 'fake-uuid-%s' % x
             instance_map[inst_uuid] = fake_instance.fake_db_instance(
                 uuid=inst_uuid, host=CONF.host, created_at=None)
@@ -5772,40 +5772,50 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute, '_get_instance_nw_info',
                 fake_get_instance_nw_info)
 
-        call_info['expected_instance'] = instances[0]
+        # Make an instance appear to be still Building
+        instances[0]['vm_state'] = vm_states.BUILDING
+        # Make an instance appear to be Deleting
+        instances[1]['task_state'] = task_states.DELETING
+        # '0', '1' should be skipped..
+        call_info['expected_instance'] = instances[2]
         self.compute._heal_instance_info_cache(ctxt)
         self.assertEqual(1, call_info['get_all_by_host'])
         self.assertEqual(0, call_info['get_by_uuid'])
         self.assertEqual(1, call_info['get_nw_info'])
 
-        call_info['expected_instance'] = instances[1]
+        call_info['expected_instance'] = instances[3]
         self.compute._heal_instance_info_cache(ctxt)
         self.assertEqual(1, call_info['get_all_by_host'])
         self.assertEqual(1, call_info['get_by_uuid'])
         self.assertEqual(2, call_info['get_nw_info'])
 
         # Make an instance switch hosts
-        instances[2]['host'] = 'not-me'
+        instances[4]['host'] = 'not-me'
         # Make an instance disappear
-        instance_map.pop(instances[3]['uuid'])
-        # '2' and '3' should be skipped..
-        call_info['expected_instance'] = instances[4]
+        instance_map.pop(instances[5]['uuid'])
+        # Make an instance switch to be Deleting
+        instances[6]['task_state'] = task_states.DELETING
+        # '4', '5', and '6' should be skipped..
+        call_info['expected_instance'] = instances[7]
         self.compute._heal_instance_info_cache(ctxt)
-        self.assertEqual(call_info['get_all_by_host'], 1)
-        # Incremented for '2' and '4'.. '3' caused a raise above.
-        self.assertEqual(call_info['get_by_uuid'], 3)
-        self.assertEqual(call_info['get_nw_info'], 3)
+        self.assertEqual(1, call_info['get_all_by_host'])
+        self.assertEqual(4, call_info['get_by_uuid'])
+        self.assertEqual(3, call_info['get_nw_info'])
         # Should be no more left.
-        self.assertEqual(len(self.compute._instance_uuids_to_heal), 0)
+        self.assertEqual(0, len(self.compute._instance_uuids_to_heal))
 
-        # This should cause a DB query now so we get first instance
-        # back again
-        call_info['expected_instance'] = instances[0]
+        # This should cause a DB query now, so get a list of instances
+        # where none can be processed to make sure we handle that case
+        # cleanly.   Use just '0' (Building) and '1' (Deleting)
+        instances = instances[0:2]
+
         self.compute._heal_instance_info_cache(ctxt)
-        self.assertEqual(call_info['get_all_by_host'], 2)
-        # Stays the same, because the instance came from the DB
-        self.assertEqual(call_info['get_by_uuid'], 3)
-        self.assertEqual(call_info['get_nw_info'], 4)
+        # Should have called the list once more
+        self.assertEqual(2, call_info['get_all_by_host'])
+        # Stays the same because we remove invalid entries from the list
+        self.assertEqual(4, call_info['get_by_uuid'])
+        # Stays the same because we didn't find anything to process
+        self.assertEqual(3, call_info['get_nw_info'])
 
     def test_poll_rescued_instances(self):
         timed_out_time = timeutils.utcnow() - datetime.timedelta(minutes=5)
