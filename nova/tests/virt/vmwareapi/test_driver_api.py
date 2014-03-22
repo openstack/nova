@@ -937,6 +937,22 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
         self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
 
+    def test_search_vm_ref_by_identifier(self):
+        self._create_vm()
+        vm_ref = vm_util.search_vm_ref_by_identifier(self.conn._session,
+                                            self.instance['uuid'])
+        self.assertIsNotNone(vm_ref, 'VM Reference cannot be none')
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        fake_vm.set("summary.config.instanceUuid", "foo")
+        fake_vm.set("name", "foo")
+        fake_vm.get('config.extraConfig["nvp.vm-uuid"]').value = "foo"
+        self.assertIsNone(vm_util.search_vm_ref_by_identifier(
+                                    self.conn._session, self.instance['uuid']),
+                          "VM Reference should be none")
+        self.assertIsNotNone(
+                vm_util.search_vm_ref_by_identifier(self.conn._session, "foo"),
+                "VM Reference should not be none")
+
     def test_get_object_for_optionvalue(self):
         self._create_vm()
         vms = self.conn._session._call_method(vim_util, "get_objects",
@@ -2069,6 +2085,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
             return None
 
         self._create_vm()
+        vm_ref_orig = vm_util.get_vm_ref(self.conn._session, self.instance)
         flavor = {'name': 'fake', 'flavorid': 'fake_id'}
         self.stubs.Set(self.conn._vmops, "_update_instance_progress",
                        fake_update_instance_progress)
@@ -2077,6 +2094,64 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.conn.migrate_disk_and_power_off(self.context, self.instance,
                                              'fake_dest', flavor,
                                              None)
+        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        self.assertNotEqual(vm_ref_orig.value, vm_ref.value,
+                             "These should be different")
+
+    def test_disassociate_vmref_from_instance(self):
+        self._create_vm()
+        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        vm_util.disassociate_vmref_from_instance(self.conn._session,
+                                        self.instance, vm_ref, "-backup")
+        self.assertRaises(exception.InstanceNotFound,
+                    vm_util.get_vm_ref, self.conn._session, self.instance)
+
+    def test_clone_vmref_for_instance(self):
+        self._create_vm()
+        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        vm_util.disassociate_vmref_from_instance(self.conn._session,
+                                            self.instance, vm_ref, "-backup")
+        host_ref = vmwareapi_fake._get_object_refs("HostSystem")[0]
+        ds_ref = vmwareapi_fake._get_object_refs("Datastore")[0]
+        dc_obj = vmwareapi_fake._get_objects("Datacenter").objects[0]
+        vm_util.clone_vmref_for_instance(self.conn._session, self.instance,
+                                         vm_ref, host_ref, ds_ref,
+                                         dc_obj.get("vmFolder"))
+        self.assertIsNotNone(
+                        vm_util.get_vm_ref(self.conn._session, self.instance),
+                        "No VM found")
+        cloned_vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        self.assertNotEqual(vm_ref.value, cloned_vm_ref.value,
+                            "Reference for the cloned VM should be different")
+        vm_obj = vmwareapi_fake._get_vm_mdo(vm_ref)
+        cloned_vm_obj = vmwareapi_fake._get_vm_mdo(cloned_vm_ref)
+        self.assertEqual(vm_obj.name, self.instance['uuid'] + "-backup",
+                       "Original VM name should be with suffix -backup")
+        self.assertEqual(cloned_vm_obj.name, self.instance['uuid'],
+                       "VM name does not match instance['uuid']")
+        self.assertRaises(error_util.MissingParameter,
+                          vm_util.clone_vmref_for_instance, self.conn._session,
+                          self.instance, None, host_ref, ds_ref,
+                          dc_obj.get("vmFolder"))
+
+    def test_associate_vmref_for_instance(self):
+        self._create_vm()
+        vm_ref = vm_util.get_vm_ref(self.conn._session, self.instance)
+        # First disassociate the VM from the instance so that we have a VM
+        # to later associate using the associate_vmref_for_instance method
+        vm_util.disassociate_vmref_from_instance(self.conn._session,
+                                            self.instance, vm_ref, "-backup")
+        # Ensure that the VM is indeed disassociated and that we cannot find
+        # the VM using the get_vm_ref method
+        self.assertRaises(exception.InstanceNotFound,
+                    vm_util.get_vm_ref, self.conn._session, self.instance)
+        # Associate the VM back to the instance
+        vm_util.associate_vmref_for_instance(self.conn._session, self.instance,
+                                             suffix="-backup")
+        # Verify if we can get the VM reference
+        self.assertIsNotNone(
+                        vm_util.get_vm_ref(self.conn._session, self.instance),
+                        "No VM found")
 
     def test_confirm_migration(self):
         self._create_vm()

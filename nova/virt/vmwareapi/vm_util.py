@@ -29,6 +29,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 from nova import utils
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vim_util
 
 CONF = cfg.CONF
@@ -570,13 +571,15 @@ def detach_virtual_disk_spec(client_factory, device, destroy_disk=False):
 
 
 def clone_vm_spec(client_factory, location,
-                  power_on=False, snapshot=None, template=False):
+                  power_on=False, snapshot=None, template=False, config=None):
     """Builds the VM clone spec."""
     clone_spec = client_factory.create('ns0:VirtualMachineCloneSpec')
     clone_spec.location = location
     clone_spec.powerOn = power_on
     if snapshot:
         clone_spec.snapshot = snapshot
+    if config is not None:
+        clone_spec.config = config
     clone_spec.template = template
     return clone_spec
 
@@ -827,12 +830,24 @@ def _get_vm_ref_from_extraconfig(session, instance_uuid):
 def get_vm_ref(session, instance):
     """Get reference to the VM through uuid or vm name."""
     uuid = instance['uuid']
-    vm_ref = (_get_vm_ref_from_vm_uuid(session, uuid) or
-                  _get_vm_ref_from_extraconfig(session, uuid) or
-                  _get_vm_ref_from_uuid(session, uuid) or
-                  _get_vm_ref_from_name(session, instance['name']))
+    vm_ref = (search_vm_ref_by_identifier(session, uuid) or
+              _get_vm_ref_from_name(session, instance['name']))
     if vm_ref is None:
         raise exception.InstanceNotFound(instance_id=uuid)
+    return vm_ref
+
+
+def search_vm_ref_by_identifier(session, identifier):
+    """Searches VM reference using the identifier.
+
+    This method is primarily meant to separate out part of the logic for
+    vm_ref search that could be use directly in the special case of
+    migrating the instance. For querying VM linked to an instance always
+    use get_vm_ref instead.
+    """
+    vm_ref = (_get_vm_ref_from_vm_uuid(session, identifier) or
+              _get_vm_ref_from_extraconfig(session, identifier) or
+              _get_vm_ref_from_uuid(session, identifier))
     return vm_ref
 
 
@@ -1347,3 +1362,96 @@ def get_vmdk_adapter_type(adapter_type):
     else:
         vmdk_adapter_type = adapter_type
     return vmdk_adapter_type
+
+
+def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
+                                vmfolder_ref):
+    """Clone VM and link the cloned VM to the instance.
+
+    Clones the passed vm_ref into a new VM and links the cloned vm to
+    the passed instance.
+    """
+    if vm_ref is None:
+        LOG.warn(_("vmwareapi:vm_util:clone_vmref_for_instance, called "
+                   "with vm_ref=None"))
+        raise error_util.MissingParameter(param="vm_ref")
+    # Get the clone vm spec
+    client_factory = session._get_vim().client.factory
+    rel_spec = relocate_vm_spec(client_factory, ds_ref, host_ref)
+    extra_opts = {'nvp.vm-uuid': instance['uuid']}
+    config_spec = get_vm_extra_config_spec(client_factory, extra_opts)
+    config_spec.instanceUuid = instance['uuid']
+    clone_spec = clone_vm_spec(client_factory, rel_spec, config=config_spec)
+
+    # Clone VM on ESX host
+    LOG.debug(_("Cloning VM for instance %s"), instance['uuid'],
+               instance=instance)
+    vm_clone_task = session._call_method(session._get_vim(), "CloneVM_Task",
+                                         vm_ref, folder=vmfolder_ref,
+                                         name=instance['uuid'],
+                                         spec=clone_spec)
+    session._wait_for_task(vm_clone_task)
+    LOG.debug(_("Cloned VM for instance %s"), instance['uuid'],
+               instance=instance)
+    # Invalidate the cache, so that it is refetched the next time
+    vm_ref_cache_delete(instance['uuid'])
+
+
+def disassociate_vmref_from_instance(session, instance, vm_ref=None,
+                                      suffix='-orig'):
+    """Disassociates the VM linked to the instance.
+
+    Disassociates the VM linked to the instance by performing the following
+    1. Update the extraConfig property for nvp.vm-uuid to be replaced with
+    instance[uuid]+suffix
+    2. Rename the VM to be instance[uuid]+suffix instead
+    3. Reset the instanceUUID of the VM to a new generated value
+    """
+    if vm_ref is None:
+        vm_ref = get_vm_ref(session, instance)
+    extra_opts = {'nvp.vm-uuid': instance['uuid'] + suffix}
+    client_factory = session._get_vim().client.factory
+    reconfig_spec = get_vm_extra_config_spec(client_factory, extra_opts)
+    reconfig_spec.name = instance['uuid'] + suffix
+    reconfig_spec.instanceUuid = ''
+    LOG.debug(_("Disassociating VM from instance %s"), instance['uuid'],
+               instance=instance)
+    reconfig_task = session._call_method(session._get_vim(), "ReconfigVM_Task",
+                                         vm_ref, spec=reconfig_spec)
+    session._wait_for_task(reconfig_task)
+    LOG.debug(_("Disassociated VM from instance %s"), instance['uuid'],
+               instance=instance)
+    # Invalidate the cache, so that it is refetched the next time
+    vm_ref_cache_delete(instance['uuid'])
+
+
+def associate_vmref_for_instance(session, instance, vm_ref=None,
+                                    suffix='-orig'):
+    """Associates the VM to the instance.
+
+    Associates the VM to the instance by performing the following
+    1. Update the extraConfig property for nvp.vm-uuid to be replaced with
+    instance[uuid]
+    2. Rename the VM to be instance[uuid]
+    3. Reset the instanceUUID of the VM to be instance[uuid]
+    """
+    if vm_ref is None:
+        vm_ref = search_vm_ref_by_identifier(session,
+                                             instance['uuid'] + suffix)
+        if vm_ref is None:
+            raise exception.InstanceNotFound(instance_id=instance['uuid']
+                                            + suffix)
+    extra_opts = {'nvp.vm-uuid': instance['uuid']}
+    client_factory = session._get_vim().client.factory
+    reconfig_spec = get_vm_extra_config_spec(client_factory, extra_opts)
+    reconfig_spec.name = instance['uuid']
+    reconfig_spec.instanceUuid = instance['uuid']
+    LOG.debug(_("Associating VM to instance %s"), instance['uuid'],
+               instance=instance)
+    reconfig_task = session._call_method(session._get_vim(), "ReconfigVM_Task",
+                                         vm_ref, spec=reconfig_spec)
+    session._wait_for_task(reconfig_task)
+    LOG.debug(_("Associated VM to instance %s"), instance['uuid'],
+               instance=instance)
+    # Invalidate the cache, so that it is refetched the next time
+    vm_ref_cache_delete(instance['uuid'])
