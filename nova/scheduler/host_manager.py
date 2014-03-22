@@ -310,7 +310,8 @@ class HostState(object):
         if vm_state == vm_states.BUILDING or task_state in [
                 task_states.RESIZE_MIGRATING, task_states.REBUILDING,
                 task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
-                task_states.IMAGE_BACKUP]:
+                task_states.IMAGE_BACKUP, task_states.UNSHELVING,
+                task_states.RESCUING]:
             self.num_io_ops += 1
 
     def __repr__(self):
