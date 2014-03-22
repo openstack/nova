@@ -107,6 +107,14 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         vmwareapi_fake.cleanup()
         nova.tests.image.fake.FakeImageService_reset()
 
+    def _spawn_vm(self, injected_files=[], admin_password=None,
+                  block_device_info=None):
+        self.conn.spawn(self.context, self.instance, self.image,
+                        injected_files=injected_files,
+                        admin_password=admin_password,
+                        network_info=self.network_info,
+                        block_device_info=block_device_info)
+
     def test_create_vm_with_config_drive_verify_method_invocation(self):
         self.instance = copy.deepcopy(self.test_instance)
         self.instance['config_drive'] = True
@@ -128,10 +136,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         # _attach_cdrom_to_vm call with the correct set of parameters
         # then mox's VerifyAll will throw a Expected methods never called
         # Exception
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
-                        network_info=self.network_info,
-                        block_device_info=None)
+        self._spawn_vm()
 
     def test_create_vm_without_config_drive(self):
         self.instance = copy.deepcopy(self.test_instance)
@@ -142,15 +147,9 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         # if spawn ends up calling _create_config_drive or
         # _attach_cdrom_to_vm then mox will log a Unexpected method call
         # exception
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
-                        network_info=self.network_info,
-                        block_device_info=None)
+        self._spawn_vm()
 
     def test_create_vm_with_config_drive(self):
         self.instance = copy.deepcopy(self.test_instance)
         self.instance['config_drive'] = True
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
-                        network_info=self.network_info,
-                        block_device_info=None)
+        self._spawn_vm()
