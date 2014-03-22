@@ -31,6 +31,13 @@ def ids_from_instance(context, instance):
     return project_id, user_id
 
 
+# TODO(lyj): This method needs to be cleaned up once the
+# ids_from_instance helper method is renamed or some common
+# method is added for objects.quotas.
+def ids_from_security_group(context, security_group):
+    return ids_from_instance(context, security_group)
+
+
 class Quotas(base.NovaObject):
     fields = {
         'reservations': fields.ListOfStringsField(nullable=True),
