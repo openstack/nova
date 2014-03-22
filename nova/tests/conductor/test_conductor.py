@@ -39,6 +39,7 @@ from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import quota
@@ -1545,7 +1546,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  'select_destinations')
         self.mox.StubOutWithMock(self.conductor,
                                  '_set_vm_state_and_notify')
-        self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'rollback')
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
@@ -1568,12 +1569,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
-        self.conductor.quotas.rollback(self.context, resvs)
+        quotas_obj.Quotas.rollback()
 
         self.mox.ReplayAll()
 
         self.conductor._cold_migrate(self.context, inst_obj,
-                                     'flavor', filter_props, resvs)
+                                     'flavor', filter_props, [resvs])
 
     def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
@@ -1592,7 +1593,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  'select_destinations')
         self.mox.StubOutWithMock(self.conductor,
                                  '_set_vm_state_and_notify')
-        self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'rollback')
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
@@ -1615,12 +1616,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
-        self.conductor.quotas.rollback(self.context, resvs)
+        quotas_obj.Quotas.rollback()
 
         self.mox.ReplayAll()
 
         self.conductor._cold_migrate(self.context, inst_obj,
-                                     'flavor', filter_props, resvs)
+                                     'flavor', filter_props, [resvs])
 
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
@@ -1644,7 +1645,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  'prep_resize')
         self.mox.StubOutWithMock(self.conductor,
                                  '_set_vm_state_and_notify')
-        self.mox.StubOutWithMock(self.conductor.quotas, 'rollback')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'rollback')
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
@@ -1669,7 +1670,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.conductor.compute_rpcapi.prep_resize(
                 self.context, image, inst_obj,
-                'flavor', hosts[0]['host'], resvs,
+                'flavor', hosts[0]['host'], [resvs],
                 request_spec=expected_request_spec,
                 filter_properties=expected_filter_props,
                 node=hosts[0]['nodename']).AndRaise(exc_info)
@@ -1681,14 +1682,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 expected_request_spec)
-        self.conductor.quotas.rollback(self.context, resvs)
+        quotas_obj.Quotas.rollback()
 
         self.mox.ReplayAll()
 
         self.assertRaises(test.TestingException,
                           self.conductor._cold_migrate,
                           self.context, inst_obj, 'flavor',
-                          filter_props, resvs)
+                          filter_props, [resvs])
 
 
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,

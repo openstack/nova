@@ -36,6 +36,7 @@ from nova import notifications
 from nova.objects import base as nova_object
 from nova.objects import instance as instance_obj
 from nova.objects import migration as migration_obj
+from nova.objects import quotas as quotas_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -86,7 +87,6 @@ class ConductorManager(manager.Manager):
         self._network_api = None
         self._compute_api = None
         self.compute_task_mgr = ComputeTaskManager()
-        self.quotas = quota.QUOTAS
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.additional_endpoints.append(self.compute_task_mgr)
         self.additional_endpoints.append(_ConductorManagerV2Proxy(self))
@@ -654,7 +654,6 @@ class ComputeTaskManager(base.Base):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.image_service = glance.get_default_image_service()
-        self.quotas = quota.QUOTAS
 
     @messaging.expected_exceptions(exception.NoValidHost,
                                    exception.ComputeServiceUnavailable,
@@ -696,6 +695,9 @@ class ComputeTaskManager(base.Base):
         request_spec = scheduler_utils.build_request_spec(
             context, image, [instance], instance_type=flavor)
 
+        quotas = quotas_obj.Quotas.from_reservations(context,
+                                                     reservations,
+                                                     instance=instance)
         try:
             hosts = self.scheduler_rpcapi.select_destinations(
                     context, request_spec, filter_properties)
@@ -707,8 +709,7 @@ class ComputeTaskManager(base.Base):
             updates = {'vm_state': vm_state, 'task_state': None}
             self._set_vm_state_and_notify(context, 'migrate_server',
                                           updates, ex, request_spec)
-            if reservations:
-                self.quotas.rollback(context, reservations)
+            quotas.rollback()
 
             LOG.warning(_("No valid host found for cold migrate"),
                         instance=instance)
@@ -737,8 +738,7 @@ class ComputeTaskManager(base.Base):
                            'task_state': None}
                 self._set_vm_state_and_notify(context, 'migrate_server',
                                               updates, ex, request_spec)
-                if reservations:
-                    self.quotas.rollback(context, reservations)
+                quotas.rollback()
 
     def _set_vm_state_and_notify(self, context, method, updates, ex,
                                  request_spec):
