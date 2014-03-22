@@ -2067,7 +2067,8 @@ class API(base.Base):
                 state=instance['vm_state'],
                 method='reboot')
         if ((reboot_type == 'SOFT' and
-                instance['task_state'] == task_states.REBOOTING) or
+                instance['task_state'] in
+                (task_states.REBOOTING, task_states.REBOOTING_HARD)) or
             (reboot_type == 'HARD' and
                 instance['task_state'] == task_states.REBOOTING_HARD)):
             raise exception.InstanceInvalidState(
