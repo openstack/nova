@@ -202,7 +202,7 @@ class API(base.Base):
         :param dhcp_options: None or a set of key/value pairs that should
             determine the DHCP BOOTP response, eg. for PXE booting an instance
             configured with the baremetal hypervisor. It is expected that these
-            are already formatted for the quantum v2 api.
+            are already formatted for the neutron v2 api.
             See nova/virt/driver.py:dhcp_options_for_instance for an example.
         """
         hypervisor_macs = kwargs.get('macs', None)
