@@ -105,6 +105,7 @@ class VMwareVMOps(object):
         self._tmp_folder = 'vmware_temp'
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
+        self._migrate_suffix = '-orig'
         self._poll_rescue_last_ran = None
         self._is_neutron = utils.is_neutron()
         self._datastore_dc_mapping = {}
@@ -1251,49 +1252,33 @@ class VMwareVMOps(object):
                                        step=1,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        # 2. Rename the original VM with suffix '-orig'
-        name_label = self._get_orig_vm_name_label(instance)
-        LOG.debug(_("Renaming the VM to %s") % name_label,
-                  instance=instance)
-        rename_task = self._session._call_method(
-                            self._session._get_vim(),
-                            "Rename_Task", vm_ref, newName=name_label)
-        self._session._wait_for_task(rename_task)
-        LOG.debug(_("Renamed the VM to %s") % name_label,
-                  instance=instance)
+        # 2. Disassociate the linked vsphere VM from the instance
+        vm_util.disassociate_vmref_from_instance(self._session, instance,
+                                                 vm_ref,
+                                                 suffix=self._migrate_suffix)
         self._update_instance_progress(context, instance,
                                        step=2,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
-        # Get the clone vm spec
         ds_ref = vm_util.get_datastore_ref_and_name(
                             self._session, self._cluster, host_ref,
                             datastore_regex=self._datastore_regex)[0]
-        client_factory = self._session._get_vim().client.factory
-        rel_spec = vm_util.relocate_vm_spec(client_factory, ds_ref, host_ref)
-        clone_spec = vm_util.clone_vm_spec(client_factory, rel_spec)
         dc_info = self.get_datacenter_ref_and_name(ds_ref)
-
-        # 3. Clone VM on ESX host
-        LOG.debug(_("Cloning VM to host %s") % dest, instance=instance)
-        vm_clone_task = self._session._call_method(
-                                self._session._get_vim(),
-                                "CloneVM_Task", vm_ref,
-                                folder=dc_info.vmFolder,
-                                name=instance['uuid'],
-                                spec=clone_spec)
-        self._session._wait_for_task(vm_clone_task)
-        LOG.debug(_("Cloned VM to host %s") % dest, instance=instance)
+        # 3. Clone the VM for instance
+        vm_util.clone_vmref_for_instance(self._session, instance, vm_ref,
+                                         host_ref, ds_ref, dc_info.vmFolder)
         self._update_instance_progress(context, instance,
                                        step=3,
                                        total_steps=RESIZE_TOTAL_STEPS)
 
     def confirm_migration(self, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
-        instance_name = self._get_orig_vm_name_label(instance)
-        # Destroy the original VM. The vm_ref is via the instance_name
-        # and not the UUID
-        vm_ref = vm_util.get_vm_ref_from_name(self._session, instance_name)
+        # Destroy the original VM. The vm_ref needs to be searched using the
+        # instance['uuid'] + self._migrate_suffix as the identifier. We will
+        # not get the vm when searched using the instanceUuid but rather will
+        # be found using the uuid buried in the extraConfig
+        vm_ref = vm_util.search_vm_ref_by_identifier(self._session,
+                                    instance['uuid'] + self._migrate_suffix)
         if vm_ref is None:
             LOG.debug(_("instance not present"), instance=instance)
             return
@@ -1312,21 +1297,8 @@ class VMwareVMOps(object):
     def finish_revert_migration(self, context, instance, network_info,
                                 block_device_info, power_on=True):
         """Finish reverting a resize."""
-        # The original vm was suffixed with '-orig'; find it using
-        # the old suffix, remove the suffix, then power it back on.
-        name_label = self._get_orig_vm_name_label(instance)
-        vm_ref = vm_util.get_vm_ref_from_name(self._session, name_label)
-        if vm_ref is None:
-            raise exception.InstanceNotFound(instance_id=name_label)
-
-        LOG.debug(_("Renaming the VM from %s") % name_label,
-                  instance=instance)
-        rename_task = self._session._call_method(
-                            self._session._get_vim(),
-                            "Rename_Task", vm_ref, newName=instance['uuid'])
-        self._session._wait_for_task(rename_task)
-        LOG.debug(_("Renamed the VM from %s") % name_label,
-                  instance=instance)
+        vm_util.associate_vmref_for_instance(self._session, instance,
+                                             suffix=self._migrate_suffix)
         if power_on:
             self._power_on(instance)
 
