@@ -125,13 +125,13 @@ class BaseTest(test.TestCase):
 
         self.controller = server_metadata.ServerMetadataController()
         self.uuid = str(uuid.uuid4())
-        self.url = '/v1.1/fake/servers/%s/metadata' % self.uuid
+        self.url = '/fake/servers/%s/metadata' % self.uuid
 
 
 class ServerMetaDataTest(BaseTest):
 
     def test_index(self):
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         res_dict = self.controller.index(req, self.uuid)
 
         expected = {
@@ -146,20 +146,20 @@ class ServerMetaDataTest(BaseTest):
     def test_index_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_server_nonexistent)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.index, req, self.url)
 
     def test_index_no_data(self):
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_empty_server_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         res_dict = self.controller.index(req, self.uuid)
         expected = {'metadata': {}}
         self.assertEqual(expected, res_dict)
 
     def test_show(self):
-        req = fakes.HTTPRequest.blank(self.url + '/key2')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key2')
         res_dict = self.controller.show(req, self.uuid, 'key2')
         expected = {'metadata': {'key2': 'value2'}}
         self.assertEqual(expected, res_dict)
@@ -167,14 +167,14 @@ class ServerMetaDataTest(BaseTest):
     def test_show_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_server_nonexistent)
-        req = fakes.HTTPRequest.blank(self.url + '/key2')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key2')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, self.uuid, 'key2')
 
     def test_show_meta_not_found(self):
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_empty_server_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key6')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key6')
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, req, self.uuid, 'key6')
 
@@ -183,7 +183,7 @@ class ServerMetaDataTest(BaseTest):
                        return_server_metadata)
         self.stubs.Set(nova.db, 'instance_metadata_delete',
                        delete_server_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key2')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key2')
         req.method = 'DELETE'
         res = self.controller.delete(req, self.uuid, 'key2')
 
@@ -192,7 +192,7 @@ class ServerMetaDataTest(BaseTest):
     def test_delete_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_nonexistent)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, req, self.uuid, 'key1')
@@ -200,7 +200,7 @@ class ServerMetaDataTest(BaseTest):
     def test_delete_meta_not_found(self):
         self.stubs.Set(nova.db, 'instance_metadata_get',
                        return_empty_server_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key6')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key6')
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, req, self.uuid, 'key6')
@@ -227,7 +227,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create_empty_body(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
 
@@ -237,7 +237,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create_item_empty_key(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {"": "value1"}}
         req.body = jsonutils.dumps(body)
@@ -249,7 +249,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create_item_non_dict(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": None}
         req.body = jsonutils.dumps(body)
@@ -261,7 +261,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create_item_key_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {("a" * 260): "value1"}}
         req.body = jsonutils.dumps(body)
@@ -274,7 +274,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_nonexistent)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'POST'
         body = {"metadata": {"key1": "value1"}}
         req.body = jsonutils.dumps(body)
@@ -328,7 +328,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_all_malformed_container(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'PUT'
         req.content_type = "application/json"
         expected = {'meta': {}}
@@ -340,7 +340,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_all_malformed_data(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'PUT'
         req.content_type = "application/json"
         expected = {'metadata': ['asdf']}
@@ -351,7 +351,7 @@ class ServerMetaDataTest(BaseTest):
 
     def test_update_all_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_get', return_server_nonexistent)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'PUT'
         req.content_type = "application/json"
         body = {'metadata': {'key10': 'value10'}}
@@ -362,7 +362,7 @@ class ServerMetaDataTest(BaseTest):
 
     def test_update_item(self):
         self.stubs.Set(instance_obj.Instance, 'save', fake_instance_save)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {"key1": "value1"}}
         req.body = jsonutils.dumps(body)
@@ -374,7 +374,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_nonexistent_server(self):
         self.stubs.Set(nova.db, 'instance_get_by_uuid',
                        return_server_nonexistent)
-        req = fakes.HTTPRequest.blank('/v1.1/fake/servers/asdf/metadata/key1')
+        req = fakes.HTTPRequestV3.blank('/fake/servers/asdf/metadata/key1')
         req.method = 'PUT'
         body = {"metadata": {"key1": "value1"}}
         req.body = jsonutils.dumps(body)
@@ -386,7 +386,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_empty_body(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         req.headers["content-type"] = "application/json"
 
@@ -396,7 +396,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_empty_key(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {"": "value1"}}
         req.body = jsonutils.dumps(body)
@@ -408,7 +408,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_key_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {("a" * 260): "value1"}}
         req.body = jsonutils.dumps(body)
@@ -421,7 +421,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_value_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {"key1": ("a" * 260)}}
         req.body = jsonutils.dumps(body)
@@ -434,7 +434,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_too_many_keys(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/key1')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key1')
         req.method = 'PUT'
         body = {"metadata": {"key1": "value1", "key2": "value2"}}
         req.body = jsonutils.dumps(body)
@@ -446,7 +446,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_body_uri_mismatch(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/bad')
+        req = fakes.HTTPRequestV3.blank(self.url + '/bad')
         req.method = 'PUT'
         body = {"metadata": {"key1": "value1"}}
         req.body = jsonutils.dumps(body)
@@ -458,7 +458,7 @@ class ServerMetaDataTest(BaseTest):
     def test_update_item_non_dict(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url + '/bad')
+        req = fakes.HTTPRequestV3.blank(self.url + '/bad')
         req.method = 'PUT'
         body = {"metadata": None}
         req.body = jsonutils.dumps(body)
@@ -473,7 +473,7 @@ class ServerMetaDataTest(BaseTest):
         data = {"metadata": {}}
         for num in range(CONF.quota_metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'POST'
         req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
@@ -484,7 +484,7 @@ class ServerMetaDataTest(BaseTest):
     def test_create_item_value_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
 
@@ -499,7 +499,7 @@ class ServerMetaDataTest(BaseTest):
         data = {"metadata": {}}
         for num in range(CONF.quota_metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'PUT'
         req.body = jsonutils.dumps(data)
         req.headers["content-type"] = "application/json"
@@ -510,7 +510,7 @@ class ServerMetaDataTest(BaseTest):
     def test_invalid_metadata_items_on_update_item(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'PUT'
         req.headers["content-type"] = "application/json"
 
@@ -544,7 +544,7 @@ class BadStateServerMetaDataTest(BaseTest):
                        delete_server_metadata)
 
     def test_invalid_state_on_delete(self):
-        req = fakes.HTTPRequest.blank(self.url + '/key2')
+        req = fakes.HTTPRequestV3.blank(self.url + '/key2')
         req.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPConflict, self.controller.delete,
                           req, self.uuid, 'key2')
@@ -552,7 +552,7 @@ class BadStateServerMetaDataTest(BaseTest):
     def test_invalid_state_on_update_metadata(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
-        req = fakes.HTTPRequest.blank(self.url)
+        req = fakes.HTTPRequestV3.blank(self.url)
         req.method = 'POST'
         req.content_type = 'application/json'
         expected = {
