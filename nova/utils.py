@@ -914,6 +914,27 @@ def get_wrapped_function(function):
     return _get_wrapped_function(function)
 
 
+def expects_func_args(*args):
+    def _decorator_checker(dec):
+        @functools.wraps(dec)
+        def _decorator(f):
+            base_f = get_wrapped_function(f)
+            arg_names, a, kw, _default = inspect.getargspec(base_f)
+            if a or kw or set(args) <= set(arg_names):
+                # NOTE (ndipanov): We can't really tell if correct stuff will
+                # be passed if it's a function with *args or **kwargs so
+                # we still carry on and hope for the best
+                return dec(f)
+            else:
+                raise TypeError("Decorated function %(f_name)s does not "
+                                "have the arguments expected by the "
+                                "decorator %(d_name)s" %
+                                {'f_name': base_f.__name__,
+                                 'd_name': dec.__name__})
+        return _decorator
+    return _decorator_checker
+
+
 class ExceptionHelper(object):
     """Class to wrap another and translate the ClientExceptions raised by its
     function calls to the actual ones.

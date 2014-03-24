@@ -709,6 +709,52 @@ class WrappedCodeTestCase(test.NoDBTestCase):
         self.assertIn('blue', func_code.co_varnames)
 
 
+class ExpectedArgsTestCase(test.NoDBTestCase):
+    def test_passes(self):
+        @utils.expects_func_args('foo', 'baz')
+        def dec(f):
+            return f
+
+        @dec
+        def func(foo, bar, baz="lol"):
+            pass
+
+    def test_raises(self):
+        @utils.expects_func_args('foo', 'baz')
+        def dec(f):
+            return f
+
+        def func(bar, baz):
+            pass
+
+        self.assertRaises(TypeError, dec, func)
+
+    def test_var_no_of_args(self):
+        @utils.expects_func_args('foo')
+        def dec(f):
+            return f
+
+        @dec
+        def func(bar, *args, **kwargs):
+            pass
+
+    def test_more_layers(self):
+        @utils.expects_func_args('foo', 'baz')
+        def dec(f):
+            return f
+
+        def dec_2(f):
+            def inner_f(*a, **k):
+                return f()
+            return inner_f
+
+        @dec_2
+        def func(bar, baz):
+            pass
+
+        self.assertRaises(TypeError, dec, func)
+
+
 class StringLengthTestCase(test.NoDBTestCase):
     def test_check_string_length(self):
         self.assertIsNone(utils.check_string_length(

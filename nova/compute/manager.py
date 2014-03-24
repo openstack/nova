@@ -225,6 +225,7 @@ wrap_exception = functools.partial(exception.wrap_exception,
                                    get_notifier=get_notifier)
 
 
+@utils.expects_func_args('migration')
 def errors_out_migration(function):
     """Decorator to error out migration on failure."""
 
@@ -255,6 +256,7 @@ def errors_out_migration(function):
     return decorated_function
 
 
+@utils.expects_func_args('instance')
 def reverts_task_state(function):
     """Decorator to revert task_state on failure."""
 
@@ -308,6 +310,7 @@ def wrap_instance_fault(function):
     return decorated_function
 
 
+@utils.expects_func_args('instance')
 def wrap_instance_event(function):
     """Wraps a method to log the event taken on the instance, and result.
 
@@ -331,6 +334,7 @@ def wrap_instance_event(function):
     return decorated_function
 
 
+@utils.expects_func_args('image_id', 'instance')
 def delete_image_on_error(function):
     """Used for snapshot related method to ensure the image created in
     compute.api is deleted when an error occurs.
