@@ -26,10 +26,8 @@ import nova.exception
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.openstack.common.gettextutils import _
-from nova.openstack.common import log as logging
 from nova import utils
 
-LOG = logging.getLogger(__name__)
 SUPPORTED_POLICIES = ['anti-affinity', 'affinity']
 
 authorize = extensions.extension_authorizer('compute', 'server_groups')
@@ -167,17 +165,15 @@ class ServerGroupController(wsgi.Controller):
 
         Validates that there are no contradicting policies, for example
         'anti-affinity' and 'affinity' in the same group.
+        Validates that the defined policies are supported.
         :param policies:     the given policies of the server_group
         """
         if ('anti-affinity' in policies and
             'affinity' in policies):
             msg = _("Conflicting policies configured!")
             raise nova.exception.InvalidInput(reason=msg)
-        not_supported = []
-        for policy in policies:
-            if policy not in SUPPORTED_POLICIES:
-                not_supported.append(policy)
-
+        not_supported = [policy for policy in policies
+                         if policy not in SUPPORTED_POLICIES]
         if not_supported:
             msg = _("Invalid policies: %s") % ', '.join(not_supported)
             raise nova.exception.InvalidInput(reason=msg)
