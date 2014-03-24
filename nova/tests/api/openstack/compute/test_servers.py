@@ -17,7 +17,6 @@
 
 import base64
 import datetime
-import testtools
 import uuid
 
 import iso8601
@@ -25,6 +24,7 @@ from lxml import etree
 import mox
 from oslo.config import cfg
 import six.moves.urllib.parse as urlparse
+import testtools
 import webob
 
 from nova.api.openstack import compute
@@ -544,7 +544,7 @@ class ServersControllerTest(ControllerTest):
                        return_servers_empty)
 
         req = fakes.HTTPRequest.blank('/fake/servers/detail')
-        res_dict = self.controller.index(req)
+        res_dict = self.controller.detail(req)
 
         num_servers = len(res_dict['servers'])
         self.assertEqual(0, num_servers)
@@ -845,6 +845,12 @@ class ServersControllerTest(ControllerTest):
         servers = self.controller.index(req)['servers']
 
         self.assertEqual(len(servers), 0)
+
+    def test_get_server_details_with_bad_flavor(self):
+        req = fakes.HTTPRequest.blank('/fake/servers/detail?flavor=abcde')
+        servers = self.controller.detail(req)['servers']
+
+        self.assertThat(servers, testtools.matchers.HasLength(0))
 
     def test_get_servers_allows_status(self):
         server_uuid = str(uuid.uuid4())
