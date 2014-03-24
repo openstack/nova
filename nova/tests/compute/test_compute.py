@@ -4397,10 +4397,11 @@ class ComputeTestCase(BaseTestCase):
 
         self._stub_out_resize_network_methods()
 
-        instance = self._create_fake_instance_obj()
+        old_flavor_name = 'm1.tiny'
+        instance = self._create_fake_instance_obj(type_name=old_flavor_name)
         reservations = self._ensure_quota_reservations_rolledback(instance)
 
-        instance_type = flavors.get_default_flavor()
+        instance_type = flavors.get_flavor_by_name('m1.small')
 
         self.compute.prep_resize(self.context, instance=instance,
                                  instance_type=instance_type,
@@ -4420,10 +4421,32 @@ class ComputeTestCase(BaseTestCase):
                           migration=migration,
                           disk_info={}, image={}, instance=instance,
                           reservations=reservations)
-        # NOTE(comstud): error path doesn't use objects, so our object
-        # is not updated.  Refresh and compare against the DB.
         instance.refresh()
         self.assertEqual(vm_states.ERROR, instance.vm_state)
+
+        old_flavor = flavors.get_flavor_by_name(old_flavor_name)
+        self.assertEqual(old_flavor['memory_mb'], instance.memory_mb)
+        self.assertEqual(old_flavor['vcpus'], instance.vcpus)
+        self.assertEqual(old_flavor['root_gb'], instance.root_gb)
+        self.assertEqual(old_flavor['ephemeral_gb'], instance.ephemeral_gb)
+        self.assertEqual(old_flavor['id'], instance.instance_type_id)
+        self.assertNotEqual(instance_type['id'], instance.instance_type_id)
+
+    def test_save_instance_info(self):
+        old_flavor_name = 'm1.tiny'
+        new_flavor_name = 'm1.small'
+        instance = self._create_fake_instance_obj(type_name=old_flavor_name)
+        new_flavor = flavors.get_flavor_by_name(new_flavor_name)
+
+        self.compute._save_instance_info(instance, new_flavor,
+                                         instance.system_metadata)
+
+        self.assertEqual(new_flavor['memory_mb'], instance.memory_mb)
+        self.assertEqual(new_flavor['vcpus'], instance.vcpus)
+        self.assertEqual(new_flavor['root_gb'], instance.root_gb)
+        self.assertEqual(new_flavor['ephemeral_gb'], instance.ephemeral_gb)
+        self.assertEqual(new_flavor['id'], instance.instance_type_id)
+        self.assertEqual(new_flavor['id'], instance.instance_type_id)
 
     def test_rebuild_instance_notification(self):
         # Ensure notifications on instance migrate/resize.
