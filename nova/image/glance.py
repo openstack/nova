@@ -251,7 +251,7 @@ class GlanceImageService(object):
 
     def detail(self, context, **kwargs):
         """Calls out to Glance for a list of detailed image information."""
-        params = self._extract_query_params(kwargs)
+        params = _extract_query_params(kwargs)
         try:
             images = self._client.call(context, 1, 'list', **params)
         except Exception:
@@ -259,25 +259,10 @@ class GlanceImageService(object):
 
         _images = []
         for image in images:
-            if self._is_image_available(context, image):
-                _images.append(self._translate_from_glance(image))
+            if _is_image_available(context, image):
+                _images.append(_translate_from_glance(image))
 
         return _images
-
-    def _extract_query_params(self, params):
-        _params = {}
-        accepted_params = ('filters', 'marker', 'limit',
-                           'page_size', 'sort_key', 'sort_dir')
-        for param in accepted_params:
-            if params.get(param):
-                _params[param] = params.get(param)
-
-        # ensure filters is a dict
-        _params.setdefault('filters', {})
-        # NOTE(vish): don't filter out private images
-        _params['filters'].setdefault('is_public', 'none')
-
-        return _params
 
     def show(self, context, image_id):
         """Returns a dict with image data for the given opaque image id."""
@@ -286,10 +271,10 @@ class GlanceImageService(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
 
-        if not self._is_image_available(context, image):
+        if not _is_image_available(context, image):
             raise exception.ImageNotFound(image_id=image_id)
 
-        base_image_meta = self._translate_from_glance(image)
+        base_image_meta = _translate_from_glance(image)
         return base_image_meta
 
     def _get_locations(self, context, image_id):
@@ -302,7 +287,7 @@ class GlanceImageService(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
 
-        if not self._is_image_available(context, image_meta):
+        if not _is_image_available(context, image_meta):
             raise exception.ImageNotFound(image_id=image_id)
 
         locations = getattr(image_meta, 'locations', [])
@@ -362,7 +347,7 @@ class GlanceImageService(object):
 
     def create(self, context, image_meta, data=None):
         """Store the image data and return the new image object."""
-        sent_service_image_meta = self._translate_to_glance(image_meta)
+        sent_service_image_meta = _translate_to_glance(image_meta)
 
         if data:
             sent_service_image_meta['data'] = data
@@ -373,12 +358,12 @@ class GlanceImageService(object):
         except glanceclient.exc.HTTPException:
             _reraise_translated_exception()
 
-        return self._translate_from_glance(recv_service_image_meta)
+        return _translate_from_glance(recv_service_image_meta)
 
     def update(self, context, image_id, image_meta, data=None,
             purge_props=True):
         """Modify the given image with the new data."""
-        image_meta = self._translate_to_glance(image_meta)
+        image_meta = _translate_to_glance(image_meta)
         image_meta['purge_props'] = purge_props
         #NOTE(bcwaldon): id is not an editable field, but it is likely to be
         # passed in by calling code. Let's be nice and ignore it.
@@ -391,7 +376,7 @@ class GlanceImageService(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
         else:
-            return self._translate_from_glance(image_meta)
+            return _translate_from_glance(image_meta)
 
     def delete(self, context, image_id):
         """Delete the given image.
@@ -409,59 +394,75 @@ class GlanceImageService(object):
             raise exception.ImageNotAuthorized(image_id=image_id)
         return True
 
-    @staticmethod
-    def _translate_to_glance(image_meta):
-        image_meta = _convert_to_string(image_meta)
-        image_meta = _remove_read_only(image_meta)
-        return image_meta
 
-    @staticmethod
-    def _translate_from_glance(image):
-        image_meta = _extract_attributes(image)
-        image_meta = _convert_timestamps_to_datetimes(image_meta)
-        image_meta = _convert_from_string(image_meta)
-        return image_meta
+def _extract_query_params(params):
+    _params = {}
+    accepted_params = ('filters', 'marker', 'limit',
+                       'page_size', 'sort_key', 'sort_dir')
+    for param in accepted_params:
+        if params.get(param):
+            _params[param] = params.get(param)
 
-    @staticmethod
-    def _is_image_available(context, image):
-        """Check image availability.
+    # ensure filters is a dict
+    _params.setdefault('filters', {})
+    # NOTE(vish): don't filter out private images
+    _params['filters'].setdefault('is_public', 'none')
 
-        This check is needed in case Nova and Glance are deployed
-        without authentication turned on.
-        """
-        # The presence of an auth token implies this is an authenticated
-        # request and we need not handle the noauth use-case.
-        if hasattr(context, 'auth_token') and context.auth_token:
-            return True
+    return _params
 
-        def _is_image_public(image):
-            # NOTE(jaypipes) V2 Glance API replaced the is_public attribute
-            # with a visibility attribute. We do this here to prevent the
-            # glanceclient for a V2 image model from throwing an
-            # exception from warlock when trying to access an is_public
-            # attribute.
-            if hasattr(image, 'visibility'):
-                return str(image.visibility).lower() == 'public'
-            else:
-                return image.is_public
 
-        if context.is_admin or _is_image_public(image):
-            return True
+def _is_image_available(context, image):
+    """Check image availability.
 
-        properties = image.properties
+    This check is needed in case Nova and Glance are deployed
+    without authentication turned on.
+    """
+    # The presence of an auth token implies this is an authenticated
+    # request and we need not handle the noauth use-case.
+    if hasattr(context, 'auth_token') and context.auth_token:
+        return True
 
-        if context.project_id and ('owner_id' in properties):
-            return str(properties['owner_id']) == str(context.project_id)
+    def _is_image_public(image):
+        # NOTE(jaypipes) V2 Glance API replaced the is_public attribute
+        # with a visibility attribute. We do this here to prevent the
+        # glanceclient for a V2 image model from throwing an
+        # exception from warlock when trying to access an is_public
+        # attribute.
+        if hasattr(image, 'visibility'):
+            return str(image.visibility).lower() == 'public'
+        else:
+            return image.is_public
 
-        if context.project_id and ('project_id' in properties):
-            return str(properties['project_id']) == str(context.project_id)
+    if context.is_admin or _is_image_public(image):
+        return True
 
-        try:
-            user_id = properties['user_id']
-        except KeyError:
-            return False
+    properties = image.properties
 
-        return str(user_id) == str(context.user_id)
+    if context.project_id and ('owner_id' in properties):
+        return str(properties['owner_id']) == str(context.project_id)
+
+    if context.project_id and ('project_id' in properties):
+        return str(properties['project_id']) == str(context.project_id)
+
+    try:
+        user_id = properties['user_id']
+    except KeyError:
+        return False
+
+    return str(user_id) == str(context.user_id)
+
+
+def _translate_to_glance(image_meta):
+    image_meta = _convert_to_string(image_meta)
+    image_meta = _remove_read_only(image_meta)
+    return image_meta
+
+
+def _translate_from_glance(image):
+    image_meta = _extract_attributes(image)
+    image_meta = _convert_timestamps_to_datetimes(image_meta)
+    image_meta = _convert_from_string(image_meta)
+    return image_meta
 
 
 def _convert_timestamps_to_datetimes(image_meta):
