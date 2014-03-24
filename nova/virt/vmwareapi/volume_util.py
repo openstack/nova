@@ -17,9 +17,6 @@ Helper methods for operations related to the management of volumes,
 and storage repositories
 """
 
-import re
-import string
-
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
@@ -158,16 +155,3 @@ def rescan_iscsi_hba(session, cluster=None):
     session._call_method(session._get_vim(), "RescanHba", storage_system_mor,
                          hbaDevice=hba_device)
     LOG.debug(_("Rescanned HBA %s ") % hba_device)
-
-
-def mountpoint_to_number(mountpoint):
-    """Translate a mountpoint like /dev/sdc into a numeric."""
-    if mountpoint.startswith('/dev/'):
-        mountpoint = mountpoint[5:]
-    if re.match('^[hsv]d[a-p]$', mountpoint):
-        return (ord(mountpoint[2:3]) - ord('a'))
-    elif re.match('^[0-9]+$', mountpoint):
-        return string.atoi(mountpoint, 10)
-    else:
-        LOG.warn(_("Mountpoint cannot be translated: %s") % mountpoint)
-        return -1

@@ -44,9 +44,9 @@ postgres=# create database openstack_baremetal_citest with owner
 import ConfigParser
 import glob
 import os
-import urlparse
 
 from migrate.versioning import repository
+import six.moves.urllib.parse as urlparse
 import sqlalchemy
 import sqlalchemy.exc
 

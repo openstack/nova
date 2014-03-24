@@ -35,6 +35,13 @@ class fake_session(object):
     def _call_method(self, *args):
         return self.ret
 
+    def _get_vim(self):
+        fake_vim = fake.DataObject()
+        client = fake.DataObject()
+        client.factory = 'fake_factory'
+        fake_vim.client = client
+        return fake_vim
+
 
 class partialObject(object):
     def __init__(self, path='fake-path'):
@@ -299,7 +306,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         result = vm_util.get_cdrom_attach_config_spec(fake.FakeFactory(),
                                              fake.Datastore(),
                                              "/tmp/foo.iso",
-                                             0)
+                                             200, 0)
         expected = """{
     'deviceChange': [
         {
@@ -365,7 +372,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         filename = '[test_datastore] test_file.vmdk'
         devices = self._vmdk_path_and_adapter_type_devices(filename)
         vmdk_info = vm_util.get_vmdk_path_and_adapter_type(devices)
-        adapter_type = vmdk_info[2]
+        adapter_type = vmdk_info[1]
         self.assertEqual('lsiLogicsas', adapter_type)
         self.assertEqual(vmdk_info[0], filename)
 
@@ -374,7 +381,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         devices = self._vmdk_path_and_adapter_type_devices(n_filename)
         vmdk_info = vm_util.get_vmdk_path_and_adapter_type(
                 devices, uuid='uuid')
-        adapter_type = vmdk_info[2]
+        adapter_type = vmdk_info[1]
         self.assertEqual('lsiLogicsas', adapter_type)
         self.assertEqual(n_filename, vmdk_info[0])
 
@@ -383,7 +390,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         devices = self._vmdk_path_and_adapter_type_devices(n_filename)
         vmdk_info = vm_util.get_vmdk_path_and_adapter_type(
                 devices, uuid='uuid')
-        adapter_type = vmdk_info[2]
+        adapter_type = vmdk_info[1]
         self.assertEqual('lsiLogicsas', adapter_type)
         self.assertIsNone(vmdk_info[0])
 
@@ -396,6 +403,73 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual("lsiLogic", vmdk_adapter_type)
         vmdk_adapter_type = vm_util.get_vmdk_adapter_type("dummyAdapter")
         self.assertEqual("dummyAdapter", vmdk_adapter_type)
+
+    def test_find_allocated_slots(self):
+        disk1 = fake.VirtualDisk(200, 0)
+        disk2 = fake.VirtualDisk(200, 1)
+        disk3 = fake.VirtualDisk(201, 1)
+        ide0 = fake.VirtualIDEController(200)
+        ide1 = fake.VirtualIDEController(201)
+        scsi0 = fake.VirtualLsiLogicController(key=1000, scsiCtlrUnitNumber=7)
+        devices = [disk1, disk2, disk3, ide0, ide1, scsi0]
+        taken = vm_util._find_allocated_slots(devices)
+        self.assertEqual([0, 1], sorted(taken[200]))
+        self.assertEqual([1], taken[201])
+        self.assertEqual([7], taken[1000])
+
+    def test_allocate_controller_key_and_unit_number_ide_default(self):
+        # Test that default IDE controllers are used when there is a free slot
+        # on them
+        disk1 = fake.VirtualDisk(200, 0)
+        disk2 = fake.VirtualDisk(200, 1)
+        ide0 = fake.VirtualIDEController(200)
+        ide1 = fake.VirtualIDEController(201)
+        devices = [disk1, disk2, ide0, ide1]
+        (controller_key, unit_number,
+         controller_spec) = vm_util.allocate_controller_key_and_unit_number(
+                                                            None,
+                                                            devices,
+                                                            'ide')
+        self.assertEqual(201, controller_key)
+        self.assertEqual(0, unit_number)
+        self.assertIsNone(controller_spec)
+
+    def test_allocate_controller_key_and_unit_number_ide(self):
+        # Test that a new controller is created when there is no free slot on
+        # the default IDE controllers
+        ide0 = fake.VirtualIDEController(200)
+        ide1 = fake.VirtualIDEController(201)
+        devices = [ide0, ide1]
+        for controller_key in [200, 201]:
+            for unit_number in [0, 1]:
+                disk = fake.VirtualDisk(controller_key, unit_number)
+                devices.append(disk)
+        factory = fake.FakeFactory()
+        (controller_key, unit_number,
+         controller_spec) = vm_util.allocate_controller_key_and_unit_number(
+                                                            factory,
+                                                            devices,
+                                                            'ide')
+        self.assertEqual(-101, controller_key)
+        self.assertEqual(0, unit_number)
+        self.assertIsNotNone(controller_spec)
+
+    def test_allocate_controller_key_and_unit_number_scsi(self):
+        # Test that we allocate on existing SCSI controller if there is a free
+        # slot on it
+        devices = [fake.VirtualLsiLogicController(1000, scsiCtlrUnitNumber=7)]
+        for unit_number in range(7):
+            disk = fake.VirtualDisk(1000, unit_number)
+            devices.append(disk)
+        factory = fake.FakeFactory()
+        (controller_key, unit_number,
+         controller_spec) = vm_util.allocate_controller_key_and_unit_number(
+                                                            factory,
+                                                            devices,
+                                                            'lsiLogic')
+        self.assertEqual(1000, controller_key)
+        self.assertEqual(8, unit_number)
+        self.assertIsNone(controller_spec)
 
     def _test_get_vnc_config_spec(self, port):
 

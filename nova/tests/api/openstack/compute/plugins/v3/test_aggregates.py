@@ -129,7 +129,7 @@ class AggregateTestCase(test.NoDBTestCase):
         def stub_create_aggregate(context, name, availability_zone):
             self.assertEqual(context, self.context, "context")
             self.assertEqual("test", name, "name")
-            self.assertEqual(None, availability_zone, "availability_zone")
+            self.assertIsNone(availability_zone, "availability_zone")
             return AGGREGATE
         self.stubs.Set(self.controller.api, "create_aggregate",
                        stub_create_aggregate)

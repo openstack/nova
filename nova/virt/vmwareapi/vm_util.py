@@ -203,7 +203,6 @@ def create_network_spec(client_factory, vif_info):
 
 
 def get_vmdk_attach_config_spec(client_factory,
-                                adapter_type="lsiLogic",
                                 disk_type="preallocated",
                                 file_path=None,
                                 disk_size=None,
@@ -214,20 +213,7 @@ def get_vmdk_attach_config_spec(client_factory,
     """Builds the vmdk attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
-    # The controller Key pertains to the Key of the LSI Logic Controller, which
-    # controls this Hard Disk
     device_config_spec = []
-    # For IDE devices, there are these two default controllers created in the
-    # VM having keys 200 and 201
-    if controller_key is None:
-        if adapter_type == "ide":
-            controller_key = 200
-        else:
-            controller_key = -101
-            controller_spec = create_controller_spec(client_factory,
-                                                     controller_key,
-                                                     adapter_type)
-            device_config_spec.append(controller_spec)
     virtual_device_config_spec = create_virtual_disk_spec(client_factory,
                                 controller_key, disk_type, file_path,
                                 disk_size, linked_clone,
@@ -242,14 +228,12 @@ def get_vmdk_attach_config_spec(client_factory,
 def get_cdrom_attach_config_spec(client_factory,
                                  datastore,
                                  file_path,
+                                 controller_key,
                                  cdrom_unit_number):
     """Builds and returns the cdrom attach config spec."""
     config_spec = client_factory.create('ns0:VirtualMachineConfigSpec')
 
     device_config_spec = []
-    # For IDE devices, there are these two default controllers created in the
-    # VM having keys 200 and 201
-    controller_key = 200
     virtual_device_config_spec = create_virtual_cdrom_spec(client_factory,
                                                            datastore,
                                                            controller_key,
@@ -299,7 +283,6 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
     vmdk_file_path = None
     vmdk_controller_key = None
     disk_type = None
-    unit_number = 0
 
     adapter_type_dict = {}
     for device in hardware_devices:
@@ -319,8 +302,6 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
                         disk_type = "eagerZeroedThick"
                     else:
                         disk_type = "preallocated"
-            if device.unitNumber > unit_number:
-                unit_number = device.unitNumber
         elif device.__class__.__name__ == "VirtualLsiLogicController":
             adapter_type_dict[device.key] = "lsiLogic"
         elif device.__class__.__name__ == "VirtualBusLogicController":
@@ -332,8 +313,70 @@ def get_vmdk_path_and_adapter_type(hardware_devices, uuid=None):
 
     adapter_type = adapter_type_dict.get(vmdk_controller_key, "")
 
-    return (vmdk_file_path, vmdk_controller_key, adapter_type,
-            disk_type, unit_number)
+    return (vmdk_file_path, adapter_type, disk_type)
+
+
+def _find_controller_slot(controller_keys, taken, max_unit_number):
+    for controller_key in controller_keys:
+        for unit_number in range(max_unit_number):
+            if not unit_number in taken.get(controller_key, []):
+                return controller_key, unit_number
+
+
+def _is_ide_controller(device):
+    return device.__class__.__name__ == 'VirtualIDEController'
+
+
+def _is_scsi_controller(device):
+    return device.__class__.__name__ in ['VirtualLsiLogicController',
+                                         'VirtualLsiLogicSASController',
+                                         'VirtualBusLogicController']
+
+
+def _find_allocated_slots(devices):
+    """
+    Return dictionary which maps controller_key to list of allocated unit
+    numbers for that controller_key.
+    """
+    taken = {}
+    for device in devices:
+        if hasattr(device, 'controllerKey') and hasattr(device, 'unitNumber'):
+            unit_numbers = taken.setdefault(device.controllerKey, [])
+            unit_numbers.append(device.unitNumber)
+        if _is_scsi_controller(device):
+            # the SCSI controller sits on its own bus
+            unit_numbers = taken.setdefault(device.key, [])
+            unit_numbers.append(device.scsiCtlrUnitNumber)
+    return taken
+
+
+def allocate_controller_key_and_unit_number(client_factory, devices,
+                                            adapter_type):
+    """
+    This function inspects the current set of hardware devices and returns
+    controller_key and unit_number that can be used for attaching a new virtual
+    disk to adapter with the given adapter_type.
+    """
+    if devices.__class__.__name__ == "ArrayOfVirtualDevice":
+        devices = devices.VirtualDevice
+
+    taken = _find_allocated_slots(devices)
+
+    ret = None
+    if adapter_type == 'ide':
+        ide_keys = [dev.key for dev in devices if _is_ide_controller(dev)]
+        ret = _find_controller_slot(ide_keys, taken, 2)
+    elif adapter_type in ['lsiLogic', 'lsiLogicsas', 'busLogic']:
+        scsi_keys = [dev.key for dev in devices if _is_scsi_controller(dev)]
+        ret = _find_controller_slot(scsi_keys, taken, 16)
+    if ret:
+        return ret[0], ret[1], None
+
+    # create new controller with the specified type and return its spec
+    controller_key = -101
+    controller_spec = create_controller_spec(client_factory, controller_key,
+                                             adapter_type)
+    return controller_key, 0, controller_spec
 
 
 def get_rdm_disk(hardware_devices, uuid):

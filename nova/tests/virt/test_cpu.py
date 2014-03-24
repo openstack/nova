@@ -22,7 +22,7 @@ class CpuSetTestCase(test.NoDBTestCase):
     def test_get_cpuset_ids_none_returns_none(self):
         self.flags(vcpu_pin_set=None)
         cpuset_ids = cpu.get_cpuset_ids()
-        self.assertEqual(None, cpuset_ids)
+        self.assertIsNone(cpuset_ids)
 
     def test_get_cpuset_ids_valid_syntax_works(self):
         self.flags(vcpu_pin_set="1")

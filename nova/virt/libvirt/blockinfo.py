@@ -422,7 +422,7 @@ def get_root_info(virt_type, image_meta, root_bdm, disk_bus, cdrom_bus,
         if not get_device_name(root_bdm) and root_device_name:
             root_bdm = root_bdm.copy()
             root_bdm['device_name'] = root_device_name
-        return get_info_from_bdm(virt_type, root_bdm, {})
+        return get_info_from_bdm(virt_type, root_bdm, {}, disk_bus)
 
 
 def default_device_names(virt_type, context, instance, root_device_name,

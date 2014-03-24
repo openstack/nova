@@ -1,6 +1,0 @@
-<element name="flavors" xmlns="http://relaxng.org/ns/structure/1.0"
-         ns="http://docs.openstack.org/compute/api/v1.1">
-  <zeroOrMore>
-    <externalRef href="flavor.rng"/>
-  </zeroOrMore>
-</element>

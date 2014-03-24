@@ -40,8 +40,10 @@ from nova.compute import vm_states
 from nova import context
 from nova import db
 from nova import exception
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import pci_device as pci_device_obj
+from nova.objects import service as service_obj
 from nova.openstack.common import fileutils
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
@@ -503,29 +505,37 @@ class LibvirtConnTestCase(test.TestCase):
 
         return db.service_create(context.get_admin_context(), service_ref)
 
+    def _get_host_disabled(self, host):
+        return db.service_get_by_compute_host(context.get_admin_context(),
+                                              host)['disabled']
+
     def test_set_host_enabled_with_disable(self):
         # Tests disabling an enabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(host='fake-mini')
-        self.assertEqual('disabled', conn.set_host_enabled('fake-mini', False))
+        conn._set_host_enabled(False)
+        self.assertTrue(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_with_enable(self):
         # Tests enabling a disabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(disabled=True, host='fake-mini')
-        self.assertEqual('enabled', conn.set_host_enabled('fake-mini', True))
+        conn._set_host_enabled(True)
+        self.assertTrue(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_with_enable_state_enabled(self):
         # Tests enabling an enabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(disabled=False, host='fake-mini')
-        self.assertEqual('enabled', conn.set_host_enabled('fake-mini', True))
+        conn._set_host_enabled(True)
+        self.assertFalse(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_with_disable_state_disabled(self):
         # Tests disabling a disabled host.
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         self._create_service(disabled=True, host='fake-mini')
-        self.assertEqual('disabled', conn.set_host_enabled('fake-mini', False))
+        conn._set_host_enabled(False)
+        self.assertTrue(self._get_host_disabled('fake-mini'))
 
     def test_set_host_enabled_swallows_exceptions(self):
         # Tests that set_host_enabled will swallow exceptions coming from the
@@ -536,7 +546,7 @@ class LibvirtConnTestCase(test.TestCase):
             # Make db.service_get_by_compute_host raise NovaException; this
             # is more robust than just raising ComputeHostNotFound.
             db_mock.side_effect = exception.NovaException
-            self.assertIsNone(conn.set_host_enabled('fake-mini', False))
+            conn._set_host_enabled(False)
 
     def create_instance_obj(self, context, **params):
         default_params = self.test_instance
@@ -716,95 +726,66 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertThat(expected, matchers.DictMatches(result))
 
     def test_close_callback(self):
-        class FakeConn(object):
-            def getLibVersion(self):
-                return (1 * 1000 * 1000) + (0 * 1000) + 1
-
-            def domainEventRegisterAny(self, *args, **kwargs):
-                pass
-
-            def registerCloseCallback(self, cb, opaque):
-                pass
-
         self.close_callback = None
 
         def set_close_callback(cb, opaque):
             self.close_callback = cb
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn._wrapped_conn = FakeConn()
+        service_mock = mock.MagicMock()
+        service_mock.disabled.return_value = False
+        with contextlib.nested(
+            mock.patch.object(conn, "_connect", return_value=self.conn),
+            mock.patch.object(self.conn, "registerCloseCallback",
+                              side_effect=set_close_callback),
+            mock.patch.object(service_obj.Service, "get_by_compute_host",
+                              return_value=service_mock)):
 
-        self.mox.StubOutWithMock(conn, '_connect')
-        self.mox.StubOutWithMock(conn._conn, 'registerCloseCallback')
-        self.mox.StubOutWithMock(conn, 'set_host_enabled')
+            # verify that the driver registers for the close callback
+            # and re-connects after receiving the callback
+            conn._get_connection()
+            self.assertFalse(service_mock.disabled)
+            self.assertTrue(self.close_callback)
+            self.close_callback(self.conn, 1, None)
 
-        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn._conn)
-        conn._conn.registerCloseCallback(
-            mox.IgnoreArg(), mox.IgnoreArg()
-        ).WithSideEffects(set_close_callback)
-        conn.set_host_enabled('fake-mini', True)
-        conn.set_host_enabled('fake-mini', 'Connection to libvirt lost: 1')
-        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn._conn)
-        conn.set_host_enabled('fake-mini', True)
-        conn._conn.registerCloseCallback(mox.IgnoreArg(), mox.IgnoreArg())
-        self.mox.ReplayAll()
-
-        # verify that the driver registers for the close callback
-        # and re-connects after receiving the callback
-        conn._get_new_connection()
-
-        self.assertTrue(self.close_callback)
-        self.close_callback(conn._conn, 1, None)
-
-        conn._get_connection()
-        self.mox.UnsetStubs()
+            self.assertTrue(service_mock.disabled)
+            conn._get_connection()
 
     def test_close_callback_bad_signature(self):
-        class FakeConn(object):
-            def getLibVersion(self):
-                return (1 * 1000 * 1000) + (0 * 1000) + 0
-
-            def domainEventRegisterAny(self, *args, **kwargs):
-                pass
-
-            def registerCloseCallback(self, cb, opaque, *args, **kwargs):
-                pass
-
+        '''Validates that a connection to libvirt exist,
+           even when registerCloseCallback method has a different
+           number of arguments in the libvirt python library.
+        '''
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn._wrapped_conn = FakeConn()
+        service_mock = mock.MagicMock()
+        service_mock.disabled.return_value = False
+        with contextlib.nested(
+            mock.patch.object(conn, "_connect", return_value=self.conn),
+            mock.patch.object(self.conn, "registerCloseCallback",
+                              side_effect=TypeError('dd')),
+            mock.patch.object(service_obj.Service, "get_by_compute_host",
+                              return_value=service_mock)):
 
-        self.mox.StubOutWithMock(conn, '_connect')
-        self.mox.StubOutWithMock(conn._conn, 'registerCloseCallback')
-        self.mox.StubOutWithMock(conn, 'set_host_enabled')
-
-        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(conn._conn)
-        conn.set_host_enabled('fake-mini', True)
-        conn._conn.registerCloseCallback(
-            mox.IgnoreArg(), mox.IgnoreArg()).AndRaise(TypeError)
-
-        self.mox.ReplayAll()
-        conn._get_new_connection()
+            connection = conn._get_connection()
+            self.assertTrue(connection)
 
     def test_close_callback_not_defined(self):
-        class FakeConn():
-            def getLibVersion(self):
-                return (0 * 1000 * 1000) + (9 * 1000) + 0
-
-            def domainEventRegisterAny(self, *args, **kwargs):
-                pass
-
+        '''Validates that a connection to libvirt exist,
+           even when registerCloseCallback method missing from
+           the libvirt python library.
+        '''
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        conn._wrapped_conn = FakeConn()
+        service_mock = mock.MagicMock()
+        service_mock.disabled.return_value = False
+        with contextlib.nested(
+            mock.patch.object(conn, "_connect", return_value=self.conn),
+            mock.patch.object(self.conn, "registerCloseCallback",
+                              side_effect=AttributeError('dd')),
+            mock.patch.object(service_obj.Service, "get_by_compute_host",
+                              return_value=service_mock)):
 
-        self.mox.StubOutWithMock(conn, '_connect')
-        self.mox.StubOutWithMock(conn, 'set_host_enabled')
-
-        conn._connect(mox.IgnoreArg(), mox.IgnoreArg()).AndReturn(
-            conn._wrapped_conn)
-        conn.set_host_enabled('fake-mini', True)
-
-        self.mox.ReplayAll()
-        conn._get_new_connection()
+            connection = conn._get_connection()
+            self.assertTrue(connection)
 
     def test_cpu_features_bug_1217630(self):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -1019,6 +1000,51 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertIsInstance(cfg.devices[2],
                               vconfig.LibvirtConfigGuestDisk)
         self.assertEqual(cfg.devices[2].target_dev, 'hdd')
+
+    def test_get_guest_config_with_virtio_scsi_bus(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = {"properties": {"hw_scsi_model": "virtio-scsi"}}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, [], image_meta)
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info)
+        self.assertIsInstance(cfg.devices[0],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[1],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertIsInstance(cfg.devices[2],
+                         vconfig.LibvirtConfigGuestController)
+        self.assertEqual(cfg.devices[2].model, 'virtio-scsi')
+
+    def test_get_guest_config_with_virtio_scsi_bus_bdm(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = {"properties": {"hw_scsi_model": "virtio-scsi"}}
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        conn_info = {'driver_volume_type': 'fake'}
+        bd_info = {'block_device_mapping': [
+                  {'connection_info': conn_info, 'mount_device': '/dev/sdc',
+                   'disk_bus': 'scsi'},
+                  {'connection_info': conn_info, 'mount_device': '/dev/sdd',
+                   'disk_bus': 'scsi'}]}
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref, bd_info, image_meta)
+        cfg = conn.get_guest_config(instance_ref, [], image_meta, disk_info,
+                                    [], bd_info)
+        self.assertIsInstance(cfg.devices[2],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(cfg.devices[2].target_dev, 'sdc')
+        self.assertEqual(cfg.devices[2].target_bus, 'scsi')
+        self.assertIsInstance(cfg.devices[3],
+                         vconfig.LibvirtConfigGuestDisk)
+        self.assertEqual(cfg.devices[3].target_dev, 'sdd')
+        self.assertEqual(cfg.devices[3].target_bus, 'scsi')
+        self.assertIsInstance(cfg.devices[4],
+                         vconfig.LibvirtConfigGuestController)
+        self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
 
     def test_get_guest_config_with_vnc(self):
         self.flags(vnc_enabled=True)
@@ -1444,6 +1470,77 @@ class LibvirtConnTestCase(test.TestCase):
                                     _fake_network_info(self.stubs, 1),
                                     image_meta, disk_info)
         self.assertEqual(cfg.os_cmdline, "fake_os_command_line")
+
+    def test_get_guest_config_armv7(self):
+        def get_host_capabilities_stub(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = "armv7l"
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.flags(virt_type="kvm",
+                   group="libvirt")
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "get_host_capabilities",
+                       get_host_capabilities_stub)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info)
+        self.assertEqual(cfg.os_mach_type, "vexpress-a15")
+
+    def test_get_guest_config_aarch64(self):
+        def get_host_capabilities_stub(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = "aarch64"
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.flags(virt_type="kvm",
+                   group="libvirt")
+
+        instance_ref = db.instance_create(self.context, self.test_instance)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        self.stubs.Set(libvirt_driver.LibvirtDriver,
+                       "get_host_capabilities",
+                       get_host_capabilities_stub)
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    None, disk_info)
+        self.assertEqual(cfg.os_mach_type, "virt")
+
+    def test_get_guest_config_machine_type_through_image_meta(self):
+        self.flags(virt_type="kvm",
+                   group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = db.instance_create(self.context, self.test_instance)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref)
+
+        image_meta = {"properties": {"hw_machine_type":
+            "fake_machine_type"}}
+        cfg = conn.get_guest_config(instance_ref,
+                                    _fake_network_info(self.stubs, 1),
+                                    image_meta, disk_info)
+        self.assertEqual(cfg.os_mach_type, "fake_machine_type")
 
     def _test_get_guest_config_ppc64(self, device_index):
         """Test for nova.virt.libvirt.driver.LibvirtDriver.get_guest_config.
@@ -3616,6 +3713,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(eventlet.greenthread, 'sleep', lambda x: None)
         self.assertRaises(processutils.ProcessExecutionError,
                           conn.pre_live_migration,
                           self.context, instance, block_device_info=None,
@@ -3635,6 +3733,7 @@ class LibvirtConnTestCase(test.TestCase):
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.stubs.Set(conn, 'plug_vifs', fake_plug_vifs)
+        self.stubs.Set(eventlet.greenthread, 'sleep', lambda x: None)
         conn.pre_live_migration(self.context, instance, block_device_info=None,
                                 network_info=[], disk_info={})
 
@@ -4339,69 +4438,53 @@ class LibvirtConnTestCase(test.TestCase):
     def test_command_with_broken_connection(self):
         self.mox.UnsetStubs()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(libvirt, "openAuth")
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_domain")
-        self.mox.StubOutWithMock(conn, 'set_host_enabled')
-        libvirt.openAuth(mox.IgnoreArg(), mox.IgnoreArg(),
-                         mox.IgnoreArg()).AndRaise(
-                                     libvirt.libvirtError("fake failure"))
-
-        conn.set_host_enabled('fake-mini', 'Connection to libvirt lost: ERROR')
-        conn.set_host_enabled('fake-mini', False)
-        self.mox.ReplayAll()
-        conn._close_callback(conn._wrapped_conn, 'ERROR', '')
-        self.assertRaises(exception.HypervisorUnavailable,
-                          conn.get_num_instances)
+        with contextlib.nested(
+            mock.patch.object(libvirt, 'openAuth',
+                              side_effect=libvirt.libvirtError("fake")),
+            mock.patch.object(libvirt.libvirtError, "get_error_code"),
+            mock.patch.object(libvirt.libvirtError, "get_error_domain"),
+            mock.patch.object(conn, '_set_host_enabled')):
+            conn._close_callback(conn._wrapped_conn, 'ERROR', '')
+            self.assertRaises(exception.HypervisorUnavailable,
+                              conn.get_num_instances)
 
     def test_broken_connection_disable_service(self):
-        disabled_reason = 'Connection to libvirt lost: ERROR!'
+        reason = 'Connection to libvirt lost: ERROR!'
         self.mox.UnsetStubs()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(libvirt, "openAuth")
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_code")
-        self.mox.StubOutWithMock(libvirt.libvirtError, "get_error_domain")
-        libvirt.openAuth(mox.IgnoreArg(), mox.IgnoreArg(),
-                         mox.IgnoreArg()).AndRaise(
-                                     libvirt.libvirtError("fake failure"))
-
-        from nova.objects import service as service_obj
         service_mock = mock.MagicMock()
-        service_mock.__getitem__.return_value = False
+        service_mock.disabled.return_value = False
         service_mock_failed_conn = mock.MagicMock()
-        service_mock_failed_conn.__getitem__.return_value = True
-        self.mox.StubOutWithMock(service_obj.Service,
-                                 'get_by_compute_host')
-        service_obj.Service.get_by_compute_host(mox.IgnoreArg(),
-                                    'fake-mini').AndReturn(service_mock)
-        service_obj.Service.get_by_compute_host(mox.IgnoreArg(),
-                        'fake-mini').AndReturn(service_mock_failed_conn)
-        self.mox.ReplayAll()
+        service_mock_failed_conn.disabled.return_value = True
+        mocks_list = [service_mock, service_mock_failed_conn]
+        with contextlib.nested(
+            mock.patch.object(libvirt, 'openAuth',
+                              side_effect=libvirt.libvirtError("fake")),
+            mock.patch.object(libvirt.libvirtError, "get_error_code"),
+            mock.patch.object(libvirt.libvirtError, "get_error_domain"),
+            mock.patch.object(service_obj.Service, "get_by_compute_host",
+                              return_value=mocks_list.pop())):
 
-        conn._close_callback(conn._wrapped_conn, 'ERROR!', '')
-        self.assertTrue(service_mock.disabled and
-                        service_mock.disabled_reason.endswith(disabled_reason))
-        self.assertRaises(exception.HypervisorUnavailable,
-                          conn.get_num_instances)
+            conn._close_callback(conn._wrapped_conn, 'ERROR!', '')
+            self.assertTrue(service_mock.disabled and
+                            service_mock.disabled_reason.endswith(reason))
+            self.assertRaises(exception.HypervisorUnavailable,
+                              conn.get_num_instances)
 
     def test_service_resume_after_broken_connection(self):
         self.mox.UnsetStubs()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(libvirt, "openAuth")
-        libvirt.openAuth(mox.IgnoreArg(), mox.IgnoreArg(),
-                         mox.IgnoreArg()).AndReturn(mock.MagicMock())
-
-        from nova.objects import service as service_obj
         service_mock = mock.MagicMock()
-        service_mock.__getitem__.return_value = True
-        self.mox.StubOutWithMock(service_obj.Service,
-                                 'get_by_compute_host')
-        service_obj.Service.get_by_compute_host(mox.IgnoreArg(),
-                                    'fake-mini').AndReturn(service_mock)
-        self.mox.ReplayAll()
-        conn.get_num_instances()
-        self.assertTrue(not service_mock.disabled and
-                        service_mock.disabled_reason is 'None')
+        service_mock.disabled.return_value = True
+        with contextlib.nested(
+            mock.patch.object(libvirt, 'openAuth',
+                              return_value=mock.MagicMock()),
+            mock.patch.object(service_obj.Service, "get_by_compute_host",
+                              return_value=service_mock)):
+
+            conn.get_num_instances()
+            self.assertTrue(not service_mock.disabled and
+                            service_mock.disabled_reason is 'None')
 
     def test_broken_connection_no_wrapped_conn(self):
         # Tests that calling _close_callback when _wrapped_conn is None
@@ -6044,14 +6127,15 @@ class LibvirtConnTestCase(test.TestCase):
         else:
             raise ValueError("Unhandled method %" % method_name)
 
-        virtapi = fake.FakeVirtAPI()
-        fake_flavor_id = test_instance['instance_type_id']
-        fake_flavor = virtapi.flavor_get(self.context, fake_flavor_id)
+        fake_flavor = flavor_obj.Flavor.get_by_id(
+            self.context, test_instance['instance_type_id'])
         expected = conn.vif_driver.get_config(test_instance, network_info[0],
-                                              fake_image_meta, fake_flavor)
+                                              fake_image_meta,
+                                              fake_flavor)
         self.mox.StubOutWithMock(conn.vif_driver, 'get_config')
         conn.vif_driver.get_config(test_instance, network_info[0],
-                                   fake_image_meta, fake_flavor).\
+                                   fake_image_meta,
+                                   mox.IsA(flavor_obj.Flavor)).\
                                    AndReturn(expected)
 
         self.mox.ReplayAll()
@@ -6988,28 +7072,6 @@ class NWFilterTestCase(test.TestCase):
 
 
 class LibvirtUtilsTestCase(test.TestCase):
-    def test_get_iscsi_initiator(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        initiator = 'fake.initiator.iqn'
-        rval = ("junk\nInitiatorName=%s\njunk\n" % initiator, None)
-        utils.execute('cat', '/etc/iscsi/initiatorname.iscsi',
-                      run_as_root=True).AndReturn(rval)
-        # Start test
-        self.mox.ReplayAll()
-        result = libvirt_utils.get_iscsi_initiator()
-        self.assertEqual(initiator, result)
-
-    def test_get_missing_iscsi_initiator(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-        file_path = '/etc/iscsi/initiatorname.iscsi'
-        utils.execute('cat', file_path, run_as_root=True).AndRaise(
-            exception.FileNotFound(file_path=file_path)
-        )
-        # Start test
-        self.mox.ReplayAll()
-        result = libvirt_utils.get_iscsi_initiator()
-        self.assertIsNone(result)
-
     def test_create_image(self):
         self.mox.StubOutWithMock(utils, 'execute')
         utils.execute('qemu-img', 'create', '-f', 'raw',

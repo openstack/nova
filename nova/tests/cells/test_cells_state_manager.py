@@ -32,9 +32,14 @@ FAKE_COMPUTES = [
     ('host4', 1024, 100, 300, 30),
 ]
 
+# NOTE(alaski): It's important to have multiple types that end up having the
+# same memory and disk requirements.  So two types need the same first value,
+# and two need the second and third values to add up to the same thing.
 FAKE_ITYPES = [
     (0, 0, 0),
     (50, 12, 13),
+    (50, 2, 4),
+    (10, 20, 5),
 ]
 
 

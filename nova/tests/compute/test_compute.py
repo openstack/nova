@@ -1814,7 +1814,8 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['rescued'])
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context, instance=instance)
+        self.compute.unrescue_instance(self.context,
+                                       instance=self._objectify(instance))
         self.assertTrue(called['unrescued'])
 
         self.compute.terminate_instance(self.context,
@@ -1879,7 +1880,8 @@ class ComputeTestCase(BaseTestCase):
         fake_notifier.NOTIFICATIONS = []
         db.instance_update(self.context, instance_uuid,
                            {"task_state": task_states.UNRESCUING})
-        self.compute.unrescue_instance(self.context, instance=instance)
+        self.compute.unrescue_instance(self.context,
+                                       instance=self._objectify(instance))
 
         expected_notifications = ['compute.instance.unrescue.start',
                                   'compute.instance.unrescue.end']
@@ -3118,7 +3120,7 @@ class ComputeTestCase(BaseTestCase):
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 0)
         self.compute.add_fixed_ip_to_instance(self.context, network_id=1,
-                instance=instance)
+                instance=self._objectify(instance))
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         self.compute.terminate_instance(self.context,
@@ -5075,8 +5077,9 @@ class ComputeTestCase(BaseTestCase):
                                   self._create_fake_instance(params))
 
         self.admin_ctxt = context.get_admin_context()
-        self.instance = db.instance_get_by_uuid(self.admin_ctxt,
-                                                self.instance['uuid'])
+        self.instance = instance_obj.Instance._from_db_object(self.context,
+               instance_obj.Instance(),
+               db.instance_get_by_uuid(self.admin_ctxt, self.instance['uuid']))
 
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
                                                         self.instance,
@@ -5093,8 +5096,7 @@ class ComputeTestCase(BaseTestCase):
                 False,
                 fake_block_dev_info)
         self.compute._get_power_state(self.admin_ctxt,
-                                      self.instance).AndReturn(
-                                                     'fake_power_state')
+                                      self.instance).AndReturn(10001)
 
     def _finish_post_live_migration_at_destination(self):
         self.compute.network_api.setup_networks_on_host(self.admin_ctxt,
@@ -6022,17 +6024,17 @@ class ComputeTestCase(BaseTestCase):
         self.stubs.Set(self.compute.network_api,
                        'remove_fixed_ip_from_instance', _noop)
 
-        instance = self._create_fake_instance()
+        instance = self._create_fake_instance_obj()
         updated_at_1 = instance['updated_at']
 
         self.compute.add_fixed_ip_to_instance(self.context, 'fake', instance)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        updated_at_2 = instance['updated_at']
+        updated_at_2 = db.instance_get_by_uuid(self.context,
+                                               instance['uuid'])['updated_at']
 
         self.compute.remove_fixed_ip_from_instance(self.context, 'fake',
-                                                   instance)
-        instance = db.instance_get_by_uuid(self.context, instance['uuid'])
-        updated_at_3 = instance['updated_at']
+                                                   self._objectify(instance))
+        updated_at_3 = db.instance_get_by_uuid(self.context,
+                                               instance['uuid'])['updated_at']
 
         updated_ats = (updated_at_1, updated_at_2, updated_at_3)
         self.assertEqual(len(updated_ats), len(set(updated_ats)))
@@ -7008,7 +7010,7 @@ class ComputeAPITestCase(BaseTestCase):
         db.instance_update(self.context, instance_uuid, params)
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.compute_api.unrescue(self.context, instance)
+        self.compute_api.unrescue(self.context, self._objectify(instance))
 
         instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.assertEqual(instance['vm_state'], vm_states.RESCUED)
@@ -8041,8 +8043,11 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance(params={'host': CONF.host})
         self.stubs.Set(self.compute_api.network_api, 'deallocate_for_instance',
                        lambda *a, **kw: None)
-        self.compute_api.add_fixed_ip(self.context, instance, '1')
-        self.compute_api.remove_fixed_ip(self.context, instance, '192.168.1.1')
+        self.compute_api.add_fixed_ip(self.context, self._objectify(instance),
+                                      '1')
+        self.compute_api.remove_fixed_ip(self.context,
+                                         self._objectify(instance),
+                                         '192.168.1.1')
         self.compute_api.delete(self.context, self._objectify(instance))
 
     def test_attach_volume_invalid(self):

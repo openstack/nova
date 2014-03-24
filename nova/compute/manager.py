@@ -412,7 +412,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.10')
+    target = messaging.Target(version='3.14')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -956,12 +956,10 @@ class ComputeManager(manager.Manager):
 
         extra_usage_info = {}
 
-        def notify(status, msg=None, **kwargs):
+        def notify(status, msg="", **kwargs):
             """Send a create.{start,error,end} notification."""
             type_ = "create.%(status)s" % dict(status=status)
             info = extra_usage_info.copy()
-            if not msg:
-                msg = ""
             info['message'] = unicode(msg)
             self._notify_about_instance_usage(context, instance, type_,
                     extra_usage_info=info, **kwargs)
@@ -2746,6 +2744,7 @@ class ComputeManager(manager.Manager):
                 "rescue.end", extra_usage_info=extra_usage_info,
                 network_info=network_info)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event
@@ -2763,12 +2762,11 @@ class ComputeManager(manager.Manager):
                                  network_info)
 
         current_power_state = self._get_power_state(context, instance)
-        instance = self._instance_update(context,
-            instance['uuid'],
-            vm_state=vm_states.ACTIVE,
-            task_state=None,
-            expected_task_state=task_states.UNRESCUING,
-            power_state=current_power_state)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.power_state = current_power_state
+        instance.save(expected_task_state=task_states.UNRESCUING)
+
         self._notify_about_instance_usage(context,
                                           instance,
                                           "unrescue.end",
@@ -3323,6 +3321,7 @@ class ComputeManager(manager.Manager):
                                   qr_error, instance=instance)
                 self._set_instance_error_state(context, instance['uuid'])
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
@@ -3337,18 +3336,17 @@ class ComputeManager(manager.Manager):
         self.network_api.add_fixed_ip_to_instance(context, instance,
                                                   network_id)
 
-        inst_obj = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance)
-        network_info = self._inject_network_info(context, inst_obj)
-        self.reset_network(context, inst_obj)
+        network_info = self._inject_network_info(context, instance)
+        self.reset_network(context, instance)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
-        self._instance_update(context, instance['uuid'],
-                updated_at=timeutils.utcnow())
+        instance.updated_at = timeutils.utcnow()
+        instance.save()
 
         self._notify_about_instance_usage(
             context, instance, "create_ip.end", network_info=network_info)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
@@ -3363,14 +3361,12 @@ class ComputeManager(manager.Manager):
         self.network_api.remove_fixed_ip_from_instance(context, instance,
                                                        address)
 
-        inst_obj = instance_obj.Instance._from_db_object(
-                context, instance_obj.Instance(), instance)
-        network_info = self._inject_network_info(context, inst_obj)
-        self.reset_network(context, inst_obj)
+        network_info = self._inject_network_info(context, instance)
+        self.reset_network(context, instance)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
-        self._instance_update(context, instance['uuid'],
-                updated_at=timeutils.utcnow())
+        instance.updated_at = timeutils.utcnow()
+        instance.save()
 
         self._notify_about_instance_usage(
             context, instance, "delete_ip.end", network_info=network_info)
@@ -4395,6 +4391,7 @@ class ComputeManager(manager.Manager):
                 self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
                         instance_ref['uuid'])
 
+    @object_compat
     @wrap_exception()
     @wrap_instance_fault
     def post_live_migration_at_destination(self, context, instance,
@@ -4440,11 +4437,12 @@ class ComputeManager(manager.Manager):
         except exception.NotFound:
             LOG.exception(_('Failed to get compute_info for %s') % self.host)
         finally:
-            instance = self._instance_update(context, instance['uuid'],
-                    host=self.host, power_state=current_power_state,
-                    vm_state=vm_states.ACTIVE, task_state=None,
-                    expected_task_state=task_states.MIGRATING,
-                    node=node_name)
+            instance.host = self.host
+            instance.power_state = current_power_state
+            instance.vm_state = vm_states.ACTIVE
+            instance.task_state = None
+            instance.node = node_name
+            instance.save(expected_task_state=task_states.MIGRATING)
 
         # NOTE(vish): this is necessary to update dhcp
         self.network_api.setup_networks_on_host(context, instance, self.host)

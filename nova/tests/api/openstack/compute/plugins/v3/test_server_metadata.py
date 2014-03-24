@@ -239,7 +239,7 @@ class ServerMetaDataTest(BaseTest):
                        return_create_instance_metadata)
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
-        body = {"meta": {"": "value1"}}
+        body = {"metadata": {"": "value1"}}
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
@@ -251,7 +251,7 @@ class ServerMetaDataTest(BaseTest):
                        return_create_instance_metadata)
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
-        body = {"meta": None}
+        body = {"metadata": None}
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
@@ -263,11 +263,11 @@ class ServerMetaDataTest(BaseTest):
                        return_create_instance_metadata)
         req = fakes.HTTPRequest.blank(self.url + '/key1')
         req.method = 'PUT'
-        body = {"meta": {("a" * 260): "value1"}}
+        body = {"metadata": {("a" * 260): "value1"}}
         req.body = jsonutils.dumps(body)
         req.headers["content-type"] = "application/json"
 
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.create,
                           req, self.uuid, body)
 
@@ -481,29 +481,16 @@ class ServerMetaDataTest(BaseTest):
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller.create, req, self.uuid, data)
 
-    def test_invalid_metadata_items_on_create(self):
+    def test_create_item_value_too_long(self):
         self.stubs.Set(nova.db, 'instance_metadata_update',
                        return_create_instance_metadata)
         req = fakes.HTTPRequest.blank(self.url)
         req.method = 'POST'
         req.headers["content-type"] = "application/json"
 
-        #test for long key
-        data = {"metadata": {"a" * 260: "value1"}}
-        req.body = jsonutils.dumps(data)
-        self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create, req, self.uuid, data)
-
-        #test for long value
         data = {"metadata": {"key": "v" * 260}}
         req.body = jsonutils.dumps(data)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
-                          self.controller.create, req, self.uuid, data)
-
-        #test for empty key.
-        data = {"metadata": {"": "value1"}}
-        req.body = jsonutils.dumps(data)
-        self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.create, req, self.uuid, data)
 
     def test_too_many_metadata_items_on_update_item(self):

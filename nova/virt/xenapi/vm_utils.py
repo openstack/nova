@@ -23,12 +23,12 @@ import contextlib
 import os
 import time
 import urllib
-import urlparse
 import uuid
 from xml.parsers import expat
 
 from eventlet import greenthread
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 
 from nova.api.metadata import base as instance_metadata
 from nova import block_device
@@ -2722,3 +2722,10 @@ def handle_ipxe_iso(session, instance, cd_vdi, network_info):
                      CONF.xenserver.ipxe_mkisofs_cmd, instance=instance)
         else:
             raise
+
+
+def set_other_config_pci(session, vm_ref, params):
+    """Set the pci key of other-config parameter to params."""
+    other_config = session.call_xenapi("VM.get_other_config", vm_ref)
+    other_config['pci'] = params
+    session.call_xenapi("VM.set_other_config", vm_ref, other_config)

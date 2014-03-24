@@ -41,6 +41,7 @@ from nova.openstack.common import uuidutils
 from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import vif as vmwarevif
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
@@ -164,8 +165,20 @@ class VMwareVMOps(object):
                 vim.get_service_content().fileManager,
                 name=datastore_path,
                 datacenter=dc_ref)
-        self._session._wait_for_task(instance['uuid'],
-                                     file_delete_task)
+        try:
+            self._session._wait_for_task(instance['uuid'],
+                                         file_delete_task)
+        except (error_util.CannotDeleteFileException,
+                error_util.FileFaultException,
+                error_util.FileLockedException,
+                error_util.FileNotFoundException) as e:
+            # There may be more than one process or thread that tries
+            # to delete the file.
+            LOG.debug(_("Unable to delete %(ds)s. There may be more than "
+                        "one process or thread that tries to delete the file. "
+                        "Exception: %(ex)s"),
+                      {'ds': datastore_path, 'ex': e})
+
         LOG.debug(_("Deleted the datastore file"), instance=instance)
 
     def spawn(self, context, instance, image_meta, injected_files,
@@ -370,12 +383,15 @@ class VMwareVMOps(object):
                 destinationName=vm_util.build_datastore_path(data_store_name,
                                                              base_folder),
                 destinationDatacenter=dc_info.ref)
-            # TODO(garyk): ensure that _wait_for_task raises an exception that
-            # can be specifically treated here.
             try:
                 self._session._wait_for_task(instance['uuid'], vmdk_move_task)
-            except Exception as e:
-                LOG.warning(_("File moving failed - %s"), e)
+            except error_util.FileAlreadyExistsException:
+                # File move has failed. This may be due to the fact that a
+                # process or thread has already completed the opertaion.
+                # In the event of a FileAlreadyExists we continue, all other
+                # exceptions will be raised.
+                LOG.debug(_("File %(folder)s already exists on %(ds)s."),
+                          {'folder': base_folder, 'ds': data_store_name})
 
         def _fetch_image_on_datastore():
             """Fetch image from Glance to datastore."""
@@ -585,8 +601,7 @@ class VMwareVMOps(object):
                 self._attach_cdrom_to_vm(
                     vm_ref, instance,
                     data_store_ref,
-                    uploaded_iso_path,
-                    1 if adapter_type in ['ide'] else 0)
+                    uploaded_iso_path)
 
         else:
             # Attach the root disk to the VM.
@@ -645,15 +660,24 @@ class VMwareVMOps(object):
                           e, instance=instance)
 
     def _attach_cdrom_to_vm(self, vm_ref, instance,
-                         datastore, file_path,
-                         cdrom_unit_number):
+                         datastore, file_path):
         """Attach cdrom to VM by reconfiguration."""
         instance_name = instance['name']
         instance_uuid = instance['uuid']
         client_factory = self._session._get_vim().client.factory
-        vmdk_attach_config_spec = vm_util.get_cdrom_attach_config_spec(
+        devices = self._session._call_method(vim_util,
+                                    "get_dynamic_property", vm_ref,
+                                    "VirtualMachine", "config.hardware.device")
+        (controller_key, unit_number,
+         controller_spec) = vm_util.allocate_controller_key_and_unit_number(
+                                                              client_factory,
+                                                              devices,
+                                                              'ide')
+        cdrom_attach_config_spec = vm_util.get_cdrom_attach_config_spec(
                                     client_factory, datastore, file_path,
-                                    cdrom_unit_number)
+                                    controller_key, unit_number)
+        if controller_spec:
+            cdrom_attach_config_spec.deviceChange.append(controller_spec)
 
         LOG.debug(_("Reconfiguring VM instance %(instance_name)s to attach "
                     "cdrom %(file_path)s"),
@@ -661,7 +685,7 @@ class VMwareVMOps(object):
         reconfig_task = self._session._call_method(
                                         self._session._get_vim(),
                                         "ReconfigVM_Task", vm_ref,
-                                        spec=vmdk_attach_config_spec)
+                                        spec=cdrom_attach_config_spec)
         self._session._wait_for_task(instance_uuid, reconfig_task)
         LOG.debug(_("Reconfigured VM instance %(instance_name)s to attach "
                     "cdrom %(file_path)s"),
@@ -740,12 +764,12 @@ class VMwareVMOps(object):
 
         def _get_vm_and_vmdk_attribs():
             # Get the vmdk file name that the VM is pointing to
-            hardware_devices = self._session._call_method(vim_util,
+            hw_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-            (vmdk_file_path_before_snapshot, controller_key, adapter_type,
-             disk_type, unit_number) = vm_util.get_vmdk_path_and_adapter_type(
-                                    hardware_devices, uuid=instance['uuid'])
+            (vmdk_file_path_before_snapshot, adapter_type,
+             disk_type) = vm_util.get_vmdk_path_and_adapter_type(
+                                        hw_devices, uuid=instance['uuid'])
             datastore_name = vm_util.split_datastore_path(
                                         vmdk_file_path_before_snapshot)[0]
             os_type = self._session._call_method(vim_util,
@@ -1094,19 +1118,14 @@ class VMwareVMOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-        (vmdk_path, controller_key, adapter_type, disk_type,
-         unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+        (vmdk_path, adapter_type,
+         disk_type) = vm_util.get_vmdk_path_and_adapter_type(
                 hardware_devices, uuid=instance['uuid'])
-
-        # Figure out the correct unit number
-        unit_number = unit_number + 1
         rescue_vm_ref = vm_util.get_vm_ref_from_name(self._session,
                                                      instance_name)
         self._volumeops.attach_disk_to_vm(
                                 rescue_vm_ref, r_instance,
-                                adapter_type, disk_type, vmdk_path,
-                                controller_key=controller_key,
-                                unit_number=unit_number)
+                                adapter_type, disk_type, vmdk_path)
         self._power_on(instance, vm_ref=rescue_vm_ref)
 
     def unrescue(self, instance):
@@ -1116,8 +1135,8 @@ class VMwareVMOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-        (vmdk_path, controller_key, adapter_type, disk_type,
-         unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+        (vmdk_path, adapter_type,
+         disk_type) = vm_util.get_vmdk_path_and_adapter_type(
                 hardware_devices, uuid=instance['uuid'])
 
         r_instance = copy.deepcopy(instance)
@@ -1633,16 +1652,6 @@ class VMwareVMOps(object):
         # the NIC configuration inside the VM
         client_factory = self._session._get_vim().client.factory
         self._set_machine_id(client_factory, instance, network_info)
-
-    def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks."""
-        msg = _("VIF plugging is not supported by the VMware driver.")
-        raise NotImplementedError(msg)
-
-    def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks."""
-        msg = _("VIF unplugging is not supported by the VMware driver.")
-        raise NotImplementedError(msg)
 
 
 class VMwareVCVMOps(VMwareVMOps):

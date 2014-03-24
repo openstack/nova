@@ -35,9 +35,10 @@ class MultinicController(wsgi.Controller):
         super(MultinicController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    def _get_instance(self, context, instance_id):
+    def _get_instance(self, context, instance_id, want_objects=False):
         try:
-            return self.compute_api.get(context, instance_id)
+            return self.compute_api.get(context, instance_id,
+                                        want_objects=want_objects)
         except exception.InstanceNotFound:
             msg = _("Server not found")
             raise exc.HTTPNotFound(msg)
@@ -53,7 +54,7 @@ class MultinicController(wsgi.Controller):
             msg = _("Missing 'networkId' argument for addFixedIp")
             raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-        instance = self._get_instance(context, id)
+        instance = self._get_instance(context, id, want_objects=True)
         network_id = body['addFixedIp']['networkId']
         self.compute_api.add_fixed_ip(context, instance, network_id)
         return webob.Response(status_int=202)
@@ -69,7 +70,8 @@ class MultinicController(wsgi.Controller):
             msg = _("Missing 'address' argument for removeFixedIp")
             raise exc.HTTPUnprocessableEntity(explanation=msg)
 
-        instance = self._get_instance(context, id)
+        instance = self._get_instance(context, id,
+                                      want_objects=True)
         address = body['removeFixedIp']['address']
 
         try:

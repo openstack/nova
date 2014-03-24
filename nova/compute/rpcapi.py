@@ -224,6 +224,10 @@ class ComputeAPI(object):
         3.8 - Update set_admin_password() to take an instance object
         3.9 - Update rescue_instance() to take an instance object
         3.10 - Added get_rdp_console method
+        3.11 - Update unrescue_instance() to take an object
+        3.12 - Update add_fixed_ip_to_instance() to take an object
+        3.13 - Update remove_fixed_ip_from_instance() to take an object
+        3.14 - Update post_live_migration_at_destination() to take an object
     '''
 
     VERSION_ALIASES = {
@@ -279,13 +283,16 @@ class ComputeAPI(object):
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.12'):
+            version = '3.12'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
-                   instance=instance_p, network_id=network_id)
+                   instance=instance, network_id=network_id)
 
     def attach_interface(self, ctxt, instance, network_id, port_id,
                          requested_ip):
@@ -528,12 +535,15 @@ class ComputeAPI(object):
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.14'):
+            version = '3.14'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=host, version=version)
         cctxt.cast(ctxt, 'post_live_migration_at_destination',
-            instance=instance_p, block_migration=block_migration)
+            instance=instance, block_migration=block_migration)
 
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
@@ -632,13 +642,16 @@ class ComputeAPI(object):
                    slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.13'):
+            version = '3.13'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
-                   instance=instance_p, address=address)
+                   instance=instance, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
         # NOTE(russellb) Havana compat
@@ -826,12 +839,15 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.11'):
+            version = '3.11'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'unrescue_instance', instance=instance_p)
+        cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
         # NOTE(russellb) Havana compat

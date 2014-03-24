@@ -14,9 +14,9 @@
 #    under the License.
 
 import datetime
-import urlparse
 
 import iso8601
+import six.moves.urllib.parse as urlparse
 from webob import exc
 
 from nova.api.openstack import extensions

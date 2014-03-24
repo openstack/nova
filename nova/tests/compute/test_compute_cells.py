@@ -17,8 +17,10 @@ Tests For Compute w/ Cells
 """
 import functools
 
+import mock
 from oslo.config import cfg
 
+from nova.cells import manager
 from nova.compute import api as compute_api
 from nova.compute import cells_api as compute_cells_api
 from nova import db
@@ -182,6 +184,39 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         response = self.compute_api.get_migrations(self.context, filters)
 
         self.assertEqual(migrations, response)
+
+    @mock.patch('nova.cells.messaging._TargetedMessage')
+    def test_rebuild_sig(self, mock_msg):
+        # TODO(belliott) Cells could benefit from better testing to ensure API
+        # and manager signatures stay up to date
+
+        def wire(version):
+            # wire the rpc cast directly to the manager method to make sure
+            # the signature matches
+            cells_mgr = manager.CellsManager()
+
+            def cast(context, method, *args, **kwargs):
+                fn = getattr(cells_mgr, method)
+                fn(context, *args, **kwargs)
+
+            cells_mgr.cast = cast
+            return cells_mgr
+
+        cells_rpcapi = self.compute_api.cells_rpcapi
+        client = cells_rpcapi.client
+
+        with mock.patch.object(client, 'prepare', side_effect=wire):
+            inst = self._create_fake_instance_obj()
+            inst.cell_name = 'mycell'
+
+            cells_rpcapi.rebuild_instance(self.context, inst, 'pass', None,
+                                          None, None, None, None,
+                                          recreate=False,
+                                          on_shared_storage=False, host='host',
+                                          preserve_ephemeral=True, kwargs=None)
+
+        # one targeted message should have been created
+        self.assertEqual(1, mock_msg.call_count)
 
 
 class CellsComputePolicyTestCase(test_compute.ComputePolicyTestCase):

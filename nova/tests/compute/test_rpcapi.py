@@ -104,7 +104,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_add_fixed_ip_to_instance(self):
         self._test_compute_api('add_fixed_ip_to_instance', 'cast',
-                instance=self.fake_instance, network_id='id')
+                instance=self.fake_instance, network_id='id', version='3.12')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -379,7 +379,7 @@ class ComputeRpcAPITestCase(test.TestCase):
     def test_post_live_migration_at_destination(self):
         self._test_compute_api('post_live_migration_at_destination', 'cast',
                 instance=self.fake_instance, block_migration='block_migration',
-                host='host')
+                host='host', version='3.14')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -549,7 +549,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_remove_fixed_ip_from_instance(self):
         self._test_compute_api('remove_fixed_ip_from_instance', 'cast',
-                instance=self.fake_instance, address='addr')
+                instance=self.fake_instance, address='addr',
+                version='3.13')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -751,7 +752,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_unrescue_instance(self):
         self._test_compute_api('unrescue_instance', 'cast',
-                instance=self.fake_instance)
+                instance=self.fake_instance, version='3.11')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

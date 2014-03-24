@@ -17,9 +17,8 @@
 Management class for Pool-related functions (join, eject, etc).
 """
 
-import urlparse
-
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception

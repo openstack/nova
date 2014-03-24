@@ -70,3 +70,13 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(
             len(list(checks.assert_equal_type("self.assertTrue()"))), 0)
+
+    def test_assert_equal_none(self):
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertEqual(A, None)"))), 1)
+
+        self.assertEqual(len(list(checks.assert_equal_none(
+            "self.assertEqual(None, A)"))), 1)
+
+        self.assertEqual(
+            len(list(checks.assert_equal_none("self.assertIsNone()"))), 0)

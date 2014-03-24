@@ -67,7 +67,7 @@ class _TestDNSDomain(object):
         dns_domain.DNSDomain.delete_by_domain(self.context.elevated(),
                 'domain')
         dnsd = dns_domain.DNSDomain.get_by_domain(self.context, 'domain')
-        self.assertEqual(None, dnsd)
+        self.assertIsNone(dnsd)
 
     def test_get_all(self):
         with mock.patch.object(db, 'dnsdomain_get_all') as get:

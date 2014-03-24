@@ -18,6 +18,7 @@
 import fixtures
 import mock
 import mox
+import netaddr
 from oslo.config import cfg
 from oslo import messaging
 
@@ -31,6 +32,7 @@ from nova.network import linux_net
 from nova.network import manager as network_manager
 from nova.network import model as net_model
 from nova.objects import fixed_ip as fixed_ip_obj
+from nova.objects import floating_ip as floating_ip_obj
 from nova.objects import network as network_obj
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common import importutils
@@ -43,7 +45,9 @@ from nova.tests import fake_ldap
 from nova.tests import fake_network
 from nova.tests import matchers
 from nova.tests.objects import test_fixed_ip
+from nova.tests.objects import test_floating_ip
 from nova.tests.objects import test_network
+from nova.tests.objects import test_service
 from nova import utils
 
 CONF = cfg.CONF
@@ -834,37 +838,37 @@ class VlanNetworkTestCase(test.TestCase):
                                       is_admin=False)
 
         # raises because floating_ip project_id is None
-        floating_ip = {'address': '10.0.0.1',
-                       'project_id': None}
+        floating_ip = floating_ip_obj.FloatingIP(address='10.0.0.1',
+                                                 project_id=None)
         self.assertRaises(exception.NotAuthorized,
                           self.network._floating_ip_owned_by_project,
                           ctxt,
                           floating_ip)
 
         # raises because floating_ip project_id is not equal to ctxt project_id
-        floating_ip = {'address': '10.0.0.1',
-                       'project_id': ctxt.project_id + '1'}
+        floating_ip = floating_ip_obj.FloatingIP(
+            address='10.0.0.1', project_id=ctxt.project_id + '1')
         self.assertRaises(exception.NotAuthorized,
                           self.network._floating_ip_owned_by_project,
                           ctxt,
                           floating_ip)
 
         # does not raise (floating ip is owned by ctxt project)
-        floating_ip = {'address': '10.0.0.1',
-                       'project_id': ctxt.project_id}
+        floating_ip = floating_ip_obj.FloatingIP(address='10.0.0.1',
+                                                 project_id=ctxt.project_id)
         self.network._floating_ip_owned_by_project(ctxt, floating_ip)
 
         ctxt = context.RequestContext(None, None,
                                       is_admin=True)
 
         # does not raise (ctxt is admin)
-        floating_ip = {'address': '10.0.0.1',
-                       'project_id': None}
+        floating_ip = floating_ip_obj.FloatingIP(address='10.0.0.1',
+                                                 project_id=None)
         self.network._floating_ip_owned_by_project(ctxt, floating_ip)
 
         # does not raise (ctxt is admin)
-        floating_ip = {'address': '10.0.0.1',
-                       'project_id': 'testproject'}
+        floating_ip = floating_ip_obj.FloatingIP(address='10.0.0.1',
+                                                 project_id='testproject')
         self.network._floating_ip_owned_by_project(ctxt, floating_ip)
 
     def test_allocate_floating_ip(self):
@@ -887,11 +891,13 @@ class VlanNetworkTestCase(test.TestCase):
             pass
 
         def fake2(*args, **kwargs):
-            return {'address': '10.0.0.1', 'fixed_ip_id': 1}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1', fixed_ip_id=1)
 
         def fake3(*args, **kwargs):
-            return {'address': '10.0.0.1', 'fixed_ip_id': None,
-                    'project_id': ctxt.project_id}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1', fixed_ip_id=None,
+                        project_id=ctxt.project_id)
 
         self.stubs.Set(self.network.db, 'floating_ip_deallocate', fake1)
         self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
@@ -907,48 +913,56 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake3)
         self.network.deallocate_floating_ip(ctxt, ctxt.project_id)
 
-    def test_associate_floating_ip(self):
+    @mock.patch('nova.db.fixed_ip_get')
+    def test_associate_floating_ip(self, fixed_get):
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
 
         def fake1(*args, **kwargs):
-            return {'address': '10.0.0.1', 'network': 'fakenet'}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1', network='fakenet')
 
         # floating ip that's already associated
         def fake2(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'interface': 'eth0',
-                    'fixed_ip_id': 1}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        interface='eth0',
+                        fixed_ip_id=1)
 
         # floating ip that isn't associated
         def fake3(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'interface': 'eth0',
-                    'fixed_ip_id': None}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        interface='eth0',
+                        fixed_ip_id=None)
 
         # fixed ip with remote host
         def fake4(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'instance_uuid': FAKEUUID,
-                    'interface': 'eth0',
-                    'network_id': 'blah'}
+            return dict(test_fixed_ip.fake_fixed_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        instance_uuid=FAKEUUID,
+                        interface='eth0',
+                        network_id=123)
 
         def fake4_network(*args, **kwargs):
-            return {'multi_host': False, 'host': 'jibberjabber'}
+            return dict(test_network.fake_network,
+                        multi_host=False, host='jibberjabber')
 
         # fixed ip with local host
         def fake5(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'instance_uuid': FAKEUUID,
-                    'interface': 'eth0',
-                    'network_id': 'blahblah'}
+            return dict(test_fixed_ip.fake_fixed_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        instance_uuid=FAKEUUID,
+                        interface='eth0',
+                        network_id=1234)
 
         def fake5_network(*args, **kwargs):
-            return {'multi_host': False, 'host': 'testhost'}
+            return dict(test_network.fake_network,
+                        multi_host=False, host='testhost')
 
         def fake6(ctxt, method, **kwargs):
             self.local = False
@@ -983,13 +997,13 @@ class VlanNetworkTestCase(test.TestCase):
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address', fake2)
         self.stubs.Set(self.network, 'disassociate_floating_ip', fake9)
 
-        def fake_fixed_ip_get(context, fixed_ip_id):
-            return {'address': 'old', 'instance_uuid': 'fake_uuid'}
-
-        self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
+        fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                      address='1.2.3.4',
+                                      instance_uuid='fake_uuid',
+                                      network=test_network.fake_network)
 
         # doesn't raise because we exit early if the address is the same
-        self.network.associate_floating_ip(ctxt, mox.IgnoreArg(), 'old')
+        self.network.associate_floating_ip(ctxt, mox.IgnoreArg(), '1.2.3.4')
 
         # raises because we call disassociate which is mocked
         self.assertRaises(test.TestingException,
@@ -1056,32 +1070,39 @@ class VlanNetworkTestCase(test.TestCase):
                                               'fakeiface',
                                               'fakenet')
 
-    def _test_floating_ip_init_host(self, public_interface, expected_arg):
+    @mock.patch('nova.db.floating_ip_get_all_by_host')
+    @mock.patch('nova.db.fixed_ip_get')
+    def _test_floating_ip_init_host(self, fixed_get, floating_get,
+                                    public_interface, expected_arg):
 
-        def get_all_by_host(_context, _host):
-            return [{'interface': 'foo',
-                     'address': 'foo'},
-                    {'interface': 'fakeiface',
-                     'address': 'fakefloat',
-                     'fixed_ip_id': 1},
-                    {'interface': 'bar',
-                     'address': 'bar',
-                     'fixed_ip_id': 2}]
-        self.stubs.Set(self.network.db, 'floating_ip_get_all_by_host',
-                       get_all_by_host)
+        floating_get.return_value = [
+            dict(test_floating_ip.fake_floating_ip,
+                 interface='foo',
+                 address='1.2.3.4'),
+            dict(test_floating_ip.fake_floating_ip,
+                 interface='fakeiface',
+                 address='1.2.3.5',
+                 fixed_ip_id=1),
+            dict(test_floating_ip.fake_floating_ip,
+                 interface='bar',
+                 address='1.2.3.6',
+                 fixed_ip_id=2),
+            ]
 
         def fixed_ip_get(_context, fixed_ip_id, get_network):
             if fixed_ip_id == 1:
-                return {'address': 'fakefixed', 'network': 'fakenet'}
+                return dict(test_fixed_ip.fake_fixed_ip,
+                            address='1.2.3.4',
+                            network=test_network.fake_network)
             raise exception.FixedIpNotFound(id=fixed_ip_id)
-        self.stubs.Set(self.network.db, 'fixed_ip_get', fixed_ip_get)
+        fixed_get.side_effect = fixed_ip_get
 
         self.mox.StubOutWithMock(self.network.l3driver, 'add_floating_ip')
         self.flags(public_interface=public_interface)
-        self.network.l3driver.add_floating_ip('fakefloat',
-                                              'fakefixed',
+        self.network.l3driver.add_floating_ip(netaddr.IPAddress('1.2.3.5'),
+                                              netaddr.IPAddress('1.2.3.4'),
                                               expected_arg,
-                                              'fakenet')
+                                              mox.IsA(network_obj.Network))
         self.mox.ReplayAll()
         self.network.init_host_floating_ips()
         self.mox.UnsetStubs()
@@ -1104,41 +1125,47 @@ class VlanNetworkTestCase(test.TestCase):
 
         # floating ip that isn't associated
         def fake2(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'interface': 'eth0',
-                    'fixed_ip_id': None}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        interface='eth0',
+                        fixed_ip_id=None)
 
         # floating ip that is associated
         def fake3(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'interface': 'eth0',
-                    'fixed_ip_id': 1,
-                    'project_id': ctxt.project_id}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        interface='eth0',
+                        fixed_ip_id=1,
+                        project_id=ctxt.project_id)
 
         # fixed ip with remote host
         def fake4(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'instance_uuid': FAKEUUID,
-                    'interface': 'eth0',
-                    'network_id': 'blah'}
+            return dict(test_fixed_ip.fake_fixed_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        instance_uuid=FAKEUUID,
+                        interface='eth0',
+                        network_id=123)
 
         def fake4_network(*args, **kwargs):
-            return {'multi_host': False,
-                    'host': 'jibberjabber'}
+            return dict(test_network.fake_network,
+                        multi_host=False,
+                        host='jibberjabber')
 
         # fixed ip with local host
         def fake5(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'instance_uuid': FAKEUUID,
-                    'interface': 'eth0',
-                    'network_id': 'blahblah'}
+            return dict(test_fixed_ip.fake_fixed_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        instance_uuid=FAKEUUID,
+                        interface='eth0',
+                        network_id=1234)
 
         def fake5_network(*args, **kwargs):
-            return {'multi_host': False, 'host': 'testhost'}
+            return dict(test_network.fake_network,
+                        multi_host=False, host='testhost')
 
         def fake6(ctxt, method, **kwargs):
             self.local = False
@@ -1147,12 +1174,13 @@ class VlanNetworkTestCase(test.TestCase):
             self.local = True
 
         def fake8(*args, **kwargs):
-            return {'address': '10.0.0.1',
-                    'pool': 'nova',
-                    'interface': 'eth0',
-                    'fixed_ip_id': 1,
-                    'auto_assigned': True,
-                    'project_id': ctxt.project_id}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address='10.0.0.1',
+                        pool='nova',
+                        interface='eth0',
+                        fixed_ip_id=1,
+                        auto_assigned=True,
+                        project_id=ctxt.project_id)
 
         self.stubs.Set(self.network, '_floating_ip_owned_by_project', fake1)
 
@@ -1238,7 +1266,8 @@ class VlanNetworkTestCase(test.TestCase):
         """Makes sure that we cannot deallocaate or disassociate
         a public ip of other project.
         """
-        net_get.return_value = dict(networks[1])
+        net_get.return_value = dict(test_network.fake_network,
+                                    **networks[1])
 
         context1 = context.RequestContext('user', 'project1')
         context2 = context.RequestContext('user', 'project2')
@@ -1364,7 +1393,8 @@ class VlanNetworkTestCase(test.TestCase):
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')
-    def test_deallocate_fixed_no_vif(self, net_get, fixed_get):
+    @mock.patch('nova.db.fixed_ip_update')
+    def test_deallocate_fixed_no_vif(self, fixed_update, net_get, fixed_get):
         """Verify that deallocate doesn't raise when no vif is returned.
 
         Ensures https://bugs.launchpad.net/nova/+bug/968457 doesn't return
@@ -1384,13 +1414,18 @@ class VlanNetworkTestCase(test.TestCase):
         elevated = context1.elevated()
         fix_addr = db.fixed_ip_associate_pool(elevated, 1, instance['uuid'])
         fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                      address=fix_addr.address,
                                       allocated=True,
                                       virtual_interface_id=3,
                                       instance_uuid=instance.uuid,
                                       network=dict(test_network.fake_network,
                                                    **networks[1]))
         self.flags(force_dhcp_release=True)
+        fixed_update.return_value = fixed_get.return_value
         self.network.deallocate_fixed_ip(context1, fix_addr.address, 'fake')
+        fixed_update.assert_called_once_with(context1, fix_addr.address,
+                                             {'allocated': False,
+                                              'virtual_interface_id': None})
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')
@@ -1525,7 +1560,8 @@ class CommonNetworkTestCase(test.TestCase):
         ], manager.deallocate_fixed_ip_calls)
 
     @mock.patch('nova.db.fixed_ip_get_by_instance')
-    def test_remove_fixed_ip_from_instance(self, get):
+    @mock.patch('nova.db.fixed_ip_disassociate')
+    def test_remove_fixed_ip_from_instance(self, disassociate, get):
         manager = fake_network.FakeNetworkManager()
         get.return_value = [
             dict(test_fixed_ip.fake_fixed_ip, **x)
@@ -1536,6 +1572,7 @@ class CommonNetworkTestCase(test.TestCase):
                                               '10.0.0.1')
 
         self.assertEqual(manager.deallocate_called, '10.0.0.1')
+        disassociate.assert_called_once_with(self.context, '10.0.0.1')
 
     @mock.patch('nova.db.fixed_ip_get_by_instance')
     def test_remove_fixed_ip_from_instance_bad_input(self, get):
@@ -2190,50 +2227,39 @@ class FloatingIPTestCase(test.TestCase):
         self.context = context.RequestContext('testuser', self.project_id,
             is_admin=False)
 
-    def test_disassociate_floating_ip_multi_host_calls(self):
-        floating_ip = {
-            'fixed_ip_id': 12
-        }
+    @mock.patch('nova.db.fixed_ip_get')
+    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.instance_get_by_uuid')
+    @mock.patch('nova.db.service_get_by_host_and_topic')
+    @mock.patch('nova.db.floating_ip_get_by_address')
+    def test_disassociate_floating_ip_multi_host_calls(self, floating_get,
+                                                       service_get,
+                                                       inst_get, net_get,
+                                                       fixed_get):
+        floating_ip = dict(test_floating_ip.fake_floating_ip,
+                           fixed_ip_id=12)
 
-        fixed_ip = {
-            'network_id': None,
-            'instance_uuid': 'instance-uuid'
-        }
+        fixed_ip = dict(test_fixed_ip.fake_fixed_ip,
+                        network_id=None,
+                        instance_uuid='instance-uuid')
 
-        network = {
-            'multi_host': True
-        }
+        network = dict(test_network.fake_network,
+                       multi_host=True)
 
-        instance = {
-            'host': 'some-other-host'
-        }
+        instance = dict(fake_instance.fake_db_instance(host='some-other-host'))
 
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
-
-        self.stubs.Set(self.network.db,
-                       'floating_ip_get_by_address',
-                       lambda _x, _y: floating_ip)
 
         self.stubs.Set(self.network,
                        '_floating_ip_owned_by_project',
                        lambda _x, _y: True)
 
-        self.stubs.Set(self.network.db,
-                       'fixed_ip_get',
-                       lambda _x, _y: fixed_ip)
-
-        self.stubs.Set(self.network.db,
-                       'network_get',
-                       lambda _x, _y: network)
-
-        self.stubs.Set(self.network.db,
-                       'instance_get_by_uuid',
-                       lambda _x, _y: instance)
-
-        self.stubs.Set(self.network.db,
-                       'service_get_by_host_and_topic',
-                       lambda _x, _y, _z: 'service')
+        floating_get.return_value = floating_ip
+        fixed_get.return_value = fixed_ip
+        net_get.return_value = network
+        inst_get.return_value = instance
+        service_get.return_value = test_service.fake_service
 
         self.stubs.Set(self.network.servicegroup_api,
                        'service_is_up',
@@ -2248,46 +2274,36 @@ class FloatingIPTestCase(test.TestCase):
 
         self.network.disassociate_floating_ip(ctxt, 'fl_ip', True)
 
-    def test_associate_floating_ip_multi_host_calls(self):
-        floating_ip = {
-            'fixed_ip_id': None
-        }
+    @mock.patch('nova.db.fixed_ip_get_by_address')
+    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.instance_get_by_uuid')
+    @mock.patch('nova.db.floating_ip_get_by_address')
+    def test_associate_floating_ip_multi_host_calls(self, floating_get,
+                                                    inst_get, net_get,
+                                                    fixed_get):
+        floating_ip = dict(test_floating_ip.fake_floating_ip,
+                           fixed_ip_id=None)
 
-        fixed_ip = {
-            'network_id': None,
-            'instance_uuid': 'instance-uuid'
-        }
+        fixed_ip = dict(test_fixed_ip.fake_fixed_ip,
+                        network_id=None,
+                        instance_uuid='instance-uuid')
 
-        network = {
-            'multi_host': True
-        }
+        network = dict(test_network.fake_network,
+                       multi_host=True)
 
-        instance = {
-            'host': 'some-other-host'
-        }
+        instance = dict(fake_instance.fake_db_instance(host='some-other-host'))
 
         ctxt = context.RequestContext('testuser', 'testproject',
                                       is_admin=False)
-
-        self.stubs.Set(self.network.db,
-                       'floating_ip_get_by_address',
-                       lambda _x, _y: floating_ip)
 
         self.stubs.Set(self.network,
                        '_floating_ip_owned_by_project',
                        lambda _x, _y: True)
 
-        self.stubs.Set(self.network.db,
-                       'fixed_ip_get_by_address',
-                       lambda _x, _y: fixed_ip)
-
-        self.stubs.Set(self.network.db,
-                       'network_get',
-                       lambda _x, _y: network)
-
-        self.stubs.Set(self.network.db,
-                       'instance_get_by_uuid',
-                       lambda _x, _y: instance)
+        floating_get.return_value = floating_ip
+        fixed_get.return_value = fixed_ip
+        net_get.return_value = network
+        inst_get.return_value = instance
 
         self.mox.StubOutWithMock(
             self.network.network_rpcapi, '_associate_floating_ip')
@@ -2351,39 +2367,39 @@ class FloatingIPTestCase(test.TestCase):
         self.network.deallocate_for_instance(self.context,
                 instance_id=instance['uuid'])
 
-    def test_migrate_instance_start(self):
+    @mock.patch('nova.db.fixed_ip_get')
+    @mock.patch('nova.db.floating_ip_get_by_address')
+    @mock.patch('nova.db.floating_ip_update')
+    def test_migrate_instance_start(self, floating_update, floating_get,
+                                    fixed_get):
         called = {'count': 0}
 
         def fake_floating_ip_get_by_address(context, address):
-            return {'address': address,
-                    'fixed_ip_id': 0}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address=address,
+                        fixed_ip_id=0)
 
         def fake_is_stale_floating_ip_address(context, floating_ip):
-            return floating_ip['address'] == '172.24.4.23'
+            return str(floating_ip.address) == '172.24.4.23'
 
-        def fake_fixed_ip_get(context, fixed_ip_id, get_network):
-            return {'instance_uuid': 'fake_uuid',
-                    'address': '10.0.0.2',
-                    'network': 'fakenet'}
+        floating_get.side_effect = fake_floating_ip_get_by_address
+        fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                      instance_uuid='fake_uuid',
+                                      address='10.0.0.2',
+                                      network=test_network.fake_network)
+        floating_update.return_value = fake_floating_ip_get_by_address(
+            None, '1.2.3.4')
 
         def fake_remove_floating_ip(floating_addr, fixed_addr, interface,
                                     network):
             called['count'] += 1
 
         def fake_clean_conntrack(fixed_ip):
-            if not fixed_ip == "10.0.0.2":
+            if not str(fixed_ip) == "10.0.0.2":
                 raise exception.FixedIpInvalid(address=fixed_ip)
 
-        def fake_floating_ip_update(context, address, args):
-            pass
-
-        self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
-                       fake_floating_ip_get_by_address)
         self.stubs.Set(self.network, '_is_stale_floating_ip_address',
                                  fake_is_stale_floating_ip_address)
-        self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
-        self.stubs.Set(self.network.db, 'floating_ip_update',
-                       fake_floating_ip_update)
         self.stubs.Set(self.network.l3driver, 'remove_floating_ip',
                        fake_remove_floating_ip)
         self.stubs.Set(self.network.l3driver, 'clean_conntrack',
@@ -2400,35 +2416,34 @@ class FloatingIPTestCase(test.TestCase):
 
         self.assertEqual(called['count'], 2)
 
-    def test_migrate_instance_finish(self):
+    @mock.patch('nova.db.fixed_ip_get')
+    @mock.patch('nova.db.floating_ip_update')
+    def test_migrate_instance_finish(self, floating_update, fixed_get):
         called = {'count': 0}
 
         def fake_floating_ip_get_by_address(context, address):
-            return {'address': address,
-                    'fixed_ip_id': 0}
+            return dict(test_floating_ip.fake_floating_ip,
+                        address=address,
+                        fixed_ip_id=0)
 
         def fake_is_stale_floating_ip_address(context, floating_ip):
-            return floating_ip['address'] == '172.24.4.23'
+            return str(floating_ip.address) == '172.24.4.23'
 
-        def fake_fixed_ip_get(context, fixed_ip_id, get_network):
-            return {'instance_uuid': 'fake_uuid',
-                    'address': '10.0.0.2',
-                    'network': 'fakenet'}
+        fixed_get.return_value = dict(test_fixed_ip.fake_fixed_ip,
+                                      instance_uuid='fake_uuid',
+                                      address='10.0.0.2',
+                                      network=test_network.fake_network)
+        floating_update.return_value = fake_floating_ip_get_by_address(
+            None, '1.2.3.4')
 
         def fake_add_floating_ip(floating_addr, fixed_addr, interface,
                                  network):
             called['count'] += 1
 
-        def fake_floating_ip_update(context, address, args):
-            pass
-
         self.stubs.Set(self.network.db, 'floating_ip_get_by_address',
                        fake_floating_ip_get_by_address)
         self.stubs.Set(self.network, '_is_stale_floating_ip_address',
                                  fake_is_stale_floating_ip_address)
-        self.stubs.Set(self.network.db, 'fixed_ip_get', fake_fixed_ip_get)
-        self.stubs.Set(self.network.db, 'floating_ip_update',
-                       fake_floating_ip_update)
         self.stubs.Set(self.network.l3driver, 'add_floating_ip',
                        fake_add_floating_ip)
         self.mox.ReplayAll()

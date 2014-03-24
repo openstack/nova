@@ -270,7 +270,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        robj = self.controller._action_rebuild(req, FAKE_UUID, body)
+        robj = self.controller._action_rebuild(req, FAKE_UUID, body=body)
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
@@ -297,7 +297,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank('/v3/servers/a/action')
-        self.controller._action_rebuild(req, FAKE_UUID, body)
+        self.controller._action_rebuild(req, FAKE_UUID, body=body)
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_instance_with_image_href_uses_uuid(self):
@@ -318,7 +318,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank('/v3/servers/a/action')
-        self.controller._action_rebuild(req, FAKE_UUID, body)
+        self.controller._action_rebuild(req, FAKE_UUID, body=body)
         self.assertEqual(info['image_href_in_call'], self.image_uuid)
 
     def test_rebuild_accepted_minimum_pass_disabled(self):
@@ -338,7 +338,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        robj = self.controller._action_rebuild(req, FAKE_UUID, body)
+        robj = self.controller._action_rebuild(req, FAKE_UUID, body=body)
         body = robj.obj
 
         self.assertEqual(body['server']['image']['id'], '2')
@@ -363,7 +363,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPConflict,
                           self.controller._action_rebuild,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_accepted_with_metadata(self):
         metadata = {'new': 'metadata'}
@@ -380,7 +380,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
+        body = self.controller._action_rebuild(req, FAKE_UUID, body=body).obj
 
         self.assertEqual(body['server']['metadata'], metadata)
 
@@ -395,7 +395,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_with_too_large_metadata(self):
         body = {
@@ -410,7 +410,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPRequestEntityTooLarge,
                           self.controller._action_rebuild, req,
-                          FAKE_UUID, body)
+                          FAKE_UUID, body=body)
 
     def test_rebuild_bad_entity(self):
         body = {
@@ -422,7 +422,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_admin_password(self):
         return_server = fakes.fake_instance_get(image_ref='2',
@@ -437,7 +437,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
+        body = self.controller._action_rebuild(req, FAKE_UUID, body=body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertEqual(body['server']['admin_password'], 'asdf')
@@ -459,7 +459,7 @@ class ServerActionsControllerTest(test.TestCase):
         }
 
         req = fakes.HTTPRequestV3.blank(self.url)
-        body = self.controller._action_rebuild(req, FAKE_UUID, body).obj
+        body = self.controller._action_rebuild(req, FAKE_UUID, body=body).obj
 
         self.assertEqual(body['server']['image']['id'], '2')
         self.assertNotIn('admin_password', body['server'])
@@ -479,7 +479,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller._action_rebuild,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_with_bad_image(self):
         body = {
@@ -490,7 +490,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_when_kernel_not_exists(self):
 
@@ -518,7 +518,7 @@ class ServerActionsControllerTest(test.TestCase):
         req = fakes.HTTPRequestV3.blank(self.url)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
-                          req, FAKE_UUID, body)
+                          req, FAKE_UUID, body=body)
 
     def test_rebuild_proper_kernel_ram(self):
         instance_meta = {'kernel_id': None, 'ramdisk_id': None}
@@ -561,7 +561,7 @@ class ServerActionsControllerTest(test.TestCase):
             },
         }
         req = fakes.HTTPRequestV3.blank(self.url)
-        self.controller._action_rebuild(req, FAKE_UUID, body).obj
+        self.controller._action_rebuild(req, FAKE_UUID, body=body).obj
         self.assertEqual(instance_meta['kernel_id'], '1')
         self.assertEqual(instance_meta['ramdisk_id'], '2')
 
@@ -591,7 +591,7 @@ class ServerActionsControllerTest(test.TestCase):
                                     mox.IgnoreArg())
         self.mox.ReplayAll()
 
-        self.controller._action_rebuild(req, FAKE_UUID, body)
+        self.controller._action_rebuild(req, FAKE_UUID, body=body)
 
     def test_rebuild_preserve_ephemeral_true(self):
         self._test_rebuild_preserve_ephemeral(True)

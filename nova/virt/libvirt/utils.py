@@ -32,6 +32,7 @@ from nova.openstack.common import processutils
 from nova.openstack.common import units
 from nova import utils
 from nova.virt import images
+from nova.virt import volumeutils
 
 libvirt_opts = [
     cfg.BoolOpt('snapshot_compression',
@@ -53,17 +54,7 @@ def execute(*args, **kwargs):
 
 
 def get_iscsi_initiator():
-    """Get iscsi initiator name for this machine."""
-    # NOTE(vish) openiscsi stores initiator name in a file that
-    #            needs root permission to read.
-    try:
-        contents = utils.read_file_as_root('/etc/iscsi/initiatorname.iscsi')
-    except exception.FileNotFound:
-        return None
-
-    for l in contents.split('\n'):
-        if l.startswith('InitiatorName='):
-            return l[l.index('=') + 1:].strip()
+    return volumeutils.get_iscsi_initiator()
 
 
 def get_fc_hbas():
@@ -361,26 +352,23 @@ def logical_volume_size(path):
     return int(out)
 
 
-def clear_logical_volume(path):
-    """Obfuscate the logical volume.
+def _zero_logical_volume(path, volume_size):
+    """Write zeros over the specified path
 
     :param path: logical volume path
+    :param size: number of zeros to write
     """
-    # TODO(p-draigbrady): We currently overwrite with zeros
-    # but we may want to make this configurable in future
-    # for more or less security conscious setups.
-
-    vol_size = logical_volume_size(path)
     bs = units.Mi
     direct_flags = ('oflag=direct',)
     sync_flags = ()
-    remaining_bytes = vol_size
+    remaining_bytes = volume_size
 
-    # The loop caters for versions of dd that
-    # don't support the iflag=count_bytes option.
+    # The loop efficiently writes zeros using dd,
+    # and caters for versions of dd that don't have
+    # the easier to use iflag=count_bytes option.
     while remaining_bytes:
         zero_blocks = remaining_bytes / bs
-        seek_blocks = (vol_size - remaining_bytes) / bs
+        seek_blocks = (volume_size - remaining_bytes) / bs
         zero_cmd = ('dd', 'bs=%s' % bs,
                     'if=/dev/zero', 'of=%s' % path,
                     'seek=%s' % seek_blocks, 'count=%s' % zero_blocks)
@@ -393,6 +381,39 @@ def clear_logical_volume(path):
         # Use O_DIRECT with initial block size and fdatasync otherwise
         direct_flags = ()
         sync_flags = ('conv=fdatasync',)
+
+
+def clear_logical_volume(path):
+    """Obfuscate the logical volume.
+
+    :param path: logical volume path
+    """
+    volume_clear = CONF.libvirt.volume_clear
+
+    if volume_clear not in ('none', 'shred', 'zero'):
+        LOG.error(_("ignoring unrecognized volume_clear='%s' value"),
+                  volume_clear)
+        volume_clear = 'zero'
+
+    if volume_clear == 'none':
+        return
+
+    volume_clear_size = int(CONF.libvirt.volume_clear_size) * units.Mi
+    volume_size = logical_volume_size(path)
+
+    if volume_clear_size != 0 and volume_clear_size < volume_size:
+        volume_size = volume_clear_size
+
+    if volume_clear == 'zero':
+        # NOTE(p-draigbrady): we could use shred to do the zeroing
+        # with -n0 -z, however only versions >= 8.22 perform as well as dd
+        _zero_logical_volume(path, volume_size)
+    elif volume_clear == 'shred':
+        utils.execute('shred', '-n3', '-s%d' % volume_size, path,
+                      run_as_root=True)
+    else:
+        raise exception.Invalid(_("volume_clear='%s' is not handled")
+                                % volume_clear)
 
 
 def remove_logical_volumes(*paths):

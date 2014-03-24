@@ -70,6 +70,7 @@ from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
 from nova.image import glance
+from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import service as service_obj
 from nova.openstack.common import excutils
@@ -645,8 +646,10 @@ class LibvirtDriver(driver.ComputeDriver):
         finally:
             # Enabling the compute service, in case it was disabled
             # since the connection was successful.
-            is_connected = bool(wrapped_conn)
-            self.set_host_enabled(CONF.host, is_connected)
+            disable_reason = DISABLE_REASON_UNDEFINED
+            if not wrapped_conn:
+                disable_reason = 'Failed to connect to libvirt'
+            self._set_host_enabled(bool(wrapped_conn), disable_reason)
 
         self._wrapped_conn = wrapped_conn
 
@@ -700,7 +703,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._wrapped_conn = None
                 # Disable compute service to avoid
                 # new instances of being scheduled on this host.
-                self.set_host_enabled(CONF.host, _error)
+                self._set_host_enabled(False, disable_reason=_error)
 
     @staticmethod
     def _test_connection(conn):
@@ -1350,13 +1353,13 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def attach_interface(self, instance, image_meta, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        inst_type = self.virtapi.flavor_get(
+        flavor = flavor_obj.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         self.vif_driver.plug(instance, vif)
         self.firewall_driver.setup_basic_filtering(instance, [vif])
         cfg = self.vif_driver.get_config(instance, vif, image_meta,
-                                         inst_type)
+                                         flavor)
         try:
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
             state = LIBVIRT_POWER_STATE[virt_dom.info()[0]]
@@ -1371,10 +1374,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def detach_interface(self, instance, vif):
         virt_dom = self._lookup_by_name(instance['name'])
-        inst_type = self.virtapi.flavor_get(
+        flavor = flavor_obj.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
-        cfg = self.vif_driver.get_config(instance, vif, None, inst_type)
+        cfg = self.vif_driver.get_config(instance, vif, None, flavor)
         try:
             self.vif_driver.unplug(instance, vif)
             flags = libvirt.VIR_DOMAIN_AFFECT_CONFIG
@@ -2721,8 +2724,9 @@ class LibvirtDriver(driver.ComputeDriver):
                       % {'dev': pci_devs, 'dom': dom.ID()})
             raise
 
-    def set_host_enabled(self, host, enabled):
-        """Sets the specified host's ability to accept new instances.
+    def _set_host_enabled(self, enabled,
+                          disable_reason=DISABLE_REASON_UNDEFINED):
+        """Enables / Disables the compute service on this host.
 
            This doesn't override non-automatic disablement with an automatic
            setting; thereby permitting operators to keep otherwise
@@ -2732,12 +2736,7 @@ class LibvirtDriver(driver.ComputeDriver):
         status_name = {True: 'disabled',
                        False: 'enabled'}
 
-        if isinstance(enabled, bool):
-            disable_service = not enabled
-            disable_reason = DISABLE_REASON_UNDEFINED
-        else:
-            disable_service = bool(enabled)
-            disable_reason = enabled
+        disable_service = not enabled
 
         ctx = nova_context.get_admin_context()
         try:
@@ -2764,7 +2763,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     LOG.debug(_('Not overriding manual compute service '
                                 'status with: %s'),
                                  status_name[disable_service])
-            return status_name[disable_service]
         except exception.ComputeHostNotFound:
             LOG.warn(_('Cannot update service status on host: %s,'
                         'since it is not registered.') % CONF.host)
@@ -2979,6 +2977,14 @@ class LibvirtDriver(driver.ComputeDriver):
         for d in devices:
             self.set_cache_mode(d)
 
+        if (image_meta and
+                image_meta.get('properties', {}).get('hw_scsi_model')):
+            hw_scsi_model = image_meta['properties']['hw_scsi_model']
+            scsi_controller = vconfig.LibvirtConfigGuestController()
+            scsi_controller.type = 'scsi'
+            scsi_controller.model = hw_scsi_model
+            devices.append(scsi_controller)
+
         return devices
 
     def get_guest_config_sysinfo(self, instance):
@@ -3016,7 +3022,7 @@ class LibvirtDriver(driver.ComputeDriver):
             'kernel_id' if a kernel is needed for the rescue image.
         """
 
-        inst_type = self.virtapi.flavor_get(
+        flavor = flavor_obj.Flavor.get_by_id(
             nova_context.get_admin_context(read_deleted='yes'),
             instance['instance_type_id'])
         inst_path = libvirt_utils.get_instance_path(instance)
@@ -3029,12 +3035,12 @@ class LibvirtDriver(driver.ComputeDriver):
         guest.name = instance['name']
         guest.uuid = instance['uuid']
         # We are using default unit for memory: KiB
-        guest.memory = inst_type['memory_mb'] * units.Ki
-        guest.vcpus = inst_type['vcpus']
+        guest.memory = flavor.memory_mb * units.Ki
+        guest.vcpus = flavor.vcpus
         guest.cpuset = CONF.vcpu_pin_set
 
         quota_items = ['cpu_shares', 'cpu_period', 'cpu_quota']
-        for key, value in inst_type['extra_specs'].iteritems():
+        for key, value in flavor.extra_specs.iteritems():
             scope = key.split(':')
             if len(scope) > 1 and scope[0] == 'quota':
                 if scope[1] in quota_items:
@@ -3075,6 +3081,22 @@ class LibvirtDriver(driver.ComputeDriver):
             if caps.host.cpu.arch in ("i686", "x86_64"):
                 guest.sysinfo = self.get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
+
+            # The underlying machine type can be set as an image attribute,
+            # or otherwise based on some architecture specific defaults
+            if (image_meta is not None and image_meta.get('properties') and
+                   image_meta['properties'].get('hw_machine_type')
+                   is not None):
+                guest.os_mach_type = \
+                    image_meta['properties']['hw_machine_type']
+            else:
+                # For ARM systems we will default to vexpress-a15 for armv7
+                # and virt for aarch64
+                if caps.host.cpu.arch == "armv7l":
+                    guest.os_mach_type = "vexpress-a15"
+
+                if caps.host.cpu.arch == "aarch64":
+                    guest.os_mach_type = "virt"
 
         if CONF.libvirt.virt_type == "lxc":
             guest.os_init_path = "/sbin/init"
@@ -3153,14 +3175,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                                  disk_info,
                                                  rescue,
                                                  block_device_info,
-                                                 inst_type):
+                                                 flavor):
             guest.add_device(cfg)
 
         for vif in network_info:
             cfg = self.vif_driver.get_config(instance,
                                              vif,
                                              image_meta,
-                                             inst_type)
+                                             flavor)
             guest.add_device(cfg)
 
         if ((CONF.libvirt.virt_type == "qemu" or
@@ -3959,7 +3981,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Temporary: convert supported_instances into a string, while keeping
         # the RPC version as JSON. Can be changed when RPC broadcast is removed
-        stats = self.host_state.get_host_stats(refresh=True)
+        stats = self.get_host_stats(refresh=True)
         stats['supported_instances'] = jsonutils.dumps(
                 stats['supported_instances'])
         return stats

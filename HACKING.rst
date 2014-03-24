@@ -28,6 +28,8 @@ Nova Specific Commandments
   assertIsInstance(A, B).
 - [N317] Change assertEqual(type(A), B) by optimal assert like
   assertIsInstance(A, B)
+- [N318] Change assertEqual(A, None) or assertEqual(None, A) by optimal assert like
+  assertIsNone(A)
 
 Creating Unit Tests
 -------------------

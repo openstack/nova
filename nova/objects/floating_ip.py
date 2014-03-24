@@ -49,6 +49,18 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
         floatingip.obj_reset_changes()
         return floatingip
 
+    def obj_load_attr(self, attrname):
+        if attrname not in FLOATING_IP_OPTIONAL_ATTRS:
+            raise exception.ObjectActionError(
+                action='obj_load_attr',
+                reason='attribute %s is not lazy-loadable' % attrname)
+        if not self._context:
+            raise exception.OrphanedObjectError(method='obj_load_attr',
+                                                objtype=self.obj_name())
+        self.fixed_ip = fixed_ip.FixedIP.get_by_id(self._context,
+                                                   self.fixed_ip_id,
+                                                   expected_attrs=['network'])
+
     @obj_base.remotable_classmethod
     def get_by_id(cls, context, id):
         db_floatingip = db.floating_ip_get(context, id)

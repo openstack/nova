@@ -2009,16 +2009,42 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         self.context = context.get_admin_context()
         self.flags(use_local=True, group='conductor')
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
+        self.instance = fake_instance.fake_db_instance(name='foo')
 
     def test_host_state(self):
         stats = self.conn.get_host_stats()
+        # Values from fake.create_local_srs (ext SR)
         self.assertEqual(stats['disk_total'], 40000)
         self.assertEqual(stats['disk_used'], 20000)
+        # Values from fake._plugin_xenhost_host_data
         self.assertEqual(stats['host_memory_total'], 10)
         self.assertEqual(stats['host_memory_overhead'], 20)
         self.assertEqual(stats['host_memory_free'], 30)
         self.assertEqual(stats['host_memory_free_computed'], 40)
         self.assertEqual(stats['hypervisor_hostname'], 'fake-xenhost')
+        self.assertThat({'cpu_count': 50},
+                        matchers.DictMatches(stats['host_cpu_info']))
+        # No VMs running
+        self.assertEqual(stats['vcpus_used'], 0)
+
+    def test_host_state_vcpus_used(self):
+        stats = self.conn.get_host_stats(True)
+        self.assertEqual(stats['vcpus_used'], 0)
+        vm = xenapi_fake.create_vm(self.instance['name'], 'Running')
+        stats = self.conn.get_host_stats(True)
+        self.assertEqual(stats['vcpus_used'], 4)
+
+    def test_pci_passthrough_devices_whitelist(self):
+        # NOTE(guillaume-thouvenin): This pci whitelist will be used to
+        # match with _plugin_xenhost_get_pci_device_details method in fake.py.
+        self.flags(pci_passthrough_whitelist=
+                   ['[{"vendor_id":"10de", "product_id":"11bf"}]'])
+        stats = self.conn.get_host_stats()
+        self.assertEqual(len(stats['pci_passthrough_devices']), 1)
+
+    def test_pci_passthrough_devices_no_whitelist(self):
+        stats = self.conn.get_host_stats()
+        self.assertEqual(len(stats['pci_passthrough_devices']), 0)
 
     def test_host_state_missing_sr(self):
         def fake_safe_find_sr(session):
@@ -2087,6 +2113,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
     def test_update_stats_caches_hostname(self):
         self.mox.StubOutWithMock(host, 'call_xenhost')
         self.mox.StubOutWithMock(vm_utils, 'scan_default_sr')
+        self.mox.StubOutWithMock(vm_utils, 'list_vms')
         self.mox.StubOutWithMock(self.conn._session, 'call_xenapi')
         data = {'disk_total': 0,
                 'disk_used': 0,
@@ -2094,6 +2121,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
                 'supported_instances': 0,
                 'host_capabilities': [],
                 'host_hostname': 'foo',
+                'vcpus_used': 0,
                 }
         sr_rec = {
             'physical_size': 0,
@@ -2103,6 +2131,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         for i in range(3):
             host.call_xenhost(mox.IgnoreArg(), 'host_data', {}).AndReturn(data)
             vm_utils.scan_default_sr(self.conn._session).AndReturn("ref")
+            vm_utils.list_vms(self.conn._session).AndReturn([])
             self.conn._session.call_xenapi('SR.get_record', "ref").AndReturn(
                 sr_rec)
             if i == 2:

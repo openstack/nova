@@ -951,6 +951,29 @@ class LibvirtConfigGuestVideo(LibvirtConfigGuestDevice):
         return dev
 
 
+class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestController,
+              self).__init__(root_name="controller", **kwargs)
+
+        self.type = None
+        self.index = None
+        self.model = None
+
+    def format_dom(self):
+        controller = super(LibvirtConfigGuestController, self).format_dom()
+        controller.set("type", self.type)
+
+        if self.index is not None:
+            controller.set("index", str(self.index))
+
+        if self.model:
+            controller.set("model", str(self.model))
+
+        return controller
+
+
 class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestHostdev, self).\
@@ -1109,6 +1132,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         self.os_init_path = None
         self.os_boot_dev = []
         self.os_smbios = None
+        self.os_mach_type = None
         self.devices = []
 
     def _format_basic_props(self, root):
@@ -1124,7 +1148,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
 
     def _format_os(self, root):
         os = etree.Element("os")
-        os.append(self._text_node("type", self.os_type))
+        type_node = self._text_node("type", self.os_type)
+        if self.os_mach_type is not None:
+            type_node.set("machine", self.os_mach_type)
+        os.append(type_node)
         if self.os_kernel is not None:
             os.append(self._text_node("kernel", self.os_kernel))
         if self.os_loader is not None:
@@ -1335,3 +1362,33 @@ class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):
                                           c.get('bus'),
                                           c.get('slot'),
                                           c.get('function')))
+
+
+class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestRng, self).__init__(root_name="rng",
+                                                      **kwargs)
+
+        self.model = 'random'
+        self.backend = '/dev/random'
+        self.rate_period = None
+        self.rate_bytes = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestRng, self).format_dom()
+        dev.set('model', 'virtio')
+
+        backend = etree.Element("backend")
+        backend.set("model", self.model)
+        backend.text = self.backend
+
+        if self.rate_period and self.rate_bytes:
+            rate = etree.Element("rate")
+            rate.set("period", str(self.rate_period))
+            rate.set("bytes", str(self.rate_bytes))
+            dev.append(rate)
+
+        dev.append(backend)
+
+        return dev

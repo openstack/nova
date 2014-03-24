@@ -358,9 +358,9 @@ class NetworkManager(manager.Manager):
             now = timeutils.utcnow()
             timeout = CONF.fixed_ip_disassociate_timeout
             time = now - datetime.timedelta(seconds=timeout)
-            num = self.db.fixed_ip_disassociate_all_by_timeout(context,
-                                                               self.host,
-                                                               time)
+            num = fixed_ip_obj.FixedIP.disassociate_all_by_timeout(context,
+                                                                   self.host,
+                                                                   time)
             if num:
                 LOG.debug(_('Disassociated %s stale fixed ip(s)'), num)
 
@@ -639,7 +639,7 @@ class NetworkManager(manager.Manager):
                     continue
                 gfipbfa = self.ipam.get_floating_ips_by_fixed_address
                 floating_ips = gfipbfa(context, fixed_ip['address'])
-                floating_ips = [network_model.IP(address=ip['address'],
+                floating_ips = [network_model.IP(address=str(ip['address']),
                                                  type='floating')
                                 for ip in floating_ips]
                 for ip in floating_ips:
@@ -795,7 +795,7 @@ class NetworkManager(manager.Manager):
                 #             case that this is a race condition, we
                 #             will just get a warn in lease or release.
                 if not fixed_ip.leased:
-                    self.db.fixed_ip_disassociate(context, address)
+                    fixed_ip.disassociate()
                 return self.get_instance_nw_info(context, instance_id,
                                                  rxtx_factor, host)
         raise exception.FixedIpNotFoundForSpecificInstance(
@@ -857,9 +857,9 @@ class NetworkManager(manager.Manager):
                         context.elevated(), network['id'], instance_id)
                 vif = vif_obj.VirtualInterface.get_by_instance_and_network(
                         context, instance_id, network['id'])
-                values = {'allocated': True,
-                          'virtual_interface_id': vif['id']}
-                self.db.fixed_ip_update(context, str(fip.address), values)
+                fip.allocated = True
+                fip.virtual_interface_id = vif.id
+                fip.save()
                 self._do_trigger_security_group_members_refresh_for_instance(
                     instance_id)
 
@@ -916,9 +916,9 @@ class NetworkManager(manager.Manager):
                 self.instance_dns_manager.delete_entry(n,
                                                       self.instance_dns_domain)
 
-        self.db.fixed_ip_update(context, address,
-                                {'allocated': False,
-                                 'virtual_interface_id': None})
+        fixed_ip_ref.allocated = False
+        fixed_ip_ref.virtual_interface_id = None
+        fixed_ip_ref.save()
 
         if teardown:
             network = fixed_ip_ref.network
@@ -956,8 +956,7 @@ class NetworkManager(manager.Manager):
                     context, address)
                 if (instance_uuid == fixed_ip_ref.instance_uuid and
                         not fixed_ip_ref.leased):
-                    self.db.fixed_ip_disassociate(context, address)
-
+                    fixed_ip_ref.disassociate()
             else:
                 # We can't try to free the IP address so just call teardown
                 self._teardown_network_on_host(context, network)
@@ -975,11 +974,8 @@ class NetworkManager(manager.Manager):
             LOG.warn(_('IP %s leased that is not associated'), address,
                        context=context)
             return
-        now = timeutils.utcnow()
-        self.db.fixed_ip_update(context,
-                                fixed_ip.address,
-                                {'leased': True,
-                                 'updated_at': now})
+        fixed_ip.leased = True
+        fixed_ip.save()
         if not fixed_ip.allocated:
             LOG.warn(_('IP |%s| leased that isn\'t allocated'), address,
                      context=context)
@@ -996,11 +992,10 @@ class NetworkManager(manager.Manager):
         if not fixed_ip.leased:
             LOG.warn(_('IP %s released that was not leased'), address,
                      context=context)
-        self.db.fixed_ip_update(context,
-                                fixed_ip.address,
-                                {'leased': False})
+        fixed_ip.leased = False
+        fixed_ip.save()
         if not fixed_ip.allocated:
-            self.db.fixed_ip_disassociate(context, address)
+            fixed_ip.disassociate()
 
     @staticmethod
     def _convert_int_args(kwargs):
@@ -1513,7 +1508,7 @@ class FlatManager(NetworkManager):
         """Returns a fixed ip to the pool."""
         super(FlatManager, self).deallocate_fixed_ip(context, address, host,
                                                      teardown)
-        self.db.fixed_ip_disassociate(context, address)
+        fixed_ip_obj.FixedIP.disassociate_by_address(context, address)
 
     def _setup_network_on_host(self, context, network):
         """Setup Network on this host."""
@@ -1726,8 +1721,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
 
         if kwargs.get('vpn', None):
             address = network['vpn_private_address']
-            fixed_ip_obj.FixedIP.associate(context, address, instance_id,
-                                           network['id'], reserved=True)
+            fip = fixed_ip_obj.FixedIP.associate(context, address, instance_id,
+                                                 network['id'], reserved=True)
         else:
             address = kwargs.get('address', None)
             if address:
@@ -1738,13 +1733,13 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 fip = fixed_ip_obj.FixedIP.associate_pool(context,
                                                           network['id'],
                                                           instance_id)
-            address = fip.address
+        address = fip.address
 
         vif = vif_obj.VirtualInterface.get_by_instance_and_network(
             context, instance_id, network['id'])
-        values = {'allocated': True,
-                  'virtual_interface_id': vif.id}
-        self.db.fixed_ip_update(context, str(address), values)
+        fip.allocated = True
+        fip.virtual_interface_id = vif.id
+        fip.save()
 
         if not kwargs.get('vpn', None):
             self._do_trigger_security_group_members_refresh_for_instance(
@@ -1900,14 +1895,15 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 network['multi_host'] and vpn_address != CONF.vpn_ip and
                 not self.db.network_in_use_on_host(context, network['id'],
                                                    self.host)):
-                LOG.debug("Remove unused gateway %s", network['bridge'])
+                LOG.debug(_("Remove unused gateway %s"), network['bridge'])
                 self.driver.kill_dhcp(dev)
                 self.l3driver.remove_gateway(network)
                 if not CONF.share_dhcp_address:
-                    values = {'allocated': False,
-                              'host': None}
-                    self.db.fixed_ip_update(context, network['dhcp_server'],
-                                            values)
+                    fip = fixed_ip_obj.FixedIP.get_by_address(
+                        context, network.dhcp_server)
+                    fip.allocated = False
+                    fip.host = None
+                    fip.save()
             else:
                 self.driver.update_dhcp(elevated, dev, network)
 

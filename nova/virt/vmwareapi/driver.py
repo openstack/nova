@@ -82,16 +82,6 @@ CONF.register_opts(vmwareapi_opts, 'vmware')
 TIME_BETWEEN_API_CALL_RETRIES = 1.0
 
 
-class Failure(Exception):
-    """Base Exception class for handling task failures."""
-
-    def __init__(self, details):
-        self.details = details
-
-    def __str__(self):
-        return str(self.details)
-
-
 class VMwareESXDriver(driver.ComputeDriver):
     """The ESX host connection object."""
 
@@ -336,14 +326,6 @@ class VMwareESXDriver(driver.ComputeDriver):
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""
         self._vmops.inject_network_info(instance, network_info)
-
-    def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks."""
-        self._vmops.plug_vifs(instance, network_info)
-
-    def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks."""
-        self._vmops.unplug_vifs(instance, network_info)
 
     def list_instance_uuids(self):
         """List VM instance UUIDs."""
@@ -706,16 +688,6 @@ class VMwareVCDriver(VMwareESXDriver):
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.inject_network_info(instance, network_info)
 
-    def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.plug_vifs(instance, network_info)
-
-    def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.unplug_vifs(instance, network_info)
-
 
 class VMwareAPISession(object):
     """
@@ -831,7 +803,7 @@ class VMwareAPISession(object):
                 # to a session gone bad. So we try re-creating a session
                 # and then proceeding ahead with the call.
                 exc = excep
-                if error_util.FAULT_NOT_AUTHENTICATED in excep.fault_list:
+                if error_util.NOT_AUTHENTICATED in excep.fault_list:
                     # Because of the idle session returning an empty
                     # RetrievePropertiesResponse and also the same is returned
                     # when there is say empty answer to the query for
@@ -847,6 +819,9 @@ class VMwareAPISession(object):
                     # No re-trying for errors for API call has gone through
                     # and is the caller's fault. Caller should handle these
                     # errors. e.g, InvalidArgument fault.
+                    # Raise specific exceptions here if possible
+                    if excep.fault_list:
+                        raise error_util.get_fault_class(excep.fault_list[0])
                     break
             except error_util.SessionOverLoadException as excep:
                 # For exceptions which may come because of session overload,
@@ -937,7 +912,11 @@ class VMwareAPISession(object):
                           "status: error %(error_info)s"),
                          {'task_name': task_name, 'task_ref': task_ref,
                           'error_info': error_info})
-                done.send_exception(exception.NovaException(error_info))
+                # Check if we can raise a specific exception
+                error = task_info.error
+                name = error.fault.__class__.__name__
+                task_ex = error_util.get_fault_class(name)(error_info)
+                done.send_exception(task_ex)
         except Exception as excep:
             LOG.warn(_("In vmwareapi:_poll_task, Got this error %s") % excep)
             done.send_exception(excep)

@@ -14,9 +14,9 @@
 #    under the License.
 
 import pkg_resources
-import urlparse
 
 from oslo.config import cfg
+import six.moves.urllib.parse as urlparse
 
 from nova.openstack.common.gettextutils import _
 import nova.openstack.common.log as logging

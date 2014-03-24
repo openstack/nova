@@ -30,7 +30,7 @@ class ErrorUtilTestCase(test.NoDBTestCase):
         # perform additional checks on the exception raised, instead of
         # try/catch block in the below tests, but it's available
         # only from  Py 2.7.
-        exp_fault_list = [error_util.FAULT_NOT_AUTHENTICATED]
+        exp_fault_list = [error_util.NOT_AUTHENTICATED]
         try:
             error_util.FaultCheckers.retrievepropertiesex_fault_checker(None)
         except error_util.VimFaultException as e:

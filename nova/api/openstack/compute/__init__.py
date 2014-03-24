@@ -73,7 +73,7 @@ class APIRouter(nova.api.openstack.APIRouter):
                         collection_name='servers'))
 
         if init_only is None or 'consoles' in init_only or \
-                'servers' in init_only or ips in init_only:
+                'servers' in init_only or 'ips' in init_only:
             self.resources['servers'] = servers.create_resource(ext_mgr)
             mapper.resource("server", "servers",
                             controller=self.resources['servers'],

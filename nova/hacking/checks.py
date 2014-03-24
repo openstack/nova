@@ -44,6 +44,10 @@ asse_trueinst_re = re.compile(
 asse_equal_type_re = re.compile(
                        r"(.)*assertEqual\(type\((\w|\.|\'|\"|\[|\])+\), "
                        "(\w|\.|\'|\"|\[|\])+\)")
+asse_equal_end_with_none_re = re.compile(
+                           r"(.)*assertEqual\((\w|\.|\'|\"|\[|\])+, None\)")
+asse_equal_start_with_none_re = re.compile(
+                           r"(.)*assertEqual\(None, (\w|\.|\'|\"|\[|\])+\)")
 
 
 def import_no_db_in_virt(logical_line, filename):
@@ -177,6 +181,18 @@ def assert_equal_type(logical_line):
         yield (0, "N317: assertEqual(type(A), B) sentences not allowed")
 
 
+def assert_equal_none(logical_line):
+    """Check for assertEqual(A, None) or assertEqual(None, A) sentences
+
+    N318
+    """
+    res = (asse_equal_start_with_none_re.match(logical_line) or
+           asse_equal_end_with_none_re.match(logical_line))
+    if res:
+        yield (0, "N318: assertEqual(A, None) or assertEqual(None, A) "
+               "sentences not allowed")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -188,3 +204,4 @@ def factory(register):
     register(no_author_tags)
     register(assert_true_instance)
     register(assert_equal_type)
+    register(assert_equal_none)

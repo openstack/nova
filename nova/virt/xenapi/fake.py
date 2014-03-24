@@ -672,6 +672,7 @@ class SessionBase(object):
                                                     'free': 30,
                                                     'free-computed': 40},
                                     'host_hostname': 'fake-xenhost',
+                                    'host_cpu_info': {'cpu_count': 50},
                                     })
 
     def _plugin_poweraction(self, method, args):
@@ -688,6 +689,33 @@ class SessionBase(object):
     def _plugin_xenhost_host_uptime(self, method, args):
         return jsonutils.dumps({"uptime": "fake uptime"})
 
+    def _plugin_xenhost_get_pci_device_details(self, method, args):
+        """Simulate the ouput of three pci devices.
+
+        Both of those devices are available for pci passtrough but
+        only one will match with the pci whitelist used in the
+        method test_pci_passthrough_devices_*().
+        Return a single list.
+
+        """
+        # Driver is not pciback
+        dev_bad1 = ["Slot:\t86:10.0", "Class:\t0604", "Vendor:\t10b5",
+                    "Device:\t8747", "Rev:\tba", "Driver:\tpcieport", "\n"]
+        # Driver is pciback but vendor and device are bad
+        dev_bad2 = ["Slot:\t88:00.0", "Class:\t0300", "Vendor:\t0bad",
+                    "Device:\tcafe", "SVendor:\t10de", "SDevice:\t100d",
+                    "Rev:\ta1", "Driver:\tpciback", "\n"]
+        # Driver is pciback and vendor, device are used for matching
+        dev_good = ["Slot:\t87:00.0", "Class:\t0300", "Vendor:\t10de",
+                    "Device:\t11bf", "SVendor:\t10de", "SDevice:\t100d",
+                    "Rev:\ta1", "Driver:\tpciback", "\n"]
+
+        lspci_output = "\n".join(dev_bad1 + dev_bad2 + dev_good)
+        return pickle.dumps(lspci_output)
+
+    def _plugin_xenhost_get_pci_type(self, method, args):
+        return pickle.dumps("type-PCI")
+
     def _plugin_console_get_console_log(self, method, args):
         dom_id = args["dom_id"]
         if dom_id == 0:
@@ -695,7 +723,7 @@ class SessionBase(object):
         return base64.b64encode(zlib.compress("dom_id: %s" % dom_id))
 
     def _plugin_nova_plugin_version_get_version(self, method, args):
-        return pickle.dumps("1.1")
+        return pickle.dumps("1.2")
 
     def _plugin_xenhost_query_gc(self, method, args):
         return pickle.dumps("False")

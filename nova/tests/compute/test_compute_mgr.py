@@ -339,7 +339,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.ReplayAll()
 
         self.compute._init_instance(self.context, instance)
-        self.assertEqual(None, instance.task_state)
+        self.assertIsNone(instance.task_state)
 
     def test_init_instance_reverts_crashed_migration_from_active(self):
         self._test_init_instance_reverts_crashed_migrations(

@@ -21,6 +21,8 @@ from nova import context
 from nova import db
 from nova.network import nova_ipam_lib
 from nova import test
+from nova.tests.objects import test_fixed_ip
+from nova.tests.objects import test_network
 
 
 fake_vif = {
@@ -38,12 +40,15 @@ fake_vif = {
 
 class NeutronNovaIPAMTestCase(test.NoDBTestCase):
     def test_get_v4_ips_by_interface(self):
+        fake_ips = [dict(test_fixed_ip.fake_fixed_ip,
+                         address='192.168.1.101'),
+                    dict(test_fixed_ip.fake_fixed_ip,
+                         address='192.168.1.102')]
         with contextlib.nested(
                 mock.patch.object(db, 'virtual_interface_get_by_uuid',
                                   return_value=fake_vif),
                 mock.patch.object(db, 'fixed_ips_by_virtual_interface',
-                                  return_value=[{'address': '192.168.1.101'},
-                                                {'address': '192.168.1.102'}])
+                                  return_value=fake_ips)
         ):
             ipam_lib = nova_ipam_lib.NeutronNovaIPAMLib(None)
             v4_IPs = ipam_lib.get_v4_ips_by_interface(None,
@@ -69,9 +74,11 @@ class NeutronNovaIPAMTestCase(test.NoDBTestCase):
             def elevated(self):
                 pass
 
+        net = dict(test_network.fake_network,
+                   cidr_v6='2001:db8::')
         with contextlib.nested(
                 mock.patch.object(db, 'network_get_by_uuid',
-                                  return_value={'cidr_v6': '2001:db8::'}),
+                                  return_value=net),
                 mock.patch.object(db, 'virtual_interface_get_by_uuid',
                                   return_value=fake_vif)
         ):
@@ -88,9 +95,11 @@ class NeutronNovaIPAMTestCase(test.NoDBTestCase):
             def elevated(self):
                 pass
 
+        net = dict(test_network.fake_network,
+                   cidr_v6='2001:db8::')
         with contextlib.nested(
                 mock.patch.object(db, 'network_get_by_uuid',
-                                  return_value={'cidr_v6': '2001:db8::'}),
+                                  return_value=net),
                 mock.patch.object(db, 'virtual_interface_get_by_uuid',
                                   return_value=None)
         ):

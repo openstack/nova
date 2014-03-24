@@ -122,7 +122,7 @@ class _TestFixedIPObject(object):
                                                            'instance'])
         self._compare(fixedip, db_fixed)
         self.assertEqual(db_fixed['network']['uuid'], fixedip.network.uuid)
-        self.assertEqual(None, fixedip.instance)
+        self.assertIsNone(fixedip.instance)
         self.assertFalse(network_get.called)
         self.assertFalse(instance_get.called)
 
@@ -209,7 +209,7 @@ class _TestFixedIPObject(object):
         fixedip.obj_reset_changes()
         fixedip.disassociate()
         disassociate.assert_called_once_with(self.context, '1.2.3.4')
-        self.assertEqual(None, fixedip.instance_uuid)
+        self.assertIsNone(fixedip.instance_uuid)
 
     @mock.patch('nova.db.fixed_ip_get_all')
     def test_get_all(self, get_all):
