@@ -2812,19 +2812,43 @@ class ComputeTestCase(BaseTestCase):
     def test_snapshot_fails_cleanup_ignores_exception(self):
         self._test_snapshot_fails(True)
 
-    def test_snapshot_fails_with_glance_error(self):
+    def _test_snapshot_deletes_image_on_failure(self, exc):
+        self.fake_image_delete_called = False
+
+        def fake_delete(self_, context, image_id):
+            self.fake_image_delete_called = True
+            self.assertEqual('fakesnap', image_id)
+
+        self.stubs.Set(fake_image._FakeImageService, 'delete', fake_delete)
+
         def fake_snapshot(*args, **kwargs):
-            raise exception.ImageNotFound(image_id='xxx')
+            raise exc
 
         self.stubs.Set(self.compute.driver, 'snapshot', fake_snapshot)
+
         fake_image.stub_out_image_service(self.stubs)
 
         inst_obj = self._get_snapshotting_instance()
 
-        self.compute.snapshot_instance(
-                          self.context, image_id='fakesnap',
-                          instance=inst_obj)
+        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+                                       instance=inst_obj)
+
+    def test_snapshot_fails_with_glance_error(self):
+        image_not_found = exception.ImageNotFound(image_id='fakesnap')
+        self._test_snapshot_deletes_image_on_failure(image_not_found)
+        self.assertFalse(self.fake_image_delete_called)
         self._assert_state({'task_state': None})
+
+    def test_snapshot_fails_with_task_state_error(self):
+        deleting_state_error = exception.UnexpectedDeletingTaskStateError(
+            expected=task_states.IMAGE_SNAPSHOT, actual=task_states.DELETING)
+        self._test_snapshot_deletes_image_on_failure(deleting_state_error)
+        self.assertTrue(self.fake_image_delete_called)
+
+    def test_snapshot_fails_with_instance_not_found(self):
+        instance_not_found = exception.InstanceNotFound(instance_id='uuid')
+        self._test_snapshot_deletes_image_on_failure(instance_not_found)
+        self.assertTrue(self.fake_image_delete_called)
 
     def test_snapshot_handles_cases_when_instance_is_deleted(self):
         inst_obj = self._get_snapshotting_instance()
