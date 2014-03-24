@@ -1542,6 +1542,11 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         filtered_instances = db.instance_get_all_by_filters(self.ctxt, {})
         self._assertEqualListsOfInstances(instances, filtered_instances)
 
+    def test_instance_get_all_by_filters_zero_limit(self):
+        self.create_instance_with_args()
+        instances = db.instance_get_all_by_filters(self.ctxt, {}, limit=0)
+        self.assertEqual([], instances)
+
     def test_instance_metadata_get_multi(self):
         uuids = [self.create_instance_with_args()['uuid'] for i in range(3)]
         meta = sqlalchemy_api._instance_metadata_get_multi(self.ctxt, uuids)
