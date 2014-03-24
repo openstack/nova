@@ -1,5 +1,5 @@
 pbr>=0.6,<1.0
-SQLAlchemy>=0.7.8,<=0.8.99
+SQLAlchemy>=0.7.8,<=0.9.99
 amqplib>=0.6.1
 anyjson>=0.3.3
 argparse
@@ -32,4 +32,4 @@ wsgiref>=0.1.2
 oslo.config>=1.2.0
 oslo.rootwrap
 pycadf>=0.4.1
-oslo.messaging>=1.3.0a4
+oslo.messaging>=1.3.0a9
