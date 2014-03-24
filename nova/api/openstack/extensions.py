@@ -131,11 +131,11 @@ class ExtensionsTemplate(xmlutil.TemplateBuilder):
         return xmlutil.MasterTemplate(root, 1, nsmap=ext_nsmap)
 
 
-class ExtensionsResource(wsgi.Resource):
+class ExtensionsController(wsgi.Resource):
 
     def __init__(self, extension_manager):
         self.extension_manager = extension_manager
-        super(ExtensionsResource, self).__init__(None)
+        super(ExtensionsController, self).__init__(None)
 
     def _translate(self, ext):
         ext_data = {}
@@ -207,7 +207,7 @@ class ExtensionManager(object):
 
         resources = []
         resources.append(ResourceExtension('extensions',
-                                           ExtensionsResource(self)))
+                                           ExtensionsController(self)))
         for ext in self.sorted_extensions():
             try:
                 resources.extend(ext.get_resources())
