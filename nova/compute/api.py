@@ -1541,7 +1541,7 @@ class API(base.Base):
             LOG.info(_('Migration %s may have been confirmed during delete') %
                     migration.id, context=context, instance=instance)
             return
-        quotas = self._reserve_quota_delta(context, deltas)
+        quotas = self._reserve_quota_delta(context, deltas, instance)
 
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
@@ -2173,7 +2173,7 @@ class API(base.Base):
 
         # reverse quota reservation for increased resource usage
         deltas = self._reverse_upsize_quota_delta(context, migration)
-        quotas = self._reserve_quota_delta(context, deltas)
+        quotas = self._reserve_quota_delta(context, deltas, instance)
 
         instance.task_state = task_states.RESIZE_REVERTING
         try:
@@ -2210,7 +2210,7 @@ class API(base.Base):
 
         # reserve quota only for any decrease in resource usage
         deltas = self._downsize_quota_delta(context, instance)
-        quotas = self._reserve_quota_delta(context, deltas)
+        quotas = self._reserve_quota_delta(context, deltas, instance)
 
         migration.status = 'confirming'
         migration.save()
@@ -2282,20 +2282,22 @@ class API(base.Base):
         return API._resize_quota_delta(context, new_flavor, old_flavor, 1, -1)
 
     @staticmethod
-    def _reserve_quota_delta(context, deltas, project_id=None):
+    def _reserve_quota_delta(context, deltas, instance):
         """If there are deltas to reserve, construct a Quotas object and
         reserve the deltas for the given project.
 
         @param context:    The nova request context.
         @param deltas:     A dictionary of the proposed delta changes.
-        @param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
+        @param instance:   The instance we're operating on, so that
+                           quotas can use the correct project_id/user_id.
         @return: nova.objects.quotas.Quotas
         """
         quotas = quotas_obj.Quotas()
         if deltas:
-            quotas.reserve(context, project_id=project_id, **deltas)
+            project_id, user_id = quotas_obj.ids_from_instance(context,
+                                                               instance)
+            quotas.reserve(context, project_id=project_id, user_id=user_id,
+                           **deltas)
         return quotas
 
     @staticmethod
@@ -2370,10 +2372,7 @@ class API(base.Base):
         deltas = self._upsize_quota_delta(context, new_instance_type,
                                           current_instance_type)
         try:
-            project_id, user_id = quotas_obj.ids_from_instance(context,
-                                                               instance)
-            quotas = self._reserve_quota_delta(context, deltas,
-                                               project_id=project_id)
+            quotas = self._reserve_quota_delta(context, deltas, instance)
         except exception.OverQuota as exc:
             quotas = exc.kwargs['quotas']
             overs = exc.kwargs['overs']
