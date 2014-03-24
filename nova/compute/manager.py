@@ -282,6 +282,7 @@ def reverts_task_state(function):
     return decorated_function
 
 
+@utils.expects_func_args('instance')
 def wrap_instance_fault(function):
     """Wraps a method to catch exceptions related to instances.
 
@@ -4535,7 +4536,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @wrap_instance_fault
-    def _post_live_migration(self, ctxt, instance_ref,
+    def _post_live_migration(self, ctxt, instance,
                             dest, block_migration=False, migrate_data=None):
         """Post operations for live migration.
 
@@ -4543,7 +4544,7 @@ class ComputeManager(manager.Manager):
         and mainly updating database record.
 
         :param ctxt: security context
-        :param instance_ref: nova.db.sqlalchemy.models.Instance
+        :param instance: Instance object
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
         :param migrate_data: if not None, it is a dict which has data
@@ -4551,19 +4552,19 @@ class ComputeManager(manager.Manager):
 
         """
         LOG.info(_('_post_live_migration() is started..'),
-                 instance=instance_ref)
+                 instance=instance)
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, instance_ref['uuid'])
+                ctxt, instance.uuid)
 
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_volume_block_device_info(
-                            ctxt, instance_ref, bdms)
-        self.driver.post_live_migration(ctxt, instance_ref, block_device_info,
+                            ctxt, instance, bdms)
+        self.driver.post_live_migration(ctxt, instance, block_device_info,
                                         migrate_data)
 
         # Detaching volumes.
-        connector = self.driver.get_volume_connector(instance_ref)
+        connector = self.driver.get_volume_connector(instance)
         for bdm in bdms:
             # NOTE(vish): We don't want to actually mark the volume
             #             detached, or delete the bdm, just remove the
@@ -4578,25 +4579,25 @@ class ComputeManager(manager.Manager):
         # Releasing vlan.
         # (not necessary in current implementation?)
 
-        network_info = self._get_instance_nw_info(ctxt, instance_ref)
+        network_info = self._get_instance_nw_info(ctxt, instance)
 
-        self._notify_about_instance_usage(ctxt, instance_ref,
+        self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.start",
                                           network_info=network_info)
         # Releasing security group ingress rule.
-        self.driver.unfilter_instance(instance_ref,
+        self.driver.unfilter_instance(instance,
                                       network_info)
 
         migration = {'source_compute': self.host,
                      'dest_compute': dest, }
         self.conductor_api.network_migrate_instance_start(ctxt,
-                                                          instance_ref,
+                                                          instance,
                                                           migration)
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
         self.compute_rpcapi.post_live_migration_at_destination(ctxt,
-                instance_ref, block_migration, dest)
+                instance, block_migration, dest)
 
         # No instance booting at source host, but instance dir
         # must be deleted for preparing next block migration
@@ -4605,38 +4606,38 @@ class ComputeManager(manager.Manager):
         if migrate_data:
             is_shared_storage = migrate_data.get('is_shared_storage', True)
         if block_migration or not is_shared_storage:
-            self.driver.cleanup(ctxt, instance_ref, network_info)
+            self.driver.cleanup(ctxt, instance, network_info)
         else:
             # self.driver.destroy() usually performs  vif unplugging
             # but we must do it explicitly here when block_migration
             # is false, as the network devices at the source must be
             # torn down
             try:
-                self.driver.unplug_vifs(instance_ref, network_info)
+                self.driver.unplug_vifs(instance, network_info)
             except NotImplementedError as e:
-                LOG.debug(e, instance=instance_ref)
+                LOG.debug(e, instance=instance)
         # NOTE(tr3buchet): tear down networks on source host
-        self.network_api.setup_networks_on_host(ctxt, instance_ref,
+        self.network_api.setup_networks_on_host(ctxt, instance,
                                                 self.host, teardown=True)
-        self.instance_events.clear_events_for_instance(instance_ref)
+        self.instance_events.clear_events_for_instance(instance)
 
-        self._notify_about_instance_usage(ctxt, instance_ref,
+        self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
                                           network_info=network_info)
         LOG.info(_('Migrating instance to %s finished successfully.'),
-                 dest, instance=instance_ref)
+                 dest, instance=instance)
         LOG.info(_("You may see the error \"libvirt: QEMU error: "
                    "Domain not found: no domain with matching name.\" "
                    "This error can be safely ignored."),
-                 instance=instance_ref)
+                 instance=instance)
 
         if CONF.vnc_enabled or CONF.spice.enabled or CONF.rdp.enabled:
             if CONF.cells.enable:
                 self.cells_rpcapi.consoleauth_delete_tokens(ctxt,
-                        instance_ref['uuid'])
+                        instance.uuid)
             else:
                 self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
-                        instance_ref['uuid'])
+                        instance.uuid)
 
     @object_compat
     @wrap_exception()

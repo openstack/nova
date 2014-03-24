@@ -1072,7 +1072,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertTrue(called['fault_added'])
 
     def test_wrap_instance_fault_no_instance(self):
-        inst_uuid = "fake_uuid"
+        inst = {"uuid": "fake_uuid"}
 
         called = {'fault_added': False}
 
@@ -1083,11 +1083,11 @@ class ComputeTestCase(BaseTestCase):
                        did_it_add_fault)
 
         @compute_manager.wrap_instance_fault
-        def failer(self2, context, instance_uuid):
-            raise exception.InstanceNotFound(instance_id=instance_uuid)
+        def failer(self2, context, instance):
+            raise exception.InstanceNotFound(instance_id=instance['uuid'])
 
         self.assertRaises(exception.InstanceNotFound, failer,
-                          self.compute, self.context, inst_uuid)
+                          self.compute, self.context, inst)
 
         self.assertFalse(called['fault_added'])
 
@@ -5095,12 +5095,9 @@ class ComputeTestCase(BaseTestCase):
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance_ref = self._create_fake_instance_obj()
-        instance_ref['host'] = self.compute.host
+        instance = self._objectify(self._create_fake_instance_obj())
+        instance.host = self.compute.host
         dest = 'desthost'
-        inst_uuid = instance_ref['uuid']
-
-        instance = jsonutils.to_primitive(instance_ref)
 
         migrate_data = {'is_shared_storage': False}
 
@@ -5139,7 +5136,7 @@ class ComputeTestCase(BaseTestCase):
         self.assertIsNone(ret)
 
         # cleanup
-        db.instance_destroy(c, inst_uuid)
+        instance.destroy(c)
 
     def test_post_live_migration_no_shared_storage_working_correctly(self):
         """Confirm post_live_migration() works correctly as expected
@@ -5160,32 +5157,31 @@ class ComputeTestCase(BaseTestCase):
 
         # creating testdata
         c = context.get_admin_context()
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance({
-                                          'host': srchost,
-                                          'state_description': 'migrating',
-                                          'state': power_state.PAUSED}))
-        inst_uuid = inst_ref['uuid']
+        instance = self._objectify(self._create_fake_instance(
+                                             {'host': srchost,
+                                              'state_description': 'migrating',
+                                              'state': power_state.PAUSED}))
+        instance.update({'task_state': task_states.MIGRATING,
+                         'power_state': power_state.PAUSED})
+        instance.save(c)
 
-        db.instance_update(c, inst_uuid,
-                           {'task_state': task_states.MIGRATING,
-                            'power_state': power_state.PAUSED})
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
-        self.compute.driver.unfilter_instance(inst_ref, [])
+        self.compute.driver.unfilter_instance(instance, [])
         self.mox.StubOutWithMock(self.compute.conductor_api,
                                  'network_migrate_instance_start')
         migration = {'source_compute': srchost, 'dest_compute': dest, }
-        self.compute.conductor_api.network_migrate_instance_start(c, inst_ref,
+        self.compute.conductor_api.network_migrate_instance_start(c, instance,
                                                                   migration)
 
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'post_live_migration_at_destination')
         self.compute.compute_rpcapi.post_live_migration_at_destination(
-            c, inst_ref, False, dest)
+            c, instance, False, dest)
 
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
-        self.compute.network_api.setup_networks_on_host(c, inst_ref,
+        self.compute.network_api.setup_networks_on_host(c, instance,
                                                         self.compute.host,
                                                         teardown=True)
         self.mox.StubOutWithMock(self.compute.instance_events,
@@ -5196,7 +5192,7 @@ class ComputeTestCase(BaseTestCase):
         # start test
         self.mox.ReplayAll()
         migrate_data = {'is_shared_storage': False}
-        self.compute._post_live_migration(c, inst_ref, dest,
+        self.compute._post_live_migration(c, instance, dest,
                                           migrate_data=migrate_data)
         self.assertIn('cleanup', result)
         self.assertEqual(result['cleanup'], True)
@@ -5208,15 +5204,14 @@ class ComputeTestCase(BaseTestCase):
 
         # creating testdata
         c = context.get_admin_context()
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance({
-                                'host': srchost,
-                                'state_description': 'migrating',
-                                'state': power_state.PAUSED}))
-        inst_uuid = inst_ref['uuid']
+        instance = self._objectify(self._create_fake_instance({
+                                        'host': srchost,
+                                        'state_description': 'migrating',
+                                        'state': power_state.PAUSED}))
 
-        db.instance_update(c, inst_uuid,
-                           {'task_state': task_states.MIGRATING,
-                            'power_state': power_state.PAUSED})
+        instance.update({'task_state': task_states.MIGRATING,
+                        'power_state': power_state.PAUSED})
+        instance.save(c)
 
         # creating mocks
         with contextlib.nested(
@@ -5236,31 +5231,31 @@ class ComputeTestCase(BaseTestCase):
             network_migrate_instance_start, post_live_migration_at_destination,
             unplug_vifs, setup_networks_on_host, clear_events
         ):
-            self.compute._post_live_migration(c, inst_ref, dest)
+            self.compute._post_live_migration(c, instance, dest)
 
             post_live_migration.assert_has_calls([
-                mock.call(c, inst_ref, {'block_device_mapping': []}, None)])
-            unfilter_instance.assert_has_calls([mock.call(inst_ref, [])])
+                mock.call(c, instance, {'block_device_mapping': []}, None)])
+            unfilter_instance.assert_has_calls([mock.call(instance, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }
             network_migrate_instance_start.assert_has_calls([
-                mock.call(c, inst_ref, migration)])
+                mock.call(c, instance, migration)])
             post_live_migration_at_destination.assert_has_calls([
-                mock.call(c, inst_ref, False, dest)])
-            unplug_vifs.assert_has_calls([mock.call(inst_ref, [])])
+                mock.call(c, instance, False, dest)])
+            unplug_vifs.assert_has_calls([mock.call(instance, [])])
             setup_networks_on_host.assert_has_calls([
-                mock.call(c, inst_ref, self.compute.host, teardown=True)])
-            clear_events.assert_called_once_with(inst_ref)
+                mock.call(c, instance, self.compute.host, teardown=True)])
+            clear_events.assert_called_once_with(instance)
 
     def test_post_live_migration_terminate_volume_connections(self):
         c = context.get_admin_context()
-        inst_ref = jsonutils.to_primitive(self._create_fake_instance({
-                                'host': self.compute.host,
-                                'state_description': 'migrating',
-                                'state': power_state.PAUSED}))
-        db.instance_update(c, inst_ref['uuid'],
-                           {'task_state': task_states.MIGRATING,
-                            'power_state': power_state.PAUSED})
+        instance = self._objectify(self._create_fake_instance({
+                                        'host': self.compute.host,
+                                        'state_description': 'migrating',
+                                        'state': power_state.PAUSED}))
+        instance.update({'task_state': task_states.MIGRATING,
+                         'power_state': power_state.PAUSED})
+        instance.save(c)
 
         bdms = block_device_obj.block_device_make_list(c,
                 [fake_block_device.FakeDbBlockDeviceDict({
@@ -5295,7 +5290,7 @@ class ComputeTestCase(BaseTestCase):
             get_by_instance_uuid.return_value = bdms
             get_volume_connector.return_value = 'fake-connector'
 
-            self.compute._post_live_migration(c, inst_ref, 'dest_host')
+            self.compute._post_live_migration(c, instance, 'dest_host')
 
             terminate_connection.assert_called_once_with(
                     c, 'fake-volume-id', 'fake-connector')
