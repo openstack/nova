@@ -165,7 +165,7 @@ class VMwareVMOps(object):
 
     def _get_disk_format(self, image_meta):
         disk_format = image_meta.get('disk_format')
-        if disk_format not in ['iso', 'vmdk']:
+        if disk_format not in ['iso', 'vmdk', None]:
             raise exception.InvalidDiskFormat(disk_format=disk_format)
         return (disk_format, disk_format == 'iso')
 

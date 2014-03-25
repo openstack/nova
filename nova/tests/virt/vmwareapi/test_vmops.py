@@ -17,6 +17,7 @@ import mock
 import contextlib
 import mock
 
+from nova import exception
 from nova.network import model as network_model
 from nova import test
 from nova.tests.virt.vmwareapi import stubs
@@ -85,6 +86,21 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   rxtx_cap=3)
                 ])
         utils.reset_is_neutron()
+
+    def test_get_disk_format_none(self):
+        format, is_iso = self._vmops._get_disk_format({'disk_format': None})
+        self.assertIsNone(format)
+        self.assertFalse(is_iso)
+
+    def test_get_disk_format_iso(self):
+        format, is_iso = self._vmops._get_disk_format({'disk_format': 'iso'})
+        self.assertEqual('iso', format)
+        self.assertTrue(is_iso)
+
+    def test_get_disk_format_bad(self):
+        self.assertRaises(exception.InvalidDiskFormat,
+                          self._vmops._get_disk_format,
+                          {'disk_format': 'foo'})
 
     def test_get_machine_id_str(self):
         result = vmops.VMwareVMOps._get_machine_id_str(self.network_info)
