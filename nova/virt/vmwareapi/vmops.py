@@ -118,27 +118,7 @@ class VMwareVMOps(object):
         vms = self._session._call_method(vim_util, "get_objects",
                      "VirtualMachine",
                      ["name", "runtime.connectionState"])
-        lst_vm_names = []
-
-        while vms:
-            token = vm_util._get_token(vms)
-            for vm in vms.objects:
-                vm_name = None
-                conn_state = None
-                for prop in vm.propSet:
-                    if prop.name == "name":
-                        vm_name = prop.val
-                    elif prop.name == "runtime.connectionState":
-                        conn_state = prop.val
-                # Ignoring the orphaned or inaccessible VMs
-                if conn_state not in ["orphaned", "inaccessible"]:
-                    lst_vm_names.append(vm_name)
-            if token:
-                vms = self._session._call_method(vim_util,
-                                                 "continue_to_get_objects",
-                                                 token)
-            else:
-                break
+        lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
 
         LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
         return lst_vm_names
@@ -1667,6 +1647,31 @@ class VMwareVMOps(object):
             datastores_info.append((ds, ds_info))
         self._imagecache.update(context, instances, datastores_info)
 
+    def _get_valid_vms_from_retrieve_result(self, retrieve_result):
+        """Returns list of valid vms from RetrieveResult object."""
+        lst_vm_names = []
+
+        while retrieve_result:
+            token = vm_util._get_token(retrieve_result)
+            for vm in retrieve_result.objects:
+                vm_name = None
+                conn_state = None
+                for prop in vm.propSet:
+                    if prop.name == "name":
+                        vm_name = prop.val
+                    elif prop.name == "runtime.connectionState":
+                        conn_state = prop.val
+                # Ignoring the orphaned or inaccessible VMs
+                if conn_state not in ["orphaned", "inaccessible"]:
+                    lst_vm_names.append(vm_name)
+            if token:
+                retrieve_result = self._session._call_method(vim_util,
+                                                 "continue_to_get_objects",
+                                                 token)
+            else:
+                break
+        return lst_vm_names
+
 
 class VMwareVCVMOps(VMwareVMOps):
     """Management class for VM-related tasks.
@@ -1725,3 +1730,21 @@ class VMwareVCVMOps(VMwareVMOps):
             self._update_datacenter_cache_from_objects(dcs)
             dc_info = self._datastore_dc_mapping.get(ds_ref.value)
         return dc_info
+
+    def list_instances(self):
+        """Lists the VM instances that are registered with vCenter cluster."""
+        properties = ['name', 'runtime.connectionState']
+        LOG.debug(_("Getting list of instances from cluster %s"),
+                  self._cluster)
+        vms = []
+        root_res_pool = self._session._call_method(
+            vim_util, "get_dynamic_property", self._cluster,
+            'ClusterComputeResource', 'resourcePool')
+        if root_res_pool:
+            vms = self._session._call_method(
+                vim_util, 'get_inner_objects', root_res_pool, 'vm',
+                'VirtualMachine', properties)
+        lst_vm_names = self._get_valid_vms_from_retrieve_result(vms)
+
+        LOG.debug(_("Got total of %s instances") % str(len(lst_vm_names)))
+        return lst_vm_names

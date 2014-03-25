@@ -180,6 +180,28 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                          "folder", "some_file")
         ops._create_folder_if_missing.assert_called_once()
 
+    def test_get_valid_vms_from_retrieve_result(self):
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        fake_objects = vmwareapi_fake.FakeRetrieveResult()
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
+        vms = ops._get_valid_vms_from_retrieve_result(fake_objects)
+        self.assertEqual(3, len(vms))
+
+    def test_get_valid_vms_from_retrieve_result_with_invalid(self):
+        ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
+        fake_objects = vmwareapi_fake.FakeRetrieveResult()
+        fake_objects.add_object(vmwareapi_fake.VirtualMachine())
+        invalid_vm1 = vmwareapi_fake.VirtualMachine()
+        invalid_vm1.set('runtime.connectionState', 'orphaned')
+        invalid_vm2 = vmwareapi_fake.VirtualMachine()
+        invalid_vm2.set('runtime.connectionState', 'inaccessible')
+        fake_objects.add_object(invalid_vm1)
+        fake_objects.add_object(invalid_vm2)
+        vms = ops._get_valid_vms_from_retrieve_result(fake_objects)
+        self.assertEqual(1, len(vms))
+
     def test_delete_vm_snapshot(self):
         def fake_call_method(module, method, *args, **kwargs):
             self.assertEqual('RemoveSnapshot_Task', method)

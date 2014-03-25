@@ -492,6 +492,7 @@ class ResourcePool(ManagedObject):
 
         memoryAllocation = DataObject()
         cpuAllocation = DataObject()
+        vm_list = DataObject()
 
         memory.maxUsage = 1000 * units.Mi
         memory.overallUsage = 500 * units.Mi
@@ -505,9 +506,11 @@ class ResourcePool(ManagedObject):
         memoryAllocation.reservation = 1024
         config.memoryAllocation = memoryAllocation
         config.cpuAllocation = cpuAllocation
+        vm_list.ManagedObjectReference = []
         self.set("summary", summary)
         self.set("summary.runtime.memory", memory)
         self.set("config", config)
+        self.set("vm", vm_list)
         parent = ManagedObjectReference(value=value,
                                         name=name)
         owner = ManagedObjectReference(value=value,
@@ -862,6 +865,7 @@ def create_datastore(name, capacity, free):
 def create_res_pool():
     res_pool = ResourcePool()
     _create_object('ResourcePool', res_pool)
+    return res_pool.obj
 
 
 def create_network():
@@ -874,7 +878,7 @@ def create_cluster(name, ds_ref):
     cluster._add_host(_get_object_refs("HostSystem")[0])
     cluster._add_host(_get_object_refs("HostSystem")[1])
     cluster._add_datastore(ds_ref)
-    cluster._add_root_resource_pool(_get_object_refs("ResourcePool")[0])
+    cluster._add_root_resource_pool(create_res_pool())
     _create_object('ClusterComputeResource', cluster)
 
 
@@ -1050,6 +1054,7 @@ class FakeVim(object):
     def _create_vm(self, method, *args, **kwargs):
         """Creates and registers a VM object with the Host System."""
         config_spec = kwargs.get("config")
+        pool = kwargs.get('pool')
         ds = _db_content["Datastore"].keys()[0]
         host = _db_content["HostSystem"].keys()[0]
         vm_dict = {"name": config_spec.name,
@@ -1064,6 +1069,8 @@ class FakeVim(object):
                   "instanceUuid": config_spec.instanceUuid}
         virtual_machine = VirtualMachine(**vm_dict)
         _create_object("VirtualMachine", virtual_machine)
+        res_pool = _get_object(pool)
+        res_pool.vm.ManagedObjectReference.append(virtual_machine.obj)
         task_mdo = create_task(method, "success")
         return task_mdo.obj
 
