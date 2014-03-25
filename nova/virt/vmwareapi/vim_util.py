@@ -217,6 +217,26 @@ def get_objects(vim, type, properties_to_collect=None, all=False):
             specSet=[property_filter_spec], options=options)
 
 
+def get_inner_objects(vim, base_obj, path, inner_type,
+                      properties_to_collect=None, all=False):
+    """Gets the list of inner objects of the type specified."""
+    client_factory = vim.client.factory
+    base_type = base_obj._type
+    traversal_spec = build_traversal_spec(client_factory, 'inner', base_type,
+                                          path, False, [])
+    object_spec = build_object_spec(client_factory, base_obj, [traversal_spec])
+    property_spec = build_property_spec(client_factory, type=inner_type,
+                                properties_to_collect=properties_to_collect,
+                                all_properties=all)
+    property_filter_spec = build_property_filter_spec(client_factory,
+                                [property_spec], [object_spec])
+    options = client_factory.create('ns0:RetrieveOptions')
+    options.maxObjects = CONF.vmware.maximum_objects
+    return vim.RetrievePropertiesEx(
+            vim.get_service_content().propertyCollector,
+            specSet=[property_filter_spec], options=options)
+
+
 def cancel_retrieve(vim, token):
     """Cancels the retrieve operation."""
     return vim.CancelRetrievePropertiesEx(
