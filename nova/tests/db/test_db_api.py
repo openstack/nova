@@ -1738,6 +1738,17 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                                                  'soft_deleted': True})
         self._assertEqualListsOfInstances([inst2, inst3], result)
 
+    def test_instance_get_all_by_filters_not_deleted(self):
+        inst1 = self.create_instance_with_args()
+        inst2 = self.create_instance_with_args(vm_state=vm_states.SOFT_DELETED)
+        inst3 = self.create_instance_with_args()
+        inst4 = self.create_instance_with_args(vm_state=vm_states.ACTIVE)
+        db.instance_destroy(self.ctxt, inst1['uuid'])
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'deleted': False})
+        self.assertIsNone(inst3.vm_state)
+        self._assertEqualListsOfInstances([inst3, inst4], result)
+
     def test_instance_get_all_by_filters_cleaned(self):
         inst1 = self.create_instance_with_args()
         inst2 = self.create_instance_with_args(reservation_id='b')

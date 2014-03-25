@@ -1898,8 +1898,13 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
             query_prefix = query_prefix.\
                     filter_by(deleted=0)
             if not filters.pop('soft_deleted', False):
-                query_prefix = query_prefix.\
-                    filter(models.Instance.vm_state != vm_states.SOFT_DELETED)
+                # It would be better to have vm_state not be nullable
+                # but until then we test it explicitly as a workaround.
+                not_soft_deleted = or_(
+                    models.Instance.vm_state != vm_states.SOFT_DELETED,
+                    models.Instance.vm_state == None
+                    )
+                query_prefix = query_prefix.filter(not_soft_deleted)
 
     if 'cleaned' in filters:
         if filters.pop('cleaned'):
