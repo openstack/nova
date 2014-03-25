@@ -1806,8 +1806,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.mox.ReplayAll()
 
-        self.conductor._cold_migrate(self.context, inst_obj,
-                                     'flavor', filter_props, [resvs])
+        self.assertRaises(exc.NoValidHost,
+                          self.conductor._cold_migrate,
+                          self.context, inst_obj,
+                          'flavor', filter_props, [resvs])
 
     def test_cold_migrate_no_valid_host_back_in_stopped_state(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',
@@ -1858,8 +1860,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.mox.ReplayAll()
 
-        self.conductor._cold_migrate(self.context, inst_obj,
-                                     'flavor', filter_props, [resvs])
+        self.assertRaises(exc.NoValidHost,
+                          self.conductor._cold_migrate, self.context,
+                          inst_obj, 'flavor', filter_props, [resvs])
 
     def test_cold_migrate_exception_host_in_error_state_and_raise(self):
         inst = fake_instance.fake_db_instance(image_ref='fake-image_ref',

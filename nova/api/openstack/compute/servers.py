@@ -1188,6 +1188,8 @@ class Controller(wsgi.Controller):
         except exception.Invalid:
             msg = _("Invalid instance image.")
             raise exc.HTTPBadRequest(explanation=msg)
+        except exception.NoValidHost as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
         return webob.Response(status_int=202)
 

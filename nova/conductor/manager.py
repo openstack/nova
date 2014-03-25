@@ -722,9 +722,8 @@ class ComputeTaskManager(base.Base):
                                           updates, ex, request_spec)
             quotas.rollback()
 
-            LOG.warning(_("No valid host found for cold migrate"),
-                        instance=instance)
-            return
+            msg = _("No valid host found for cold migrate")
+            raise exception.NoValidHost(reason=msg)
 
         try:
             scheduler_utils.populate_filter_properties(filter_properties,

@@ -159,6 +159,8 @@ class AdminActionsController(wsgi.Controller):
                     'migrate')
         except exception.InstanceNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.NoValidHost as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except Exception as e:
             LOG.exception(_("Error in migrate %s"), e)
             raise exc.HTTPBadRequest()
