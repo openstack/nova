@@ -2100,6 +2100,7 @@ class API(base.Base):
         files_to_inject = files_to_inject or []
         metadata = kwargs.get('metadata', {})
         preserve_ephemeral = kwargs.get('preserve_ephemeral', False)
+        auto_disk_config = kwargs.get('auto_disk_config')
 
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image, **kwargs)
@@ -2136,6 +2137,12 @@ class API(base.Base):
             instance.system_metadata.update(new_sys_metadata)
             instance.save()
             return orig_sys_metadata
+
+        # Since image might have changed, we may have new values for
+        # os_type, vm_mode, etc
+        options_from_image = self._inherit_properties_from_image(
+                image, auto_disk_config)
+        instance.update(options_from_image)
 
         instance.task_state = task_states.REBUILDING
         instance.image_ref = image_href
