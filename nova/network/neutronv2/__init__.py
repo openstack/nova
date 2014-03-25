@@ -30,11 +30,11 @@ def _get_client(token=None):
         'timeout': CONF.neutron_url_timeout,
         'insecure': CONF.neutron_api_insecure,
         'ca_cert': CONF.neutron_ca_certificates_file,
+        'auth_strategy': CONF.neutron_auth_strategy,
     }
 
     if token:
         params['token'] = token
-        params['auth_strategy'] = None
     else:
         params['username'] = CONF.neutron_admin_username
         if CONF.neutron_admin_tenant_id:
@@ -43,7 +43,6 @@ def _get_client(token=None):
             params['tenant_name'] = CONF.neutron_admin_tenant_name
         params['password'] = CONF.neutron_admin_password
         params['auth_url'] = CONF.neutron_admin_auth_url
-        params['auth_strategy'] = CONF.neutron_auth_strategy
     return clientv20.Client(**params)
 
 
