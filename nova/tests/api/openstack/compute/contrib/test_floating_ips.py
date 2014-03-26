@@ -58,7 +58,8 @@ def network_api_get_floating_ips_by_project(self, context):
              'fixed_ip': None}]
 
 
-def compute_api_get(self, context, instance_id):
+def compute_api_get(self, context, instance_id, expected_attrs=None,
+                    want_objects=False):
     return dict(uuid=FAKE_UUID, id=instance_id, instance_type_id=1, host='bob')
 
 
@@ -365,6 +366,22 @@ class FloatingIpTest(test.TestCase):
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
         rsp = self.manager._add_floating_ip(req, 'test_inst', body)
         self.assertTrue(rsp.status_int == 202)
+
+    def test_floating_ip_associate_invalid_instance(self):
+        fixed_address = '192.168.1.100'
+
+        def fake_get(self, context, id, expected_attrs=None,
+                     want_objects=False):
+            raise exception.InstanceNotFound(instance_id=id)
+
+        self.stubs.Set(compute.api.API, "get", fake_get)
+
+        body = dict(addFloatingIp=dict(address=self.floating_ip))
+
+        req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.manager._add_floating_ip, req, 'test_inst',
+                          body)
 
     def test_not_extended_floating_ip_associate_fixed(self):
         # Check that fixed_address is ignored if os-extended-floating-ips

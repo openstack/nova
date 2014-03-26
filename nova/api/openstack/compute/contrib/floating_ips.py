@@ -17,6 +17,7 @@
 
 import webob
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -218,8 +219,7 @@ class FloatingIPActionController(wsgi.Controller):
             msg = _("Address not specified")
             raise webob.exc.HTTPBadRequest(explanation=msg)
 
-        instance = self.compute_api.get(context, id)
-
+        instance = common.get_instance(self.compute_api, context, id)
         cached_nwinfo = compute_utils.get_nw_info_for_instance(instance)
         if not cached_nwinfo:
             msg = _('No nw_info cache associated with instance')
