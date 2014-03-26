@@ -31,11 +31,6 @@ from nova import config
 from nova import context
 from nova import db
 from nova import exception
-
-# NOTE(philip-schwartz) Added service import to fix issue where importing
-# xenapi service would cause an ArgsAlreadyParsedError exception
-from nova import service
-
 from nova.openstack.common import timeutils
 from nova.virt import virtapi
 from nova.virt.xenapi import driver as xenapi_driver

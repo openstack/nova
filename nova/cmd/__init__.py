@@ -30,8 +30,9 @@ if ('eventlet' in sys.modules and
 os.environ['EVENTLET_NO_GREENDNS'] = 'yes'
 
 import eventlet
+from nova import debugger
 
-if '--remote_debug-host' in sys.argv and '--remote_debug-port' in sys.argv:
+if debugger.enabled():
     # turn off thread patching to enable the remote debugger
     eventlet.monkey_patch(os=False, thread=False)
 else:
