@@ -292,7 +292,8 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_add_security_group_refresh(context, instance)
 
-        nw_info = self.get_instance_nw_info(context, instance, networks=nets)
+        nw_info = self.get_instance_nw_info(context, instance,
+                conductor_api=kwargs.get('conductor_api'), networks=nets)
         # NOTE(danms): Only return info about ports we created in this run.
         # In the initial allocation case, this will be everything we created,
         # and in later runs will only be what was created that time. Thus,
@@ -365,7 +366,8 @@ class API(base.Base):
         self.trigger_security_group_members_refresh(context, instance)
         self.trigger_instance_remove_security_group_refresh(context, instance)
 
-        return self.get_instance_nw_info(context, instance)
+        return self.get_instance_nw_info(context, instance, 
+                                                conductor_api=conductor_api)
 
     def list_ports(self, context, **search_opts):
         return quantumv2.get_client(context).list_ports(**search_opts)
