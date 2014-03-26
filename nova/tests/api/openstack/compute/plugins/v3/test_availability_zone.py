@@ -371,6 +371,7 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_with_availability_zone(self):
         def create(*args, **kwargs):
             self.assertIn('availability_zone', kwargs)
+            self.assertEqual('nova', kwargs['availability_zone'])
             return old_create(*args, **kwargs)
 
         old_create = compute_api.API.create
@@ -386,7 +387,7 @@ class ServersControllerCreateTest(test.TestCase):
                     'hello': 'world',
                     'open': 'stack',
                 },
-                'availability_zone': "nova",
+                availability_zone.ATTRIBUTE_NAME: "nova",
             },
         }
 
