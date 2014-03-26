@@ -160,6 +160,7 @@ class TestQuantumSecurityGroups(
         self._create_network()
         fake_instance = {'project_id': 'fake_tenant',
                          'availability_zone': 'zone_one',
+                         'info_cache': {'network_info': []},
                          'security_groups': [],
                          'uuid': str(uuid.uuid4()),
                          'display_name': 'test_instance'}

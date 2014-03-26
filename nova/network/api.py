@@ -65,6 +65,7 @@ def refresh_cache(f):
 def update_instance_cache_with_nw_info(api, context, instance,
                                        nw_info=None, conductor_api=None):
     try:
+        LOG.debug(_('Updating cache with info: %s'), nw_info)
         if not isinstance(nw_info, network_model.NetworkInfo):
             nw_info = None
         if not nw_info:
