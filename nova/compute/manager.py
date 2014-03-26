@@ -3149,17 +3149,20 @@ class ComputeManager(manager.Manager):
             except exception.MigrationNotFound:
                 LOG.error(_("Migration %s is not found during confirmation") %
                             migration_id, context=context, instance=instance)
+                quotas.rollback()
                 return
 
             if migration.status == 'confirmed':
                 LOG.info(_("Migration %s is already confirmed") %
                             migration_id, context=context, instance=instance)
+                quotas.rollback()
                 return
             elif migration.status not in ('finished', 'confirming'):
                 LOG.warn(_("Unexpected confirmation status '%(status)s' of "
                            "migration %(id)s, exit confirmation process") %
                            {"status": migration.status, "id": migration_id},
                            context=context, instance=instance)
+                quotas.rollback()
                 return
 
             # NOTE(wangpan): Get the instance from db, if it has been
@@ -3172,6 +3175,7 @@ class ComputeManager(manager.Manager):
             except exception.InstanceNotFound:
                 LOG.info(_("Instance is not found during confirmation"),
                             context=context, instance=instance)
+                quotas.rollback()
                 return
 
             self._confirm_resize(context, instance, quotas,
