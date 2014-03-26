@@ -130,7 +130,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
         filter_uuids = self.members
         if exclude:
             filter_uuids = set(filter_uuids) - set(exclude)
-        filters = {'uuid': filter_uuids, 'deleted_at': None}
+        filters = {'uuid': filter_uuids, 'deleted': False}
         instances = instance_obj.InstanceList.get_by_filters(context,
                                                              filters=filters)
         return list(set([instance.host for instance in instances
