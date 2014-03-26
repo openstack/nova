@@ -987,6 +987,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._create_vm()
         self._test_snapshot()
 
+    def test_snapshot_no_root_disk(self):
+        self._iso_disk_type_created(instance_type='m1.micro')
+        self.assertRaises(error_util.NoRootDiskDefined, self.conn.snapshot,
+                          self.context, self.instance, "Test-Snapshot",
+                          lambda *args, **kwargs: None)
+
     def test_snapshot_non_existent(self):
         self._create_instance()
         self.assertRaises(exception.InstanceNotFound, self.conn.snapshot,
