@@ -483,8 +483,8 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
         """Disconnect the volume."""
 
         export = connection_info['data']['export']
-        mount_path = os.path.join(CONF.libvirt.nfs_mount_point_base,
-                                  utils.get_hash_str(export))
+        mount_path = os.path.join(CONF.nfs_mount_point_base,
+                                  self.get_hash_str(export))
 
         try:
             utils.execute('umount', mount_path, run_as_root=True)
@@ -627,7 +627,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
 
         export = connection_info['data']['export']
         mount_path = os.path.join(CONF.libvirt.glusterfs_mount_point_base,
-                                  utils.get_hash_str(export))
+                                  self.get_hash_str(export))
 
         try:
             utils.execute('umount', mount_path, run_as_root=True)
