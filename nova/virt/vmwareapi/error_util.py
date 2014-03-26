@@ -29,6 +29,7 @@ FILE_ALREADY_EXISTS = 'FileAlreadyExists'
 FILE_FAULT = 'FileFault'
 FILE_LOCKED = 'FileLocked'
 FILE_NOT_FOUND = 'FileNotFound'
+INVALID_POWER_STATE = 'InvalidPowerState'
 INVALID_PROPERTY = 'InvalidProperty'
 NO_PERMISSION = 'NoPermission'
 NOT_AUTHENTICATED = 'NotAuthenticated'
@@ -194,6 +195,11 @@ class NotAuthenticatedException(VMwareDriverException):
     code = 403
 
 
+class InvalidPowerStateException(VMwareDriverException):
+    msg_fmt = _("Invalid Power State.")
+    code = 409
+
+
 # Populate the fault registry with the exceptions that have
 # special treatment.
 _fault_classes_registry = {
@@ -203,6 +209,7 @@ _fault_classes_registry = {
     FILE_FAULT: FileFaultException,
     FILE_LOCKED: FileLockedException,
     FILE_NOT_FOUND: FileNotFoundException,
+    INVALID_POWER_STATE: InvalidPowerStateException,
     INVALID_PROPERTY: InvalidPropertyException,
     NO_PERMISSION: NoPermissionException,
     NOT_AUTHENTICATED: NotAuthenticatedException

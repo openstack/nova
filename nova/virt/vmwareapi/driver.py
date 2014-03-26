@@ -230,7 +230,7 @@ class VMwareESXDriver(driver.ComputeDriver):
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
         """Power on the specified instance."""
-        self._vmops._power_on(instance)
+        self._vmops.power_on(instance)
 
     def resume_state_on_host_boot(self, context, instance, network_info,
                                   block_device_info=None):
@@ -712,7 +712,7 @@ class VMwareVCDriver(VMwareESXDriver):
                  block_device_info=None):
         """Power on the specified instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops._power_on(instance)
+        _vmops.power_on(instance)
 
     def poll_rebooting_instances(self, timeout, instances):
         """Poll for rebooting instances."""

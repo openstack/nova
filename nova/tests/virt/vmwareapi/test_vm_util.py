@@ -26,6 +26,7 @@ from nova.openstack.common.gettextutils import _
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova import test
+from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import vm_util
 
@@ -34,6 +35,7 @@ class fake_session(object):
     def __init__(self, *ret):
         self.ret = ret
         self.ind = 0
+        self.vim = fake.FakeVim()
 
     def _call_method(self, *args):
         # return fake objects in circular manner
@@ -44,11 +46,7 @@ class fake_session(object):
         pass
 
     def _get_vim(self):
-        fake_vim = fake.DataObject()
-        client = fake.DataObject()
-        client.factory = 'fake_factory'
-        fake_vim.client = client
-        return fake_vim
+        return self.vim
 
 
 class partialObject(object):
@@ -693,3 +691,70 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertRaises(exception.Invalid,
                           vm_util._convert_vif_model,
                           "InvalidVifModel")
+
+    def test_power_on_instance_with_vm_ref(self):
+        session = fake_session()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, "_call_method",
+                              return_value='fake-task'),
+            mock.patch.object(session, "_wait_for_task"),
+        ) as (fake_call_method, fake_wait_for_task):
+            vm_util.power_on_instance(session, fake_instance,
+                                      vm_ref='fake-vm-ref')
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOnVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+
+    def test_power_on_instance_without_vm_ref(self):
+        session = fake_session()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(vm_util, "get_vm_ref",
+                              return_value='fake-vm-ref'),
+            mock.patch.object(session, "_call_method",
+                              return_value='fake-task'),
+            mock.patch.object(session, "_wait_for_task"),
+        ) as (fake_get_vm_ref, fake_call_method, fake_wait_for_task):
+            vm_util.power_on_instance(session, fake_instance)
+            fake_get_vm_ref.assert_called_once_with(session, fake_instance)
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOnVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+
+    def test_power_on_instance_with_exception(self):
+        session = fake_session()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, "_call_method",
+                              return_value='fake-task'),
+            mock.patch.object(session, "_wait_for_task",
+                              side_effect=exception.NovaException('fake')),
+        ) as (fake_call_method, fake_wait_for_task):
+            self.assertRaises(exception.NovaException,
+                              vm_util.power_on_instance,
+                              session, fake_instance,
+                              vm_ref='fake-vm-ref')
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOnVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+
+    def test_power_on_instance_with_power_state_exception(self):
+        session = fake_session()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, "_call_method",
+                              return_value='fake-task'),
+            mock.patch.object(
+                    session, "_wait_for_task",
+                    side_effect=error_util.InvalidPowerStateException),
+        ) as (fake_call_method, fake_wait_for_task):
+            vm_util.power_on_instance(session, fake_instance,
+                                      vm_ref='fake-vm-ref')
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOnVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')

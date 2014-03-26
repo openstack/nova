@@ -460,7 +460,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                 self.context, **values)
 
     def _create_vm(self, node=None, num_instances=1, uuid=None,
-                   instance_type='m1.large'):
+                   instance_type='m1.large', powered_on=True):
         """Create and spawn the VM."""
         if not node:
             node = self.node_name
@@ -471,10 +471,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         injected_files=[], admin_password=None,
                         network_info=self.network_info,
                         block_device_info=None)
-        self._check_vm_record(num_instances=num_instances)
+        self._check_vm_record(num_instances=num_instances,
+                              powered_on=powered_on)
         self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
 
-    def _check_vm_record(self, num_instances=1):
+    def _check_vm_record(self, num_instances=1, powered_on=True):
         """Check if the spawned VM's properties correspond to the instance in
         the db.
         """
@@ -505,11 +506,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(
             vm.get("config.hardware.device")[2].device.obj_name,
             "ns0:VirtualE1000")
-        # Check that the VM is running according to Nova
-        self.assertEqual(vm_info['state'], power_state.RUNNING)
+        if powered_on:
+            # Check that the VM is running according to Nova
+            self.assertEqual(power_state.RUNNING, vm_info['state'])
 
-        # Check that the VM is running according to vSphere API.
-        self.assertEqual(vm.get("runtime.powerState"), 'poweredOn')
+            # Check that the VM is running according to vSphere API.
+            self.assertEqual('poweredOn', vm.get("runtime.powerState"))
+        else:
+            # Check that the VM is not running according to Nova
+            self.assertEqual(power_state.SHUTDOWN, vm_info['state'])
+
+            # Check that the VM is not running according to vSphere API.
+            self.assertEqual('poweredOff', vm.get("runtime.powerState"))
 
         found_vm_uuid = False
         found_iface_id = False
@@ -666,6 +674,36 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
+
+    def _spawn_power_state(self, power_on):
+        self._spawn = self.conn._vmops.spawn
+        self._power_on = power_on
+
+        def _fake_spawn(context, instance, image_meta, injected_files,
+            admin_password, network_info, block_device_info=None,
+            instance_name=None, power_on=True):
+            return self._spawn(context, instance, image_meta,
+                               injected_files, admin_password, network_info,
+                               block_device_info=block_device_info,
+                               instance_name=instance_name,
+                               power_on=self._power_on)
+
+        with (
+            mock.patch.object(self.conn._vmops, 'spawn', _fake_spawn)
+        ):
+            self._create_vm(powered_on=power_on)
+            info = self.conn.get_info({'uuid': self.uuid,
+                                       'node': self.instance_node})
+            if power_on:
+                self._check_vm_info(info, power_state.RUNNING)
+            else:
+                self._check_vm_info(info, power_state.SHUTDOWN)
+
+    def test_spawn_no_power_on(self):
+        self._spawn_power_state(False)
+
+    def test_spawn_power_on(self):
+        self._spawn_power_state(True)
 
     def _spawn_with_delete_exception(self, fault=None):
 
@@ -1246,10 +1284,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def destroy_rescued(self, fake_method):
         self._rescue()
-        with (
+        with contextlib.nested(
             mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
-                              fake_method)
-        ):
+                              fake_method),
+            mock.patch.object(vm_util, "power_on_instance"),
+        ) as (fake_detach, fake_power_on):
             self.instance['vm_state'] = vm_states.RESCUED
             self.conn.destroy(self.context, self.instance, self.network_info)
             inst_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
@@ -1258,6 +1297,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                                                   self.uuid,
                                                                   self.uuid)
             self.assertFalse(vmwareapi_fake.get_file(rescue_file_path))
+            # Unrescue does not power on with destroy
+            self.assertFalse(fake_power_on.called)
 
     def test_destroy_rescued(self):
         def fake_detach_disk_from_vm(*args, **kwargs):
@@ -1318,6 +1359,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             self.assertFalse(mock_destroy.called)
 
     def _rescue(self, config_drive=False):
+        # validate that the power on is only called once
+        self._power_on = vm_util.power_on_instance
+        self._power_on_called = 0
+
         def fake_attach_disk_to_vm(vm_ref, instance,
                                    adapter_type, disk_type, vmdk_path=None,
                                    disk_size=None, linked_clone=False,
@@ -1336,13 +1381,20 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                            fake_create_config_drive)
 
         self._create_vm()
+
+        def fake_power_on_instance(session, instance, vm_ref=None):
+            self._power_on_called += 1
+            return self._power_on(session, instance, vm_ref=vm_ref)
+
         info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
+        self.stubs.Set(vm_util, "power_on_instance",
+                       fake_power_on_instance)
         self.stubs.Set(self.conn._volumeops, "attach_disk_to_vm",
                        fake_attach_disk_to_vm)
         self.conn.rescue(self.context, self.instance, self.network_info,
-                         self.image, 'fake-password')
+                                self.image, None)
         info = self.conn.get_info({'name': '1-rescue',
                                    'uuid': '%s-rescue' % self.uuid,
                                    'node': self.instance_node})
@@ -1351,6 +1403,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.SHUTDOWN)
         self.assertIsNotNone(vm_util.vm_ref_cache_get('%s-rescue' % self.uuid))
+        self.assertEqual(1, self._power_on_called)
 
     def test_rescue(self):
         self._rescue()
@@ -1366,9 +1419,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._rescue(config_drive=True)
 
     def test_unrescue(self):
+        # NOTE(dims): driver unrescue ends up eventually in vmops.unrescue
+        # with power_on=True, the test_destroy_rescued tests the
+        # vmops.unrescue with power_on=False
         self._rescue()
         self.test_vm_ref = None
         self.test_device_name = None
+        vm_ref = vm_util.get_vm_ref(self.conn._session,
+                                    self.instance)
 
         def fake_power_off_vm_ref(vm_ref):
             self.test_vm_ref = vm_ref
@@ -1385,16 +1443,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                               side_effect=fake_power_off_vm_ref),
             mock.patch.object(self.conn._volumeops, "detach_disk_from_vm",
                               side_effect=fake_detach_disk_from_vm),
-        ) as (poweroff, detach):
+            mock.patch.object(vm_util, "power_on_instance"),
+        ) as (poweroff, detach, fake_power_on):
             self.conn.unrescue(self.instance, None)
             poweroff.assert_called_once_with(self.test_vm_ref)
             detach.assert_called_once_with(self.test_vm_ref, mock.ANY,
                                            self.test_device_name)
+            fake_power_on.assert_called_once_with(self.conn._session,
+                                                  self.instance,
+                                                  vm_ref=vm_ref)
             self.test_vm_ref = None
             self.test_device_name = None
-        info = self.conn.get_info({'name': 1, 'uuid': self.uuid,
-                                   'node': self.instance_node})
-        self._check_vm_info(info, power_state.RUNNING)
 
     def test_pause(self):
         # Tests that the VMwareESXDriver does not implement the pause method.
@@ -1429,38 +1488,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
             None, None)
 
     def _test_finish_migration(self, power_on, resize_instance=False):
-        """Tests the finish_migration method on vmops."""
-
-        self.power_on_called = False
-        self.wait_for_task = False
-        self.wait_task = self.conn._session._wait_for_task
-
-        def fake_power_on(instance):
-            self.assertEqual(self.instance, instance)
-            self.power_on_called = True
-
-        def fake_vmops_update_instance_progress(context, instance, step,
-                                                total_steps):
-            self.assertEqual(self.context, context)
-            self.assertEqual(self.instance, instance)
-            self.assertEqual(4, step)
-            self.assertEqual(vmops.RESIZE_TOTAL_STEPS, total_steps)
-
-        if resize_instance:
-            def fake_wait_for_task(task_ref):
-                self.wait_for_task = True
-                return self.wait_task(task_ref)
-
-            self.stubs.Set(self.conn._session, "_wait_for_task",
-                           fake_wait_for_task)
-
-        self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
-        self.stubs.Set(self.conn._vmops, "_update_instance_progress",
-                       fake_vmops_update_instance_progress)
-
-        # setup the test instance in the database
         self._create_vm()
-        # perform the migration on our stubbed methods
         self.conn.finish_migration(context=self.context,
                                    migration=None,
                                    instance=self.instance,
@@ -1470,18 +1498,6 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    resize_instance=resize_instance,
                                    image_meta=None,
                                    power_on=power_on)
-        if resize_instance:
-            self.assertTrue(self.wait_for_task)
-        else:
-            self.assertFalse(self.wait_for_task)
-
-    def test_finish_migration_power_on(self):
-        self.assertRaises(NotImplementedError,
-                          self._test_finish_migration, power_on=True)
-
-    def test_finish_migration_power_off(self):
-        self.assertRaises(NotImplementedError,
-                          self._test_finish_migration, power_on=False)
 
     def test_confirm_migration(self):
         self._create_vm()
@@ -1490,59 +1506,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                           self.instance, None)
 
     def _test_finish_revert_migration(self, power_on):
-        """Tests the finish_revert_migration method on vmops."""
-
-        # setup the test instance in the database
         self._create_vm()
-
-        self.power_on_called = False
-        self.vm_name = str(self.instance['name']) + '-orig'
-
-        def fake_power_on(instance):
-            self.assertEqual(self.instance, instance)
-            self.power_on_called = True
-
-        def fake_get_orig_vm_name_label(instance):
-            self.assertEqual(self.instance, instance)
-            return self.vm_name
-
-        def fake_get_vm_ref_from_name(session, vm_name):
-            self.assertEqual(self.vm_name, vm_name)
-            return vmwareapi_fake._get_objects("VirtualMachine").objects[0]
-
-        def fake_get_vm_ref_from_uuid(session, vm_uuid):
-            return vmwareapi_fake._get_objects("VirtualMachine").objects[0]
-
-        def fake_call_method(*args, **kwargs):
-            pass
-
-        def fake_wait_for_task(*args, **kwargs):
-            pass
-
-        self.stubs.Set(self.conn._vmops, "_power_on", fake_power_on)
-        self.stubs.Set(self.conn._vmops, "_get_orig_vm_name_label",
-                       fake_get_orig_vm_name_label)
-        self.stubs.Set(vm_util, "_get_vm_ref_from_uuid",
-                       fake_get_vm_ref_from_uuid)
-        self.stubs.Set(vm_util, "get_vm_ref_from_name",
-                       fake_get_vm_ref_from_name)
-        self.stubs.Set(self.conn._session, "_call_method", fake_call_method)
-        self.stubs.Set(self.conn._session, "_wait_for_task",
-                       fake_wait_for_task)
-
-        # perform the revert on our stubbed methods
-        self.conn.finish_revert_migration(self.context,
-                                          instance=self.instance,
-                                          network_info=None,
-                                          power_on=power_on)
+        # Ensure ESX driver throws an error
+        self.assertRaises(NotImplementedError,
+                          self.conn.finish_revert_migration,
+                          self.context,
+                          instance=self.instance,
+                          network_info=None)
 
     def test_finish_revert_migration_power_on(self):
-        self.assertRaises(NotImplementedError,
-                          self._test_finish_migration, power_on=True)
+        self._test_finish_revert_migration(power_on=True)
 
     def test_finish_revert_migration_power_off(self):
-        self.assertRaises(NotImplementedError,
-                          self._test_finish_migration, power_on=False)
+        self._test_finish_revert_migration(power_on=False)
 
     def test_get_console_pool_info(self):
         info = self.conn.get_console_pool_info("console_type")
@@ -2088,27 +2064,6 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
 
-    def test_finish_migration_power_on(self):
-        self._test_finish_migration(power_on=True)
-        self.assertEqual(True, self.power_on_called)
-
-    def test_finish_migration_power_off(self):
-        self._test_finish_migration(power_on=False)
-        self.assertEqual(False, self.power_on_called)
-
-    def test_finish_migration_power_on_resize(self):
-        self._test_finish_migration(power_on=True,
-                                    resize_instance=True)
-        self.assertEqual(True, self.power_on_called)
-
-    def test_finish_revert_migration_power_on(self):
-        self._test_finish_revert_migration(power_on=True)
-        self.assertEqual(True, self.power_on_called)
-
-    def test_finish_revert_migration_power_off(self):
-        self._test_finish_revert_migration(power_on=False)
-        self.assertEqual(False, self.power_on_called)
-
     def test_snapshot(self):
         # Ensure VMwareVCVMOps's get_copy_virtual_disk_spec is getting called
         # two times
@@ -2357,3 +2312,91 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
     def test_get_host_uptime(self):
         self.assertRaises(NotImplementedError,
                           self.conn.get_host_uptime, 'host')
+
+    def _test_finish_migration(self, power_on, resize_instance=False):
+        """Tests the finish_migration method on VC Driver"""
+        # setup the test instance in the database
+        self._create_vm()
+        vm_ref = vm_util.get_vm_ref(self.conn._session,
+                                    self.instance)
+        with contextlib.nested(
+                mock.patch.object(self.conn._session, "_call_method",
+                                  return_value='fake-task'),
+                mock.patch.object(self.conn._vmops,
+                                  "_update_instance_progress"),
+                mock.patch.object(self.conn._session, "_wait_for_task"),
+                mock.patch.object(vm_util, "get_vm_resize_spec",
+                                  return_value='fake-spec'),
+                mock.patch.object(vm_util, "power_on_instance")
+        ) as (fake_call_method, fake_update_instance_progress,
+              fake_wait_for_task, fake_vm_resize_spec, fake_power_on):
+            self.conn.finish_migration(context=self.context,
+                                       migration=None,
+                                       instance=self.instance,
+                                       disk_info=None,
+                                       network_info=None,
+                                       block_device_info=None,
+                                       resize_instance=resize_instance,
+                                       image_meta=None,
+                                       power_on=power_on)
+            if resize_instance:
+                fake_vm_resize_spec.assert_called_once_with(
+                    self.conn._session._get_vim().client.factory,
+                    self.instance)
+                fake_call_method.assert_called_once_with(
+                    self.conn._session._get_vim(),
+                    "ReconfigVM_Task",
+                    vm_ref,
+                    spec='fake-spec')
+                fake_wait_for_task.assert_called_once_with('fake-task')
+            else:
+                self.assertFalse(fake_vm_resize_spec.called)
+                self.assertFalse(fake_call_method.called)
+                self.assertFalse(fake_wait_for_task.called)
+
+            if power_on:
+                fake_power_on.assert_called_once_with(self.conn._session,
+                                                      self.instance,
+                                                      vm_ref=vm_ref)
+            else:
+                self.assertFalse(fake_power_on.called)
+            fake_update_instance_progress.called_once_with(
+                self.context, self.instance, 4, vmops.RESIZE_TOTAL_STEPS)
+
+    def test_finish_migration_power_on(self):
+        self._test_finish_migration(power_on=True)
+
+    def test_finish_migration_power_off(self):
+        self._test_finish_migration(power_on=False)
+
+    def test_finish_migration_power_on_resize(self):
+        self._test_finish_migration(power_on=True,
+                                    resize_instance=True)
+
+    @mock.patch.object(vm_util, 'associate_vmref_for_instance')
+    @mock.patch.object(vm_util, 'power_on_instance')
+    def _test_finish_revert_migration(self, fake_power_on,
+                                      fake_associate_vmref, power_on):
+        """Tests the finish_revert_migration method on VC Driver"""
+
+        # setup the test instance in the database
+        self._create_instance()
+        self.conn.finish_revert_migration(self.context,
+                                          instance=self.instance,
+                                          network_info=None,
+                                          block_device_info=None,
+                                          power_on=power_on)
+        fake_associate_vmref.assert_called_once_with(self.conn._session,
+                                                     self.instance,
+                                                     suffix='-orig')
+        if power_on:
+            fake_power_on.assert_called_once_with(self.conn._session,
+                                                  self.instance)
+        else:
+            self.assertFalse(fake_power_on.called)
+
+    def test_finish_revert_migration_power_on(self):
+        self._test_finish_revert_migration(power_on=True)
+
+    def test_finish_revert_migration_power_off(self):
+        self._test_finish_revert_migration(power_on=False)

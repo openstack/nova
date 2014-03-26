@@ -1482,3 +1482,20 @@ def associate_vmref_for_instance(session, instance, vm_ref=None,
                instance=instance)
     # Invalidate the cache, so that it is refetched the next time
     vm_ref_cache_delete(instance['uuid'])
+
+
+def power_on_instance(session, instance, vm_ref=None):
+    """Power on the specified instance."""
+
+    if vm_ref is None:
+        vm_ref = get_vm_ref(session, instance)
+
+    LOG.debug("Powering on the VM", instance=instance)
+    try:
+        poweron_task = session._call_method(
+                                    session._get_vim(),
+                                    "PowerOnVM_Task", vm_ref)
+        session._wait_for_task(poweron_task)
+        LOG.debug("Powered on the VM", instance=instance)
+    except error_util.InvalidPowerStateException:
+        LOG.debug("VM already powered on", instance=instance)

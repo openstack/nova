@@ -574,19 +574,8 @@ class VMwareVMOps(object):
                 self._volumeops.attach_root_volume(connection_info, instance,
                                                    self._default_root_device,
                                                    data_store_ref)
-
-        def _power_on_vm():
-            """Power on the VM."""
-            LOG.debug(_("Powering on the VM instance"), instance=instance)
-            # Power On the VM
-            power_on_task = self._session._call_method(
-                               self._session._get_vim(),
-                               "PowerOnVM_Task", vm_ref)
-            self._session._wait_for_task(power_on_task)
-            LOG.debug(_("Powered on the VM instance"), instance=instance)
-
         if power_on:
-            _power_on_vm()
+            vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
     def _create_config_drive(self, instance, injected_files, admin_password,
                              data_store_name, dc_name, upload_folder, cookies):
@@ -1090,7 +1079,8 @@ class VMwareVMOps(object):
         self._volumeops.attach_disk_to_vm(
                                 rescue_vm_ref, r_instance,
                                 adapter_type, disk_type, vmdk_path)
-        self._power_on(instance, vm_ref=rescue_vm_ref)
+        vm_util.power_on_instance(self._session, r_instance,
+                                  vm_ref=rescue_vm_ref)
 
     def unrescue(self, instance, power_on=True):
         """Unrescue the specified instance."""
@@ -1116,7 +1106,7 @@ class VMwareVMOps(object):
         self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
         self._destroy_instance(r_instance, None, instance_name=instance_name)
         if power_on:
-            self._power_on(instance)
+            vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
 
     def _power_off_vm_ref(self, vm_ref):
         """Power off the specifed vm.
@@ -1151,28 +1141,8 @@ class VMwareVMOps(object):
             LOG.debug(_("VM was already in powered off state. So returning "
                         "without doing anything"), instance=instance)
 
-    def _power_on(self, instance, vm_ref=None):
-        """Power on the specified instance."""
-        if not vm_ref:
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
-
-        pwr_state = self._session._call_method(vim_util,
-                                     "get_dynamic_property", vm_ref,
-                                     "VirtualMachine", "runtime.powerState")
-        if pwr_state == "poweredOn":
-            LOG.debug(_("VM was already in powered on state. So returning "
-                      "without doing anything"), instance=instance)
-        # Only PoweredOff and Suspended VMs can be powered on.
-        else:
-            LOG.debug(_("Powering on the VM"), instance=instance)
-            poweron_task = self._session._call_method(
-                                        self._session._get_vim(),
-                                        "PowerOnVM_Task", vm_ref)
-            self._session._wait_for_task(poweron_task)
-            LOG.debug(_("Powered on the VM"), instance=instance)
-
-    def power_on(self, context, instance, network_info, block_device_info):
-        self._power_on(instance)
+    def power_on(self, instance):
+        vm_util.power_on_instance(self._session, instance)
 
     def _get_orig_vm_name_label(self, instance):
         return instance['uuid'] + '-orig'
@@ -1265,15 +1235,16 @@ class VMwareVMOps(object):
         vm_util.associate_vmref_for_instance(self._session, instance,
                                              suffix=self._migrate_suffix)
         if power_on:
-            self._power_on(instance)
+            vm_util.power_on_instance(self._session, instance)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance=False,
                          block_device_info=None, power_on=True):
         """Completes a resize, turning on the migrated instance."""
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+
         if resize_instance:
             client_factory = self._session._get_vim().client.factory
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
             vm_resize_spec = vm_util.get_vm_resize_spec(client_factory,
                                                         instance)
             reconfig_task = self._session._call_method(
@@ -1284,7 +1255,8 @@ class VMwareVMOps(object):
 
         # 4. Start VM
         if power_on:
-            self._power_on(instance)
+            vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
+
         self._update_instance_progress(context, instance,
                                        step=4,
                                        total_steps=RESIZE_TOTAL_STEPS)

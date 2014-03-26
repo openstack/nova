@@ -16,6 +16,7 @@ import contextlib
 
 import mock
 
+from nova import context
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import instance as instance_obj
@@ -26,6 +27,7 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import vim_util
+from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 
 
@@ -36,9 +38,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         stubs.set_stubs(self.stubs)
         self.flags(image_cache_subdirectory_name='vmware_base',
                    my_ip='')
+        self._context = context.RequestContext('fake_user', 'fake_project')
         self._session = driver.VMwareAPISession()
 
-        self._vmops = vmops.VMwareVMOps(self._session, None, None)
+        self._virtapi = mock.Mock()
+        self._vmops = vmops.VMwareVMOps(self._session, self._virtapi, None)
         self._instance = {'name': 'fake_name', 'uuid': 'fake_uuid'}
 
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
@@ -116,7 +120,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         value = vmops.VMwareVMOps.decide_linked_clone(None, False)
         self.assertFalse(value, "No overrides present but still overridden!")
 
-    def test_use_linked_clone_override_nt(self):
+    def test_use_linked_clone_override_none_true(self):
         value = vmops.VMwareVMOps.decide_linked_clone(None, True)
         self.assertTrue(value, "No overrides present but still overridden!")
 
@@ -129,7 +133,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.assertFalse(value,
                         "image level metadata failed to override global")
 
-    def test_use_linked_clone_override_nt(self):
+    def test_use_linked_clone_override_no_true(self):
         value = vmops.VMwareVMOps.decide_linked_clone("no", True)
         self.assertFalse(value,
                         "image level metadata failed to override global")
@@ -311,3 +315,140 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     def test_get_datacenter_ref_and_name_with_no_datastore(self):
         self._test_get_datacenter_ref_and_name()
+
+    def test_unrescue_power_on(self):
+        self._test_unrescue(True)
+
+    def test_unrescue_power_off(self):
+        self._test_unrescue(False)
+
+    def _test_unrescue(self, power_on):
+        self._vmops._volumeops = mock.Mock()
+        vm_rescue_ref = mock.Mock()
+        vm_ref = mock.Mock()
+
+        args_list = [(vm_ref, 'VirtualMachine',
+                      'config.hardware.device'),
+                     (vm_rescue_ref, 'VirtualMachine',
+                      'config.hardware.device')]
+
+        def fake_call_method(module, method, *args, **kwargs):
+            expected_args = args_list.pop(0)
+            self.assertEqual('get_dynamic_property', method)
+            self.assertEqual(expected_args, args)
+
+        path = mock.Mock()
+        path_and_type = (path, mock.Mock(), mock.Mock())
+        with contextlib.nested(
+                mock.patch.object(vm_util, 'get_vmdk_path_and_adapter_type',
+                                  return_value=path_and_type),
+                mock.patch.object(vm_util, 'get_vmdk_volume_disk'),
+                mock.patch.object(vm_util, 'power_on_instance'),
+                mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
+                mock.patch.object(vm_util, 'get_vm_ref_from_name',
+                                  return_value=vm_rescue_ref),
+                mock.patch.object(self._session, '_call_method',
+                                  fake_call_method),
+                mock.patch.object(self._vmops, '_power_off_vm_ref'),
+                mock.patch.object(self._vmops, '_destroy_instance'),
+        ) as (_get_vmdk_path_and_adapter_type, _get_vmdk_volume_disk,
+              _power_on_instance, _get_vm_ref, _get_vm_ref_from_name,
+              _call_method, _power_off, _destroy_instance):
+            self._vmops.unrescue(self._instance, power_on=power_on)
+
+            _get_vmdk_path_and_adapter_type.assert_called_once_with(
+                None, uuid='fake_uuid')
+            _get_vmdk_volume_disk.assert_called_once_with(None, path=path)
+            if power_on:
+                _power_on_instance.assert_called_once_with(self._session,
+                                                           self._instance,
+                                                           vm_ref=vm_ref)
+            else:
+                self.assertFalse(_power_on_instance.called)
+            _get_vm_ref.assert_called_once_with(self._session,
+                                                self._instance)
+            _get_vm_ref_from_name.assert_called_once_with(self._session,
+                                                          'fake_uuid-rescue')
+            _power_off.assert_called_once_with(vm_rescue_ref)
+            _destroy_instance.assert_called_once_with(self._instance, None,
+                instance_name='fake_uuid-rescue')
+
+    def _test_finish_migration(self, power_on=True, resize_instance=False):
+        """Tests the finish_migration method on vmops."""
+        with contextlib.nested(
+                mock.patch.object(self._session, "_call_method",
+                                  return_value='fake-task'),
+                mock.patch.object(self._vmops, "_update_instance_progress"),
+                mock.patch.object(self._session, "_wait_for_task"),
+                mock.patch.object(vm_util, "get_vm_resize_spec",
+                                  return_value='fake-spec'),
+                mock.patch.object(vm_util, "power_on_instance")
+        ) as (fake_call_method, fake_update_instance_progress,
+              fake_wait_for_task, fake_vm_resize_spec, fake_power_on):
+            self._vmops.finish_migration(context=self._context,
+                                         migration=None,
+                                         instance=self._instance,
+                                         disk_info=None,
+                                         network_info=None,
+                                         block_device_info=None,
+                                         resize_instance=resize_instance,
+                                         image_meta=None,
+                                         power_on=power_on)
+            if resize_instance:
+                fake_vm_resize_spec.assert_called_once_with(
+                    self._session._get_vim().client.factory,
+                    self._instance)
+                fake_call_method.assert_has_calls(mock.call(
+                    self._session._get_vim(),
+                    "ReconfigVM_Task",
+                    'f',
+                    spec='fake-spec'))
+                fake_wait_for_task.assert_called_once_with('fake-task')
+            else:
+                self.assertFalse(fake_vm_resize_spec.called)
+                self.assertFalse(fake_wait_for_task.called)
+
+            if power_on:
+                fake_power_on.assert_called_once_with(self._session,
+                                                      self._instance,
+                                                      vm_ref='f')
+            else:
+                self.assertFalse(fake_power_on.called)
+            fake_update_instance_progress.called_once_with(
+                self._context, self._instance, 4, vmops.RESIZE_TOTAL_STEPS)
+
+    def test_finish_migration_power_on(self):
+        self._test_finish_migration(power_on=True, resize_instance=False)
+
+    def test_finish_migration_power_off(self):
+        self._test_finish_migration(power_on=False, resize_instance=False)
+
+    def test_finish_migration_power_on_resize(self):
+        self._test_finish_migration(power_on=True, resize_instance=True)
+
+    @mock.patch.object(vm_util, 'associate_vmref_for_instance')
+    @mock.patch.object(vm_util, 'power_on_instance')
+    def _test_finish_revert_migration(self, fake_power_on,
+                                      fake_associate_vmref, power_on):
+        """Tests the finish_revert_migration method on vmops."""
+
+        # setup the test instance in the database
+        self._vmops.finish_revert_migration(self._context,
+                                                 instance=self._instance,
+                                                 network_info=None,
+                                                 block_device_info=None,
+                                                 power_on=power_on)
+        fake_associate_vmref.assert_called_once_with(self._session,
+                                                     self._instance,
+                                                     suffix='-orig')
+        if power_on:
+            fake_power_on.assert_called_once_with(self._session,
+                                                  self._instance)
+        else:
+            self.assertFalse(fake_power_on.called)
+
+    def test_finish_revert_migration_power_on(self):
+        self._test_finish_revert_migration(power_on=True)
+
+    def test_finish_revert_migration_power_off(self):
+        self._test_finish_revert_migration(power_on=False)
