@@ -42,6 +42,7 @@ from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
+from nova import quota
 from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -1649,7 +1650,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  'select_destinations')
         self.mox.StubOutWithMock(self.conductor,
                                  '_set_vm_state_and_notify')
-        self.mox.StubOutWithMock(quotas_obj.Quotas, 'rollback')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
@@ -1672,7 +1673,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
-        quotas_obj.Quotas.rollback()
+        # NOTE(mriedem): Validate that the quota rollback is using
+        # the correct project_id and user_id.
+        project_id, user_id = quotas_obj.ids_from_instance(self.context,
+                                                           inst_obj)
+        quota.QUOTAS.rollback(self.context, [resvs], project_id=project_id,
+                              user_id=user_id)
 
         self.mox.ReplayAll()
 
@@ -1696,7 +1702,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  'select_destinations')
         self.mox.StubOutWithMock(self.conductor,
                                  '_set_vm_state_and_notify')
-        self.mox.StubOutWithMock(quotas_obj.Quotas, 'rollback')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
@@ -1719,7 +1725,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 request_spec)
-        quotas_obj.Quotas.rollback()
+        # NOTE(mriedem): Validate that the quota rollback is using
+        # the correct project_id and user_id.
+        project_id, user_id = quotas_obj.ids_from_instance(self.context,
+                                                           inst_obj)
+        quota.QUOTAS.rollback(self.context, [resvs], project_id=project_id,
+                              user_id=user_id)
 
         self.mox.ReplayAll()
 
@@ -1748,7 +1759,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                  'prep_resize')
         self.mox.StubOutWithMock(self.conductor,
                                  '_set_vm_state_and_notify')
-        self.mox.StubOutWithMock(quotas_obj.Quotas, 'rollback')
+        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
 
         compute_utils.get_image_metadata(
             self.context, self.conductor_manager.image_service,
@@ -1785,7 +1796,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                 'migrate_server',
                                                 updates, exc_info,
                                                 expected_request_spec)
-        quotas_obj.Quotas.rollback()
+        # NOTE(mriedem): Validate that the quota rollback is using
+        # the correct project_id and user_id.
+        project_id, user_id = quotas_obj.ids_from_instance(self.context,
+                                                           inst_obj)
+        quota.QUOTAS.rollback(self.context, [resvs], project_id=project_id,
+                              user_id=user_id)
 
         self.mox.ReplayAll()
 
