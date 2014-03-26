@@ -71,9 +71,6 @@ class FlavorManageController(wsgi.Controller):
                                     flavorid=flavorid, swap=swap,
                                     rxtx_factor=rxtx_factor,
                                     is_public=is_public)
-            if not flavor['is_public']:
-                flavors.add_flavor_access(flavor['flavorid'],
-                                          context.project_id, context)
             req.cache_db_flavor(flavor)
         except (exception.FlavorExists,
                 exception.FlavorIdExists) as err:

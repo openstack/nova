@@ -464,7 +464,7 @@ class PrivateFlavorManageTest(test.TestCase):
         self.flavor_access_controller = flavor_access.FlavorAccessController()
         self.app = fakes.wsgi_app(init_only=('flavors',))
 
-    def test_create_private_flavor_should_create_flavor_access(self):
+    def test_create_private_flavor_should_not_grant_flavor_access(self):
         expected = {
             "flavor": {
                 "name": "test",
@@ -497,8 +497,8 @@ class PrivateFlavorManageTest(test.TestCase):
             "tenant_id": "%s" % ctxt.project_id,
             "flavor_id": "%s" % body["flavor"]["id"]
         }
-        self.assertTrue(expected_flavor_access_body in
-                        flavor_access_body["flavor_access"])
+        self.assertNotIn(expected_flavor_access_body,
+                         flavor_access_body["flavor_access"])
 
     def test_create_public_flavor_should_not_create_flavor_access(self):
         expected = {
