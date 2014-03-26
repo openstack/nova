@@ -752,7 +752,9 @@ class LibvirtConnTestCase(test.TestCase):
             conn._get_connection()
             self.assertFalse(service_mock.disabled)
             self.assertTrue(self.close_callback)
+            conn._init_events_pipe()
             self.close_callback(self.conn, 1, None)
+            conn._dispatch_events()
 
             self.assertTrue(service_mock.disabled)
             conn._get_connection()
@@ -4895,32 +4897,20 @@ class LibvirtConnTestCase(test.TestCase):
             mock.patch.object(libvirt.libvirtError, "get_error_code"),
             mock.patch.object(libvirt.libvirtError, "get_error_domain"),
             mock.patch.object(conn, '_set_host_enabled')):
-            conn._close_callback(conn._wrapped_conn, 'ERROR', '')
             self.assertRaises(exception.HypervisorUnavailable,
                               conn.get_num_instances)
 
     def test_broken_connection_disable_service(self):
-        reason = 'Connection to libvirt lost: ERROR!'
         self.mox.UnsetStubs()
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        service_mock = mock.MagicMock()
-        service_mock.disabled.return_value = False
-        service_mock_failed_conn = mock.MagicMock()
-        service_mock_failed_conn.disabled.return_value = True
-        mocks_list = [service_mock, service_mock_failed_conn]
+        conn._init_events_pipe()
         with contextlib.nested(
-            mock.patch.object(libvirt, 'openAuth',
-                              side_effect=libvirt.libvirtError("fake")),
-            mock.patch.object(libvirt.libvirtError, "get_error_code"),
-            mock.patch.object(libvirt.libvirtError, "get_error_domain"),
-            mock.patch.object(service_obj.Service, "get_by_compute_host",
-                              return_value=mocks_list.pop())):
-
+            mock.patch.object(conn, '_set_host_enabled')):
             conn._close_callback(conn._wrapped_conn, 'ERROR!', '')
-            self.assertTrue(service_mock.disabled and
-                            service_mock.disabled_reason.endswith(reason))
-            self.assertRaises(exception.HypervisorUnavailable,
-                              conn.get_num_instances)
+            conn._dispatch_events()
+            conn._set_host_enabled.assert_called_once_with(
+                False,
+                disable_reason=u'Connection to libvirt lost: ERROR!')
 
     def test_service_resume_after_broken_connection(self):
         self.mox.UnsetStubs()
@@ -4948,7 +4938,9 @@ class LibvirtConnTestCase(test.TestCase):
         mock_failed_conn.__getitem__.return_value = True
         # nothing should happen when calling _close_callback since
         # _wrapped_conn is None in the driver
+        conn._init_events_pipe()
         conn._close_callback(mock_failed_conn, reason=None, opaque=None)
+        conn._dispatch_events()
 
     def test_immediate_delete(self):
         def fake_lookup_by_name(instance_name):
