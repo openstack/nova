@@ -102,6 +102,23 @@ class LibvirtVifTestCase(test.TestCase):
                                 devname='tap-xxx-yyy-zzz',
                                 ovs_interfaceid='aaa-bbb-ccc')
 
+    vif_ovs_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                       address='ca:fe:de:ad:be:ef',
+                                       network=network_ovs,
+                                       type=network_model.VIF_TYPE_OVS,
+                                       details={'ovs_hybrid_plug': True,
+                                                'port_filter': True},
+                                       devname='tap-xxx-yyy-zzz',
+                                       ovs_interfaceid='aaa-bbb-ccc')
+
+    vif_ovs_filter_cap = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                           address='ca:fe:de:ad:be:ef',
+                                           network=network_ovs,
+                                           type=network_model.VIF_TYPE_OVS,
+                                           details={'port_filter': True},
+                                           devname='tap-xxx-yyy-zzz',
+                                           ovs_interfaceid='aaa-bbb-ccc')
+
     vif_ovs_legacy = network_model.VIF(id='vif-xxx-yyy-zzz',
                                        address='ca:fe:de:ad:be:ef',
                                        network=network_ovs,
@@ -690,6 +707,24 @@ class LibvirtVifTestCase(test.TestCase):
         self._check_ivs_virtualport_driver(d,
                                            self.vif_ivs,
                                            want_iface_id)
+
+    def test_hybrid_plug_without_nova_firewall(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn())
+        br_want = "qbr" + self.vif_ovs_hybrid['id']
+        br_want = br_want[:network_model.NIC_NAME_LEN]
+        self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
+        xml = self._get_instance_xml(d, self.vif_ovs_hybrid)
+        node = self._get_node(xml)
+        self._assertTypeAndMacEquals(node, "bridge", "source", "bridge",
+                                     self.vif_ovs_hybrid, br_want, 0)
+
+    def test_direct_plug_with_port_filter_cap_no_nova_firewall(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn())
+        br_want = self.vif_midonet['devname']
+        xml = self._get_instance_xml(d, self.vif_ovs_filter_cap)
+        node = self._get_node(xml)
+        self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
+                                     self.vif_ovs_filter_cap, br_want)
 
     def _check_neutron_hybrid_driver(self, d, vif, br_want):
         self.flags(firewall_driver="nova.virt.firewall.IptablesFirewallDriver")

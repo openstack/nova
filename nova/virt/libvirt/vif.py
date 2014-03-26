@@ -153,10 +153,9 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return (("qvb%s" % iface_id)[:network_model.NIC_NAME_LEN],
                 ("qvo%s" % iface_id)[:network_model.NIC_NAME_LEN])
 
-    def get_firewall_required(self):
-        # TODO(berrange): Extend this to use information from VIF model
-        # which can indicate whether the network provider (eg Neutron)
-        # has already applied firewall filtering itself.
+    def get_firewall_required(self, vif):
+        if vif.is_neutron_filtering_enabled():
+            return False
         if CONF.firewall_driver != "nova.virt.firewall.NoopFirewallDriver":
             return True
         return False
@@ -173,7 +172,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
 
         mac_id = vif['address'].replace(':', '')
         name = "nova-instance-" + instance['name'] + "-" + mac_id
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif):
             conf.filtername = name
         designer.set_vif_bandwidth_config(conf, inst_type)
 
@@ -213,7 +212,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                       image_meta, inst_type)
 
     def get_config_ovs(self, instance, vif, image_meta, inst_type):
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             return self.get_config_ovs_hybrid(instance, vif,
                                               image_meta,
                                               inst_type)
@@ -249,7 +248,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         return conf
 
     def get_config_ivs(self, instance, vif, image_meta, inst_type):
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             return self.get_config_ivs_hybrid(instance, vif,
                                               image_meta,
                                               inst_type)
@@ -463,7 +462,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                           instance['uuid'])
 
     def plug_ovs(self, instance, vif):
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.plug_ovs_hybrid(instance, vif)
         elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
             self.plug_ovs_bridge(instance, vif)
@@ -514,7 +513,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
                                           instance['uuid'])
 
     def plug_ivs(self, instance, vif):
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.plug_ivs_hybrid(instance, vif)
         else:
             self.plug_ivs_ethernet(instance, vif)
@@ -664,7 +663,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ovs(self, instance, vif):
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.unplug_ovs_hybrid(instance, vif)
         elif self.has_libvirt_version(LIBVIRT_OVS_VPORT_VERSION):
             self.unplug_ovs_bridge(instance, vif)
@@ -703,7 +702,7 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
     def unplug_ivs(self, instance, vif):
-        if self.get_firewall_required():
+        if self.get_firewall_required(vif) or vif.is_hybrid_plug_enabled():
             self.unplug_ivs_hybrid(instance, vif)
         else:
             self.unplug_ivs_ethernet(instance, vif)
