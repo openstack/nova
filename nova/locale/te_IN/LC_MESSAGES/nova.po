@@ -1,18 +1,17 @@
-# Greek translations for nova.
+# Telugu (India) translations for nova.
 # Copyright (C) 2014 ORGANIZATION
 # This file is distributed under the same license as the nova project.
 #
 # Translators:
-# Efstathios Iosifidis <iefstathios@gmail.com>, 2014
 msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2014-03-25 06:19+0000\n"
-"PO-Revision-Date: 2014-03-14 00:21+0000\n"
+"PO-Revision-Date: 2014-03-25 00:30+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
-"Language-Team: Greek "
-"(http://www.transifex.com/projects/p/openstack/language/el/)\n"
+"Language-Team: Telugu (India) "
+"(http://www.transifex.com/projects/p/openstack/language/te_IN/)\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
@@ -268,7 +267,7 @@ msgstr ""
 #: nova/exception.py:320
 #, python-format
 msgid "%(err)s"
-msgstr "%(err)s"
+msgstr ""
 
 #: nova/exception.py:324
 #, python-format
@@ -3005,7 +3004,7 @@ msgstr ""
 #: nova/api/openstack/compute/plugins/v3/create_backup.py:85
 #: nova/api/openstack/compute/plugins/v3/servers.py:898
 msgid "Invalid metadata"
-msgstr "Μη έγκυρα μεταδεδομένα"
+msgstr ""
 
 #: nova/api/openstack/compute/servers.py:1484
 msgid "Invalid adminPass"
@@ -13428,51 +13427,4 @@ msgstr ""
 #, python-format
 msgid "formatting encrypted volume %s"
 msgstr ""
-
-#~ msgid "Unknown service"
-#~ msgstr ""
-
-#~ msgid "Preparing to wait for external event %(event)s for instance %(uuid)s"
-#~ msgstr ""
-
-#~ msgid "disk not on shared storagerebuilding from: '%s'"
-#~ msgstr ""
-
-#~ msgid "Updated the info_cache for instance"
-#~ msgstr ""
-
-#~ msgid "An error occurred"
-#~ msgstr ""
-
-#~ msgid "fetching image %s from glance"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Using neutron_admin_tenant_name for authentication"
-#~ " is deprecated and will be removed"
-#~ " in the next release.  Use "
-#~ "neutron_admin_tenant_id instead."
-#~ msgstr ""
-
-#~ msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)"
-#~ msgstr ""
-
-#~ msgid "Injecting %(inj)s into image %(img_id)s"
-#~ msgstr ""
-
-#~ msgid "Copying disk data before snapshot of the VM"
-#~ msgstr ""
-
-#~ msgid "Copied disk data before snapshot of the VM"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "The xenapi driver does not meet "
-#~ "the Nova project's requirements for "
-#~ "quality verification and is planned for"
-#~ " removal. This may change, but users"
-#~ " should plan accordingly. Additional "
-#~ "details here: "
-#~ "https://wiki.openstack.org/wiki/HypervisorSupportMatrix/DeprecationPlan"
-#~ msgstr ""
 
