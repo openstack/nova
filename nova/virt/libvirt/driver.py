@@ -304,6 +304,9 @@ MIN_QEMU_LIVESNAPSHOT_VERSION = (1, 3, 0)
 MIN_LIBVIRT_BLOCKIO_VERSION = (0, 10, 2)
 # BlockJobInfo management requirement
 MIN_LIBVIRT_BLOCKJOBINFO_VERSION = (1, 1, 1)
+# Relative block commit (feature is detected,
+#  this version is only used for messaging)
+MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION = (1, 2, 7)
 
 
 def libvirt_error_handler(context, err):
@@ -1937,12 +1940,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         ##### Find dev name
         my_dev = None
+        active_disk = None
 
         xml = virt_dom.XMLDesc(0)
         xml_doc = etree.fromstring(xml)
 
         device_info = vconfig.LibvirtConfigGuest()
         device_info.parse_dom(xml_doc)
+
+        active_disk_object = None
 
         for guest_disk in device_info.devices:
             if (guest_disk.root_name != 'disk'):
@@ -1954,7 +1960,12 @@ class LibvirtDriver(driver.ComputeDriver):
             if guest_disk.serial == volume_id:
                 my_dev = guest_disk.target_dev
 
-        if my_dev is None:
+                active_disk = guest_disk.source_path
+                active_protocol = guest_disk.source_protocol
+                active_disk_object = guest_disk
+                break
+
+        if my_dev is None or (active_disk is None and active_protocol is None):
             msg = _('Disk with id: %s '
                     'not found attached to instance.') % volume_id
             LOG.debug('Domain XML: %s', xml)
@@ -1962,15 +1973,57 @@ class LibvirtDriver(driver.ComputeDriver):
 
         LOG.debug("found device at %s", my_dev)
 
+        def _get_snap_dev(filename, backing_store):
+            if filename is None:
+                msg = _('filename cannot be None')
+                raise exception.NovaException(msg)
+
+            # libgfapi delete
+            LOG.debug("XML: %s" % xml)
+
+            LOG.debug("active disk object: %s" % active_disk_object)
+
+            # determine reference within backing store for desired image
+            filename_to_merge = filename
+            matched_name = None
+            b = backing_store
+            index = None
+
+            current_filename = active_disk_object.source_name.split('/')[1]
+            if current_filename == filename_to_merge:
+                return my_dev + '[0]'
+
+            while b is not None:
+                source_filename = b.source_name.split('/')[1]
+                if source_filename == filename_to_merge:
+                    LOG.debug('found match: %s' % b.source_name)
+                    matched_name = b.source_name
+                    index = b.index
+                    break
+
+                b = b.backing_store
+
+            if matched_name is None:
+                msg = _('no match found for %s') % (filename_to_merge)
+                raise exception.NovaException(msg)
+
+            LOG.debug('index of match (%s) is %s' % (b.source_name, index))
+
+            my_snap_dev = '%s[%s]' % (my_dev, index)
+            return my_snap_dev
+
         if delete_info['merge_target_file'] is None:
             # pull via blockRebase()
 
             # Merge the most recent snapshot into the active image
 
             rebase_disk = my_dev
-            rebase_base = delete_info['file_to_merge']
-            rebase_bw = 0
             rebase_flags = 0
+            rebase_base = delete_info['file_to_merge']  # often None
+            if active_protocol is not None:
+                rebase_base = _get_snap_dev(delete_info['file_to_merge'],
+                                            active_disk_object.backing_store)
+            rebase_bw = 0
 
             LOG.debug('disk: %(disk)s, base: %(base)s, '
                       'bw: %(bw)s, flags: %(flags)s',
@@ -1985,27 +2038,53 @@ class LibvirtDriver(driver.ComputeDriver):
             if result == 0:
                 LOG.debug('blockRebase started successfully')
 
-            while self._wait_for_block_job(virt_dom, rebase_disk,
+            while self._wait_for_block_job(virt_dom, my_dev,
                                            abort_on_error=True):
                 LOG.debug('waiting for blockRebase job completion')
                 time.sleep(0.5)
 
         else:
             # commit with blockCommit()
-
+            my_snap_base = None
+            my_snap_top = None
             commit_disk = my_dev
-            commit_base = delete_info['merge_target_file']
-            commit_top = delete_info['file_to_merge']
+            commit_flags = 0
+
+            if active_protocol is not None:
+                my_snap_base = _get_snap_dev(delete_info['merge_target_file'],
+                                             active_disk_object.backing_store)
+                my_snap_top = _get_snap_dev(delete_info['file_to_merge'],
+                                            active_disk_object.backing_store)
+                try:
+                    commit_flags |= libvirt.VIR_DOMAIN_BLOCK_COMMIT_RELATIVE
+                except AttributeError:
+                    ver = '.'.join(
+                        [str(x) for x in
+                         MIN_LIBVIRT_BLOCKCOMMIT_RELATIVE_VERSION])
+                    msg = _("Relative blockcommit support was not detected. "
+                            "Libvirt '%s' or later is required for online "
+                            "deletion of network storage-backed volume "
+                            "snapshots.") % ver
+                    raise exception.Invalid(msg)
+
+            commit_base = my_snap_base or delete_info['merge_target_file']
+            commit_top = my_snap_top or delete_info['file_to_merge']
             bandwidth = 0
-            flags = 0
+
+            LOG.debug('will call blockCommit with commit_disk=%(commit_disk)s '
+                      'commit_base=%(commit_base)s '
+                      'commit_top=%(commit_top)s '
+                      % {'commit_disk': commit_disk,
+                         'commit_base': commit_base,
+                         'commit_top': commit_top})
 
             result = virt_dom.blockCommit(commit_disk, commit_base, commit_top,
-                                          bandwidth, flags)
+                                          bandwidth, commit_flags)
 
             if result == 0:
                 LOG.debug('blockCommit started successfully')
 
-            while self._wait_for_block_job(virt_dom, commit_disk,
+            while self._wait_for_block_job(virt_dom, my_dev,
                                            abort_on_error=True):
                 LOG.debug('waiting for blockCommit job completion')
                 time.sleep(0.5)
