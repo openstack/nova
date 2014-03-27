@@ -847,6 +847,19 @@ class ComputeManager(manager.Manager):
             instance.save()
             return
 
+        if (instance.vm_state in [vm_states.ACTIVE, vm_states.STOPPED] and
+            instance.task_state in [task_states.REBUILDING,
+                                    task_states.REBUILD_BLOCK_DEVICE_MAPPING,
+                                    task_states.REBUILD_SPAWNING]):
+            # NOTE(jichenjc) compute stopped before instance was fully
+            # spawned so set to ERROR state. This is consistent to BUILD
+            LOG.debug("Instance failed to rebuild correctly, "
+                      "setting to ERROR state", instance=instance)
+            instance.task_state = None
+            instance.vm_state = vm_states.ERROR
+            instance.save()
+            return
+
         if (instance.vm_state != vm_states.ERROR and
             instance.task_state in [task_states.IMAGE_SNAPSHOT_PENDING,
                                     task_states.IMAGE_PENDING_UPLOAD,
