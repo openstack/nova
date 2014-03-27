@@ -765,7 +765,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         ephemeral_size = 1
         instance_type = {'swap': swap_size,
                          'ephemeral_gb': ephemeral_size}
-        instance = self._create_fake_instance()
         mappings = [
                 {'virtual': 'ami', 'device': 'sda1'},
                 {'virtual': 'root', 'device': '/dev/sda1'},
@@ -777,7 +776,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         ]
 
         preped_bdm = self.compute_api._prepare_image_mapping(
-            instance_type, instance['uuid'], mappings)
+            instance_type, mappings)
 
         expected_result = [
             {
@@ -7953,7 +7952,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'no_device': True}]
 
         image_mapping = self.compute_api._prepare_image_mapping(
-            instance_type, instance['uuid'], mappings)
+            instance_type, mappings)
         self.compute_api._update_block_device_mapping(
             self.context, instance_type, instance['uuid'], image_mapping)
 
@@ -8052,7 +8051,7 @@ class ComputeAPITestCase(BaseTestCase):
         base_options = base_options or {'root_device_name': 'vda',
                                         'image_ref': FAKE_IMAGE_REF}
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-                base_options, image_meta, 1, 1, bdms, legacy_bdms)
+                base_options, {}, image_meta, 1, 1, bdms, legacy_bdms)
         self.assertThat(expected_bdms,
                             matchers.DictListMatches(transformed_bdm))
 
@@ -8152,27 +8151,27 @@ class ComputeAPITestCase(BaseTestCase):
 
         # We get an image BDM
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, 1, 1, fake_legacy_bdms, True)
+            base_options, {}, {}, 1, 1, fake_legacy_bdms, True)
         self.assertEqual(len(transformed_bdm), 2)
 
         # No image BDM created if image already defines a root BDM
         base_options['root_device_name'] = 'vda'
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, image_meta, 1, 1, [], True)
+            base_options, {}, image_meta, 1, 1, [], True)
         self.assertEqual(len(transformed_bdm), 1)
 
         # No image BDM created
         transformed_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, 1, 1, fake_legacy_bdms, True)
+            base_options, {}, {}, 1, 1, fake_legacy_bdms, True)
         self.assertEqual(len(transformed_bdm), 1)
 
         # Volumes with multiple instances fails
         self.assertRaises(exception.InvalidRequest,
             self.compute_api._check_and_transform_bdm,
-            base_options, {}, 1, 2, fake_legacy_bdms, True)
+            base_options, {}, {}, 1, 2, fake_legacy_bdms, True)
 
         checked_bdm = self.compute_api._check_and_transform_bdm(
-            base_options, {}, 1, 1, transformed_bdm, True)
+            base_options, {}, {}, 1, 1, transformed_bdm, True)
         self.assertEqual(checked_bdm, transformed_bdm)
 
     def test_volume_size(self):
