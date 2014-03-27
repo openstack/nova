@@ -2749,8 +2749,8 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                                    vm_states.SUSPENDED, vm_states.STOPPED,
-                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
+                                    vm_states.STOPPED, vm_states.RESIZED,
+                                    vm_states.SOFT_DELETED],
                           task_state=[None])
     def attach_volume(self, context, instance, volume_id, device=None,
                        disk_bus=None, device_type=None):
@@ -2778,8 +2778,8 @@ class API(base.Base):
     @wrap_check_policy
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                                    vm_states.SUSPENDED, vm_states.STOPPED,
-                                    vm_states.RESIZED, vm_states.SOFT_DELETED],
+                                    vm_states.STOPPED, vm_states.RESIZED,
+                                    vm_states.SOFT_DELETED],
                           task_state=[None])
     def detach_volume(self, context, instance, volume):
         """Detach a volume from an instance."""
