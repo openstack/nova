@@ -876,15 +876,43 @@ class API(base.Base):
         return {}
 
     @staticmethod
+    def _update_instance_group_by_name(context, instance_uuids, group_name):
+        try:
+            ig = instance_group_obj.InstanceGroup.get_by_name(context,
+                    group_name)
+            instance_group_obj.InstanceGroup.add_members(context, ig.uuid,
+                    instance_uuids)
+        except exception.InstanceGroupNotFound:
+            # NOTE(russellb) If the group does not already exist, we need to
+            # automatically create it to be backwards compatible with old
+            # handling of the 'group' scheduler hint.  The policy type will be
+            # 'legacy', indicating that this group was created to emulate
+            # legacy group behavior.
+            ig = instance_group_obj.InstanceGroup()
+            ig.name = group_name
+            ig.project_id = context.project_id
+            ig.user_id = context.user_id
+            ig.policies = ['legacy']
+            ig.members = instance_uuids
+            ig.create(context)
+
+    @staticmethod
     def _update_instance_group(context, instances, scheduler_hints):
         if not scheduler_hints:
             return
-        group_uuid = scheduler_hints.get('group')
-        if not group_uuid:
+
+        group_hint = scheduler_hints.get('group')
+        if not group_hint:
             return
+
         instance_uuids = [instance.uuid for instance in instances]
-        instance_group_obj.InstanceGroup.add_members(context, group_uuid,
-                instance_uuids)
+
+        if uuidutils.is_uuid_like(group_hint):
+            instance_group_obj.InstanceGroup.add_members(context, group_hint,
+                    instance_uuids)
+        else:
+            API._update_instance_group_by_name(context, instance_uuids,
+                    group_hint)
 
     def _create_instance(self, context, instance_type,
                image_href, kernel_id, ramdisk_id,
