@@ -8319,6 +8319,15 @@ class ComputeAPITestCase(BaseTestCase):
                 None,
                 '/dev/vdb')
 
+    def test_no_attach_volume_in_suspended_state(self):
+        self.assertRaises(exception.InstanceInvalidState,
+                self.compute_api.attach_volume,
+                self.context,
+                {'uuid': 'fake_uuid', 'locked': False,
+                'vm_state': vm_states.SUSPENDED},
+                {'id': 'fake-volume-id'},
+                '/dev/vdb')
+
     def test_no_detach_volume_in_rescue_state(self):
         # Ensure volume can be detached from instance
 
@@ -8672,6 +8681,19 @@ class ComputeAPITestCase(BaseTestCase):
                   'instance_uuid': 'uuid2'}
 
         self.assertRaises(exception.VolumeUnattached,
+                          self.compute_api.detach_volume, self.context,
+                          instance, volume)
+
+    def test_detach_suspended_instance_fails(self):
+        instance = {'uuid': 'uuid1',
+                    'locked': False,
+                    'launched_at': timeutils.utcnow(),
+                    'vm_state': vm_states.SUSPENDED,
+                    'task_state': None}
+        volume = {'id': 1, 'attach_status': 'in-use',
+                  'instance_uuid': 'uuid2'}
+
+        self.assertRaises(exception.InstanceInvalidState,
                           self.compute_api.detach_volume, self.context,
                           instance, volume)
 
