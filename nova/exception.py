@@ -463,6 +463,14 @@ class InvalidDiskFormat(Invalid):
     msg_fmt = _("Disk format %(disk_format)s is not acceptable")
 
 
+class InvalidDiskInfo(Invalid):
+    msg_fmt = _("Disk info file is invalid: %(reason)s")
+
+
+class DiskInfoReadWriteFail(Invalid):
+    msg_fmt = _("Failed to read or write disk info file: %(reason)s")
+
+
 class ImageUnacceptable(Invalid):
     msg_fmt = _("Image %(image_id)s is unacceptable: %(reason)s")
 
