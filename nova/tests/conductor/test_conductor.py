@@ -844,6 +844,27 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             self.context, fake_secgroup)
         self.assertEqual(result, 'it worked')
 
+    def _test_action_event_expected_exceptions(self, db_method,
+                                               conductor_method, error):
+        # Tests that expected exceptions are handled properly.
+        with mock.patch.object(db, db_method, side_effect=error):
+            self.assertRaises(messaging.ExpectedException, conductor_method,
+                              self.context, {'foo': 'bar'})
+
+    def test_action_event_start_expected_exceptions(self):
+        error = exc.InstanceActionNotFound(request_id='1', instance_uuid='2')
+        self._test_action_event_expected_exceptions(
+            'action_event_start', self.conductor.action_event_start, error)
+
+    def test_action_event_finish_expected_exceptions(self):
+        errors = (exc.InstanceActionNotFound(request_id='1',
+                                             instance_uuid='2'),
+                  exc.InstanceActionEventNotFound(event='1', action_id='2'))
+        for error in errors:
+            self._test_action_event_expected_exceptions(
+                'action_event_finish', self.conductor.action_event_finish,
+                error)
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""

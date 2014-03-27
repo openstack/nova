@@ -446,10 +446,13 @@ class ConductorManager(manager.Manager):
 
         return jsonutils.to_primitive(result)
 
+    @messaging.expected_exceptions(exception.InstanceActionNotFound)
     def action_event_start(self, context, values):
         evt = self.db.action_event_start(context, values)
         return jsonutils.to_primitive(evt)
 
+    @messaging.expected_exceptions(exception.InstanceActionNotFound,
+                                   exception.InstanceActionEventNotFound)
     def action_event_finish(self, context, values):
         evt = self.db.action_event_finish(context, values)
         return jsonutils.to_primitive(evt)
