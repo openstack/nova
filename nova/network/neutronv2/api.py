@@ -1129,6 +1129,7 @@ class API(base.Base):
                     address=current_neutron_port['mac_address'],
                     network=network,
                     type=current_neutron_port.get('binding:vif_type'),
+                    details=current_neutron_port.get('binding:vif_details'),
                     ovs_interfaceid=ovs_interfaceid,
                     devname=devname,
                     active=vif_active))

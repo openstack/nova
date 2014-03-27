@@ -39,6 +39,11 @@ VIF_TYPE_MLNX_DIRECT = 'mlnx_direct'
 VIF_TYPE_MIDONET = 'midonet'
 VIF_TYPE_OTHER = 'other'
 
+# Constants for dictionary keys in the 'vif_details' field in the VIF
+# class
+VIF_DETAIL_PORT_FILTER = 'port_filter'
+VIF_DETAIL_OVS_HYBRID_PLUG = 'ovs_hybrid_plug'
+
 # Constant for max length of network interface names
 # eg 'bridge' in the Network class or 'devname' in
 # the VIF class
@@ -254,7 +259,7 @@ class VIF8021QbhParams(Model):
 class VIF(Model):
     """Represents a Virtual Interface in Nova."""
     def __init__(self, id=None, address=None, network=None, type=None,
-                 devname=None, ovs_interfaceid=None,
+                 details=None, devname=None, ovs_interfaceid=None,
                  qbh_params=None, qbg_params=None, active=False,
                  **kwargs):
         super(VIF, self).__init__()
@@ -263,6 +268,7 @@ class VIF(Model):
         self['address'] = address
         self['network'] = network or None
         self['type'] = type
+        self['details'] = details or {}
         self['devname'] = devname
 
         self['ovs_interfaceid'] = ovs_interfaceid
@@ -273,7 +279,7 @@ class VIF(Model):
         self._set_meta(kwargs)
 
     def __eq__(self, other):
-        keys = ['id', 'address', 'network', 'type', 'devname',
+        keys = ['id', 'address', 'network', 'type', 'details', 'devname',
                 'ovs_interfaceid', 'qbh_params', 'qbg_params',
                 'active']
         return all(self[k] == other[k] for k in keys)
@@ -322,6 +328,12 @@ class VIF(Model):
                     'network_id': self['network']['id'],
                     'ips': ips}
         return []
+
+    def is_hybrid_plug_enabled(self):
+        return self['details'].get(VIF_DETAIL_OVS_HYBRID_PLUG, False)
+
+    def is_neutron_filtering_enabled(self):
+        return self['details'].get(VIF_DETAIL_PORT_FILTER, False)
 
     @classmethod
     def hydrate(cls, vif):
