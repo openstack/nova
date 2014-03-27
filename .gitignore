@@ -29,6 +29,7 @@ covhtml
 dist/*
 doc/source/api/*
 doc/build/*
+etc/nova/nova.conf.sample
 instances
 keeper
 keys
