@@ -681,6 +681,67 @@ class LibvirtConfigGuestSnapshotDiskTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.target_bus, 'ide')
 
 
+class LibvirtConfigGuestDiskBackingStoreTest(LibvirtConfigBaseTest):
+
+    def test_config_file_parse(self):
+        xml = """<backingStore type='file'>
+                   <driver name='qemu' type='qcow2'/>
+                   <source file='/var/lib/libvirt/images/mid.qcow2'/>
+                   <backingStore type='file'>
+                     <driver name='qemu' type='qcow2'/>
+                     <source file='/var/lib/libvirt/images/base.qcow2'/>
+                     <backingStore/>
+                   </backingStore>
+                 </backingStore>
+              """
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDiskBackingStore()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.driver_name, 'qemu')
+        self.assertEqual(obj.driver_format, 'qcow2')
+        self.assertEqual(obj.source_type, 'file')
+        self.assertEqual(obj.source_file, '/var/lib/libvirt/images/mid.qcow2')
+        self.assertEqual(obj.backing_store.driver_name, 'qemu')
+        self.assertEqual(obj.backing_store.source_type, 'file')
+        self.assertEqual(obj.backing_store.source_file,
+                         '/var/lib/libvirt/images/base.qcow2')
+        self.assertIsNone(obj.backing_store.backing_store)
+
+    def test_config_network_parse(self):
+        xml = """<backingStore type='network' index='1'>
+                   <format type='qcow2'/>
+                   <source protocol='gluster' name='volume1/img1'>
+                     <host name='host1' port='24007'/>
+                   </source>
+                   <backingStore type='network' index='2'>
+                     <format type='qcow2'/>
+                     <source protocol='gluster' name='volume1/img2'>
+                       <host name='host1' port='24007'/>
+                     </source>
+                     <backingStore/>
+                   </backingStore>
+                 </backingStore>
+              """
+        xmldoc = etree.fromstring(xml)
+
+        obj = config.LibvirtConfigGuestDiskBackingStore()
+        obj.parse_dom(xmldoc)
+
+        self.assertEqual(obj.source_type, 'network')
+        self.assertEqual(obj.source_protocol, 'gluster')
+        self.assertEqual(obj.source_name, 'volume1/img1')
+        self.assertEqual(obj.source_hosts[0], 'host1')
+        self.assertEqual(obj.source_ports[0], '24007')
+        self.assertEqual(obj.index, '1')
+        self.assertEqual(obj.backing_store.source_name, 'volume1/img2')
+        self.assertEqual(obj.backing_store.index, '2')
+        self.assertEqual(obj.backing_store.source_hosts[0], 'host1')
+        self.assertEqual(obj.backing_store.source_ports[0], '24007')
+        self.assertIsNone(obj.backing_store.backing_store)
+
+
 class LibvirtConfigGuestFilesysTest(LibvirtConfigBaseTest):
 
     def test_config_mount(self):

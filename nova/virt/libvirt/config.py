@@ -503,6 +503,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.physical_block_size = None
         self.readonly = False
         self.snapshot = None
+        self.backing_store = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -630,15 +631,57 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
 
             elif c.tag == 'serial':
                 self.serial = c.text
-
-        for c in xmldoc.getchildren():
-            if c.tag == 'target':
+            elif c.tag == 'target':
                 if self.source_type == 'mount':
                     self.target_path = c.get('dir')
                 else:
                     self.target_dev = c.get('dev')
 
                 self.target_bus = c.get('bus', None)
+            elif c.tag == 'backingStore':
+                b = LibvirtConfigGuestDiskBackingStore()
+                b.parse_dom(c)
+                self.backing_store = b
+
+
+class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDiskBackingStore, self).__init__(
+            root_name="backingStore", **kwargs)
+
+        self.index = None
+        self.source_type = None
+        self.source_file = None
+        self.source_protocol = None
+        self.source_name = None
+        self.source_hosts = []
+        self.source_ports = []
+        self.driver_name = None
+        self.driver_format = None
+        self.backing_store = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigGuestDiskBackingStore, self).parse_dom(xmldoc)
+
+        self.source_type = xmldoc.get('type')
+        self.index = xmldoc.get('index')
+
+        for c in xmldoc.getchildren():
+            if c.tag == 'driver':
+                self.driver_name = c.get('name')
+                self.driver_format = c.get('type')
+            elif c.tag == 'source':
+                self.source_file = c.get('file')
+                self.source_protocol = c.get('protocol')
+                self.source_name = c.get('name')
+                for d in c.getchildren():
+                    if d.tag == 'host':
+                        self.source_hosts.append(d.get('name'))
+                        self.source_ports.append(d.get('port'))
+            elif c.tag == 'backingStore':
+                if c.getchildren():
+                    self.backing_store = LibvirtConfigGuestDiskBackingStore()
+                    self.backing_store.parse_dom(c)
 
 
 class LibvirtConfigGuestSnapshotDisk(LibvirtConfigObject):
