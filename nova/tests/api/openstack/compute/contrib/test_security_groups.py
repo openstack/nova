@@ -23,6 +23,7 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova.compute import power_state
+from nova import context as context_maker
 import nova.db
 from nova import exception
 from nova.objects import instance as instance_obj
@@ -139,6 +140,11 @@ class TestSecurityGroups(test.TestCase):
         """Check that no reservations are leaked during tests."""
         result = quota.QUOTAS.get_project_quotas(context, context.project_id)
         self.assertEqual(result['security_groups']['reserved'], 0)
+
+    def _assert_security_groups_in_use(self, project_id, user_id, in_use):
+        context = context_maker.get_admin_context()
+        result = quota.QUOTAS.get_user_quotas(context, project_id, user_id)
+        self.assertEqual(result['security_groups']['in_use'], in_use)
 
     def test_create_security_group(self):
         sg = security_group_template()
@@ -465,7 +471,8 @@ class TestSecurityGroups(test.TestCase):
                           req, '1', {'security_group': sg})
 
     def test_delete_security_group_by_id(self):
-        sg = security_group_template(id=1, rules=[])
+        sg = security_group_template(id=1, project_id='fake_project',
+                                     user_id='fake_user', rules=[])
 
         self.called = False
 
@@ -485,6 +492,26 @@ class TestSecurityGroups(test.TestCase):
         self.controller.delete(req, '1')
 
         self.assertTrue(self.called)
+
+    def test_delete_security_group_by_admin(self):
+        sg = security_group_template(id=2, rules=[])
+
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups')
+        self.controller.create(req, {'security_group': sg})
+        context = req.environ['nova.context']
+
+        # Ensure quota usage for security group is correct.
+        self._assert_security_groups_in_use(context.project_id,
+                                            context.user_id, 2)
+
+        # Delete the security group by admin.
+        req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/2',
+                                      use_admin_context=True)
+        self.controller.delete(req, '2')
+
+        # Ensure quota for security group in use is released.
+        self._assert_security_groups_in_use(context.project_id,
+                                            context.user_id, 1)
 
     def test_delete_security_group_by_invalid_id(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-security-groups/invalid')

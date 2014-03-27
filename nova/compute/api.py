@@ -3664,11 +3664,13 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Security group is still in use")
             self.raise_invalid_group(msg)
 
-        # Get reservations
+        quotas = quotas_obj.Quotas()
+        quota_project, quota_user = quotas_obj.ids_from_security_group(
+                                context, security_group)
         try:
-            reservations = QUOTAS.reserve(context, security_groups=-1)
+            quotas.reserve(context, project_id=quota_project,
+                           user_id=quota_user, security_groups=-1)
         except Exception:
-            reservations = None
             LOG.exception(_("Failed to update usages deallocating "
                             "security group"))
 
@@ -3677,8 +3679,7 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         self.db.security_group_destroy(context, security_group['id'])
 
         # Commit the reservations
-        if reservations:
-            QUOTAS.commit(context, reservations)
+        quotas.commit()
 
     def is_associated_with_server(self, security_group, instance_uuid):
         """Check if the security group is already associated
