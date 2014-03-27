@@ -3281,9 +3281,10 @@ class AggregateAPI(base.Base):
         aggregate = aggregate_obj.Aggregate.get_by_id(context,
                                                       aggregate_id)
         if len(aggregate.hosts) > 0:
+            msg = _("Host aggregate is not empty")
             raise exception.InvalidAggregateAction(action='delete',
                                                    aggregate_id=aggregate_id,
-                                                   reason='not empty')
+                                                   reason=msg)
         aggregate.destroy()
         compute_utils.notify_about_aggregate_update(context,
                                                     "delete.end",
