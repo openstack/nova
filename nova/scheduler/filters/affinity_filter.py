@@ -99,15 +99,18 @@ class SimpleCIDRAffinityFilter(AffinityFilter):
         return True
 
 
-class GroupAntiAffinityFilter(AffinityFilter):
+class _GroupAntiAffinityFilter(AffinityFilter):
     """Schedule the instance on a different host from a set of group
     hosts.
     """
 
+    def __init__(self):
+        super(_GroupAntiAffinityFilter, self).__init__()
+
     def host_passes(self, host_state, filter_properties):
         # Only invoke the filter is 'anti-affinity' is configured
         policies = filter_properties.get('group_policies', [])
-        if 'anti-affinity' not in policies:
+        if self.policy_name not in policies:
             return True
 
         group_hosts = filter_properties.get('group_hosts') or []
@@ -121,14 +124,29 @@ class GroupAntiAffinityFilter(AffinityFilter):
         return True
 
 
-class GroupAffinityFilter(AffinityFilter):
+class GroupAntiAffinityFilter(_GroupAntiAffinityFilter):
+    def __init__(self):
+        self.policy_name = 'legacy'
+        super(GroupAntiAffinityFilter, self).__init__()
+
+
+class ServerGroupAntiAffinityFilter(_GroupAntiAffinityFilter):
+    def __init__(self):
+        self.policy_name = 'anti-affinity'
+        super(ServerGroupAntiAffinityFilter, self).__init__()
+
+
+class _GroupAffinityFilter(AffinityFilter):
     """Schedule the instance on to host from a set of group hosts.
     """
+
+    def __init__(self):
+        super(_GroupAffinityFilter, self).__init__()
 
     def host_passes(self, host_state, filter_properties):
         # Only invoke the filter is 'affinity' is configured
         policies = filter_properties.get('group_policies', [])
-        if 'affinity' not in policies:
+        if self.policy_name not in policies:
             return True
 
         group_hosts = filter_properties.get('group_hosts', [])
@@ -140,3 +158,15 @@ class GroupAffinityFilter(AffinityFilter):
 
         # No groups configured
         return True
+
+
+class GroupAffinityFilter(_GroupAffinityFilter):
+    def __init__(self):
+        self.policy_name = 'legacy'
+        super(GroupAffinityFilter, self).__init__()
+
+
+class ServerGroupAffinityFilter(_GroupAffinityFilter):
+    def __init__(self):
+        self.policy_name = 'affinity'
+        super(ServerGroupAffinityFilter, self).__init__()

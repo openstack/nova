@@ -119,10 +119,20 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
 * |TypeAffinityFilter| - Only passes hosts that are not already running an
   instance of the requested type.
 * |AggregateTypeAffinityFilter| - limits instance_type by aggregate.
-* |GroupAntiAffinityFilter| - ensures that each instance in group is on a
-  different host.
-* |GroupAffinityFilter| - ensures that each instance in group is on a same
-  host with one of the instance host in a group.
+* |ServerGroupAntiAffinityFilter| - This filter implements anti-affinity for a
+  server group.  First you must create a server group with a policy of
+  'anti-affinity' via the server groups API.  Then, when you boot a new server,
+  provide a scheduler hint of 'group=<uuid>' where <uuid> is the UUID of the
+  server group you created.  This will result in the server getting added to the
+  group.  When the server gets scheduled, anti-affinity will be enforced among
+  all servers in that group.
+* |ServerGroupAffinityFilter| - This filter works the same way as
+  ServerGroupAffinityFilter.  The difference is that when you create the server
+  group, you should specify a policy of 'affinity'.
+* |GroupAntiAffinityFilter| - This filter is deprecated in favor of
+  ServerGroupAntiAffinityFilter.
+* |GroupAffinityFilter| - This filter is deprecated in favor of
+  ServerGroupAffinityFilter.
 * |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
 * |AggregateImagePropertiesIsolation| - isolates hosts based on image
   properties and aggregate metadata.
