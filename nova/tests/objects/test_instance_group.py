@@ -182,6 +182,7 @@ class _TestInstanceGroupObjects(test.TestCase):
         for instance in instances:
             values = self._get_default_values()
             values['uuid'] = instance[0]
+            values['name'] = instance[0]
             values['project_id'] = instance[1]
             self._create_instance_group(self.context, values)
 
@@ -209,7 +210,14 @@ class _TestInstanceGroupObjects(test.TestCase):
                 self.assertIsInstance(il.objects[i],
                                       instance_group.InstanceGroup)
                 self.assertEqual(il.objects[i].uuid, groups[i]['uuid'])
+                self.assertEqual(il.objects[i].name, groups[i]['name'])
                 self.assertEqual(il.objects[i].project_id, id)
+
+    def test_get_by_name(self):
+        self._populate_instances()
+        ctxt = context.RequestContext('fake_user', 'p1')
+        ig = instance_group.InstanceGroup.get_by_name(ctxt, 'f1')
+        self.assertEqual('f1', ig.name)
 
     def test_add_members(self):
         instance_ids = ['fakeid1', 'fakeid2']

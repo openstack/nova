@@ -26,7 +26,8 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     # Version 1.3: Make uuid a non-None real string
     # Version 1.4: Add add_members()
     # Version 1.5: Add get_hosts()
-    VERSION = '1.5'
+    # Version 1.6: Add get_by_name()
+    VERSION = '1.6'
 
     fields = {
         'id': fields.IntegerField(),
@@ -63,6 +64,20 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
     def get_by_uuid(cls, context, uuid):
         db_inst = db.instance_group_get(context, uuid)
         return cls._from_db_object(context, cls(), db_inst)
+
+    @base.remotable_classmethod
+    def get_by_name(cls, context, name):
+        # TODO(russellb) We need to get the group by name here.  There's no
+        # db.api method for this yet.  Come back and optimize this by
+        # adding a new query by name.  This is unnecessarily expensive if a
+        # tenant has lots of groups.
+        igs = InstanceGroupList.get_by_project_id(context,
+                                                  context.project_id)
+        for ig in igs:
+            if ig.name == name:
+                return ig
+
+        raise exception.InstanceGroupNotFound(group_uuid=name)
 
     @base.remotable
     def save(self, context):
@@ -152,6 +167,7 @@ class InstanceGroupList(base.ObjectListBase, base.NovaObject):
         # NOTE(danms): InstanceGroup was at 1.3 before we added this
         '1.1': '1.4',
         '1.2': '1.5',
+        '1.3': '1.6',
         }
 
     @base.remotable_classmethod
