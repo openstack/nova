@@ -464,6 +464,25 @@ class ComputeCellsAPI(compute_api.API):
         return self.cells_rpcapi.get_migrations(context, filters)
 
 
+class ServiceProxy(object):
+    def __init__(self, obj, cell_path):
+        self._obj = obj
+        self._cell_path = cell_path
+
+    @property
+    def id(self):
+        return cells_utils.cell_with_item(self._cell_path, self._obj.id)
+
+    def __getitem__(self, key):
+        if key == 'id':
+            return self.id
+
+        return getattr(self._obj, key)
+
+    def __getattr__(self, key):
+        return getattr(self._obj, key)
+
+
 class HostAPI(compute_api.HostAPI):
     """HostAPI() class for cells.
 
@@ -505,13 +524,29 @@ class HostAPI(compute_api.HostAPI):
             if zone_filter is not None:
                 services = [s for s in services
                             if s['availability_zone'] == zone_filter]
+        # NOTE(johannes): Cells adds the cell path as a prefix to the id
+        # to uniquely identify the service amongst all cells. Unfortunately
+        # the object model makes the id an integer. Use a proxy here to
+        # work around this particular problem.
+
+        # Split out the cell path first
+        cell_paths = []
+        for service in services:
+            cell_path, id = cells_utils.split_cell_and_item(service['id'])
+            service['id'] = id
+            cell_paths.append(cell_path)
+
         # NOTE(danms): Currently cells does not support objects as
         # return values, so just convert the db-formatted service objects
         # to new-world objects here
-        return obj_base.obj_make_list(context,
-                                      service_obj.ServiceList(),
-                                      service_obj.Service,
-                                      services)
+        services = obj_base.obj_make_list(context,
+                                          service_obj.ServiceList(),
+                                          service_obj.Service,
+                                          services)
+
+        # Now wrap it in the proxy with the original cell_path
+        services = [ServiceProxy(s, c) for s, c in zip(services, cell_paths)]
+        return services
 
     def service_get_by_compute_host(self, context, host_name):
         db_service = self.cells_rpcapi.service_get_by_compute_host(context,

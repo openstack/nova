@@ -14,12 +14,14 @@
 
 import calendar
 import datetime
+import iso8601
 
 import mock
 import webob.exc
 
 from nova.api.openstack.compute.plugins.v3 import services
 from nova import availability_zones
+from nova.compute import cells_api
 from nova import context
 from nova import db
 from nova import exception
@@ -90,35 +92,52 @@ class FakeRequestWithHostService(object):
         GET = {"host": "host1", "binary": "nova-compute"}
 
 
-def fake_host_api_service_get_all(context, filters=None, set_zones=False):
-    if set_zones or 'availability_zone' in filters:
-        return availability_zones.set_availability_zones(context,
-                                                         fake_services_list)
+def fake_service_get_all(services):
+    def service_get_all(context, filters=None, set_zones=False):
+        if set_zones or 'availability_zone' in filters:
+            return availability_zones.set_availability_zones(context,
+                                                             services)
+        return services
+    return service_get_all
 
 
 def fake_db_api_service_get_all(context, disabled=None):
     return fake_services_list
 
 
+def fake_db_service_get_by_host_binary(services):
+    def service_get_by_host_binary(context, host, binary):
+        for service in services:
+            if service['host'] == host and service['binary'] == binary:
+                return service
+        raise exception.HostBinaryNotFound(host=host, binary=binary)
+    return service_get_by_host_binary
+
+
 def fake_service_get_by_host_binary(context, host, binary):
-    for service in fake_services_list:
-        if service['host'] == host and service['binary'] == binary:
-            return service
-    raise exception.HostBinaryNotFound(host=host, binary=binary)
+    fake = fake_db_service_get_by_host_binary(fake_services_list)
+    return fake(context, host, binary)
 
 
-def fake_service_get_by_id(value):
-    for service in fake_services_list:
+def _service_get_by_id(services, value):
+    for service in services:
         if service['id'] == value:
             return service
     return None
 
 
+def fake_db_service_update(services):
+    def service_update(context, service_id, values):
+        service = _service_get_by_id(services, service_id)
+        if service is None:
+            raise exception.ServiceNotFound(service_id=service_id)
+        return service
+    return service_update
+
+
 def fake_service_update(context, service_id, values):
-    service = fake_service_get_by_id(service_id)
-    if service is None:
-        raise exception.ServiceNotFound(service_id=service_id)
-    return service
+    fake = fake_db_service_update(fake_services_list)
+    return fake(context, service_id, values)
 
 
 def fake_utcnow():
@@ -135,15 +154,18 @@ class ServicesTest(test.TestCase):
     def setUp(self):
         super(ServicesTest, self).setUp()
 
-        self.context = context.get_admin_context()
         self.controller = services.ServiceController()
-        self.stubs.Set(self.controller.host_api, "service_get_all",
-                       fake_host_api_service_get_all)
+
         self.stubs.Set(timeutils, "utcnow", fake_utcnow)
         self.stubs.Set(timeutils, "utcnow_ts", fake_utcnow_ts)
+
+        self.stubs.Set(self.controller.host_api, "service_get_all",
+                       fake_service_get_all(fake_services_list))
+
         self.stubs.Set(db, "service_get_by_args",
-                       fake_service_get_by_host_binary)
-        self.stubs.Set(db, "service_update", fake_service_update)
+                       fake_db_service_get_by_host_binary(fake_services_list))
+        self.stubs.Set(db, "service_update",
+                       fake_db_service_update(fake_services_list))
 
     def test_services_list(self):
         req = FakeRequest()
@@ -361,3 +383,68 @@ class ServicesTest(test.TestCase):
         request.method = 'DELETE'
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, request, 'abc')
+
+
+class ServicesCellsTest(test.TestCase):
+    def setUp(self):
+        super(ServicesCellsTest, self).setUp()
+
+        host_api = cells_api.HostAPI()
+
+        self.controller = services.ServiceController()
+        self.controller.host_api = host_api
+
+        self.stubs.Set(timeutils, "utcnow", fake_utcnow)
+        self.stubs.Set(timeutils, "utcnow_ts", fake_utcnow_ts)
+
+        services_list = []
+        for service in fake_services_list:
+            service = service.copy()
+            service['id'] = 'cell1@%d' % service['id']
+            services_list.append(service)
+
+        self.stubs.Set(host_api.cells_rpcapi, "service_get_all",
+                       fake_service_get_all(services_list))
+
+    def test_services_detail(self):
+        req = FakeRequest()
+        res_dict = self.controller.index(req)
+        utc = iso8601.iso8601.Utc()
+        response = {'services': [
+                    {'id': 'cell1@1',
+                     'binary': 'nova-scheduler',
+                     'host': 'host1',
+                     'zone': 'internal',
+                     'status': 'disabled',
+                     'state': 'up',
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2,
+                                                     tzinfo=utc),
+                     'disabled_reason': 'test1'},
+                    {'id': 'cell1@2',
+                     'binary': 'nova-compute',
+                     'host': 'host1',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'up',
+                     'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 5,
+                                                     tzinfo=utc),
+                     'disabled_reason': 'test2'},
+                    {'id': 'cell1@3',
+                     'binary': 'nova-scheduler',
+                     'host': 'host2',
+                     'zone': 'internal',
+                     'status': 'enabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 19, 6, 55, 34,
+                                                     tzinfo=utc),
+                     'disabled_reason': ''},
+                    {'id': 'cell1@4',
+                     'binary': 'nova-compute',
+                     'host': 'host2',
+                     'zone': 'nova',
+                     'status': 'disabled',
+                     'state': 'down',
+                     'updated_at': datetime.datetime(2012, 9, 18, 8, 3, 38,
+                                                     tzinfo=utc),
+                     'disabled_reason': 'test4'}]}
+        self.assertEqual(res_dict, response)
