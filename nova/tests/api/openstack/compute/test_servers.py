@@ -932,7 +932,7 @@ class ServersControllerTest(ControllerTest):
     def test_get_servers_deleted_status_as_user(self):
         req = fakes.HTTPRequest.blank('/fake/servers?status=deleted',
                                       use_admin_context=False)
-        self.assertRaises(webob.exc.HTTPBadRequest,
+        self.assertRaises(webob.exc.HTTPForbidden,
                           self.controller.detail, req)
 
     def test_get_servers_deleted_status_as_admin(self):

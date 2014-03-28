@@ -569,7 +569,7 @@ class Controller(wsgi.Controller):
                 search_opts['deleted'] = True
             else:
                 msg = _("Only administrators may list deleted instances")
-                raise exc.HTTPBadRequest(explanation=msg)
+                raise exc.HTTPForbidden(explanation=msg)
 
         # If all tenants is passed with 0 or false as the value
         # then remove it from the search options. Nothing passed as

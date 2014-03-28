@@ -233,7 +233,7 @@ class ServersController(wsgi.Controller):
                 search_opts['deleted'] = True
             else:
                 msg = _("Only administrators may list deleted instances")
-                raise exc.HTTPBadRequest(explanation=msg)
+                raise exc.HTTPForbidden(explanation=msg)
 
         # If tenant_id is passed as a search parameter this should
         # imply that all_tenants is also enabled unless explicitly
