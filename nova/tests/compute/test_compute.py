@@ -6941,6 +6941,36 @@ class ComputeAPITestCase(BaseTestCase):
 
         db.instance_destroy(self.context, refs[0]['uuid'])
 
+    def test_instance_create_auto_creates_group(self):
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+
+        inst_type = flavors.get_default_flavor()
+        (refs, resv_id) = self.compute_api.create(
+            self.context, inst_type, self.fake_image['id'],
+            scheduler_hints={'group': 'groupname'})
+
+        group = instance_group_obj.InstanceGroup.get_by_name(self.context,
+                'groupname')
+        self.assertEqual('groupname', group.name)
+        self.assertIn('legacy', group.policies)
+        self.assertEqual(1, len(group.members))
+        self.assertIn(refs[0]['uuid'], group.members)
+
+        # On a second instance, make sure it gets added to the group that was
+        # auto-created above
+        (refs2, resv_id) = self.compute_api.create(
+            self.context, inst_type, self.fake_image['id'],
+            scheduler_hints={'group': 'groupname'})
+        group = instance_group_obj.InstanceGroup.get_by_name(self.context,
+                'groupname')
+        self.assertEqual('groupname', group.name)
+        self.assertIn('legacy', group.policies)
+        self.assertEqual(2, len(group.members))
+        self.assertIn(refs[0]['uuid'], group.members)
+        self.assertIn(refs2[0]['uuid'], group.members)
+
+        db.instance_destroy(self.context, refs[0]['uuid'])
+
     def test_destroy_instance_disassociates_security_groups(self):
         # Make sure destroying disassociates security groups.
         group = self._create_group()
