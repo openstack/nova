@@ -130,9 +130,11 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   ServerGroupAffinityFilter.  The difference is that when you create the server
   group, you should specify a policy of 'affinity'.
 * |GroupAntiAffinityFilter| - This filter is deprecated in favor of
-  ServerGroupAntiAffinityFilter.
+  ServerGroupAntiAffinityFilter.  Note that this should not be enabled at the
+  same time as GroupAffinityFilter or neither filter will work properly.
 * |GroupAffinityFilter| - This filter is deprecated in favor of
-  ServerGroupAffinityFilter.
+  ServerGroupAffinityFilter.  Note that this should not be enabled at the same
+  time as GroupAntiAffinityFilter or neither filter will work properly.
 * |AggregateMultiTenancyIsolation| - isolate tenants in specific aggregates.
 * |AggregateImagePropertiesIsolation| - isolates hosts based on image
   properties and aggregate metadata.
