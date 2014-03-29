@@ -256,6 +256,46 @@ class TestGlanceImageService(test.NoDBTestCase):
         self.assertEqual(image_metas[0]['name'], 'test image')
         self.assertEqual(image_metas[0]['is_public'], False)
 
+    def test_detail_passes_through_to_client(self):
+        fixture = self._make_fixture(name='image10', is_public=True)
+        image_id = self.service.create(self.context, fixture)['id']
+        image_metas = self.service.detail(self.context)
+        expected = [
+            {
+                'id': image_id,
+                'name': 'image10',
+                'is_public': True,
+                'size': None,
+                'min_disk': None,
+                'min_ram': None,
+                'disk_format': None,
+                'container_format': None,
+                'checksum': None,
+                'created_at': self.NOW_DATETIME,
+                'updated_at': self.NOW_DATETIME,
+                'deleted_at': None,
+                'deleted': None,
+                'status': None,
+                'properties': {},
+                'owner': None,
+            },
+        ]
+        self.assertEqual(image_metas, expected)
+
+    def test_show_makes_datetimes(self):
+        fixture = self._make_datetime_fixture()
+        image_id = self.service.create(self.context, fixture)['id']
+        image_meta = self.service.show(self.context, image_id)
+        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
+
+    def test_detail_makes_datetimes(self):
+        fixture = self._make_datetime_fixture()
+        self.service.create(self.context, fixture)
+        image_meta = self.service.detail(self.context)[0]
+        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
+        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
+
     def test_detail_marker(self):
         fixtures = []
         ids = []
@@ -403,82 +443,6 @@ class TestGlanceImageService(test.NoDBTestCase):
         num_images = reduce(lambda x, y: x + (0 if y['deleted'] else 1),
                             self.service.detail(self.context), 0)
         self.assertEqual(1, num_images)
-
-    def test_show_passes_through_to_client(self):
-        fixture = self._make_fixture(name='image1', is_public=True)
-        image_id = self.service.create(self.context, fixture)['id']
-
-        image_meta = self.service.show(self.context, image_id)
-        expected = {
-            'id': image_id,
-            'name': 'image1',
-            'is_public': True,
-            'size': None,
-            'min_disk': None,
-            'min_ram': None,
-            'disk_format': None,
-            'container_format': None,
-            'checksum': None,
-            'created_at': self.NOW_DATETIME,
-            'updated_at': self.NOW_DATETIME,
-            'deleted_at': None,
-            'deleted': None,
-            'status': None,
-            'properties': {},
-            'owner': None,
-        }
-        self.assertEqual(image_meta, expected)
-
-    def test_show_raises_when_no_authtoken_in_the_context(self):
-        fixture = self._make_fixture(name='image1',
-                                     is_public=False,
-                                     properties={'one': 'two'})
-        image_id = self.service.create(self.context, fixture)['id']
-        self.context.auth_token = False
-        self.assertRaises(exception.ImageNotFound,
-                          self.service.show,
-                          self.context,
-                          image_id)
-
-    def test_detail_passes_through_to_client(self):
-        fixture = self._make_fixture(name='image10', is_public=True)
-        image_id = self.service.create(self.context, fixture)['id']
-        image_metas = self.service.detail(self.context)
-        expected = [
-            {
-                'id': image_id,
-                'name': 'image10',
-                'is_public': True,
-                'size': None,
-                'min_disk': None,
-                'min_ram': None,
-                'disk_format': None,
-                'container_format': None,
-                'checksum': None,
-                'created_at': self.NOW_DATETIME,
-                'updated_at': self.NOW_DATETIME,
-                'deleted_at': None,
-                'deleted': None,
-                'status': None,
-                'properties': {},
-                'owner': None,
-            },
-        ]
-        self.assertEqual(image_metas, expected)
-
-    def test_show_makes_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        image_id = self.service.create(self.context, fixture)['id']
-        image_meta = self.service.show(self.context, image_id)
-        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
-
-    def test_detail_makes_datetimes(self):
-        fixture = self._make_datetime_fixture()
-        self.service.create(self.context, fixture)
-        image_meta = self.service.detail(self.context)[0]
-        self.assertEqual(image_meta['created_at'], self.NOW_DATETIME)
-        self.assertEqual(image_meta['updated_at'], self.NOW_DATETIME)
 
     def test_download_with_retries(self):
         tries = [0]
@@ -768,7 +732,7 @@ def _create_failing_glance_client(info):
 
 
 class TestIsImageAvailable(test.NoDBTestCase):
-    """Tests the internal _is_image_available method on the Glance service."""
+    """Tests the internal _is_image_available function."""
 
     class ImageSpecV2(object):
         visibility = None
@@ -888,6 +852,65 @@ class TestIsImageAvailable(test.NoDBTestCase):
 
         res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
+
+
+class TestShow(test.NoDBTestCase):
+
+    """Tests the show method of the GlanceImageService."""
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_success(self, is_avail_mock, trans_from_mock):
+        is_avail_mock.return_value = True
+        trans_from_mock.return_value = mock.sentinel.trans_from
+        client = mock.MagicMock()
+        client.call.return_value = mock.sentinel.images_0
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+        info = service.show(ctx, mock.sentinel.image_id)
+
+        client.call.assert_called_once_with(ctx, 1, 'get',
+                                            mock.sentinel.image_id)
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        trans_from_mock.assert_called_once_with(mock.sentinel.images_0)
+        self.assertEqual(mock.sentinel.trans_from, info)
+
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_not_available(self, is_avail_mock, trans_from_mock):
+        is_avail_mock.return_value = False
+        client = mock.MagicMock()
+        client.call.return_value = mock.sentinel.images_0
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageService(client)
+
+        with testtools.ExpectedException(exception.ImageNotFound):
+            service.show(ctx, mock.sentinel.image_id)
+
+        client.call.assert_called_once_with(ctx, 1, 'get',
+                                            mock.sentinel.image_id)
+        is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
+        trans_from_mock.assert_not_called()
+
+    @mock.patch('nova.image.glance._reraise_translated_image_exception')
+    @mock.patch('nova.image.glance._translate_from_glance')
+    @mock.patch('nova.image.glance._is_image_available')
+    def test_show_client_failure(self, is_avail_mock, trans_from_mock,
+                                 reraise_mock):
+        raised = exception.ImageNotAuthorized(image_id=123)
+        client = mock.MagicMock()
+        client.call.side_effect = glanceclient.exc.Forbidden
+        ctx = mock.sentinel.ctx
+        reraise_mock.side_effect = raised
+        service = glance.GlanceImageService(client)
+
+        with testtools.ExpectedException(exception.ImageNotAuthorized):
+            service.show(ctx, mock.sentinel.image_id)
+            client.call.assert_called_once_with(ctx, 1, 'get',
+                                                mock.sentinel.image_id)
+            is_avail_mock.assert_not_called()
+            trans_from_mock.assert_not_called()
+            reraise_mock.assert_called_once_with(mock.sentinel.image_id)
 
 
 class TestGlanceClientWrapper(test.NoDBTestCase):
