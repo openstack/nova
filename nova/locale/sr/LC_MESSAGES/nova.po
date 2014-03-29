@@ -13424,39 +13424,3 @@ msgstr ""
 msgid "formatting encrypted volume %s"
 msgstr ""
 
-#~ msgid "Unknown service"
-#~ msgstr ""
-
-#~ msgid "Preparing to wait for external event %(event)s for instance %(uuid)s"
-#~ msgstr ""
-
-#~ msgid "disk not on shared storagerebuilding from: '%s'"
-#~ msgstr ""
-
-#~ msgid "Updated the info_cache for instance"
-#~ msgstr ""
-
-#~ msgid "An error occurred"
-#~ msgstr ""
-
-#~ msgid "fetching image %s from glance"
-#~ msgstr ""
-
-#~ msgid ""
-#~ msgstr ""
-
-#~ msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)"
-#~ msgstr ""
-
-#~ msgid "Injecting %(inj)s into image %(img_id)s"
-#~ msgstr ""
-
-#~ msgid "Copying disk data before snapshot of the VM"
-#~ msgstr ""
-
-#~ msgid "Copied disk data before snapshot of the VM"
-#~ msgstr ""
-
-#~ msgid "Event loop thread is not active, discarding event %s"
-#~ msgstr ""
-
