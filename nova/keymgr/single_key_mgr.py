@@ -63,7 +63,7 @@ class SingleKeyManager(mock_key_mgr.MockKeyManager):
 
     def delete_key(self, ctxt, key_id, **kwargs):
         if ctxt is None:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         if key_id != self.key_id:
             raise exception.KeyManagerError(

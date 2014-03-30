@@ -401,7 +401,7 @@ def soft_extension_authorizer(api_name, extension_name):
         try:
             hard_authorize(context, action=action)
             return True
-        except exception.NotAuthorized:
+        except exception.Forbidden:
             return False
     return authorize
 

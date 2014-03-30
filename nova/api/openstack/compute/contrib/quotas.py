@@ -103,7 +103,7 @@ class QuotaSetsController(wsgi.Controller):
             nova.context.authorize_project_context(context, id)
             return self._format_quota_set(id,
                     self._get_quotas(context, id, user_id=user_id))
-        except exception.NotAuthorized:
+        except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
     @wsgi.serializers(xml=QuotaTemplate)
@@ -133,7 +133,7 @@ class QuotaSetsController(wsgi.Controller):
         try:
             settable_quotas = QUOTAS.get_settable_quotas(context, project_id,
                                                          user_id=user_id)
-        except exception.NotAuthorized:
+        except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
         if not self.is_valid_body(body, 'quota_set'):
@@ -165,7 +165,7 @@ class QuotaSetsController(wsgi.Controller):
         try:
             quotas = self._get_quotas(context, id, user_id=user_id,
                                       usages=True)
-        except exception.NotAuthorized:
+        except exception.Forbidden:
             raise webob.exc.HTTPForbidden()
 
         for key, value in quota_set.items():
@@ -227,7 +227,7 @@ class QuotaSetsController(wsgi.Controller):
                 else:
                     QUOTAS.destroy_all_by_project(context, id)
                 return webob.Response(status_int=202)
-            except exception.NotAuthorized:
+            except exception.Forbidden:
                 raise webob.exc.HTTPForbidden()
         raise webob.exc.HTTPNotFound()
 

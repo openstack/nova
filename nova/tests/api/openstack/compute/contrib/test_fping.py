@@ -58,7 +58,7 @@ class FpingTest(test.TestCase):
 
     def test_fping_index_policy(self):
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping?all_tenants=1")
-        self.assertRaises(exception.NotAuthorized, self.controller.index, req)
+        self.assertRaises(exception.Forbidden, self.controller.index, req)
         req = fakes.HTTPRequest.blank("/v2/1234/os-fping?all_tenants=1")
         req.environ["nova.context"].is_admin = True
         res_dict = self.controller.index(req)

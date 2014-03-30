@@ -562,7 +562,7 @@ class Executor(wsgi.Application):
                 exception.MissingParameter,
                 exception.NoFloatingIpInterface,
                 exception.NoMoreFixedIps,
-                exception.NotAuthorized,
+                exception.Forbidden,
                 exception.QuotaError,
                 exception.SecurityGroupExists,
                 exception.SecurityGroupLimitExceeded,

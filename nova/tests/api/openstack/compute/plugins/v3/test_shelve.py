@@ -46,7 +46,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
-        self.assertRaises(exception.NotAuthorized, self.controller._shelve,
+        self.assertRaises(exception.Forbidden, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
 
     def test_shelve_allowed(self):
@@ -57,7 +57,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
-        self.assertRaises(exception.NotAuthorized, self.controller._shelve,
+        self.assertRaises(exception.Forbidden, self.controller._shelve,
                 req, str(uuid.uuid4()), {})
 
     def test_shelve_locked_server(self):
@@ -75,7 +75,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
-        self.assertRaises(exception.NotAuthorized, self.controller._unshelve,
+        self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
 
     def test_unshelve_allowed(self):
@@ -86,7 +86,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
-        self.assertRaises(exception.NotAuthorized, self.controller._unshelve,
+        self.assertRaises(exception.Forbidden, self.controller._unshelve,
                 req, str(uuid.uuid4()), {})
 
     def test_unshelve_locked_server(self):
@@ -104,7 +104,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
         policy.set_rules(rules)
 
         req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_allowed(self):
@@ -115,7 +115,7 @@ class ShelvePolicyTest(test.NoDBTestCase):
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequestV3.blank('/servers/12/os-shelve')
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                 self.controller._shelve_offload, req, str(uuid.uuid4()), {})
 
     def test_shelve_offload_locked_server(self):

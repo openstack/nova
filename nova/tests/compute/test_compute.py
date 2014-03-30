@@ -2702,7 +2702,7 @@ class ComputeTestCase(BaseTestCase):
         """Ensure expected exception is raised if set_admin_password not
         authorized.
         """
-        exc = exception.NotAuthorized(_('Internal error'))
+        exc = exception.Forbidden(_('Internal error'))
         expected_exception = exception.InstancePasswordSetFailed
         self._do_test_set_admin_password_driver_error(exc,
                                                 vm_states.ERROR,

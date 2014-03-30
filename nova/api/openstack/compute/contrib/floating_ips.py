@@ -91,7 +91,7 @@ def get_instance_by_floating_ip_addr(self, context, address):
 def disassociate_floating_ip(self, context, instance, address):
     try:
         self.network_api.disassociate_floating_ip(context, instance, address)
-    except exception.NotAuthorized:
+    except exception.Forbidden:
         raise webob.exc.HTTPForbidden()
     except exception.CannotDisassociateAutoAssignedFloatingIP:
         msg = _('Cannot disassociate auto assigned floating ip')
@@ -258,7 +258,7 @@ class FloatingIPActionController(wsgi.Controller):
             msg = _('l3driver call to add floating ip failed')
             raise webob.exc.HTTPBadRequest(explanation=msg)
         except (exception.FloatingIpNotFoundForAddress,
-                exception.NotAuthorized):
+                exception.Forbidden):
             msg = _('floating ip not found')
             raise webob.exc.HTTPNotFound(explanation=msg)
         except Exception:

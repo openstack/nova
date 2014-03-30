@@ -909,7 +909,7 @@ class VlanNetworkTestCase(test.TestCase):
         # raises because floating_ip project_id is None
         floating_ip = floating_ip_obj.FloatingIP(address='10.0.0.1',
                                                  project_id=None)
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.network._floating_ip_owned_by_project,
                           ctxt,
                           floating_ip)
@@ -917,7 +917,7 @@ class VlanNetworkTestCase(test.TestCase):
         # raises because floating_ip project_id is not equal to ctxt project_id
         floating_ip = floating_ip_obj.FloatingIP(
             address='10.0.0.1', project_id=ctxt.project_id + '1')
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.network._floating_ip_owned_by_project,
                           ctxt,
                           floating_ip)
@@ -1360,14 +1360,14 @@ class VlanNetworkTestCase(test.TestCase):
                                                    **networks[1]))
 
         # Associate the IP with non-admin user context
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.network.associate_floating_ip,
                           context2,
                           float_addr,
                           fix_addr)
 
         # Deallocate address from other project
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.network.deallocate_floating_ip,
                           context2,
                           float_addr)
@@ -1376,7 +1376,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.associate_floating_ip(context1, float_addr, fix_addr)
 
         # Now try dis-associating from other project
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.network.disassociate_floating_ip,
                           context2,
                           float_addr)

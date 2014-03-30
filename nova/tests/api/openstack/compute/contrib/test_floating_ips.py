@@ -406,7 +406,7 @@ class FloatingIpTest(test.TestCase):
         def fake_associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         self.stubs.Set(network.api.API, "associate_floating_ip",
                        fake_associate_floating_ip)
         floating_ip = '10.10.10.11'
@@ -544,7 +544,7 @@ class FloatingIpTest(test.TestCase):
                 return 'test_inst'
 
         def network_api_disassociate(self, context, instance, address):
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
         self.stubs.Set(network.api.API, "get_floating_ip_by_address",
                        fake_get_floating_ip_addr_auto_assigned)

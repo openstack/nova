@@ -1657,7 +1657,7 @@ class CloudController(object):
             return self.image_service.update(context, internal_id, image)
         except exception.ImageNotAuthorized:
             msg = _('Not allowed to modify attributes for image %s') % image_id
-            raise exception.NotAuthorized(message=msg)
+            raise exception.Forbidden(message=msg)
 
     def update_image(self, context, image_id, **kwargs):
         internal_id = ec2utils.ec2_id_to_id(image_id)

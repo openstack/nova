@@ -777,14 +777,14 @@ class TestDetail(test.NoDBTestCase):
                                    ext_query_mock, reraise_mock):
         params = {}
         ext_query_mock.return_value = params
-        raised = exception.NotAuthorized()
+        raised = exception.Forbidden()
         client = mock.MagicMock()
         client.call.side_effect = glanceclient.exc.Forbidden
         ctx = mock.sentinel.ctx
         reraise_mock.side_effect = raised
         service = glance.GlanceImageService(client)
 
-        with testtools.ExpectedException(exception.NotAuthorized):
+        with testtools.ExpectedException(exception.Forbidden):
             service.detail(ctx, **params)
 
         client.call.assert_called_once_with(ctx, 1, 'list')
