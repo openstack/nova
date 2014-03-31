@@ -1108,8 +1108,14 @@ class API(base.Base):
                 context, instance, networks, port_ids)
         nw_info = network_model.NetworkInfo()
 
+        current_neutron_port_map = {}
         for current_neutron_port in current_neutron_ports:
-            if current_neutron_port['id'] in port_ids:
+            current_neutron_port_map[current_neutron_port['id']] = (
+                current_neutron_port)
+
+        for port_id in port_ids:
+            current_neutron_port = current_neutron_port_map.get(port_id)
+            if current_neutron_port:
                 vif_active = False
                 if (current_neutron_port['admin_state_up'] is False
                     or current_neutron_port['status'] == 'ACTIVE'):
