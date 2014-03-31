@@ -3299,11 +3299,11 @@ class AggregateAPI(base.Base):
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
         if 'name' in values:
             aggregate.name = values.pop('name')
+            aggregate.save()
         self.is_safe_to_update_az(context, values, aggregate=aggregate,
                                   action_name="update_aggregate")
         if values:
-            aggregate.metadata = values
-        aggregate.save()
+            aggregate.update_metadata(values)
         # If updated values include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
         if values.get('availability_zone'):
