@@ -429,7 +429,7 @@ class ServersController(wsgi.Controller):
         req.cache_db_instance(instance)
         return self._view_builder.show(req, instance)
 
-    @extensions.expected_errors((400, 409, 413))
+    @extensions.expected_errors((400, 403, 409, 413))
     @wsgi.response(202)
     @validation.schema(schema_server_create)
     def create(self, req, body):
@@ -509,7 +509,7 @@ class ServersController(wsgi.Controller):
                             **create_kwargs)
         except (exception.QuotaError,
                 exception.PortLimitExceeded) as error:
-            raise exc.HTTPRequestEntityTooLarge(
+            raise exc.HTTPForbidden(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})
         except exception.InvalidMetadataSize as error:
@@ -728,7 +728,7 @@ class ServersController(wsgi.Controller):
         try:
             self.compute_api.resize(context, instance, flavor_id, **kwargs)
         except exception.QuotaError as error:
-            raise exc.HTTPRequestEntityTooLarge(
+            raise exc.HTTPForbidden(
                 explanation=error.format_message(),
                 headers={'Retry-After': 0})
         except exception.FlavorNotFound:
@@ -810,7 +810,7 @@ class ServersController(wsgi.Controller):
 
         return common.get_id_from_href(flavor_ref)
 
-    @extensions.expected_errors((400, 401, 404, 409, 413))
+    @extensions.expected_errors((400, 401, 403, 404, 409))
     @wsgi.response(202)
     @wsgi.action('resize')
     def _action_resize(self, req, id, body):
