@@ -235,23 +235,17 @@ def errors_out_migration(function):
             return function(self, context, *args, **kwargs)
         except Exception:
             with excutils.save_and_reraise_exception():
-                # Find migration argument. The argument cannot be
-                # defined by position because the wrapped functions
-                # do not have the same signature.
-                for arg in args:
-                    if not isinstance(arg, migration_obj.Migration):
-                        continue
-                    status = arg.status
-                    if status not in ['migrating', 'post-migrating']:
-                        continue
-                    arg.status = 'error'
-                    try:
-                        arg.save(context.elevated())
-                    except Exception:
-                        LOG.debug(_('Error setting migration status '
-                                    'for instance %s.') %
-                                  arg.instance_uuid, exc_info=True)
-                    break
+                migration = kwargs['migration']
+                status = migration.status
+                if status not in ['migrating', 'post-migrating']:
+                    return
+                migration.status = 'error'
+                try:
+                    migration.save(context.elevated())
+                except Exception:
+                    LOG.debug(_('Error setting migration status '
+                                'for instance %s.') %
+                              migration.instance_uuid, exc_info=True)
 
     return decorated_function
 
