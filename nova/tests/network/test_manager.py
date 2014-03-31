@@ -1425,8 +1425,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.network.deallocate_fixed_ip(context1, fix_addr.address, 'fake')
         fixed_update.assert_called_once_with(context1, fix_addr.address,
-                                             {'allocated': False,
-                                              'virtual_interface_id': None})
+                                             {'allocated': False})
 
     def test_deallocate_fixed_deleted(self):
         # Verify doesn't deallocate deleted fixed_ip from deleted network.
@@ -1494,8 +1493,7 @@ class VlanNetworkTestCase(test.TestCase):
         fixed_update.return_value = fixed_get.return_value
         self.network.deallocate_fixed_ip(context1, fix_addr.address, 'fake')
         fixed_update.assert_called_once_with(context1, fix_addr.address,
-                                             {'allocated': False,
-                                              'virtual_interface_id': None})
+                                             {'allocated': False})
 
     @mock.patch('nova.db.fixed_ip_get_by_address')
     @mock.patch('nova.db.network_get')

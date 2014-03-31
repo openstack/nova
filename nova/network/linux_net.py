@@ -885,7 +885,7 @@ def get_dhcp_leases(context, network_ref):
                                                            host=host):
         # NOTE(cfb): Don't return a lease entry if the IP isn't
         #            already leased
-        if fixedip.allocated and fixedip.leased:
+        if fixedip.leased:
             hosts.append(_host_lease(fixedip))
 
     return '\n'.join(hosts)
@@ -901,9 +901,10 @@ def get_dhcp_hosts(context, network_ref):
     for fixedip in fixed_ip_obj.FixedIPList.get_by_network(context,
                                                            network_ref,
                                                            host=host):
-        if fixedip.virtual_interface.address not in macs:
-            hosts.append(_host_dhcp(fixedip))
-            macs.add(fixedip.virtual_interface.address)
+        if fixedip.allocated:
+            if fixedip.virtual_interface.address not in macs:
+                hosts.append(_host_dhcp(fixedip))
+                macs.add(fixedip.virtual_interface.address)
     return '\n'.join(hosts)
 
 
@@ -912,7 +913,8 @@ def get_dns_hosts(context, network_ref):
     hosts = []
     for fixedip in fixed_ip_obj.FixedIPList.get_by_network(context,
                                                            network_ref):
-        hosts.append(_host_dns(fixedip))
+        if fixedip.allocated:
+            hosts.append(_host_dns(fixedip))
     return '\n'.join(hosts)
 
 
@@ -979,12 +981,13 @@ def get_dhcp_opts(context, network_ref):
                 default_gw_vif[instance_uuid] = vifs[0].id
 
         for fixedip in fixedips:
-            instance_uuid = fixedip.instance_uuid
-            if instance_uuid in default_gw_vif:
-                # we don't want default gateway for this fixed ip
-                if (default_gw_vif[instance_uuid] !=
-                        fixedip.virtual_interface_id):
-                    hosts.append(_host_dhcp_opts(fixedip))
+            if fixedip.allocated:
+                instance_uuid = fixedip.instance_uuid
+                if instance_uuid in default_gw_vif:
+                    # we don't want default gateway for this fixed ip
+                    if (default_gw_vif[instance_uuid] !=
+                            fixedip.virtual_interface_id):
+                        hosts.append(_host_dhcp_opts(fixedip))
     return '\n'.join(hosts)
 
 

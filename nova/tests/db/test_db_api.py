@@ -3494,6 +3494,8 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         address = '192.168.1.5'
         instance_uuid = self._create_instance()
         network_id = db.network_create_safe(self.ctxt, {})['id']
+        values = {'address': '192.168.1.5', 'instance_uuid': instance_uuid}
+        vif = db.virtual_interface_create(self.ctxt, values)
         param = {
             'reserved': False,
             'deleted': 0,
@@ -3503,16 +3505,18 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
             'allocated': False,
             'instance_uuid': instance_uuid,
             'network_id': network_id,
-            'virtual_interface_id': None
+            'virtual_interface_id': vif['id']
         }
         db.fixed_ip_create(self.ctxt, param)
 
         db.fixed_ip_disassociate(self.ctxt, address)
         fixed_ip_data = db.fixed_ip_get_by_address(self.ctxt, address)
         ignored_keys = ['created_at', 'id', 'deleted_at',
-                        'updated_at', 'instance_uuid']
+                        'updated_at', 'instance_uuid',
+                        'virtual_interface_id']
         self._assertEqualObjects(param, fixed_ip_data, ignored_keys)
         self.assertIsNone(fixed_ip_data['instance_uuid'])
+        self.assertIsNone(fixed_ip_data['virtual_interface_id'])
 
     def test_fixed_ip_get_not_found_exception(self):
         self.assertRaises(exception.FixedIpNotFound,

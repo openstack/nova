@@ -1200,7 +1200,8 @@ def fixed_ip_disassociate(context, address):
     session = get_session()
     with session.begin():
         _fixed_ip_get_by_address(context, address, session=session).\
-                                 update({'instance_uuid': None})
+                                 update({'instance_uuid': None,
+                                         'virtual_interface_id': None})
 
 
 @require_admin_context
@@ -2627,7 +2628,6 @@ def network_get_associated_fixed_ips(context, network_id, host=None):
                           models.FixedIp.leased).\
                           filter(models.FixedIp.deleted == 0).\
                           filter(models.FixedIp.network_id == network_id).\
-                          filter(models.FixedIp.allocated == True).\
                           join((models.VirtualInterface, vif_and)).\
                           join((models.Instance, inst_and)).\
                           filter(models.FixedIp.instance_uuid != None).\

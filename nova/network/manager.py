@@ -935,7 +935,6 @@ class NetworkManager(manager.Manager):
                                                       self.instance_dns_domain)
 
         fixed_ip_ref.allocated = False
-        fixed_ip_ref.virtual_interface_id = None
         fixed_ip_ref.save()
 
         if teardown:
