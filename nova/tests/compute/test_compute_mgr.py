@@ -1013,6 +1013,22 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.instance_events._events['foo']['test-event'])
         self.assertTrue(hasattr(result, 'send'))
 
+    def test_prepare_for_instance_event_again(self):
+        inst_obj = instance_obj.Instance(uuid='foo')
+        self.compute.instance_events.prepare_for_instance_event(
+            inst_obj, 'test-event')
+        # A second attempt will avoid creating a new list; make sure we
+        # get the current list
+        result = self.compute.instance_events.prepare_for_instance_event(
+            inst_obj, 'test-event')
+        self.assertIn('foo', self.compute.instance_events._events)
+        self.assertIn('test-event',
+                      self.compute.instance_events._events['foo'])
+        self.assertEqual(
+            result,
+            self.compute.instance_events._events['foo']['test-event'])
+        self.assertTrue(hasattr(result, 'send'))
+
     def test_process_instance_event(self):
         event = eventlet_event.Event()
         self.compute.instance_events._events = {
