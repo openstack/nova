@@ -68,10 +68,11 @@ class LocalAPI(object):
 
     def instance_get_all_by_host(self, context, host, columns_to_join=None):
         return self._manager.instance_get_all_by_host(
-            context, host, columns_to_join=columns_to_join)
+            context, host, None, columns_to_join=columns_to_join)
 
     def instance_get_all_by_host_and_node(self, context, host, node):
-        return self._manager.instance_get_all_by_host(context, host, node)
+        return self._manager.instance_get_all_by_host(context, host, node,
+                None)
 
     def instance_info_cache_delete(self, context, instance):
         return self._manager.instance_info_cache_delete(context, instance)
@@ -87,7 +88,8 @@ class LocalAPI(object):
                                                             key)
 
     def bw_usage_get(self, context, uuid, start_period, mac):
-        return self._manager.bw_usage_update(context, uuid, mac, start_period)
+        return self._manager.bw_usage_update(context, uuid, mac, start_period,
+                None, None, None, None, None, False)
 
     def bw_usage_update(self, context, uuid, mac, start_period,
                         bw_in, bw_out, last_ctr_in, last_ctr_out,
@@ -118,7 +120,8 @@ class LocalAPI(object):
 
     def block_device_mapping_update_or_create(self, context, values):
         return self._manager.block_device_mapping_update_or_create(context,
-                                                                   values)
+                                                                   values,
+                                                                   create=None)
 
     def block_device_mapping_get_all_by_instance(self, context, instance,
                                                  legacy=True):
@@ -138,26 +141,31 @@ class LocalAPI(object):
                                               update_totals)
 
     def service_get_all(self, context):
-        return self._manager.service_get_all_by(context)
+        return self._manager.service_get_all_by(context, host=None, topic=None,
+                binary=None)
 
     def service_get_all_by_topic(self, context, topic):
-        return self._manager.service_get_all_by(context, topic=topic)
+        return self._manager.service_get_all_by(context, topic=topic,
+                host=None, binary=None)
 
     def service_get_all_by_host(self, context, host):
-        return self._manager.service_get_all_by(context, host=host)
+        return self._manager.service_get_all_by(context, host=host, topic=None,
+                binary=None)
 
     def service_get_by_host_and_topic(self, context, host, topic):
-        return self._manager.service_get_all_by(context, topic, host)
+        return self._manager.service_get_all_by(context, topic, host,
+                binary=None)
 
     def service_get_by_compute_host(self, context, host):
-        result = self._manager.service_get_all_by(context, 'compute', host)
+        result = self._manager.service_get_all_by(context, 'compute', host,
+                binary=None)
         # FIXME(comstud): A major revision bump to 2.0 should return a
         # single entry, so we should just return 'result' at that point.
         return result[0]
 
     def service_get_by_args(self, context, host, binary):
         return self._manager.service_get_all_by(context, host=host,
-                                                binary=binary)
+                                                binary=binary, topic=None)
 
     def service_create(self, context, values):
         return self._manager.service_create(context, values)
