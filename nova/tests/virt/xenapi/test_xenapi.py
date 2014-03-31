@@ -2142,6 +2142,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
         sr_rec = {
             'physical_size': 0,
             'physical_utilisation': 0,
+            'virtual_allocation': 0,
             }
 
         for i in range(3):

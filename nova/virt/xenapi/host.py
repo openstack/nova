@@ -246,6 +246,7 @@ class HostState(object):
             used = int(sr_rec["physical_utilisation"])
             data["disk_total"] = total
             data["disk_used"] = used
+            data["disk_allocated"] = int(sr_rec["virtual_allocation"])
             data["disk_available"] = total - used
             data["supported_instances"] = to_supported_instances(
                 data.get("host_capabilities")
