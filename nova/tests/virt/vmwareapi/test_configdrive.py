@@ -13,11 +13,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import copy
 import fixtures
+
+import mock
 import mox
 
 from nova import context
+from nova.image import glance
 from nova import test
 import nova.tests.image.fake
 from nova.tests import utils
@@ -25,6 +29,7 @@ from nova.tests.virt.vmwareapi import stubs
 from nova.virt import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import fake as vmwareapi_fake
+from nova.virt.vmwareapi import read_write_util
 from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmops
 from nova.virt.vmwareapi import vmware_images
@@ -47,13 +52,10 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.conn = driver.VMwareVCDriver(fake.FakeVirtAPI)
         self.network_info = utils.get_test_network_info()
-        self.image = {
-            'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',
-            'disk_format': 'vmdk',
-            'size': 512,
-        }
+        self.vim = vmwareapi_fake.FakeVim()
         self.node_name = '%s(%s)' % (self.conn.dict_mors.keys()[0],
                                      cluster_name)
+        image_ref = nova.tests.image.fake.get_valid_image_id()
         self.test_instance = {'node': 'test_url',
                               'vm_state': 'building',
                               'project_id': 'fake',
@@ -68,7 +70,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                               'flavor': 'm1.large',
                               'vcpus': 4,
                               'root_gb': 80,
-                              'image_ref': '1',
+                              'image_ref': image_ref,
                               'host': 'fake_host',
                               'task_state':
                                   'scheduling',
@@ -77,6 +79,15 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                               'uuid': 'fake-uuid',
                               'node': self.node_name,
                               'metadata': []}
+
+        (image_service, image_id) = glance.get_remote_image_service(context,
+                                    image_ref)
+        metadata = image_service.show(context, image_id)
+        self.image = {
+            'id': image_ref,
+            'disk_format': 'vmdk',
+            'size': int(metadata['size']),
+        }
 
         class FakeInstanceMetadata(object):
             def __init__(self, instance, content=None, extra_md=None):
@@ -109,11 +120,43 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
     def _spawn_vm(self, injected_files=[], admin_password=None,
                   block_device_info=None):
-        self.conn.spawn(self.context, self.instance, self.image,
+
+        read_file_handle = mock.MagicMock()
+        write_file_handle = mock.MagicMock()
+        self.image_ref = self.instance['image_ref']
+
+        def fake_read_handle(read_iter):
+            return read_file_handle
+
+        def fake_write_handle(host, dc_name, ds_name, cookies,
+                 file_path, file_size, scheme="https"):
+            self.assertEqual('dc1', dc_name)
+            self.assertEqual('ds1', ds_name)
+            self.assertEqual('Fake-CookieJar', cookies)
+            split_file_path = file_path.split('/')
+            self.assertEqual('vmware_temp', split_file_path[0])
+            self.assertEqual(self.image_ref, split_file_path[2])
+            self.assertEqual(('%s-flat.vmdk' % self.image_ref),
+                             split_file_path[3])
+            self.assertEqual(int(self.image['size']), file_size)
+
+            return write_file_handle
+
+        with contextlib.nested(
+             mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
+                               side_effect=fake_write_handle),
+             mock.patch.object(read_write_util, 'GlanceFileRead',
+                                side_effect=fake_read_handle),
+             mock.patch.object(vmware_images, 'start_transfer')
+        ) as (fake_http_write, fake_glance_read, fake_start_transfer):
+            self.conn.spawn(self.context, self.instance, self.image,
                         injected_files=injected_files,
                         admin_password=admin_password,
                         network_info=self.network_info,
                         block_device_info=block_device_info)
+            fake_start_transfer.assert_called_once_with(self.context,
+                read_file_handle, self.image['size'],
+                write_file_handle=write_file_handle)
 
     def test_create_vm_with_config_drive_verify_method_invocation(self):
         self.instance = copy.deepcopy(self.test_instance)

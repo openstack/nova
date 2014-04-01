@@ -37,6 +37,7 @@ from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
 from nova import exception
+from nova.image import glance
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import units
@@ -56,6 +57,7 @@ from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import fake as vmwareapi_fake
 from nova.virt.vmwareapi import imagecache
+from nova.virt.vmwareapi import read_write_util
 from nova.virt.vmwareapi import vim
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -319,16 +321,23 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
         stubs.set_stubs(self.stubs)
         vmwareapi_fake.reset()
+        nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.conn = driver.VMwareESXDriver(fake.FakeVirtAPI)
+        self.vim = vmwareapi_fake.FakeVim()
+
         # NOTE(vish): none of the network plugging code is actually
         #             being tested
         self.network_info = utils.get_test_network_info()
-
+        image_ref = nova.tests.image.fake.get_valid_image_id()
+        (image_service, image_id) = glance.get_remote_image_service(
+            self.context, image_ref)
+        metadata = image_service.show(self.context, image_id)
         self.image = {
-            'id': 'c1c8ce3d-c2e0-4247-890c-ccf5cc1c004c',
+            'id': image_ref,
             'disk_format': 'vmdk',
-            'size': 512,
+            'size': int(metadata['size']),
         }
+        self.fake_image_uuid = self.image['id']
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.vnc_host = 'test_url'
         self._set_exception_vars()
@@ -347,7 +356,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                          'instance_type': 'm1.large',
                                          'vcpus': 4,
                                          'root_gb': 80,
-                                         'image_ref': '1',
+                                         'image_ref': self.image['id'],
                                          'host': 'fake_host',
                                          'task_state':
                                          'scheduling',
@@ -453,7 +462,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                   'swap': self.type_data['swap'],
         }
         if set_image_ref:
-            values['image_ref'] = "fake_image_uuid"
+            values['image_ref'] = self.fake_image_uuid
         self.instance_node = node
         self.uuid = uuid
         self.instance = fake_instance.fake_instance_obj(
@@ -462,17 +471,48 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def _create_vm(self, node=None, num_instances=1, uuid=None,
                    instance_type='m1.large', powered_on=True):
         """Create and spawn the VM."""
+
+        read_file_handle = mock.MagicMock()
+        write_file_handle = mock.MagicMock()
+
+        def fake_read_handle(read_iter):
+            return read_file_handle
+
+        def _fake_write_mock(host, dc_name, ds_name, cookies,
+                 file_path, file_size, scheme="https"):
+            self.vim.fake_transfer_file(ds_name=ds_name,
+                                        file_path=file_path)
+            image_ref = self.image['id']
+            self.assertIn(dc_name, ['dc1', 'dc2'])
+            self.assertIn(ds_name, ['ds1', 'ds2'])
+            self.assertEqual('Fake-CookieJar', cookies)
+            split_file_path = file_path.split('/')
+            self.assertEqual('vmware_temp', split_file_path[0])
+            self.assertEqual(image_ref, split_file_path[2])
+            self.assertEqual(int(self.image['size']), file_size)
+            return write_file_handle
+
         if not node:
             node = self.node_name
         self._create_instance(node=node, uuid=uuid,
                               instance_type=instance_type)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
-        self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
-                        network_info=self.network_info,
-                        block_device_info=None)
-        self._check_vm_record(num_instances=num_instances,
-                              powered_on=powered_on)
+        with contextlib.nested(
+             mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
+                               _fake_write_mock),
+             mock.patch.object(read_write_util, 'GlanceFileRead',
+                               fake_read_handle),
+             mock.patch.object(vmware_images, 'start_transfer')
+        ) as (fake_http_write, fake_glance_read, fake_start_transfer):
+            self.conn.spawn(self.context, self.instance, self.image,
+                            injected_files=[], admin_password=None,
+                            network_info=self.network_info,
+                            block_device_info=None)
+            fake_start_transfer.assert_called_once_with(self.context,
+                read_file_handle, self.image['size'],
+                write_file_handle=write_file_handle)
+            self._check_vm_record(num_instances=num_instances,
+                                  powered_on=powered_on)
         self.assertIsNotNone(vm_util.vm_ref_cache_get(self.uuid))
 
     def _check_vm_record(self, num_instances=1, powered_on=True):
@@ -560,8 +600,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(len(uuids), 0)
 
     def _cached_files_exist(self, exists=True):
-        cache = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.vmdk' %
-                 self.ds)
+        cache = ('[%s] vmware_base/%s/%s.vmdk' %
+                 (self.ds, self.fake_image_uuid, self.fake_image_uuid))
         if exists:
             self.assertTrue(vmwareapi_fake.get_file(cache))
         else:
@@ -574,8 +614,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
         self._create_vm()
         inst_file_path = '[%s] %s/%s.vmdk' % (self.ds, self.uuid, self.uuid)
-        cache = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.vmdk' %
-                 self.ds)
+        cache = ('[%s] vmware_base/%s/%s.vmdk' %
+                 (self.ds, self.fake_image_uuid, self.fake_image_uuid))
         self.assertTrue(vmwareapi_fake.get_file(inst_file_path))
         self._cached_files_exist()
 
@@ -583,18 +623,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         """Test image disk is cached when use_linked_clone is True."""
         self.flags(use_linked_clone=True, group='vmware')
         self._create_vm()
-        file = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.vmdk' %
-                self.ds)
-        root = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.80.vmdk' %
-                self.ds)
+        file = '[%s] vmware_base/%s/%s.vmdk' % (self.ds, self.fake_image_uuid,
+                                                self.fake_image_uuid)
+        root = '[%s] vmware_base/%s/%s.80.vmdk' % (self.ds,
+                                                   self.fake_image_uuid,
+                                                   self.fake_image_uuid)
         self.assertTrue(vmwareapi_fake.get_file(file))
         self.assertTrue(vmwareapi_fake.get_file(root))
 
     def _iso_disk_type_created(self, instance_type='m1.large'):
         self.image['disk_format'] = 'iso'
         self._create_vm(instance_type=instance_type)
-        file = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' %
-                self.ds)
+        file = '[%s] vmware_base/%s/%s.iso' % (self.ds, self.fake_image_uuid,
+                                               self.fake_image_uuid)
         self.assertTrue(vmwareapi_fake.get_file(file))
 
     def test_iso_disk_type_created(self):
@@ -609,7 +650,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
 
     def test_iso_disk_cdrom_attach(self):
         self.iso_path = (
-            '[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' % self.ds)
+            '[%s] vmware_base/%s/%s.iso' % (self.ds, self.fake_image_uuid,
+                                            self.fake_image_uuid))
 
         def fake_attach_cdrom(vm_ref, instance, data_store_ref,
                               iso_uploaded_path):
@@ -623,8 +665,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_iso_disk_cdrom_attach_with_config_drive(self):
         self.flags(force_config_drive=True)
         self.iso_path = [
-            ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.iso' %
-             self.ds),
+            '[%s] vmware_base/%s/%s.iso' %
+             (self.ds, self.fake_image_uuid, self.fake_image_uuid),
             '[%s] fake-config-drive' % self.ds]
         self.iso_unit_nos = [0, 1]
         self.iso_index = 0
@@ -757,8 +799,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self._check_vm_info(info, power_state.RUNNING)
 
     def test_spawn_disk_extend_exists(self):
-        root = ('[%s] vmware_base/fake_image_uuid/fake_image_uuid.80.vmdk' %
-                self.ds)
+        root = ('[%s] vmware_base/%s/%s.80.vmdk' %
+                (self.ds, self.fake_image_uuid, self.fake_image_uuid))
         self.root = root
 
         def _fake_extend(instance, requested_size, name, dc_ref):
@@ -796,7 +838,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.wait_task = self.conn._session._wait_for_task
         self.call_method = self.conn._session._call_method
         self.task_ref = None
-        id = 'fake_image_uuid'
+        id = self.fake_image_uuid
         cached_image = '[%s] vmware_base/%s/%s.80.vmdk' % (self.ds,
                                                            id, id)
         tmp_file = '[%s] vmware_base/%s/%s.80-flat.vmdk' % (self.ds,
@@ -1399,8 +1441,21 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                        fake_power_on_instance)
         self.stubs.Set(self.conn._volumeops, "attach_disk_to_vm",
                        fake_attach_disk_to_vm)
-        self.conn.rescue(self.context, self.instance, self.network_info,
-                                self.image, None)
+
+        def _fake_http_write(host, data_center_name, datastore_name,
+                             cookies, file_path, file_size, scheme="https"):
+            self.vim.fake_transfer_file(ds_name=datastore_name,
+                                        file_path=file_path)
+
+        with contextlib.nested(
+             mock.patch.object(read_write_util, 'VMwareHTTPWriteFile',
+                               _fake_http_write),
+             mock.patch.object(read_write_util, 'GlanceFileRead'),
+             mock.patch.object(vmware_images, 'start_transfer')
+
+        ) as (http_write, glance_read, fake_start_transfer):
+            self.conn.rescue(self.context, self.instance, self.network_info,
+                         self.image, 'fake-password')
         info = self.conn.get_info({'name': '1-rescue',
                                    'uuid': '%s-rescue' % self.uuid,
                                    'node': self.instance_node})
@@ -1794,8 +1849,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                        _fake_get_timestamp_filename)
 
     def _timestamp_file_exists(self, exists=True):
-        timestamp = ('[%s] vmware_base/fake_image_uuid/%s/' %
-                 (self.ds, self._get_timestamp_filename()))
+        timestamp = ('[%s] vmware_base/%s/%s/' %
+                 (self.ds, self.fake_image_uuid,
+                  self._get_timestamp_filename()))
         if exists:
             self.assertTrue(vmwareapi_fake.get_file(timestamp))
         else:
@@ -1826,8 +1882,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_timestamp_file_removed_aging(self):
         self._timestamp_file_removed()
         ts = self._get_timestamp_filename()
-        ts_path = ('[%s] vmware_base/fake_image_uuid/%s/' %
-                   (self.ds, ts))
+        ts_path = ('[%s] vmware_base/%s/%s/' %
+                   (self.ds, self.fake_image_uuid, ts))
         vmwareapi_fake._add_file(ts_path)
         self._timestamp_file_exists()
         all_instances = [self.instance]

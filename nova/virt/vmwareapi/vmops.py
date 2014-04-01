@@ -278,30 +278,6 @@ class VMwareVMOps(object):
             vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port)
 
-        def _fetch_image_on_datastore(upload_name):
-            """Fetch image from Glance to datastore."""
-            LOG.debug(_("Downloading image file data %(image_ref)s to the "
-                        "data store %(data_store_name)s") %
-                        {'image_ref': instance['image_ref'],
-                         'data_store_name': data_store_name},
-                      instance=instance)
-            vmware_images.fetch_image(
-                context,
-                instance['image_ref'],
-                instance,
-                host=self._session._host_ip,
-                data_center_name=dc_info.name,
-                datastore_name=data_store_name,
-                cookies=cookies,
-                file_path=upload_name)
-            LOG.debug(_("Downloaded image file data %(image_ref)s to "
-                        "%(upload_name)s on the data store "
-                        "%(data_store_name)s") %
-                        {'image_ref': instance['image_ref'],
-                         'upload_name': upload_name,
-                         'data_store_name': data_store_name},
-                      instance=instance)
-
         def _copy_virtual_disk(source, dest):
             """Copy a sparse virtual disk to a thin virtual disk."""
             # Copy a sparse virtual disk to a thin virtual disk. This is also
@@ -431,7 +407,13 @@ class VMwareVMOps(object):
                     else:
                         upload_file_name = sparse_uploaded_vmdk_name
 
-                _fetch_image_on_datastore(upload_file_name)
+                vmware_images.fetch_image(context,
+                                          instance,
+                                          self._session._host_ip,
+                                          dc_info.name,
+                                          data_store_name,
+                                          upload_file_name,
+                                          cookies=cookies)
 
                 if not is_iso and disk_type == "sparse":
                     # Copy the sparse virtual disk to a thin virtual disk.
