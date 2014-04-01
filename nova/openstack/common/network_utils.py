@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2012 OpenStack Foundation.
 # All Rights Reserved.
 #
@@ -19,7 +17,17 @@
 Network-related utilities and helper functions.
 """
 
-import urlparse
+# TODO(jd) Use six.moves once
+# https://bitbucket.org/gutworth/six/pull-request/28
+# is merged
+try:
+    import urllib.parse
+    SplitResult = urllib.parse.SplitResult
+except ImportError:
+    import urlparse
+    SplitResult = urlparse.SplitResult
+
+from six.moves.urllib import parse
 
 
 def parse_host_port(address, default_port=None):
@@ -66,16 +74,35 @@ def parse_host_port(address, default_port=None):
     return (host, None if port is None else int(port))
 
 
+class ModifiedSplitResult(SplitResult):
+    """Split results class for urlsplit."""
+
+    # NOTE(dims): The functions below are needed for Python 2.6.x.
+    # We can remove these when we drop support for 2.6.x.
+    @property
+    def hostname(self):
+        netloc = self.netloc.split('@', 1)[-1]
+        host, port = parse_host_port(netloc)
+        return host
+
+    @property
+    def port(self):
+        netloc = self.netloc.split('@', 1)[-1]
+        host, port = parse_host_port(netloc)
+        return port
+
+
 def urlsplit(url, scheme='', allow_fragments=True):
     """Parse a URL using urlparse.urlsplit(), splitting query and fragments.
     This function papers over Python issue9374 when needed.
 
     The parameters are the same as urlparse.urlsplit.
     """
-    scheme, netloc, path, query, fragment = urlparse.urlsplit(
+    scheme, netloc, path, query, fragment = parse.urlsplit(
         url, scheme, allow_fragments)
     if allow_fragments and '#' in path:
         path, fragment = path.split('#', 1)
     if '?' in path:
         path, query = path.split('?', 1)
-    return urlparse.SplitResult(scheme, netloc, path, query, fragment)
+    return ModifiedSplitResult(scheme, netloc,
+                               path, query, fragment)

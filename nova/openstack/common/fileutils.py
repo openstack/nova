@@ -13,14 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
 import contextlib
 import errno
 import os
 import tempfile
 
 from nova.openstack.common import excutils
-from nova.openstack.common.gettextutils import _  # noqa
 from nova.openstack.common import log as logging
 
 LOG = logging.getLogger(__name__)
@@ -60,7 +58,7 @@ def read_cached_file(filename, force_reload=False):
     cache_info = _FILE_CACHE.setdefault(filename, {})
 
     if not cache_info or mtime > cache_info.get('mtime', 0):
-        LOG.debug(_("Reloading cached file %s") % filename)
+        LOG.debug("Reloading cached file %s" % filename)
         with open(filename) as fap:
             cache_info['data'] = fap.read()
         cache_info['mtime'] = mtime

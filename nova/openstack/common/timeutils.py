@@ -114,7 +114,7 @@ def utcnow():
 
 
 def iso8601_from_timestamp(timestamp):
-    """Returns a iso8601 formated date from timestamp."""
+    """Returns a iso8601 formatted date from timestamp."""
     return isotime(datetime.datetime.utcfromtimestamp(timestamp))
 
 
@@ -201,8 +201,8 @@ def total_seconds(delta):
 def is_soon(dt, window):
     """Determines if time is going to happen in the next window seconds.
 
-    :params dt: the time
-    :params window: minimum seconds to remain to consider the time not soon
+    :param dt: the time
+    :param window: minimum seconds to remain to consider the time not soon
 
     :return: True if expiration is within the given duration
     """

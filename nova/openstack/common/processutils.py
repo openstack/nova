@@ -151,7 +151,8 @@ def execute(*cmd, **kwargs):
     while attempts > 0:
         attempts -= 1
         try:
-            LOG.log(loglevel, _('Running cmd (subprocess): %s'), ' '.join(cmd))
+            LOG.log(loglevel, 'Running cmd (subprocess): %s',
+                    ' '.join(cmd))
             _PIPE = subprocess.PIPE  # pylint: disable=E1101
 
             if os.name == 'nt':
@@ -184,7 +185,7 @@ def execute(*cmd, **kwargs):
                 break
             obj.stdin.close()  # pylint: disable=E1101
             _returncode = obj.returncode  # pylint: disable=E1101
-            LOG.log(loglevel, _('Result was %s') % _returncode)
+            LOG.log(loglevel, 'Result was %s' % _returncode)
             if not ignore_exit_code and _returncode not in check_exit_code:
                 (stdout, stderr) = result
                 raise ProcessExecutionError(exit_code=_returncode,
@@ -196,7 +197,7 @@ def execute(*cmd, **kwargs):
             if not attempts:
                 raise
             else:
-                LOG.log(loglevel, _('%r failed. Retrying.'), cmd)
+                LOG.log(loglevel, '%r failed. Retrying.', cmd)
                 if delay_on_retry:
                     greenthread.sleep(random.randint(20, 200) / 100.0)
         finally:
@@ -235,7 +236,7 @@ def trycmd(*args, **kwargs):
 
 def ssh_execute(ssh, cmd, process_input=None,
                 addl_env=None, check_exit_code=True):
-    LOG.debug(_('Running cmd (SSH): %s'), cmd)
+    LOG.debug('Running cmd (SSH): %s', cmd)
     if addl_env:
         raise InvalidArgumentError(_('Environment not supported over SSH'))
 
@@ -256,7 +257,7 @@ def ssh_execute(ssh, cmd, process_input=None,
 
     # exit_status == -1 if no exit code was returned
     if exit_status != -1:
-        LOG.debug(_('Result was %s') % exit_status)
+        LOG.debug('Result was %s' % exit_status)
         if check_exit_code and exit_status != 0:
             raise ProcessExecutionError(exit_code=exit_status,
                                         stdout=stdout,
