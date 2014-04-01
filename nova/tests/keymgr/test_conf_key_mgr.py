@@ -45,3 +45,15 @@ class ConfKeyManagerTestCase(test_single_key_mgr.SingleKeyManagerTestCase):
 
         encoded_key = array.array('B', self._hex_key.decode('hex')).tolist()
         self.key = key.SymmetricKey('AES', encoded_key)
+
+    def test_init(self):
+        key_manager = self._create_key_manager()
+        self.assertEqual(self._hex_key, key_manager._hex_key)
+
+    def test_init_value_error(self):
+        CONF.set_default('fixed_key', default=None, group='keymgr')
+        self.assertRaises(ValueError, conf_key_mgr.ConfKeyManager)
+
+    def test_generate_hex_key(self):
+        key_manager = self._create_key_manager()
+        self.assertEqual(self._hex_key, key_manager._generate_hex_key())
