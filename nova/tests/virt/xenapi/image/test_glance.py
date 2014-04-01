@@ -13,10 +13,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import random
 import time
+
+import mock
 
 from nova import context
 from nova import exception
+from nova.openstack.common import log as logging
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
@@ -85,6 +89,48 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                 self.context, self.session, self.instance, 'fake_image_uuid')
 
         self.mox.VerifyAll()
+
+    @mock.patch.object(vm_utils, '_make_uuid_stack', return_value=['uuid1'])
+    @mock.patch.object(random, 'shuffle')
+    @mock.patch.object(time, 'sleep')
+    @mock.patch.object(logging.getLogger('nova.virt.xenapi.client.session'),
+                       'debug')
+    def test_download_image_retry(self, mock_log_debug,
+                                  mock_sleep, mock_shuffle,
+                                  mock_make_uuid_stack):
+        params = self._get_download_params()
+        self.flags(glance_num_retries=2)
+
+        params.pop("glance_port")
+        params.pop("glance_host")
+        calls = [mock.call('glance', 'download_vhd', glance_port=9292,
+                           glance_host='10.0.1.1', **params),
+                 mock.call('glance', 'download_vhd', glance_port=9293,
+                            glance_host='10.0.0.1', **params)]
+        log_calls = [mock.call(mock.ANY, {'callback_result': '10.0.1.1',
+                                          'attempts': 3, 'attempt': 1,
+                                          'fn': 'download_vhd',
+                                          'plugin': 'glance'}),
+                     mock.call(mock.ANY, {'callback_result': '10.0.0.1',
+                                          'attempts': 3, 'attempt': 2,
+                                          'fn': 'download_vhd',
+                                          'plugin': 'glance'})]
+
+        glance_api_servers = ['10.0.1.1:9292',
+                              'http://10.0.0.1:9293']
+        self.flags(glance_api_servers=glance_api_servers)
+
+        with (mock.patch.object(self.session, 'call_plugin_serialized')
+          ) as mock_call_plugin_serialized:
+            error_details = ["", "", "RetryableError", ""]
+            error = self.session.XenAPI.Failure(details=error_details)
+            mock_call_plugin_serialized.side_effect = [error, "success"]
+
+            vdis = self.store.download_image(
+                self.context, self.session, self.instance, 'fake_image_uuid')
+
+            mock_call_plugin_serialized.assert_has_calls(calls)
+            mock_log_debug.assert_has_calls(log_calls, any_order=True)
 
     def _get_upload_params(self, auto_disk_config=True,
                            expected_os_type='default'):

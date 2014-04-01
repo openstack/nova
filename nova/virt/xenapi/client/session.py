@@ -210,17 +210,21 @@ class XenAPISession(object):
         attempts = num_retries + 1
         sleep_time = 0.5
         for attempt in xrange(1, attempts + 1):
-            LOG.info(_('%(plugin)s.%(fn)s attempt %(attempt)d/%(attempts)d'),
-                     {'plugin': plugin, 'fn': fn, 'attempt': attempt,
-                      'attempts': attempts})
             try:
                 if attempt > 1:
                     time.sleep(sleep_time)
                     sleep_time = min(2 * sleep_time, 15)
 
+                callback_result = None
                 if callback:
-                    callback(kwargs)
+                    callback_result = callback(kwargs)
 
+                msg = _('%(plugin)s.%(fn)s attempt %(attempt)d/%(attempts)d, '
+                        'callback_result: %(callback_result)s')
+                LOG.debug(msg,
+                          {'plugin': plugin, 'fn': fn, 'attempt': attempt,
+                           'attempts': attempts,
+                           'callback_result': callback_result})
                 return self.call_plugin_serialized(plugin, fn, *args, **kwargs)
             except self.XenAPI.Failure as exc:
                 if self._is_retryable_exception(exc):

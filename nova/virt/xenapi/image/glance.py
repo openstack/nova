@@ -33,6 +33,7 @@ class GlanceStore(object):
             kwargs['glance_host'] = g_host
             kwargs['glance_port'] = g_port
             kwargs['glance_use_ssl'] = g_use_ssl
+            return g_host
 
         return session.call_plugin_serialized_with_retry(
             'glance', fn, CONF.glance_num_retries, pick_glance, **params)
