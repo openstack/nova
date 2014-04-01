@@ -49,8 +49,8 @@ from nova import test
 from nova.tests import cast_as_call
 from nova.tests.compute import test_compute
 from nova.tests import fake_instance
-from nova.tests import fake_instance_actions
 from nova.tests import fake_notifier
+from nova.tests import fake_server_actions
 from nova.tests.objects import test_migration
 from nova import utils
 
@@ -1219,7 +1219,7 @@ class _BaseTaskTestCase(object):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = FakeContext(self.user_id, self.project_id)
-        fake_instance_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self.stubs)
 
         def fake_deserialize_context(serializer, ctxt_dict):
             self.assertEqual(self.context.user_id, ctxt_dict['user_id'])

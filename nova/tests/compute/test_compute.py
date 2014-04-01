@@ -73,10 +73,10 @@ from nova.tests.compute import fake_resource_tracker
 from nova.tests.db import fakes as db_fakes
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
-from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
 from nova.tests import fake_notifier
+from nova.tests import fake_server_actions
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.objects import test_flavor
@@ -228,7 +228,7 @@ class BaseTestCase(test.TestCase):
         fake_rpcapi = FakeSchedulerAPI()
         self.stubs.Set(self.compute, 'scheduler_rpcapi', fake_rpcapi)
         fake_network.set_stub_network_methods(self.stubs)
-        fake_instance_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self.stubs)
 
         def fake_get_nw_info(cls, ctxt, instance, *args, **kwargs):
             self.assertTrue(ctxt.is_admin)

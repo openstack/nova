@@ -17,28 +17,28 @@ import copy
 
 from nova.compute import api as compute_api
 from nova import db
-from nova.tests import fake_instance_actions
+from nova.tests import fake_server_actions
 from nova.tests.integrated.v3 import api_sample_base
 from nova.tests import utils as test_utils
 
 
-class InstanceActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
-    extension_name = 'os-instance-actions'
+class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
+    extension_name = 'os-server-actions'
 
     def setUp(self):
-        super(InstanceActionsSampleJsonTest, self).setUp()
-        self.actions = fake_instance_actions.FAKE_ACTIONS
-        self.events = fake_instance_actions.FAKE_EVENTS
+        super(ServerActionsSampleJsonTest, self).setUp()
+        self.actions = fake_server_actions.FAKE_ACTIONS
+        self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance()
 
-        def fake_instance_action_get_by_request_id(context, uuid, request_id):
+        def fake_server_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
 
-        def fake_instance_actions_get(context, uuid):
+        def fake_server_actions_get(context, uuid):
             return [copy.deepcopy(value) for value in
                     self.actions[uuid].itervalues()]
 
-        def fake_instance_action_events_get(context, action_id):
+        def fake_server_action_events_get(context, action_id):
             return copy.deepcopy(self.events[action_id])
 
         def fake_instance_get_by_uuid(context, instance_id):
@@ -48,19 +48,19 @@ class InstanceActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
             return {'uuid': instance_uuid}
 
         self.stubs.Set(db, 'action_get_by_request_id',
-                       fake_instance_action_get_by_request_id)
-        self.stubs.Set(db, 'actions_get', fake_instance_actions_get)
+                       fake_server_action_get_by_request_id)
+        self.stubs.Set(db, 'actions_get', fake_server_actions_get)
         self.stubs.Set(db, 'action_events_get',
-                       fake_instance_action_events_get)
+                       fake_server_action_events_get)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
 
-    def test_instance_action_get(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        fake_request_id = fake_instance_actions.FAKE_REQUEST_ID1
+    def test_server_action_get(self):
+        fake_uuid = fake_server_actions.FAKE_UUID
+        fake_request_id = fake_server_actions.FAKE_REQUEST_ID1
         fake_action = self.actions[fake_uuid][fake_request_id]
 
-        response = self._do_get('servers/%s/os-instance-actions/%s' %
+        response = self._do_get('servers/%s/os-server-actions/%s' %
                                 (fake_uuid, fake_request_id))
         subs = self._get_regexes()
         subs['action'] = '(reboot)|(resize)'
@@ -70,15 +70,15 @@ class InstanceActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs['start_time'] = fake_action['start_time']
         subs['result'] = '(Success)|(Error)'
         subs['event'] = '(schedule)|(compute_create)'
-        self._verify_response('instance-action-get-resp', subs, response, 200)
+        self._verify_response('server-action-get-resp', subs, response, 200)
 
-    def test_instance_actions_list(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
+    def test_server_actions_list(self):
+        fake_uuid = fake_server_actions.FAKE_UUID
+        response = self._do_get('servers/%s/os-server-actions' % (fake_uuid))
         subs = self._get_regexes()
         subs['action'] = '(reboot)|(resize)'
         subs['integer_id'] = '[0-9]+'
         subs['request_id'] = ('req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                               '-[0-9a-f]{4}-[0-9a-f]{12}')
-        self._verify_response('instance-actions-list-resp', subs,
+        self._verify_response('server-actions-list-resp', subs,
                               response, 200)

@@ -27,7 +27,7 @@ from nova import context
 from nova.openstack.common import timeutils
 from nova import test
 from nova.tests.cells import fakes
-from nova.tests import fake_instance_actions
+from nova.tests import fake_server_actions
 
 CONF = cfg.CONF
 CONF.import_opt('compute_topic', 'nova.compute.rpcapi')
@@ -490,9 +490,9 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.assertEqual(expected_response, response)
 
     def test_actions_get(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        fake_req_id = fake_instance_actions.FAKE_REQUEST_ID1
-        fake_act = fake_instance_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
+        fake_uuid = fake_server_actions.FAKE_UUID
+        fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
+        fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
         fake_response = messaging.Response('fake-cell', [fake_act], False)
         expected_response = [fake_act]
         self.mox.StubOutWithMock(self.msg_runner, 'actions_get')
@@ -504,9 +504,9 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.assertEqual(expected_response, response)
 
     def test_action_get_by_request_id(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        fake_req_id = fake_instance_actions.FAKE_REQUEST_ID1
-        fake_act = fake_instance_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
+        fake_uuid = fake_server_actions.FAKE_UUID
+        fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
+        fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
         fake_response = messaging.Response('fake-cell', fake_act, False)
         expected_response = fake_act
         self.mox.StubOutWithMock(self.msg_runner, 'action_get_by_request_id')
@@ -520,8 +520,8 @@ class CellsManagerClassTestCase(test.NoDBTestCase):
         self.assertEqual(expected_response, response)
 
     def test_action_events_get(self):
-        fake_action_id = fake_instance_actions.FAKE_ACTION_ID1
-        fake_events = fake_instance_actions.FAKE_EVENTS[fake_action_id]
+        fake_action_id = fake_server_actions.FAKE_ACTION_ID1
+        fake_events = fake_server_actions.FAKE_EVENTS[fake_action_id]
         fake_response = messaging.Response('fake-cell', fake_events, False)
         expected_response = fake_events
         self.mox.StubOutWithMock(self.msg_runner, 'action_events_get')

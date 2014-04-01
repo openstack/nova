@@ -39,9 +39,9 @@ from nova import rpc
 from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
-from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests import fake_notifier
+from nova.tests import fake_server_actions
 import nova.tests.image.fake
 from nova.tests import matchers
 from nova.virt import driver
@@ -412,7 +412,7 @@ class UsageInfoTestCase(test.TestCase):
         self.stubs.Set(nova.tests.image.fake._FakeImageService,
                        'show', fake_show)
         fake_network.set_stub_network_methods(self.stubs)
-        fake_instance_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self.stubs)
 
     def _create_instance(self, params={}):
         """Create a test instance."""

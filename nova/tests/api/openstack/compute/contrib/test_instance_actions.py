@@ -28,10 +28,10 @@ from nova.openstack.common import policy
 from nova import test
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_instance
-from nova.tests import fake_instance_actions
+from nova.tests import fake_server_actions
 
-FAKE_UUID = fake_instance_actions.FAKE_UUID
-FAKE_REQUEST_ID = fake_instance_actions.FAKE_REQUEST_ID1
+FAKE_UUID = fake_server_actions.FAKE_UUID
+FAKE_REQUEST_ID = fake_server_actions.FAKE_REQUEST_ID1
 
 
 def format_action(action):
@@ -112,8 +112,8 @@ class InstanceActionsTest(test.NoDBTestCase):
     def setUp(self):
         super(InstanceActionsTest, self).setUp()
         self.controller = instance_actions.InstanceActionsController()
-        self.fake_actions = copy.deepcopy(fake_instance_actions.FAKE_ACTIONS)
-        self.fake_events = copy.deepcopy(fake_instance_actions.FAKE_EVENTS)
+        self.fake_actions = copy.deepcopy(fake_server_actions.FAKE_ACTIONS)
+        self.fake_events = copy.deepcopy(fake_server_actions.FAKE_EVENTS)
 
         def fake_get(self, context, instance_uuid):
             return {'uuid': instance_uuid}
@@ -210,8 +210,8 @@ class InstanceActionsTest(test.NoDBTestCase):
 class InstanceActionsSerializerTest(test.NoDBTestCase):
     def setUp(self):
         super(InstanceActionsSerializerTest, self).setUp()
-        self.fake_actions = copy.deepcopy(fake_instance_actions.FAKE_ACTIONS)
-        self.fake_events = copy.deepcopy(fake_instance_actions.FAKE_EVENTS)
+        self.fake_actions = copy.deepcopy(fake_server_actions.FAKE_ACTIONS)
+        self.fake_events = copy.deepcopy(fake_server_actions.FAKE_EVENTS)
 
     def _verify_instance_action_attachment(self, attach, tree):
         for key in attach.keys():

@@ -1,8 +1,8 @@
 {
-    "instance_actions": [
+    "server_actions": [
         {
             "action": "%(action)s",
-            "instance_uuid": "%(uuid)s",
+            "server_uuid": "%(uuid)s",
             "request_id": "%(request_id)s",
             "user_id": "%(integer_id)s",
             "project_id": "%(integer_id)s",
@@ -11,7 +11,7 @@
         },
         {
             "action": "%(action)s",
-            "instance_uuid": "%(uuid)s",
+            "server_uuid": "%(uuid)s",
             "request_id": "%(request_id)s",
             "user_id": "%(integer_id)s",
             "project_id": "%(integer_id)s",

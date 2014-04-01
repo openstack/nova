@@ -38,7 +38,7 @@ from nova.openstack.common import uuidutils
 from nova import rpc
 from nova import test
 from nova.tests.cells import fakes
-from nova.tests import fake_instance_actions
+from nova.tests import fake_server_actions
 
 CONF = cfg.CONF
 CONF.import_opt('name', 'nova.cells.opts', group='cells')
@@ -1002,9 +1002,9 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual('fake_result', result)
 
     def test_actions_get(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        fake_req_id = fake_instance_actions.FAKE_REQUEST_ID1
-        fake_act = fake_instance_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
+        fake_uuid = fake_server_actions.FAKE_UUID
+        fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
+        fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'actions_get')
         self.tgt_db_inst.actions_get(self.ctxt,
@@ -1018,9 +1018,9 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual([jsonutils.to_primitive(fake_act)], result)
 
     def test_action_get_by_request_id(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        fake_req_id = fake_instance_actions.FAKE_REQUEST_ID1
-        fake_act = fake_instance_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
+        fake_uuid = fake_server_actions.FAKE_UUID
+        fake_req_id = fake_server_actions.FAKE_REQUEST_ID1
+        fake_act = fake_server_actions.FAKE_ACTIONS[fake_uuid][fake_req_id]
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'action_get_by_request_id')
         self.tgt_db_inst.action_get_by_request_id(self.ctxt,
@@ -1033,8 +1033,8 @@ class CellsTargetedMethodsTestCase(test.TestCase):
         self.assertEqual(jsonutils.to_primitive(fake_act), result)
 
     def test_action_events_get(self):
-        fake_action_id = fake_instance_actions.FAKE_ACTION_ID1
-        fake_events = fake_instance_actions.FAKE_EVENTS[fake_action_id]
+        fake_action_id = fake_server_actions.FAKE_ACTION_ID1
+        fake_events = fake_server_actions.FAKE_EVENTS[fake_action_id]
 
         self.mox.StubOutWithMock(self.tgt_db_inst, 'action_events_get')
         self.tgt_db_inst.action_events_get(self.ctxt,
