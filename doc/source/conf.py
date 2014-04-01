@@ -152,8 +152,6 @@ man_pages = [
      [u'OpenStack'], 1),
     ('man/nova-rootwrap', 'nova-rootwrap', u'Cloud controller fabric',
      [u'OpenStack'], 1),
-    ('man/nova-rpc-zmq-receiver', 'nova-rpc-zmq-receiver', u'Cloud controller fabric',
-     [u'OpenStack'], 1),
     ('man/nova-scheduler', 'nova-scheduler', u'Cloud controller fabric',
      [u'OpenStack'], 1),
     ('man/nova-xvpvncproxy', 'nova-xvpvncproxy', u'Cloud controller fabric',
