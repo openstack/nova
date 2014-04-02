@@ -29,6 +29,7 @@ from oslo.config import cfg
 from nova import exception
 from nova.openstack.common import lockutils
 from nova.openstack.common import log as logging
+from nova.openstack.common import processutils
 from nova import paths
 from nova.storage import linuxscsi
 from nova import utils
