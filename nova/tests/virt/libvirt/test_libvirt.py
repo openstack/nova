@@ -6847,6 +6847,23 @@ class LibvirtConnTestCase(test.TestCase):
                                         block_device_info=block_device_info)
         self.assertTrue('fake' in self.resultXML)
 
+    def test_create_without_pause(self):
+        self.flags(virt_type='lxc', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = instance_obj.Instance(id=1, uuid='fake-uuid')
+
+        with contextlib.nested(
+              mock.patch.object(conn, 'plug_vifs'),
+              mock.patch.object(conn, 'firewall_driver'),
+              mock.patch.object(conn, '_create_domain'),
+              mock.patch.object(conn, 'cleanup')) as (
+              cleanup, firewall_driver, create, plug_vifs):
+            domain = conn._create_domain_and_network(self.context, 'xml',
+                                                     instance, None)
+            self.assertEqual(0, create.call_args_list[0][1]['launch_flags'])
+            self.assertEqual(0, domain.resume.call_count)
+
     def _test_create_with_network_events(self, neutron_failure=None):
         self.flags(vif_driver="nova.tests.fake_network.FakeVIFDriver",
                    group='libvirt')
@@ -6887,9 +6904,12 @@ class LibvirtConnTestCase(test.TestCase):
             domain = conn._create_domain_and_network(self.context, 'xml',
                                                      instance, vifs)
             plug_vifs.assert_called_with(instance, vifs)
-            self.assertEqual(libvirt.VIR_DOMAIN_START_PAUSED,
+            event = utils.is_neutron() and CONF.vif_plugging_timeout
+            flag = event and libvirt.VIR_DOMAIN_START_PAUSED or 0
+            self.assertEqual(flag,
                              create.call_args_list[0][1]['launch_flags'])
-            domain.resume.assert_called_once_with()
+            if flag:
+                domain.resume.assert_called_once_with()
             if neutron_failure and CONF.vif_plugging_is_fatal:
                 cleanup.assert_called_once_with(self.context,
                                                 instance, network_info=vifs,
