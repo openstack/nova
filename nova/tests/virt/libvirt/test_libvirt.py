@@ -734,6 +734,37 @@ class LibvirtConnTestCase(test.TestCase):
         result = conn.get_volume_connector(volume)
         self.assertThat(expected, matchers.DictMatches(result))
 
+    def test_lifecycle_event_registration(self):
+        calls = []
+
+        def fake_registerErrorHandler(*args, **kwargs):
+            calls.append('fake_registerErrorHandler')
+
+        def fake_get_host_capabilities(**args):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = "armv7l"
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            calls.append('fake_get_host_capabilities')
+            return caps
+
+        @mock.patch.object(libvirt, 'registerErrorHandler',
+                           side_effect=fake_registerErrorHandler)
+        @mock.patch.object(libvirt_driver.LibvirtDriver,
+                           'get_host_capabilities',
+                            side_effect=fake_get_host_capabilities)
+        def test_init_host(get_host_capabilities, register_error_handler):
+            conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+            conn.init_host("test_host")
+
+        test_init_host()
+        # NOTE(dkliban): Will fail if get_host_capabilities is called before
+        # registerErrorHandler
+        self.assertEqual(['fake_registerErrorHandler',
+                          'fake_get_host_capabilities'], calls)
+
     def test_close_callback(self):
         self.close_callback = None
 
