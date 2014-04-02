@@ -62,13 +62,17 @@ def _compute_host(host, instance):
     return instance['host']
 
 
+def _icehouse_compat():
+    return CONF.upgrade_levels.compute == 'icehouse-compat'
+
+
 def _get_version(version):
     # NOTE(russellb) If "[upgrade_levels] compute=icehouse-compat" is set in
     # the config, we switch into a special mode where we send 3.0 as the
     # version number instead of 2.latest.  3.0 == 2.latest, and both Havana
     # and Icehouse compute nodes support 3.0.  This allows for a live
     # upgrade environment with a mix of Havana and Icehouse compute nodes.
-    if CONF.upgrade_levels.compute == 'icehouse-compat':
+    if _icehouse_compat():
         return ComputeAPI.VERSION_ALIASES['icehouse-compat']
     return version
 
@@ -294,28 +298,28 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
-        if self.client.can_send_version('2.38'):
-            version = '2.38'
+        if _icehouse_compat() or self.client.can_send_version('2.38'):
+            version = _get_version('2.38')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=destination,
-                version=_get_version(version))
+                version=version)
         return cctxt.call(ctxt, 'check_can_live_migrate_destination',
                           instance=instance,
                           block_migration=block_migration,
                           disk_over_commit=disk_over_commit)
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
-        if self.client.can_send_version('2.38'):
-            version = '2.38'
+        if _icehouse_compat() or self.client.can_send_version('2.38'):
+            version = _get_version('2.38')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         return cctxt.call(ctxt, 'check_can_live_migrate_source',
                           instance=instance,
                           dest_check_data=dest_check_data)
@@ -330,8 +334,8 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def confirm_resize(self, ctxt, instance, migration, host,
             reservations=None, cast=True):
-        if self.client.can_send_version('2.39'):
-            version = '2.39'
+        if _icehouse_compat() or self.client.can_send_version('2.39'):
+            version = _get_version('2.39')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
@@ -339,7 +343,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(migration))
             version = '2.7'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
-                                    version=_get_version(version))
+                                    version=version)
         rpc_method = cctxt.cast if cast else cctxt.call
         return rpc_method(ctxt, 'confirm_resize',
                           instance=instance, migration=migration,
@@ -361,8 +365,8 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):
-        if self.client.can_send_version('2.46'):
-            version = '2.46'
+        if _icehouse_compat() or self.client.can_send_version('2.46'):
+            version = _get_version('2.46')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
@@ -370,15 +374,15 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(migration))
             version = '2.8'
         cctxt = self.client.prepare(server=host,
-                version=_get_version(version))
+                version=version)
         cctxt.cast(ctxt, 'finish_resize',
                    instance=instance, migration=migration,
                    image=image, disk_info=disk_info, reservations=reservations)
 
     def finish_revert_resize(self, ctxt, instance, migration, host,
                              reservations=None):
-        if self.client.can_send_version('2.47'):
-            version = '2.47'
+        if _icehouse_compat() or self.client.can_send_version('2.47'):
+            version = _get_version('2.47')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
@@ -386,7 +390,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(migration))
             version = '2.13'
         cctxt = self.client.prepare(server=host,
-                version=_get_version(version))
+                version=version)
         cctxt.cast(ctxt, 'finish_revert_resize',
                    instance=instance, migration=migration,
                    reservations=reservations)
@@ -466,14 +470,14 @@ class ComputeAPI(rpcclient.RpcProxy):
                    file_contents=file_contents)
 
     def inject_network_info(self, ctxt, instance):
-        if self.client.can_send_version('2.41'):
-            version = '2.41'
+        if _icehouse_compat() or self.client.can_send_version('2.41'):
+            version = _get_version('2.41')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
 
     def live_migration(self, ctxt, instance, dest, block_migration, host,
@@ -486,14 +490,14 @@ class ComputeAPI(rpcclient.RpcProxy):
                    migrate_data=migrate_data)
 
     def pause_instance(self, ctxt, instance):
-        if self.client.can_send_version('2.36'):
-            version = '2.36'
+        if _icehouse_compat() or self.client.can_send_version('2.36'):
+            version = _get_version('2.36')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
@@ -530,8 +534,8 @@ class ComputeAPI(rpcclient.RpcProxy):
     def prep_resize(self, ctxt, image, instance, instance_type, host,
                     reservations=None, request_spec=None,
                     filter_properties=None, node=None):
-        if self.client.can_send_version('2.43'):
-            version = '2.43'
+        if _icehouse_compat() or self.client.can_send_version('2.43'):
+            version = _get_version('2.43')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
@@ -539,7 +543,7 @@ class ComputeAPI(rpcclient.RpcProxy):
         instance_type_p = jsonutils.to_primitive(instance_type)
         image_p = jsonutils.to_primitive(image)
         cctxt = self.client.prepare(server=host,
-                version=_get_version(version))
+                version=version)
         cctxt.cast(ctxt, 'prep_resize',
                    instance=instance,
                    instance_type=instance_type_p,
@@ -550,14 +554,14 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        if not self.client.can_send_version('2.32'):
+        if _icehouse_compat() or self.client.can_send_version('2.32'):
+            version = _get_version('2.32')
+        else:
             version = '2.23'
             instance = jsonutils.to_primitive(
                 objects_base.obj_to_primitive(instance))
-        else:
-            version = '2.32'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'reboot_instance',
                    instance=instance,
                    block_device_info=block_device_info,
@@ -623,20 +627,20 @@ class ComputeAPI(rpcclient.RpcProxy):
                    rescue_password=rescue_password)
 
     def reset_network(self, ctxt, instance):
-        if self.client.can_send_version('2.40'):
-            version = '2.40'
+        if _icehouse_compat() or self.client.can_send_version('2.40'):
+            version = _get_version('2.40')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
                         reservations=None):
-        if self.client.can_send_version('2.45'):
-            version = '2.45'
+        if _icehouse_compat() or self.client.can_send_version('2.45'):
+            version = _get_version('2.45')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
@@ -645,27 +649,27 @@ class ComputeAPI(rpcclient.RpcProxy):
             version = '2.16'
         instance_type_p = jsonutils.to_primitive(instance_type)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'resize_instance',
                    instance=instance, migration=migration,
                    image=image, reservations=reservations,
                    instance_type=instance_type_p)
 
     def resume_instance(self, ctxt, instance):
-        if self.client.can_send_version('2.33'):
-            version = '2.33'
+        if _icehouse_compat() or self.client.can_send_version('2.33'):
+            version = _get_version('2.33')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
     def revert_resize(self, ctxt, instance, migration, host,
                       reservations=None):
-        if self.client.can_send_version('2.39'):
-            version = '2.39'
+        if _icehouse_compat() or self.client.can_send_version('2.39'):
+            version = _get_version('2.39')
         else:
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
@@ -673,7 +677,7 @@ class ComputeAPI(rpcclient.RpcProxy):
                     objects_base.obj_to_primitive(migration))
             version = '2.12'
         cctxt = self.client.prepare(server=_compute_host(host, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'revert_resize',
                    instance=instance, migration=migration,
                    reservations=reservations)
@@ -697,13 +701,13 @@ class ComputeAPI(rpcclient.RpcProxy):
                       'admin_password': admin_password,
                       'is_first_time': is_first_time, 'node': node}
 
-        if self.client.can_send_version('2.37'):
-            version = '2.37'
+        if _icehouse_compat() or self.client.can_send_version('2.37'):
+            version = _get_version('2.37')
             msg_kwargs['legacy_bdm_in_spec'] = legacy_bdm_in_spec
         else:
             version = '2.19'
         cctxt = self.client.prepare(server=host,
-                version=_get_version(version))
+                version=version)
         cctxt.cast(ctxt, 'run_instance', **msg_kwargs)
 
     def set_admin_password(self, ctxt, instance, new_pass):
@@ -747,8 +751,8 @@ class ComputeAPI(rpcclient.RpcProxy):
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
-        if self.client.can_send_version('2.42'):
-            version = '2.42'
+        if _icehouse_compat() or self.client.can_send_version('2.42'):
+            version = _get_version('2.42')
             method = 'backup_instance'
             extra_kwargs = dict()
         else:
@@ -758,7 +762,7 @@ class ComputeAPI(rpcclient.RpcProxy):
             extra_kwargs = dict(image_type='backup')
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, method,
                    instance=instance,
                    image_id=image_id,
@@ -767,8 +771,8 @@ class ComputeAPI(rpcclient.RpcProxy):
                    **extra_kwargs)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        if self.client.can_send_version('2.42'):
-            version = '2.42'
+        if _icehouse_compat() or self.client.can_send_version('2.42'):
+            version = _get_version('2.42')
             extra_kwargs = dict()
         else:
             instance = jsonutils.to_primitive(
@@ -778,68 +782,68 @@ class ComputeAPI(rpcclient.RpcProxy):
                                 rotation=None)
             version = '2.0'
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'snapshot_instance',
                    instance=instance,
                    image_id=image_id,
                    **extra_kwargs)
 
     def start_instance(self, ctxt, instance):
-        if self.client.can_send_version('2.29'):
-            version = '2.29'
+        if _icehouse_compat() or self.client.can_send_version('2.29'):
+            version = _get_version('2.29')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
 
     def stop_instance(self, ctxt, instance, do_cast=True):
-        if self.client.can_send_version('2.29'):
-            version = '2.29'
+        if _icehouse_compat() or self.client.can_send_version('2.29'):
+            version = _get_version('2.29')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', instance=instance)
 
     def suspend_instance(self, ctxt, instance):
-        if self.client.can_send_version('2.33'):
-            version = '2.33'
+        if _icehouse_compat() or self.client.can_send_version('2.33'):
+            version = _get_version('2.33')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
     def terminate_instance(self, ctxt, instance, bdms, reservations=None):
-        if self.client.can_send_version('2.35'):
-            version = '2.35'
+        if _icehouse_compat() or self.client.can_send_version('2.35'):
+            version = _get_version('2.35')
         else:
             version = '2.27'
             instance = jsonutils.to_primitive(instance)
         bdms_p = jsonutils.to_primitive(bdms)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'terminate_instance',
                    instance=instance, bdms=bdms_p,
                    reservations=reservations)
 
     def unpause_instance(self, ctxt, instance):
-        if self.client.can_send_version('2.36'):
-            version = '2.36'
+        if _icehouse_compat() or self.client.can_send_version('2.36'):
+            version = _get_version('2.36')
         else:
             version = '2.0'
             instance = jsonutils.to_primitive(
                     objects_base.obj_to_primitive(instance))
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
@@ -849,13 +853,13 @@ class ComputeAPI(rpcclient.RpcProxy):
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance_p)
 
     def soft_delete_instance(self, ctxt, instance, reservations=None):
-        if self.client.can_send_version('2.35'):
-            version = '2.35'
+        if _icehouse_compat() or self.client.can_send_version('2.35'):
+            version = _get_version('2.35')
         else:
             version = '2.27'
             instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
-                                    version=_get_version(version))
+                                    version=version)
         cctxt.cast(ctxt, 'soft_delete_instance',
                    instance=instance, reservations=reservations)
 
