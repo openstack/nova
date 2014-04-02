@@ -19,6 +19,8 @@ It ensures to assign request ID for each API request and set it to
 request environment. The request ID is also added to API response.
 """
 
+import webob.dec
+
 from nova.openstack.common import context
 from nova.openstack.common.middleware import base
 
@@ -29,10 +31,11 @@ HTTP_RESP_HEADER_REQUEST_ID = 'x-openstack-request-id'
 
 class RequestIdMiddleware(base.Middleware):
 
-    def process_request(self, req):
-        self.req_id = context.generate_request_id()
-        req.environ[ENV_REQUEST_ID] = self.req_id
-
-    def process_response(self, response):
-        response.headers.add(HTTP_RESP_HEADER_REQUEST_ID, self.req_id)
+    @webob.dec.wsgify
+    def __call__(self, req):
+        req_id = context.generate_request_id()
+        req.environ[ENV_REQUEST_ID] = req_id
+        response = req.get_response(self.application)
+        if HTTP_RESP_HEADER_REQUEST_ID not in response.headers:
+            response.headers.add(HTTP_RESP_HEADER_REQUEST_ID, req_id)
         return response
