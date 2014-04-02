@@ -79,8 +79,8 @@ def make_server(elem, detailed=False):
 
     global XML_WARNING
     if not XML_WARNING:
-        LOG.warning(_('XML support has been deprecated and will be removed '
-                      'in the Juno release.'))
+        LOG.warning(_('XML support has been deprecated and may be removed '
+                      'as early as the Juno release.'))
         XML_WARNING = True
 
     if detailed:
