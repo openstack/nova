@@ -837,3 +837,72 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected = re.sub(r'\s+', '', expected)
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
+
+    @mock.patch.object(vm_util, "get_vm_ref")
+    def test_power_off_instance(self, fake_get_ref):
+        session = fake.FakeSession()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, '_call_method',
+                              return_value='fake-task'),
+            mock.patch.object(session, '_wait_for_task')
+        ) as (fake_call_method, fake_wait_for_task):
+            vm_util.power_off_instance(session, fake_instance, 'fake-vm-ref')
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOffVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+            self.assertFalse(fake_get_ref.called)
+
+    @mock.patch.object(vm_util, "get_vm_ref", return_value="fake-vm-ref")
+    def test_power_off_instance_no_vm_ref(self, fake_get_ref):
+        session = fake.FakeSession()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, '_call_method',
+                              return_value='fake-task'),
+            mock.patch.object(session, '_wait_for_task')
+        ) as (fake_call_method, fake_wait_for_task):
+            vm_util.power_off_instance(session, fake_instance)
+            fake_get_ref.assert_called_once_with(session, fake_instance)
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOffVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+
+    @mock.patch.object(vm_util, "get_vm_ref")
+    def test_power_off_instance_with_exception(self, fake_get_ref):
+        session = fake.FakeSession()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, '_call_method',
+                              return_value='fake-task'),
+            mock.patch.object(session, '_wait_for_task',
+                              side_effect=exception.NovaException('fake'))
+        ) as (fake_call_method, fake_wait_for_task):
+            self.assertRaises(exception.NovaException,
+                              vm_util.power_off_instance,
+                              session, fake_instance, 'fake-vm-ref')
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOffVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+            self.assertFalse(fake_get_ref.called)
+
+    @mock.patch.object(vm_util, "get_vm_ref")
+    def test_power_off_instance_power_state_exception(self, fake_get_ref):
+        session = fake.FakeSession()
+        fake_instance = mock.MagicMock()
+        with contextlib.nested(
+            mock.patch.object(session, '_call_method',
+                              return_value='fake-task'),
+            mock.patch.object(
+                    session, '_wait_for_task',
+                    side_effect=error_util.InvalidPowerStateException)
+        ) as (fake_call_method, fake_wait_for_task):
+            vm_util.power_off_instance(session, fake_instance, 'fake-vm-ref')
+            fake_call_method.assert_called_once_with(session._get_vim(),
+                                                     "PowerOffVM_Task",
+                                                     'fake-vm-ref')
+            fake_wait_for_task.assert_called_once_with('fake-task')
+            self.assertFalse(fake_get_ref.called)

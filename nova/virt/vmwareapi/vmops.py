@@ -900,12 +900,7 @@ class VMwareVMOps(object):
 
             # Power off the VM if it is in PoweredOn state.
             if pwr_state == "poweredOn":
-                LOG.debug("Powering off the VM", instance=instance)
-                poweroff_task = self._session._call_method(
-                       self._session._get_vim(),
-                       "PowerOffVM_Task", vm_ref)
-                self._session._wait_for_task(poweroff_task)
-                LOG.debug("Powered off the VM", instance=instance)
+                vm_util.power_off_instance(self._session, instance, vm_ref)
 
             # Un-register the VM
             try:
@@ -1066,44 +1061,18 @@ class VMwareVMOps(object):
                         "get_dynamic_property", vm_rescue_ref,
                         "VirtualMachine", "config.hardware.device")
         device = vm_util.get_vmdk_volume_disk(hardware_devices, path=vmdk_path)
-        self._power_off_vm_ref(vm_rescue_ref)
+        vm_util.power_off_instance(self._session, r_instance, vm_rescue_ref)
         self._volumeops.detach_disk_from_vm(vm_rescue_ref, r_instance, device)
         self._destroy_instance(r_instance, instance_name=instance_name)
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
-
-    def _power_off_vm_ref(self, vm_ref):
-        """Power off the specifed vm.
-
-        :param vm_ref: a reference object to the VM.
-        """
-        poweroff_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "PowerOffVM_Task", vm_ref)
-        self._session._wait_for_task(poweroff_task)
 
     def power_off(self, instance):
         """Power off the specified instance.
 
         :param instance: nova.objects.instance.Instance
         """
-        vm_ref = vm_util.get_vm_ref(self._session, instance)
-
-        pwr_state = self._session._call_method(vim_util,
-                    "get_dynamic_property", vm_ref,
-                    "VirtualMachine", "runtime.powerState")
-        # Only PoweredOn VMs can be powered off.
-        if pwr_state == "poweredOn":
-            LOG.debug("Powering off the VM", instance=instance)
-            self._power_off_vm_ref(vm_ref)
-            LOG.debug("Powered off the VM", instance=instance)
-        # Raise Exception if VM is suspended
-        elif pwr_state == "suspended":
-            reason = _("instance is suspended and cannot be powered off.")
-            raise exception.InstancePowerOffFailure(reason=reason)
-        else:
-            LOG.debug("VM was already in powered off state. So returning "
-                      "without doing anything", instance=instance)
+        vm_util.power_off_instance(self._session, instance)
 
     def power_on(self, instance):
         vm_util.power_on_instance(self._session, instance)

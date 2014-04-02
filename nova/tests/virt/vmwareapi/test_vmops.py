@@ -406,7 +406,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   return_value=vm_rescue_ref),
                 mock.patch.object(self._session, '_call_method',
                                   fake_call_method),
-                mock.patch.object(self._vmops, '_power_off_vm_ref'),
+                mock.patch.object(vm_util, 'power_off_instance'),
                 mock.patch.object(self._vmops, '_destroy_instance'),
                 mock.patch.object(copy, 'deepcopy', return_value=r_instance)
         ) as (_get_vmdk_path_and_adapter_type, _get_vmdk_volume_disk,
@@ -427,7 +427,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                 self._instance)
             _get_vm_ref_from_name.assert_called_once_with(self._session,
                                                           'fake_uuid-rescue')
-            _power_off.assert_called_once_with(vm_rescue_ref)
+            _power_off.assert_called_once_with(self._session, r_instance,
+                                               vm_rescue_ref)
             _destroy_instance.assert_called_once_with(r_instance,
                 instance_name='fake_uuid-rescue')
 
