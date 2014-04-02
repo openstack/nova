@@ -35,10 +35,15 @@ import pluginlib_nova
 pluginlib_nova.configure_logging('bittorrent')
 logging = pluginlib_nova.logging
 
-
+# Taken from units since we don't pull down full library
+Mi = 1024 ** 2
 DEFAULT_TORRENT_CACHE = '/images/torrents'
 DEFAULT_SEED_CACHE = '/images/seeds'
 SEEDER_PROCESS = '_bittorrent_seeder'
+DEFAULT_MMA = int(libtorrent.bandwidth_mixed_algo_t.prefer_tcp)
+DEFAULT_MORQ = 400
+DEFAULT_MQDB = 8 * Mi
+DEFAULT_MQDBLW = 0
 
 
 def _make_torrent_cache():
@@ -100,6 +105,22 @@ def _download(torrent_path, save_as_path, torrent_listen_port_start,
               torrent_listen_port_end, torrent_download_stall_cutoff):
     session = libtorrent.session()
     session.listen_on(torrent_listen_port_start, torrent_listen_port_end)
+
+    mixed_mode_algorithm = os.environ.get(
+        'DEFAULT_MIXED_MODE_ALGORITHM', DEFAULT_MMA)
+    max_out_request_queue = os.environ.get(
+        'DEFAULT_MAX_OUT_REQUEST_QUEUE', DEFAULT_MORQ)
+    max_queued_disk_bytes = os.environ.get(
+        'DEFAULT_MAX_QUEUED_DISK_BYTES', DEFAULT_MQDB)
+    max_queued_disk_bytes_low_watermark = os.environ.get(
+        'DEFAULT_MAX_QUEUED_DISK_BYTES_LOW_WATERMARK', DEFAULT_MQDBLW)
+
+    session_opts = {'mixed_mode_algorithm': mixed_mode_algorithm,
+                    'max_queued_disk_bytes': max_queued_disk_bytes,
+                    'max_out_request_queue': max_out_request_queue,
+                    'max_queued_disk_bytes_low_watermark':
+                        max_queued_disk_bytes_low_watermark}
+    session.set_settings(session_opts)
     info = libtorrent.torrent_info(
         libtorrent.bdecode(open(torrent_path, 'rb').read()))
 
@@ -111,6 +132,7 @@ def _download(torrent_path, save_as_path, torrent_listen_port_start,
         last_progress = 0
         last_progress_updated = time.time()
 
+        log_time = 0
         while not torrent.is_seed():
             s = torrent.status()
 
@@ -128,11 +150,13 @@ def _download(torrent_path, save_as_path, torrent_listen_port_start,
                     stall_duration, torrent_download_stall_cutoff))
                 raise Exception("Bittorrent download stall detected, bailing!")
 
-            logging.debug(
-                '%.2f%% complete (down: %.1f kb/s up: %.1f kB/s peers: %d)'
-                ' %s %s' % (progress, s.download_rate / 1000,
-                            s.upload_rate / 1000, s.num_peers, s.state,
-                            torrent_path))
+            log_time += 1
+            if log_time % 10 == 0:
+                logging.debug(
+                    '%.2f%% complete (down: %.1f kb/s up: %.1f kB/s peers: %d)'
+                    ' %s %s' % (progress, s.download_rate / 1000,
+                                s.upload_rate / 1000, s.num_peers, s.state,
+                                torrent_path))
             time.sleep(1)
     finally:
         session.remove_torrent(torrent)
