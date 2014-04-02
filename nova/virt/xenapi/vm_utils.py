@@ -959,9 +959,12 @@ def update_vdi_virtual_size(session, instance, vdi_ref, new_gb):
         # NOTE(johngarbutt): we should never get here
         # but if we don't raise an exception, a user might be able to use
         # more storage than allowed by their chosen instance flavor
-        LOG.error(_("VDI %s is bigger than requested resize up size."),
-                  vdi_ref, instance=instance)
-        raise exception.ResizeError(_("VDI too big for requested resize up."))
+        msg = _("VDI %(vdi_ref)s is %(virtual_size)d bytes which is larger "
+                "than flavor size of %(new_disk_size)d bytes.")
+        msg = msg % {'vdi_ref': vdi_ref, 'virtual_size': virtual_size,
+             'new_disk_size': new_disk_size}
+        LOG.debug(msg, instance=instance)
+        raise exception.ResizeError(reason=msg)
 
 
 def resize_disk(session, instance, vdi_ref, flavor):
