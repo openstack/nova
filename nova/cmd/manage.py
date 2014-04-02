@@ -54,6 +54,7 @@
 
 from __future__ import print_function
 
+import argparse
 import os
 import sys
 
@@ -1305,7 +1306,8 @@ def add_command_parsers(subparsers):
             parser.set_defaults(action_fn=action_fn)
             parser.set_defaults(action_kwargs=action_kwargs)
 
-            parser.add_argument('action_args', nargs='*')
+            parser.add_argument('action_args', nargs='*',
+                                help=argparse.SUPPRESS)
 
 
 category_opt = cfg.SubCommandOpt('category',
