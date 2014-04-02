@@ -427,7 +427,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                                ).AndReturn('deltas')
         fake_quotas = quotas_obj.Quotas.from_reservations(self.context,
                                                           ['rsvs'])
-        self.compute_api._reserve_quota_delta(self.context, 'deltas'
+        self.compute_api._reserve_quota_delta(self.context, 'deltas', inst,
                                               ).AndReturn(fake_quotas)
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
@@ -810,8 +810,8 @@ class _ComputeAPIUnitTestMixIn(object):
         resvs = ['resvs']
         fake_quotas = quotas_obj.Quotas.from_reservations(self.context, resvs)
 
-        self.compute_api._reserve_quota_delta(self.context,
-                                              'deltas').AndReturn(fake_quotas)
+        self.compute_api._reserve_quota_delta(self.context, 'deltas',
+                                              fake_inst).AndReturn(fake_quotas)
 
         def _check_mig(expected_task_state=None):
             self.assertEqual('confirming', fake_mig.status)
@@ -871,8 +871,8 @@ class _ComputeAPIUnitTestMixIn(object):
         resvs = ['resvs']
         fake_quotas = quotas_obj.Quotas.from_reservations(self.context, resvs)
 
-        self.compute_api._reserve_quota_delta(self.context,
-                                              'deltas').AndReturn(fake_quotas)
+        self.compute_api._reserve_quota_delta(self.context, 'deltas',
+                                              fake_inst).AndReturn(fake_quotas)
 
         def _check_state(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_REVERTING,
@@ -928,7 +928,7 @@ class _ComputeAPIUnitTestMixIn(object):
         resvs = ['resvs']
         fake_quotas = quotas_obj.Quotas.from_reservations(self.context, resvs)
         self.compute_api._reserve_quota_delta(
-            self.context, delta).AndReturn(fake_quotas)
+            self.context, delta, fake_inst).AndReturn(fake_quotas)
 
         exc = exception.UnexpectedTaskStateError(
             actual=task_states.RESIZE_REVERTING, expected=None)
@@ -993,7 +993,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     self.context, new_flavor,
                     current_flavor).AndReturn('deltas')
             self.compute_api._reserve_quota_delta(self.context, 'deltas',
-                    project_id=project_id).AndReturn(fake_quotas)
+                    fake_inst).AndReturn(fake_quotas)
 
             def _check_state(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_PREP,
@@ -1167,7 +1167,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                headroom=headroom)
 
         self.compute_api._reserve_quota_delta(self.context, deltas,
-                project_id=fake_inst['project_id']).AndRaise(
+                fake_inst).AndRaise(
                         exception.OverQuota(**over_quota_args))
 
         self.mox.ReplayAll()
