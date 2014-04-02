@@ -111,9 +111,8 @@ class API(object):
 
     def service_is_up(self, member):
         """Check if the given member is up."""
-        msg = _('Check if the given member [%s] is part of the '
-                'ServiceGroup, is up')
-        LOG.debug(msg, member)
+        # NOTE(johngarbutt) no logging in this method,
+        # so this doesn't slow down the scheduler
         return self._driver.is_up(member)
 
     def leave(self, member_id, group_id):

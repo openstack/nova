@@ -67,9 +67,12 @@ class DbDriver(api.ServiceGroupDriver):
             last_heartbeat = last_heartbeat.replace(tzinfo=None)
         # Timestamps in DB are UTC.
         elapsed = timeutils.delta_seconds(last_heartbeat, timeutils.utcnow())
-        LOG.debug('DB_Driver.is_up last_heartbeat = %(lhb)s elapsed = %(el)s',
-                  {'lhb': str(last_heartbeat), 'el': str(elapsed)})
-        return abs(elapsed) <= CONF.service_down_time
+        is_up = abs(elapsed) <= CONF.service_down_time
+        if not is_up:
+            msg = _('Seems service is down. Last heartbeat was %(lhb)s. '
+                    'Elapsed time is %(el)s')
+            LOG.debug(msg, {'lhb': str(last_heartbeat), 'el': str(elapsed)})
+        return is_up
 
     def get_all(self, group_id):
         """Returns ALL members of the given group

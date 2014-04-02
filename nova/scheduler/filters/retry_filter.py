@@ -30,19 +30,17 @@ class RetryFilter(filters.BaseHostFilter):
         retry = filter_properties.get('retry', None)
         if not retry:
             # Re-scheduling is disabled
-            LOG.debug("Re-scheduling is disabled")
+            LOG.debug(_("Re-scheduling is disabled"))
             return True
 
         hosts = retry.get('hosts', [])
         host = [host_state.host, host_state.nodename]
 
         passes = host not in hosts
-        pass_msg = "passes" if passes else "fails"
 
-        LOG.debug(_("Host %(host)s %(pass_msg)s.  Previously tried hosts: "
-                    "%(hosts)s") % {'host': host,
-                                    'pass_msg': pass_msg,
-                                    'hosts': hosts})
+        if not passes:
+            LOG.debug(_("Host %(host)s fails.  Previously tried hosts: "
+                        "%(hosts)s"), {'host': host, 'hosts': hosts})
 
         # Host passes if it's not in the list of previously attempted hosts:
         return passes
