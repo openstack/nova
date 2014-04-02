@@ -278,7 +278,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
     def _test_volume_attach(self, driver_bdm, bdm_dict,
                             fake_volume, check_attach=True,
                             fail_check_attach=False, driver_attach=False,
-                            fail_driver_attach=False, access_mode='rw'):
+                            fail_driver_attach=False, volume_attach=True,
+                            access_mode='rw'):
         elevated_context = self.context.elevated()
         self.stubs.Set(self.context, 'elevated',
                        lambda: elevated_context)
@@ -330,16 +331,18 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         expected_conn_info).AndReturn(None)
                 return instance, expected_conn_info
 
-        self.volume_api.attach(elevated_context, fake_volume['id'],
-                          'fake_uuid', bdm_dict['device_name'],
-                          mode=access_mode).AndReturn(None)
+        if volume_attach:
+            self.volume_api.attach(elevated_context, fake_volume['id'],
+                                   'fake_uuid', bdm_dict['device_name'],
+                                   mode=access_mode).AndReturn(None)
         driver_bdm._bdm_obj.save(self.context).AndReturn(None)
         return instance, expected_conn_info
 
     def test_volume_attach(self):
         test_bdm = self.driver_classes['volume'](
             self.volume_bdm)
-        volume = {'id': 'fake-volume-id-1'}
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached'}
 
         instance, expected_conn_info = self._test_volume_attach(
                 test_bdm, self.volume_bdm, volume)
@@ -353,7 +356,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
     def test_volume_attach_ro(self):
         test_bdm = self.driver_classes['volume'](self.volume_bdm)
-        volume = {'id': 'fake-volume-id-1'}
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached'}
 
         instance, expected_conn_info = self._test_volume_attach(
                 test_bdm, self.volume_bdm, volume, access_mode='ro')
@@ -377,10 +381,29 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.asserRaises(test.TestingException, test_bdm.attach, self.context,
                          instance, self.volume_api, self.virt_driver)
 
+    def test_volume_no_volume_attach(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached'}
+
+        instance, expected_conn_info = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, check_attach=False,
+                driver_attach=False)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance,
+                        self.volume_api, self.virt_driver,
+                        do_check_attach=False, do_driver_attach=False)
+        self.assertThat(test_bdm['connection_info'],
+                        matchers.DictMatches(expected_conn_info))
+
     def test_volume_attach_no_check_driver_attach(self):
         test_bdm = self.driver_classes['volume'](
             self.volume_bdm)
-        volume = {'id': 'fake-volume-id-1'}
+        volume = {'id': 'fake-volume-id-1',
+                  'attach_status': 'detached'}
 
         instance, expected_conn_info = self._test_volume_attach(
                 test_bdm, self.volume_bdm, volume, check_attach=False,
@@ -437,8 +460,10 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         no_volume_snapshot['volume_id'] = None
         test_bdm = self.driver_classes['snapshot'](no_volume_snapshot)
 
-        snapshot = {'id': 'fake-snapshot-id-1'}
-        volume = {'id': 'fake-volume-id-2'}
+        snapshot = {'id': 'fake-volume-id-1',
+                    'attach_status': 'detached'}
+        volume = {'id': 'fake-volume-id-2',
+                  'attach_status': 'detached'}
 
         wait_func = self.mox.CreateMockAnything()
 
@@ -469,7 +494,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.volume_api, 'create')
 
         volume_class.attach(self.context, instance, self.volume_api,
-                            self.virt_driver).AndReturn(None)
+                            self.virt_driver, do_check_attach=True
+                            ).AndReturn(None)
         self.mox.ReplayAll()
 
         test_bdm.attach(self.context, instance, self.volume_api,
@@ -482,7 +508,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['image'](no_volume_image)
 
         image = {'id': 'fake-image-id-1'}
-        volume = {'id': 'fake-volume-id-2'}
+        volume = {'id': 'fake-volume-id-2',
+                  'attach_status': 'detached'}
 
         wait_func = self.mox.CreateMockAnything()
 
@@ -511,7 +538,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.volume_api, 'create')
 
         volume_class.attach(self.context, instance, self.volume_api,
-                            self.virt_driver).AndReturn(None)
+                            self.virt_driver, do_check_attach=True
+                            ).AndReturn(None)
         self.mox.ReplayAll()
 
         test_bdm.attach(self.context, instance, self.volume_api,

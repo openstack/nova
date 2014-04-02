@@ -211,7 +211,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 columns_to_join=['metadata', 'system_metadata'],
                 ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
-                mox.IgnoreArg()).AndReturn('fake_bdm')
+                mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
         self.compute.network_api.migrate_instance_finish(
@@ -250,7 +250,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
     def test_unshelve_volume_backed(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
-        host = 'fake-mini'
         node = test_compute.NODENAME
         limits = {}
         filter_properties = {'limits': limits}
@@ -262,10 +261,6 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             expected_attrs=['metadata', 'system_metadata'])
         instance.task_state = task_states.UNSHELVING
         instance.save()
-        sys_meta = dict(instance.system_metadata)
-        sys_meta['shelved_at'] = timeutils.strtime(at=cur_time)
-        sys_meta['shelved_image_id'] = None
-        sys_meta['shelved_host'] = host
 
         self.mox.StubOutWithMock(self.compute, '_notify_about_instance_usage')
         self.mox.StubOutWithMock(self.compute, '_prep_block_device')
@@ -284,7 +279,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 columns_to_join=['metadata', 'system_metadata']
                 ).AndReturn((db_instance, db_instance))
         self.compute._prep_block_device(self.context, instance,
-                mox.IgnoreArg()).AndReturn('fake_bdm')
+                mox.IgnoreArg(), do_check_attach=False).AndReturn('fake_bdm')
         db_instance['key_data'] = None
         db_instance['auto_disk_config'] = None
         self.compute.network_api.migrate_instance_finish(

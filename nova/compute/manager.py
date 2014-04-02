@@ -1705,7 +1705,8 @@ class ComputeManager(manager.Manager):
                                                 swap,
                                                 block_device_mapping)
 
-    def _prep_block_device(self, context, instance, bdms):
+    def _prep_block_device(self, context, instance, bdms,
+                           do_check_attach=True):
         """Set up the block device for an instance with error logging."""
         try:
             block_device_info = {
@@ -1716,15 +1717,17 @@ class ComputeManager(manager.Manager):
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_volumes(bdms),
                         context, instance, self.volume_api,
-                        self.driver) +
+                        self.driver, do_check_attach=do_check_attach) +
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_snapshots(bdms),
                         context, instance, self.volume_api,
-                        self.driver, self._await_block_device_map_created) +
+                        self.driver, self._await_block_device_map_created,
+                        do_check_attach=do_check_attach) +
                     driver_block_device.attach_block_devices(
                         driver_block_device.convert_images(bdms),
                         context, instance, self.volume_api,
-                        self.driver, self._await_block_device_map_created))
+                        self.driver, self._await_block_device_map_created,
+                        do_check_attach=do_check_attach))
             }
 
             if self.use_legacy_block_device_info:
@@ -4027,7 +4030,8 @@ class ComputeManager(manager.Manager):
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        block_device_info = self._prep_block_device(context, instance, bdms)
+        block_device_info = self._prep_block_device(context, instance, bdms,
+                                                    do_check_attach=False)
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
 
         if node is None:
