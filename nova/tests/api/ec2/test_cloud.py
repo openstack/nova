@@ -43,6 +43,7 @@ from nova import db
 from nova import exception
 from nova.image import s3
 from nova.network import api as network_api
+from nova.network import base_api as base_network_api
 from nova.network import model
 from nova.network import neutronv2
 from nova.objects import instance as instance_obj
@@ -321,7 +322,7 @@ class CloudTestCase(test.TestCase):
 
             return
 
-        self.stubs.Set(network_api, "update_instance_cache_with_nw_info",
+        self.stubs.Set(base_network_api, "update_instance_cache_with_nw_info",
                        fake_update_instance_cache_with_nw_info)
 
         self.cloud.associate_address(self.context,
