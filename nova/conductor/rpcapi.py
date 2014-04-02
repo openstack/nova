@@ -133,6 +133,7 @@ class ConductorAPI(object):
     ...  - Remove block_device_mapping_destroy()
 
     2.0  - Drop backwards compatibility
+    ...  - Remove quota_rollback() and quota_commit()
     """
 
     VERSION_ALIASES = {
@@ -389,22 +390,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'network_migrate_instance_finish',
                           instance=instance_p, migration=migration_p)
-
-    def quota_commit(self, context, reservations, project_id=None,
-                     user_id=None):
-        reservations_p = jsonutils.to_primitive(reservations)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'quota_commit',
-                          reservations=reservations_p,
-                          project_id=project_id, user_id=user_id)
-
-    def quota_rollback(self, context, reservations, project_id=None,
-                       user_id=None):
-        reservations_p = jsonutils.to_primitive(reservations)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'quota_rollback',
-                          reservations=reservations_p,
-                          project_id=project_id, user_id=user_id)
 
     def get_ec2_ids(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)

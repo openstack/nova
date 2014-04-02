@@ -258,18 +258,6 @@ class LocalAPI(object):
                                                              instance,
                                                              migration)
 
-    def quota_commit(self, context, reservations, project_id=None,
-                     user_id=None):
-        return self._manager.quota_commit(context, reservations,
-                                          project_id=project_id,
-                                          user_id=user_id)
-
-    def quota_rollback(self, context, reservations, project_id=None,
-                       user_id=None):
-        return self._manager.quota_rollback(context, reservations,
-                                            project_id=project_id,
-                                            user_id=user_id)
-
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
 

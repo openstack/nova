@@ -1022,10 +1022,12 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.network_migrate_instance_finish(context, instance,
                 migration)
 
+    # TODO(comstud): This can be removed in version 3.0 of RPCAPI
     def quota_commit(self, context, reservations, project_id, user_id):
         return self.manager.quota_commit(context, reservations, project_id,
                 user_id)
 
+    # TODO(comstud): This can be removed in version 3.0 of RPCAPI
     def quota_rollback(self, context, reservations, project_id, user_id):
         return self.manager.quota_rollback(context, reservations, project_id,
                 user_id)

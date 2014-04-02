@@ -42,7 +42,6 @@ from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
-from nova import quota
 from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
@@ -453,28 +452,6 @@ class _BaseTestCase(object):
         self.conductor.network_migrate_instance_finish(self.context,
                                                        'instance',
                                                        'migration')
-
-    def test_quota_commit(self):
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        quota.QUOTAS.commit(self.context, 'reservations', project_id=None,
-                            user_id=None)
-        quota.QUOTAS.commit(self.context, 'reservations', project_id='proj',
-                            user_id='user')
-        self.mox.ReplayAll()
-        self.conductor.quota_commit(self.context, 'reservations')
-        self.conductor.quota_commit(self.context, 'reservations', 'proj',
-                                    'user')
-
-    def test_quota_rollback(self):
-        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
-        quota.QUOTAS.rollback(self.context, 'reservations', project_id=None,
-                              user_id=None)
-        quota.QUOTAS.rollback(self.context, 'reservations', project_id='proj',
-                              user_id='user')
-        self.mox.ReplayAll()
-        self.conductor.quota_rollback(self.context, 'reservations')
-        self.conductor.quota_rollback(self.context, 'reservations', 'proj',
-                                      'user')
 
     def test_get_ec2_ids(self):
         expected = {
