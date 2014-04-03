@@ -20,7 +20,6 @@ from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
 from nova import compute
 from nova import exception
-from nova.openstack.common.gettextutils import _
 
 
 authorize = extensions.extension_authorizer('compute', 'server_diagnostics')
@@ -44,9 +43,8 @@ class ServerDiagnosticsController(object):
         compute_api = compute.API()
         try:
             instance = compute_api.get(context, server_id, want_objects=True)
-        except exception.NotFound():
-            msg = _("Instance not found")
-            raise webob.exc.HTTPNotFound(explanation=msg)
+        except exception.InstanceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
         return compute_api.get_diagnostics(context, instance)
 

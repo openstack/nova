@@ -12,13 +12,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 from lxml import etree
+import mock
 
 from nova.api.openstack import compute
 from nova.api.openstack.compute.contrib import server_diagnostics
 from nova.api.openstack import wsgi
 from nova.compute import api as compute_api
+from nova import exception
 from nova.openstack.common import jsonutils
 from nova import test
 from nova.tests.api.openstack import fakes
@@ -45,17 +46,29 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
             osapi_compute_extension=[
                 'nova.api.openstack.compute.contrib.select_extensions'],
             osapi_compute_ext_list=['Server_diagnostics'])
-        self.stubs.Set(compute_api.API, 'get_diagnostics',
-                       fake_get_diagnostics)
-        self.stubs.Set(compute_api.API, 'get', fake_instance_get)
 
         self.router = compute.APIRouter(init_only=('servers', 'diagnostics'))
 
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                       fake_get_diagnostics)
+    @mock.patch.object(compute_api.API, 'get',
+                       fake_instance_get)
     def test_get_diagnostics(self):
-        req = fakes.HTTPRequest.blank('/fake/servers/%s/diagnostics' % UUID)
+        req = fakes.HTTPRequest.blank(
+                    '/fake/servers/%s/diagnostics' % UUID)
         res = req.get_response(self.router)
         output = jsonutils.loads(res.body)
         self.assertEqual(output, {'data': 'Some diagnostic info'})
+
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                fake_get_diagnostics)
+    @mock.patch.object(compute_api.API, 'get',
+                side_effect=exception.InstanceNotFound(instance_id=UUID))
+    def test_get_diagnostics_with_non_existed_instance(self, mock_get):
+        req = fakes.HTTPRequest.blank(
+                    '/fake/servers/%s/diagnostics' % UUID)
+        res = req.get_response(self.router)
+        self.assertEqual(res.status_int, 404)
 
 
 class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
