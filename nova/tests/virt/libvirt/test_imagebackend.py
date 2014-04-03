@@ -803,20 +803,6 @@ class RbdTestCase(_ImageTestCase, test.NoDBTestCase):
 
         self.mox.VerifyAll()
 
-    def test_cache_base_dir_exists(self):
-        self.mox.StubOutWithMock(os.path, 'exists')
-        os.path.exists(self.TEMPLATE_DIR).AndReturn(True)
-        fn = self.mox.CreateMockAnything()
-        fn(target=self.TEMPLATE_PATH)
-        self.mox.StubOutWithMock(imagebackend.fileutils, 'ensure_tree')
-        self.mox.ReplayAll()
-
-        image = self.image_class(self.INSTANCE, self.NAME)
-        self.mock_create_image(image)
-        image.cache(fn, self.TEMPLATE)
-
-        self.mox.VerifyAll()
-
     def test_create_image(self):
         fn = self.prepare_mocks()
         fn(max_size=None, rbd=self.rbd, target=self.TEMPLATE_PATH)
