@@ -192,7 +192,7 @@ class ServiceController(object):
                     msg = _('The string containing the reason for disabling '
                             'the service contains invalid characters or is '
                             'too long.')
-                    raise webob.exc.HTTPUnprocessableEntity(detail=msg)
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
 
                 status_detail['disabled_reason'] = reason
                 ret_value['service']['disabled_reason'] = reason
@@ -200,7 +200,7 @@ class ServiceController(object):
             msg = _('Invalid attribute in the request')
             if 'host' in body and 'binary' in body:
                 msg = _('Missing disabled reason field')
-            raise webob.exc.HTTPUnprocessableEntity(detail=msg)
+            raise webob.exc.HTTPBadRequest(explanation=msg)
 
         try:
             self.host_api.service_update(context, host, binary, status_detail)
