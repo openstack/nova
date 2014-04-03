@@ -136,6 +136,15 @@ class API(base.Base):
             nets,
             net_ids)
 
+        if not context.is_admin:
+            for net in nets:
+                # Perform this check here rather than in validate_networks to
+                # ensure the check is performed everytime allocate_for_instance
+                # is invoked
+                if net.get('router:external'):
+                    raise exception.ExternalNetworkAttachForbidden(
+                        network_uuid=net['id'])
+
         return nets
 
     def _create_port(self, port_client, instance, network_id, port_req_body,
