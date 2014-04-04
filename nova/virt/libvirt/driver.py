@@ -396,6 +396,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                  "directsync",
                                  "unsafe",
                                 ]
+        self._conn_supports_start_paused = CONF.libvirt.virt_type in ('kvm',
+                                                                      'qemu')
 
         for mode_str in CONF.libvirt.disk_cachemodes:
             disk_type, sep, cache_mode = mode_str.partition('=')
@@ -3581,10 +3583,6 @@ class LibvirtDriver(driver.ComputeDriver):
         return [('network-vif-plugged', vif['id'])
                 for vif in network_info if vif.get('active', True) is False]
 
-    @staticmethod
-    def _conn_supports_start_paused():
-        return CONF.libvirt.virt_type in ('kvm', 'qemu')
-
     def _create_domain_and_network(self, context, xml, instance, network_info,
                                    block_device_info=None, power_on=True,
                                    reboot=False, vifs_already_plugged=False):
@@ -3618,7 +3616,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     encryptor.attach_volume(context, **encryption)
 
         timeout = CONF.vif_plugging_timeout
-        if (self._conn_supports_start_paused() and
+        if (self._conn_supports_start_paused and
             utils.is_neutron() and not
             vifs_already_plugged and timeout):
             events = self._get_neutron_events(network_info)
