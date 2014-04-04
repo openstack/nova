@@ -226,8 +226,6 @@ class HostState(object):
         stats = compute.get('stats', None) or '{}'
         self.stats = jsonutils.loads(stats)
 
-        self.hypervisor_version = compute['hypervisor_version']
-
         # Track number of instances on host
         self.num_instances = int(self.stats.get('num_instances', 0))
 
@@ -305,8 +303,6 @@ class HostState(object):
         if pci_requests and self.pci_stats:
             self.pci_stats.apply_requests(pci_requests)
 
-        vm_state = instance.get('vm_state', vm_states.BUILDING)
-        task_state = instance.get('task_state')
         if vm_state == vm_states.BUILDING or task_state in [
                 task_states.RESIZE_MIGRATING, task_states.REBUILDING,
                 task_states.RESIZE_PREP, task_states.IMAGE_SNAPSHOT,
