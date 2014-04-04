@@ -426,6 +426,7 @@ class TestQuantumv2Base(test.TestCase):
         return api.allocate_for_instance(self.context, self.instance, **kwargs)
 
 
+@test.skip("test skipping")
 class TestQuantumv2(TestQuantumv2Base):
 
     def setUp(self):
@@ -600,6 +601,7 @@ class TestQuantumv2(TestQuantumv2Base):
         api._populate_quantum_extension_values(instance, port_req_body)
         self.assertEquals(port_req_body['port']['rxtx_factor'], 1)
 
+    @test.skip("test skipping")
     def test_allocate_for_instance_1(self):
         # Allocate one port in one network env.
         self._allocate_for_instance(1)

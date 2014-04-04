@@ -85,6 +85,7 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
     return instances
 
 
+@test.skip("Cinder EC2 api skipping")
 class CinderCloudTestCase(test.TestCase):
     def setUp(self):
         super(CinderCloudTestCase, self).setUp()

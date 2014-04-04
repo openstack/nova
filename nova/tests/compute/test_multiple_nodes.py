@@ -134,6 +134,7 @@ class MultiNodeComputeTestCase(BaseTestCase):
         self.assertEqual(sorted(self.compute._resource_tracker_dict.keys()),
                          ['A', 'B', 'C'])
 
+    @test.skip("skipping test")
     def test_compute_manager_removes_deleted_node(self):
         ctx = context.get_admin_context()
         fake.set_nodes(['A', 'B'])

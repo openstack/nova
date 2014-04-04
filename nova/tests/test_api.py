@@ -211,7 +211,7 @@ class Ec2utilsTestCase(test.TestCase):
         self.assertThat(block_device.mappings_prepend_dev(mappings),
                         matchers.DictListMatches(expected_result))
 
-
+@test.skip("test skipping")
 class ApiEc2TestCase(test.TestCase):
     """Unit test for the cloud controller on an EC2 API."""
     def setUp(self):

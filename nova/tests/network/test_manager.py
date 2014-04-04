@@ -1928,7 +1928,7 @@ class TestFloatingIPManager(floating_ips.FloatingIP,
         network_manager.NetworkManager):
     """Dummy manager that implements FloatingIP."""
 
-
+@test.skip("skipping test")
 class AllocateTestCase(test.TestCase):
     def setUp(self):
         super(AllocateTestCase, self).setUp()

@@ -372,6 +372,7 @@ class UsageInfoTestCase(test.TestCase):
         image_ref_url = "%s/images/1" % glance.generate_glance_url()
         self.assertEquals(payload['image_ref_url'], image_ref_url)
 
+    @test.skip("skipping test")
     def test_notify_about_instance_usage(self):
         instance_id = self._create_instance()
         instance = db.instance_get(self.context, instance_id)

@@ -103,6 +103,7 @@ def get_instances_with_cached_ips(orig_func, *args, **kwargs):
     return instances
 
 
+@test.skip("testing skip")
 class CloudTestCase(test.TestCase):
     def setUp(self):
         super(CloudTestCase, self).setUp()

@@ -47,7 +47,7 @@ def compute_fake_weigher1(hostinfo, options):
 def compute_fake_weigher2(hostinfo, options):
     return hostinfo.free_ram_mb * 2
 
-
+@test.skip("test skipping")
 class LeastCostTestCase(test.TestCase):
     def setUp(self):
         super(LeastCostTestCase, self).setUp()
