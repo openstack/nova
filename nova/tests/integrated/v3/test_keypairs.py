@@ -55,10 +55,10 @@ class KeyPairsSampleJsonTest(api_sample_base.ApiSampleTestBaseV3):
         subs['keypair_name'] = '(%s)' % key_name
         self._verify_response('keypairs-import-post-resp', subs, response, 201)
 
-    def test_keypairs_get(self):
-        # Get api sample of key pairs get request.
+    def test_keypairs_list(self):
+        # Get api sample of key pairs list request.
         key_name = self.test_keypairs_post()
         response = self._do_get('keypairs')
         subs = self._get_regexes()
         subs['keypair_name'] = '(%s)' % key_name
-        self._verify_response('keypairs-get-resp', subs, response, 200)
+        self._verify_response('keypairs-list-resp', subs, response, 200)
