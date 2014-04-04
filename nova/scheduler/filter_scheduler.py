@@ -270,7 +270,7 @@ class FilterScheduler(driver.Scheduler):
             if any((policy in policies) for policy in group.policies):
                 update_group_hosts = True
                 filter_properties.setdefault('group_hosts', set())
-                user_hosts = filter_properties['group_hosts']
+                user_hosts = set(filter_properties['group_hosts'])
                 group_hosts = set(group.get_hosts(context))
                 filter_properties['group_hosts'] = user_hosts | group_hosts
                 filter_properties['group_policies'] = group.policies
