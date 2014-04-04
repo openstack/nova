@@ -58,6 +58,13 @@ def import_module(import_str):
     return sys.modules[import_str]
 
 
+def import_versioned_module(version, submodule=None):
+    module = 'nova.v%s' % version
+    if submodule:
+        module = '.'.join((module, submodule))
+    return import_module(module)
+
+
 def try_import(import_str, default=None):
     """Try to import a module and if it fails return default."""
     try:

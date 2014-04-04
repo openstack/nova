@@ -36,13 +36,9 @@ import functools
 import inspect
 import itertools
 import json
-try:
-    import xmlrpclib
-except ImportError:
-    # NOTE(jd): xmlrpclib is not shipped with Python 3
-    xmlrpclib = None
 
 import six
+import six.moves.xmlrpc_client as xmlrpclib
 
 from nova.openstack.common import gettextutils
 from nova.openstack.common import importutils
@@ -129,7 +125,7 @@ def to_primitive(value, convert_instances=False, convert_datetime=True,
         # It's not clear why xmlrpclib created their own DateTime type, but
         # for our purposes, make it a datetime type which is explicitly
         # handled
-        if xmlrpclib and isinstance(value, xmlrpclib.DateTime):
+        if isinstance(value, xmlrpclib.DateTime):
             value = datetime.datetime(*tuple(value.timetuple())[:6])
 
         if convert_datetime and isinstance(value, datetime.datetime):

@@ -64,6 +64,10 @@ BASEDIR = os.path.abspath(os.path.join(os.path.dirname(__file__),
 WORDWRAP_WIDTH = 60
 
 
+def raise_extension_exception(extmanager, ep, err):
+    raise
+
+
 def generate(argv):
     parser = argparse.ArgumentParser(
         description='generate sample configuration file',
@@ -107,6 +111,7 @@ def generate(argv):
             'oslo.config.opts',
             names=list(set(parsed_args.libraries)),
             invoke_on_load=False,
+            on_load_failure_callback=raise_extension_exception
         )
         for ext in loader:
             for group, opts in ext.plugin():

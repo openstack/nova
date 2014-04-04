@@ -24,7 +24,7 @@ import traceback
 
 import six
 
-from nova.openstack.common.gettextutils import _  # noqa
+from nova.openstack.common.gettextutils import _LE
 
 
 class save_and_reraise_exception(object):
@@ -42,16 +42,29 @@ class save_and_reraise_exception(object):
 
     In some cases the caller may not want to re-raise the exception, and
     for those circumstances this context provides a reraise flag that
-    can be used to suppress the exception.  For example:
+    can be used to suppress the exception.  For example::
 
-    except Exception:
-        with save_and_reraise_exception() as ctxt:
-            decide_if_need_reraise()
-            if not should_be_reraised:
-                ctxt.reraise = False
+      except Exception:
+          with save_and_reraise_exception() as ctxt:
+              decide_if_need_reraise()
+              if not should_be_reraised:
+                  ctxt.reraise = False
+
+    If another exception occurs and reraise flag is False,
+    the saved exception will not be logged.
+
+    If the caller wants to raise new exception during exception handling
+    he/she sets reraise to False initially with an ability to set it back to
+    True if needed::
+
+      except Exception:
+          with save_and_reraise_exception(reraise=False) as ctxt:
+              [if statements to determine whether to raise a new exception]
+              # Not raising a new exception, so reraise
+              ctxt.reraise = True
     """
-    def __init__(self):
-        self.reraise = True
+    def __init__(self, reraise=True):
+        self.reraise = reraise
 
     def __enter__(self):
         self.type_, self.value, self.tb, = sys.exc_info()
@@ -59,10 +72,11 @@ class save_and_reraise_exception(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
-            logging.error(_('Original exception being dropped: %s'),
-                          traceback.format_exception(self.type_,
-                                                     self.value,
-                                                     self.tb))
+            if self.reraise:
+                logging.error(_LE('Original exception being dropped: %s'),
+                              traceback.format_exception(self.type_,
+                                                         self.value,
+                                                         self.tb))
             return False
         if self.reraise:
             six.reraise(self.type_, self.value, self.tb)
@@ -88,8 +102,8 @@ def forever_retry_uncaught_exceptions(infunc):
                 if (cur_time - last_log_time > 60 or
                         this_exc_message != last_exc_message):
                     logging.exception(
-                        _('Unexpected exception occurred %d time(s)... '
-                          'retrying.') % exc_count)
+                        _LE('Unexpected exception occurred %d time(s)... '
+                            'retrying.') % exc_count)
                     last_log_time = cur_time
                     last_exc_message = this_exc_message
                     exc_count = 0
