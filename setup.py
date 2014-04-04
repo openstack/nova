@@ -41,7 +41,7 @@ setuptools.setup(
           'Programming Language :: Python :: 2.7',
           ],
       cmdclass=common_setup.get_cmdclass(),
-      packages=setuptools.find_packages(exclude=['bin', 'smoketests','nova']),
+      packages=setuptools.find_packages(exclude=['bin', 'smoketests']),
       install_requires=requires,
       dependency_links=depend_links,
       include_package_data=True,
