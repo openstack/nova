@@ -264,7 +264,7 @@ class HostManagerTestCase(test.TestCase):
         self.assertEqual(host_states_map[('host4', 'node4')].free_disk_mb,
                          8388608)
 
-
+@test.skip("test skipping")
 class HostManagerChangedNodesTestCase(test.TestCase):
     """Test case for HostManager class."""
 

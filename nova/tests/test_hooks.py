@@ -51,6 +51,7 @@ class MockEntryPoint(object):
         return self.cls
 
 
+@test.skip("test skipping")
 class HookTestCase(test.TestCase):
 
     def _mock_load_plugins(self, iload, iargs, ikwargs):

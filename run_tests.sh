@@ -60,6 +60,10 @@ function process_options {
         (( i++ ))
         tools_path=${!i}
         ;;
+      --concurrency)
+        (( i++ ))
+        concurrency=${!i}
+        ;;
       -*) testropts="$testropts ${!i}";;
       *) testrargs="$testrargs ${!i}"
     esac
@@ -85,6 +89,7 @@ coverage=0
 debug=0
 recreate_db=1
 update=0
+concurrency=1
 
 LANG=en_US.UTF-8
 LANGUAGE=en_US:en
@@ -135,9 +140,22 @@ function run_tests {
   # Just run the test suites in current environment
   set +e
   testrargs=`echo "$testrargs" | sed -e's/^\s*\(.*\)\s*$/\1/'`
-  TESTRTESTS="$TESTRTESTS --testr-args='--subunit $testropts $testrargs'"
+  TESTRTESTS="$TESTRTESTS --testr-args='--subunit --concurrency $concurrency $testropts $testrargs'"
+  if [ setup.cfg -nt cinder.egg-info/entry_points.txt ]
+  then
+    ${wrapper} python setup.py egg_info
+  fi
+  
   echo "Running \`${wrapper} $TESTRTESTS\`"
-  bash -c "${wrapper} $TESTRTESTS | ${wrapper} subunit2pyunit"
+  if ${wrapper} which subunit-2to1 2>&1 > /dev/null
+  then
+    # subunit-2to1 is present, testr subunit stream should be in version 2
+    # format. Convert to version one before colorizing.
+    bash -c "${wrapper} $TESTRTESTS | ${wrapper} subunit-2to1 | ${wrapper} tools/colorizer.py"
+  else
+    bash -c "${wrapper} $TESTRTESTS | ${wrapper} tools/colorizer.py"
+  fi
+
   RESULT=$?
   set -e
 
@@ -212,7 +230,7 @@ if [ $recreate_db -eq 1 ]; then
     rm -f tests.sqlite
 fi
 
-init_testr
+#init_testr
 run_tests
 
 # NOTE(sirp): we only want to run pep8 when we're running the full-test suite,

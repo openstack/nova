@@ -37,7 +37,7 @@ CONF = cfg.CONF
 CONF.import_opt('compute_driver', 'nova.virt.driver')
 LOG = logging.getLogger(__name__)
 
-
+@test.skip("testing skip ")
 class EC2ValidateTestCase(test.TestCase):
     def setUp(self):
         super(EC2ValidateTestCase, self).setUp()

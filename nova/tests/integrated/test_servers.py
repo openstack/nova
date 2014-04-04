@@ -75,6 +75,7 @@ class ServersTest(integrated_helpers._IntegratedTestBase):
         self.assertEqual('ERROR', found_server['status'])
         self._delete_server(created_server_id)
 
+    @test.skip("skip test")
     def test_create_and_delete_server(self):
         # Creates and deletes a server.
         fake_network.set_stub_network_methods(self.stubs)

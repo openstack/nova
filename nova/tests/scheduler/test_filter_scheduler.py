@@ -49,7 +49,7 @@ def fake_get_group_filtered_hosts(hosts, filter_properties):
     else:
         return list(hosts)
 
-
+@test.skip("test skipping")
 class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     """Test case for Filter Scheduler."""
 

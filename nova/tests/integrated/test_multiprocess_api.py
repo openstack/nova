@@ -122,6 +122,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
                      for l in f.readlines()]
         return [p for p, pp in processes if pp == self.pid]
 
+    @test.skip("skipping test")
     def test_killed_worker_recover(self):
         start_workers = self._spawn()
 

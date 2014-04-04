@@ -2164,6 +2164,7 @@ class AdminActionsSamplesJsonTest(ServersSampleBase):
                                  'admin-actions-unlock-server', {})
         self.assertEqual(response.status, 202)
 
+    @test.skip("test skipping")
     def test_post_backup_server(self):
         # Get api samples to backup server request.
         def image_details(self, context, **kwargs):

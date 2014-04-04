@@ -22,7 +22,7 @@ from nova.tests.integrated import integrated_helpers
 
 LOG = logging.getLogger(__name__)
 
-
+@test.skip("test skipping")
 class LoginTest(integrated_helpers._IntegratedTestBase):
     def test_login(self):
         # Simple check - we list flavors - so we know we're logged in.
