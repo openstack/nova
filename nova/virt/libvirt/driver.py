@@ -183,7 +183,9 @@ libvirt_opts = [
                deprecated_group='DEFAULT'),
     cfg.StrOpt('vif_driver',
                default='nova.virt.libvirt.vif.LibvirtGenericVIFDriver',
-               help='The libvirt VIF driver to configure the VIFs.',
+               help='DEPRECATED. The libvirt VIF driver to configure the VIFs.'
+                    'This option is deprecated and will be removed in the '
+                    'Juno release.',
                deprecated_name='libvirt_vif_driver',
                deprecated_group='DEFAULT'),
     cfg.ListOpt('volume_drivers',
