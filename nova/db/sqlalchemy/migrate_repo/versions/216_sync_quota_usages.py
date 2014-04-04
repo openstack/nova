@@ -29,15 +29,15 @@ def upgrade(migrate_engine):
     quota_usages = Table('quota_usages', meta, autoload=True)
     reservations = Table('reservations', meta, autoload=True)
 
+    resource_tuples = select(columns=[quota_usages.c.resource],
+            distinct=True).execute().fetchall()
+    resources = [resource[0] for resource in resource_tuples]
+
     for resource in ['instances', 'cores', 'ram', 'security_groups']:
         delete_null_rows(resource, quota_usages, reservations)
 
     for resource in ['fixed_ips', 'floating_ips', 'networks']:
         delete_per_user_rows(resource, quota_usages, reservations)
-
-    resource_tuples = select(columns=[quota_usages.c.resource],
-            distinct=True).execute().fetchall()
-    resources = [resource[0] for resource in resource_tuples]
 
     if 'instances' in resources:
         sync_instances(meta, quota_usages)

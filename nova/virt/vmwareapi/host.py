@@ -21,6 +21,7 @@ Management class for host-related functions (start, reboot, etc).
 from nova import exception
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
+from nova import utils
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
 
@@ -133,7 +134,8 @@ class HostState(object):
         data["host_memory_free"] = data["host_memory_total"] - \
                                    summary.quickStats.overallMemoryUsage
         data["hypervisor_type"] = summary.config.product.name
-        data["hypervisor_version"] = summary.config.product.version
+        data["hypervisor_version"] = utils.convert_version_to_int(
+            str(summary.config.product.version))
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [('i686', 'vmware', 'hvm'),
                                        ('x86_64', 'vmware', 'hvm')]
@@ -186,7 +188,8 @@ class VCState(object):
         data["host_memory_total"] = stats['mem']['total']
         data["host_memory_free"] = stats['mem']['free']
         data["hypervisor_type"] = about_info.name
-        data["hypervisor_version"] = about_info.version
+        data["hypervisor_version"] = utils.convert_version_to_int(
+            str(about_info.version))
         data["hypervisor_hostname"] = self._host_name
         data["supported_instances"] = [('i686', 'vmware', 'hvm'),
                                        ('x86_64', 'vmware', 'hvm')]

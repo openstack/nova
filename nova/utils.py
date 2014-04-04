@@ -924,6 +924,20 @@ def temporary_chown(path, owner_uid=None):
             execute('chown', orig_uid, path, run_as_root=True)
 
 
+def chown(path, owner_uid=None):
+    """chown a path.
+
+    :param owner_uid: UID of owner (defaults to current user)
+    """
+    if owner_uid is None:
+        owner_uid = os.getuid()
+
+    orig_uid = os.stat(path).st_uid
+
+    if orig_uid != owner_uid:
+        execute('chown', owner_uid, path, run_as_root=True)
+
+
 @contextlib.contextmanager
 def tempdir(**kwargs):
     argdict = kwargs.copy()
@@ -1165,7 +1179,17 @@ def is_none_string(val):
 
 
 def convert_version_to_int(version):
-    return version[0] * 1000000 + version[1] * 1000 + version[2]
+    try:
+        if type(version) == str:
+            version = convert_version_to_tuple(version)
+        if type(version) == tuple:
+            return reduce(lambda x, y: (x * 1000) + y, version)
+    except Exception:
+        raise exception.NovaException(message="Hypervisor version invalid.")
+
+
+def convert_version_to_tuple(version_str):
+    return tuple(int(part) for part in version_str.split('.'))
 
 
 def is_neutron():

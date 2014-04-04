@@ -21,11 +21,14 @@
 Test suite for VMwareAPI.
 """
 
+import collections
 import contextlib
+import copy
 
 import mock
 import mox
 from oslo.config import cfg
+import suds
 
 from nova import block_device
 from nova.compute import api as compute_api
@@ -139,6 +142,46 @@ class VMwareSessionTestCase(test.NoDBTestCase):
                               *args, **kwargs)
 
 
+class fake_vm_ref(object):
+    def __init__(self):
+        self.value = 4
+        self._type = 'VirtualMachine'
+
+
+class fake_service_content(object):
+    def __init__(self):
+        self.ServiceContent = vmwareapi_fake.DataObject()
+        self.ServiceContent.fake = 'fake'
+
+
+class VMwareSudsTest(test.NoDBTestCase):
+
+    def setUp(self):
+        super(VMwareSudsTest, self).setUp()
+
+        def new_client_init(self, url, **kwargs):
+            return
+
+        mock.patch.object(suds.client.Client,
+                          '__init__', new=new_client_init).start()
+        self.vim = self._vim_create()
+        self.addCleanup(mock.patch.stopall)
+
+    def _vim_create(self):
+
+        def fake_retrieve_service_content(fake):
+            return fake_service_content()
+
+        self.stubs.Set(vim.Vim, 'retrieve_service_content',
+                fake_retrieve_service_content)
+        return vim.Vim()
+
+    def test_exception_with_deepcopy(self):
+        self.assertIsNotNone(self.vim)
+        self.assertRaises(error_util.VimException,
+                          copy.deepcopy, self.vim)
+
+
 class VMwareAPIConfTestCase(test.NoDBTestCase):
     """Unit tests for VMWare API configurations."""
     def setUp(self):
@@ -241,6 +284,32 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
         self.conn = driver.VMwareAPISession()
         self.assertEqual(self.attempts, 2)
+
+    def test_wait_for_task_exception(self):
+        self.flags(task_poll_interval=1, group='vmware')
+        self.login_session = vmwareapi_fake.FakeVim()._login()
+        self.stop_called = 0
+
+        def _fake_login(_self):
+            return self.login_session
+
+        self.stubs.Set(vmwareapi_fake.FakeVim, '_login', _fake_login)
+
+        def fake_poll_task(instance_uuid, task_ref, done):
+            done.send_exception(exception.NovaException('fake exception'))
+
+        def fake_stop_loop(loop):
+            self.stop_called += 1
+            return loop.stop()
+
+        self.conn = driver.VMwareAPISession()
+        self.stubs.Set(self.conn, "_poll_task",
+                       fake_poll_task)
+        self.stubs.Set(self.conn, "_stop_loop",
+                       fake_stop_loop)
+        self.assertRaises(exception.NovaException,
+                          self.conn._wait_for_task, 'fake-id', 'fake-ref')
+        self.assertEqual(self.stop_called, 1)
 
     def _create_instance_in_the_db(self, node=None, set_image_ref=True,
                                    uuid=None):
@@ -409,6 +478,38 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
 
+    def test_spawn_disk_extend_insufficient_disk_space(self):
+        self.flags(use_linked_clone=True, group='vmware')
+        self.wait_task = self.conn._session._wait_for_task
+        self.call_method = self.conn._session._call_method
+        self.task_ref = None
+        id = 'fake_image_uuid'
+        cached_image = '[%s] vmware_base/%s.80.vmdk' % (self.ds, id)
+        tmp_file = '[%s] vmware_base/%s.80-flat.vmdk' % (self.ds, id)
+
+        def fake_wait_for_task(instance_uuid, task_ref):
+            if task_ref == self.task_ref:
+                self.task_ref = None
+                self.assertTrue(vmwareapi_fake.get_file(cached_image))
+                self.assertTrue(vmwareapi_fake.get_file(tmp_file))
+                raise exception.NovaException('No space!')
+            return self.wait_task(instance_uuid, task_ref)
+
+        def fake_call_method(module, method, *args, **kwargs):
+            task_ref = self.call_method(module, method, *args, **kwargs)
+            if method == "ExtendVirtualDisk_Task":
+                self.task_ref = task_ref
+            return task_ref
+
+        self.stubs.Set(self.conn._session, "_call_method", fake_call_method)
+        self.stubs.Set(self.conn._session, "_wait_for_task",
+                       fake_wait_for_task)
+
+        self.assertRaises(exception.NovaException,
+                          self._create_vm)
+        self.assertFalse(vmwareapi_fake.get_file(cached_image))
+        self.assertFalse(vmwareapi_fake.get_file(tmp_file))
+
     def test_spawn_disk_invalid_disk_size(self):
         self.mox.StubOutWithMock(vmware_images, 'get_vmdk_size_and_properties')
         result = [82 * 1024 * 1024 * 1024,
@@ -477,6 +578,11 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
                         network_info=self.network_info,
                         block_device_info=block_device_info)
 
+    def mock_upload_image(self, context, image, instance, **kwargs):
+        self.assertEqual(image, 'Test-Snapshot')
+        self.assertEqual(instance, self.instance)
+        self.assertEqual(kwargs['disk_type'], 'preallocated')
+
     def _test_snapshot(self):
         expected_calls = [
             {'args': (),
@@ -490,8 +596,10 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
-        self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
-                           func_call_matcher.call)
+        with mock.patch.object(vmware_images, 'upload_image',
+                               self.mock_upload_image):
+            self.conn.snapshot(self.context, self.instance, "Test-Snapshot",
+                               func_call_matcher.call)
         info = self.conn.get_info({'uuid': self.uuid,
                                    'node': self.instance_node})
         self._check_vm_info(info, power_state.RUNNING)
@@ -870,11 +978,12 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def _test_get_vnc_console(self):
         self._create_vm()
         fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
-        fake_vm_id = int(fake_vm.obj.value.replace('vm-', ''))
+        OptionValue = collections.namedtuple('OptionValue', ['key', 'value'])
+        opt_val = OptionValue(key='', value=5906)
+        fake_vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
         vnc_dict = self.conn.get_vnc_console(self.instance)
-        self.assertEquals(vnc_dict['host'], self.vnc_host)
-        self.assertEquals(vnc_dict['port'], cfg.CONF.vmware.vnc_port +
-                          fake_vm_id % cfg.CONF.vmware.vnc_port_total)
+        self.assertEqual(vnc_dict['host'], self.vnc_host)
+        self.assertEqual(vnc_dict['port'], 5906)
 
     def test_get_vnc_console(self):
         self._test_get_vnc_console()
@@ -882,6 +991,13 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
     def test_get_vnc_console_with_password(self):
         self.flags(vnc_password='vmware', group='vmware')
         self._test_get_vnc_console()
+
+    def test_get_vnc_console_noport(self):
+        self._create_vm()
+        fake_vm = vmwareapi_fake._get_objects("VirtualMachine").objects[0]
+        self.assertRaises(exception.ConsoleTypeUnavailable,
+                          self.conn.get_vnc_console,
+                          self.instance)
 
     def test_host_ip_addr(self):
         self.assertEquals(self.conn.get_host_ip_addr(), "test_url")
@@ -1092,6 +1208,7 @@ class VMwareAPIHostTestCase(test.NoDBTestCase):
         self.assertEquals(stats['disk_used'], 1024 - 500)
         self.assertEquals(stats['host_memory_total'], 1024)
         self.assertEquals(stats['host_memory_free'], 1024 - 500)
+        self.assertEquals(stats['hypervisor_version'], 5000000)
         supported_instances = [('i686', 'vmware', 'hvm'),
                                ('x86_64', 'vmware', 'hvm')]
         self.assertEquals(stats['supported_instances'], supported_instances)
@@ -1161,7 +1278,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         self.assertEquals(stats['memory_mb'], 1000)
         self.assertEquals(stats['memory_mb_used'], 500)
         self.assertEquals(stats['hypervisor_type'], 'VMware vCenter Server')
-        self.assertEquals(stats['hypervisor_version'], '5.1.0')
+        self.assertEquals(stats['hypervisor_version'], 5001000)
         self.assertEquals(stats['hypervisor_hostname'], self.node_name)
         self.assertEquals(stats['cpu_info'], jsonutils.dumps(cpu_info))
         self.assertEquals(stats['supported_instances'],

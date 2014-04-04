@@ -1267,6 +1267,10 @@ def _create_veth_pair(dev1_name, dev2_name):
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
         utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
                       run_as_root=True)
+        if CONF.network_device_mtu:
+            utils.execute('ip', 'link', 'set', dev, 'mtu',
+                          CONF.network_device_mtu, run_as_root=True,
+                          check_exit_code=[0, 2, 254])
 
 
 def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
@@ -1278,6 +1282,10 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
                   'external-ids:attached-mac=%s' % mac,
                   'external-ids:vm-uuid=%s' % instance_id,
                   run_as_root=True)
+    if CONF.network_device_mtu:
+        utils.execute('ip', 'link', 'set', dev, 'mtu',
+                      CONF.network_device_mtu, run_as_root=True,
+                      check_exit_code=[0, 2, 254])
 
 
 def delete_ovs_vif_port(bridge, dev):
@@ -1711,7 +1719,8 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                      run_as_root=True)
             if CONF.network_device_mtu:
                 _execute('ip', 'link', 'set', dev, 'mtu',
-                         CONF.network_device_mtu, run_as_root=True)
+                         CONF.network_device_mtu, run_as_root=True,
+                         check_exit_code=[0, 2, 254])
             _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the

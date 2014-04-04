@@ -20,6 +20,7 @@ import time
 
 from neutronclient.common import exceptions as neutron_client_exc
 from oslo.config import cfg
+import six
 
 from nova.compute import flavors
 from nova import conductor
@@ -371,7 +372,8 @@ class API(base.Base):
         if (not self.last_neutron_extension_sync or
             ((time.time() - self.last_neutron_extension_sync)
              >= CONF.neutron_extension_sync_interval)):
-            neutron = neutronv2.get_client(context.get_admin_context())
+            neutron = neutronv2.get_client(context.get_admin_context(),
+                                           admin=True)
             extensions_list = neutron.list_extensions()['extensions']
             self.last_neutron_extension_sync = time.time()
             self.extensions.clear()
@@ -456,8 +458,6 @@ class API(base.Base):
            and update cache.
         """
         result = self._get_instance_nw_info(context, instance, networks)
-        update_instance_info_cache(self, context, instance, result,
-                                   update_cells=False)
         return result
 
     def _get_instance_nw_info(self, context, instance, networks=None):
@@ -993,12 +993,15 @@ class API(base.Base):
         data = client.list_ports(**search_opts)
         ports = data.get('ports', [])
         nw_info = network_model.NetworkInfo()
+
+        # Unfortunately, this is sometimes in unicode and sometimes not
+        if isinstance(instance['info_cache']['network_info'], six.text_type):
+            ifaces = jsonutils.loads(instance['info_cache']['network_info'])
+        else:
+            ifaces = instance['info_cache']['network_info']
+
         if networks is None:
-            # retrieve networks from info_cache to get correct nic order
-            network_cache = self.conductor_api.instance_get_by_uuid(
-                context, instance['uuid'])['info_cache']['network_info']
-            network_cache = jsonutils.loads(network_cache)
-            net_ids = [iface['network']['id'] for iface in network_cache]
+            net_ids = [iface['network']['id'] for iface in ifaces]
             networks = self._get_available_networks(context,
                                                     instance['project_id'],
                                                     net_ids)
@@ -1006,14 +1009,6 @@ class API(base.Base):
         # ensure ports are in preferred network order, and filter out
         # those not attached to one of the provided list of networks
         else:
-
-            # Unfortunately, this is sometimes in unicode and sometimes not
-            if isinstance(instance['info_cache']['network_info'], unicode):
-                ifaces = jsonutils.loads(
-                    instance['info_cache']['network_info'])
-            else:
-                ifaces = instance['info_cache']['network_info']
-
             # Include existing interfaces so they are not removed from the db.
             # Needed when interfaces are added to existing instances.
             for iface in ifaces:

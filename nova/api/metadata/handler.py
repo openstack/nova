@@ -48,7 +48,7 @@ metadata_proxy_opts = [
      cfg.StrOpt(
          'neutron_metadata_proxy_shared_secret',
          default='',
-         deprecated_name='quantum_metadata_proxy_shared_secret',
+         deprecated_name='quantum_metadata_proxy_shared_secret', secret=True,
          help='Shared secret to validate proxies Neutron metadata requests')
 ]
 

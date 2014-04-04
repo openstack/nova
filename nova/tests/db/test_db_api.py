@@ -156,6 +156,9 @@ class DecoratorTestCase(test.TestCase):
     def test_require_admin_context_decorator_wraps_functions_properly(self):
         self._test_decorator_wraps_helper(sqlalchemy_api.require_admin_context)
 
+    def test_require_deadlock_retry_wraps_functions_properly(self):
+        self._test_decorator_wraps_helper(sqlalchemy_api._retry_on_deadlock)
+
 
 def _get_fake_aggr_values():
     return {'name': 'fake_aggregate'}
@@ -1470,6 +1473,23 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         result = db.instance_get_all_by_filters(self.ctxt,
                                                 {'display_name': 't.*st.'})
         self._assertEqualListsOfInstances(result, [i1, i2])
+
+    def test_instance_get_all_by_filters_changes_since(self):
+        i1 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:25.000000')
+        i2 = self.create_instance_with_args(updated_at=
+                                            '2013-12-05T15:03:26.000000')
+        changes_since = iso8601.parse_date('2013-12-05T15:03:25.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-since':
+                                                 changes_since})
+        self._assertEqualListsOfInstances([i1, i2], result)
+
+        changes_since = iso8601.parse_date('2013-12-05T15:03:26.000000')
+        result = db.instance_get_all_by_filters(self.ctxt,
+                                                {'changes-since':
+                                                 changes_since})
+        self._assertEqualListsOfInstances([i2], result)
 
     def test_instance_get_all_by_filters_exact_match(self):
         instance = self.create_instance_with_args(host='host1')

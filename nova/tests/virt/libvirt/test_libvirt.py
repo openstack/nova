@@ -339,6 +339,16 @@ class FakeVolumeDriver(object):
     def get_xml(self, *args):
         return ""
 
+    def connect_volume(self, *args):
+        """Connect the volume to a fake device."""
+        conf = vconfig.LibvirtConfigGuestDisk()
+        conf.source_type = "network"
+        conf.source_protocol = "fake"
+        conf.source_name = "fake"
+        conf.target_dev = "fake"
+        conf.target_bus = "fake"
+        return conf
+
 
 class FakeConfigGuestDisk(object):
     def __init__(self, *args, **kwargs):
@@ -389,6 +399,9 @@ class LibvirtConnTestCase(test.TestCase):
             pass
 
         self.stubs.Set(libvirt_driver.disk, 'extend', fake_extend)
+
+        self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
+                       imagebackend.Image._get_driver_format)
 
         class FakeConn():
             def getCapabilities(self):
@@ -5080,7 +5093,7 @@ class LibvirtConnTestCase(test.TestCase):
 
             def vcpus(self):
                 if self._vcpus is None:
-                    return None
+                    raise libvirt.libvirtError("fake-error")
                 else:
                     return ([1] * self._vcpus, [True] * self._vcpus)
 
@@ -5548,6 +5561,106 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertEqual('foo', conn.get_hypervisor_hostname())
         self.assertEqual('foo', conn.get_hypervisor_hostname())
+
+    def test_post_live_migration_at_destination_with_block_device_info(self):
+        # Preparing mocks
+        dummyxml = ("<domain type='kvm'><name>instance-00000001</name>"
+                    "<devices>"
+                    "<graphics type='vnc' port='5900'/>"
+                    "</devices></domain>")
+        mock_domain = self.mox.CreateMock(libvirt.virDomain)
+        self.mox.StubOutWithMock(mock_domain, "XMLDesc")
+        mock_domain.XMLDesc(0).AndReturn(dummyxml)
+        self.resultXML = None
+
+        def fake_none(*args, **kwargs):
+            return
+
+        def fake_getLibVersion():
+            return 9007
+
+        def fake_getCapabilities():
+            return """
+            <capabilities>
+                <host>
+                    <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                    <cpu>
+                      <arch>x86_64</arch>
+                      <model>Penryn</model>
+                      <vendor>Intel</vendor>
+                      <topology sockets='1' cores='2' threads='1'/>
+                      <feature name='xtpr'/>
+                    </cpu>
+                </host>
+            </capabilities>
+            """
+
+        def fake_to_xml(context, instance, network_info, disk_info,
+                        image_meta=None, rescue=None,
+                        block_device_info=None, write_to_disk=False):
+            conf = conn.get_guest_config(instance, network_info, image_meta,
+                                         disk_info, rescue, block_device_info)
+            self.resultXML = conf.to_xml()
+            return self.resultXML
+
+        def fake_lookup_name(instance_name):
+            return mock_domain
+
+        def fake_defineXML(xml):
+            return
+
+        def fake_baselineCPU(cpu, flag):
+            return """<cpu mode='custom' match='exact'>
+                        <model fallback='allow'>Westmere</model>
+                        <vendor>Intel</vendor>
+                        <feature policy='require' name='aes'/>
+                      </cpu>
+                   """
+
+        network_info = _fake_network_info(self.stubs, 1)
+        self.create_fake_libvirt_mock(getLibVersion=fake_getLibVersion,
+                                      getCapabilities=fake_getCapabilities,
+                                      getVersion=lambda: 1005001)
+        instance_ref = self.test_instance
+        instance_ref['image_ref'] = 123456  # we send an int to test sha1 call
+        instance_type = db.flavor_get(self.context,
+                                             instance_ref['instance_type_id'])
+        sys_meta = flavors.save_flavor_info({}, instance_type)
+        instance_ref['system_metadata'] = sys_meta
+        instance = db.instance_create(self.context, instance_ref)
+
+        self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
+        libvirt_driver.LibvirtDriver._conn.listDefinedDomains = lambda: []
+        libvirt_driver.LibvirtDriver._conn.getCapabilities = \
+                                                        fake_getCapabilities
+        libvirt_driver.LibvirtDriver._conn.getVersion = lambda: 1005001
+        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup_name
+        libvirt_driver.LibvirtDriver._conn.defineXML = fake_defineXML
+        libvirt_driver.LibvirtDriver._conn.baselineCPU = fake_baselineCPU
+
+        self.mox.ReplayAll()
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.stubs.Set(conn,
+                       'to_xml',
+                       fake_to_xml)
+        self.stubs.Set(conn,
+                       '_lookup_by_name',
+                       fake_lookup_name)
+        block_device_info = {'block_device_mapping': [
+                    {'guest_format': None,
+                     'boot_index': 0,
+                     'mount_device': '/dev/vda',
+                     'connection_info':
+                        {'driver_volume_type': 'iscsi'},
+                     'disk_bus': 'virtio',
+                     'device_type': 'disk',
+                     'delete_on_termination': False}
+                    ]}
+        conn.post_live_migration_at_destination(self.context, instance,
+                                        network_info, True,
+                                        block_device_info=block_device_info)
+        self.assertTrue('fake' in self.resultXML)
 
 
 class HostStateTestCase(test.TestCase):

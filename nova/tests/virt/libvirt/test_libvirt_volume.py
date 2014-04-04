@@ -441,6 +441,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         connection_info['data']['device_path'] = mpdev_filepath
         target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        self.stubs.Set(libvirt_driver,
+                       '_get_target_portals_from_iscsiadm_output',
+                       lambda x: [[self.location, self.iqn]])
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
@@ -462,6 +465,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
         mpdev_filepath = '/dev/mapper/foo'
         target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        self.stubs.Set(libvirt_driver,
+                       '_get_target_portals_from_iscsiadm_output',
+                       lambda x: [['fake_portal1', 'fake_iqn1']])
         conf = libvirt_driver.connect_volume(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
@@ -487,6 +493,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             }
         target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        self.stubs.Set(libvirt_driver,
+                       '_get_target_portals_from_iscsiadm_output',
+                       lambda x: [[location, iqn]])
         conf = libvirt_driver.connect_volume(connection_info, disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)
@@ -517,6 +526,9 @@ class LibvirtVolumeTestCase(test.NoDBTestCase):
             }
         target_portals = ['fake_portal1', 'fake_portal2']
         libvirt_driver._get_multipath_device_name = lambda x: mpdev_filepath
+        self.stubs.Set(libvirt_driver,
+                       '_get_target_portals_from_iscsiadm_output',
+                       lambda x: [['fake_portal1', 'fake_iqn1']])
         conf = libvirt_driver.connect_volume(connection_info, disk_info)
         tree = conf.format_dom()
         self.assertEqual(tree.find('./source').get('dev'), mpdev_filepath)

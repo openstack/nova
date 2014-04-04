@@ -2351,8 +2351,10 @@ class ComputeManager(manager.SchedulerDependentManager):
             msg = _("Instance disappeared during snapshot")
             LOG.debug(msg, instance=instance)
         except exception.ImageNotFound:
-            msg = _("Image not found")
-            LOG.debug(msg, instance=instance)
+            instance.task_state = None
+            instance.save()
+            msg = _("Image not found during snapshot")
+            LOG.warn(msg, instance=instance)
         except exception.UnexpectedTaskStateError as e:
             actual_task_state = e.kwargs.get('actual', None)
             if actual_task_state == 'deleting':
@@ -4763,7 +4765,6 @@ class ComputeManager(manager.SchedulerDependentManager):
                         vm_states.RESCUED,
                         vm_states.RESIZED,
                         vm_states.SUSPENDED,
-                        vm_states.PAUSED,
                         vm_states.ERROR):
             # TODO(maoy): we ignore these vm_state for now.
             pass
@@ -4821,6 +4822,17 @@ class ComputeManager(manager.SchedulerDependentManager):
                     # NOTE(russellb) Force the stop, because normally the
                     # compute API would not allow an attempt to stop a stopped
                     # instance.
+                    self.compute_api.force_stop(context, db_instance)
+                except Exception:
+                    LOG.exception(_("error during stop() in "
+                                    "sync_power_state."),
+                                  instance=db_instance)
+        elif vm_state == vm_states.PAUSED:
+            if vm_power_state in (power_state.SHUTDOWN,
+                                  power_state.CRASHED):
+                LOG.warn(_("Paused instance shutdown by itself. Calling "
+                           "the stop API."), instance=db_instance)
+                try:
                     self.compute_api.force_stop(context, db_instance)
                 except Exception:
                     LOG.exception(_("error during stop() in "

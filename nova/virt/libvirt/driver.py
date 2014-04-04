@@ -3445,10 +3445,12 @@ class LibvirtDriver(driver.ComputeDriver):
         for dom_id in dom_ids:
             try:
                 dom = self._lookup_by_id(dom_id)
-                vcpus = dom.vcpus()
-                if vcpus is None:
-                    LOG.debug(_("couldn't obtain the vpu count from domain id:"
-                                " %s") % dom_id)
+                try:
+                    vcpus = dom.vcpus()
+                except libvirt.libvirtError as e:
+                    LOG.warn(_("couldn't obtain the vpu count from domain id:"
+                               " %(id)s, exception: %(ex)s") %
+                               {"id": dom_id, "ex": e})
                 else:
                     total += len(vcpus[1])
             except exception.InstanceNotFound:
@@ -4292,10 +4294,11 @@ class LibvirtDriver(driver.ComputeDriver):
         if instance["name"] not in dom_list:
             # In case of block migration, destination does not have
             # libvirt.xml
-            disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
-                                                instance)
+            disk_info = blockinfo.get_disk_info(
+                CONF.libvirt_type, instance, block_device_info)
             self.to_xml(context, instance, network_info, disk_info,
-                        block_device_info, write_to_disk=True)
+                        block_device_info=block_device_info,
+                        write_to_disk=True)
             # libvirt.xml should be made by to_xml(), but libvirt
             # does not accept to_xml() result, since uuid is not
             # included in to_xml() result.
@@ -4756,7 +4759,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _delete_instance_files(self, instance):
         # NOTE(mikal): a shim to handle this file not using instance objects
         # everywhere. Remove this when that conversion happens.
-        context = nova_context.get_admin_context()
+        context = nova_context.get_admin_context(read_deleted='yes')
         inst_obj = instance_obj.Instance.get_by_uuid(context, instance['uuid'])
 
         # NOTE(mikal): this code should be pushed up a layer when this shim is

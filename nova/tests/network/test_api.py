@@ -24,11 +24,13 @@ import mox
 
 from nova.compute import flavors
 from nova import context
+from nova import db
 from nova import exception
 from nova import network
 from nova.network import api
 from nova.network import floating_ips
 from nova.network import rpcapi as network_rpcapi
+from nova.network.model import NetworkInfo, VIF
 from nova import policy
 from nova import test
 from nova import utils
@@ -128,6 +130,14 @@ class ApiTestCase(test.TestCase):
 
         self.stubs.Set(self.network_api.db, 'instance_info_cache_update',
                        fake_instance_info_cache_update)
+
+        def fake_update_instance_cache_with_nw_info(api, context, instance,
+                                                    nw_info=None,
+                                                    update_cells=True):
+            return
+
+        self.stubs.Set(api, "update_instance_cache_with_nw_info",
+                       fake_update_instance_cache_with_nw_info)
 
         self.network_api.associate_floating_ip(self.context,
                                                new_instance,
@@ -272,3 +282,57 @@ class ApiTestCase(test.TestCase):
         self.stubs.Set(self.network_api, 'get', fake_get)
 
         self.network_api.associate(self.context, FAKE_UUID, project=None)
+
+
+class TestUpdateInstanceCache(test.TestCase):
+    def setUp(self):
+        super(TestUpdateInstanceCache, self).setUp()
+        self.context = context.get_admin_context()
+        self.instance = {'uuid': FAKE_UUID}
+        self.impl = self.mox.CreateMock(api.API)
+        self.nw_info = NetworkInfo([VIF(id='super_vif')])
+        self.is_nw_info = mox.Func(lambda d: 'super_vif' in d['network_info'])
+
+    def expect_cache_update(self, nw_info):
+        self.mox.StubOutWithMock(db, 'instance_info_cache_update')
+        db.instance_info_cache_update(self.context,
+                                      self.instance['uuid'],
+                                      nw_info)
+
+    def test_update_nw_info_none(self):
+        self.impl._get_instance_nw_info(self.context, self.instance)\
+                 .AndReturn(self.nw_info)
+        self.expect_cache_update(self.is_nw_info)
+        self.mox.ReplayAll()
+        api.update_instance_cache_with_nw_info(self.impl, self.context,
+                                               self.instance, None)
+
+    def test_update_nw_info_one_network(self):
+        self.expect_cache_update(self.is_nw_info)
+        self.mox.ReplayAll()
+        api.update_instance_cache_with_nw_info(self.impl, self.context,
+                                               self.instance, self.nw_info)
+
+    def test_update_nw_info_empty_list(self):
+        self.expect_cache_update({'network_info': '[]'})
+        self.mox.ReplayAll()
+        api.update_instance_cache_with_nw_info(self.impl, self.context,
+                                               self.instance, NetworkInfo([]))
+
+    def test_decorator_return_object(self):
+        @api.refresh_cache
+        def func(self, context, instance):
+            return NetworkInfo([])
+        self.expect_cache_update({'network_info': '[]'})
+        self.mox.ReplayAll()
+        func(self.impl, self.context, self.instance)
+
+    def test_decorator_return_none(self):
+        @api.refresh_cache
+        def func(self, context, instance):
+            pass
+        self.impl._get_instance_nw_info(self.context, self.instance)\
+                 .AndReturn(self.nw_info)
+        self.expect_cache_update(self.is_nw_info)
+        self.mox.ReplayAll()
+        func(self.impl, self.context, self.instance)

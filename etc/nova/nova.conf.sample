@@ -2612,6 +2612,14 @@
 # (integer value)
 #volume_attach_retry_interval=5
 
+# The number of times to retry checking for a disk mounted via
+# iSCSI. (integer value)
+#mounted_disk_query_retry_count=10
+
+# Interval between checks for a mounted iSCSI disk, in
+# seconds. (integer value)
+#mounted_disk_query_retry_interval=5
+
 
 [zookeeper]
 

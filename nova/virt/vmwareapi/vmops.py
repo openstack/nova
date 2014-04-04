@@ -142,8 +142,18 @@ class VMwareVMOps(object):
                 datacenter=dc_ref,
                 newCapacityKb=requested_size,
                 eagerZero=False)
-        self._session._wait_for_task(instance['uuid'],
-                                     vmdk_extend_task)
+        try:
+            self._session._wait_for_task(instance['uuid'],
+                                         vmdk_extend_task)
+        except Exception as e:
+            with excutils.save_and_reraise_exception():
+                LOG.error(_('Extending virtual disk failed with error: %s'),
+                          e, instance=instance)
+                # Clean up files created during the extend operation
+                files = [name.replace(".vmdk", "-flat.vmdk"), name]
+                for file in files:
+                    self._delete_datastore_file(instance, file, dc_ref)
+
         LOG.debug(_("Extended root virtual disk"))
 
     def _delete_datastore_file(self, instance, datastore_path, dc_ref):
@@ -299,8 +309,8 @@ class VMwareVMOps(object):
 
         # Set the vnc configuration of the instance, vnc port starts from 5900
         if CONF.vnc_enabled:
-            vnc_port = self._get_vnc_port(vm_ref)
             vnc_pass = CONF.vmware.vnc_password or ''
+            vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port, vnc_pass)
 
         def _create_virtual_disk():
@@ -683,7 +693,7 @@ class VMwareVMOps(object):
                         "VirtualMachine", "config.hardware.device")
             (vmdk_file_path_before_snapshot, controller_key, adapter_type,
              disk_type, unit_number) = vm_util.get_vmdk_path_and_adapter_type(
-                                        hardware_devices)
+                                    hardware_devices, uuid=instance['uuid'])
             datastore_name = vm_util.split_datastore_path(
                                         vmdk_file_path_before_snapshot)[0]
             os_type = self._session._call_method(vim_util,
@@ -785,6 +795,7 @@ class VMwareVMOps(object):
                 image_id,
                 instance,
                 os_type=os_type,
+                disk_type="preallocated",
                 adapter_type=adapter_type,
                 image_version=1,
                 host=self._session._host_ip,
@@ -1038,8 +1049,10 @@ class VMwareVMOps(object):
         hardware_devices = self._session._call_method(vim_util,
                         "get_dynamic_property", vm_ref,
                         "VirtualMachine", "config.hardware.device")
-        vmdk_path, controller_key, adapter_type, disk_type, unit_number \
-            = vm_util.get_vmdk_path_and_adapter_type(hardware_devices)
+        (vmdk_path, controller_key, adapter_type, disk_type,
+         unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+                hardware_devices, uuid=instance['uuid'])
+
         # Figure out the correct unit number
         unit_number = unit_number + 1
         rescue_vm_ref = vm_util.get_vm_ref_from_uuid(self._session,
@@ -1055,6 +1068,14 @@ class VMwareVMOps(object):
 
     def unrescue(self, instance):
         """Unrescue the specified instance."""
+        # Get the original vmdk_path
+        vm_ref = vm_util.get_vm_ref(self._session, instance)
+        hardware_devices = self._session._call_method(vim_util,
+                        "get_dynamic_property", vm_ref,
+                        "VirtualMachine", "config.hardware.device")
+        (vmdk_path, controller_key, adapter_type, disk_type,
+         unit_number) = vm_util.get_vmdk_path_and_adapter_type(
+                hardware_devices, uuid=instance['uuid'])
         r_instance = copy.deepcopy(instance)
         r_instance['name'] = r_instance['name'] + self._rescue_suffix
         r_instance['uuid'] = r_instance['uuid'] + self._rescue_suffix
@@ -1340,9 +1361,17 @@ class VMwareVMOps(object):
     def get_vnc_console(self, instance):
         """Return connection info for a vnc console."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
+        opt_value = self._session._call_method(vim_util,
+                               'get_dynamic_property',
+                               vm_ref, 'VirtualMachine',
+                               vm_util.VNC_CONFIG_KEY)
+        if opt_value:
+            port = int(opt_value.value)
+        else:
+            raise exception.ConsoleTypeUnavailable(console_type='vnc')
 
         return {'host': CONF.vmware.host_ip,
-                'port': self._get_vnc_port(vm_ref),
+                'port': port,
                 'internal_access_path': None}
 
     def get_vnc_console_vcenter(self, instance):
@@ -1364,14 +1393,6 @@ class VMwareVMOps(object):
                 {'uuid': instance['name'], 'host_name': host_name})
 
         return vnc_console
-
-    @staticmethod
-    def _get_vnc_port(vm_ref):
-        """Return VNC port for an VM."""
-        vm_id = int(vm_ref.value.replace('vm-', ''))
-        port = CONF.vmware.vnc_port + vm_id % CONF.vmware.vnc_port_total
-
-        return port
 
     @staticmethod
     def _get_machine_id_str(network_info):

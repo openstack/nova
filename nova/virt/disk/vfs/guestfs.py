@@ -122,13 +122,18 @@ class VFSGuestFS(vfs.VFS):
 
             self.handle.aug_init("/", 0)
         except RuntimeError as e:
-            # dereference object and implicitly close()
-            self.handle = None
+            # explicitly teardown instead of implicit close()
+            # to prevent orphaned VMs in cases when an implicit
+            # close() is not enough
+            self.teardown()
             raise exception.NovaException(
                 _("Error mounting %(imgfile)s with libguestfs (%(e)s)") %
                 {'imgfile': self.imgfile, 'e': e})
         except Exception:
-            self.handle = None
+            # explicitly teardown instead of implicit close()
+            # to prevent orphaned VMs in cases when an implicit
+            # close() is not enough
+            self.teardown()
             raise
 
     def teardown(self):

@@ -285,21 +285,46 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual("ns0:VirtualLsiLogicSASController",
                           config_spec.device.obj_name)
 
-    def test_get_vmdk_path_and_adapter_type(self):
+    def _vmdk_path_and_adapter_type_devices(self, filename, parent=None):
         # Test the adapter_type returned for a lsiLogic sas controller
         controller_key = 1000
-        filename = '[test_datastore] test_file.vmdk'
         disk = fake.VirtualDisk()
         disk.controllerKey = controller_key
         disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
         disk_backing.fileName = filename
+        if parent:
+            disk_backing.parent = parent
         disk.backing = disk_backing
         controller = fake.VirtualLsiLogicSASController()
         controller.key = controller_key
         devices = [disk, controller]
+        return devices
+
+    def test_get_vmdk_path_and_adapter_type(self):
+        filename = '[test_datastore] test_file.vmdk'
+        devices = self._vmdk_path_and_adapter_type_devices(filename)
         vmdk_info = vm_util.get_vmdk_path_and_adapter_type(devices)
         adapter_type = vmdk_info[2]
         self.assertEqual('lsiLogicsas', adapter_type)
+        self.assertEqual(vmdk_info[0], filename)
+
+    def test_get_vmdk_path_and_adapter_type_with_match(self):
+        n_filename = '[test_datastore] uuid/uuid.vmdk'
+        devices = self._vmdk_path_and_adapter_type_devices(n_filename)
+        vmdk_info = vm_util.get_vmdk_path_and_adapter_type(
+                devices, uuid='uuid')
+        adapter_type = vmdk_info[2]
+        self.assertEqual('lsiLogicsas', adapter_type)
+        self.assertEqual(n_filename, vmdk_info[0])
+
+    def test_get_vmdk_path_and_adapter_type_with_nomatch(self):
+        n_filename = '[test_datastore] diuu/diuu.vmdk'
+        devices = self._vmdk_path_and_adapter_type_devices(n_filename)
+        vmdk_info = vm_util.get_vmdk_path_and_adapter_type(
+                devices, uuid='uuid')
+        adapter_type = vmdk_info[2]
+        self.assertEqual('lsiLogicsas', adapter_type)
+        self.assertIsNone(vmdk_info[0])
 
     def test_get_vmdk_adapter_type(self):
         # Test for the adapter_type to be used in vmdk descriptor
@@ -347,6 +372,31 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected = re.sub(r'\s+', '', expected)
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
+
+    def _create_fake_vms(self):
+        fake_vms = fake.FakeRetrieveResult()
+        OptionValue = collections.namedtuple('OptionValue', ['key', 'value'])
+        for i in range(10):
+            vm = fake.ManagedObject()
+            opt_val = OptionValue(key='', value=5900 + i)
+            vm.set(vm_util.VNC_CONFIG_KEY, opt_val)
+            fake_vms.add_object(vm)
+        return fake_vms
+
+    def test_get_vnc_port(self):
+        fake_vms = self._create_fake_vms()
+        self.flags(vnc_port=5900, group='vmware')
+        self.flags(vnc_port_total=10000, group='vmware')
+        actual = vm_util.get_vnc_port(fake_session(fake_vms))
+        self.assertEqual(actual, 5910)
+
+    def test_get_vnc_port_exhausted(self):
+        fake_vms = self._create_fake_vms()
+        self.flags(vnc_port=5900, group='vmware')
+        self.flags(vnc_port_total=10, group='vmware')
+        self.assertRaises(exception.ConsolePortRangeExhausted,
+                          vm_util.get_vnc_port,
+                          fake_session(fake_vms))
 
     def test_get_all_cluster_refs_by_name_none(self):
         fake_objects = fake.FakeRetrieveResult()
