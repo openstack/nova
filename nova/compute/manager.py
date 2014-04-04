@@ -487,7 +487,9 @@ class InstanceEvents(object):
         """
         @utils.synchronized(self._lock_name)
         def _clear_events():
-            return self._events.pop(instance.uuid, {})
+            # NOTE(danms): Use getitem syntax for the instance until
+            # all the callers are using objects
+            return self._events.pop(instance['uuid'], {})
         return _clear_events()
 
 
@@ -4544,7 +4546,7 @@ class ComputeManager(manager.Manager):
         and mainly updating database record.
 
         :param ctxt: security context
-        :param instance: Instance object
+        :param instance: instance dict
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
         :param migrate_data: if not None, it is a dict which has data
@@ -4555,7 +4557,7 @@ class ComputeManager(manager.Manager):
                  instance=instance)
 
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
-                ctxt, instance.uuid)
+                ctxt, instance['uuid'])
 
         # Cleanup source host post live-migration
         block_device_info = self._get_instance_volume_block_device_info(
@@ -4634,10 +4636,10 @@ class ComputeManager(manager.Manager):
         if CONF.vnc_enabled or CONF.spice.enabled or CONF.rdp.enabled:
             if CONF.cells.enable:
                 self.cells_rpcapi.consoleauth_delete_tokens(ctxt,
-                        instance.uuid)
+                        instance['uuid'])
             else:
                 self.consoleauth_rpcapi.delete_tokens_for_instance(ctxt,
-                        instance.uuid)
+                        instance['uuid'])
 
     @object_compat
     @wrap_exception()
