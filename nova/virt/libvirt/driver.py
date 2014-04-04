@@ -924,7 +924,8 @@ class LibvirtDriver(driver.ComputeDriver):
         return connector
 
     def _cleanup_resize(self, instance, network_info):
-        target = libvirt_utils.get_instance_path(instance) + "_resize"
+        inst_base = libvirt_utils.get_instance_path(instance)
+        target = inst_base + "_resize"
         if os.path.exists(target):
             shutil.rmtree(target)
 
@@ -932,6 +933,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self._undefine_domain(instance)
             self.unplug_vifs(instance, network_info)
             self.firewall_driver.unfilter_instance(instance, network_info)
+            shutil.rmtree(inst_base)
 
     def volume_driver_method(self, method_name, connection_info,
                              *args, **kwargs):
@@ -3413,19 +3415,26 @@ class LibvirtDriver(driver.ComputeDriver):
         """Manage the local cache of images."""
         self.image_cache_manager.verify_base_images(context, all_instances)
 
-    def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize):
+    def _cleanup_remote_migration(self, dest, inst_base, inst_base_resize,
+                                  resize_data=None):
         """Used only for cleanup in case migrate_disk_and_power_off fails."""
+
+        is_volume_backed = False
+        if resize_data:
+            is_volume_backed = resize_data.get('is_volume_backed', False)
+
         try:
             if os.path.exists(inst_base_resize):
                 utils.execute('rm', '-rf', inst_base)
                 utils.execute('mv', inst_base_resize, inst_base)
-                utils.execute('ssh', dest, 'rm', '-rf', inst_base)
+                if not is_volume_backed:
+                    utils.execute('ssh', dest, 'rm', '-rf', inst_base)
         except Exception:
             pass
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    instance_type, network_info,
-                                   block_device_info=None):
+                                   block_device_info=None, resize_data=None):
         LOG.debug(_("Starting migrate_disk_and_power_off"),
                    instance=instance)
         disk_info_text = self.get_instance_disk_info(instance['name'])
@@ -3448,6 +3457,11 @@ class LibvirtDriver(driver.ComputeDriver):
         same_host = (dest == self.get_host_ip_addr())
         inst_base = libvirt_utils.get_instance_path(instance)
         inst_base_resize = inst_base + "_resize"
+
+        is_volume_backed = False
+        if resize_data:
+            is_volume_backed = resize_data.get('is_volume_backed', False)
+
         try:
             utils.execute('mv', inst_base, inst_base_resize)
             if same_host:
@@ -3456,28 +3470,29 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 utils.execute('ssh', dest, 'mkdir', '-p', inst_base)
             for info in disk_info:
-                # assume inst_base == dirname(info['path'])
-                img_path = info['path']
-                fname = os.path.basename(img_path)
-                from_path = os.path.join(inst_base_resize, fname)
-                if info['type'] == 'qcow2' and info['backing_file']:
-                    tmp_path = from_path + "_rbase"
-                    # merge backing file
-                    utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                                  '-O', 'qcow2', from_path, tmp_path)
+                if not is_volume_backed:
+                    # assume inst_base == dirname(info['path'])
+                    img_path = info['path']
+                    fname = os.path.basename(img_path)
+                    from_path = os.path.join(inst_base_resize, fname)
+                    if info['type'] == 'qcow2' and info['backing_file']:
+                        tmp_path = from_path + "_rbase"
+                        # merge backing file
+                        utils.execute('qemu-img', 'convert', '-f', 'qcow2',
+                                      '-O', 'qcow2', from_path, tmp_path)
 
-                    if same_host:
-                        utils.execute('mv', tmp_path, img_path)
-                    else:
-                        libvirt_utils.copy_image(tmp_path, img_path, host=dest)
-                        utils.execute('rm', '-f', tmp_path)
+                        if same_host:
+                            utils.execute('mv', tmp_path, img_path)
+                        else:
+                            libvirt_utils.copy_image(tmp_path, img_path, host=dest)
+                            utils.execute('rm', '-f', tmp_path)
 
-                else:  # raw or qcow2 with no backing file
-                    libvirt_utils.copy_image(from_path, img_path, host=dest)
+                    else:  # raw or qcow2 with no backing file
+                        libvirt_utils.copy_image(from_path, img_path, host=dest)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self._cleanup_remote_migration(dest, inst_base,
-                                               inst_base_resize)
+                                               inst_base_resize, resize_data)
 
         return disk_info_text
 
@@ -3490,8 +3505,12 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
-                         block_device_info=None):
+                         block_device_info=None, resize_data=None):
         LOG.debug(_("Starting finish_migration"), instance=instance)
+
+        is_volume_backed = False
+        if resize_data:
+            is_volume_backed = resize_data.get('is_volume_backed', False)
 
         # resize disks. only "disk" and "disk.local" are necessary.
         disk_info = jsonutils.loads(disk_info)
@@ -3507,25 +3526,26 @@ class LibvirtDriver(driver.ComputeDriver):
 
             # If we have a non partitioned image that we can extend
             # then ensure we're in 'raw' format so we can extend file system.
-            fmt = info['type']
-            if (size and fmt == 'qcow2' and
-                disk.can_resize_fs(info['path'], size, use_cow=True)):
-                path_raw = info['path'] + '_raw'
-                utils.execute('qemu-img', 'convert', '-f', 'qcow2',
-                              '-O', 'raw', info['path'], path_raw)
-                utils.execute('mv', path_raw, info['path'])
-                fmt = 'raw'
+            if not is_volume_backed:
+                fmt = info['type']
+                if (size and fmt == 'qcow2' and
+                    disk.can_resize_fs(info['path'], size, use_cow=True)):
+                    path_raw = info['path'] + '_raw'
+                    utils.execute('qemu-img', 'convert', '-f', 'qcow2',
+                                  '-O', 'raw', info['path'], path_raw)
+                    utils.execute('mv', path_raw, info['path'])
+                    fmt = 'raw'
 
-            if size:
-                disk.extend(info['path'], size)
+                if size:
+                    disk.extend(info['path'], size)
 
-            if fmt == 'raw' and CONF.use_cow_images:
-                # back to qcow2 (no backing_file though) so that snapshot
-                # will be available
-                path_qcow = info['path'] + '_qcow'
-                utils.execute('qemu-img', 'convert', '-f', 'raw',
-                              '-O', 'qcow2', info['path'], path_qcow)
-                utils.execute('mv', path_qcow, info['path'])
+                if fmt == 'raw' and CONF.use_cow_images:
+                    # back to qcow2 (no backing_file though) so that snapshot
+                    # will be available
+                    path_qcow = info['path'] + '_qcow'
+                    utils.execute('qemu-img', 'convert', '-f', 'raw',
+                                  '-O', 'qcow2', info['path'], path_qcow)
+                    utils.execute('mv', path_qcow, info['path'])
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt_type,
                                             instance,

@@ -2390,10 +2390,19 @@ class ComputeManager(manager.SchedulerDependentManager):
             block_device_info = self._get_instance_volume_block_device_info(
                                 context, instance)
 
+            resize_data = {}
+            capi = self.conductor_api
+            bdms = capi.block_device_mapping_get_all_by_instance(context, instance)
+            is_volume_backed = self.compute_api.is_volume_backed_instance(context,
+                                                                          instance,
+                                                                          bdms)
+
+            resize_data['is_volume_backed'] = is_volume_backed
+
             disk_info = self.driver.migrate_disk_and_power_off(
                     context, instance, migration['dest_host'],
                     instance_type, self._legacy_nw_info(network_info),
-                    block_device_info)
+                    block_device_info, resize_data)
 
             self._terminate_volume_connections(context, instance)
 
@@ -2475,6 +2484,13 @@ class ComputeManager(manager.SchedulerDependentManager):
 
         bdms = self._refresh_block_device_connection_info(context, instance)
 
+        resize_data = {}
+        is_volume_backed = self.compute_api.is_volume_backed_instance(context,
+                                                                      instance,
+                                                                      bdms)
+
+        resize_data['is_volume_backed'] = is_volume_backed
+
         block_device_info = self._get_instance_volume_block_device_info(
                             context, instance, bdms=bdms)
 
@@ -2482,7 +2498,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                                      disk_info,
                                      self._legacy_nw_info(network_info),
                                      image, resize_instance,
-                                     block_device_info)
+                                     block_device_info, resize_data)
 
         migration = self.conductor_api.migration_update(context,
                 migration, 'finished')
