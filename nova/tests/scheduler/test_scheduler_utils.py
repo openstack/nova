@@ -215,3 +215,9 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                   '=',
                                   float,
                                   [('bar', -2.1)])
+
+    def test_validate_filters_configured(self):
+        self.flags(scheduler_default_filters='FakeFilter1,FakeFilter2')
+        self.assertTrue(scheduler_utils.validate_filter('FakeFilter1'))
+        self.assertTrue(scheduler_utils.validate_filter('FakeFilter2'))
+        self.assertFalse(scheduler_utils.validate_filter('FakeFilter3'))

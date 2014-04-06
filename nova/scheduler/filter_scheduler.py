@@ -61,6 +61,10 @@ class FilterScheduler(driver.Scheduler):
         self.options = scheduler_options.SchedulerOptions()
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.notifier = rpc.get_notifier('scheduler')
+        self._supports_affinity = scheduler_utils.validate_filter(
+            'ServerGroupAffinityFilter')
+        self._supports_anti_affinity = scheduler_utils.validate_filter(
+            'ServerGroupAntiAffinityFilter')
 
     # NOTE(alaski): Remove this method when the scheduler rpc interface is
     # bumped to 4.x as it is no longer used.
@@ -202,8 +206,7 @@ class FilterScheduler(driver.Scheduler):
         if pci_requests:
             filter_properties['pci_requests'] = pci_requests
 
-    @staticmethod
-    def _setup_instance_group(context, filter_properties):
+    def _setup_instance_group(self, context, filter_properties):
         update_group_hosts = False
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
         group_hint = scheduler_hints.get('group', None)
@@ -211,6 +214,16 @@ class FilterScheduler(driver.Scheduler):
             group = objects.InstanceGroup.get_by_hint(context, group_hint)
             policies = set(('anti-affinity', 'affinity'))
             if any((policy in policies) for policy in group.policies):
+                if ('affinity' in group.policies and
+                        not self._supports_affinity):
+                        msg = _("ServerGroupAffinityFilter not configured")
+                        LOG.error(msg)
+                        raise exception.NoValidHost(reason=msg)
+                if ('anti-affinity' in group.policies and
+                        not self._supports_anti_affinity):
+                        msg = _("ServerGroupAntiAffinityFilter not configured")
+                        LOG.error(msg)
+                        raise exception.NoValidHost(reason=msg)
                 update_group_hosts = True
                 filter_properties.setdefault('group_hosts', set())
                 user_hosts = set(filter_properties['group_hosts'])
