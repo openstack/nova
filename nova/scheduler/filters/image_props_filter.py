@@ -79,13 +79,6 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
         for supp_inst in supp_instances:
             if _compare_props(checked_img_props, supp_inst):
                 if _compare_product_version(hypervisor_version, image_props):
-                    LOG.debug(_("Instance properties %(image_props)s "
-                                "are satisfied by compute host hypervisor "
-                                "version %(hypervisor_version)s and "
-                                "supported instances %(supp_instances)s"),
-                              {'image_props': image_props,
-                               'supp_instances': supp_instances,
-                               'hypervisor_version': hypervisor_version})
                     return True
 
         LOG.debug(_("Instance contains properties %(image_props)s "
