@@ -441,6 +441,21 @@ class VirtualMachine(ManagedObject):
         """Called to reconfigure the VM. Actually customizes the property
         setting of the Virtual Machine object.
         """
+
+        if hasattr(val, 'name') and val.name:
+            self.set("name", val.name)
+
+        if hasattr(val, 'extraConfig'):
+            extraConfigs = _merge_extraconfig(
+                                    self.get("config.extraConfig").OptionValue,
+                                    val.extraConfig)
+            self.get("config.extraConfig").OptionValue = extraConfigs
+
+        if hasattr(val, 'instanceUuid') and val.instanceUuid is not None:
+            if val.instanceUuid == "":
+                val.instanceUuid = uuidutils.generate_uuid()
+            self.set("summary.config.instanceUuid", val.instanceUuid)
+
         try:
             if not hasattr(val, 'deviceChange'):
                 return
@@ -466,8 +481,7 @@ class VirtualMachine(ManagedObject):
             self.set("config.hardware.device", [disk, controller,
                                                   self.device[0]])
         except AttributeError:
-            # Case of Reconfig of VM to set extra params
-            self.set("config.extraConfig", val.extraConfig)
+            pass
 
 
 class Network(ManagedObject):
@@ -959,6 +973,19 @@ def _get_vm_mdo(vm_ref):
     return _db_content.get("VirtualMachine")[vm_ref]
 
 
+def _merge_extraconfig(existing, changes):
+    """Imposes the changes in extraConfig over the existing extraConfig."""
+    existing = existing or []
+    if (changes):
+        for c in changes:
+            if len([x for x in existing if x.key == c.key]) > 0:
+                extraConf = [x for x in existing if x.key == c.key][0]
+                extraConf.value = c.value
+            else:
+                existing.append(c)
+    return existing
+
+
 class FakeFactory(object):
     """Fake factory class for the suds client."""
 
@@ -1142,7 +1169,39 @@ class FakeVim(object):
 
     def _clone_vm(self, method, *args, **kwargs):
         """Fakes a VM clone."""
-        return self._just_return_task(method)
+        """Creates and registers a VM object with the Host System."""
+        source_vmref = args[0]
+        source_vm_mdo = _get_vm_mdo(source_vmref)
+        clone_spec = kwargs.get("spec")
+        ds = _db_content["Datastore"].keys()[0]
+        host = _db_content["HostSystem"].keys()[0]
+        vm_dict = {
+         "name": kwargs.get("name"),
+         "ds": source_vm_mdo.get("datastore"),
+         "runtime_host": source_vm_mdo.get("runtime.host"),
+         "powerstate": source_vm_mdo.get("runtime.powerState"),
+         "vmPathName": source_vm_mdo.get("config.files.vmPathName"),
+         "numCpu": source_vm_mdo.get("summary.config.numCpu"),
+         "mem": source_vm_mdo.get("summary.config.memorySizeMB"),
+         "extra_config": source_vm_mdo.get("config.extraConfig").OptionValue,
+         "virtual_device": source_vm_mdo.get("config.hardware.device"),
+         "instanceUuid": source_vm_mdo.get("summary.config.instanceUuid")}
+
+        if clone_spec.config is not None:
+            # Impose the config changes specified in the config property
+            if (hasattr(clone_spec.config, 'instanceUuid') and
+               clone_spec.config.instanceUuid is not None):
+                vm_dict["instanceUuid"] = clone_spec.config.instanceUuid
+
+            if hasattr(clone_spec.config, 'extraConfig'):
+                extraConfigs = _merge_extraconfig(vm_dict["extra_config"],
+                                                clone_spec.config.extraConfig)
+                vm_dict["extra_config"] = extraConfigs
+
+        virtual_machine = VirtualMachine(**vm_dict)
+        _create_object("VirtualMachine", virtual_machine)
+        task_mdo = create_task(method, "success")
+        return task_mdo.obj
 
     def _unregister_vm(self, method, *args, **kwargs):
         """Unregisters a VM from the Host System."""

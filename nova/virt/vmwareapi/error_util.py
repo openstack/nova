@@ -137,6 +137,10 @@ class UseLinkedCloneConfigurationFault(VMwareDriverConfigurationException):
     msg_fmt = _("No default value for use_linked_clone found.")
 
 
+class MissingParameter(VMwareDriverException):
+    msg_fmt = _("Missing parameter : %(param)s")
+
+
 class AlreadyExistsException(VMwareDriverException):
     msg_fmt = _("Resource already exists.")
     code = 409
