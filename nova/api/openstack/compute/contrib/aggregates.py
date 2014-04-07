@@ -147,6 +147,8 @@ class AggregateController(object):
             self.api.delete_aggregate(context, id)
         except exception.AggregateNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidAggregateAction as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
 
     def action(self, req, id, body):
         _actions = {
