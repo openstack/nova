@@ -42,7 +42,7 @@ FAKE_SERVICES = [dict(id=1, host='host1',
 FAKE_TASK_LOGS = [dict(id=1, host='host1'),
                   dict(id=2, host='host2')]
 
-
+@test.skip("test skippiing.")
 class CellsManagerClassTestCase(test.TestCase):
     """Test case for CellsManager class."""
 
