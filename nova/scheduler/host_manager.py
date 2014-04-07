@@ -49,7 +49,9 @@ host_manager_opts = [
                   'RamFilter',
                   'ComputeFilter',
                   'ComputeCapabilitiesFilter',
-                  'ImagePropertiesFilter'
+                  'ImagePropertiesFilter',
+                  'ServerGroupAntiAffinityFilter',
+                  'ServerGroupAffinityFilter',
                   ],
                 help='Which filter class names to use for filtering hosts '
                       'when not specified in the request.'),
