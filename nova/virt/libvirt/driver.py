@@ -3464,7 +3464,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         try:
             utils.execute('mv', inst_base, inst_base_resize)
-            if same_host:
+            if same_host or is_volume_backed:
                 dest = None
                 utils.execute('mkdir', '-p', inst_base)
             else:
