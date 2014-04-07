@@ -2518,18 +2518,23 @@ class LibvirtDriver(driver.ComputeDriver):
 
         image_type = CONF.libvirt.images_type
         if any((key, net, metadata, admin_pass, files)):
-            injection_path = self.image_backend.image(
+            injection_image = self.image_backend.image(
                 instance,
                 'disk' + suffix,
-                image_type).path
+                image_type)
             img_id = instance['image_ref']
 
             try:
-                disk.inject_data(injection_path,
-                                 key, net, metadata, admin_pass, files,
-                                 partition=target_partition,
-                                 use_cow=CONF.use_cow_images,
-                                 mandatory=('files',))
+                if injection_image.check_image_exists():
+                    disk.inject_data(injection_image.path,
+                                     key, net, metadata, admin_pass, files,
+                                     partition=target_partition,
+                                     use_cow=CONF.use_cow_images,
+                                     mandatory=('files',))
+                else:
+                    LOG.warning(_('Image %s not found on disk storage. '
+                                  'Continue without injecting data'),
+                                injection_image.path, instance=instance)
             except Exception as e:
                 with excutils.save_and_reraise_exception():
                     LOG.error(_('Error injecting data into image '
