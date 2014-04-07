@@ -56,10 +56,10 @@ class PciDevTracker(object):
         self.node_id = node_id
         self.stats = pci_stats.PciDeviceStats()
         if node_id:
-            self.pci_devs = pci_device.PciDeviceList.get_by_compute_node(
-                context, node_id)
+            self.pci_devs = list(pci_device.PciDeviceList.get_by_compute_node(
+                context, node_id))
         else:
-            self.pci_devs = pci_device.PciDeviceList()
+            self.pci_devs = []
         self._initial_instance_usage()
 
     def _initial_instance_usage(self):
@@ -123,8 +123,8 @@ class PciDevTracker(object):
             if dev.obj_what_changed():
                 dev.save(context)
 
-        self.pci_devs.objects = [dev for dev in self.pci_devs
-                                 if dev['status'] != 'deleted']
+        self.pci_devs = [dev for dev in self.pci_devs
+                         if dev['status'] != 'deleted']
 
     @property
     def pci_stats(self):
@@ -188,7 +188,7 @@ class PciDevTracker(object):
                     dev['address'] in new_addrs - exist_addrs]:
             dev['compute_node_id'] = self.node_id
             dev_obj = pci_device.PciDevice.create(dev)
-            self.pci_devs.objects.append(dev_obj)
+            self.pci_devs.append(dev_obj)
             self.stats.add_device(dev_obj)
 
     def _claim_instance(self, instance, prefix=''):
