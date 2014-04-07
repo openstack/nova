@@ -22,6 +22,7 @@ from oslo.vmware import vim_util as vutil
 
 from nova import exception
 from nova.i18n import _
+from nova.i18n import _LI
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -336,8 +337,8 @@ class VMwareVolumeOps(object):
         # Store the uuid of the volume_device
         self._update_volume_details(vm_ref, instance, data['volume_id'])
 
-        LOG.info(_("Mountpoint %(mountpoint)s attached to "
-                   "instance %(instance_name)s"),
+        LOG.info(_LI("Mountpoint %(mountpoint)s attached to "
+                     "vmdk instance %(instance_name)s"),
                  {'mountpoint': mountpoint, 'instance_name': instance_name},
                  instance=instance)
 
@@ -371,8 +372,8 @@ class VMwareVolumeOps(object):
         self.attach_disk_to_vm(vm_ref, instance,
                                adapter_type, 'rdmp',
                                device_name=device_name)
-        LOG.info(_("Mountpoint %(mountpoint)s attached to "
-                   "instance %(instance_name)s"),
+        LOG.info(_LI("Mountpoint %(mountpoint)s attached to "
+                     "iscsi instance %(instance_name)s"),
                  {'mountpoint': mountpoint, 'instance_name': instance_name},
                  instance=instance)
 
@@ -511,8 +512,8 @@ class VMwareVolumeOps(object):
         self._consolidate_vmdk_volume(instance, vm_ref, device, volume_ref)
 
         self.detach_disk_from_vm(vm_ref, instance, device)
-        LOG.info(_("Mountpoint %(mountpoint)s detached from "
-                   "instance %(instance_name)s"),
+        LOG.info(_LI("Mountpoint %(mountpoint)s detached from "
+                     "vmdk instance %(instance_name)s"),
                  {'mountpoint': mountpoint, 'instance_name': instance_name},
                  instance=instance)
 
@@ -540,8 +541,8 @@ class VMwareVolumeOps(object):
         if device is None:
             raise exception.StorageError(reason=_("Unable to find volume"))
         self.detach_disk_from_vm(vm_ref, instance, device, destroy_disk=True)
-        LOG.info(_("Mountpoint %(mountpoint)s detached from "
-                   "instance %(instance_name)s"),
+        LOG.info(_LI("Mountpoint %(mountpoint)s detached from "
+                     "iscsi instance %(instance_name)s"),
                  {'mountpoint': mountpoint, 'instance_name': instance_name},
                  instance=instance)
 

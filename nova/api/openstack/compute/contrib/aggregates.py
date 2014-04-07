@@ -188,12 +188,12 @@ class AggregateController(object):
             aggregate = self.api.add_host_to_aggregate(context, id, host)
         except (exception.AggregateNotFound, exception.ComputeHostNotFound):
             msg = _('Cannot add host %(host)s in aggregate'
-                    ' %(id)s') % {'host': host, 'id': id}
+                    ' %(id)s: not found') % {'host': host, 'id': id}
             raise exc.HTTPNotFound(explanation=msg)
         except (exception.AggregateHostExists,
                 exception.InvalidAggregateAction):
             msg = _('Cannot add host %(host)s in aggregate'
-                    ' %(id)s') % {'host': host, 'id': id}
+                    ' %(id)s: host exists') % {'host': host, 'id': id}
             raise exc.HTTPConflict(explanation=msg)
         return self._marshall_aggregate(aggregate)
 
@@ -207,11 +207,11 @@ class AggregateController(object):
         except (exception.AggregateNotFound, exception.AggregateHostNotFound,
                 exception.ComputeHostNotFound):
             msg = _('Cannot remove host %(host)s in aggregate'
-                    ' %(id)s') % {'host': host, 'id': id}
+                    ' %(id)s: not found') % {'host': host, 'id': id}
             raise exc.HTTPNotFound(explanation=msg)
         except exception.InvalidAggregateAction:
             msg = _('Cannot remove host %(host)s in aggregate'
-                    ' %(id)s') % {'host': host, 'id': id}
+                    ' %(id)s: invalid') % {'host': host, 'id': id}
             raise exc.HTTPConflict(explanation=msg)
         return self._marshall_aggregate(aggregate)
 
