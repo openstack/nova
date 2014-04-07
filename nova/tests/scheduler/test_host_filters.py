@@ -27,6 +27,7 @@ from nova.openstack.common import timeutils
 from nova.pci import pci_stats
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
+from nova.scheduler.filters import ram_filter
 from nova.scheduler.filters import trusted_filter
 from nova import servicegroup
 from nova import test
@@ -499,7 +500,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_ram_filter_fails_on_memory(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['RamFilter']()
-        self.flags(ram_allocation_ratio=1.0)
+        ram_filter.RamFilter.ram_allocation_ratio = 1.0
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'node1',
@@ -510,7 +511,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_ram_filter_passes(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['RamFilter']()
-        self.flags(ram_allocation_ratio=1.0)
+        ram_filter.RamFilter.ram_allocation_ratio = 1.0
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'node1',
@@ -521,7 +522,7 @@ class HostFiltersTestCase(test.NoDBTestCase):
     def test_ram_filter_oversubscribe(self):
         self._stub_service_is_up(True)
         filt_cls = self.class_map['RamFilter']()
-        self.flags(ram_allocation_ratio=2.0)
+        ram_filter.RamFilter.ram_allocation_ratio = 2.0
         filter_properties = {'instance_type': {'memory_mb': 1024}}
         service = {'disabled': False}
         host = fakes.FakeHostState('host1', 'node1',

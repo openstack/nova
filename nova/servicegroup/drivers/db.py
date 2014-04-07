@@ -35,6 +35,7 @@ class DbDriver(api.ServiceGroupDriver):
     def __init__(self, *args, **kwargs):
         self.db_allowed = kwargs.get('db_allowed', True)
         self.conductor_api = conductor.API(use_local=self.db_allowed)
+        self.service_down_time = CONF.service_down_time
 
     def join(self, member_id, group_id, service=None):
         """Join the given service with it's group."""
@@ -67,7 +68,7 @@ class DbDriver(api.ServiceGroupDriver):
             last_heartbeat = last_heartbeat.replace(tzinfo=None)
         # Timestamps in DB are UTC.
         elapsed = timeutils.delta_seconds(last_heartbeat, timeutils.utcnow())
-        is_up = abs(elapsed) <= CONF.service_down_time
+        is_up = abs(elapsed) <= self.service_down_time
         if not is_up:
             msg = _('Seems service is down. Last heartbeat was %(lhb)s. '
                     'Elapsed time is %(el)s')
