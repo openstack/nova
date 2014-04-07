@@ -13423,6 +13423,3 @@ msgstr ""
 msgid "formatting encrypted volume %s"
 msgstr ""
 
-#~ msgid "Event loop thread is not active, discarding event %s"
-#~ msgstr ""
-
