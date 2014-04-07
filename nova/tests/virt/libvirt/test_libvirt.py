@@ -55,6 +55,7 @@ from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova.pci import pci_manager
 from nova import test
+from nova.tests import fake_instance
 from nova.tests import fake_network
 import nova.tests.image.fake
 from nova.tests import matchers
@@ -6443,27 +6444,27 @@ class LibvirtConnTestCase(test.TestCase):
         self.mox.ReplayAll()
         self.assertTrue(conn._is_storage_shared_with('foo', '/path'))
 
-    def test_get_domain_info_with_more_return(self):
-        mock_domain = libvirt.virDomain('qemu:///system', None)
-        instance = {"name": "instancename", "id": "instanceid",
-                    "uuid": "875a8070-d0b9-4949-8b31-104d125c9a64"}
-
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._lookup_by_name')
+    def test_get_domain_info_with_more_return(self, lookup_mock):
+        instance = fake_instance.fake_instance_obj(mock.sentinel.ctx)
+        dom_mock = mock.MagicMock()
+        dom_mock.info.return_value = [
+            1, 2048, 737, 8, 12345, 888888
+        ]
+        dom_mock.ID.return_value = mock.sentinel.instance_id
+        lookup_mock.return_value = dom_mock
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with contextlib.nested(
-           mock.patch.object(mock_domain, 'info',
-                             return_value=[1, 2048, 737, 8, 12345, 888888]),
-           mock.patch.object(mock_domain, 'ID', return_value="123456"),
-           mock.patch.object(conn, '_lookup_by_name',
-                             return_value=mock_domain),
-        ) as (mock_info, mock_ID, mock_domain):
-            info = conn.get_info(instance)
-            expect = {'state': 1,
-                      'max_mem': 2048,
-                      'mem': 737,
-                      'num_cpu': 8,
-                      'cpu_time': 12345,
-                      'id': '123456'}
-            self.assertEqual(expect, info)
+        info = conn.get_info(instance)
+        expect = {'state': 1,
+                  'max_mem': 2048,
+                  'mem': 737,
+                  'num_cpu': 8,
+                  'cpu_time': 12345,
+                  'id': mock.sentinel.instance_id}
+        self.assertEqual(expect, info)
+        dom_mock.info.assert_called_once_with()
+        dom_mock.ID.assert_called_once_with()
+        lookup_mock.assert_called_once_with(instance['name'])
 
     def test_create_domain_define_xml_fails(self):
         """Tests that the xml is logged when defining the domain fails."""
