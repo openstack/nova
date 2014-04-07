@@ -468,48 +468,6 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         driver_format = image.resolve_driver_format()
         self.assertEqual(driver_format, 'qcow2')
 
-    def test_prealloc_image(self):
-        CONF.set_override('preallocate_images', 'space')
-
-        fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
-        image = self.image_class(self.INSTANCE, self.NAME)
-
-        def fake_fetch(target, *args, **kwargs):
-            return
-
-        self.stubs.Set(os.path, 'exists', lambda _: True)
-        self.stubs.Set(os, 'access', lambda p, w: True)
-
-        # Call twice to verify testing fallocate is only called once.
-        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
-        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
-
-        self.assertEqual(fake_processutils.fake_execute_get_log(),
-            ['fallocate -n -l 1 %s.fallocate_test' % self.PATH,
-             'fallocate -n -l %s %s' % (self.SIZE, self.PATH),
-             'fallocate -n -l %s %s' % (self.SIZE, self.PATH)])
-
-    def test_prealloc_image_without_write_access(self):
-        CONF.set_override('preallocate_images', 'space')
-
-        fake_processutils.fake_execute_clear_log()
-        fake_processutils.stub_out_processutils_execute(self.stubs)
-        image = self.image_class(self.INSTANCE, self.NAME)
-
-        def fake_fetch(target, *args, **kwargs):
-            return
-
-        self.stubs.Set(image, 'check_image_exists', lambda: True)
-        self.stubs.Set(image, '_can_fallocate', lambda: True)
-        self.stubs.Set(os.path, 'exists', lambda _: True)
-        self.stubs.Set(os, 'access', lambda p, w: False)
-
-        # Testing fallocate is only called when user has write access.
-        image.cache(fake_fetch, self.TEMPLATE_PATH, self.SIZE)
-
-        self.assertEqual(fake_processutils.fake_execute_get_log(), [])
-
 
 class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
     VG = 'FakeVG'
