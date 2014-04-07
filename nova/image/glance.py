@@ -277,25 +277,6 @@ class GlanceImageService(object):
         base_image_meta = _translate_from_glance(image)
         return base_image_meta
 
-    def _get_locations(self, context, image_id):
-        """Returns the direct url representing the backend storage location,
-        or None if this attribute is not shown by Glance.
-        """
-        try:
-            client = GlanceClientWrapper()
-            image_meta = client.call(context, 2, 'get', image_id)
-        except Exception:
-            _reraise_translated_image_exception(image_id)
-
-        if not _is_image_available(context, image_meta):
-            raise exception.ImageNotFound(image_id=image_id)
-
-        locations = getattr(image_meta, 'locations', [])
-        du = getattr(image_meta, 'direct_url', None)
-        if du:
-            locations.append({'url': du, 'metadata': {}})
-        return locations
-
     def _get_transfer_module(self, scheme):
         try:
             return self._download_handlers[scheme]
@@ -309,7 +290,7 @@ class GlanceImageService(object):
     def download(self, context, image_id, data=None, dst_path=None):
         """Calls out to Glance for data and writes data."""
         if CONF.allowed_direct_url_schemes and dst_path is not None:
-            locations = self._get_locations(context, image_id)
+            locations = _get_locations(self._client, context, image_id)
             for entry in locations:
                 loc_url = entry['url']
                 loc_meta = entry['metadata']
@@ -393,6 +374,25 @@ class GlanceImageService(object):
         except glanceclient.exc.HTTPForbidden:
             raise exception.ImageNotAuthorized(image_id=image_id)
         return True
+
+
+def _get_locations(client, context, image_id):
+    """Returns the direct url representing the backend storage location,
+    or None if this attribute is not shown by Glance.
+    """
+    try:
+        image_meta = client.call(context, 2, 'get', image_id)
+    except Exception:
+        _reraise_translated_image_exception(image_id)
+
+    if not _is_image_available(context, image_meta):
+        raise exception.ImageNotFound(image_id=image_id)
+
+    locations = getattr(image_meta, 'locations', [])
+    du = getattr(image_meta, 'direct_url', None)
+    if du:
+        locations.append({'url': du, 'metadata': {}})
+    return locations
 
 
 def _extract_query_params(params):
