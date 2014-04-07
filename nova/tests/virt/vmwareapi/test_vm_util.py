@@ -300,6 +300,18 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         devices = [disk, controller]
         return devices
 
+    def test_get_vmdk_path(self):
+        uuid = '00000000-0000-0000-0000-000000000000'
+        filename = '[test_datastore] %s/%s.vmdk' % (uuid, uuid)
+        devices = self._vmdk_path_and_adapter_type_devices(filename)
+        session = fake.FakeSession()
+
+        with mock.patch.object(session, '_call_method',
+                               return_value=devices):
+            instance = {'uuid': uuid}
+            vmdk_path = vm_util.get_vmdk_path(session, None, instance)
+            self.assertEqual(filename, vmdk_path)
+
     def test_get_vmdk_path_and_adapter_type(self):
         filename = '[test_datastore] test_file.vmdk'
         devices = self._vmdk_path_and_adapter_type_devices(filename)
