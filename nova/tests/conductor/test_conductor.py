@@ -821,26 +821,101 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
             self.context, fake_secgroup)
         self.assertEqual(result, 'it worked')
 
-    def _test_action_event_expected_exceptions(self, db_method,
-                                               conductor_method, error):
+    def _test_expected_exceptions(self, db_method, conductor_method, errors,
+                                  *args, **kwargs):
         # Tests that expected exceptions are handled properly.
-        with mock.patch.object(db, db_method, side_effect=error):
-            self.assertRaises(messaging.ExpectedException, conductor_method,
-                              self.context, {'foo': 'bar'})
+        for error in errors:
+            with mock.patch.object(db, db_method, side_effect=error):
+                self.assertRaises(messaging.ExpectedException,
+                                  conductor_method,
+                                  self.context, *args, **kwargs)
 
     def test_action_event_start_expected_exceptions(self):
         error = exc.InstanceActionNotFound(request_id='1', instance_uuid='2')
-        self._test_action_event_expected_exceptions(
-            'action_event_start', self.conductor.action_event_start, error)
+        self._test_expected_exceptions(
+            'action_event_start', self.conductor.action_event_start, [error],
+            {'foo': 'bar'})
 
     def test_action_event_finish_expected_exceptions(self):
         errors = (exc.InstanceActionNotFound(request_id='1',
                                              instance_uuid='2'),
                   exc.InstanceActionEventNotFound(event='1', action_id='2'))
-        for error in errors:
-            self._test_action_event_expected_exceptions(
-                'action_event_finish', self.conductor.action_event_finish,
-                error)
+        self._test_expected_exceptions(
+            'action_event_finish', self.conductor.action_event_finish,
+            errors, {'foo': 'bar'})
+
+    def test_instance_update_expected_exceptions(self):
+        errors = (exc.InvalidUUID(uuid='foo'),
+                  exc.InstanceNotFound(instance_id=1),
+                  exc.UnexpectedTaskStateError(expected='foo',
+                                               actual='bar'))
+        self._test_expected_exceptions(
+            'instance_update', self.conductor.instance_update,
+            errors, None, {'foo': 'bar'})
+
+    def test_instance_get_expected_exceptions(self):
+        error = exc.InstanceNotFound(instance_id=1)
+        self._test_expected_exceptions(
+            'instance_get', self.conductor.instance_get,
+            [error], None)
+
+    def test_instance_get_by_uuid_expected_exceptions(self):
+        error = exc.InstanceNotFound(instance_id=1)
+        self._test_expected_exceptions(
+            'instance_get_by_uuid', self.conductor.instance_get_by_uuid,
+            [error], None)
+
+    def test_migration_get_expected_exceptions(self):
+        error = exc.MigrationNotFound(migration_id=1)
+        self._test_expected_exceptions(
+            'migration_get', self.conductor.migration_get,
+            [error], None)
+
+    def test_migration_update_expected_exceptions(self):
+        error = exc.MigrationNotFound(migration_id=1)
+        self._test_expected_exceptions(
+            'migration_update', self.conductor.migration_update,
+            [error], {'id': 1}, None)
+
+    def test_aggregate_host_add_expected_exceptions(self):
+        error = exc.AggregateHostExists(aggregate_id=1, host='foo')
+        self._test_expected_exceptions(
+            'aggregate_host_add', self.conductor.aggregate_host_add,
+            [error], {'id': 1}, None)
+
+    def test_aggregate_host_delete_expected_exceptions(self):
+        error = exc.AggregateHostNotFound(aggregate_id=1, host='foo')
+        self._test_expected_exceptions(
+            'aggregate_host_delete', self.conductor.aggregate_host_delete,
+            [error], {'id': 1}, None)
+
+    def test_aggregate_get_expected_exceptions(self):
+        error = exc.AggregateNotFound(aggregate_id=1)
+        self._test_expected_exceptions(
+            'aggregate_get', self.conductor.aggregate_get,
+            [error], None)
+
+    def test_aggregate_metadata_delete_expected_exceptions(self):
+        error = exc.AggregateMetadataNotFound(aggregate_id=1,
+                                              metadata_key='foo')
+        self._test_expected_exceptions(
+            'aggregate_metadata_delete',
+            self.conductor.aggregate_metadata_delete,
+            [error], {'id': 1}, None)
+
+    def test_service_update_expected_exceptions(self):
+        error = exc.ServiceNotFound(service_id=1)
+        self._test_expected_exceptions(
+            'service_update',
+            self.conductor.service_update,
+            [error], {'id': 1}, None)
+
+    def test_service_destroy_expected_exceptions(self):
+        error = exc.ServiceNotFound(service_id=1)
+        self._test_expected_exceptions(
+            'service_destroy',
+            self.conductor.service_destroy,
+            [error], 1)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
