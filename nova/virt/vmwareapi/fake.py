@@ -824,8 +824,11 @@ class Datacenter(ManagedObject):
         network_do = DataObject()
         network_do.ManagedObjectReference = [net_ref]
         self.set("network", network_do)
-        datastore = DataObject()
-        datastore.ManagedObjectReference = [ds_ref]
+        if ds_ref:
+            datastore = DataObject()
+            datastore.ManagedObjectReference = [ds_ref]
+        else:
+            datastore = None
         self.set("datastore", datastore)
 
 

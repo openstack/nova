@@ -1619,19 +1619,19 @@ class VMwareVCVMOps(VMwareVMOps):
         while dcs:
             token = vm_util._get_token(dcs)
             for dco in dcs.objects:
-                name = None
-                vmFolder = None
                 dc_ref = dco.obj
                 ds_refs = []
-                for p in dco.propSet:
-                    if p.name == 'name':
-                        name = p.val
-                    if p.name == 'datastore':
-                        datastore_refs = p.val.ManagedObjectReference
-                        for ds in datastore_refs:
-                            ds_refs.append(ds.value)
-                    if p.name == 'vmFolder':
-                        vmFolder = p.val
+                prop_dict = vm_util.propset_dict(dco.propSet)
+                name = prop_dict.get('name')
+                vmFolder = prop_dict.get('vmFolder')
+                datastore_refs = prop_dict.get('datastore')
+                if datastore_refs:
+                    datastore_refs = datastore_refs.ManagedObjectReference
+                    for ds in datastore_refs:
+                        ds_refs.append(ds.value)
+                else:
+                    LOG.debug("Datacenter %s doesn't have any datastore "
+                              "associated with it, ignoring it", name)
                 for ds_ref in ds_refs:
                     self._datastore_dc_mapping[ds_ref] = DcInfo(ref=dc_ref,
                             name=name, vmFolder=vmFolder)
