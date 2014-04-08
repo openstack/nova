@@ -391,6 +391,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             'scheduler_hints': {
                 'group': group.uuid,
             },
+            'group_hosts': ['hostB'],
         }
 
         with contextlib.nested(
@@ -402,7 +403,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             update_group_hosts = sched._setup_instance_group(self.context,
                     filter_properties)
             self.assertTrue(update_group_hosts)
-            self.assertEqual(set(['hostA']), filter_properties['group_hosts'])
+            self.assertEqual(set(['hostA', 'hostB']),
+                             filter_properties['group_hosts'])
             self.assertEqual(['anti-affinity'],
                     filter_properties['group_policies'])
 
