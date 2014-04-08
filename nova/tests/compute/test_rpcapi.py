@@ -216,7 +216,7 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_detach_volume(self):
         self._test_compute_api('detach_volume', 'cast',
-                instance=self.fake_instance, volume_id='id')
+                instance=self.fake_instance, volume_id='id', version='3.25')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

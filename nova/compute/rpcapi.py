@@ -242,6 +242,7 @@ class ComputeAPI(object):
         3.22 - Made terminate_instance take new-world BDM objects
         3.23 - Added external_instance_event()
         3.24 - Update rescue_instance() to take optional rescue_image_ref
+        3.25 - Make detach_volume take an object
     '''
 
     VERSION_ALIASES = {
@@ -403,13 +404,16 @@ class ComputeAPI(object):
                    instance=instance, port_id=port_id)
 
     def detach_volume(self, ctxt, instance, volume_id):
-        # NOTE(russellb) Havana compat
-        version = self._get_compat_version('3.0', '2.0')
-        instance_p = jsonutils.to_primitive(instance)
+        if self.client.can_send_version('3.25'):
+            version = '3.25'
+        else:
+            # NOTE(russellb) Havana compat
+            version = self._get_compat_version('3.0', '2.0')
+            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
         cctxt.cast(ctxt, 'detach_volume',
-                   instance=instance_p, volume_id=volume_id)
+                   instance=instance, volume_id=volume_id)
 
     def finish_resize(self, ctxt, instance, migration, image, disk_info,
             host, reservations=None):

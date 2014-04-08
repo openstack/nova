@@ -571,7 +571,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.24')
+    target = messaging.Target(version='3.25')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4213,7 +4213,7 @@ class ComputeManager(manager.Manager):
         if connection_info and 'serial' not in connection_info:
             connection_info['serial'] = volume_id
         try:
-            if not self.driver.instance_exists(instance['name']):
+            if not self.driver.instance_exists(instance.name):
                 LOG.warn(_('Detaching volume from unknown instance'),
                          context=context, instance=instance)
 
@@ -4232,6 +4232,7 @@ class ComputeManager(manager.Manager):
                               context=context, instance=instance)
                 self.volume_api.roll_detaching(context, volume_id)
 
+    @object_compat
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
@@ -4246,7 +4247,7 @@ class ComputeManager(manager.Manager):
             if '/dev/' in mp:
                 mp = mp[5:]
             try:
-                vol_stats = self.driver.block_stats(instance['name'], mp)
+                vol_stats = self.driver.block_stats(instance.name, mp)
             except NotImplementedError:
                 pass
 
@@ -4376,7 +4377,9 @@ class ComputeManager(manager.Manager):
         try:
             bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
-            self._detach_volume(context, instance, bdm)
+            self._detach_volume(context,
+                                instance_obj.Instance._from_db_object(
+                                    context, instance, bdm))
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:

@@ -505,7 +505,8 @@ class VolumeAttachmentController(wsgi.Controller):
         LOG.audit(_("Detach volume %s"), volume_id, context=context)
 
         try:
-            instance = self.compute_api.get(context, server_id)
+            instance = self.compute_api.get(context, server_id,
+                                            want_objects=True)
         except exception.NotFound:
             raise exc.HTTPNotFound()
 

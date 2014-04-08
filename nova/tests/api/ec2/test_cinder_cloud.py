@@ -858,7 +858,6 @@ class CinderCloudTestCase(test.TestCase):
 
         inst_obj = instance_obj.Instance.get_by_uuid(self.context,
                                                          instance_uuid)
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
         self.cloud.compute_api.attach_volume(self.context,
                                              inst_obj,
                                              volume_id=vol2_uuid,
@@ -871,7 +870,7 @@ class CinderCloudTestCase(test.TestCase):
         self._assert_volume_attached(vol2, instance_uuid, '/dev/sdc')
 
         self.cloud.compute_api.detach_volume(self.context,
-                                             instance, vol1)
+                                             inst_obj, vol1)
 
         vol1 = self.volume_api.get(self.context, vol1_uuid)
         self._assert_volume_detached(vol1)
