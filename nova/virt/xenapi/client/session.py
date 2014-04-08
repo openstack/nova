@@ -223,7 +223,7 @@ class XenAPISession(object):
 
                 return self.call_plugin_serialized(plugin, fn, *args, **kwargs)
             except self.XenAPI.Failure as exc:
-                if self._is_retryable_exception(exc):
+                if self._is_retryable_exception(exc, fn):
                     LOG.warn(_('%(plugin)s.%(fn)s failed. Retrying call.')
                              % {'plugin': plugin, 'fn': fn})
                 else:
@@ -231,14 +231,14 @@ class XenAPISession(object):
 
         raise exception.PluginRetriesExceeded(num_retries=num_retries)
 
-    def _is_retryable_exception(self, exc):
+    def _is_retryable_exception(self, exc, fn):
         _type, method, error = exc.details[:3]
         if error == 'RetryableError':
-            LOG.debug(_("RetryableError, so retrying upload_vhd"),
+            LOG.debug(_("RetryableError, so retrying %(fn)s"), {'fn': fn},
                       exc_info=True)
             return True
         elif "signal" in method:
-            LOG.debug(_("Error due to a signal, retrying upload_vhd"),
+            LOG.debug(_("Error due to a signal, retrying %(fn)s"), {'fn': fn},
                       exc_info=True)
             return True
         else:
