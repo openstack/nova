@@ -22,7 +22,8 @@ from nova.objects import fields
 
 class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added in_use_on_host()
+    VERSION = '1.1'
 
     fields = {
         'id': fields.IntegerField(),
@@ -108,6 +109,10 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
     def disassociate(cls, context, network_id, host=False, project=False):
         db.network_disassociate(context, network_id, host, project)
 
+    @obj_base.remotable_classmethod
+    def in_use_on_host(cls, context, network_id, host):
+        return db.network_in_use_on_host(context, network_id, host)
+
     def _get_primitive_changes(self):
         changes = {}
         for key, value in self.obj_get_changes().items():
@@ -156,13 +161,15 @@ class Network(obj_base.NovaPersistentObject, obj_base.NovaObject):
 
 class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added get_by_project()
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Network'),
         }
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
         }
 
     @obj_base.remotable_classmethod
@@ -179,4 +186,10 @@ class NetworkList(obj_base.ObjectListBase, obj_base.NovaObject):
     @obj_base.remotable_classmethod
     def get_by_host(cls, context, host):
         db_networks = db.network_get_all_by_host(context, host)
+        return obj_base.obj_make_list(context, cls(), Network, db_networks)
+
+    @obj_base.remotable_classmethod
+    def get_by_project(cls, context, project_id, associate=True):
+        db_networks = db.project_get_networks(context, project_id,
+                                              associate=associate)
         return obj_base.obj_make_list(context, cls(), Network, db_networks)

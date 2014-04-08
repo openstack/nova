@@ -192,6 +192,21 @@ class _TestNetworkObject(object):
         get_all.assert_called_once_with(self.context, 'host')
         self._compare(networks[0], fake_network)
 
+    @mock.patch('nova.db.network_in_use_on_host')
+    def test_in_use_on_host(self, in_use):
+        in_use.return_value = True
+        self.assertTrue(network_obj.Network.in_use_on_host(self.context,
+                                                           123, 'foo'))
+        in_use.assert_called_once_with(self.context, 123, 'foo')
+
+    @mock.patch('nova.db.project_get_networks')
+    def test_get_all_by_project(self, get_nets):
+        get_nets.return_value = [fake_network]
+        networks = network_obj.NetworkList.get_by_project(self.context, 123)
+        self.assertEqual(1, len(networks))
+        get_nets.assert_called_once_with(self.context, 123, associate=True)
+        self._compare(networks[0], fake_network)
+
 
 class TestNetworkObject(test_objects._LocalTest,
                         _TestNetworkObject):
