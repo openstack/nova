@@ -314,13 +314,6 @@ class ServersController(wsgi.Controller):
     def _validate_server_name(self, value):
         self._check_string_length(value, 'Server name', max_length=255)
 
-    def _validate_device_name(self, value):
-        self._check_string_length(value, 'Device name', max_length=255)
-
-        if ' ' in value:
-            msg = _("Device name cannot include spaces.")
-            raise exc.HTTPBadRequest(explanation=msg)
-
     def _get_requested_networks(self, requested_networks):
         """Create a list of requested networks from the networks attribute."""
         networks = []
