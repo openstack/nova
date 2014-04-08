@@ -459,8 +459,11 @@ class VMwareVMOps(object):
                                                   root_vmdk_path, dc_info.ref)
                 else:
                     upload_folder = '%s/%s' % (self._base_folder, upload_name)
-                    root_vmdk_name = "%s.%s.vmdk" % (upload_name,
-                                                     instance.root_gb)
+                    if root_gb:
+                        root_vmdk_name = "%s.%s.vmdk" % (upload_name,
+                                                         instance.root_gb)
+                    else:
+                        root_vmdk_name = "%s.vmdk" % upload_name
                     root_vmdk_path = str(datastore.build_path(
                             upload_folder, root_vmdk_name))
 
