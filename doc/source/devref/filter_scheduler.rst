@@ -127,7 +127,7 @@ There are some standard filter classes to use (:mod:`nova.scheduler.filters`):
   group.  When the server gets scheduled, anti-affinity will be enforced among
   all servers in that group.
 * |ServerGroupAffinityFilter| - This filter works the same way as
-  ServerGroupAffinityFilter.  The difference is that when you create the server
+  ServerGroupAntiAffinityFilter.  The difference is that when you create the server
   group, you should specify a policy of 'affinity'.
 * |GroupAntiAffinityFilter| - This filter is deprecated in favor of
   ServerGroupAntiAffinityFilter.  Note that this should not be enabled at the
