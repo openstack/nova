@@ -9321,6 +9321,23 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertEqual(msg.event_type,
                          'aggregate.updateprop.end')
 
+    def test_update_aggregate_az_fails_with_nova_az(self):
+        # Ensure aggregate's availability zone can't be updated,
+        # when aggregate has hosts in other availability zone
+        fake_notifier.NOTIFICATIONS = []
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr1 = self._init_aggregate_with_host(None, 'fake_aggregate1',
+                                               CONF.default_availability_zone,
+                                               fake_host)
+        aggr2 = self._init_aggregate_with_host(None, 'fake_aggregate2', None,
+                                               fake_host)
+        metadata = {'availability_zone': 'another_zone'}
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.update_aggregate,
+                          self.context, aggr2['id'], metadata)
+
     def test_update_aggregate_metadata(self):
         # Ensure metadata can be updated.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
@@ -9537,6 +9554,25 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         fake_host = values[fake_zone][0]
         aggr = self.api.create_aggregate(self.context,
                                          'fake_aggregate', fake_zone)
+        aggr = self.api.add_host_to_aggregate(self.context,
+                                              aggr['id'], fake_host)
+        self.assertEqual(len(aggr['hosts']), 1)
+        fake_zone2 = "another_zone"
+        aggr2 = self.api.create_aggregate(self.context,
+                                         'fake_aggregate2', fake_zone2)
+        self.assertRaises(exception.InvalidAggregateAction,
+                          self.api.add_host_to_aggregate,
+                          self.context, aggr2['id'], fake_host)
+
+    def test_add_host_to_multi_az_with_nova_agg(self):
+        # Ensure we can't add a host if already existing in an agg with AZ set
+        #  to default
+        values = _create_service_entries(self.context)
+        fake_zone = values.keys()[0]
+        fake_host = values[fake_zone][0]
+        aggr = self.api.create_aggregate(self.context,
+                                         'fake_aggregate',
+                                         CONF.default_availability_zone)
         aggr = self.api.add_host_to_aggregate(self.context,
                                               aggr['id'], fake_host)
         self.assertEqual(len(aggr['hosts']), 1)

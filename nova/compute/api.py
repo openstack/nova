@@ -3300,32 +3300,14 @@ class AggregateAPI(base.Base):
         aggregates = aggregate_obj.AggregateList.get_all(context)
         return [self._reformat_aggregate_info(agg) for agg in aggregates]
 
-    def is_safe_to_update_az(self, context, aggregate, metadata,
-                                action_name):
-        """Determine if updates alter an aggregate's availability zone."""
-        if 'availability_zone' in metadata:
-            aggregate_az = aggregate.metadata.get("availability_zone")
-            for host in aggregate.hosts:
-                host_az = availability_zones.get_host_availability_zone(
-                                                    context, host)
-                if (host_az and host_az != metadata["availability_zone"]
-                   and host_az != CONF.default_availability_zone and
-                   host_az != aggregate_az):
-                    msg = _("This aggregate contains hosts in"
-                            " an existing availability zone")
-                    raise exception.InvalidAggregateAction(
-                                            action=action_name,
-                                            aggregate_id=aggregate.id,
-                                            reason=msg)
-
     @wrap_exception()
     def update_aggregate(self, context, aggregate_id, values):
         """Update the properties of an aggregate."""
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
         if 'name' in values:
             aggregate.name = values.pop('name')
-        self.is_safe_to_update_az(context, aggregate,
-                                    values, "update aggregate")
+        self.is_safe_to_update_az(context, values, aggregate=aggregate,
+                                  action_name="update_aggregate")
         if values:
             aggregate.metadata = values
         aggregate.save()
@@ -3339,8 +3321,8 @@ class AggregateAPI(base.Base):
     def update_aggregate_metadata(self, context, aggregate_id, metadata):
         """Updates the aggregate metadata."""
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
-        self.is_safe_to_update_az(context, aggregate,
-                         metadata, "update aggregate metadata")
+        self.is_safe_to_update_az(context, metadata, aggregate=aggregate,
+                                  action_name="update_aggregate_metadata")
         aggregate.update_metadata(metadata)
         # If updated metadata include availability_zones, then the cache
         # which stored availability_zones and host need to be reset
@@ -3366,19 +3348,59 @@ class AggregateAPI(base.Base):
                                                     "delete.end",
                                                     aggregate_payload)
 
-    def _check_az_for_host(self, aggregate_meta, host_az, aggregate_id):
+    def is_safe_to_update_az(self, context, metadata, aggregate,
+                             hosts=None, action_name="add_host_to_aggregate"):
+        """Determine if updates alter an aggregate's availability zone.
+
+            :param context: local context
+            :param metadata: Target metadata for updating aggregate
+            :param aggregate: Aggregate to update
+            :param hosts: Hosts to check. If None, aggregate.hosts is used
+            :type hosts: list
+            :action_name: Calling method for logging purposes
+
+        """
+        if 'availability_zone' in metadata:
+            _hosts = hosts or aggregate.hosts
+            for host in _hosts:
+                host_az = availability_zones.get_host_availability_zone(
+                    context, host)
+                if host_az == CONF.default_availability_zone:
+                    # NOTE(sbauza): Aggregate with AZ set to default AZ can
+                    #               exist, we need to check
+                    host_aggs = aggregate_obj.AggregateList.get_by_host(
+                        context, host, key='availability_zone')
+                    default_aggs = [agg for agg in host_aggs
+                                    if agg['metadata'].get(
+                                        'availability_zone'
+                                    ) == CONF.default_availability_zone]
+                else:
+                    default_aggs = []
+                if (host_az != aggregate.metadata.get('availability_zone') and
+                        (host_az != CONF.default_availability_zone or
+                            len(default_aggs) != 0)):
+                                self._check_az_for_host(
+                                    metadata, host_az, aggregate.id,
+                                    action_name=action_name)
+
+    def _check_az_for_host(self, aggregate_meta, host_az, aggregate_id,
+                           action_name="add_host_to_aggregate"):
         # NOTE(mtreinish) The availability_zone key returns a set of
         # zones so loop over each zone. However there should only
         # ever be one zone in the set because an aggregate can only
         # have a single availability zone set at one time.
-        for aggregate_az in aggregate_meta["availability_zone"]:
+        if isinstance(aggregate_meta["availability_zone"], six.string_types):
+            azs = set([aggregate_meta["availability_zone"]])
+        else:
+            azs = aggregate_meta["availability_zone"]
+
+        for aggregate_az in azs:
             # NOTE(mtreinish) Ensure that the aggregate_az is not none
             # if it is none then that is just a regular aggregate and
             # it is valid to have a host in multiple aggregates.
             if aggregate_az and aggregate_az != host_az:
                 msg = _("Host already in availability zone "
                         "%s") % host_az
-                action_name = "add_host_to_aggregate"
                 raise exception.InvalidAggregateAction(
                     action=action_name, aggregate_id=aggregate_id,
                     reason=msg)
@@ -3401,14 +3423,13 @@ class AggregateAPI(base.Base):
                                                     aggregate_payload)
         # validates the host; ComputeHostNotFound is raised if invalid
         service_obj.Service.get_by_compute_host(context, host_name)
-        host_az = availability_zones.get_host_availability_zone(context,
-                                                                host_name)
-        if host_az and host_az != CONF.default_availability_zone:
-            aggregate_meta = self.db.aggregate_metadata_get_by_metadata_key(
-                context, aggregate_id, 'availability_zone')
-            if aggregate_meta.get("availability_zone"):
-                self._check_az_for_host(aggregate_meta, host_az, aggregate_id)
+
+        metadata = self.db.aggregate_metadata_get_by_metadata_key(
+            context, aggregate_id, 'availability_zone')
         aggregate = aggregate_obj.Aggregate.get_by_id(context, aggregate_id)
+        self.is_safe_to_update_az(context, metadata, hosts=[host_name],
+                                  aggregate=aggregate)
+
         aggregate.add_host(context, host_name)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         #NOTE(jogo): Send message to host to support resource pools
