@@ -796,3 +796,36 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         else:
             raise exception.NovaException(
                 _("Unexpected vif_type=%s") % vif_type)
+
+# The following classes were removed in the transition from Havana to
+# Icehouse, but may still be referenced in configuration files.  The
+# following stubs allow those configurations to work while logging a
+# deprecation warning.
+
+
+class _LibvirtDeprecatedDriver(LibvirtGenericVIFDriver):
+    def __init__(self, *args, **kwargs):
+        LOG.warn('VIF driver \"%s\" is marked as deprecated and will be '
+                 'removed in the Juno release.',
+                 self.__class__.__name__)
+        super(_LibvirtDeprecatedDriver, self).__init__(*args, **kwargs)
+
+
+class LibvirtBridgeDriver(_LibvirtDeprecatedDriver):
+    pass
+
+
+class LibvirtOpenVswitchDriver(_LibvirtDeprecatedDriver):
+    pass
+
+
+class LibvirtHybridOVSBridgeDriver(_LibvirtDeprecatedDriver):
+    pass
+
+
+class LibvirtOpenVswitchVirtualPortDriver(_LibvirtDeprecatedDriver):
+    pass
+
+
+class NeutronLinuxBridgeVIFDriver(_LibvirtDeprecatedDriver):
+    pass
