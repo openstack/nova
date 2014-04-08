@@ -26,6 +26,7 @@ eventlet.monkey_patch(os=False)
 
 import copy
 import gettext
+import logging
 import os
 import shutil
 import sys
@@ -44,7 +45,7 @@ from nova.network import manager as network_manager
 from nova.objects import base as objects_base
 from nova.openstack.common.fixture import logging as log_fixture
 from nova.openstack.common.fixture import moxstubout
-from nova.openstack.common import log as logging
+from nova.openstack.common import log as nova_logging
 from nova.openstack.common import timeutils
 from nova import paths
 from nova import rpc
@@ -69,7 +70,7 @@ CONF.import_opt('sqlite_db', 'nova.openstack.common.db.options',
 CONF.import_opt('enabled', 'nova.api.openstack', group='osapi_v3')
 CONF.set_override('use_stderr', False)
 
-logging.setup('nova')
+nova_logging.setup('nova')
 
 _DB_CACHE = None
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
@@ -239,8 +240,14 @@ class TestCase(testtools.TestCase):
         self.addCleanup(rpc.clear_extra_exmods)
         self.addCleanup(rpc.cleanup)
 
+        # supports running a debug level for local runs
+        if os.environ.get('OS_DEBUG') in _TRUE_VALUES:
+            level = logging.DEBUG
+        else:
+            level = logging.INFO
         fs = '%(levelname)s [%(name)s] %(message)s'
-        self.log_fixture = self.useFixture(fixtures.FakeLogger(format=fs))
+        self.log_fixture = self.useFixture(
+            fixtures.FakeLogger(format=fs, level=level))
         self.useFixture(conf_fixture.ConfFixture(CONF))
 
         self.messaging_conf = messaging_conffixture.ConfFixture(CONF)
