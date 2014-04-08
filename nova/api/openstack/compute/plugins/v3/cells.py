@@ -22,14 +22,15 @@ import six
 from webob import exc
 
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas.v3 import cells
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import api as compute
 from nova import exception
 from nova.i18n import _
 from nova.openstack.common import strutils
-from nova.openstack.common import timeutils
 from nova import rpc
 
 
@@ -187,21 +188,6 @@ class CellsController(object):
             raise exc.HTTPNotFound(
                 explanation=_("Cell %s doesn't exist.") % id)
 
-    def _validate_cell_name(self, cell_name):
-        """Validate cell name is not empty and doesn't contain '!' or '.'."""
-        if not cell_name:
-            msg = _("Cell name cannot be empty")
-            raise exc.HTTPBadRequest(explanation=msg)
-        if '!' in cell_name or '.' in cell_name:
-            msg = _("Cell name cannot contain '!' or '.'")
-            raise exc.HTTPBadRequest(explanation=msg)
-
-    def _validate_cell_type(self, cell_type):
-        """Validate cell_type is 'parent' or 'child'."""
-        if cell_type not in ['parent', 'child']:
-            msg = _("Cell type must be 'parent' or 'child'")
-            raise exc.HTTPBadRequest(explanation=msg)
-
     def _normalize_cell(self, cell, existing=None):
         """Normalize input cell data.  Normalizations include:
 
@@ -211,7 +197,6 @@ class CellsController(object):
 
         # Start with the cell type conversion
         if 'type' in cell:
-            self._validate_cell_type(cell['type'])
             cell['is_parent'] = cell['type'] == 'parent'
             del cell['type']
         # Avoid cell type being overwritten to 'child'
@@ -249,6 +234,7 @@ class CellsController(object):
     @extensions.expected_errors((400, 403, 501))
     @common.check_cells_enabled
     @wsgi.response(201)
+    @validation.schema(cells.create)
     def create(self, req, body):
         """Create a child cell entry."""
         context = req.environ['nova.context']
@@ -256,14 +242,7 @@ class CellsController(object):
         authorize(context)
         authorize(context, action="create")
 
-        if 'cell' not in body:
-            msg = _("No cell information in request")
-            raise exc.HTTPBadRequest(explanation=msg)
         cell = body['cell']
-        if 'name' not in cell:
-            msg = _("No cell name in request")
-            raise exc.HTTPBadRequest(explanation=msg)
-        self._validate_cell_name(cell['name'])
         self._normalize_cell(cell)
         try:
             cell = self.cells_rpcapi.cell_create(context, cell)
@@ -273,6 +252,7 @@ class CellsController(object):
 
     @extensions.expected_errors((400, 403, 404, 501))
     @common.check_cells_enabled
+    @validation.schema(cells.update)
     def update(self, req, id, body):
         """Update a child cell entry.  'id' is the cell name to update."""
         context = req.environ['nova.context']
@@ -280,13 +260,9 @@ class CellsController(object):
         authorize(context)
         authorize(context, action="update")
 
-        if 'cell' not in body:
-            msg = _("No cell information in request")
-            raise exc.HTTPBadRequest(explanation=msg)
         cell = body['cell']
         cell.pop('id', None)
-        if 'name' in cell:
-            self._validate_cell_name(cell['name'])
+
         try:
             # NOTE(Vek): There is a race condition here if multiple
             #            callers are trying to update the cell
@@ -309,6 +285,7 @@ class CellsController(object):
     @extensions.expected_errors((400, 501))
     @common.check_cells_enabled
     @wsgi.response(204)
+    @validation.schema(cells.sync_instances)
     def sync_instances(self, req, body):
         """Tell all cells to sync instance info."""
         context = req.environ['nova.context']
@@ -319,21 +296,8 @@ class CellsController(object):
         project_id = body.pop('project_id', None)
         deleted = body.pop('deleted', False)
         updated_since = body.pop('updated_since', None)
-        if body:
-            msg = _("Only 'updated_since', 'project_id' and 'deleted' are "
-                    "understood.")
-            raise exc.HTTPBadRequest(explanation=msg)
         if isinstance(deleted, six.string_types):
-            try:
-                deleted = strutils.bool_from_string(deleted, strict=True)
-            except ValueError as err:
-                raise exc.HTTPBadRequest(explanation=str(err))
-        if updated_since:
-            try:
-                timeutils.parse_isotime(updated_since)
-            except ValueError:
-                msg = _('Invalid changes-since value')
-                raise exc.HTTPBadRequest(explanation=msg)
+            deleted = strutils.bool_from_string(deleted, strict=True)
         self.cells_rpcapi.sync_instances(context, project_id=project_id,
                 updated_since=updated_since, deleted=deleted)
 

@@ -602,6 +602,51 @@ class TcpUdpPortTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
+class DatetimeTestCase(APIValidationTestCase):
+
+    def setUp(self):
+        super(DatetimeTestCase, self).setUp()
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {
+                    'type': 'string',
+                    'format': 'date-time',
+                },
+            },
+        }
+
+        @validation.schema(schema)
+        def post(body):
+            return 'Validation succeeded.'
+
+        self.post = post
+
+    def test_validate_datetime(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(
+                         body={'foo': '2014-01-14T01:00:00Z'}
+                         ))
+
+    def test_validate_datetime_fails(self):
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: 2014-13-14T01:00:00Z."
+                  " '2014-13-14T01:00:00Z' is not a 'date-time'")
+        self.check_validation_error(self.post,
+                                    body={'foo': '2014-13-14T01:00:00Z'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo."
+                  " Value: bar. 'bar' is not a 'date-time'")
+        self.check_validation_error(self.post, body={'foo': 'bar'},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: 1."
+                  " '1' is not a 'date-time'")
+        self.check_validation_error(self.post, body={'foo': '1'},
+                                    expected_detail=detail)
+
+
 class UuidTestCase(APIValidationTestCase):
 
     def setUp(self):
