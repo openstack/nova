@@ -183,11 +183,6 @@ Nova VM
     Live migrate instance from current host to destination host. Requires instance id (which comes from euca-describe-instance) and destination host name (which can be found from nova-manage service list).
 
 
-FILES
-========
-
-The nova-manage.conf file contains configuration information in the form of python-gflags.
-
 SEE ALSO
 ========
 
