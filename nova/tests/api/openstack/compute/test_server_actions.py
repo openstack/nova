@@ -981,6 +981,20 @@ class ServerActionsControllerTest(test.TestCase):
         location = response.headers['Location']
         self.assertEqual('http://localhost/v2/fake/images/123', location)
 
+    def test_create_image_glance_link_prefix(self):
+        self.flags(osapi_glance_link_prefix='https://glancehost')
+        body = {
+            'createImage': {
+                'name': 'Snapshot 1',
+            },
+        }
+
+        req = fakes.HTTPRequest.blank(self.url)
+        response = self.controller._action_create_image(req, FAKE_UUID, body)
+
+        location = response.headers['Location']
+        self.assertEqual('https://glancehost/v2/fake/images/123', location)
+
     def test_create_image_name_too_long(self):
         long_name = 'a' * 260
         body = {

@@ -1466,7 +1466,9 @@ class Controller(wsgi.Controller):
 
         # build location of newly-created image entity
         image_id = str(image['id'])
-        image_ref = os.path.join(req.application_url,
+        url_prefix = self._view_builder._update_glance_link_prefix(
+                req.application_url)
+        image_ref = os.path.join(url_prefix,
                                  context.project_id,
                                  'images',
                                  image_id)
