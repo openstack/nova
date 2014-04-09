@@ -1386,12 +1386,12 @@ class NetworkManager(manager.Manager):
         instance = instance_obj.Instance.get_by_id(context, instance_id)
         # NOTE(russellb) No need to object-ify this since
         # get_vifs_by_instance() is unused and set to be removed.
-        vifs = self.db.virtual_interface_get_by_instance(context,
-                                                         instance.uuid)
+        vifs = vif_obj.VirtualInterfaceList.get_by_instance_uuid(context,
+                                                                 instance.uuid)
         for vif in vifs:
-            if vif.get('network_id') is not None:
-                network = self._get_network_by_id(context, vif['network_id'])
-                vif['net_uuid'] = network['uuid']
+            if vif.network_id is not None:
+                network = self._get_network_by_id(context, vif.network_id)
+                vif.net_uuid = network.uuid
         return [dict(vif.iteritems()) for vif in vifs]
 
     def get_instance_id_by_floating_address(self, context, address):
@@ -1443,11 +1443,10 @@ class NetworkManager(manager.Manager):
         #             we major version the network_rpcapi to 2.0.
         # NOTE(russellb) No need to object-ify this since
         # get_vifs_by_instance() is unused and set to be removed.
-        vif = self.db.virtual_interface_get_by_address(context,
-                                                        mac_address)
-        if vif.get('network_id') is not None:
-            network = self._get_network_by_id(context, vif['network_id'])
-            vif['net_uuid'] = network['uuid']
+        vif = vif_obj.VirtualInterface.get_by_address(context, mac_address)
+        if vif.network_id is not None:
+            network = self._get_network_by_id(context, vif.network_id)
+            vif.net_uuid = network.uuid
         return vif
 
     @periodic_task.periodic_task(
@@ -1834,7 +1833,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             network_uuids = [uuid for (uuid, fixed_ip) in requested_networks]
             networks = self._get_networks_by_uuids(context, network_uuids)
         else:
-            networks = self.db.project_get_networks(context, project_id)
+            networks = network_obj.NetworkList.get_by_project(context,
+                                                              project_id)
         return networks
 
     def create_networks(self, context, **kwargs):
@@ -1911,8 +1911,8 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
             vpn_address = network['vpn_public_address']
             if (CONF.teardown_unused_network_gateway and
                 network['multi_host'] and vpn_address != CONF.vpn_ip and
-                not self.db.network_in_use_on_host(context, network['id'],
-                                                   self.host)):
+                not network_obj.Network.in_use_on_host(context, network['id'],
+                                                       self.host)):
                 LOG.debug(_("Remove unused gateway %s"), network['bridge'])
                 self.driver.kill_dhcp(dev)
                 self.l3driver.remove_gateway(network)
