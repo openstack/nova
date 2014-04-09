@@ -17,9 +17,9 @@ import fixtures
 import mock
 
 from nova import test
+from nova.tests.virt.vmwareapi import fake
 from nova.tests.virt.vmwareapi import stubs
 from nova.virt.vmwareapi import driver
-from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import vim_util
 
 

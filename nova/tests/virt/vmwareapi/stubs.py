@@ -21,9 +21,9 @@ import contextlib
 
 import mock
 
+from nova.tests.virt.vmwareapi import fake
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import error_util
-from nova.virt.vmwareapi import fake
 from nova.virt.vmwareapi import network_util
 from nova.virt.vmwareapi import vmware_images
 
