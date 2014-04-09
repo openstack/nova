@@ -372,14 +372,6 @@ class VMwareESXDriver(driver.ComputeDriver):
         """inject network info for specified instance."""
         self._vmops.inject_network_info(instance, network_info)
 
-    def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks."""
-        self._vmops.plug_vifs(instance, network_info)
-
-    def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks."""
-        self._vmops.unplug_vifs(instance, network_info)
-
     def list_instance_uuids(self):
         """List VM instance UUIDs."""
         uuids = self._vmops.list_instances()
@@ -732,16 +724,6 @@ class VMwareVCDriver(VMwareESXDriver):
         """inject network info for specified instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.inject_network_info(instance, network_info)
-
-    def plug_vifs(self, instance, network_info):
-        """Plug VIFs into networks."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.plug_vifs(instance, network_info)
-
-    def unplug_vifs(self, instance, network_info):
-        """Unplug VIFs from networks."""
-        _vmops = self._get_vmops_for_compute_node(instance['node'])
-        _vmops.unplug_vifs(instance, network_info)
 
 
 class VMwareAPISession(object):
