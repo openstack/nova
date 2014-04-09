@@ -1012,7 +1012,7 @@ class ComputeManager(manager.Manager):
         LOG.info(_("Lifecycle event %(state)d on VM %(uuid)s") %
                   {'state': event.get_transition(),
                    'uuid': event.get_instance_uuid()})
-        context = nova.context.get_admin_context()
+        context = nova.context.get_admin_context(read_deleted='yes')
         instance = instance_obj.Instance.get_by_uuid(
             context, event.get_instance_uuid())
         vm_power_state = None
