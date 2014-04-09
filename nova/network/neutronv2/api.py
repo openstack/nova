@@ -23,9 +23,8 @@ import six
 
 from nova.compute import flavors
 from nova import conductor
-from nova.db import base
 from nova import exception
-from nova.network import api as network_api
+from nova.network import base_api
 from nova.network import model as network_model
 from nova.network import neutronv2
 from nova.network.neutronv2 import constants
@@ -88,13 +87,9 @@ CONF.import_opt('default_floating_pool', 'nova.network.floating_ips')
 CONF.import_opt('flat_injected', 'nova.network.manager')
 LOG = logging.getLogger(__name__)
 
-refresh_cache = network_api.refresh_cache
-update_instance_info_cache = network_api.update_instance_cache_with_nw_info
 
-
-class API(base.Base):
+class API(base_api.NetworkAPI):
     """API for interacting with the neutron 2.x API."""
-    _sentinel = object()
 
     def __init__(self):
         super(API, self).__init__()
@@ -430,8 +425,8 @@ class API(base.Base):
         # hasn't already been deleted. This is needed when an instance fails to
         # launch and is rescheduled onto another compute node. If the instance
         # has already been deleted this call does nothing.
-        update_instance_info_cache(self, context, instance,
-                                   network_model.NetworkInfo([]))
+        base_api.update_instance_cache_with_nw_info(self, context, instance,
+                                            network_model.NetworkInfo([]))
 
     def allocate_port_for_instance(self, context, instance, port_id,
                                    network_id=None, requested_ip=None):
@@ -460,7 +455,7 @@ class API(base.Base):
         """Return the port for the client given the port id."""
         return neutronv2.get_client(context).show_port(port_id)
 
-    @refresh_cache
+    @base_api.refresh_cache
     def get_instance_nw_info(self, context, instance, networks=None,
                              port_ids=None, use_slave=False):
         """Return network information for specified instance
@@ -523,7 +518,7 @@ class API(base.Base):
 
         return networks, port_ids
 
-    @refresh_cache
+    @base_api.refresh_cache
     def add_fixed_ip_to_instance(self, context, instance, network_id):
         """Add a fixed ip to the instance from specified network."""
         search_opts = {'network_id': network_id}
@@ -558,7 +553,7 @@ class API(base.Base):
         raise exception.NetworkNotFoundForInstance(
                 instance_id=instance['uuid'])
 
-    @refresh_cache
+    @base_api.refresh_cache
     def remove_fixed_ip_from_instance(self, context, instance, address):
         """Remove a fixed ip from the instance."""
         zone = 'compute:%s' % instance['availability_zone']
@@ -719,7 +714,7 @@ class API(base.Base):
             raise exception.FixedIpNotFoundForAddress(address=address)
         return port_id
 
-    @refresh_cache
+    @base_api.refresh_cache
     def associate_floating_ip(self, context, instance,
                               floating_address, fixed_address,
                               affect_auto_assigned=False):
@@ -749,7 +744,8 @@ class API(base.Base):
                                                          orig_instance_uuid)
 
             # purge cached nw info for the original instance
-            update_instance_info_cache(self, context, orig_instance)
+            base_api.update_instance_cache_with_nw_info(self, context,
+                                                        orig_instance)
 
     def get_all(self, context):
         """Get all networks for client."""
@@ -774,8 +770,8 @@ class API(base.Base):
         """Disassociate a network for client."""
         raise NotImplementedError()
 
-    def associate(self, context, network_uuid, host=_sentinel,
-                  project=_sentinel):
+    def associate(self, context, network_uuid, host=base_api.SENTINEL,
+                  project=base_api.SENTINEL):
         """Associate a network for client."""
         raise NotImplementedError()
 
@@ -981,7 +977,7 @@ class API(base.Base):
             raise exception.FloatingIpAssociated(address=address)
         client.delete_floatingip(fip['id'])
 
-    @refresh_cache
+    @base_api.refresh_cache
     def disassociate_floating_ip(self, context, instance, address,
                                  affect_auto_assigned=False):
         """Disassociate a floating ip from the instance."""
