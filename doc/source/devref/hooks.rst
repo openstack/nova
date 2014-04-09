@@ -40,11 +40,11 @@ Adding hook object code
 1. Setup a Python package with a setup.py file.
 2. Add the following to the setup.py setup call::
 
-    entry_points = [
+    entry_points = {
         'nova.hooks': [
             'resize_hook': your_package.hooks.YourHookClass,
         ]
-    ]
+    },
 
 3. *YourHookClass* should be an object with *pre* and/or *post* methods::
 
