@@ -45,7 +45,6 @@ mkdir: CommandFilter, mkdir, root
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/connection.py: 'chown', 'root', basepath('disk')
-# nova/utils.py: 'chown', owner_uid, path
 chown: CommandFilter, chown, root
 
 # nova/virt/disk/vfs/localfs.py: 'chmod'
