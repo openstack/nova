@@ -1076,9 +1076,13 @@ class VMOps(object):
         new_root_gb = instance['root_gb']
         root_vdi = vdis.get('root')
         if new_root_gb and root_vdi:
-            vdi_ref = root_vdi['ref']
-            vm_utils.update_vdi_virtual_size(self._session, instance,
-                                             vdi_ref, new_root_gb)
+            if root_vdi.get('osvol', False):  # Don't resize root volumes.
+                LOG.debug(_("Not resizing the root volume."),
+                    instance=instance)
+            else:
+                vdi_ref = root_vdi['ref']
+                vm_utils.update_vdi_virtual_size(self._session, instance,
+                                                 vdi_ref, new_root_gb)
 
         ephemeral_vdis = vdis.get('ephemerals')
         if not ephemeral_vdis:
