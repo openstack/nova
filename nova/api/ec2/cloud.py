@@ -622,6 +622,9 @@ class CloudController(object):
         security_group = self.security_group_api.get(context, group_name,
                                                      group_id)
 
+        extensions.check_compute_policy(context, 'security_groups',
+                                        security_group, 'compute_extension')
+
         prevalues = kwargs.get('ip_permissions', [kwargs])
 
         rule_ids = []
@@ -655,6 +658,9 @@ class CloudController(object):
 
         security_group = self.security_group_api.get(context, group_name,
                                                      group_id)
+
+        extensions.check_compute_policy(context, 'security_groups',
+                                        security_group, 'compute_extension')
 
         prevalues = kwargs.get('ip_permissions', [kwargs])
         postvalues = []
@@ -727,6 +733,9 @@ class CloudController(object):
 
         security_group = self.security_group_api.get(context, group_name,
                                                      group_id)
+
+        extensions.check_compute_policy(context, 'security_groups',
+                                        security_group, 'compute_extension')
 
         self.security_group_api.destroy(context, security_group)
 
