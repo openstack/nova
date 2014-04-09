@@ -39,6 +39,7 @@ class MultinicController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.action('add_fixed_ip')
+    @extensions.expected_errors(404)
     @validation.schema(multinic.add_fixed_ip)
     def _add_fixed_ip(self, req, id, body):
         """Adds an IP on a given network to an instance."""
@@ -52,6 +53,7 @@ class MultinicController(wsgi.Controller):
         return webob.Response(status_int=202)
 
     @wsgi.action('remove_fixed_ip')
+    @extensions.expected_errors((400, 404))
     @validation.schema(multinic.remove_fixed_ip)
     def _remove_fixed_ip(self, req, id, body):
         """Removes an IP from an instance."""
