@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright 2010 United States Government as represented by the
 # Administrator of the National Aeronautics and Space Administration.
 # All Rights Reserved.
@@ -23,7 +21,7 @@ Helper methods to deal with images.
 
 import re
 
-from nova.openstack.common.gettextutils import _  # noqa
+from nova.openstack.common.gettextutils import _
 from nova.openstack.common import strutils
 
 
@@ -31,7 +29,8 @@ class QemuImgInfo(object):
     BACKING_FILE_RE = re.compile((r"^(.*?)\s*\(actual\s+path\s*:"
                                   r"\s+(.*?)\)\s*$"), re.I)
     TOP_LEVEL_RE = re.compile(r"^([\w\d\s\_\-]+):(.*)$")
-    SIZE_RE = re.compile(r"\(\s*(\d+)\s+bytes\s*\)", re.I)
+    SIZE_RE = re.compile(r"(\d*\.?\d+)(\w+)?(\s*\(\s*(\d+)\s+bytes\s*\))?",
+                         re.I)
 
     def __init__(self, cmd_output=None):
         details = self._parse(cmd_output or '')
@@ -42,7 +41,7 @@ class QemuImgInfo(object):
         self.cluster_size = details.get('cluster_size')
         self.disk_size = details.get('disk_size')
         self.snapshots = details.get('snapshot_list', [])
-        self.encryption = details.get('encryption')
+        self.encrypted = details.get('encrypted')
 
     def __str__(self):
         lines = [
@@ -55,6 +54,8 @@ class QemuImgInfo(object):
         ]
         if self.snapshots:
             lines.append("snapshots: %s" % self.snapshots)
+        if self.encrypted:
+            lines.append("encrypted: %s" % self.encrypted)
         return "\n".join(lines)
 
     def _canonicalize(self, field):
@@ -70,13 +71,17 @@ class QemuImgInfo(object):
     def _extract_bytes(self, details):
         # Replace it with the byte amount
         real_size = self.SIZE_RE.search(details)
-        if real_size:
-            details = real_size.group(1)
-        try:
-            details = strutils.to_bytes(details)
-        except TypeError:
-            pass
-        return details
+        if not real_size:
+            raise ValueError(_('Invalid input value "%s".') % details)
+        magnitude = real_size.group(1)
+        unit_of_measure = real_size.group(2)
+        bytes_info = real_size.group(3)
+        if bytes_info:
+            return int(real_size.group(4))
+        elif not unit_of_measure:
+            return int(magnitude)
+        return strutils.string_to_bytes('%s%sB' % (magnitude, unit_of_measure),
+                                        return_int=True)
 
     def _extract_details(self, root_cmd, root_details, lines_after):
         real_details = root_details
@@ -87,7 +92,10 @@ class QemuImgInfo(object):
                 real_details = backing_match.group(2).strip()
         elif root_cmd in ['virtual_size', 'cluster_size', 'disk_size']:
             # Replace it with the byte amount (if we can convert it)
-            real_details = self._extract_bytes(root_details)
+            if root_details == 'None':
+                real_details = 0
+            else:
+                real_details = self._extract_bytes(root_details)
         elif root_cmd == 'file_format':
             real_details = real_details.strip().lower()
         elif root_cmd == 'snapshot_list':
