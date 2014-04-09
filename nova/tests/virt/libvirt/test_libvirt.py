@@ -61,6 +61,7 @@ import nova.tests.image.fake
 from nova.tests import matchers
 from nova.tests.objects import test_pci_device
 from nova.tests.virt.libvirt import fake_libvirt_utils
+from nova.tests.virt.libvirt import fakelibvirt
 from nova import utils
 from nova import version
 from nova.virt import configdrive
@@ -81,7 +82,7 @@ from nova.virt import netutils
 try:
     import libvirt
 except ImportError:
-    import nova.tests.virt.libvirt.fakelibvirt as libvirt
+    libvirt = fakelibvirt
 libvirt_driver.libvirt = libvirt
 
 
