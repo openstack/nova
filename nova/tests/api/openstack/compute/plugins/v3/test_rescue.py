@@ -47,6 +47,23 @@ class RescueTest(test.NoDBTestCase):
         self.stubs.Set(compute.api.API, "unrescue", unrescue)
         self.app = fakes.wsgi_app_v3(init_only=('servers', 'os-rescue'))
 
+    def test_rescue_from_locked_server(self):
+        body = dict(rescue=None)
+
+        def fake_rescue(*args, **kwargs):
+            raise exception.InstanceIsLocked('fake message')
+
+        self.stubs.Set(compute.api.API,
+                       'rescue',
+                       fake_rescue)
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 409)
+
     def test_rescue_with_preset_password(self):
         body = {"rescue": {"admin_password": "AABBCC112233"}}
         req = webob.Request.blank('/v3/servers/test_inst/action')
@@ -129,6 +146,24 @@ class RescueTest(test.NoDBTestCase):
 
         resp = req.get_response(self.app)
         self.assertEqual(202, resp.status_int)
+
+    def test_unrescue_from_locked_server(self):
+        def fake_unrescue_from_locked_server(self, context,
+                                             instance):
+            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
+
+        self.stubs.Set(compute.api.API,
+                       'unrescue',
+                       fake_unrescue_from_locked_server)
+
+        body = dict(unrescue=None)
+        req = webob.Request.blank('/v3/servers/test_inst/action')
+        req.method = "POST"
+        req.body = jsonutils.dumps(body)
+        req.headers["content-type"] = "application/json"
+
+        resp = req.get_response(self.app)
+        self.assertEqual(resp.status_int, 409)
 
     def test_unrescue_of_active_instance(self):
         body = dict(unrescue=None)
