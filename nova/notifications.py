@@ -122,11 +122,10 @@ def send_update(context, old_instance, new_instance, service=None, host=None):
     if old_vm_state != new_vm_state:
         # yes, the vm state is changing:
         update_with_state_change = True
-    elif CONF.notify_on_state_change:
-        if (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
-                old_task_state != new_task_state):
-            # yes, the task state is changing:
-            update_with_state_change = True
+    elif (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
+          old_task_state != new_task_state):
+        # yes, the task state is changing:
+        update_with_state_change = True
 
     if update_with_state_change:
         # send a notification with state changes
@@ -170,11 +169,10 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
         if old_vm_state != new_vm_state:
             # yes, the vm state is changing:
             fire_update = True
-        elif CONF.notify_on_state_change:
-            if (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
-                    old_task_state != new_task_state):
-                # yes, the task state is changing:
-                fire_update = True
+        elif (CONF.notify_on_state_change.lower() == "vm_and_task_state" and
+              old_task_state != new_task_state):
+            # yes, the task state is changing:
+            fire_update = True
 
     if fire_update:
         # send either a state change or a regular notification
