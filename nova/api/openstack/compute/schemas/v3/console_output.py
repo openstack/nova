@@ -20,8 +20,9 @@ get_console_output = {
             'properties': {
                 'length': {
                     'type': ['integer', 'string'],
-                    'minimum': 0,
-                    'pattern': '^[0-9]+$',
+                    'pattern': '^-?[0-9]+$',
+                    # NOTE: -1 means an unlimited length.
+                    'minimum': -1,
                 },
             },
             'additionalProperties': False,
