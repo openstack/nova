@@ -98,7 +98,10 @@ class MetadataRequestHandler(wsgi.Application):
     @webob.dec.wsgify(RequestClass=wsgi.Request)
     def __call__(self, req):
         if os.path.normpath(req.path_info) == "/":
-            return(base.ec2_md_print(base.VERSIONS + ["latest"]))
+            resp = base.ec2_md_print(base.VERSIONS + ["latest"])
+            req.response.body = resp
+            req.response.content_type = base.MIME_TYPE_TEXT_PLAIN
+            return req.response
 
         if CONF.service_neutron_metadata_proxy:
             meta_data = self._handle_instance_id_request(req)
@@ -121,7 +124,10 @@ class MetadataRequestHandler(wsgi.Application):
         if callable(data):
             return data(req, meta_data)
 
-        return base.ec2_md_print(data)
+        resp = base.ec2_md_print(data)
+        req.response.body = resp
+        req.response.content_type = meta_data.get_mimetype()
+        return req.response
 
     def _handle_remote_ip_request(self, req):
         remote_address = req.remote_addr

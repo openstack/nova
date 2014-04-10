@@ -596,10 +596,23 @@ class MetadataHandlerTestCase(test.TestCase):
 
     def test_version_root(self):
         response = fake_request(self.stubs, self.mdinst, "/2009-04-04")
+        response_ctype = response.headers['Content-Type']
+        self.assertTrue(response_ctype.startswith("text/plain"))
         self.assertEqual(response.body, 'meta-data/\nuser-data')
 
         response = fake_request(self.stubs, self.mdinst, "/9999-99-99")
         self.assertEqual(response.status_int, 404)
+
+    def test_json_data(self):
+        response = fake_request(self.stubs, self.mdinst,
+                                "/openstack/latest/meta_data.json")
+        response_ctype = response.headers['Content-Type']
+        self.assertTrue(response_ctype.startswith("application/json"))
+
+        response = fake_request(self.stubs, self.mdinst,
+                                "/openstack/latest/vendor_data.json")
+        response_ctype = response.headers['Content-Type']
+        self.assertTrue(response_ctype.startswith("application/json"))
 
     def test_user_data_non_existing_fixed_address(self):
         self.stubs.Set(network_api.API, 'get_fixed_ip_by_address',
@@ -636,6 +649,8 @@ class MetadataHandlerTestCase(test.TestCase):
                                 headers={'X-Forwarded-For': expected_addr})
 
         self.assertEqual(response.status_int, 200)
+        response_ctype = response.headers['Content-Type']
+        self.assertTrue(response_ctype.startswith("text/plain"))
         self.assertEqual(response.body,
                          base64.b64decode(self.instance['user_data']))
 
@@ -687,6 +702,8 @@ class MetadataHandlerTestCase(test.TestCase):
                      'X-Instance-ID-Signature': signed})
 
         self.assertEqual(response.status_int, 200)
+        response_ctype = response.headers['Content-Type']
+        self.assertTrue(response_ctype.startswith("text/plain"))
         self.assertEqual(response.body,
                          base64.b64decode(self.instance['user_data']))
 
