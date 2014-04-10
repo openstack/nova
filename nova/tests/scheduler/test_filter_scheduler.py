@@ -376,26 +376,29 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual({'vcpus': 5}, host_state.limits)
 
-    def test_group_details_in_filter_properties(self):
-        sched = fakes.FakeFilterScheduler()
-
+    def _create_server_group(self):
         instance = fake_instance.fake_instance_obj(self.context,
                 params={'host': 'hostA'})
 
         group = instance_group_obj.InstanceGroup()
+        group.name = 'pele'
         group.uuid = str(uuid.uuid4())
         group.members = [instance.uuid]
         group.policies = ['anti-affinity']
+        return group
+
+    def _test_group_details_in_filter_properties(self, group, func, hint):
+        sched = fakes.FakeFilterScheduler()
 
         filter_properties = {
             'scheduler_hints': {
-                'group': group.uuid,
+                'group': hint,
             },
             'group_hosts': ['hostB'],
         }
 
         with contextlib.nested(
-            mock.patch.object(instance_group_obj.InstanceGroup, 'get_by_uuid',
+            mock.patch.object(instance_group_obj.InstanceGroup, func,
                                return_value=group),
             mock.patch.object(instance_group_obj.InstanceGroup, 'get_hosts',
                                return_value=['hostA']),
@@ -407,6 +410,16 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                              filter_properties['group_hosts'])
             self.assertEqual(['anti-affinity'],
                     filter_properties['group_policies'])
+
+    def test_group_uuid_details_in_filter_properties(self):
+        group = self._create_server_group()
+        self._test_group_details_in_filter_properties(group, 'get_by_uuid',
+                                                      group.uuid)
+
+    def test_group_name_details_in_filter_properties(self):
+        group = self._create_server_group()
+        self._test_group_details_in_filter_properties(group, 'get_by_name',
+                                                      group.name)
 
     def test_schedule_host_pool(self):
         """Make sure the scheduler_host_subset_size property works properly."""

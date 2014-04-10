@@ -262,10 +262,10 @@ class FilterScheduler(driver.Scheduler):
     def _setup_instance_group(context, filter_properties):
         update_group_hosts = False
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group_uuid = scheduler_hints.get('group', None)
-        if group_uuid:
-            group = instance_group_obj.InstanceGroup.get_by_uuid(context,
-                    group_uuid)
+        group_hint = scheduler_hints.get('group', None)
+        if group_hint:
+            group = instance_group_obj.InstanceGroup.get_by_hint(context,
+                        group_hint)
             policies = set(('anti-affinity', 'affinity'))
             if any((policy in policies) for policy in group.policies):
                 update_group_hosts = True
