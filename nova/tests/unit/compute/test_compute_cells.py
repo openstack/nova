@@ -227,6 +227,9 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
             self.context, instance['uuid'])
         self.assertEqual(0, len(bdms))
 
+    def test_create_bdm_from_flavor(self):
+        self.skipTest("Test is incompatible with cells.")
+
     @mock.patch('nova.cells.messaging._TargetedMessage')
     def test_rebuild_sig(self, mock_msg):
         # TODO(belliott) Cells could benefit from better testing to ensure API

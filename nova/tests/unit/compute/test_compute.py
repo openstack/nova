@@ -7329,6 +7329,29 @@ class ComputeAPITestCase(BaseTestCase):
         (refs, resv_id) = self.compute_api.create(self.context,
                 inst_type, self.fake_image['id'])
 
+    def test_create_bdm_from_flavor(self):
+        instance_type_params = {
+            'flavorid': 'test', 'name': 'test',
+            'swap': 1024, 'ephemeral_gb': 1, 'root_gb': 1,
+        }
+        self._create_instance_type(params=instance_type_params)
+        inst_type = flavors.get_flavor_by_name('test')
+        self.stubs.Set(fake_image._FakeImageService, 'show', self.fake_show)
+        (refs, resv_id) = self.compute_api.create(self.context, inst_type,
+                                                  self.fake_image['id'])
+
+        instance_uuid = refs[0]['uuid']
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+            self.context, instance_uuid)
+
+        ephemeral = filter(block_device.new_format_is_ephemeral, bdms)
+        self.assertEqual(1, len(ephemeral))
+        swap = filter(block_device.new_format_is_swap, bdms)
+        self.assertEqual(1, len(swap))
+
+        self.assertEqual(1024, swap[0].volume_size)
+        self.assertEqual(1, ephemeral[0].volume_size)
+
     def test_create_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
         # build from it
