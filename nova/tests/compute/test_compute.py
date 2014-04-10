@@ -1997,7 +1997,7 @@ class ComputeTestCase(BaseTestCase):
         self.mox.StubOutWithMock(nova.virt.fake.FakeDriver, 'rescue')
 
         self.compute._get_rescue_image(
-            mox.IgnoreArg(), inst_obj).AndReturn({})
+            mox.IgnoreArg(), inst_obj, mox.IgnoreArg()).AndReturn({})
         nova.virt.fake.FakeDriver.rescue(
             mox.IgnoreArg(), inst_obj, [], mox.IgnoreArg(), 'password'
             ).AndRaise(RuntimeError("Try again later"))
@@ -2015,6 +2015,75 @@ class ComputeTestCase(BaseTestCase):
                     rescue_password='password')
 
         self.assertEqual('some_random_state', inst_obj['vm_state'])
+
+    @mock.patch.object(nova.compute.utils, "get_image_metadata")
+    @mock.patch.object(nova.image.glance, "get_remote_image_service")
+    @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
+    def test_rescue_with_image_specified(self, mock_rescue,
+            mock_get_remote_image_service, mock_get_image_metadata):
+
+        image_ref = "image-ref"
+        rescue_image_meta = {}
+        params = {"task_state": task_states.RESCUING}
+        instance = self._create_fake_instance(params=params)
+        instance = self._objectify(instance)
+
+        ctxt = context.get_admin_context()
+        mock_context = mock.Mock()
+        mock_context.elevated.return_value = ctxt
+
+        mock_get_image_metadata.return_value = rescue_image_meta
+        mock_image_service = "image_service"
+        mock_get_remote_image_service.return_value = (mock_image_service, "id")
+
+        self.compute.rescue_instance(mock_context, instance=instance,
+            rescue_password="password", rescue_image_ref=image_ref)
+
+        mock_get_remote_image_service.assert_called_with(ctxt,
+                                                         image_ref)
+        mock_get_image_metadata.assert_called_with(ctxt,
+                                                   mock_image_service,
+                                                   image_ref, instance)
+        mock_rescue.assert_called_with(ctxt, instance, [],
+                                       rescue_image_meta, 'password')
+        self.compute.terminate_instance(ctxt,
+                                        self._objectify(instance), [], [])
+
+    @mock.patch.object(nova.compute.utils, "get_image_metadata")
+    @mock.patch.object(nova.image.glance, "get_remote_image_service")
+    @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
+    def test_rescue_with_base_image_when_image_not_specified(self,
+            mock_rescue, mock_get_remote_image_service,
+            mock_get_image_metadata):
+
+        image_ref = "image-ref"
+        system_meta = {"image_base_image_ref": image_ref}
+        rescue_image_meta = {}
+        params = {"task_state": task_states.RESCUING,
+                  "system_metadata": system_meta}
+        instance = self._create_fake_instance(params=params)
+        instance = self._objectify(instance)
+
+        ctxt = context.get_admin_context()
+        mock_context = mock.Mock()
+        mock_context.elevated.return_value = ctxt
+
+        mock_get_image_metadata.return_value = rescue_image_meta
+        mock_image_service = "image_service"
+        mock_get_remote_image_service.return_value = (mock_image_service, "id")
+
+        self.compute.rescue_instance(mock_context, instance=instance,
+                                     rescue_password="password")
+
+        mock_get_remote_image_service.assert_called_with(ctxt,
+                                                         image_ref)
+        mock_get_image_metadata.assert_called_with(ctxt,
+                                                   mock_image_service,
+                                                   image_ref, instance)
+        mock_rescue.assert_called_with(ctxt, instance, [],
+                                       rescue_image_meta, 'password')
+        self.compute.terminate_instance(self.context,
+                                        self._objectify(instance), [], [])
 
     def test_power_on(self):
         # Ensure instance can be powered on.

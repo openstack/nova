@@ -303,12 +303,15 @@ class ComputeCellsAPI(compute_api.API):
         return self._call_to_cells(context, instance, 'get_diagnostics')
 
     @check_instance_cell
-    def rescue(self, context, instance, rescue_password=None):
+    def rescue(self, context, instance, rescue_password=None,
+               rescue_image_ref=None):
         """Rescue the given instance."""
         super(ComputeCellsAPI, self).rescue(context, instance,
-                rescue_password=rescue_password)
+                rescue_password=rescue_password,
+                rescue_image_ref=rescue_image_ref)
         self._cast_to_cells(context, instance, 'rescue',
-                rescue_password=rescue_password)
+                rescue_password=rescue_password,
+                rescue_image_ref=rescue_image_ref)
 
     @check_instance_cell
     def unrescue(self, context, instance):

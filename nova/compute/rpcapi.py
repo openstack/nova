@@ -241,6 +241,7 @@ class ComputeAPI(object):
         3.21 - Made rebuild take new-world BDM objects
         3.22 - Made terminate_instance take new-world BDM objects
         3.23 - Added external_instance_event()
+        3.24 - Update rescue_instance() to take optional rescue_image_ref
     '''
 
     VERSION_ALIASES = {
@@ -686,17 +687,21 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'remove_volume_connection',
                           instance=instance_p, volume_id=volume_id)
 
-    def rescue_instance(self, ctxt, instance, rescue_password):
-        if self.client.can_send_version('3.9'):
+    def rescue_instance(self, ctxt, instance, rescue_password,
+                        rescue_image_ref=None):
+        instance = jsonutils.to_primitive(instance)
+        msg_args = {'rescue_password': rescue_password, 'instance': instance}
+        if self.client.can_send_version('3.24'):
+            version = '3.24'
+            msg_args['rescue_image_ref'] = rescue_image_ref
+        elif self.client.can_send_version('3.9'):
             version = '3.9'
         else:
             # NOTE(russellb) Havana compat
             version = self._get_compat_version('3.0', '2.44')
-            instance = jsonutils.to_primitive(instance)
         cctxt = self.client.prepare(server=_compute_host(None, instance),
                 version=version)
-        cctxt.cast(ctxt, 'rescue_instance', instance=instance,
-                   rescue_password=rescue_password)
+        cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
     def reset_network(self, ctxt, instance):
         # NOTE(russellb) Havana compat

@@ -567,15 +567,19 @@ class ComputeRpcAPITestCase(test.TestCase):
                 version='2.0')
 
     def test_rescue_instance(self):
+        self.flags(compute='3.9', group='upgrade_levels')
         self._test_compute_api('rescue_instance', 'cast',
-                instance=self.fake_instance, rescue_password='pw',
-                version='3.9')
+            instance=self.fake_instance, rescue_password='pw', version='3.9')
 
-        # NOTE(russellb) Havana compat
+    def test_rescue_instance_with_rescue_image_ref_passed(self):
+        self._test_compute_api('rescue_instance', 'cast',
+            instance=self.fake_instance, rescue_password='pw',
+            rescue_image_ref='fake_image_ref', version='3.24')
+
+    def test_rescue_instance_for_havana_compatibiltiy(self):
         self.flags(compute='havana', group='upgrade_levels')
         self._test_compute_api('rescue_instance', 'cast',
-                instance=self.fake_instance, rescue_password='pw',
-                version='2.44')
+            instance=self.fake_instance, rescue_password='pw', version='2.44')
 
     def test_reset_network(self):
         self._test_compute_api('reset_network', 'cast',

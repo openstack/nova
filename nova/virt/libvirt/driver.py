@@ -115,7 +115,8 @@ LOG = logging.getLogger(__name__)
 
 libvirt_opts = [
     cfg.StrOpt('rescue_image_id',
-               help='Rescue ami image',
+               help='Rescue ami image. This will not be used if an image id '
+                    'is provided by the user.',
                deprecated_group='DEFAULT'),
     cfg.StrOpt('rescue_kernel_id',
                help='Rescue aki image',
@@ -2180,8 +2181,14 @@ class LibvirtDriver(driver.ComputeDriver):
         unrescue_xml_path = os.path.join(instance_dir, 'unrescue.xml')
         libvirt_utils.write_to_file(unrescue_xml_path, unrescue_xml)
 
+        if image_meta is not None:
+            rescue_image_id = image_meta.get('id')
+        else:
+            rescue_image_id = None
+
         rescue_images = {
-            'image_id': CONF.libvirt.rescue_image_id or instance['image_ref'],
+            'image_id': (rescue_image_id or
+                        CONF.libvirt.rescue_image_id or instance['image_ref']),
             'kernel_id': (CONF.libvirt.rescue_kernel_id or
                           instance['kernel_id']),
             'ramdisk_id': (CONF.libvirt.rescue_ramdisk_id or
