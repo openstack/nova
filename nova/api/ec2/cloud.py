@@ -44,6 +44,7 @@ from nova.network.security_group import neutron_driver
 from nova.objects import base as obj_base
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
+from nova.objects import security_group as sec_group_obj
 from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -581,14 +582,14 @@ class CloudController(object):
             source_project_id = self._get_source_project_id(context,
                 source_security_group_owner_id)
 
-            source_security_group = db.security_group_get_by_name(
+            source_security_group = sec_group_obj.SecurityGroup.get_by_name(
                     context.elevated(),
                     source_project_id,
                     source_security_group_name)
             notfound = exception.SecurityGroupNotFound
             if not source_security_group:
                 raise notfound(security_group_id=source_security_group_name)
-            group_id = source_security_group['id']
+            group_id = source_security_group.id
             return self.security_group_api.new_group_ingress_rule(
                                     group_id, ip_protocol, from_port, to_port)
         else:

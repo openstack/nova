@@ -545,12 +545,20 @@ class CloudTestCase(test.TestCase):
                           self.context, group_name=sec['name'], **kwargs)
 
     def test_authorize_security_group_ingress_ip_permissions_groups(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        kwargs = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+            'name': 'test'
+        }
         sec = db.security_group_create(self.context,
                                        {'project_id': 'someuser',
+                                        'user_id': 'someuser',
+                                        'description': '',
                                         'name': 'somegroup1'})
         sec = db.security_group_create(self.context,
                                        {'project_id': 'someuser',
+                                        'user_id': 'someuser',
+                                        'description': '',
                                         'name': 'othergroup2'})
         sec = db.security_group_create(self.context, kwargs)
         authz = self.cloud.authorize_security_group_ingress
@@ -563,13 +571,21 @@ class CloudTestCase(test.TestCase):
         self.assertTrue(authz(self.context, group_name=sec['name'], **kwargs))
 
     def test_describe_security_group_ingress_groups(self):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        kwargs = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+            'name': 'test'
+        }
         sec1 = db.security_group_create(self.context, kwargs)
         sec2 = db.security_group_create(self.context,
                                        {'project_id': 'someuser',
+                                        'user_id': 'someuser',
+                                        'description': '',
                                         'name': 'somegroup1'})
         sec3 = db.security_group_create(self.context,
                                        {'project_id': 'someuser',
+                                        'user_id': 'someuser',
+                                        'description': '',
                                         'name': 'othergroup2'})
         authz = self.cloud.authorize_security_group_ingress
         kwargs = {'ip_permissions': [
@@ -687,7 +703,12 @@ class CloudTestCase(test.TestCase):
                           self.context, group_id=sec_group['id'], **kwargs)
 
     def _test_authorize_security_group_no_ports_with_source_group(self, proto):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        kwargs = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+            'description': '',
+            'name': 'test'
+        }
         sec = db.security_group_create(self.context, kwargs)
 
         authz = self.cloud.authorize_security_group_ingress
@@ -718,7 +739,12 @@ class CloudTestCase(test.TestCase):
         db.security_group_destroy(self.context, sec['id'])
 
     def _test_authorize_security_group_no_ports_no_source_group(self, proto):
-        kwargs = {'project_id': self.context.project_id, 'name': 'test'}
+        kwargs = {
+            'project_id': self.context.project_id,
+            'user_id': self.context.user_id,
+            'description': '',
+            'name': 'test'
+        }
         sec = db.security_group_create(self.context, kwargs)
 
         authz = self.cloud.authorize_security_group_ingress
