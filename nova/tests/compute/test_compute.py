@@ -5897,31 +5897,35 @@ class ComputeTestCase(BaseTestCase):
         # Stays the same because we didn't find anything to process
         self.assertEqual(3, call_info['get_nw_info'])
 
-    def test_poll_rescued_instances(self):
+    @mock.patch('nova.objects.instance.InstanceList.get_by_filters')
+    @mock.patch('nova.compute.api.API.unrescue')
+    def test_poll_rescued_instances(self, unrescue, get):
         timed_out_time = timeutils.utcnow() - datetime.timedelta(minutes=5)
         not_timed_out_time = timeutils.utcnow()
 
-        instances = [{'uuid': 'fake_uuid1', 'vm_state': vm_states.RESCUED,
-                      'launched_at': timed_out_time},
-                     {'uuid': 'fake_uuid2', 'vm_state': vm_states.RESCUED,
-                      'launched_at': timed_out_time},
-                     {'uuid': 'fake_uuid3', 'vm_state': vm_states.RESCUED,
-                      'launched_at': not_timed_out_time}]
+        instances = [instance_obj.Instance(uuid='fake_uuid1',
+                                           vm_state=vm_states.RESCUED,
+                                           launched_at=timed_out_time),
+                     instance_obj.Instance(uuid='fake_uuid2',
+                                           vm_state=vm_states.RESCUED,
+                                           launched_at=timed_out_time),
+                     instance_obj.Instance(uuid='fake_uuid3',
+                                           vm_state=vm_states.RESCUED,
+                                           launched_at=not_timed_out_time)]
         unrescued_instances = {'fake_uuid1': False, 'fake_uuid2': False}
 
         def fake_instance_get_all_by_filters(context, filters,
-                                             columns_to_join, use_slave=False):
-            self.assertEqual(columns_to_join, ["system_metadata"])
+                                             expected_attrs=None,
+                                             use_slave=False):
+            self.assertEqual(["system_metadata"], expected_attrs)
             return instances
+
+        get.side_effect = fake_instance_get_all_by_filters
 
         def fake_unrescue(context, instance):
             unrescued_instances[instance['uuid']] = True
 
-        self.stubs.Set(self.compute.conductor_api,
-                       'instance_get_all_by_filters',
-                       fake_instance_get_all_by_filters)
-        self.stubs.Set(self.compute.conductor_api, 'compute_unrescue',
-                       fake_unrescue)
+        unrescue.side_effect = fake_unrescue
 
         self.flags(rescue_timeout=60)
         ctxt = context.get_admin_context()
