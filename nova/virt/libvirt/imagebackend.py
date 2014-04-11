@@ -272,20 +272,21 @@ class Image(object):
                             lock_path=self.lock_path)
         def write_to_disk_info_file():
             # Use os.open to create it without group or world write permission.
-            fd = os.open(self.disk_info_path, os.O_RDWR | os.O_CREAT, 0o644)
-            with os.fdopen(fd, "r+") as disk_info_file:
+            fd = os.open(self.disk_info_path, os.O_RDONLY | os.O_CREAT, 0o644)
+            with os.fdopen(fd, "r") as disk_info_file:
                 line = disk_info_file.read().rstrip()
                 dct = _dict_from_line(line)
-                if self.path in dct:
-                    msg = _("Attempted overwrite of an existing value.")
-                    raise exception.InvalidDiskInfo(reason=msg)
-                dct.update({self.path: driver_format})
-                disk_info_file.seek(0)
-                disk_info_file.truncate()
-                disk_info_file.write('%s\n' % jsonutils.dumps(dct))
-            # Ensure the file is always owned by the nova user so qemu can't
-            # write it.
-            utils.chown(self.disk_info_path, owner_uid=os.getuid())
+
+            if self.path in dct:
+                msg = _("Attempted overwrite of an existing value.")
+                raise exception.InvalidDiskInfo(reason=msg)
+            dct.update({self.path: driver_format})
+
+            tmp_path = self.disk_info_path + ".tmp"
+            fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT, 0o644)
+            with os.fdopen(fd, "w") as tmp_file:
+                tmp_file.write('%s\n' % jsonutils.dumps(dct))
+            os.rename(tmp_path, self.disk_info_path)
 
         try:
             if (self.disk_info_path is not None and

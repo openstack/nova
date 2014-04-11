@@ -28,7 +28,6 @@ from nova.openstack.common import uuidutils
 from nova import test
 from nova.tests import fake_processutils
 from nova.tests.virt.libvirt import fake_libvirt_utils
-from nova import utils
 from nova.virt.libvirt import imagebackend
 
 CONF = cfg.CONF
@@ -66,10 +65,6 @@ class _ImageTestCase(object):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.virt.libvirt.imagebackend.libvirt_utils',
             fake_libvirt_utils))
-
-        def fake_chown(path, owner_uid=None):
-            return None
-        self.stubs.Set(utils, 'chown', fake_chown)
 
     def tearDown(self):
         super(_ImageTestCase, self).tearDown()
@@ -126,10 +121,6 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
         self.image_class = imagebackend.Raw
         super(RawTestCase, self).setUp()
         self.stubs.Set(imagebackend.Raw, 'correct_format', lambda _: None)
-
-        def fake_chown(path, owner_uid=None):
-            return None
-        self.stubs.Set(utils, 'chown', fake_chown)
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
@@ -243,10 +234,6 @@ class RawTestCase(_ImageTestCase, test.NoDBTestCase):
         self.mox.StubOutWithMock(os.path, 'exists')
         self.mox.StubOutWithMock(imagebackend.images, 'qemu_img_info')
 
-        def fake_chown(path, owner_uid=None):
-            return None
-        self.stubs.Set(utils, 'chown', fake_chown)
-
         os.path.exists(self.PATH).AndReturn(True)
         os.path.exists(self.DISK_INFO_PATH).AndReturn(False)
         info = self.mox.CreateMockAnything()
@@ -274,10 +261,6 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         super(Qcow2TestCase, self).setUp()
         self.QCOW2_BASE = (self.TEMPLATE_PATH +
                            '_%d' % (self.SIZE / units.Gi))
-
-        def fake_chown(path, owner_uid=None):
-            return None
-        self.stubs.Set(utils, 'chown', fake_chown)
 
     def prepare_mocks(self):
         fn = self.mox.CreateMockAnything()
@@ -831,10 +814,6 @@ class BackendTestCase(test.NoDBTestCase):
 
     def setUp(self):
         super(BackendTestCase, self).setUp()
-
-        def fake_chown(path, owner_uid=None):
-            return None
-        self.stubs.Set(utils, 'chown', fake_chown)
 
     def get_image(self, use_cow, image_type):
         return imagebackend.Backend(use_cow).image(self.INSTANCE,
