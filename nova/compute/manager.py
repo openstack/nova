@@ -2240,11 +2240,8 @@ class ComputeManager(manager.Manager):
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
             instance.save()
-            system_meta = utils.instance_sys_meta(instance)
-            db_inst = self.conductor_api.instance_destroy(
-                context, obj_base.obj_to_primitive(instance))
-            instance = instance_obj.Instance._from_db_object(context, instance,
-                                                             db_inst)
+            system_meta = instance.system_metadata
+            instance.destroy()
         except Exception:
             with excutils.save_and_reraise_exception():
                 quotas.rollback()
