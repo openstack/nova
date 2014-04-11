@@ -142,6 +142,7 @@ class ConductorAPI(object):
         existing methods in 2.x after that point should be done such that they
         can handle the version_cap being set to 2.0.
     ...  - Remove instance_destroy()
+    ...  - Remove compute_unrescue()
     """
 
     VERSION_ALIASES = {
@@ -371,11 +372,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'get_ec2_ids',
                           instance=instance_p)
-
-    def compute_unrescue(self, context, instance):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'compute_unrescue', instance=instance_p)
 
     def object_class_action(self, context, objname, objmethod, objver,
                             args, kwargs):

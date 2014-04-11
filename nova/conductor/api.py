@@ -242,9 +242,6 @@ class LocalAPI(object):
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
 
-    def compute_unrescue(self, context, instance):
-        return self._manager.compute_unrescue(context, instance)
-
     def object_backport(self, context, objinst, target_version):
         return self._manager.object_backport(context, objinst, target_version)
 

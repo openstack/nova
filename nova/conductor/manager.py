@@ -1041,6 +1041,7 @@ class _ConductorManagerV2Proxy(object):
     def get_ec2_ids(self, context, instance):
         return self.manager.get_ec2_ids(context, instance)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPCAPI
     def compute_unrescue(self, context, instance):
         return self.manager.compute_unrescue(context, instance)
 
