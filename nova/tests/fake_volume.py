@@ -162,7 +162,7 @@ class API(object):
         return v.vol
 
     def get(self, context, volume_id):
-        if volume_id == 87654321:
+        if str(volume_id) == '87654321':
             return {'id': volume_id,
                     'attach_time': '13:56:24',
                     'attach_status': 'attached',
