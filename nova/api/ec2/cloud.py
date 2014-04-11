@@ -1350,25 +1350,27 @@ class CloudController(object):
         if client_token:
             for ec2_id in instance_ids:
                 instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-                db.instance_system_metadata_update(
-                    context, instance_uuid, {'EC2_client_token': client_token},
-                    delete=False)
+                instance = instance_obj.Instance.get_by_uuid(context,
+                        instance_uuid, expected_attrs=['system_metadata'])
+                instance.system_metadata.update(
+                        {'EC2_client_token': client_token})
+                instance.save()
 
     def _get_client_token(self, context, instance_uuid):
         """Get client token for a given instance."""
-        sys_meta = db.instance_system_metadata_get(context, instance_uuid)
-        return sys_meta.get('EC2_client_token')
+        instance = instance_obj.Instance.get_by_uuid(context,
+                instance_uuid, expected_attrs=['system_metadata'])
+        return instance.system_metadata.get('EC2_client_token')
 
     def _remove_client_token(self, context, instance_ids):
         """Remove client token to reservation ID mapping."""
 
         for ec2_id in instance_ids:
             instance_uuid = ec2utils.ec2_inst_id_to_uuid(context, ec2_id)
-            sys_meta = db.instance_system_metadata_get(context, instance_uuid)
-            if 'EC2_client_token' in sys_meta:
-                del sys_meta['EC2_client_token']
-            db.instance_system_metadata_update(context, instance_uuid,
-                                               sys_meta, delete=True)
+            instance = instance_obj.Instance.get_by_uuid(context,
+                    instance_uuid, expected_attrs=['system_metadata'])
+            instance.system_metadata.pop('EC2_client_token', None)
+            instance.save()
 
     def _resv_id_from_token(self, context, client_token):
         """Get reservation ID from db."""
