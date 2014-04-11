@@ -143,6 +143,7 @@ class ConductorAPI(object):
         can handle the version_cap being set to 2.0.
     ...  - Remove instance_destroy()
     ...  - Remove compute_unrescue()
+    ...  - Remove instance_get_all_by_filters()
     """
 
     VERSION_ALIASES = {
@@ -225,15 +226,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'block_device_mapping_get_all_by_instance',
                           instance=instance_p, legacy=legacy)
-
-    def instance_get_all_by_filters(self, context, filters, sort_key,
-                                    sort_dir, columns_to_join=None,
-                                    use_slave=False):
-        msg_kwargs = dict(filters=filters, sort_key=sort_key,
-                          sort_dir=sort_dir, columns_to_join=columns_to_join,
-                          use_slave=use_slave)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'instance_get_all_by_filters', **msg_kwargs)
 
     def instance_get_active_by_window_joined(self, context, begin, end=None,
                                              project_id=None, host=None):

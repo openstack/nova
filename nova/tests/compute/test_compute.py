@@ -6032,32 +6032,6 @@ class ComputeTestCase(BaseTestCase):
         for uuid, status in expected_migration_status.iteritems():
             self.assertEqual(status, fetch_instance_migration_status(uuid))
 
-    def test_instance_build_timeout_disabled(self):
-        # Tests that no instances are set to error state when there is no
-        # instance_build_timeout configured.
-        self.flags(instance_build_timeout=0)
-        ctxt = context.get_admin_context()
-        created_at = timeutils.utcnow() + datetime.timedelta(seconds=-60)
-
-        filters = {'vm_state': vm_states.BUILDING, 'host': CONF.host}
-        instances = []
-        for x in xrange(5):
-            instance = {'uuid': str(uuid.uuid4()), 'created_at': created_at}
-            instance.update(filters)
-            instances.append(instance)
-
-        # creating mocks
-        with mock.patch.object(self.compute.conductor_api,
-                               'instance_get_all_by_filters',
-                               return_value=instances) as (
-            instance_get_all_by_filters
-        ):
-            # run the code
-            self.compute._check_instance_build_time(ctxt)
-            # check our assertions
-            self.assertThat(instance_get_all_by_filters.mock_calls,
-                            testtools_matchers.HasLength(0))
-
     def test_instance_build_timeout_mixed_instances(self):
         # Tests that instances which failed to build within the configured
         # instance_build_timeout value are set to error state.
