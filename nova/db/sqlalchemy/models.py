@@ -1144,7 +1144,7 @@ class VolumeUsage(BASE, NovaBase):
     volume_id = Column(String(36), nullable=False)
     instance_uuid = Column(String(36))
     project_id = Column(String(36))
-    user_id = Column(String(36))
+    user_id = Column(String(64))
     availability_zone = Column(String(255))
     tot_last_refreshed = Column(DateTime)
     tot_reads = Column(BigInteger, default=0)
