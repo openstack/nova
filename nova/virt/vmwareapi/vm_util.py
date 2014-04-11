@@ -1424,6 +1424,34 @@ def create_virtual_disk(session, dc_ref, adapter_type, disk_type,
                "disk_type": disk_type})
 
 
+def copy_virtual_disk(session, dc_ref, source, dest, copy_spec=None):
+    """Copy a sparse virtual disk to a thin virtual disk. This is also
+       done to generate the meta-data file whose specifics
+       depend on the size of the disk, thin/thick provisioning and the
+       storage adapter type.
+
+    :param session: - session for connection
+    :param dc_ref: - data center reference object
+    :param source: - source datastore path
+    :param dest: - destination datastore path
+    :param copy_spec: - the copy specification
+    """
+    LOG.debug("Copying Virtual Disk %(source)s to %(dest)s",
+              {'source': source, 'dest': dest})
+    vim = session._get_vim()
+    vmdk_copy_task = session._call_method(
+            vim,
+            "CopyVirtualDisk_Task",
+            vim.get_service_content().virtualDiskManager,
+            sourceName=source,
+            sourceDatacenter=dc_ref,
+            destName=dest,
+            destSpec=copy_spec)
+    session._wait_for_task(vmdk_copy_task)
+    LOG.debug("Copied Virtual Disk %(source)s to %(dest)s",
+              {'source': source, 'dest': dest})
+
+
 def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
                                 vmfolder_ref):
     """Clone VM and link the cloned VM to the instance.
