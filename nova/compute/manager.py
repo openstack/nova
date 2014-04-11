@@ -1208,7 +1208,7 @@ class ComputeManager(manager.Manager):
             """Send a create.{start,error,end} notification."""
             type_ = "create.%(status)s" % dict(status=status)
             info = extra_usage_info.copy()
-            info['message'] = unicode(msg)
+            info['message'] = msg
             self._notify_about_instance_usage(context, instance, type_,
                     extra_usage_info=info, fault=fault, **kwargs)
 
@@ -1237,7 +1237,7 @@ class ComputeManager(manager.Manager):
         except exception.BuildAbortException as e:
             # Instance build aborted due to a non-failure
             LOG.info(e)
-            notify("end", msg=unicode(e))  # notify that build is done
+            notify("end", msg=e.format_message())  # notify that build is done
 
         except Exception as e:
             # Instance build encountered a non-recoverable error:
