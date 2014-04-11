@@ -56,6 +56,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import compute_node as compute_node_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import migration as migration_obj
@@ -5420,7 +5421,8 @@ class ComputeTestCase(BaseTestCase):
         """The instance's node property should be updated correctly."""
         self._begin_post_live_migration_at_destination()
         hypervisor_hostname = 'fake_hypervisor_hostname'
-        fake_compute_info = {'hypervisor_hostname': hypervisor_hostname}
+        fake_compute_info = compute_node_obj.ComputeNode(
+            hypervisor_hostname=hypervisor_hostname)
         self.compute._get_compute_info(mox.IgnoreArg(),
                                        mox.IgnoreArg()).AndReturn(
                                                         fake_compute_info)
@@ -10482,7 +10484,9 @@ class EvacuateHostTestCase(BaseTestCase):
         def fake_get_compute_info(context, host):
             self.assertTrue(context.is_admin)
             self.assertEqual('fake-mini', host)
-            return {'hypervisor_hostname': self.rt.nodename}
+            cn = compute_node_obj.ComputeNode(
+                hypervisor_hostname=self.rt.nodename)
+            return cn
 
         self.stubs.Set(self.compute, '_get_compute_info',
                        fake_get_compute_info)
