@@ -266,12 +266,14 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
             text = r'(\\"|[^"])*'
         else:
             text = r'[^<]*'
+        # NOTE(treinish): Could result in a false positive, but it
+        # shouldn't be an issue for this case.
+        timestamp_re = ('\d{4}-[0,1]\d-[0-3]\d[ ,T]'
+                        '\d{2}:\d{2}:\d{2}'
+                        '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|)')
         return {
-            # NOTE(treinish): Could result in a false positive, but it
-            # shouldn't be an issue for this case.
-            'timestamp': '\d{4}-[0,1]\d-[0-3]\d[ ,T]'
-                         '\d{2}:\d{2}:\d{2}'
-                         '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|)',
+            'timestamp': timestamp_re,
+            'timestamp_or_none': r'None|%s' % timestamp_re,
             'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
             'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]{1,4}',
