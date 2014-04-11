@@ -19,6 +19,8 @@
 
 import os
 
+import mox
+
 from oslo.config import cfg
 
 from nova import exception
@@ -242,6 +244,9 @@ class TileraPrivateMethodsTestCase(BareMetalTileraTestCase):
         net_info = utils.get_test_network_info(1)
         net = tilera.build_network_config(net_info)
         admin_password = 'fake password'
+
+        self.mox.StubOutWithMock(os.path, 'exists')
+        os.path.exists(mox.IgnoreArg()).AndReturn(True)
 
         self.mox.StubOutWithMock(disk_api, 'inject_data')
         disk_api.inject_data(

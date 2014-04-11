@@ -12,11 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import fixtures
 import os
 import sys
-
-import posix
 
 from nova import exception
 from nova import test
@@ -33,19 +30,6 @@ class VirtDiskTest(test.NoDBTestCase):
         vfsguestfs.guestfs = fakeguestfs
 
     def test_inject_data(self):
-
-        orig_os_stat = os.stat
-
-        def fake_stat(arg):
-            if arg == '/some/file':  # fake success
-                return posix.stat_result((16877, 2, 2049L,
-                                          23, 0, 0,
-                                          4096, 1381787843,
-                                          1381635971, 1381635971))
-            else:
-                return orig_os_stat(arg)
-
-        self.useFixture(fixtures.MonkeyPatch('os.stat', fake_stat))
 
         self.assertTrue(diskapi.inject_data("/some/file", use_cow=True))
 
@@ -64,7 +48,8 @@ class VirtDiskTest(test.NoDBTestCase):
         self.assertFalse(diskapi.inject_data("/some/file", admin_password="p"))
         os.name = os_name
 
-        self.assertFalse(diskapi.inject_data("/some/fail/file"))
+        self.assertFalse(diskapi.inject_data("/some/fail/file",
+                                             key="mysshkey"))
 
     def test_inject_data_key(self):
 

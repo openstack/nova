@@ -34,11 +34,15 @@ def cache_image(context, target, image_id, user_id, project_id, clean=False):
                                   user_id, project_id)
 
 
-def inject_into_image(image, key, net, metadata, admin_password,
-        files, partition, use_cow=False):
+def inject_into_image(image, key, net, metadata, admin_password, files,
+                      partition, use_cow=False):
     try:
-        disk_api.inject_data(image, key, net, metadata, admin_password,
-                files, partition, use_cow)
+        if os.path.exists(image):
+            disk_api.inject_data(image, key, net, metadata, admin_password,
+                                 files, partition, use_cow)
+        else:
+            LOG.warning(_('Image %s not found on disk storage. '
+                          'Continue without injecting data'), image)
     except Exception as e:
         LOG.warn(_("Failed to inject data into image %(image)s. "
                    "Error: %(e)s"), {'image': image, 'e': e})

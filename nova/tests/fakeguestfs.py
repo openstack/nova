@@ -40,6 +40,9 @@ class GuestFS(object):
         self.closed = True
 
     def add_drive_opts(self, file, *args, **kwargs):
+        if file == "/some/fail/file":
+            raise RuntimeError("%s: No such file or directory", file)
+
         self.drives.append((file, kwargs['format']))
 
     def inspect_os(self):

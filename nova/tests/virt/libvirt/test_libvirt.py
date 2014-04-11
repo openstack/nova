@@ -8526,17 +8526,25 @@ class LibvirtDriverTestCase(test.TestCase):
                           called=True):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
-        class i(object):
+        class ImageBackend(object):
             path = '/path'
+
+            def check_image_exists(self):
+                if self.path == '/fail/path':
+                    return False
+                return True
 
         def fake_inj_network(*args, **kwds):
             return args[0] or None
         inj_network.side_effect = fake_inj_network
 
+        image_backend = ImageBackend()
+        image_backend.path = disk_params[0]
+
         with mock.patch.object(
                 conn.image_backend,
                 'image',
-                return_value=i()):
+                return_value=image_backend):
             self.flags(inject_partition=0, group='libvirt')
 
             conn._inject_data(**driver_params)
@@ -8639,6 +8647,18 @@ class LibvirtDriverTestCase(test.TestCase):
             None,  # files
         ]
         self._test_inject_data(driver_params, disk_params)
+
+    def test_inject_not_exist_image(self):
+        driver_params = self._test_inject_data_default_driver_params()
+        disk_params = [
+            '/fail/path',  # injection_path
+            'key-content',  # key
+            None,  # net
+            None,  # metadata
+            None,  # admin_pass
+            None,  # files
+        ]
+        self._test_inject_data(driver_params, disk_params, called=False)
 
 
 class LibvirtVolumeUsageTestCase(test.TestCase):

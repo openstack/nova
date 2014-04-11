@@ -414,6 +414,9 @@ class PXEPrivateMethodsTestCase(BareMetalPXETestCase):
         net = pxe.build_network_config(net_info)
         admin_password = 'fake password'
 
+        self.mox.StubOutWithMock(os.path, 'exists')
+        os.path.exists(mox.IgnoreArg()).AndReturn(True)
+
         self.mox.StubOutWithMock(disk_api, 'inject_data')
         disk_api.inject_data(
                 admin_password=admin_password,
