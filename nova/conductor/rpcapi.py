@@ -144,6 +144,7 @@ class ConductorAPI(object):
     ...  - Remove instance_destroy()
     ...  - Remove compute_unrescue()
     ...  - Remove instance_get_all_by_filters()
+    ...  - Remove instance_get_active_by_window_joined()
     """
 
     VERSION_ALIASES = {
@@ -226,13 +227,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'block_device_mapping_get_all_by_instance',
                           instance=instance_p, legacy=legacy)
-
-    def instance_get_active_by_window_joined(self, context, begin, end=None,
-                                             project_id=None, host=None):
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'instance_get_active_by_window_joined',
-                          begin=begin, end=end, project_id=project_id,
-                          host=host)
 
     def instance_info_cache_delete(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)

@@ -78,11 +78,6 @@ class LocalAPI(object):
     def instance_get_all_by_host_and_node(self, context, host, node):
         return self._manager.instance_get_all_by_host(context, host, node)
 
-    def instance_get_active_by_window_joined(self, context, begin, end=None,
-                                             project_id=None, host=None):
-        return self._manager.instance_get_active_by_window_joined(
-            context, begin, end, project_id, host)
-
     def instance_info_cache_delete(self, context, instance):
         return self._manager.instance_info_cache_delete(context, instance)
 

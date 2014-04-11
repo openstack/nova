@@ -936,6 +936,7 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.instance_get_all_by_filters(context, filters,
                 sort_key, sort_dir, columns_to_join, use_slave)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def instance_get_active_by_window_joined(self, context, begin, end,
                                              project_id, host):
         return self.manager.instance_get_active_by_window_joined(context,

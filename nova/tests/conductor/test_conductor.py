@@ -210,15 +210,6 @@ class _BaseTestCase(object):
             self.context, fake_inst, legacy=False)
         self.assertEqual(result, 'fake-result')
 
-    def test_instance_get_active_by_window_joined(self):
-        self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
-        db.instance_get_active_by_window_joined(self.context, 'fake-begin',
-                                                'fake-end', 'fake-proj',
-                                                'fake-host')
-        self.mox.ReplayAll()
-        self.conductor.instance_get_active_by_window_joined(
-            self.context, 'fake-begin', 'fake-end', 'fake-proj', 'fake-host')
-
     def test_instance_info_cache_delete(self):
         self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
         db.instance_info_cache_delete(self.context, 'fake-uuid')
@@ -917,6 +908,15 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.instance_get_all_by_filters(self.context, filters,
                                                    'fake-key', 'fake-sort',
                                                    use_slave=True)
+
+    def test_instance_get_active_by_window_joined(self):
+        self.mox.StubOutWithMock(db, 'instance_get_active_by_window_joined')
+        db.instance_get_active_by_window_joined(self.context, 'fake-begin',
+                                                'fake-end', 'fake-proj',
+                                                'fake-host')
+        self.mox.ReplayAll()
+        self.conductor.instance_get_active_by_window_joined(
+            self.context, 'fake-begin', 'fake-end', 'fake-proj', 'fake-host')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
