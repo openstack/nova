@@ -5043,9 +5043,9 @@ class ComputeManager(manager.Manager):
             return
 
         begin, end = utils.last_completed_audit_period()
-        capi = self.conductor_api
-        instances = capi.instance_get_active_by_window_joined(
-            context, begin, end, host=self.host)
+        instances = instance_obj.InstanceList.get_active_by_window_joined(
+            context, begin, end, host=self.host,
+            expected_attrs=['system_metadata', 'info_cache', 'metadata'])
         num_instances = len(instances)
         errors = 0
         successes = 0
