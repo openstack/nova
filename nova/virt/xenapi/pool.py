@@ -62,7 +62,7 @@ class ResourcePool(object):
             if set_error:
                 metadata = {pool_states.KEY: pool_states.ERROR}
                 aggregate.update_metadata(metadata)
-            op(context, aggregate, host)
+            op(host)
         except Exception:
             LOG.exception(_('Aggregate %(aggregate_id)s: unrecoverable state '
                             'during operation on %(host)s'),

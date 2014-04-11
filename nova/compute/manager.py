@@ -5622,7 +5622,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self.driver.undo_aggregate_operation(
                                     context,
-                                    self.conductor_api.aggregate_host_delete,
+                                    aggregate.delete_host,
                                     aggregate, host)
 
     @aggregate_object_compat
@@ -5640,7 +5640,7 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 self.driver.undo_aggregate_operation(
                                     context,
-                                    self.conductor_api.aggregate_host_add,
+                                    aggregate.add_host,
                                     aggregate, host,
                                     isinstance(e, exception.AggregateError))
 
