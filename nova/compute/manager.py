@@ -64,6 +64,7 @@ from nova.network.security_group import openstack_driver
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import compute_node as compute_node_obj
 from nova.objects import external_event as external_event_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
@@ -5463,21 +5464,19 @@ class ComputeManager(manager.Manager):
         compute_nodes_in_db = self._get_compute_nodes_in_db(context)
 
         for cn in compute_nodes_in_db:
-            if cn.get('hypervisor_hostname') not in nodenames:
-                LOG.audit(_("Deleting orphan compute node %s") % cn['id'])
-                self.conductor_api.compute_node_delete(context, cn)
+            if cn.hypervisor_hostname not in nodenames:
+                LOG.audit(_("Deleting orphan compute node %s") % cn.id)
+                cn.destroy()
 
         self._resource_tracker_dict = new_resource_tracker_dict
 
     def _get_compute_nodes_in_db(self, context):
-        service_ref = self.conductor_api.service_get_by_compute_host(
-            context, self.host)
-
-        if not service_ref:
+        service = service_obj.Service.get_by_compute_host(context, self.host)
+        if not service:
             LOG.error(_("No service record for host %s"), self.host)
             return []
-
-        return service_ref['compute_node']
+        return compute_node_obj.ComputeNodeList.get_by_service(context,
+                                                               service)
 
     @periodic_task.periodic_task(
         spacing=CONF.running_deleted_instance_poll_interval)
