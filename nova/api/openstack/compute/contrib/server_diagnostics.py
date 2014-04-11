@@ -15,6 +15,7 @@
 
 import webob.exc
 
+from nova.api.openstack import common
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api.openstack import xmlutil
@@ -46,7 +47,11 @@ class ServerDiagnosticsController(object):
         except exception.InstanceNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        return compute_api.get_diagnostics(context, instance)
+        try:
+            return compute_api.get_diagnostics(context, instance)
+        except exception.InstanceInvalidState as state_error:
+            common.raise_http_conflict_for_instance_invalid_state(state_error,
+                    'get_diagnostics')
 
 
 class Server_diagnostics(extensions.ExtensionDescriptor):

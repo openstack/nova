@@ -70,6 +70,16 @@ class ServerDiagnosticsTest(test.NoDBTestCase):
         res = req.get_response(self.router)
         self.assertEqual(res.status_int, 404)
 
+    @mock.patch.object(compute_api.API, 'get_diagnostics',
+                side_effect=exception.InstanceInvalidState('fake message'))
+    @mock.patch.object(compute_api.API, 'get', fake_instance_get)
+    def test_get_diagnostics_raise_conflict_on_invalid_state(self,
+                                                  mock_get_diagnostics):
+        req = fakes.HTTPRequest.blank(
+                    '/fake/servers/%s/diagnostics' % UUID)
+        res = req.get_response(self.router)
+        self.assertEqual(409, res.status_int)
+
 
 class TestServerDiagnosticsXMLSerializer(test.NoDBTestCase):
     namespace = wsgi.XMLNS_V11
