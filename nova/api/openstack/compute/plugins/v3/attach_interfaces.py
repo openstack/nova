@@ -111,6 +111,8 @@ class InterfaceAttachmentController(object):
                 exception.NetworkAmbiguous,
                 exception.NetworkNotFound) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError as e:
             raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
         except exception.InterfaceAttachFailed as e:
@@ -139,6 +141,8 @@ class InterfaceAttachmentController(object):
                 instance, port_id=port_id)
         except exception.PortNotFound:
             raise exc.HTTPNotFound()
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError as e:
             raise webob.exc.HTTPNotImplemented(explanation=e.format_message())
 

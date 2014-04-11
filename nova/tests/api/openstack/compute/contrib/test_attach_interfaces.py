@@ -170,6 +170,27 @@ class InterfaceAttachTests(test.NoDBTestCase):
         result = attachments.delete(req, FAKE_UUID1, FAKE_PORT_ID1)
         self.assertEqual('202 Accepted', result.status)
 
+    def test_detach_interface_instance_locked(self):
+        def fake_detach_interface_from_locked_server(self, context,
+            instance, port_id):
+            raise exception.InstanceIsLocked(instance_uuid=FAKE_UUID1)
+
+        self.stubs.Set(compute_api.API,
+                       'detach_interface',
+                       fake_detach_interface_from_locked_server)
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        req = webob.Request.blank('/v2/fake/os-interfaces/delete')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+
+        self.assertRaises(exc.HTTPConflict,
+                          attachments.delete,
+                          req,
+                          FAKE_UUID1,
+                          FAKE_PORT_ID1)
+
     def test_delete_interface_not_found(self):
         self.stubs.Set(compute_api.API, 'detach_interface',
                        fake_detach_interface)
@@ -185,6 +206,24 @@ class InterfaceAttachTests(test.NoDBTestCase):
                           req,
                           FAKE_UUID1,
                           'invaid-port-id')
+
+    def test_attach_interface_instance_locked(self):
+        def fake_attach_interface_to_locked_server(self, context,
+            instance, network_id, port_id, requested_ip):
+            raise exception.InstanceIsLocked(instance_uuid=FAKE_UUID1)
+
+        self.stubs.Set(compute_api.API,
+                       'attach_interface',
+                       fake_attach_interface_to_locked_server)
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        req = webob.Request.blank('/v2/fake/os-interfaces/attach')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(exc.HTTPConflict,
+                          attachments.create, req, FAKE_UUID1,
+                          jsonutils.loads(req.body))
 
     def test_attach_interface_without_network_id(self):
         self.stubs.Set(compute_api.API, 'attach_interface',

@@ -113,6 +113,8 @@ class InterfaceAttachmentController(object):
         except exception.NotFound as e:
             LOG.exception(e)
             raise exc.HTTPNotFound()
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
@@ -146,6 +148,8 @@ class InterfaceAttachmentController(object):
                 instance, port_id=port_id)
         except exception.PortNotFound:
             raise exc.HTTPNotFound()
+        except exception.InstanceIsLocked as e:
+            raise exc.HTTPConflict(explanation=e.format_message())
         except NotImplementedError:
             msg = _("Network driver does not support this function.")
             raise webob.exc.HTTPNotImplemented(explanation=msg)
