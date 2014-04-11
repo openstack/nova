@@ -753,3 +753,23 @@ class VersionsSerializerTests(test.NoDBTestCase):
             'type': 'application/vnd.sun.wadl+xml',
             'href': EXP_LINKS['v2.0']['wadl'],
         })
+
+    def test_multi_choice_image_with_body(self):
+        req = webob.Request.blank('/images/1')
+        req.accept = "application/json"
+        req.method = 'POST'
+        req.content_type = "application/json"
+        req.body = "{\"foo\": \"bar\"}"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(300, res.status_int)
+        self.assertEqual("application/json", res.content_type)
+
+    def test_get_version_list_with_body(self):
+        req = webob.Request.blank('/')
+        req.accept = "application/json"
+        req.method = 'POST'
+        req.content_type = "application/json"
+        req.body = "{\"foo\": \"bar\"}"
+        res = req.get_response(fakes.wsgi_app())
+        self.assertEqual(200, res.status_int)
+        self.assertEqual("application/json", res.content_type)

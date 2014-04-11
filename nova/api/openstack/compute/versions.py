@@ -241,14 +241,14 @@ class Versions(wsgi.Resource):
 
     @wsgi.serializers(xml=VersionsTemplate,
                       atom=VersionsAtomSerializer)
-    def index(self, req):
+    def index(self, req, body=None):
         """Return all versions."""
         builder = views_versions.get_view_builder(req)
         return builder.build_versions(VERSIONS)
 
     @wsgi.serializers(xml=ChoicesTemplate)
     @wsgi.response(300)
-    def multi(self, req):
+    def multi(self, req, body=None):
         """Return multiple choices."""
         builder = views_versions.get_view_builder(req)
         return builder.build_choices(VERSIONS, req)
