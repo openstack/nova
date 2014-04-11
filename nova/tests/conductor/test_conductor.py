@@ -400,27 +400,6 @@ class _BaseTestCase(object):
         self.conductor.security_groups_trigger_members_refresh(self.context,
                                                                [1, 2, 3])
 
-    def test_network_migrate_instance_start(self):
-        self.mox.StubOutWithMock(self.conductor_manager.network_api,
-                                 'migrate_instance_start')
-        self.conductor_manager.network_api.migrate_instance_start(self.context,
-                                                                  'instance',
-                                                                  'migration')
-        self.mox.ReplayAll()
-        self.conductor.network_migrate_instance_start(self.context,
-                                                      'instance',
-                                                      'migration')
-
-    def test_network_migrate_instance_finish(self):
-        self.mox.StubOutWithMock(self.conductor_manager.network_api,
-                                 'migrate_instance_finish')
-        self.conductor_manager.network_api.migrate_instance_finish(
-            self.context, 'instance', 'migration')
-        self.mox.ReplayAll()
-        self.conductor.network_migrate_instance_finish(self.context,
-                                                       'instance',
-                                                       'migration')
-
     def test_get_ec2_ids(self):
         expected = {
             'instance-id': 'ec2-inst-id',
@@ -917,6 +896,27 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
                               for host in aggregate_ref['hosts']]))
 
         db.aggregate_delete(self.context.elevated(), aggregate_ref['id'])
+
+    def test_network_migrate_instance_start(self):
+        self.mox.StubOutWithMock(self.conductor_manager.network_api,
+                                 'migrate_instance_start')
+        self.conductor_manager.network_api.migrate_instance_start(self.context,
+                                                                  'instance',
+                                                                  'migration')
+        self.mox.ReplayAll()
+        self.conductor.network_migrate_instance_start(self.context,
+                                                      'instance',
+                                                      'migration')
+
+    def test_network_migrate_instance_finish(self):
+        self.mox.StubOutWithMock(self.conductor_manager.network_api,
+                                 'migrate_instance_finish')
+        self.conductor_manager.network_api.migrate_instance_finish(
+            self.context, 'instance', 'migration')
+        self.mox.ReplayAll()
+        self.conductor.network_migrate_instance_finish(self.context,
+                                                       'instance',
+                                                       'migration')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

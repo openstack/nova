@@ -242,16 +242,6 @@ class LocalAPI(object):
         return self._manager.security_groups_trigger_members_refresh(context,
                                                                      group_ids)
 
-    def network_migrate_instance_start(self, context, instance, migration):
-        return self._manager.network_migrate_instance_start(context,
-                                                            instance,
-                                                            migration)
-
-    def network_migrate_instance_finish(self, context, instance, migration):
-        return self._manager.network_migrate_instance_finish(context,
-                                                             instance,
-                                                             migration)
-
     def get_ec2_ids(self, context, instance):
         return self._manager.get_ec2_ids(context, instance)
 

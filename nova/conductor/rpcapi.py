@@ -135,6 +135,8 @@ class ConductorAPI(object):
     2.0  - Drop backwards compatibility
     ...  - Remove quota_rollback() and quota_commit()
     ...  - Remove aggregate_host_add() and aggregate_host_delete()
+    ...  - Remove network_migrate_instance_start() and
+           network_migrate_instance_finish()
     """
 
     VERSION_ALIASES = {
@@ -363,20 +365,6 @@ class ConductorAPI(object):
         cctxt = self.client.prepare()
         return cctxt.call(context, 'security_groups_trigger_members_refresh',
                           group_ids=group_ids)
-
-    def network_migrate_instance_start(self, context, instance, migration):
-        instance_p = jsonutils.to_primitive(instance)
-        migration_p = jsonutils.to_primitive(migration)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'network_migrate_instance_start',
-                          instance=instance_p, migration=migration_p)
-
-    def network_migrate_instance_finish(self, context, instance, migration):
-        instance_p = jsonutils.to_primitive(instance)
-        migration_p = jsonutils.to_primitive(migration)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'network_migrate_instance_finish',
-                          instance=instance_p, migration=migration_p)
 
     def get_ec2_ids(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
