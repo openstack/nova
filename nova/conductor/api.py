@@ -74,9 +74,6 @@ class LocalAPI(object):
         return self._manager.instance_get_all_by_host(context, host, node,
                 None)
 
-    def instance_info_cache_delete(self, context, instance):
-        return self._manager.instance_info_cache_delete(context, instance)
-
     def migration_get_in_progress_by_host_and_node(self, context, host, node):
         return self._manager.migration_get_in_progress_by_host_and_node(
             context, host, node)

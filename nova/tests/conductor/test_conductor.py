@@ -186,13 +186,6 @@ class _BaseTestCase(object):
             self.context, fake_inst, legacy=False)
         self.assertEqual(result, 'fake-result')
 
-    def test_instance_info_cache_delete(self):
-        self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
-        db.instance_info_cache_delete(self.context, 'fake-uuid')
-        self.mox.ReplayAll()
-        self.conductor.instance_info_cache_delete(self.context,
-                                                  {'uuid': 'fake-uuid'})
-
     def test_vol_usage_update(self):
         self.mox.StubOutWithMock(db, 'vol_usage_update')
         self.mox.StubOutWithMock(compute_utils, 'usage_volume_info')
