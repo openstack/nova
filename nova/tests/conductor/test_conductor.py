@@ -219,14 +219,6 @@ class _BaseTestCase(object):
         self.conductor.instance_get_active_by_window_joined(
             self.context, 'fake-begin', 'fake-end', 'fake-proj', 'fake-host')
 
-    def test_instance_destroy(self):
-        self.mox.StubOutWithMock(db, 'instance_destroy')
-        db.instance_destroy(self.context, 'fake-uuid').AndReturn('fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.instance_destroy(self.context,
-                                                 {'uuid': 'fake-uuid'})
-        self.assertEqual(result, 'fake-result')
-
     def test_instance_info_cache_delete(self):
         self.mox.StubOutWithMock(db, 'instance_info_cache_delete')
         db.instance_info_cache_delete(self.context, 'fake-uuid')
@@ -917,6 +909,14 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.conductor.network_migrate_instance_finish(self.context,
                                                        'instance',
                                                        'migration')
+
+    def test_instance_destroy(self):
+        self.mox.StubOutWithMock(db, 'instance_destroy')
+        db.instance_destroy(self.context, 'fake-uuid').AndReturn('fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_destroy(self.context,
+                                                 {'uuid': 'fake-uuid'})
+        self.assertEqual(result, 'fake-result')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

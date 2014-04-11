@@ -940,6 +940,7 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.instance_get_active_by_window_joined(context,
                 begin, end, project_id, host)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def instance_destroy(self, context, instance):
         return self.manager.instance_destroy(context, instance)
 
