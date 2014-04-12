@@ -17,7 +17,6 @@
 
 import contextlib
 import itertools
-import random
 
 import mock
 import mox
@@ -32,6 +31,8 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import fields
+from nova.objects import fixed_ip as fixed_ip_obj
+from nova.objects import network as network_obj
 from nova import policy
 from nova import test
 from nova.tests import fake_instance
@@ -235,45 +236,43 @@ class ApiTestCase(test.TestCase):
         self.assertFalse(self.network_api._is_multi_host(self.context,
                                                          instance))
 
-    def test_is_multi_host_network_has_no_project_id(self):
-        is_multi_host = random.choice([True, False])
-        network = {'project_id': None,
-                   'multi_host': is_multi_host, }
-        network_ref = self.network_api.db.network_create_safe(
-                                                 self.context.elevated(),
-                                                 network)
-
-        def fake_fixed_ip_get_by_instance(ctxt, uuid):
-            fixed_ip = [{'network_id': network_ref['id'],
-                         'instance_uuid': FAKE_UUID, }]
-            return fixed_ip
-
-        self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
-                       fake_fixed_ip_get_by_instance)
-
+    @mock.patch('nova.objects.fixed_ip.FixedIPList.get_by_instance_uuid')
+    @mock.patch('nova.objects.network.Network.get_by_id')
+    def _test_is_multi_host_network_has_no_project_id(self, is_multi_host,
+                                                      net_get, fip_get):
+        net_get.return_value = network_obj.Network(id=123,
+                                                   project_id=None,
+                                                   multi_host=is_multi_host)
+        fip_get.return_value = [fixed_ip_obj.FixedIP(
+                network_id=123, instance_uuid=FAKE_UUID)]
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
         self.assertEqual(is_multi_host, result)
 
-    def test_is_multi_host_network_has_project_id(self):
-        is_multi_host = random.choice([True, False])
-        network = {'project_id': self.context.project_id,
-                   'multi_host': is_multi_host, }
-        network_ref = self.network_api.db.network_create_safe(
-                                                 self.context.elevated(),
-                                                 network)
+    def test_is_multi_host_network_has_no_project_id_multi(self):
+        self._test_is_multi_host_network_has_no_project_id(True)
 
-        def fake_fixed_ip_get_by_instance(ctxt, uuid):
-            fixed_ip = [{'network_id': network_ref['id'],
-                         'instance_uuid': FAKE_UUID, }]
-            return fixed_ip
+    def test_is_multi_host_network_has_no_project_id_non_multi(self):
+        self._test_is_multi_host_network_has_no_project_id(False)
 
-        self.stubs.Set(self.network_api.db, 'fixed_ip_get_by_instance',
-                       fake_fixed_ip_get_by_instance)
-
+    @mock.patch('nova.objects.fixed_ip.FixedIPList.get_by_instance_uuid')
+    @mock.patch('nova.objects.network.Network.get_by_id')
+    def _test_is_multi_host_network_has_project_id(self, is_multi_host,
+                                                   net_get, fip_get):
+        net_get.return_value = network_obj.Network(
+            id=123, project_id=self.context.project_id,
+            multi_host=is_multi_host)
+        fip_get.return_value = [
+            fixed_ip_obj.FixedIP(network_id=123, instance_uuid=FAKE_UUID)]
         instance = {'uuid': FAKE_UUID}
         result = self.network_api._is_multi_host(self.context, instance)
         self.assertEqual(is_multi_host, result)
+
+    def test_is_multi_host_network_has_project_id_multi(self):
+        self._test_is_multi_host_network_has_project_id(True)
+
+    def test_is_multi_host_network_has_project_id_non_multi(self):
+        self._test_is_multi_host_network_has_project_id(False)
 
     def test_network_disassociate_project(self):
         def fake_network_disassociate(ctx, network_id, disassociate_host,
