@@ -55,12 +55,6 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
         self.stubs.Set(
                 vm_utils, 'get_sr_path', lambda *a, **kw: '/fake/sr/path')
 
-        self.instance = {'uuid': 'blah',
-                         'system_metadata': {'image_xenapi_use_agent': 'true'},
-                         'auto_disk_config': True,
-                         'os_type': 'default',
-                         'xenapi_use_agent': 'true'}
-
     def test_download_image(self):
 
         params = {'image_id': 'fake_image_uuid',
@@ -84,21 +78,21 @@ class TestBittorrentStore(stubs.XenAPITestBaseNoDB):
         self.mox.ReplayAll()
 
         vdis = self.store.download_image(
-                self.context, self.session, self.instance, 'fake_image_uuid')
+                self.context, self.session, 'fake_image_uuid')
 
         self.mox.VerifyAll()
 
     def test_upload_image(self):
         self.assertRaises(NotImplementedError, self.store.upload_image,
-                self.context, self.session, self.instance, ['fake_vdi_uuid'],
+                self.context, self.session, mox.IgnoreArg, ['fake_vdi_uuid'],
                 'fake_image_uuid')
 
 
-def bad_fetcher(instance, image_id):
+def bad_fetcher(image_id):
     raise test.TestingException("just plain bad.")
 
 
-def another_fetcher(instance, image_id):
+def another_fetcher(image_id):
     return "http://www.foobar.com/%s" % image_id
 
 
@@ -113,7 +107,6 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LookupTorrentURLTestCase, self).setUp()
         self.store = bittorrent.BittorrentStore()
-        self.instance = {'uuid': 'fakeuuid'}
         self.image_id = 'fakeimageid'
 
     def _mock_iter_none(self, namespace):
@@ -143,7 +136,7 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual('http://foo/fakeimageid.torrent',
-                         lookup_fn(self.instance, self.image_id))
+                         lookup_fn(self.image_id))
 
     def test_with_extension(self):
         self.stubs.Set(pkg_resources, 'iter_entry_points',
@@ -151,7 +144,7 @@ class LookupTorrentURLTestCase(test.NoDBTestCase):
 
         lookup_fn = self.store._lookup_torrent_url_fn()
         self.assertEqual("http://www.foobar.com/%s" % self.image_id,
-                         lookup_fn(self.instance, self.image_id))
+                         lookup_fn(self.image_id))
 
     def test_multiple_extensions_found(self):
         self.flags(torrent_base_url=None,

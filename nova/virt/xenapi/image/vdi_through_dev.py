@@ -36,7 +36,7 @@ class VdiThroughDevStore(object):
             context, session, instance, vdi_uuids, image_id)
         return command.upload_image()
 
-    def download_image(self, context, session, instance, image_id):
+    def download_image(self, context, session, image_id):
         # TODO(matelakat) Move through-dev image download functionality to this
         # method.
         raise NotImplementedError()
