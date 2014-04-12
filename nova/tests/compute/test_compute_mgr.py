@@ -1856,8 +1856,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
               migration_save, context_elevated):
             self.assertRaises(
                 exception.ResizeError, self.compute.finish_resize,
-                self.context, [], self.image, self.instance, [],
-                self.migration
+                context=self.context, disk_info=[], image=self.image,
+                instance=self.instance, reservations=[],
+                migration=self.migration
             )
             self.assertEqual("error", self.migration.status)
             migration_save.assert_has_calls([mock.call(elevated_context)])
@@ -1894,8 +1895,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
               vol_block_info, bdm):
             self.assertRaises(
                 exception.ResizeError, self.compute.resize_instance,
-                self.context, self.instance, self.image, [], self.migration,
-                'type'
+                context=self.context, instance=self.instance, image=self.image,
+                reservations=[], migration=self.migration, instance_type='type'
             )
             self.assertEqual("error", self.migration.status)
             migration_save.assert_has_calls([mock.call(elevated_context)])

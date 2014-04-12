@@ -3859,6 +3859,7 @@ class ComputeTestCase(BaseTestCase):
     def test_state_revert(self):
         # ensure that task_state is reverted after a failed operation.
         migration = migration_obj.Migration()
+        migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
         migration.new_instance_type_id = '1'
 
         actions = [
