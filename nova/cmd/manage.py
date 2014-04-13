@@ -79,6 +79,7 @@ from nova.openstack.common import log as logging
 from nova import quota
 from nova import rpc
 from nova import servicegroup
+from nova import utils
 from nova import version
 
 CONF = cfg.CONF
@@ -487,6 +488,13 @@ class FloatingIpCommands(object):
 class NetworkCommands(object):
     """Class for managing networks."""
 
+    def _using_valid_network_api_class(self):
+        if utils.is_neutron():
+            print(_("ERROR: Network commands are not supported when using the "
+                    "Neutron API.  Use python-neutronclient instead."))
+            return False
+        return True
+
     @args('--label', metavar='<label>', help='Label for network (ex: public)')
     @args('--fixed_range_v4', dest='cidr', metavar='<x.x.x.x/yy>',
             help='IPv4 subnet (ex: 10.0.0.0/8)')
@@ -521,6 +529,9 @@ class NetworkCommands(object):
                dns1=None, dns2=None, project_id=None, priority=None,
                uuid=None, fixed_cidr=None):
         """Creates fixed ips for host by range."""
+        if not self._using_valid_network_api_class():
+            return(2)
+
         kwargs = dict(((k, v) for k, v in locals().iteritems()
                        if v and k != "self"))
         if multi_host is not None:
@@ -530,6 +541,9 @@ class NetworkCommands(object):
 
     def list(self):
         """List all created networks."""
+        if not self._using_valid_network_api_class():
+            return(2)
+
         _fmt = "%-5s\t%-18s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s\t%-15s"
         print(_fmt % (_('id'),
                           _('IPv4'),
@@ -563,6 +577,8 @@ class NetworkCommands(object):
     @args('--uuid', metavar='<uuid>', help='UUID of network to delete')
     def delete(self, fixed_range=None, uuid=None):
         """Deletes a network."""
+        if not self._using_valid_network_api_class():
+            return(2)
 
         if fixed_range is None and uuid is None:
             raise Exception(_("Please specify either fixed_range or uuid"))
@@ -593,6 +609,9 @@ class NetworkCommands(object):
         arguments: network project host
         leave any field blank to ignore it
         """
+        if not self._using_valid_network_api_class():
+            return(2)
+
         admin_context = context.get_admin_context()
         network = db.network_get_by_cidr(admin_context, fixed_range)
         net = {}
