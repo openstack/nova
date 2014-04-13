@@ -927,6 +927,10 @@ class FlavorCommands(object):
     Note instance type is a deprecated synonym for flavor.
     """
 
+    description = ('DEPRECATED: Use the nova flavor-* commands from '
+                   'python-novaclient instead. The flavor subcommand will be '
+                   'removed in the 2015.1 release')
+
     def _print_flavors(self, val):
         is_public = ('private', 'public')[val["is_public"] == 1]
         print(("%s: Memory: %sMB, VCPUS: %s, Root: %sGB, Ephemeral: %sGb, "
@@ -1300,13 +1304,14 @@ def add_command_parsers(subparsers):
     for category in CATEGORIES:
         command_object = CATEGORIES[category]()
 
-        parser = subparsers.add_parser(category)
+        desc = getattr(command_object, 'description', None)
+        parser = subparsers.add_parser(category, description=desc)
         parser.set_defaults(command_object=command_object)
 
         category_subparsers = parser.add_subparsers(dest='action')
 
         for (action, action_fn) in methods_of(command_object):
-            parser = category_subparsers.add_parser(action)
+            parser = category_subparsers.add_parser(action, description=desc)
 
             action_kwargs = []
             for args, kwargs in getattr(action_fn, 'args', []):
