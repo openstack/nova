@@ -15,6 +15,7 @@
 
 import datetime
 
+import mock
 import webob
 
 from nova.api.openstack.compute.contrib import flavor_access
@@ -425,6 +426,31 @@ class FlavorManageTest(test.NoDBTestCase):
         req.body = jsonutils.dumps(expected)
         res = req.get_response(self.app)
         self.assertEqual(res.status_int, 409)
+
+    @mock.patch('nova.compute.flavors.create',
+                side_effect=exception.FlavorCreateFailed)
+    def test_flavor_create_db_failed(self, mock_create):
+        request_dict = {
+            "flavor": {
+                "name": " test ",
+                'id': "12345",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "OS-FLV-EXT-DATA:ephemeral": 1,
+                "swap": 512,
+                "rxtx_factor": 1,
+                "os-flavor-access:is_public": True,
+            }
+        }
+        url = '/v2/fake/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(request_dict)
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 500)
+        self.assertIn('Unable to create flavor', res.body)
 
     def test_invalid_memory_mb(self):
         """Check negative and decimal number can't be accepted."""

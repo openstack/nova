@@ -15,6 +15,7 @@
 
 import datetime
 
+import mock
 import webob
 
 from nova.api.openstack.compute.plugins.v3 import flavor_access
@@ -209,6 +210,31 @@ class FlavorManageTest(test.NoDBTestCase):
         id = " 1234 "
         self.base_request_dict['flavor']['id'] = id
         self._test_create_bad_request(self.base_request_dict)
+
+    @mock.patch('nova.compute.flavors.create',
+                side_effect=exception.FlavorCreateFailed)
+    def test_flavor_create_db_failed(self, mock_create):
+        request_dict = {
+            "flavor": {
+                "name": "test",
+                "ram": 512,
+                "vcpus": 2,
+                "disk": 1,
+                "ephemeral": 1,
+                "id": unicode('1234'),
+                "swap": 512,
+                "%s:rxtx_factor" % flavor_rxtx.ALIAS: 1,
+                "flavor-access:is_public": True,
+            }
+        }
+        url = '/v3/flavors'
+        req = webob.Request.blank(url)
+        req.headers['Content-Type'] = 'application/json'
+        req.method = 'POST'
+        req.body = jsonutils.dumps(request_dict)
+        res = req.get_response(self.app)
+        self.assertEqual(res.status_int, 500)
+        self.assertIn('Unable to create flavor', res.body)
 
     def test_create_without_name(self):
         del self.base_request_dict['flavor']['name']
