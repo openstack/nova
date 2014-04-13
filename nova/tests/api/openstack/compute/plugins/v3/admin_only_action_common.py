@@ -142,6 +142,28 @@ class CommonMixin(object):
         self.mox.VerifyAll()
         self.mox.UnsetStubs()
 
+    def _test_instance_not_found_in_compute_api(self, action,
+                         method=None, body=None, compute_api_args_map={}):
+        if method is None:
+            method = action
+
+        instance = self._stub_instance_get()
+
+        args, kwargs = compute_api_args_map.get(action, ((), {}))
+        getattr(self.compute_api, method)(self.context, instance, *args,
+                                          **kwargs).AndRaise(
+                exception.InstanceNotFound(instance_id=instance.uuid))
+
+        self.mox.ReplayAll()
+
+        res = self._make_request('/servers/%s/action' % instance.uuid,
+                                 {action: body})
+        self.assertEqual(404, res.status_int)
+        # Do these here instead of tearDown because this method is called
+        # more than once for the same test case
+        self.mox.VerifyAll()
+        self.mox.UnsetStubs()
+
 
 class CommonTests(CommonMixin, test.NoDBTestCase):
     def _test_actions(self, actions, method_translations={}, body_map={},
@@ -152,6 +174,18 @@ class CommonTests(CommonMixin, test.NoDBTestCase):
             self.mox.StubOutWithMock(self.compute_api, method or action)
             self._test_action(action, method=method, body=body,
                               compute_api_args_map=args_map)
+            # Re-mock this.
+            self.mox.StubOutWithMock(self.compute_api, 'get')
+
+    def _test_actions_instance_not_found_in_compute_api(self,
+                  actions, method_translations={}, body_map={}, args_map={}):
+        for action in actions:
+            method = method_translations.get(action)
+            body = body_map.get(action)
+            self.mox.StubOutWithMock(self.compute_api, method or action)
+            self._test_instance_not_found_in_compute_api(
+                action, method=method, body=body,
+                compute_api_args_map=args_map)
             # Re-mock this.
             self.mox.StubOutWithMock(self.compute_api, 'get')
 
