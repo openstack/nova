@@ -235,7 +235,13 @@ def list_rbd_volumes(pool):
 def remove_rbd_volumes(pool, *names):
     """Remove one or more rbd volume."""
     for name in names:
-        rbd_remove = ['rbd', '-p', pool, 'rm', name]
+        # NOTE(nic): the rbd command supports two methods for
+        # specifying a pool name: the "-p" flag, and using the volume
+        # name notation "pool_name/volume_name"
+        # The latter method supercedes the former, so to guard
+        # against slashes in the volume name confusing things, always
+        # use the path notation
+        rbd_remove = ('rbd', 'rm', os.path.join(pool, name))
         try:
             _run_rbd(*rbd_remove, attempts=3, run_as_root=True)
         except processutils.ProcessExecutionError:

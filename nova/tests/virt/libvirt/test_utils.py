@@ -72,13 +72,13 @@ blah BLAH: bb
         self.flags(images_rbd_ceph_conf=conf, group='libvirt')
         self.flags(rbd_user=user, group='libvirt')
         self.mox.StubOutWithMock(libvirt_utils.utils, 'execute')
-        libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume1',
+        libvirt_utils.utils.execute('rbd', 'rm', os.path.join(pool, 'volume1'),
                                     '--id', user, '--conf', conf, attempts=3,
                                     run_as_root=True)
-        libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume2',
+        libvirt_utils.utils.execute('rbd', 'rm', os.path.join(pool, 'volume2'),
                                     '--id', user, '--conf', conf, attempts=3,
                                     run_as_root=True)
-        libvirt_utils.utils.execute('rbd', '-p', pool, 'rm', 'volume3',
+        libvirt_utils.utils.execute('rbd', 'rm', os.path.join(pool, 'volume3'),
                                     '--id', user, '--conf', conf, attempts=3,
                                     run_as_root=True)
         self.mox.ReplayAll()
