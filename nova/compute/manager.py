@@ -3614,10 +3614,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                 context, instance, "create_ip.start")
 
-        self.network_api.add_fixed_ip_to_instance(context, instance,
-                                                  network_id)
-
-        network_info = self._inject_network_info(context, instance)
+        network_info = self.network_api.add_fixed_ip_to_instance(context,
+                                                                 instance,
+                                                                 network_id)
+        self._inject_network_info(context, instance, network_info)
         self.reset_network(context, instance)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
@@ -3639,10 +3639,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                 context, instance, "delete_ip.start")
 
-        self.network_api.remove_fixed_ip_from_instance(context, instance,
-                                                       address)
-
-        network_info = self._inject_network_info(context, instance)
+        network_info = self.network_api.remove_fixed_ip_from_instance(context,
+                                                                      instance,
+                                                                      address)
+        self._inject_network_info(context, instance, network_info)
         self.reset_network(context, instance)
 
         # NOTE(russellb) We just want to bump updated_at.  See bug 1143466.
@@ -3947,22 +3947,20 @@ class ComputeManager(manager.Manager):
         LOG.debug(_('Reset network'), context=context, instance=instance)
         self.driver.reset_network(instance)
 
-    def _inject_network_info(self, context, instance):
+    def _inject_network_info(self, context, instance, network_info):
         """Inject network info for the given instance."""
         LOG.debug(_('Inject network info'), context=context, instance=instance)
-
-        network_info = self._get_instance_nw_info(context, instance)
         LOG.debug(_('network_info to inject: |%s|'), network_info,
                   instance=instance)
 
         self.driver.inject_network_info(instance,
                                         network_info)
-        return network_info
 
     @wrap_instance_fault
     def inject_network_info(self, context, instance):
         """Inject network info, but don't return the info."""
-        self._inject_network_info(context, instance)
+        network_info = self._get_instance_nw_info(context, instance)
+        self._inject_network_info(context, instance, network_info)
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
