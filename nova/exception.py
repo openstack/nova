@@ -1526,6 +1526,10 @@ class KeyManagerError(NovaException):
     msg_fmt = _("Key manager error: %(reason)s")
 
 
+class VolumesNotRemoved(Invalid):
+    msg_fmt = _("Failed to remove volume(s): (%(reason)s)")
+
+
 class InvalidVideoMode(Invalid):
     msg_fmt = _("Provided video model (%(model)s) is not supported.")
 

@@ -416,15 +416,19 @@ def clear_logical_volume(path):
                                 % volume_clear)
 
 
-def remove_logical_volumes(*paths):
+def remove_logical_volumes(paths):
     """Remove one or more logical volume."""
 
+    errors = []
     for path in paths:
         clear_logical_volume(path)
-
-    if paths:
-        lvremove = ('lvremove', '-f') + paths
-        execute(*lvremove, attempts=3, run_as_root=True)
+        lvremove = ('lvremove', '-f', path)
+        try:
+            execute(*lvremove, attempts=3, run_as_root=True)
+        except processutils.ProcessExecutionError as exp:
+            errors.append(str(exp))
+    if errors:
+        raise exception.VolumesNotRemoved(reason=(', ').join(errors))
 
 
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
