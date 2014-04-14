@@ -27,7 +27,7 @@ try:
 except ImportError:
     import pickle
 
-import mock
+import mox
 from oslo.config import cfg
 import webob
 
@@ -47,7 +47,6 @@ from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_network
-from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_security_group
 from nova.virt import netutils
 
@@ -72,7 +71,7 @@ INSTANCE = fake_instance.fake_db_instance(**
      'vcpus': 1,
      'fixed_ips': [],
      'root_device_name': '/dev/sda1',
-     'info_cache': test_instance_info_cache.fake_info_cache,
+     'info_cache': {'network_info': []},
      'hostname': 'test.novadomain',
      'display_name': 'my_displayname',
      'metadata': {},
@@ -83,8 +82,7 @@ INSTANCE = fake_instance.fake_db_instance(**
 def fake_inst_obj(context):
     return instance_obj.Instance._from_db_object(
         context, instance_obj.Instance(), INSTANCE,
-        expected_attrs=['metadata', 'system_metadata',
-                        'info_cache'])
+        expected_attrs=['metadata', 'system_metadata'])
 
 
 def get_default_sys_meta():
@@ -309,11 +307,23 @@ class MetadataTestCase(test.TestCase):
         for (path, value) in inst_md.metadata_for_config_drive():
             self.assertIsNotNone(path)
 
-    @mock.patch('nova.virt.netutils.get_injected_network_template')
-    def test_InstanceMetadata_queries_network_API_when_needed(self, mocked):
-        inst_obj = fake_inst_obj(self.context)
-        base.InstanceMetadata(inst_obj)
-        mocked.assert_called_once_with(inst_obj.info_cache.network_info)
+    def test_InstanceMetadata_queries_network_API_when_needed(self):
+        network_info_from_api = []
+
+        self.mox.StubOutWithMock(network_api.API, "get_instance_nw_info")
+
+        network_api.API.get_instance_nw_info(
+            mox.IgnoreArg(),
+            mox.IgnoreArg()).AndReturn(network_info_from_api)
+
+        self.mox.StubOutWithMock(netutils, "get_injected_network_template")
+
+        netutils.get_injected_network_template(
+            network_info_from_api).AndReturn(False)
+
+        self.mox.ReplayAll()
+
+        base.InstanceMetadata(fake_inst_obj(self.context))
 
     def test_local_ipv4_from_nw_info(self):
         nw_info = fake_network.fake_get_instance_nw_info(self.stubs,
