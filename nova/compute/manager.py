@@ -70,6 +70,7 @@ from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import migration as migration_obj
 from nova.objects import quotas as quotas_obj
+from nova.objects import service as service_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import jsonutils
@@ -2479,7 +2480,7 @@ class ComputeManager(manager.Manager):
                 node_name = None
                 try:
                     compute_node = self._get_compute_info(context, self.host)
-                    node_name = compute_node['hypervisor_hostname']
+                    node_name = compute_node.hypervisor_hostname
                 except exception.NotFound:
                     LOG.exception(_('Failed to get compute_info for %s') %
                                   self.host)
@@ -4415,10 +4416,9 @@ class ComputeManager(manager.Manager):
         self.driver.detach_interface(instance, condemned)
 
     def _get_compute_info(self, context, host):
-        compute_node_ref = self.conductor_api.service_get_by_compute_host(
-            context, host)
+        service = service_obj.Service.get_by_compute_host(context, host)
         try:
-            return compute_node_ref['compute_node'][0]
+            return service.compute_node
         except IndexError:
             raise exception.NotFound(_("Host %s not found") % host)
 
@@ -4450,8 +4450,10 @@ class ComputeManager(manager.Manager):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a dict containing migration info
         """
-        src_compute_info = self._get_compute_info(ctxt, instance.host)
-        dst_compute_info = self._get_compute_info(ctxt, CONF.host)
+        src_compute_info = obj_base.obj_to_primitive(
+            self._get_compute_info(ctxt, instance.host))
+        dst_compute_info = obj_base.obj_to_primitive(
+            self._get_compute_info(ctxt, CONF.host))
         dest_check_data = self.driver.check_can_live_migrate_destination(ctxt,
             instance, src_compute_info, dst_compute_info,
             block_migration, disk_over_commit)
@@ -4722,7 +4724,7 @@ class ComputeManager(manager.Manager):
         node_name = None
         try:
             compute_node = self._get_compute_info(context, self.host)
-            node_name = compute_node['hypervisor_hostname']
+            node_name = compute_node.hypervisor_hostname
         except exception.NotFound:
             LOG.exception(_('Failed to get compute_info for %s') % self.host)
         finally:
