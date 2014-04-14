@@ -4930,8 +4930,8 @@ class ComputeManager(manager.Manager):
         if CONF.rescue_timeout > 0:
             filters = {'vm_state': vm_states.RESCUED,
                        'host': self.host}
-            rescued_instances = self.conductor_api.instance_get_all_by_filters(
-                context, filters, columns_to_join=["system_metadata"],
+            rescued_instances = instance_obj.InstanceList.get_by_filters(
+                context, filters, expected_attrs=["system_metadata"],
                 use_slave=True)
 
             to_unrescue = []
@@ -4941,7 +4941,7 @@ class ComputeManager(manager.Manager):
                     to_unrescue.append(instance)
 
             for instance in to_unrescue:
-                self.conductor_api.compute_unrescue(context, instance)
+                self.compute_api.unrescue(context, instance)
 
     @periodic_task.periodic_task
     def _poll_unconfirmed_resizes(self, context):
