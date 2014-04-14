@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import db
 from nova import exception
 from nova.objects import compute_node
@@ -148,6 +150,16 @@ class _TestComputeNodeObject(object):
         self.mox.ReplayAll()
         computes = compute_node.ComputeNodeList.get_by_hypervisor(self.context,
                                                                   'hyper')
+        self.assertEqual(1, len(computes))
+        self.compare_obj(computes[0], fake_compute_node,
+                         comparators={'stats': self.json_comparator})
+
+    @mock.patch('nova.db.service_get')
+    def test_get_by_service(self, service_get):
+        service_get.return_value = {'compute_node': [fake_compute_node]}
+        fake_service = service.Service(id=123)
+        computes = compute_node.ComputeNodeList.get_by_service(self.context,
+                                                               fake_service)
         self.assertEqual(1, len(computes))
         self.compare_obj(computes[0], fake_compute_node,
                          comparators={'stats': self.json_comparator})

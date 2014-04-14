@@ -126,7 +126,8 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              ComputeNode <= version 1.2
     # Version 1.1 ComputeNode version 1.3
-    VERSION = '1.1'
+    # Version 1.2 Add get_by_service()
+    VERSION = '1.2'
     fields = {
         'objects': fields.ListOfObjectsField('ComputeNode'),
         }
@@ -134,6 +135,7 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
         '1.0': '1.2',
         # NOTE(danms): ComputeNode was at 1.2 before we added this
         '1.1': '1.3',
+        '1.2': '1.3',
         }
 
     @base.remotable_classmethod
@@ -148,3 +150,14 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
                                                            hypervisor_match)
         return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
                                   db_computes)
+
+    @base.remotable_classmethod
+    def _get_by_service(cls, context, service_id):
+        db_service = db.service_get(context, service_id,
+                                    with_compute_node=True)
+        return base.obj_make_list(context, ComputeNodeList(), ComputeNode,
+                                  db_service['compute_node'])
+
+    @classmethod
+    def get_by_service(cls, context, service):
+        return cls._get_by_service(context, service.id)
