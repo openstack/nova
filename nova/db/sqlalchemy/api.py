@@ -1851,6 +1851,10 @@ def instance_get_all_by_filters(context, filters, sort_key, sort_dir,
                          include or exclude instances whose
                          vm_state is SOFT_DELETED.
     """
+    # NOTE(mriedem): If the limit is 0 there is no point in even going
+    # to the database since nothing is going to be returned anyway.
+    if limit == 0:
+        return []
 
     sort_fn = {'desc': desc, 'asc': asc}
 
