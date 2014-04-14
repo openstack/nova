@@ -118,9 +118,12 @@ class InstanceMetadata():
 
         # NOTE(danms): This should be removed after bp:compute-manager-objects
         if not isinstance(instance, instance_obj.Instance):
+            expected = ['metadata', 'system_metadata']
+            if 'info_cache' in instance:
+                expected.append('info_cache')
             instance = instance_obj.Instance._from_db_object(
                 ctxt, instance_obj.Instance(), instance,
-                expected_attrs=['metadata', 'system_metadata'])
+                expected_attrs=expected)
 
         # The default value of mimeType is set to MIME_TYPE_TEXT_PLAIN
         self.set_mimetype(MIME_TYPE_TEXT_PLAIN)
@@ -162,8 +165,7 @@ class InstanceMetadata():
 
         # get network info, and the rendered network template
         if network_info is None:
-            network_info = network.API().get_instance_nw_info(ctxt,
-                                                              instance)
+            network_info = instance.info_cache.network_info
 
         self.ip_info = \
                 ec2utils.get_ip_info_for_instance_from_nw_info(network_info)

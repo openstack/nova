@@ -106,7 +106,7 @@ class API(base_api.NetworkAPI):
 
     @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
-        return self.db.fixed_ip_get_by_address(context, address)
+        return fixed_ip_obj.FixedIP.get_by_address(context, address)
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):

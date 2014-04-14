@@ -27,7 +27,6 @@ try:
 except ImportError:
     import pickle
 
-import mox
 from oslo.config import cfg
 import webob
 
@@ -47,6 +46,7 @@ from nova import test
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_network
+from nova.tests.objects import test_instance_info_cache
 from nova.tests.objects import test_security_group
 from nova.virt import netutils
 
@@ -71,7 +71,7 @@ INSTANCE = fake_instance.fake_db_instance(**
      'vcpus': 1,
      'fixed_ips': [],
      'root_device_name': '/dev/sda1',
-     'info_cache': {'network_info': []},
+     'info_cache': test_instance_info_cache.fake_info_cache,
      'hostname': 'test.novadomain',
      'display_name': 'my_displayname',
      'metadata': {},
@@ -82,7 +82,8 @@ INSTANCE = fake_instance.fake_db_instance(**
 def fake_inst_obj(context):
     return instance_obj.Instance._from_db_object(
         context, instance_obj.Instance(), INSTANCE,
-        expected_attrs=['metadata', 'system_metadata'])
+        expected_attrs=['metadata', 'system_metadata',
+                        'info_cache'])
 
 
 def get_default_sys_meta():
@@ -309,12 +310,6 @@ class MetadataTestCase(test.TestCase):
 
     def test_InstanceMetadata_queries_network_API_when_needed(self):
         network_info_from_api = []
-
-        self.mox.StubOutWithMock(network_api.API, "get_instance_nw_info")
-
-        network_api.API.get_instance_nw_info(
-            mox.IgnoreArg(),
-            mox.IgnoreArg()).AndReturn(network_info_from_api)
 
         self.mox.StubOutWithMock(netutils, "get_injected_network_template")
 
