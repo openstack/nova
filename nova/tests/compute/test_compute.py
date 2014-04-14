@@ -192,16 +192,19 @@ class BaseTestCase(test.TestCase):
                                    'disk_available_least': 265856,
                                    'deleted_at': None,
                                    'free_ram_mb': 130560,
+                                   'metrics': '',
+                                   'stats': '',
                                    'id': 2}]
-            return fake_compute_nodes
+            return [compute_node_obj.ComputeNode._from_db_object(
+                        context, compute_node_obj.ComputeNode(), cn)
+                    for cn in fake_compute_nodes]
 
-        def fake_compute_node_delete(context, compute_node):
-            self.assertEqual(compute_node.get('hypervisor_hostname'),
-                             'fake_phyp1')
+        def fake_compute_node_delete(context, compute_node_id):
+            self.assertEqual(2, compute_node_id)
 
         self.stubs.Set(self.compute, '_get_compute_nodes_in_db',
                 fake_get_compute_nodes_in_db)
-        self.stubs.Set(self.compute.conductor_api, 'compute_node_delete',
+        self.stubs.Set(db, 'compute_node_delete',
                 fake_compute_node_delete)
 
         self.compute.update_available_resource(
