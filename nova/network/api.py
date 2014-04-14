@@ -25,6 +25,7 @@ from nova import exception
 from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
+from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_info_cache as info_cache_obj
 from nova.openstack.common import excutils
@@ -157,7 +158,7 @@ class API(base.Base):
 
     @wrap_check_policy
     def get_fixed_ip_by_address(self, context, address):
-        return self.db.fixed_ip_get_by_address(context, address)
+        return fixed_ip_obj.FixedIP.get_by_address(context, address)
 
     @wrap_check_policy
     def get_floating_ip(self, context, id):
