@@ -29,9 +29,9 @@ from nova import block_device
 from nova.compute import flavors
 from nova import conductor
 from nova import context
+from nova import network
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
-from nova.objects import fixed_ip as fixed_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import security_group as secgroup_obj
 from nova.openstack.common.gettextutils import _
@@ -118,12 +118,9 @@ class InstanceMetadata():
 
         # NOTE(danms): This should be removed after bp:compute-manager-objects
         if not isinstance(instance, instance_obj.Instance):
-            expected = ['metadata', 'system_metadata']
-            if 'info_cache' in instance:
-                expected.append('info_cache')
             instance = instance_obj.Instance._from_db_object(
                 ctxt, instance_obj.Instance(), instance,
-                expected_attrs=expected)
+                expected_attrs=['metadata', 'system_metadata'])
 
         # The default value of mimeType is set to MIME_TYPE_TEXT_PLAIN
         self.set_mimetype(MIME_TYPE_TEXT_PLAIN)
@@ -165,7 +162,8 @@ class InstanceMetadata():
 
         # get network info, and the rendered network template
         if network_info is None:
-            network_info = instance.info_cache.network_info
+            network_info = network.API().get_instance_nw_info(ctxt,
+                                                              instance)
 
         self.ip_info = \
                 ec2utils.get_ip_info_for_instance_from_nw_info(network_info)
@@ -509,7 +507,7 @@ class VendorDataDriver(object):
 
 def get_metadata_by_address(conductor_api, address):
     ctxt = context.get_admin_context()
-    fixed_ip = fixed_ip_obj.FixedIP.get_by_address(ctxt, address)
+    fixed_ip = network.API().get_fixed_ip_by_address(ctxt, address)
 
     return get_metadata_by_instance_id(conductor_api,
                                        fixed_ip['instance_uuid'],
