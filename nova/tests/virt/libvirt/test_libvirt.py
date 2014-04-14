@@ -446,6 +446,9 @@ class LibvirtConnTestCase(test.TestCase):
             def nodeDeviceLookupByName(self, x):
                 pass
 
+            def lookupByName(self, name):
+                pass
+
         self.conn = FakeConn()
         self.stubs.Set(libvirt_driver.LibvirtDriver, '_connect',
                        lambda *a, **k: self.conn)
@@ -5035,7 +5038,7 @@ class LibvirtConnTestCase(test.TestCase):
         def fake_os_path_exists(path):
             return True
 
-        def fake_unplug_vifs(instance, network_info):
+        def fake_unplug_vifs(instance, network_info, ignore_errors=False):
             pass
 
         def fake_unfilter_instance(instance, network_info):
@@ -5086,7 +5089,7 @@ class LibvirtConnTestCase(test.TestCase):
         def fake_os_path_exists(path):
             return True
 
-        def fake_unplug_vifs(instance, network_info):
+        def fake_unplug_vifs(instance, network_info, ignore_errors=False):
             pass
 
         def fake_unfilter_instance(instance, network_info):
@@ -7030,6 +7033,38 @@ class LibvirtConnTestCase(test.TestCase):
         events = conn._get_neutron_events(network_info)
         self.assertEqual([('network-vif-plugged', '1')], events)
 
+    def test_unplug_vifs_ignores_errors(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        with mock.patch.object(conn, 'vif_driver') as vif_driver:
+            vif_driver.unplug.side_effect = exception.AgentError(
+                method='unplug')
+            conn.unplug_vifs('inst', [1], ignore_errors=True)
+            vif_driver.unplug.assert_called_once_with('inst', 1)
+
+    def test_unplug_vifs_reports_errors(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        with mock.patch.object(conn, 'vif_driver') as vif_driver:
+            vif_driver.unplug.side_effect = exception.AgentError(
+                method='unplug')
+            self.assertRaises(exception.AgentError,
+                              conn.unplug_vifs, 'inst', [1])
+            vif_driver.unplug.assert_called_once_with('inst', 1)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.unplug_vifs')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    def test_cleanup_wants_vif_errors_ignored(self, undefine, unplug):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        fake_inst = {'name': 'foo'}
+        with mock.patch.object(conn._conn, 'lookupByName') as lookup:
+            lookup.return_value = fake_inst
+            # NOTE(danms): Make unplug cause us to bail early, since
+            # we only care about how it was called
+            unplug.side_effect = test.TestingException
+            self.assertRaises(test.TestingException,
+                              conn.cleanup, 'ctxt', fake_inst, 'netinfo')
+            unplug.assert_called_once_with(fake_inst, 'netinfo',
+                                           ignore_errors=True)
+
 
 class HostStateTestCase(test.TestCase):
 
@@ -8449,7 +8484,7 @@ class LibvirtDriverTestCase(test.TestCase):
         def fake_undefine_domain(instance):
             pass
 
-        def fake_unplug_vifs(instance, network_info):
+        def fake_unplug_vifs(instance, network_info, ignore_errors=False):
             pass
 
         def fake_unfilter_instance(instance, network_info):
