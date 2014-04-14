@@ -442,8 +442,9 @@ def _service_get(context, service_id, with_compute_node=True, session=None):
 
 
 @require_admin_context
-def service_get(context, service_id):
-    return _service_get(context, service_id)
+def service_get(context, service_id, with_compute_node=False):
+    return _service_get(context, service_id,
+                        with_compute_node=with_compute_node)
 
 
 @require_admin_context

@@ -2135,7 +2135,8 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
                               running_vms=0, current_workload=0,
                               service_id=service['id'])
         compute = db.compute_node_create(self.ctxt, compute_values)
-        real_service = db.service_get(self.ctxt, service['id'])
+        real_service = db.service_get(self.ctxt, service['id'],
+                                      with_compute_node=True)
         real_compute = real_service['compute_node'][0]
         self.assertEqual(compute['id'], real_compute['id'])
 

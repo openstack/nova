@@ -96,9 +96,10 @@ def service_destroy(context, service_id):
     return IMPL.service_destroy(context, service_id)
 
 
-def service_get(context, service_id):
+def service_get(context, service_id, with_compute_node=False):
     """Get a service or raise if it does not exist."""
-    return IMPL.service_get(context, service_id)
+    return IMPL.service_get(context, service_id,
+                            with_compute_node=with_compute_node)
 
 
 def service_get_by_host_and_topic(context, host, topic):
