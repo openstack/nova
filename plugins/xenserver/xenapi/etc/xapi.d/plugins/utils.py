@@ -19,6 +19,7 @@ import errno
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import tempfile
 
@@ -115,6 +116,16 @@ def run_command(cmd, cmd_input=None, ok_exit_codes=None):
                            close_fds=True)
     return finish_subprocess(proc, cmd, cmd_input=cmd_input,
                              ok_exit_codes=ok_exit_codes)
+
+
+def try_kill_process(proc):
+    """Sends the given process the SIGKILL signal."""
+    pid = proc.pid
+    LOG.info("Killing process %s" % pid)
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except Exception:
+        LOG.exception("Failed to kill %s" % pid)
 
 
 def make_staging_area(sr_path):
@@ -378,16 +389,20 @@ def create_tarball(fileobj, path, callback=None, compression_level=None):
         env["GZIP"] = "-%d" % compression_level
     tar_proc = make_subprocess(tar_cmd, stdout=True, stderr=True, env=env)
 
-    while True:
-        chunk = tar_proc.stdout.read(CHUNK_SIZE)
-        if chunk == '':
-            break
+    try:
+        while True:
+            chunk = tar_proc.stdout.read(CHUNK_SIZE)
+            if chunk == '':
+                break
 
-        if callback:
-            callback(chunk)
+            if callback:
+                callback(chunk)
 
-        if fileobj:
-            fileobj.write(chunk)
+            if fileobj:
+                fileobj.write(chunk)
+    except Exception:
+        try_kill_process(tar_proc)
+        raise
 
     finish_subprocess(tar_proc, tar_cmd)
 
@@ -402,15 +417,19 @@ def extract_tarball(fileobj, path, callback=None):
     tar_cmd = ["tar", "-zx", "--directory=%s" % path]
     tar_proc = make_subprocess(tar_cmd, stderr=True, stdin=True)
 
-    while True:
-        chunk = fileobj.read(CHUNK_SIZE)
-        if chunk == '':
-            break
+    try:
+        while True:
+            chunk = fileobj.read(CHUNK_SIZE)
+            if chunk == '':
+                break
 
-        if callback:
-            callback(chunk)
+            if callback:
+                callback(chunk)
 
-        tar_proc.stdin.write(chunk)
+            tar_proc.stdin.write(chunk)
+    except Exception:
+        try_kill_process(tar_proc)
+        raise
 
     finish_subprocess(tar_proc, tar_cmd)
 

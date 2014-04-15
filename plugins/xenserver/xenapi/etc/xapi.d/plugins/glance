@@ -34,7 +34,7 @@ pluginlib_nova.configure_logging('glance')
 logging = pluginlib_nova.logging
 PluginError = pluginlib_nova.PluginError
 
-DEFAULT_SOCKET_TIMEOUT_SECONDS = 60
+SOCKET_TIMEOUT_SECONDS = 90
 
 
 class RetryableError(Exception):
@@ -42,10 +42,12 @@ class RetryableError(Exception):
 
 
 def _download_tarball_and_verify(request, staging_path):
-    # NOTE(johngarbutt) to ensure the script does not hang
-    # if we lose connection to glance we add a default socket
-    # The default is to never timeout.
-    socket.setdefaulttimeout(DEFAULT_SOCKET_TIMEOUT_SECONDS)
+    # NOTE(johngarbutt) By default, there is no timeout.
+    # To ensure the script does not hang if we lose connection
+    # to glance, we add this socket timeout.
+    # This is here so there is no chance the timeout out has
+    # been adjusted by other library calls.
+    socket.setdefaulttimeout(SOCKET_TIMEOUT_SECONDS)
 
     try:
         response = urllib2.urlopen(request)
@@ -124,6 +126,13 @@ def _upload_tarball(staging_path, image_id, glance_host, glance_port,
     Create a tarball of the image and then stream that into Glance
     using chunked-transfer-encoded HTTP.
     """
+    # NOTE(johngarbutt) By default, there is no timeout.
+    # To ensure the script does not hang if we lose connection
+    # to glance, we add this socket timeout.
+    # This is here so there is no chance the timeout out has
+    # been adjusted by other library calls.
+    socket.setdefaulttimeout(SOCKET_TIMEOUT_SECONDS)
+
     if glance_use_ssl:
         scheme = 'https'
     else:
