@@ -55,6 +55,7 @@ from nova.openstack.common import units
 from nova.openstack.common import uuidutils
 from nova.pci import pci_manager
 from nova import test
+from nova.tests import fake_block_device
 from nova.tests import fake_instance
 from nova.tests import fake_network
 import nova.tests.image.fake
@@ -8808,6 +8809,29 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
     def tearDown(self):
         super(LibvirtVolumeSnapshotTestCase, self).tearDown()
 
+    @mock.patch('nova.virt.block_device.DriverVolumeBlockDevice.'
+                'refresh_connection_info')
+    @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
+                'get_by_volume_id')
+    def test_volume_refresh_connection_info(self, mock_get_by_volume_id,
+                                            mock_refresh_connection_info):
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
+            'id': 123,
+            'instance_uuid': 'fake-instance',
+            'device_name': '/dev/sdb',
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'volume_id': 'fake-volume-id-1',
+            'connection_info': '{"fake": "connection_info"}'})
+        mock_get_by_volume_id.return_value = fake_bdm
+
+        self.conn._volume_refresh_connection_info(self.c, self.inst,
+                                                  self.volume_uuid)
+
+        mock_get_by_volume_id.assert_called_once_with(self.c, self.volume_uuid)
+        mock_refresh_connection_info.assert_called_once_with(self.c, self.inst,
+            self.conn._volume_api, self.conn)
+
     def test_volume_snapshot_create(self, quiesce=True):
         CONF.instance_name_template = 'instance-%s'
         self.mox.StubOutWithMock(self.conn, '_lookup_by_name')
@@ -8881,6 +8905,13 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
 
         self.conn._volume_api.update_snapshot_status(
             self.c, self.create_info['snapshot_id'], 'creating')
+
+        self.mox.StubOutWithMock(self.conn._volume_api, 'get_snapshot')
+        self.conn._volume_api.get_snapshot(self.c,
+            self.create_info['snapshot_id']).AndReturn({'status': 'available'})
+        self.mox.StubOutWithMock(self.conn, '_volume_refresh_connection_info')
+        self.conn._volume_refresh_connection_info(self.c, instance,
+                                                  self.volume_uuid)
 
         self.mox.ReplayAll()
 
@@ -9000,6 +9031,10 @@ class LibvirtVolumeSnapshotTestCase(test.TestCase):
 
         self.conn._volume_api.update_snapshot_status(
             self.c, snapshot_id, 'deleting')
+
+        self.mox.StubOutWithMock(self.conn, '_volume_refresh_connection_info')
+        self.conn._volume_refresh_connection_info(self.c, instance,
+                                                  self.volume_uuid)
 
         self.mox.ReplayAll()
 
