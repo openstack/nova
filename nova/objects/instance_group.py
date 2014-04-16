@@ -17,6 +17,7 @@ from nova import exception
 from nova.objects import base
 from nova.objects import fields
 from nova.objects import instance as instance_obj
+from nova.openstack.common import uuidutils
 
 
 class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
@@ -78,6 +79,13 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject):
                 return ig
 
         raise exception.InstanceGroupNotFound(group_uuid=name)
+
+    @classmethod
+    def get_by_hint(cls, context, hint):
+        if uuidutils.is_uuid_like(hint):
+            return cls.get_by_uuid(context, hint)
+        else:
+            return cls.get_by_name(context, hint)
 
     @base.remotable
     def save(self, context):

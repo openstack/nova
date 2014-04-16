@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import uuid
+
 from nova.compute import flavors
 from nova import context
 from nova import db
@@ -177,14 +179,17 @@ class _TestInstanceGroupObjects(test.TestCase):
                           db.instance_group_get, self.context, result['uuid'])
 
     def _populate_instances(self):
-        instances = [('f1', 'p1'), ('f2', 'p1'),
-                     ('f3', 'p2'), ('f4', 'p2')]
+        instances = [(str(uuid.uuid4()), 'f1', 'p1'),
+                     (str(uuid.uuid4()), 'f2', 'p1'),
+                     (str(uuid.uuid4()), 'f3', 'p2'),
+                     (str(uuid.uuid4()), 'f4', 'p2')]
         for instance in instances:
             values = self._get_default_values()
             values['uuid'] = instance[0]
-            values['name'] = instance[0]
-            values['project_id'] = instance[1]
+            values['name'] = instance[1]
+            values['project_id'] = instance[2]
             self._create_instance_group(self.context, values)
+        return instances
 
     def test_list_all(self):
         self._populate_instances()
@@ -218,6 +223,15 @@ class _TestInstanceGroupObjects(test.TestCase):
         ctxt = context.RequestContext('fake_user', 'p1')
         ig = instance_group.InstanceGroup.get_by_name(ctxt, 'f1')
         self.assertEqual('f1', ig.name)
+
+    def test_get_by_hint(self):
+        instances = self._populate_instances()
+        for instance in instances:
+            ctxt = context.RequestContext('fake_user', instance[2])
+            ig = instance_group.InstanceGroup.get_by_hint(ctxt, instance[1])
+            self.assertEqual(instance[1], ig.name)
+            ig = instance_group.InstanceGroup.get_by_hint(ctxt, instance[0])
+            self.assertEqual(instance[0], ig.uuid)
 
     def test_add_members(self):
         instance_ids = ['fakeid1', 'fakeid2']
