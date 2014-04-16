@@ -194,6 +194,23 @@ class TestingException(Exception):
     pass
 
 
+class NullHandler(logging.Handler):
+    """custom default NullHandler to attempt to format the record.
+
+    Used in conjunction with
+    log_fixture.get_logging_handle_error_fixture to detect formatting errors in
+    debug level logs without saving the logs.
+    """
+    def handle(self, record):
+        self.format(record)
+
+    def emit(self, record):
+        pass
+
+    def createLock(self):
+        self.lock = None
+
+
 class TestCase(testtools.TestCase):
     """Test case base class for all unit tests.
 
@@ -240,14 +257,27 @@ class TestCase(testtools.TestCase):
         self.addCleanup(rpc.clear_extra_exmods)
         self.addCleanup(rpc.cleanup)
 
-        # supports running a debug level for local runs
+        # set root logger to debug
+        root = logging.getLogger()
+        root.setLevel(logging.DEBUG)
+
+        # supports collecting debug level for local runs
         if os.environ.get('OS_DEBUG') in _TRUE_VALUES:
             level = logging.DEBUG
         else:
             level = logging.INFO
+
+        # Collect logs
         fs = '%(levelname)s [%(name)s] %(message)s'
-        self.log_fixture = self.useFixture(
-            fixtures.FakeLogger(format=fs, level=level))
+        fake = self.useFixture(fixtures.FakeLogger(format=fs, level=None))
+        root.handlers[0].setLevel(level)
+
+        if level > logging.DEBUG:
+            # Just attempt to format debug level logs, but don't save them
+            handler = NullHandler()
+            self.useFixture(fixtures.LogHandler(handler, nuke_handlers=False))
+            handler.setLevel(logging.DEBUG)
+
         self.useFixture(conf_fixture.ConfFixture(CONF))
 
         self.messaging_conf = messaging_conffixture.ConfFixture(CONF)
