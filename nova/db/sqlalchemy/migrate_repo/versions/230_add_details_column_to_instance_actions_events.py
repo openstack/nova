@@ -15,7 +15,7 @@
 from sqlalchemy import Column, String, Text
 
 from nova.db.sqlalchemy import api
-from nova.db.sqlalchemy import utils
+from nova.openstack.common.db.sqlalchemy import utils
 
 
 def upgrade(migrate_engine):

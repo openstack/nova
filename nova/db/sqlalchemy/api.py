@@ -5614,7 +5614,8 @@ def archive_deleted_rows_for_table(context, tablename, max_rows):
                           table.c.deleted != default_deleted_value).\
                           order_by(column).limit(max_rows)
 
-    insert_statement = db_utils.InsertFromSelect(shadow_table, query_insert)
+    insert_statement = sqlalchemyutils.InsertFromSelect(
+        shadow_table, query_insert)
     delete_statement = db_utils.DeleteFromSelect(table, query_delete, column)
     try:
         # Group the insert and delete in a transaction.

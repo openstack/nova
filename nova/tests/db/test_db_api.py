@@ -45,6 +45,7 @@ from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova.openstack.common.db import exception as db_exc
+from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -6320,22 +6321,24 @@ class ArchiveTestCase(test.TestCase):
         self.context = context.get_admin_context()
         self.engine = get_engine()
         self.conn = self.engine.connect()
-        self.instance_id_mappings = db_utils.get_table(self.engine,
-                                                       "instance_id_mappings")
-        self.shadow_instance_id_mappings = db_utils.get_table(self.engine,
-                                                "shadow_instance_id_mappings")
-        self.dns_domains = db_utils.get_table(self.engine, "dns_domains")
-        self.shadow_dns_domains = db_utils.get_table(self.engine,
-                                                     "shadow_dns_domains")
-        self.consoles = db_utils.get_table(self.engine, "consoles")
-        self.console_pools = db_utils.get_table(self.engine, "console_pools")
-        self.shadow_consoles = db_utils.get_table(self.engine,
-                                                  "shadow_consoles")
-        self.shadow_console_pools = db_utils.get_table(self.engine,
-                                                       "shadow_console_pools")
-        self.instances = db_utils.get_table(self.engine, "instances")
-        self.shadow_instances = db_utils.get_table(self.engine,
-                                                   "shadow_instances")
+        self.instance_id_mappings = sqlalchemyutils.get_table(
+            self.engine, "instance_id_mappings")
+        self.shadow_instance_id_mappings = sqlalchemyutils.get_table(
+            self.engine, "shadow_instance_id_mappings")
+        self.dns_domains = sqlalchemyutils.get_table(
+            self.engine, "dns_domains")
+        self.shadow_dns_domains = sqlalchemyutils.get_table(
+            self.engine, "shadow_dns_domains")
+        self.consoles = sqlalchemyutils.get_table(self.engine, "consoles")
+        self.console_pools = sqlalchemyutils.get_table(
+            self.engine, "console_pools")
+        self.shadow_consoles = sqlalchemyutils.get_table(
+            self.engine, "shadow_consoles")
+        self.shadow_console_pools = sqlalchemyutils.get_table(
+            self.engine, "shadow_console_pools")
+        self.instances = sqlalchemyutils.get_table(self.engine, "instances")
+        self.shadow_instances = sqlalchemyutils.get_table(
+            self.engine, "shadow_instances")
         self.uuidstrs = []
         for unused in range(6):
             self.uuidstrs.append(stdlib_uuid.uuid4().hex)
@@ -6349,17 +6352,17 @@ class ArchiveTestCase(test.TestCase):
         super(ArchiveTestCase, self).tearDown()
         for tablename in self.id_tablenames_to_cleanup:
             for name in [tablename, "shadow_" + tablename]:
-                table = db_utils.get_table(self.engine, name)
+                table = sqlalchemyutils.get_table(self.engine, name)
                 del_statement = table.delete(table.c.id.in_(self.ids))
                 self.conn.execute(del_statement)
         for tablename in self.uuid_tablenames_to_cleanup:
             for name in [tablename, "shadow_" + tablename]:
-                table = db_utils.get_table(self.engine, name)
+                table = sqlalchemyutils.get_table(self.engine, name)
                 del_statement = table.delete(table.c.uuid.in_(self.uuidstrs))
                 self.conn.execute(del_statement)
         for tablename in self.domain_tablenames_to_cleanup:
             for name in [tablename, "shadow_" + tablename]:
-                table = db_utils.get_table(self.engine, name)
+                table = sqlalchemyutils.get_table(self.engine, name)
                 del_statement = table.delete(table.c.domain.in_(self.uuidstrs))
                 self.conn.execute(del_statement)
 
@@ -6438,11 +6441,12 @@ class ArchiveTestCase(test.TestCase):
 
     def _test_archive_deleted_rows_for_one_uuid_table(self, tablename):
         """:returns: 0 on success, 1 if no uuid column, 2 if insert failed."""
-        main_table = db_utils.get_table(self.engine, tablename)
+        main_table = sqlalchemyutils.get_table(self.engine, tablename)
         if not hasattr(main_table.c, "uuid"):
             # Not a uuid table, so skip it.
             return 1
-        shadow_table = db_utils.get_table(self.engine, "shadow_" + tablename)
+        shadow_table = sqlalchemyutils.get_table(
+            self.engine, "shadow_" + tablename)
         # Add 6 rows to table
         for uuidstr in self.uuidstrs:
             ins_stmt = main_table.insert().values(uuid=uuidstr)
