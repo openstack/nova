@@ -3030,38 +3030,26 @@ def _reservation_create(context, uuid, usage, project_id, user_id, resource,
 # code always acquires the lock on quota_usages before acquiring the lock
 # on reservations.
 
-def _get_user_quota_usages(context, session, project_id, user_id):
-    # Broken out for testability
-    rows = model_query(context, models.QuotaUsage,
-                       read_deleted="no",
-                       session=session).\
-                   filter_by(project_id=project_id).\
-                   filter(or_(models.QuotaUsage.user_id == user_id,
-                              models.QuotaUsage.user_id == None)).\
-                   with_lockmode('update').\
-                   all()
-    return dict((row.resource, row) for row in rows)
-
-
-def _get_project_quota_usages(context, session, project_id):
+def _get_project_user_quota_usages(context, session, project_id,
+                                   user_id):
     rows = model_query(context, models.QuotaUsage,
                        read_deleted="no",
                        session=session).\
                    filter_by(project_id=project_id).\
                    with_lockmode('update').\
                    all()
-    result = dict()
+    proj_result = dict()
+    user_result = dict()
     # Get the total count of in_use,reserved
     for row in rows:
-        if row.resource in result:
-            result[row.resource]['in_use'] += row.in_use
-            result[row.resource]['reserved'] += row.reserved
-            result[row.resource]['total'] += (row.in_use + row.reserved)
-        else:
-            result[row.resource] = dict(in_use=row.in_use,
-                                        reserved=row.reserved,
-                                        total=row.in_use + row.reserved)
-    return result
+        proj_result.setdefault(row.resource,
+                               dict(in_use=0, reserved=0, total=0))
+        proj_result[row.resource]['in_use'] += row.in_use
+        proj_result[row.resource]['reserved'] += row.reserved
+        proj_result[row.resource]['total'] += (row.in_use + row.reserved)
+        if row.user_id is None or row.user_id == user_id:
+            user_result[row.resource] = row
+    return proj_result, user_result
 
 
 @require_context
@@ -3079,10 +3067,8 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
             user_id = context.user_id
 
         # Get the current usages
-        user_usages = _get_user_quota_usages(context, session,
-                                             project_id, user_id)
-        project_usages = _get_project_quota_usages(context, session,
-                                                   project_id)
+        project_usages, user_usages = _get_project_user_quota_usages(
+                context, session, project_id, user_id)
 
         # Handle usage refresh
         work = set(deltas.keys())
@@ -3291,11 +3277,12 @@ def _quota_reservations_query(session, context, reservations):
 def reservation_commit(context, reservations, project_id=None, user_id=None):
     session = get_session()
     with session.begin():
-        usages = _get_user_quota_usages(context, session, project_id, user_id)
+        _project_usages, user_usages = _get_project_user_quota_usages(
+                context, session, project_id, user_id)
         reservation_query = _quota_reservations_query(session, context,
                                                       reservations)
         for reservation in reservation_query.all():
-            usage = usages[reservation.resource]
+            usage = user_usages[reservation.resource]
             if reservation.delta >= 0:
                 usage.reserved -= reservation.delta
             usage.in_use += reservation.delta
@@ -3307,11 +3294,12 @@ def reservation_commit(context, reservations, project_id=None, user_id=None):
 def reservation_rollback(context, reservations, project_id=None, user_id=None):
     session = get_session()
     with session.begin():
-        usages = _get_user_quota_usages(context, session, project_id, user_id)
+        _project_usages, user_usages = _get_project_user_quota_usages(
+                context, session, project_id, user_id)
         reservation_query = _quota_reservations_query(session, context,
                                                       reservations)
         for reservation in reservation_query.all():
-            usage = usages[reservation.resource]
+            usage = user_usages[reservation.resource]
             if reservation.delta >= 0:
                 usage.reserved -= reservation.delta
         reservation_query.soft_delete(synchronize_session=False)
