@@ -182,6 +182,13 @@ class VMwareESXDriver(driver.ComputeDriver):
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
         """Destroy VM instance."""
+
+        # Destroy gets triggered when Resource Claim in resource_tracker
+        # is not successful. When resource claim is not successful,
+        # node is not set in instance. Perform destroy only if node is set
+        if not instance['node']:
+            return
+
         self._vmops.destroy(instance, network_info, destroy_disks)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
@@ -653,6 +660,13 @@ class VMwareVCDriver(VMwareESXDriver):
     def destroy(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True):
         """Destroy VM instance."""
+
+        # Destroy gets triggered when Resource Claim in resource_tracker
+        # is not successful. When resource claim is not successful,
+        # node is not set in instance. Perform destroy only if node is set
+        if not instance['node']:
+            return
+
         _vmops = self._get_vmops_for_compute_node(instance['node'])
         _vmops.destroy(instance, network_info, destroy_disks)
 
