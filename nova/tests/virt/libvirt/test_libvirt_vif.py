@@ -356,7 +356,7 @@ class LibvirtVifTestCase(test.TestCase):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
         xml = self._get_instance_xml(d, self.vif_bridge)
 
-        self._assertModel(xml, "virtio")
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
     def test_model_kvm_custom(self):
         self.flags(use_virtio_for_bridges=True,
@@ -364,10 +364,11 @@ class LibvirtVifTestCase(test.TestCase):
                    group='libvirt')
 
         d = vif.LibvirtGenericVIFDriver(self._get_conn())
-        image_meta = {'properties': {'hw_vif_model': 'e1000'}}
+        image_meta = {'properties': {'hw_vif_model':
+                                     network_model.VIF_MODEL_E1000}}
         xml = self._get_instance_xml(d, self.vif_bridge,
                                      image_meta)
-        self._assertModel(xml, "e1000")
+        self._assertModel(xml, network_model.VIF_MODEL_E1000)
 
     def test_model_kvm_bogus(self):
         self.flags(use_virtio_for_bridges=True,
@@ -416,7 +417,7 @@ class LibvirtVifTestCase(test.TestCase):
             self.assertEqual(outbound.get("burst"),
                              self.bandwidth['quota:vif_outbound_burst'])
 
-            self._assertModel(xml, "virtio", "qemu")
+            self._assertModel(xml, network_model.VIF_MODEL_VIRTIO, "qemu")
 
     def test_model_qemu_no_firewall(self):
         self.flags(firewall_driver="nova.virt.firewall.NoopFirewallDriver")
@@ -760,7 +761,7 @@ class LibvirtVifTestCase(test.TestCase):
         self._assertTypeEquals(node, "direct", "source",
                                "mode", "passthrough")
         self._assertMacEquals(node, self.vif_mlnx)
-        self._assertModel(xml, "virtio")
+        self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
 
     def test_midonet_ethernet_vif_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn())

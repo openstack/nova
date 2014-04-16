@@ -20,6 +20,7 @@ import re
 import mock
 
 from nova import exception
+from nova.network import model as network_model
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import units
 from nova.openstack.common import uuidutils
@@ -630,3 +631,19 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         expected = re.sub(r'\s+', '', expected)
         result = re.sub(r'\s+', '', repr(result))
         self.assertEqual(expected, result)
+
+    def test_convert_vif_model(self):
+        expected = "VirtualE1000"
+        result = vm_util._convert_vif_model(network_model.VIF_MODEL_E1000)
+        self.assertEqual(expected, result)
+        expected = "VirtualE1000e"
+        result = vm_util._convert_vif_model(network_model.VIF_MODEL_E1000E)
+        self.assertEqual(expected, result)
+        types = ["VirtualE1000", "VirtualE1000e", "VirtualPCNet32",
+                 "VirtualVmxnet"]
+        for type in types:
+            self.assertEqual(type,
+                             vm_util._convert_vif_model(type))
+        self.assertRaises(exception.Invalid,
+                          vm_util._convert_vif_model,
+                          "InvalidVifModel")

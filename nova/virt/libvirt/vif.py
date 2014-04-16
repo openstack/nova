@@ -54,9 +54,21 @@ DEV_PREFIX_ETH = 'eth'
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
         valid_models = {
-            'qemu': ['virtio', 'ne2k_pci', 'pcnet', 'rtl8139', 'e1000'],
-            'kvm': ['virtio', 'ne2k_pci', 'pcnet', 'rtl8139', 'e1000'],
-            'xen': ['netfront', 'ne2k_pci', 'pcnet', 'rtl8139', 'e1000'],
+            'qemu': [network_model.VIF_MODEL_VIRTIO,
+                     network_model.VIF_MODEL_NE2K_PCI,
+                     network_model.VIF_MODEL_PCNET,
+                     network_model.VIF_MODEL_RTL8139,
+                     network_model.VIF_MODEL_E1000],
+            'kvm': [network_model.VIF_MODEL_VIRTIO,
+                    network_model.VIF_MODEL_NE2K_PCI,
+                    network_model.VIF_MODEL_PCNET,
+                    network_model.VIF_MODEL_RTL8139,
+                    network_model.VIF_MODEL_E1000],
+            'xen': [network_model.VIF_MODEL_NETFRONT,
+                    network_model.VIF_MODEL_NE2K_PCI,
+                    network_model.VIF_MODEL_PCNET,
+                    network_model.VIF_MODEL_RTL8139,
+                    network_model.VIF_MODEL_E1000],
             'lxc': [],
             'uml': [],
             }
@@ -113,11 +125,12 @@ class LibvirtBaseVIFDriver(object):
         if (model is None and
             CONF.libvirt.virt_type in ('kvm', 'qemu') and
                     CONF.libvirt.use_virtio_for_bridges):
-            model = "virtio"
+            model = network_model.VIF_MODEL_VIRTIO
 
         # Workaround libvirt bug, where it mistakenly
         # enables vhost mode, even for non-KVM guests
-        if model == "virtio" and CONF.libvirt.virt_type == "qemu":
+        if (model == network_model.VIF_MODEL_VIRTIO and
+                CONF.libvirt.virt_type == "qemu"):
             driver = "qemu"
 
         if not is_vif_model_valid_for_virt(CONF.libvirt.virt_type,
