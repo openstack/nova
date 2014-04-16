@@ -302,6 +302,29 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         nova.tests.image.fake.stub_out_image_service(self.stubs)
         self.vnc_host = 'test_url'
         self._set_exception_vars()
+        self.instance_without_compute = {'node': None,
+                                         'vm_state': 'building',
+                                         'project_id': 'fake',
+                                         'user_id': 'fake',
+                                         'name': '1',
+                                         'display_description': '1',
+                                         'kernel_id': '1',
+                                         'ramdisk_id': '1',
+                                         'mac_addresses': [
+                                            {'address': 'de:ad:be:ef:be:ef'}
+                                         ],
+                                         'memory_mb': 8192,
+                                         'instance_type': 'm1.large',
+                                         'vcpus': 4,
+                                         'root_gb': 80,
+                                         'image_ref': '1',
+                                         'host': 'fake_host',
+                                         'task_state':
+                                         'scheduling',
+                                         'reservation_id': 'r-3t8muvr0',
+                                         'id': 1,
+                                         'uuid': 'fake-uuid',
+                                         'metadata': []}
 
     def tearDown(self):
         super(VMwareAPIVMTestCase, self).tearDown()
@@ -1219,9 +1242,25 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         self.assertEqual(len(instances), 0)
 
     def test_destroy_non_existent(self):
-        self._create_instance()
-        self.assertIsNone(self.conn.destroy(self.context, self.instance,
-            self.network_info))
+        self.destroy_disks = True
+        with mock.patch.object(self.conn._vmops,
+                               "destroy") as mock_destroy:
+            self._create_instance()
+            self.conn.destroy(self.context, self.instance,
+                              self.network_info,
+                              None, self.destroy_disks)
+            mock_destroy.assert_called_once_with(self.instance,
+                                                 self.network_info,
+                                                 self.destroy_disks)
+
+    def test_destroy_instance_without_compute(self):
+        self.destroy_disks = True
+        with mock.patch.object(self.conn._vmops,
+                               "destroy") as mock_destroy:
+            self.conn.destroy(self.context, self.instance_without_compute,
+                              self.network_info,
+                              None, self.destroy_disks)
+            self.assertFalse(mock_destroy.called)
 
     def _rescue(self, config_drive=False):
         def fake_attach_disk_to_vm(vm_ref, instance,
@@ -2187,3 +2226,51 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                     "instance", [], None)
             mock_destroy.assert_called_once_with(self.context,
                     "instance", [], None)
+
+    def test_destroy(self):
+        self._create_vm()
+        info = self.conn.get_info({'uuid': self.uuid,
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+        instances = self.conn.list_instances()
+        self.assertEqual(1, len(instances))
+        self.conn.destroy(self.context, self.instance, self.network_info)
+        instances = self.conn.list_instances()
+        self.assertEqual(0, len(instances))
+        self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
+
+    def test_destroy_no_datastore(self):
+        self._create_vm()
+        info = self.conn.get_info({'uuid': self.uuid,
+                                   'node': self.instance_node})
+        self._check_vm_info(info, power_state.RUNNING)
+        instances = self.conn.list_instances()
+        self.assertEqual(1, len(instances))
+        # Overwrite the vmPathName
+        vms = vmwareapi_fake._get_objects("VirtualMachine")
+        vm = vms.objects[0]
+        vm.set("config.files.vmPathName", None)
+        self.conn.destroy(self.context, self.instance, self.network_info)
+        instances = self.conn.list_instances()
+        self.assertEqual(0, len(instances))
+
+    def test_destroy_non_existent(self):
+        self.destroy_disks = True
+        with mock.patch.object(self.conn._vmops,
+                               "destroy") as mock_destroy:
+            self._create_instance()
+            self.conn.destroy(self.context, self.instance,
+                              self.network_info,
+                              None, self.destroy_disks)
+            mock_destroy.assert_called_once_with(self.instance,
+                                                 self.network_info,
+                                                 self.destroy_disks)
+
+    def test_destroy_instance_without_compute(self):
+        self.destroy_disks = True
+        with mock.patch.object(self.conn._vmops,
+                               "destroy") as mock_destroy:
+            self.conn.destroy(self.context, self.instance_without_compute,
+                              self.network_info,
+                              None, self.destroy_disks)
+            self.assertFalse(mock_destroy.called)
