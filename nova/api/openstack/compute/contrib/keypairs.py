@@ -116,8 +116,8 @@ class KeypairController(object):
         authorize(context, action='delete')
         try:
             self.api.delete_key_pair(context, context.user_id, id)
-        except exception.KeypairNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.KeypairNotFound as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return webob.Response(status_int=202)
 
     @wsgi.serializers(xml=KeypairTemplate)
@@ -128,8 +128,8 @@ class KeypairController(object):
 
         try:
             keypair = self.api.get_key_pair(context, context.user_id, id)
-        except exception.KeypairNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.KeypairNotFound as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return {'keypair': keypair}
 
     @wsgi.serializers(xml=KeypairsTemplate)
