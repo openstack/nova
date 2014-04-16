@@ -1314,7 +1314,7 @@ def create_ovs_vif_port(bridge, dev, iface_id, mac, instance_id):
 
 
 def delete_ovs_vif_port(bridge, dev):
-    _ovs_vsctl(['del-port', bridge, dev])
+    _ovs_vsctl(['--', '--if-exists', 'del-port', bridge, dev])
     delete_net_dev(dev)
 
 
