@@ -3198,9 +3198,9 @@ class ComputeManager(manager.Manager):
 
             instance_p = obj_base.obj_to_primitive(instance)
             migration_p = obj_base.obj_to_primitive(migration)
-            self.conductor_api.network_migrate_instance_start(context,
-                                                              instance_p,
-                                                              migration_p)
+            self.network_api.migrate_instance_start(context,
+                                                    instance_p,
+                                                    migration_p)
 
             network_info = self._get_instance_nw_info(context, instance)
             bdms = (block_device_obj.BlockDeviceMappingList.
@@ -3280,9 +3280,9 @@ class ComputeManager(manager.Manager):
 
             instance_p = obj_base.obj_to_primitive(instance)
             migration_p = obj_base.obj_to_primitive(migration)
-            self.conductor_api.network_migrate_instance_finish(context,
-                                                               instance_p,
-                                                               migration_p)
+            self.network_api.migrate_instance_finish(context,
+                                                     instance_p,
+                                                     migration_p)
 
             # if the original vm state was STOPPED, set it back to STOPPED
             LOG.info(_("Updating instance to original state: '%s'") %
@@ -3472,9 +3472,9 @@ class ComputeManager(manager.Manager):
 
             migration_p = obj_base.obj_to_primitive(migration)
             instance_p = obj_base.obj_to_primitive(instance)
-            self.conductor_api.network_migrate_instance_start(context,
-                                                              instance_p,
-                                                              migration_p)
+            self.network_api.migrate_instance_start(context,
+                                                    instance_p,
+                                                    migration_p)
 
             migration.status = 'post-migrating'
             migration.save(context.elevated())
@@ -3532,9 +3532,9 @@ class ComputeManager(manager.Manager):
 
         instance_p = obj_base.obj_to_primitive(instance)
         migration_p = obj_base.obj_to_primitive(migration)
-        self.conductor_api.network_migrate_instance_finish(context,
-                                                           instance_p,
-                                                           migration_p)
+        self.network_api.migrate_instance_finish(context,
+                                                 instance_p,
+                                                 migration_p)
 
         network_info = self._get_instance_nw_info(context, instance)
 
@@ -4632,9 +4632,9 @@ class ComputeManager(manager.Manager):
 
         migration = {'source_compute': self.host,
                      'dest_compute': dest, }
-        self.conductor_api.network_migrate_instance_start(ctxt,
-                                                          instance,
-                                                          migration)
+        self.network_api.migrate_instance_start(ctxt,
+                                                instance,
+                                                migration)
 
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
@@ -4704,9 +4704,9 @@ class ComputeManager(manager.Manager):
                                                          self.host)
         migration = {'source_compute': instance['host'],
                      'dest_compute': self.host, }
-        self.conductor_api.network_migrate_instance_finish(context,
-                                                           instance,
-                                                           migration)
+        self.network_api.migrate_instance_finish(context,
+                                                 instance,
+                                                 migration)
 
         network_info = self._get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(

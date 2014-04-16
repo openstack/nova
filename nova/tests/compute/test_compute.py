@@ -4047,8 +4047,8 @@ class ComputeTestCase(BaseTestCase):
         conductor_api = self.compute.conductor_api
 
         self.mox.StubOutWithMock(network_api, 'setup_networks_on_host')
-        self.mox.StubOutWithMock(conductor_api,
-                                 'network_migrate_instance_finish')
+        self.mox.StubOutWithMock(network_api,
+                                 'migrate_instance_finish')
         self.mox.StubOutWithMock(self.compute, '_get_instance_nw_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_notify_about_instance_usage')
@@ -4089,9 +4089,9 @@ class ComputeTestCase(BaseTestCase):
 
         network_api.setup_networks_on_host(self.context, instance,
                                            'fake-mini')
-        conductor_api.network_migrate_instance_finish(self.context,
-                                                      mox.IsA(dict),
-                                                      mox.IsA(dict))
+        network_api.migrate_instance_finish(self.context,
+                                            mox.IsA(dict),
+                                            mox.IsA(dict))
 
         self.compute._get_instance_nw_info(
                 self.context, instance).AndReturn('fake-nwinfo1')
@@ -5174,11 +5174,11 @@ class ComputeTestCase(BaseTestCase):
         self.compute.compute_rpcapi.pre_live_migration(
             c, instance, False, None, dest, migrate_data)
 
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'network_migrate_instance_start')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_start')
         migration = {'source_compute': instance['host'], 'dest_compute': dest}
-        self.compute.conductor_api.network_migrate_instance_start(c, instance,
-                                                                  migration)
+        self.compute.network_api.migrate_instance_start(c, instance,
+                                                        migration)
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'post_live_migration_at_destination')
         self.compute.compute_rpcapi.post_live_migration_at_destination(
@@ -5237,11 +5237,11 @@ class ComputeTestCase(BaseTestCase):
         # creating mocks
         self.mox.StubOutWithMock(self.compute.driver, 'unfilter_instance')
         self.compute.driver.unfilter_instance(inst_ref, [])
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'network_migrate_instance_start')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_start')
         migration = {'source_compute': srchost, 'dest_compute': dest, }
-        self.compute.conductor_api.network_migrate_instance_start(c, inst_ref,
-                                                                  migration)
+        self.compute.network_api.migrate_instance_start(c, inst_ref,
+                                                        migration)
 
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'post_live_migration_at_destination')
@@ -5286,8 +5286,8 @@ class ComputeTestCase(BaseTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute.driver, 'post_live_migration'),
             mock.patch.object(self.compute.driver, 'unfilter_instance'),
-            mock.patch.object(self.compute.conductor_api,
-                              'network_migrate_instance_start'),
+            mock.patch.object(self.compute.network_api,
+                              'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
                               'post_live_migration_at_destination'),
             mock.patch.object(self.compute.driver, 'unplug_vifs'),
@@ -5297,7 +5297,7 @@ class ComputeTestCase(BaseTestCase):
                               'clear_events_for_instance')
         ) as (
             post_live_migration, unfilter_instance,
-            network_migrate_instance_start, post_live_migration_at_destination,
+            migrate_instance_start, post_live_migration_at_destination,
             unplug_vifs, setup_networks_on_host, clear_events
         ):
             self.compute._post_live_migration(c, instance, dest)
@@ -5307,7 +5307,7 @@ class ComputeTestCase(BaseTestCase):
             unfilter_instance.assert_has_calls([mock.call(instance, [])])
             migration = {'source_compute': srchost,
                          'dest_compute': dest, }
-            network_migrate_instance_start.assert_has_calls([
+            migrate_instance_start.assert_has_calls([
                 mock.call(c, instance, migration)])
             post_live_migration_at_destination.assert_has_calls([
                 mock.call(c, instance, False, dest)])
@@ -5336,8 +5336,8 @@ class ComputeTestCase(BaseTestCase):
                  ])
 
         with contextlib.nested(
-            mock.patch.object(self.compute.conductor_api,
-                              'network_migrate_instance_start'),
+            mock.patch.object(self.compute.network_api,
+                              'migrate_instance_start'),
             mock.patch.object(self.compute.compute_rpcapi,
                               'post_live_migration_at_destination'),
             mock.patch.object(self.compute.network_api,
@@ -5351,7 +5351,7 @@ class ComputeTestCase(BaseTestCase):
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection')
         ) as (
-            network_migrate_instance_start, post_live_migration_at_destination,
+            migrate_instance_start, post_live_migration_at_destination,
             setup_networks_on_host, clear_events_for_instance,
             get_instance_volume_block_device_info, get_by_instance_uuid,
             get_volume_connector, terminate_connection
@@ -5367,8 +5367,8 @@ class ComputeTestCase(BaseTestCase):
     def _begin_post_live_migration_at_destination(self):
         self.mox.StubOutWithMock(self.compute.network_api,
                                  'setup_networks_on_host')
-        self.mox.StubOutWithMock(self.compute.conductor_api,
-                                 'network_migrate_instance_finish')
+        self.mox.StubOutWithMock(self.compute.network_api,
+                                 'migrate_instance_finish')
         self.mox.StubOutWithMock(self.compute, '_get_power_state')
         self.mox.StubOutWithMock(self.compute, '_get_compute_info')
 
@@ -5387,7 +5387,7 @@ class ComputeTestCase(BaseTestCase):
                                                         self.compute.host)
         migration = {'source_compute': self.instance['host'],
                      'dest_compute': self.compute.host, }
-        self.compute.conductor_api.network_migrate_instance_finish(
+        self.compute.network_api.migrate_instance_finish(
                 self.admin_ctxt, self.instance, migration)
         fake_net_info = []
         fake_block_dev_info = {'foo': 'bar'}
