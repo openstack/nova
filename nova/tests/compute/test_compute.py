@@ -1328,7 +1328,7 @@ class ComputeTestCase(BaseTestCase):
         instance_mb = int(total_mem_mb * 1.55)
 
         # build an instance, specifying an amount of memory that exceeds
-        # total_mem_mb, but is less than the oversubscribed limit:
+        # both total_mem_mb and the oversubscribed limit:
         params = {"memory_mb": instance_mb, "root_gb": 128,
                   "ephemeral_gb": 128}
         instance = self._create_fake_instance(params)
