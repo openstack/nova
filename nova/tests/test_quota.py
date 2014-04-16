@@ -2089,11 +2089,9 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
         def fake_get_session():
             return FakeSession()
 
-        def fake_get_project_quota_usages(context, session, project_id):
-            return self.usages.copy()
-
-        def fake_get_user_quota_usages(context, session, project_id, user_id):
-            return self.usages.copy()
+        def fake_get_project_user_quota_usages(context, session, project_id,
+                                               user_id):
+            return self.usages.copy(), self.usages.copy()
 
         def fake_quota_usage_create(context, project_id, user_id, resource,
                                     in_use, reserved, until_refresh,
@@ -2118,10 +2116,8 @@ class QuotaReserveSqlAlchemyTestCase(test.TestCase):
             return reservation_ref
 
         self.stubs.Set(sqa_api, 'get_session', fake_get_session)
-        self.stubs.Set(sqa_api, '_get_project_quota_usages',
-                       fake_get_project_quota_usages)
-        self.stubs.Set(sqa_api, '_get_user_quota_usages',
-                       fake_get_user_quota_usages)
+        self.stubs.Set(sqa_api, '_get_project_user_quota_usages',
+                       fake_get_project_user_quota_usages)
         self.stubs.Set(sqa_api, '_quota_usage_create', fake_quota_usage_create)
         self.stubs.Set(sqa_api, '_reservation_create', fake_reservation_create)
 
