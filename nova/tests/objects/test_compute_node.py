@@ -114,6 +114,14 @@ class _TestComputeNodeObject(object):
         self.compare_obj(compute, fake_compute_node,
                          comparators={'stats': self.json_comparator})
 
+    @mock.patch.object(db, 'compute_node_create',
+                       return_value=fake_compute_node)
+    def test_set_id_failure(self, db_mock):
+        compute = compute_node.ComputeNode()
+        compute.create(self.context)
+        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+                          compute, 'id', 124)
+
     def test_destroy(self):
         self.mox.StubOutWithMock(db, 'compute_node_delete')
         db.compute_node_delete(self.context, 123)

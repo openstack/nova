@@ -27,7 +27,7 @@ class ComputeNode(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.3'
 
     fields = {
-        'id': fields.IntegerField(),
+        'id': fields.IntegerField(read_only=True),
         'service_id': fields.IntegerField(),
         'vcpus': fields.IntegerField(),
         'memory_mb': fields.IntegerField(),

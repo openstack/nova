@@ -117,10 +117,12 @@ class UnspecifiedDefault(object):
 
 
 class Field(object):
-    def __init__(self, field_type, nullable=False, default=UnspecifiedDefault):
+    def __init__(self, field_type, nullable=False,
+                 default=UnspecifiedDefault, read_only=False):
         self._type = field_type
         self._nullable = nullable
         self._default = default
+        self._read_only = read_only
 
     def __repr__(self):
         args = {
@@ -138,6 +140,10 @@ class Field(object):
     @property
     def default(self):
         return self._default
+
+    @property
+    def read_only(self):
+        return self._read_only
 
     def _null(self, obj, attr):
         if self.nullable:

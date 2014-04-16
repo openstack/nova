@@ -12,6 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from nova import db
 from nova import exception
 from nova.objects import service
@@ -106,6 +108,14 @@ class _TestServiceObject(object):
         service_obj.id = 123
         service_obj.host = 'fake-host'
         service_obj.save(self.context)
+
+    @mock.patch.object(db, 'service_create',
+                       return_value=fake_service)
+    def test_set_id_failure(self, db_mock):
+        service_obj = service.Service()
+        service_obj.create(self.context)
+        self.assertRaises(exception.ReadOnlyFieldError, setattr,
+                          service_obj, 'id', 124)
 
     def _test_destroy(self):
         self.mox.StubOutWithMock(db, 'service_destroy')

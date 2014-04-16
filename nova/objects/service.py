@@ -31,7 +31,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
     VERSION = '1.2'
 
     fields = {
-        'id': fields.IntegerField(),
+        'id': fields.IntegerField(read_only=True),
         'host': fields.StringField(nullable=True),
         'binary': fields.StringField(nullable=True),
         'topic': fields.StringField(nullable=True),

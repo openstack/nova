@@ -68,10 +68,19 @@ def make_class_properties(cls):
             return getattr(self, attrname)
 
         def setter(self, value, name=name, field=field):
+            attrname = get_attrname(name)
+            field_value = field.coerce(self, name, value)
+            if field.read_only and hasattr(self, attrname):
+                # Note(yjiang5): _from_db_object() may iterate
+                # every field and write, no exception in such situation.
+                if getattr(self, attrname) != field_value:
+                    raise exception.ReadOnlyFieldError(field=name)
+                else:
+                    return
+
             self._changed_fields.add(name)
             try:
-                return setattr(self, get_attrname(name),
-                               field.coerce(self, name, value))
+                return setattr(self, attrname, field_value)
             except Exception:
                 attr = "%s.%s" % (self.obj_name(), name)
                 LOG.exception(_('Error setting %(attr)s') %
