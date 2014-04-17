@@ -481,6 +481,10 @@ class IPV6AddressField(AutoTypedField):
     AUTO_TYPE = IPV6Address()
 
 
+class IPV4AndV6AddressField(AutoTypedField):
+    AUTO_TYPE = IPV4AndV6Address()
+
+
 class IPNetworkField(AutoTypedField):
     AUTO_TYPE = IPNetwork()
 
