@@ -428,6 +428,27 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.assertTrue(mock_unreserve.called)
             self.assertTrue(mock_destroy.called)
 
+    def test_detach_volume_api_raises(self):
+        fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
+        instance = self._create_fake_instance()
+
+        with contextlib.nested(
+            mock.patch.object(self.compute, '_detach_volume'),
+            mock.patch.object(self.compute.volume_api, 'detach'),
+            mock.patch.object(block_device_obj.BlockDeviceMapping,
+                              'get_by_volume_id'),
+            mock.patch.object(fake_bdm, 'destroy')
+        ) as (mock_internal_detach, mock_detach, mock_get, mock_destroy):
+            mock_detach.side_effect = test.TestingException
+            mock_get.return_value = fake_bdm
+            self.assertRaises(
+                    test.TestingException, self.compute.detach_volume,
+                    self.context, 'fake', instance)
+            mock_internal_detach.assert_called_once_with(self.context,
+                                                         instance,
+                                                         fake_bdm)
+            self.assertTrue(mock_destroy.called)
+
     def test_attach_volume_no_bdm(self):
         fake_bdm = block_device_obj.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance()
