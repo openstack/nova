@@ -134,6 +134,7 @@ class ConductorAPI(object):
 
     2.0  - Drop backwards compatibility
     ...  - Remove quota_rollback() and quota_commit()
+    ...  - Remove aggregate_host_add() and aggregate_host_delete()
     """
 
     VERSION_ALIASES = {
@@ -174,20 +175,6 @@ class ConductorAPI(object):
         return cctxt.call(context,
                           'migration_get_in_progress_by_host_and_node',
                           host=host, node=node)
-
-    def aggregate_host_add(self, context, aggregate, host):
-        aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'aggregate_host_add',
-                          aggregate=aggregate_p,
-                          host=host)
-
-    def aggregate_host_delete(self, context, aggregate, host):
-        aggregate_p = jsonutils.to_primitive(aggregate)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'aggregate_host_delete',
-                          aggregate=aggregate_p,
-                          host=host)
 
     def aggregate_metadata_get_by_host(self, context, host, key):
         cctxt = self.client.prepare()

@@ -896,9 +896,11 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.migration_get_in_progress_by_host_and_node(context,
                 host, node)
 
+    # TODO(danms): This can be removed in v3.0 of the RPC API
     def aggregate_host_add(self, context, aggregate, host):
         return self.manager.aggregate_host_add(context, aggregate, host)
 
+    # TODO(danms): This can be removed in v3.0 of the RPC API
     def aggregate_host_delete(self, context, aggregate, host):
         return self.manager.aggregate_host_delete(context, aggregate, host)
 

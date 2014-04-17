@@ -107,12 +107,6 @@ class LocalAPI(object):
         return self._manager.migration_get_in_progress_by_host_and_node(
             context, host, node)
 
-    def aggregate_host_add(self, context, aggregate, host):
-        return self._manager.aggregate_host_add(context, aggregate, host)
-
-    def aggregate_host_delete(self, context, aggregate, host):
-        return self._manager.aggregate_host_delete(context, aggregate, host)
-
     def aggregate_metadata_get_by_host(self, context, host,
                                        key='availability_zone'):
         return self._manager.aggregate_metadata_get_by_host(context,
