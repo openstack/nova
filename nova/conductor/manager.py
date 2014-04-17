@@ -1017,10 +1017,12 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.security_groups_trigger_members_refresh(context,
                 group_ids)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def network_migrate_instance_start(self, context, instance, migration):
         return self.manager.network_migrate_instance_start(context, instance,
                 migration)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def network_migrate_instance_finish(self, context, instance, migration):
         return self.manager.network_migrate_instance_finish(context, instance,
                 migration)
