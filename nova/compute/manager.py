@@ -875,9 +875,9 @@ class ComputeManager(manager.Manager):
                         {'task_state': instance['task_state'],
                          'power_state': current_power_state},
                         instance=instance)
-            instance = self._instance_update(context, instance.uuid,
-                                             vm_state=vm_states.ACTIVE,
-                                             task_state=None)
+            instance.task_state = None
+            instance.vm_state = vm_states.ACTIVE
+            instance.save()
 
         net_info = compute_utils.get_nw_info_for_instance(instance)
         try:
