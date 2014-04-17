@@ -138,6 +138,19 @@ class TestMetaclass(test.TestCase):
         self.assertEqual(expected, Test1._obj_classes)
         self.assertEqual(expected, Test2._obj_classes)
 
+    def test_field_checking(self):
+        def create_class(field):
+            class TestField(base.NovaObject):
+                VERSION = '1.5'
+                fields = {'foo': field()}
+            return TestField
+
+        cls = create_class(fields.IPV4AndV6AddressField)
+        self.assertRaises(exception.ObjectFieldInvalid,
+                          create_class, fields.IPV4AndV6Address)
+        self.assertRaises(exception.ObjectFieldInvalid,
+                          create_class, int)
+
 
 class TestObjToPrimitive(test.TestCase):
 

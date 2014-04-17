@@ -56,6 +56,9 @@ def make_class_properties(cls):
             if name not in cls.fields:
                 cls.fields[name] = field
     for name, field in cls.fields.iteritems():
+        if not isinstance(field, fields.Field):
+            raise exception.ObjectFieldInvalid(
+                field=name, objname=cls.obj_name())
 
         def getter(self, name=name):
             attrname = get_attrname(name)

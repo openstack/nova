@@ -1381,6 +1381,10 @@ class ObjectActionError(NovaException):
     msg_fmt = _('Object action %(action)s failed because: %(reason)s')
 
 
+class ObjectFieldInvalid(NovaException):
+    msg_fmt = _('Field %(field)s of %(objname)s is not an instance of Field')
+
+
 class CoreAPIMissing(NovaException):
     msg_fmt = _("Core API extensions are missing: %(missing_apis)s")
 
