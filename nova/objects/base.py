@@ -533,8 +533,8 @@ class NovaObjectSerializer(messaging.NoOpSerializer):
     @property
     def conductor(self):
         if not hasattr(self, '_conductor'):
-            from nova.conductor import api as conductor_api
-            self._conductor = conductor_api.API()
+            from nova import conductor
+            self._conductor = conductor.API()
         return self._conductor
 
     def _process_object(self, context, objprim):
