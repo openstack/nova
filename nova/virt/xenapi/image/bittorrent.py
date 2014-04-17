@@ -26,53 +26,36 @@ LOG = logging.getLogger(__name__)
 
 xenapi_torrent_opts = [
     cfg.StrOpt('torrent_base_url',
-               deprecated_name='xenapi_torrent_base_url',
-               deprecated_group='DEFAULT',
                help='Base URL for torrent files.'),
     cfg.FloatOpt('torrent_seed_chance',
                  default=1.0,
-                 deprecated_name='xenapi_torrent_seed_chance',
-                 deprecated_group='DEFAULT',
                  help='Probability that peer will become a seeder.'
                       ' (1.0 = 100%)'),
     cfg.IntOpt('torrent_seed_duration',
                default=3600,
-               deprecated_name='xenapi_torrent_seed_duration',
-               deprecated_group='DEFAULT',
                help='Number of seconds after downloading an image via'
                     ' BitTorrent that it should be seeded for other peers.'),
     cfg.IntOpt('torrent_max_last_accessed',
                default=86400,
-               deprecated_name='xenapi_torrent_max_last_accessed',
-               deprecated_group='DEFAULT',
                help='Cached torrent files not accessed within this number of'
                     ' seconds can be reaped'),
     cfg.IntOpt('torrent_listen_port_start',
                default=6881,
-               deprecated_name='xenapi_torrent_listen_port_start',
-               deprecated_group='DEFAULT',
                help='Beginning of port range to listen on'),
     cfg.IntOpt('torrent_listen_port_end',
                default=6891,
-               deprecated_name='xenapi_torrent_listen_port_end',
-               deprecated_group='DEFAULT',
                help='End of port range to listen on'),
     cfg.IntOpt('torrent_download_stall_cutoff',
                default=600,
-               deprecated_name='xenapi_torrent_download_stall_cutoff',
-               deprecated_group='DEFAULT',
                help='Number of seconds a download can remain at the same'
                     ' progress percentage w/o being considered a stall'),
     cfg.IntOpt('torrent_max_seeder_processes_per_host',
                default=1,
-               deprecated_name='xenapi_torrent_max_seeder_processes_per_host',
-               deprecated_group='DEFAULT',
                help='Maximum number of seeder processes to run concurrently'
                     ' within a given dom0. (-1 = no limit)')
     ]
 
 CONF = cfg.CONF
-# xenapi_torrent options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_torrent_opts, 'xenserver')
 
 

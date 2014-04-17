@@ -116,79 +116,58 @@ LOG = logging.getLogger(__name__)
 libvirt_opts = [
     cfg.StrOpt('rescue_image_id',
                help='Rescue ami image. This will not be used if an image id '
-                    'is provided by the user.',
-               deprecated_group='DEFAULT'),
+                    'is provided by the user.'),
     cfg.StrOpt('rescue_kernel_id',
-               help='Rescue aki image',
-               deprecated_group='DEFAULT'),
+               help='Rescue aki image'),
     cfg.StrOpt('rescue_ramdisk_id',
-               help='Rescue ari image',
-               deprecated_group='DEFAULT'),
+               help='Rescue ari image'),
     cfg.StrOpt('virt_type',
                default='kvm',
                help='Libvirt domain type (valid options are: '
-                    'kvm, lxc, qemu, uml, xen)',
-               deprecated_group='DEFAULT',
-               deprecated_name='libvirt_type'),
+                    'kvm, lxc, qemu, uml, xen)'),
     cfg.StrOpt('connection_uri',
                default='',
                help='Override the default libvirt URI '
-                    '(which is dependent on virt_type)',
-               deprecated_group='DEFAULT',
-               deprecated_name='libvirt_uri'),
+                    '(which is dependent on virt_type)'),
     cfg.BoolOpt('inject_password',
                 default=False,
                 help='Inject the admin password at boot time, '
-                     'without an agent.',
-                deprecated_name='libvirt_inject_password',
-                deprecated_group='DEFAULT'),
+                     'without an agent.'),
     cfg.BoolOpt('inject_key',
                 default=False,
-                help='Inject the ssh public key at boot time',
-                deprecated_name='libvirt_inject_key',
-                deprecated_group='DEFAULT'),
+                help='Inject the ssh public key at boot time'),
     cfg.IntOpt('inject_partition',
                 default=-2,
                 help='The partition to inject to : '
                      '-2 => disable, -1 => inspect (libguestfs only), '
-                     '0 => not partitioned, >0 => partition number',
-               deprecated_name='libvirt_inject_partition',
-               deprecated_group='DEFAULT'),
+                     '0 => not partitioned, >0 => partition number'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
-                help='Sync virtual and real mouse cursors in Windows VMs',
-                deprecated_group='DEFAULT'),
+                help='Sync virtual and real mouse cursors in Windows VMs'),
     cfg.StrOpt('live_migration_uri',
                default="qemu+tcp://%s/system",
                help='Migration target URI '
                     '(any included "%s" is replaced with '
-                    'the migration target hostname)',
-               deprecated_group='DEFAULT'),
+                    'the migration target hostname)'),
     cfg.StrOpt('live_migration_flag',
                default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER',
-               help='Migration flags to be set for live migration',
-               deprecated_group='DEFAULT'),
+               help='Migration flags to be set for live migration'),
     cfg.StrOpt('block_migration_flag',
                default='VIR_MIGRATE_UNDEFINE_SOURCE, VIR_MIGRATE_PEER2PEER, '
                        'VIR_MIGRATE_NON_SHARED_INC',
-               help='Migration flags to be set for block migration',
-               deprecated_group='DEFAULT'),
+               help='Migration flags to be set for block migration'),
     cfg.IntOpt('live_migration_bandwidth',
                default=0,
-               help='Maximum bandwidth to be used during migration, in Mbps',
-               deprecated_group='DEFAULT'),
+               help='Maximum bandwidth to be used during migration, in Mbps'),
     cfg.StrOpt('snapshot_image_format',
                help='Snapshot image format (valid options are : '
                     'raw, qcow2, vmdk, vdi). '
-                    'Defaults to same as source image',
-               deprecated_group='DEFAULT'),
+                    'Defaults to same as source image'),
     cfg.StrOpt('vif_driver',
                default='nova.virt.libvirt.vif.LibvirtGenericVIFDriver',
                help='DEPRECATED. The libvirt VIF driver to configure the VIFs.'
                     'This option is deprecated and will be removed in the '
-                    'Juno release.',
-               deprecated_name='libvirt_vif_driver',
-               deprecated_group='DEFAULT'),
+                    'Juno release.'),
     cfg.ListOpt('volume_drivers',
                 default=[
                   'iscsi=nova.virt.libvirt.volume.LibvirtISCSIVolumeDriver',
@@ -206,52 +185,38 @@ libvirt_opts = [
                   'scality='
                       'nova.virt.libvirt.volume.LibvirtScalityVolumeDriver',
                   ],
-                help='Libvirt handlers for remote volumes.',
-                deprecated_name='libvirt_volume_drivers',
-                deprecated_group='DEFAULT'),
+                help='Libvirt handlers for remote volumes.'),
     cfg.StrOpt('disk_prefix',
                help='Override the default disk prefix for the devices attached'
                     ' to a server, which is dependent on virt_type. '
-                    '(valid options are: sd, xvd, uvd, vd)',
-               deprecated_name='libvirt_disk_prefix',
-               deprecated_group='DEFAULT'),
+                    '(valid options are: sd, xvd, uvd, vd)'),
     cfg.IntOpt('wait_soft_reboot_seconds',
                default=120,
                help='Number of seconds to wait for instance to shut down after'
                     ' soft reboot request is made. We fall back to hard reboot'
-                    ' if instance does not shutdown within this window.',
-               deprecated_name='libvirt_wait_soft_reboot_seconds',
-               deprecated_group='DEFAULT'),
+                    ' if instance does not shutdown within this window.'),
     cfg.StrOpt('cpu_mode',
                help='Set to "host-model" to clone the host CPU feature flags; '
                     'to "host-passthrough" to use the host CPU model exactly; '
                     'to "custom" to use a named CPU model; '
                     'to "none" to not set any CPU model. '
                     'If virt_type="kvm|qemu", it will default to '
-                    '"host-model", otherwise it will default to "none"',
-               deprecated_name='libvirt_cpu_mode',
-               deprecated_group='DEFAULT'),
+                    '"host-model", otherwise it will default to "none"'),
     cfg.StrOpt('cpu_model',
                help='Set to a named libvirt CPU model (see names listed '
                     'in /usr/share/libvirt/cpu_map.xml). Only has effect if '
-                    'cpu_mode="custom" and virt_type="kvm|qemu"',
-               deprecated_name='libvirt_cpu_model',
-               deprecated_group='DEFAULT'),
+                    'cpu_mode="custom" and virt_type="kvm|qemu"'),
     cfg.StrOpt('snapshots_directory',
                default='$instances_path/snapshots',
                help='Location where libvirt driver will store snapshots '
-                    'before uploading them to image service',
-               deprecated_name='libvirt_snapshots_directory',
-               deprecated_group='DEFAULT'),
+                    'before uploading them to image service'),
     cfg.StrOpt('xen_hvmloader_path',
                 default='/usr/lib/xen/boot/hvmloader',
-                help='Location where the Xen hvmloader is kept',
-               deprecated_group='DEFAULT'),
+                help='Location where the Xen hvmloader is kept'),
     cfg.ListOpt('disk_cachemodes',
                  default=[],
                  help='Specific cachemodes to use for different disk types '
-                      'e.g: file=directsync,block=none',
-                deprecated_group='DEFAULT'),
+                      'e.g: file=directsync,block=none'),
     cfg.StrOpt('rng_dev_path',
                 help='A path to a device that will be used as source of '
                      'entropy on the host. Permitted options are: '

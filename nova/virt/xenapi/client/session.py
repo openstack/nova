@@ -37,13 +37,9 @@ LOG = logging.getLogger(__name__)
 xenapi_session_opts = [
     cfg.IntOpt('login_timeout',
                default=10,
-               deprecated_name='xenapi_login_timeout',
-               deprecated_group='DEFAULT',
                help='Timeout in seconds for XenAPI login.'),
     cfg.IntOpt('connection_concurrent',
                default=5,
-               deprecated_name='xenapi_connection_concurrent',
-               deprecated_group='DEFAULT',
                help='Maximum number of concurrent XenAPI connections. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
     ]

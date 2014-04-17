@@ -24,8 +24,7 @@ LOG = logging.getLogger(__name__)
 virt_cpu_opts = [
     cfg.StrOpt('vcpu_pin_set',
                 help='Defines which pcpus that instance vcpus can use. '
-               'For example, "4-12,^8,15"',
-                deprecated_group='libvirt'),
+               'For example, "4-12,^8,15"'),
 ]
 
 CONF = cfg.CONF

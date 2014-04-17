@@ -57,79 +57,54 @@ LOG = logging.getLogger(__name__)
 
 xenapi_opts = [
     cfg.StrOpt('connection_url',
-               deprecated_name='xenapi_connection_url',
-               deprecated_group='DEFAULT',
                help='URL for connection to XenServer/Xen Cloud Platform. '
                     'A special value of unix://local can be used to connect '
                     'to the local unix socket.  '
                     'Required if compute_driver=xenapi.XenAPIDriver'),
     cfg.StrOpt('connection_username',
                default='root',
-               deprecated_name='xenapi_connection_username',
-               deprecated_group='DEFAULT',
                help='Username for connection to XenServer/Xen Cloud Platform. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
     cfg.StrOpt('connection_password',
-               deprecated_name='xenapi_connection_password',
-               deprecated_group='DEFAULT',
                help='Password for connection to XenServer/Xen Cloud Platform. '
                     'Used only if compute_driver=xenapi.XenAPIDriver',
                secret=True),
     cfg.FloatOpt('vhd_coalesce_poll_interval',
                  default=5.0,
-                 deprecated_name='xenapi_vhd_coalesce_poll_interval',
-                 deprecated_group='DEFAULT',
                  help='The interval used for polling of coalescing vhds. '
                       'Used only if compute_driver=xenapi.XenAPIDriver'),
     cfg.BoolOpt('check_host',
                 default=True,
-                deprecated_name='xenapi_check_host',
-                deprecated_group='DEFAULT',
                 help='Ensure compute service is running on host XenAPI '
                      'connects to.'),
     cfg.IntOpt('vhd_coalesce_max_attempts',
                default=20,
-               deprecated_name='xenapi_vhd_coalesce_max_attempts',
-               deprecated_group='DEFAULT',
                help='Max number of times to poll for VHD to coalesce. '
                     'Used only if compute_driver=xenapi.XenAPIDriver'),
     cfg.StrOpt('sr_base_path',
                default='/var/run/sr-mount',
-               deprecated_name='xenapi_sr_base_path',
-               deprecated_group='DEFAULT',
                help='Base path to the storage repository'),
     cfg.StrOpt('target_host',
-               deprecated_name='target_host',
-               deprecated_group='DEFAULT',
                help='The iSCSI Target Host'),
     cfg.StrOpt('target_port',
                default='3260',
-               deprecated_name='target_port',
-               deprecated_group='DEFAULT',
                help='The iSCSI Target Port, default is port 3260'),
     cfg.StrOpt('iqn_prefix',
                default='iqn.2010-10.org.openstack',
-               deprecated_name='iqn_prefix',
-               deprecated_group='DEFAULT',
                help='IQN Prefix'),
     # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
     # when we pull support for it, we should remove this
     cfg.BoolOpt('remap_vbd_dev',
                 default=False,
-                deprecated_name='xenapi_remap_vbd_dev',
-                deprecated_group='DEFAULT',
                 help='Used to enable the remapping of VBD dev '
                      '(Works around an issue in Ubuntu Maverick)'),
     cfg.StrOpt('remap_vbd_dev_prefix',
                default='sd',
-               deprecated_name='xenapi_remap_vbd_dev_prefix',
-               deprecated_group='DEFAULT',
                help='Specify prefix to remap VBD dev to '
                     '(ex. /dev/xvdb -> /dev/sdb)'),
     ]
 
 CONF = cfg.CONF
-# xenapi options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 

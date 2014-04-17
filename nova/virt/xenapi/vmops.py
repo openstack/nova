@@ -61,24 +61,17 @@ LOG = logging.getLogger(__name__)
 xenapi_vmops_opts = [
     cfg.IntOpt('running_timeout',
                default=60,
-               deprecated_name='xenapi_running_timeout',
-               deprecated_group='DEFAULT',
                help='Number of seconds to wait for instance '
                     'to go to running state'),
     cfg.StrOpt('vif_driver',
                default='nova.virt.xenapi.vif.XenAPIBridgeDriver',
-               deprecated_name='xenapi_vif_driver',
-               deprecated_group='DEFAULT',
                help='The XenAPI VIF driver using XenServer Network APIs.'),
     cfg.StrOpt('image_upload_handler',
                 default='nova.virt.xenapi.image.glance.GlanceStore',
-               deprecated_name='xenapi_image_upload_handler',
-               deprecated_group='DEFAULT',
                help='Dom0 plugin driver used to handle image uploads.'),
     ]
 
 CONF = cfg.CONF
-# xenapi_vmops options in the DEFAULT group were deprecated in Icehouse
 CONF.register_opts(xenapi_vmops_opts, 'xenserver')
 CONF.import_opt('host', 'nova.netconf')
 CONF.import_opt('vncserver_proxyclient_address', 'nova.vnc')

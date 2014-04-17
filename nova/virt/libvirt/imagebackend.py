@@ -48,20 +48,14 @@ __imagebackend_opts = [
                default='default',
                help='VM Images format. Acceptable values are: raw, qcow2, lvm,'
                     ' rbd, default. If default is specified,'
-                    ' then use_cow_images flag is used instead of this one.',
-               deprecated_group='DEFAULT',
-               deprecated_name='libvirt_images_type'),
+                    ' then use_cow_images flag is used instead of this one.'),
     cfg.StrOpt('images_volume_group',
                help='LVM Volume Group that is used for VM images, when you'
-                    ' specify images_type=lvm.',
-               deprecated_group='DEFAULT',
-               deprecated_name='libvirt_images_volume_group'),
+                    ' specify images_type=lvm.'),
     cfg.BoolOpt('sparse_logical_volumes',
                 default=False,
                 help='Create sparse logical volumes (with virtualsize)'
-                     ' if this flag is set to True.',
-                deprecated_group='DEFAULT',
-                deprecated_name='libvirt_sparse_logical_volumes'),
+                     ' if this flag is set to True.'),
     cfg.StrOpt('volume_clear',
                default='zero',
                help='Method used to wipe old volumes (valid options are: '
@@ -71,14 +65,10 @@ __imagebackend_opts = [
                help='Size in MiB to wipe at start of old volumes. 0 => all'),
     cfg.StrOpt('images_rbd_pool',
                default='rbd',
-               help='The RADOS pool in which rbd volumes are stored',
-               deprecated_group='DEFAULT',
-               deprecated_name='libvirt_images_rbd_pool'),
+               help='The RADOS pool in which rbd volumes are stored'),
     cfg.StrOpt('images_rbd_ceph_conf',
                default='',  # default determined by librados
-               help='Path to the ceph configuration file to use',
-               deprecated_group='DEFAULT',
-               deprecated_name='libvirt_images_rbd_ceph_conf'),
+               help='Path to the ceph configuration file to use'),
         ]
 
 CONF = cfg.CONF
