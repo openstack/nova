@@ -1067,11 +1067,6 @@ def is_neutron():
     return _IS_NEUTRON
 
 
-def reset_is_neutron():
-    global _IS_NEUTRON
-    _IS_NEUTRON = None
-
-
 def is_auto_disk_config_disabled(auto_disk_config_raw):
     auto_disk_config_disabled = False
     if auto_disk_config_raw is not None:

@@ -813,10 +813,8 @@ class ValidateIntegerTestCase(test.NoDBTestCase):
 class ValidateNeutronConfiguration(test.NoDBTestCase):
     def setUp(self):
         super(ValidateNeutronConfiguration, self).setUp()
-        utils.reset_is_neutron()
 
     def test_nova_network(self):
-        self.flags(network_api_class='nova.network.api.API')
         self.assertFalse(utils.is_neutron())
 
     def test_neutron(self):

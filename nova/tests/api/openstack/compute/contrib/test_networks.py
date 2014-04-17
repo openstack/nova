@@ -203,7 +203,6 @@ class NetworksTest(test.NoDBTestCase):
         self.associate_controller = networks_associate\
             .NetworkAssociateActionController(self.fake_network_api)
         fakes.stub_out_networking(self.stubs)
-        nova.utils.reset_is_neutron()
         fakes.stub_out_rate_limiting(self.stubs)
 
     @staticmethod

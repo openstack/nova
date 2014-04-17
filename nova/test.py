@@ -52,6 +52,7 @@ from nova import rpc
 from nova import service
 from nova.tests import conf_fixture
 from nova.tests import policy_fixture
+from nova import utils
 
 
 test_opts = [
@@ -304,6 +305,11 @@ class TestCase(testtools.TestCase):
         self._base_test_obj_backup = copy.copy(
             objects_base.NovaObject._obj_classes)
         self.addCleanup(self._restore_obj_registry)
+
+        # NOTE(mnaser): All calls to utils.is_neutron() are cached in
+        # nova.utils._IS_NEUTRON.  We set it to None to avoid any
+        # caching of that value.
+        utils._IS_NEUTRON = None
 
         mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox

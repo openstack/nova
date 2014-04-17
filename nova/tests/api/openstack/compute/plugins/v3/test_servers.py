@@ -192,7 +192,6 @@ class ServersControllerTest(ControllerTest):
     def setUp(self):
         super(ServersControllerTest, self).setUp()
         CONF.set_override('glance_host', 'localhost')
-        nova_utils.reset_is_neutron()
 
     def test_requested_networks_prefix(self):
         uuid = 'br-00000000-0000-0000-0000-000000000000'
@@ -2119,7 +2118,6 @@ class ServersControllerCreateTest(test.TestCase):
                           self._test_create_extra, params)
 
     def test_create_instance_with_networks_disabled_neutronv2(self):
-        nova_utils.reset_is_neutron()
         self.flags(network_api_class='nova.network.neutronv2.api.API')
         net_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
         requested_networks = [{'uuid': net_uuid}]

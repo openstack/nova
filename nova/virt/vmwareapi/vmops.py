@@ -108,7 +108,6 @@ class VMwareVMOps(object):
         self._rescue_suffix = '-rescue'
         self._migrate_suffix = '-orig'
         self._poll_rescue_last_ran = None
-        self._is_neutron = utils.is_neutron()
         self._datastore_dc_mapping = {}
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
@@ -274,7 +273,7 @@ class VMwareVMOps(object):
                 network_ref = vmwarevif.get_network_ref(self._session,
                                                         self._cluster,
                                                         vif,
-                                                        self._is_neutron)
+                                                        utils.is_neutron())
                 vif_infos.append({'network_name': network_name,
                                   'mac_address': mac_address,
                                   'network_ref': network_ref,
