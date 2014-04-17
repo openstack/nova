@@ -100,7 +100,7 @@ class TestNeutronClient(test.TestCase):
                                             auth_token='token')
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            auth_strategy=None,
+            auth_strategy=CONF.neutron_auth_strategy,
             endpoint_url=CONF.neutron_url,
             token=my_context.auth_token,
             timeout=CONF.neutron_url_timeout,
@@ -124,7 +124,7 @@ class TestNeutronClient(test.TestCase):
                                             is_admin=True)
         self.mox.StubOutWithMock(client.Client, "__init__")
         client.Client.__init__(
-            auth_strategy=None,
+            auth_strategy=CONF.neutron_auth_strategy,
             endpoint_url=CONF.neutron_url,
             token=my_context.auth_token,
             timeout=CONF.neutron_url_timeout,
