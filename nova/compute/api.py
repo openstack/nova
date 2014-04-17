@@ -3362,9 +3362,17 @@ class AggregateAPI(base.Base):
         """
         if 'availability_zone' in metadata:
             _hosts = hosts or aggregate.hosts
+            zones, not_zones = availability_zones.get_availability_zones(
+                context, with_hosts=True)
             for host in _hosts:
-                host_az = availability_zones.get_host_availability_zone(
-                    context, host)
+                # NOTE(sbauza): Host can only be in one AZ, so let's take only
+                #               the first element
+                host_azs = [az for (az, az_hosts) in zones
+                            if host in az_hosts
+                            and az != CONF.internal_service_availability_zone]
+                host_az = host_azs.pop()
+                if host_azs:
+                    LOG.warning(_("More than 1 AZ for host %s"), host)
                 if host_az == CONF.default_availability_zone:
                     # NOTE(sbauza): Aggregate with AZ set to default AZ can
                     #               exist, we need to check

@@ -103,32 +103,50 @@ def update_host_availability_zone_cache(context, host, availability_zone=None):
     cache.set(cache_key, availability_zone, AZ_CACHE_SECONDS)
 
 
-def get_availability_zones(context, get_only_available=False):
+def get_availability_zones(context, get_only_available=False,
+                           with_hosts=False):
     """Return available and unavailable zones on demand.
 
-       :param get_only_available: flag to determine whether to return
-           available zones only, default False indicates return both
-           available zones and not available zones, True indicates return
-           available zones only
+        :param get_only_available: flag to determine whether to return
+            available zones only, default False indicates return both
+            available zones and not available zones, True indicates return
+            available zones only
+        :param with_hosts: whether to return hosts part of the AZs
+        :type with_hosts: bool
     """
     enabled_services = db.service_get_all(context, False)
     enabled_services = set_availability_zones(context, enabled_services)
 
     available_zones = []
-    for zone in [service['availability_zone'] for service
-                 in enabled_services]:
-        if zone not in available_zones:
+    for (zone, host) in [(service['availability_zone'], service['host'])
+                         for service in enabled_services]:
+        if not with_hosts and zone not in available_zones:
             available_zones.append(zone)
+        elif with_hosts:
+            _available_zones = dict(available_zones)
+            zone_hosts = _available_zones.setdefault(zone, set())
+            zone_hosts.add(host)
+            # .items() returns a view in Py3, casting it to list for Py2 compat
+            available_zones = list(_available_zones.items())
 
     if not get_only_available:
         disabled_services = db.service_get_all(context, True)
         disabled_services = set_availability_zones(context, disabled_services)
         not_available_zones = []
-        zones = [service['availability_zone'] for service in disabled_services
-                if service['availability_zone'] not in available_zones]
-        for zone in zones:
-            if zone not in not_available_zones:
+        azs = available_zones if not with_hosts else dict(available_zones)
+        zones = [(service['availability_zone'], service['host'])
+                 for service in disabled_services
+                 if service['availability_zone'] not in azs]
+        for (zone, host) in zones:
+            if not with_hosts and zone not in not_available_zones:
                 not_available_zones.append(zone)
+            elif with_hosts:
+                _not_available_zones = dict(not_available_zones)
+                zone_hosts = _not_available_zones.setdefault(zone, set())
+                zone_hosts.add(host)
+                # .items() returns a view in Py3, casting it to list for Py2
+                #   compat
+                not_available_zones = list(_not_available_zones.items())
         return (available_zones, not_available_zones)
     else:
         return available_zones

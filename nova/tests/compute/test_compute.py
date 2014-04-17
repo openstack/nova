@@ -9495,8 +9495,20 @@ class ComputeAPIAggrTestCase(BaseTestCase):
 
         self.mox.StubOutWithMock(availability_zones,
                                  'update_host_availability_zone_cache')
-        availability_zones.update_host_availability_zone_cache(self.context,
-                                                               fake_host)
+
+        def _stub_update_host_avail_zone_cache(host, az=None):
+            if az is not None:
+                availability_zones.update_host_availability_zone_cache(
+                    self.context, host, az)
+            else:
+                availability_zones.update_host_availability_zone_cache(
+                    self.context, host)
+
+        for avail_zone, hosts in six.iteritems(values):
+            for host in hosts:
+                _stub_update_host_avail_zone_cache(
+                    host, CONF.default_availability_zone)
+        _stub_update_host_avail_zone_cache(fake_host)
         self.mox.ReplayAll()
 
         fake_notifier.NOTIFICATIONS = []
