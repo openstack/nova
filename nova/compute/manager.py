@@ -4340,7 +4340,7 @@ class ComputeManager(manager.SchedulerDependentManager):
                 try:
                     instance = instance_obj.Instance.get_by_uuid(
                         context, instance_uuids.pop(0),
-                        expected_attrs=['system_metadata'])
+                        expected_attrs=['system_metadata', 'info_cache'])
                 except exception.InstanceNotFound:
                     # Instance is gone.  Try to grab another.
                     continue
