@@ -19,7 +19,6 @@ import netaddr
 import six
 
 from nova.compute import api as compute
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
@@ -114,8 +113,8 @@ class _GroupAntiAffinityFilter(AffinityFilter):
             return True
 
         group_hosts = filter_properties.get('group_hosts') or []
-        LOG.debug(_("Group anti affinity: check if %(host)s not "
-                    "in %(configured)s"), {'host': host_state.host,
+        LOG.debug("Group anti affinity: check if %(host)s not "
+                    "in %(configured)s", {'host': host_state.host,
                                            'configured': group_hosts})
         if group_hosts:
             return not host_state.host in group_hosts
@@ -150,8 +149,8 @@ class _GroupAffinityFilter(AffinityFilter):
             return True
 
         group_hosts = filter_properties.get('group_hosts', [])
-        LOG.debug(_("Group affinity: check if %(host)s in "
-                    "%(configured)s"), {'host': host_state.host,
+        LOG.debug("Group affinity: check if %(host)s in "
+                    "%(configured)s", {'host': host_state.host,
                                         'configured': group_hosts})
         if group_hosts:
             return host_state.host in group_hosts

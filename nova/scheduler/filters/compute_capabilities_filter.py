@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
@@ -59,8 +58,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
                 if cap is None:
                     return False
             if not extra_specs_ops.match(str(cap), req):
-                LOG.debug(_("extra_spec requirement '%(req)s' does not match "
-                    "'%(cap)s'"), {'req': req, 'cap': cap})
+                LOG.debug("extra_spec requirement '%(req)s' does not match "
+                    "'%(cap)s'", {'req': req, 'cap': cap})
                 return False
         return True
 
@@ -69,7 +68,7 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
         instance_type = filter_properties.get('instance_type')
         if not self._satisfies_extra_specs(host_state,
                 instance_type):
-            LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements"), {'host_state': host_state})
+            LOG.debug("%(host_state)s fails instance_type extra_specs "
+                    "requirements", {'host_state': host_state})
             return False
         return True

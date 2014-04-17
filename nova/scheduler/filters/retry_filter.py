@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
@@ -30,7 +29,7 @@ class RetryFilter(filters.BaseHostFilter):
         retry = filter_properties.get('retry', None)
         if not retry:
             # Re-scheduling is disabled
-            LOG.debug(_("Re-scheduling is disabled"))
+            LOG.debug("Re-scheduling is disabled")
             return True
 
         hosts = retry.get('hosts', [])
@@ -39,8 +38,8 @@ class RetryFilter(filters.BaseHostFilter):
         passes = host not in hosts
 
         if not passes:
-            LOG.debug(_("Host %(host)s fails.  Previously tried hosts: "
-                        "%(hosts)s"), {'host': host, 'hosts': hosts})
+            LOG.debug("Host %(host)s fails.  Previously tried hosts: "
+                        "%(hosts)s", {'host': host, 'hosts': hosts})
 
         # Host passes if it's not in the list of previously attempted hosts:
         return passes

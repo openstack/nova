@@ -80,7 +80,7 @@ class FilterScheduler(driver.Scheduler):
                     "uuids: %(instance_uuids)s"),
                   {'num_instances': len(instance_uuids),
                    'instance_uuids': instance_uuids})
-        LOG.debug(_("Request Spec: %s") % request_spec)
+        LOG.debug("Request Spec: %s" % request_spec)
 
         weighed_hosts = self._schedule(context, request_spec,
                                        filter_properties, instance_uuids)
@@ -329,12 +329,12 @@ class FilterScheduler(driver.Scheduler):
                 # Can't get any more locally.
                 break
 
-            LOG.debug(_("Filtered %(hosts)s"), {'hosts': hosts})
+            LOG.debug("Filtered %(hosts)s", {'hosts': hosts})
 
             weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
                     filter_properties)
 
-            LOG.debug(_("Weighed %(hosts)s"), {'hosts': weighed_hosts})
+            LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
 
             scheduler_host_subset_size = CONF.scheduler_host_subset_size
             if scheduler_host_subset_size > len(weighed_hosts):

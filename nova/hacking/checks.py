@@ -193,6 +193,25 @@ def assert_equal_none(logical_line):
                "sentences not allowed")
 
 
+def no_translate_debug_logs(logical_line, filename):
+    """Check for 'LOG.debug(_('
+
+    As per our translation policy,
+    https://wiki.openstack.org/wiki/LoggingStandards#Log_Translation
+    we shouldn't translate debug level logs.
+
+    * This check assumes that 'LOG' is a logger.
+    * Use filename so we can start enforcing this in specific folders instead
+      of needing to do so all at once.
+
+    N319
+    """
+    dirs = ["nova/scheduler"]
+    if max([name in filename for name in dirs]):
+        if logical_line.startswith("LOG.debug(_("):
+            yield(0, "N319 Don't translate debug level logs")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -205,3 +224,4 @@ def factory(register):
     register(assert_true_instance)
     register(assert_equal_type)
     register(assert_equal_none)
+    register(no_translate_debug_logs)

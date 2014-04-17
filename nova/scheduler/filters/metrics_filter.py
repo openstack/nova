@@ -15,7 +15,6 @@
 
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler import utils
@@ -47,8 +46,8 @@ class MetricsFilter(filters.BaseHostFilter):
     def host_passes(self, host_state, filter_properties):
         unavail = [i for i in self.keys if i not in host_state.metrics]
         if unavail:
-            LOG.debug(_("%(host_state)s does not have the following "
-                        "metrics: %(metrics)s"),
+            LOG.debug("%(host_state)s does not have the following "
+                        "metrics: %(metrics)s",
                       {'host_state': host_state,
                        'metrics': ', '.join(unavail)})
         return len(unavail) == 0

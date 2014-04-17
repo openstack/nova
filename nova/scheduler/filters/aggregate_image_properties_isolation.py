@@ -16,7 +16,6 @@
 from oslo.config import cfg
 
 from nova import db
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 
@@ -58,9 +57,9 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
                 continue
             prop = image_props.get(key)
             if prop and prop not in options:
-                LOG.debug(_("%(host_state)s fails image aggregate properties "
+                LOG.debug("%(host_state)s fails image aggregate properties "
                             "requirements. Property %(prop)s does not "
-                            "match %(options)s."),
+                            "match %(options)s.",
                           {'host_state': host_state,
                            'prop': prop,
                            'options': options})
