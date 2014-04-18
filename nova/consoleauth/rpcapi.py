@@ -43,11 +43,16 @@ class ConsoleAuthAPI(object):
         they can handle the version_cap being set to 1.2.
 
         2.0 - Major API rev for Icehouse
+
+        ... Icehouse supports message version 2.0.  So, any changes to
+        existing methods in 2.x after that point should be done such that they
+        can handle the version_cap being set to 2.0.
     '''
 
     VERSION_ALIASES = {
         'grizzly': '1.2',
         'havana': '1.2',
+        'icehouse': '2.0',
     }
 
     def __init__(self):

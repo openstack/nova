@@ -241,6 +241,11 @@ class ComputeAPI(object):
         3.21 - Made rebuild take new-world BDM objects
         3.22 - Made terminate_instance take new-world BDM objects
         3.23 - Added external_instance_event()
+
+        ... Icehouse supports message version 3.23.  So, any changes to
+        existing methods in 3.x after that point should be done such that they
+        can handle the version_cap being set to 3.23.
+
         3.24 - Update rescue_instance() to take optional rescue_image_ref
         3.25 - Make detach_volume take an object
     '''
@@ -252,6 +257,7 @@ class ComputeAPI(object):
         # both havana and icehouse.  Later, 'icehouse' will be added that lists
         # the maximum version supported by icehouse.
         'icehouse-compat': '3.0',
+        'icehouse': '3.23',
     }
 
     def __init__(self):
