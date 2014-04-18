@@ -31,16 +31,20 @@ from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import version
 
 opts = [
-    cfg.StrOpt('spicehtml5proxy_host',
+    cfg.StrOpt('html5proxy_host',
                default='0.0.0.0',
-               help='Host on which to listen for incoming requests'),
-    cfg.IntOpt('spicehtml5proxy_port',
+               help='Host on which to listen for incoming requests',
+               deprecated_group='DEFAULT',
+               deprecated_name='spicehtml5proxy_host'),
+    cfg.IntOpt('html5proxy_port',
                default=6082,
-               help='Port on which to listen for incoming requests'),
+               help='Port on which to listen for incoming requests',
+               deprecated_group='DEFAULT',
+               deprecated_name='spicehtml5proxy_port'),
     ]
 
 CONF = cfg.CONF
-CONF.register_cli_opts(opts)
+CONF.register_cli_opts(opts, group='spice')
 CONF.import_opt('record', 'nova.cmd.novnc')
 CONF.import_opt('daemon', 'nova.cmd.novnc')
 CONF.import_opt('ssl_only', 'nova.cmd.novnc')
@@ -67,8 +71,8 @@ def main():
 
     # Create and start the NovaWebSockets proxy
     server = websocketproxy.NovaWebSocketProxy(
-                                   listen_host=CONF.spicehtml5proxy_host,
-                                   listen_port=CONF.spicehtml5proxy_port,
+                                   listen_host=CONF.spice.html5proxy_host,
+                                   listen_port=CONF.spice.html5proxy_port,
                                    source_is_ipv6=CONF.source_is_ipv6,
                                    verbose=CONF.verbose,
                                    cert=CONF.cert,
