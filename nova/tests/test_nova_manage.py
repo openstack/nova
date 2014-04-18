@@ -14,7 +14,6 @@
 #    under the License.
 
 import fixtures
-import mock
 import StringIO
 import sys
 
@@ -286,22 +285,19 @@ class NetworkCommandsTestCase(test.TestCase):
 class NeutronV2NetworkCommandsTestCase(test.TestCase):
     def setUp(self):
         super(NeutronV2NetworkCommandsTestCase, self).setUp()
+        self.flags(network_api_class='nova.network.neutronv2.api.API')
         self.commands = manage.NetworkCommands()
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_create(self, mock_is_neutron):
+    def test_create(self):
         self.assertEqual(2, self.commands.create())
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_list(self, mock_is_neutron):
+    def test_list(self):
         self.assertEqual(2, self.commands.list())
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_delete(self, mock_is_neutron):
+    def test_delete(self):
         self.assertEqual(2, self.commands.delete())
 
-    @mock.patch('nova.utils.is_neutron', return_value=True)
-    def test_modify(self, mock_is_neutron):
+    def test_modify(self):
         self.assertEqual(2, self.commands.modify('192.168.0.1'))
 
 

@@ -20,7 +20,6 @@ from nova import exception
 from nova.network import model as network_model
 from nova import test
 from nova.tests.virt.vmwareapi import stubs
-from nova import utils
 from nova.virt.vmwareapi import driver
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -84,7 +83,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                   ovs_interfaceid=None,
                                   rxtx_cap=3)
                 ])
-        utils.reset_is_neutron()
 
     def test_get_disk_format_none(self):
         format, is_iso = self._vmops._get_disk_format({'disk_format': None})
@@ -109,21 +107,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         result = vmops.VMwareVMOps._get_machine_id_str(
                                         self.pure_IPv6_network_info)
         self.assertEqual('DE:AD:BE:EF:00:00;;;;;#', result)
-
-    def test_is_neutron_nova(self):
-        self.flags(network_api_class='nova.network.api.API')
-        ops = vmops.VMwareVMOps(None, None, None)
-        self.assertFalse(ops._is_neutron)
-
-    def test_is_neutron_neutron(self):
-        self.flags(network_api_class='nova.network.neutronv2.api.API')
-        ops = vmops.VMwareVMOps(None, None, None)
-        self.assertTrue(ops._is_neutron)
-
-    def test_is_neutron_quantum(self):
-        self.flags(network_api_class='nova.network.quantumv2.api.API')
-        ops = vmops.VMwareVMOps(None, None, None)
-        self.assertTrue(ops._is_neutron)
 
     def test_use_linked_clone_override_nf(self):
         value = vmops.VMwareVMOps.decide_linked_clone(None, False)
