@@ -75,11 +75,16 @@ class NetworkAPI(object):
         1.11 - Add instance to deallocate_for_instance().  Remove instance_id,
                project_id, and host.
         1.12 - Add instance to deallocate_fixed_ip()
+
+        ... Icehouse supports message version 1.12.  So, any changes to
+        existing methods in 1.x after that point should be done such that they
+        can handle the version_cap being set to 1.12.
     '''
 
     VERSION_ALIASES = {
         'grizzly': '1.9',
         'havana': '1.10',
+        'icehouse': '1.12',
     }
 
     def __init__(self, topic=None):
