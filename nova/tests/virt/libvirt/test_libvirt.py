@@ -770,6 +770,15 @@ class LibvirtConnTestCase(test.TestCase):
         self.assertEqual(['fake_registerErrorHandler',
                           'fake_get_host_capabilities'], calls)
 
+    @mock.patch.object(libvirt_driver, 'LOG')
+    def test_connect_auth_cb_exception(self, log_mock):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        creds = dict(authname='nova', password='verybadpass')
+        self.assertRaises(exception.NovaException,
+                          conn._connect_auth_cb, creds, False)
+        self.assertEqual(0, len(log_mock.method_calls),
+                         'LOG should not be used in _connect_auth_cb.')
+
     def test_close_callback(self):
         self.close_callback = None
 
