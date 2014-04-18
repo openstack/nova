@@ -513,6 +513,14 @@
             "updated": "2011-08-18T00:00:00+00:00"
         },
         {
+            "alias": "os-extended-rescue-with-image",
+            "description": "Rescue instance with the image specified.",
+            "links": [],
+            "name": "ExtendedRescueWithImage",
+            "namespace": "http://docs.openstack.org/compute/ext/extended_rescue_with_image/api/v2",
+            "updated": "2014-03-05T00:00:00+00:00"
+        },
+        {
             "alias": "os-security-group-default-rules",
             "description": "Default rules for security group support.",
             "links": [],
