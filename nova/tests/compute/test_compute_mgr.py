@@ -562,23 +562,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with contextlib.nested(
             mock.patch.object(self.compute, '_get_power_state',
                                return_value=power_state.RUNNING),
-            mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(instance, 'save', autospec=True),
             mock.patch.object(compute_utils, 'get_nw_info_for_instance')
           ) as (
             _get_power_state,
-            _instance_update,
+            instance_save,
             get_nw_info_for_instance
           ):
             self.compute._init_instance(self.context, instance)
-            call = mock.call(self.context, 'foo', vm_state='active',
-                             task_state=None)
-            _instance_update.assert_has_calls([call])
+            instance_save.assert_called_once_with()
+            self.assertIsNone(instance.task_state)
+            self.assertEqual(vm_states.ACTIVE, instance.vm_state)
 
     def test_init_instance_cleans_image_state_reboot_started(self):
         instance = instance_obj.Instance(self.context)
         instance.uuid = 'foo'
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.REBOOT_STARTED
+        instance.power_state = power_state.RUNNING
         self._test_init_instance_cleans_reboot_state(instance)
 
     def test_init_instance_cleans_image_state_reboot_started_hard(self):
@@ -586,6 +587,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         instance.uuid = 'foo'
         instance.vm_state = vm_states.ACTIVE
         instance.task_state = task_states.REBOOT_STARTED_HARD
+        instance.power_state = power_state.RUNNING
         self._test_init_instance_cleans_reboot_state(instance)
 
     def test_init_instance_retries_power_off(self):

@@ -884,9 +884,9 @@ class ComputeManager(manager.Manager):
                         {'task_state': instance['task_state'],
                          'power_state': current_power_state},
                         instance=instance)
-            instance = self._instance_update(context, instance.uuid,
-                                             vm_state=vm_states.ACTIVE,
-                                             task_state=None)
+            instance.task_state = None
+            instance.vm_state = vm_states.ACTIVE
+            instance.save()
 
         if instance.task_state == task_states.POWERING_OFF:
             try:
