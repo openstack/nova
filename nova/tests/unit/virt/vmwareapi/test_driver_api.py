@@ -2161,6 +2161,17 @@ class VMwareAPIVMTestCase(test.NoDBTestCase):
         for node in self.conn._resources.keys():
             self.assertEqual(self.conn._datastore_regex,
                     self.conn._resources[node]['vmops']._datastore_regex)
+            self.assertEqual(self.conn._datastore_regex,
+                    self.conn._resources[node]['vcstate']._datastore_regex)
+
+    @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
+    def test_datastore_regex_configured_vcstate(self, mock_get_ds_ref):
+        self.assertEqual(2, len(self.conn._resources.keys()))
+        for node in self.conn._resources.keys():
+            vcstate = self.conn._resources[node]['vcstate']
+            self.conn.get_available_resource(node)
+            mock_get_ds_ref.assert_called_with(
+                vcstate._session, vcstate._cluster, vcstate._datastore_regex)
 
     def test_get_available_resource(self):
         stats = self.conn.get_available_resource(self.node_name)
