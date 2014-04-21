@@ -8782,7 +8782,7 @@ class ComputeAPITestCase(BaseTestCase):
                  'source_type': 'snapshot', 'destination_type': 'volume',
                  'connection_info': '{"test": "test"}'})
 
-        def fake_libvirt_driver_instance_exists(*args, **kwargs):
+        def fake_libvirt_driver_instance_exists(_instance):
             called['fake_libvirt_driver_instance_exists'] = True
             return False
 

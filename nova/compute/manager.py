@@ -1507,7 +1507,7 @@ class ComputeManager(manager.Manager):
 
     def _check_instance_exists(self, context, instance):
         """Ensure an instance with the same name is not already present."""
-        if self.driver.instance_exists(instance['name']):
+        if self.driver.instance_exists(instance):
             raise exception.InstanceExists(name=instance['name'])
 
     def _start_building(self, context, instance):
@@ -4199,7 +4199,7 @@ class ComputeManager(manager.Manager):
         if connection_info and 'serial' not in connection_info:
             connection_info['serial'] = volume_id
         try:
-            if not self.driver.instance_exists(instance.name):
+            if not self.driver.instance_exists(instance):
                 LOG.warn(_('Detaching volume from unknown instance'),
                          context=context, instance=instance)
 

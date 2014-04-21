@@ -799,10 +799,10 @@ class LibvirtDriver(driver.ComputeDriver):
         """Efficient override of base instance_exists method."""
         return self._conn.numOfDomains()
 
-    def instance_exists(self, instance_name):
+    def instance_exists(self, instance):
         """Efficient override of base instance_exists method."""
         try:
-            self._lookup_by_name(instance_name)
+            self._lookup_by_name(instance['name'])
             return True
         except exception.NovaException:
             return False
@@ -2153,7 +2153,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """resume guest state when a host is booted."""
         # Check if the instance is running already and avoid doing
         # anything if it is.
-        if self.instance_exists(instance['name']):
+        try:
             domain = self._lookup_by_name(instance['name'])
             state = LIBVIRT_POWER_STATE[domain.info()[0]]
 
@@ -2164,6 +2164,8 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if state in ignored_states:
                 return
+        except exception.NovaException:
+            pass
 
         # Instance is not up and could be in an unknown state.
         # Be as absolute as possible about getting it back into

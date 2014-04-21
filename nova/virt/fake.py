@@ -72,9 +72,10 @@ def restore_nodes():
 
 class FakeInstance(object):
 
-    def __init__(self, name, state):
+    def __init__(self, name, state, uuid):
         self.name = name
         self.state = state
+        self.uuid = uuid
 
     def __getitem__(self, key):
         return getattr(self, key)
@@ -116,6 +117,9 @@ class FakeDriver(driver.ComputeDriver):
     def list_instances(self):
         return self.instances.keys()
 
+    def list_instance_uuids(self):
+        return [self.instances[name].uuid for name in self.instances.keys()]
+
     def plug_vifs(self, instance, network_info):
         """Plug VIFs into networks."""
         pass
@@ -128,7 +132,7 @@ class FakeDriver(driver.ComputeDriver):
               admin_password, network_info=None, block_device_info=None):
         name = instance['name']
         state = power_state.RUNNING
-        fake_instance = FakeInstance(name, state)
+        fake_instance = FakeInstance(name, state, instance['uuid'])
         self.instances[name] = fake_instance
 
     def snapshot(self, context, instance, name, update_task_state):
@@ -462,9 +466,6 @@ class FakeDriver(driver.ComputeDriver):
 
     def instance_on_disk(self, instance):
         return False
-
-    def list_instance_uuids(self):
-        return []
 
 
 class FakeVirtAPI(virtapi.VirtAPI):
