@@ -1531,15 +1531,14 @@ class API(base.Base):
                      instance=instance)
             return
 
-        host = instance['host']
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
 
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
 
         # At these states an instance has a snapshot associate.
-        if instance['vm_state'] in (vm_states.SHELVED,
-                                    vm_states.SHELVED_OFFLOADED):
+        if instance.vm_state in (vm_states.SHELVED,
+                                 vm_states.SHELVED_OFFLOADED):
             snapshot_id = instance.system_metadata.get('shelved_image_id')
             LOG.info(_LI("Working on deleting snapshot %s "
                          "from shelved instance..."),
@@ -1581,8 +1580,9 @@ class API(base.Base):
                 cb(context, instance, bdms, reservations=None)
                 quotas.commit()
                 return
-
-            if not host:
+            shelved_offloaded = (instance.vm_state
+                                 == vm_states.SHELVED_OFFLOADED)
+            if not instance.host and not shelved_offloaded:
                 try:
                     compute_utils.notify_about_instance_usage(
                             self.notifier, context, instance,
@@ -1600,13 +1600,14 @@ class API(base.Base):
             if instance.vm_state == vm_states.RESIZED:
                 self._confirm_resize_on_deleting(context, instance)
 
-            is_up = False
+            is_local_delete = True
             try:
-                service = objects.Service.get_by_compute_host(
-                    context.elevated(), instance.host)
-                if self.servicegroup_api.service_is_up(service):
-                    is_up = True
-
+                if not shelved_offloaded:
+                    service = objects.Service.get_by_compute_host(
+                        context.elevated(), instance.host)
+                    is_local_delete = not self.servicegroup_api.service_is_up(
+                        service)
+                if not is_local_delete:
                     if (delete_type != delete_types.FORCE_DELETE
                             and original_task_state in (
                             task_states.DELETING,
@@ -1616,7 +1617,6 @@ class API(base.Base):
                                  instance=instance)
                         quotas.rollback()
                         return
-
                     self._record_action_start(context, instance,
                                               instance_actions.DELETE)
 
@@ -1633,8 +1633,10 @@ class API(base.Base):
             except exception.ComputeHostNotFound:
                 pass
 
-            if not is_up:
-                # If compute node isn't up, just delete from DB
+            if is_local_delete:
+                # If instance is in shelved_offloaded state or compute node
+                # isn't up, delete instance from db and clean bdms info and
+                # network info
                 self._local_delete(context, instance, bdms, delete_type, cb)
                 quotas.commit()
 
@@ -1738,16 +1740,36 @@ class API(base.Base):
         return quotas
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
-        LOG.warning(_LW("instance's host %s is down, deleting from "
-                        "database"), instance['host'], instance=instance)
+        if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+            LOG.info(_LI("instance is in SHELVED_OFFLOADED state, cleanup"
+                         " the instance's info from database."),
+                     instance=instance)
+        else:
+            LOG.warning(_LW("instance's host %s is down, deleting from "
+                            "database"), instance.host, instance=instance)
         instance.info_cache.delete()
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, "%s.start" % delete_type)
 
         elevated = context.elevated()
         if self.cell_type != 'api':
-            self.network_api.deallocate_for_instance(elevated,
-                                                     instance)
+            # NOTE(liusheng): In nova-network multi_host scenario,deleting
+            # network info of the instance may need instance['host'] as
+            # destination host of RPC call. If instance in SHELVED_OFFLOADED
+            # state, instance['host'] is None, here, use shelved_host as host
+            # to deallocate network info and reset instance['host'] after that.
+            # Here we shouldn't use instance.save(), because this will mislead
+            # user who may think the instance's host has been changed, and
+            # actually, the instance.host is always None.
+            orig_host = instance.host
+            try:
+                if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+                    instance['host'] = instance._system_metadata.get(
+                        'shelved_host')
+                self.network_api.deallocate_for_instance(elevated,
+                                                         instance)
+            finally:
+                instance['host'] = orig_host
 
         # cleanup volumes
         for bdm in bdms:
