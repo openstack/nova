@@ -3046,7 +3046,7 @@ class API(base.Base):
         # NOTE(danms): Transitional until evacuate supports objects
         inst_obj = instance_obj.Instance._from_db_object(
             context, instance_obj.Instance(), instance,
-            expected_attrs=['metadata', 'system_metadata'])
+            expected_attrs=['metadata', 'system_metadata', 'info_cache'])
 
         return self.compute_rpcapi.rebuild_instance(context,
                                         instance=inst_obj,
