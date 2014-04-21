@@ -13,8 +13,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import errno
+import socket
+
 import mock
 
+from nova import exception
 from nova.tests.virt.xenapi import stubs
 from nova.virt.xenapi.client import session
 
@@ -65,3 +69,48 @@ class ApplySessionHelpersTestCase(stubs.XenAPITestBaseNoDB):
     def test_apply_session_helpers_add_pool(self):
         self.session.pool.get_X("ref")
         self.session.call_xenapi.assert_called_once_with("pool.get_X", "ref")
+
+
+class CallPluginTestCase(stubs.XenAPITestBaseNoDB):
+    def _get_fake_xapisession(self):
+        class FakeXapiSession(session.XenAPISession):
+            def __init__(self, **kwargs):
+                "Skip the superclass's dirty init"
+                self.XenAPI = mock.MagicMock()
+
+        return FakeXapiSession()
+
+    def setUp(self):
+        super(CallPluginTestCase, self).setUp()
+        self.session = self._get_fake_xapisession()
+
+    def test_serialized_with_retry_socket_error_conn_reset(self):
+        exc = socket.error
+        exc.errno = errno.ECONNRESET
+        plugin = 'glance'
+        fn = 'download_vhd'
+        num_retries = 1
+        callback = None
+        with mock.patch.object(self.session, 'call_plugin_serialized',
+                autospec=True) as call_plugin_serialized:
+            call_plugin_serialized.side_effect = exc
+            self.assertRaises(exception.PluginRetriesExceeded,
+                    self.session.call_plugin_serialized_with_retry, plugin, fn,
+                    num_retries, callback)
+            call_plugin_serialized.assert_called_with(plugin, fn)
+            self.assertEqual(2, call_plugin_serialized.call_count)
+
+    def test_serialized_with_retry_socket_error_reraised(self):
+        exc = socket.error
+        exc.errno = errno.ECONNREFUSED
+        plugin = 'glance'
+        fn = 'download_vhd'
+        num_retries = 1
+        callback = None
+        with mock.patch.object(self.session, 'call_plugin_serialized',
+                autospec=True) as call_plugin_serialized:
+            call_plugin_serialized.side_effect = exc
+            self.assertRaises(socket.error,
+                    self.session.call_plugin_serialized_with_retry, plugin, fn,
+                    num_retries, callback)
+            call_plugin_serialized.assert_called_once_with(plugin, fn)
