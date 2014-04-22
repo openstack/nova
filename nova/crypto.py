@@ -23,7 +23,6 @@ Includes root and intermediate CAs, SSH key_pairs and x509 certificates.
 from __future__ import absolute_import
 
 import base64
-import hashlib
 import os
 import re
 import string
@@ -407,48 +406,3 @@ def _sign_csr(csr_text, ca_folder):
 
         with open(outbound, 'r') as crtfile:
             return (serial, crtfile.read())
-
-
-# Copyright (c) 2006-2009 Mitch Garnaat http://garnaat.org/
-#
-# Permission is hereby granted, free of charge, to any person obtaining a
-# copy of this software and associated documentation files (the
-# "Software"), to deal in the Software without restriction, including
-# without limitation the rights to use, copy, modify, merge, publish, dis-
-# tribute, sublicense, and/or sell copies of the Software, and to permit
-# persons to whom the Software is furnished to do so, subject to the fol-
-# lowing conditions:
-#
-# The above copyright notice and this permission notice shall be included
-# in all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-# OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABIL-
-# ITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
-# SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
-# WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-# http://code.google.com/p/boto
-
-def compute_md5(fp):
-    """Compute an md5 hash.
-
-    :type fp: file
-    :param fp: File pointer to the file to MD5 hash.  The file pointer will be
-               reset to the beginning of the file before the method returns.
-
-    :rtype: tuple
-    :returns: the hex digest version of the MD5 hash
-
-    """
-    m = hashlib.md5()
-    fp.seek(0)
-    s = fp.read(8192)
-    while s:
-        m.update(s)
-        s = fp.read(8192)
-    hex_md5 = m.hexdigest()
-    # size = fp.tell()
-    fp.seek(0)
-    return hex_md5
