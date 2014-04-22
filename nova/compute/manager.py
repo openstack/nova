@@ -4997,8 +4997,9 @@ class ComputeManager(manager.Manager):
                 self.compute_api.confirm_resize(context, instance,
                                                 migration=migration)
             except Exception as e:
-                LOG.error(_("Error auto-confirming resize: %s. "
-                            "Will retry later.") % e, instance=instance)
+                LOG.info(_("Error auto-confirming resize: %s. "
+                           "Will retry later."),
+                         e, instance=instance)
 
     @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
     def _poll_shelved_instances(self, context):
