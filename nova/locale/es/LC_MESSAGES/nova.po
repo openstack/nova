@@ -12,8 +12,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-04-20 06:11+0000\n"
-"PO-Revision-Date: 2014-04-19 23:54+0000\n"
+"POT-Creation-Date: 2014-04-22 06:11+0000\n"
+"PO-Revision-Date: 2014-04-21 20:41+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Spanish "
 "(http://www.transifex.com/projects/p/openstack/language/es/)\n"
@@ -2434,7 +2434,7 @@ msgstr "La indicación de fecha y hora no es válida."
 msgid "EC2 error response: %(code)s: %(message)s"
 msgstr "Respuesta EC2 errónea: %(code)s: %(message)s"
 
-#: nova/api/metadata/base.py:407
+#: nova/api/metadata/base.py:409
 #, python-format
 msgid "future versions %s hidden in version list"
 msgstr "Versiones futuras %s ocultas en lista de versiones"
@@ -6270,7 +6270,7 @@ msgstr "allocate_port_for_instance ha regresado %(ports)s puertos"
 msgid "Port %s is not attached"
 msgstr "El puerto %s no se encuentra asignado"
 
-#: nova/compute/manager.py:4417 nova/tests/compute/test_compute.py:10481
+#: nova/compute/manager.py:4417 nova/tests/compute/test_compute.py:10482
 #, python-format
 msgid "Host %s not found"
 msgstr "No se ha encontrado el host %s"
@@ -6965,7 +6965,7 @@ msgstr "ID de instancia %s no válido en la solicitud."
 msgid "Invalid field name: %s"
 msgstr "Campo de nombre inválido: %s"
 
-#: nova/db/sqlalchemy/api.py:3154
+#: nova/db/sqlalchemy/api.py:3140
 #, python-format
 msgid ""
 "quota_usages out of sync, updating. project_id: %(project_id)s, user_id: "
@@ -6973,12 +6973,12 @@ msgid ""
 "usage: %(in_use)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:3242
+#: nova/db/sqlalchemy/api.py:3228
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %s"
 msgstr "El cambio hará el uso menos de 0 para los siguientes recursos: %s"
 
-#: nova/db/sqlalchemy/api.py:4892
+#: nova/db/sqlalchemy/api.py:4880
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
@@ -6988,14 +6988,14 @@ msgstr ""
 "datos. la instancia debió haber reiniciado o colapsado. Actualizando los "
 "totales."
 
-#: nova/db/sqlalchemy/api.py:5249
+#: nova/db/sqlalchemy/api.py:5237
 #, python-format
 msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
 msgstr ""
 "Fallo en adición de metadata para el agregado %(id)s después de "
 "%(retries)s intentos"
 
-#: nova/db/sqlalchemy/api.py:5629
+#: nova/db/sqlalchemy/api.py:5617
 #, python-format
 msgid "IntegrityError detected when archiving table %s"
 msgstr ""
@@ -7226,7 +7226,7 @@ msgstr ""
 msgid "Not deleting key %s"
 msgstr ""
 
-#: nova/network/api.py:196 nova/network/neutronv2/api.py:735
+#: nova/network/api.py:196 nova/network/neutronv2/api.py:736
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "volver a asignar IP flotante %(address)s desde instancia %(instance_id)s"
@@ -7732,12 +7732,12 @@ msgstr ""
 msgid "Failed to delete neutron port %s"
 msgstr "Fallo al eliminar el puerto de neutron %s"
 
-#: nova/network/neutronv2/api.py:474
+#: nova/network/neutronv2/api.py:475
 #, python-format
 msgid "get_instance_nw_info() for %s"
 msgstr "get_instance_nw_info() para %s"
 
-#: nova/network/neutronv2/api.py:541
+#: nova/network/neutronv2/api.py:542
 #, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
@@ -7746,50 +7746,50 @@ msgstr ""
 "No se ha podido actualizar el puerto %(portid)s en la subred "
 "%(subnet_id)s con la anomalía: %(exception)s"
 
-#: nova/network/neutronv2/api.py:570
+#: nova/network/neutronv2/api.py:571
 #, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr "No se puede actualizar el puerto %(portid)s con anomalía: %(exception)s"
 
-#: nova/network/neutronv2/api.py:584
+#: nova/network/neutronv2/api.py:585
 #, python-format
 msgid "validate_networks() for %s"
 msgstr "validate_networks() para %s"
 
-#: nova/network/neutronv2/api.py:597
+#: nova/network/neutronv2/api.py:598
 msgid "Multiple possible networks found, use a Network ID to be more specific."
 msgstr ""
 "Se han encontrado múltiples redes posibles, usa un identificador de red "
 "para ser más específico."
 
-#: nova/network/neutronv2/api.py:615
+#: nova/network/neutronv2/api.py:616
 #, python-format
 msgid "Failed to access port %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:818
+#: nova/network/neutronv2/api.py:819
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:906
+#: nova/network/neutronv2/api.py:907
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr ""
 "Se han encontrado varias coincidencias de agrupaciones de IP flotante "
 "para el nombre '%s' "
 
-#: nova/network/neutronv2/api.py:950
+#: nova/network/neutronv2/api.py:951
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:1009
+#: nova/network/neutronv2/api.py:1010
 #, python-format
 msgid "Unable to update host of port %s"
 msgstr "Incapaz de actualizar el huésped del puerto %s"
 
-#: nova/network/neutronv2/api.py:1045
+#: nova/network/neutronv2/api.py:1046
 #, python-format
 msgid ""
 "Network %(id)s not matched with the tenants network! The ports tenant "
@@ -8178,7 +8178,7 @@ msgstr "Valor '%(val)s' no reconocido, los valores aceptables son: %(acceptable)
 #: nova/openstack/common/strutils.py:202
 #, python-format
 msgid "Invalid unit system: \"%s\""
-msgstr ""
+msgstr "Unidad del sistema no valida: \"%s\""
 
 #: nova/openstack/common/strutils.py:211
 #, python-format
@@ -8286,7 +8286,7 @@ msgstr "El controlador debe implementar schedule_run_instance"
 msgid "Driver must implement select_destinations"
 msgstr "El controlador debe implementar select_destinatios"
 
-#: nova/scheduler/filter_scheduler.py:79
+#: nova/scheduler/filter_scheduler.py:78
 #, python-format
 msgid ""
 "Attempting to build %(num_instances)d instance(s) uuids: "
@@ -8295,30 +8295,30 @@ msgstr ""
 "Intentando construir %(num_instances)d instancia(s) con uuids: "
 "%(instance_uuids)s"
 
-#: nova/scheduler/filter_scheduler.py:83
+#: nova/scheduler/filter_scheduler.py:82
 #, python-format
 msgid "Request Spec: %s"
 msgstr "Solicitud de especificación: %s"
 
-#: nova/scheduler/filter_scheduler.py:103
+#: nova/scheduler/filter_scheduler.py:102
 #, python-format
 msgid "Choosing host %(weighed_host)s for instance %(instance_uuid)s"
 msgstr "Eligiendo huésped %(weighed_host)s para la instancia %(instance_uuid)s"
 
-#: nova/scheduler/filter_scheduler.py:165
+#: nova/scheduler/filter_scheduler.py:164
 msgid "Instance disappeared during scheduling"
 msgstr "La instancia ha desaparecido durante la programación"
 
-#: nova/scheduler/filter_scheduler.py:204
+#: nova/scheduler/filter_scheduler.py:203
 msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
 msgstr "Valor no válido para 'scheduler_max_attempts', debe ser >= 1 "
 
-#: nova/scheduler/filter_scheduler.py:221
+#: nova/scheduler/filter_scheduler.py:220
 #, python-format
 msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
 msgstr "Error del último host: %(last_host)s (nodo %(last_node)s): %(exc)s"
 
-#: nova/scheduler/filter_scheduler.py:255
+#: nova/scheduler/filter_scheduler.py:254
 #, python-format
 msgid ""
 "Exceeded max scheduling attempts %(max_attempts)d for instance "
@@ -8327,12 +8327,12 @@ msgstr ""
 "Se ha superado el máximo de intentos de planificación %(max_attempts)d "
 "para la instancia %(instance_uuid)s"
 
-#: nova/scheduler/filter_scheduler.py:332
+#: nova/scheduler/filter_scheduler.py:331
 #, python-format
 msgid "Filtered %(hosts)s"
 msgstr "%(hosts)s filtrados"
 
-#: nova/scheduler/filter_scheduler.py:337
+#: nova/scheduler/filter_scheduler.py:336
 #, python-format
 msgid "Weighed %(hosts)s"
 msgstr "Medido %(hosts)s"
@@ -8818,7 +8818,7 @@ msgstr "Después de finalizar de forma forzada las instancias: %s"
 msgid "wrong host/node"
 msgstr "host/nodo incorrecto"
 
-#: nova/tests/compute/test_compute.py:10689
+#: nova/tests/compute/test_compute.py:10690
 msgid "spawn error"
 msgstr "error de generación"
 
