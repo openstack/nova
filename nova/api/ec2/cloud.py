@@ -42,6 +42,7 @@ from nova.image import s3
 from nova import network
 from nova.network.security_group import neutron_driver
 from nova.objects import base as obj_base
+from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import security_group as sec_group_obj
@@ -1050,9 +1051,8 @@ class CloudController(object):
         """Format InstanceBlockDeviceMappingResponseItemType."""
         root_device_type = 'instance-store'
         mapping = []
-        for bdm in block_device.legacy_mapping(
-            db.block_device_mapping_get_all_by_instance(context,
-                                                        instance_uuid)):
+        get = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid
+        for bdm in block_device.legacy_mapping(get(context, instance_uuid)):
             volume_id = bdm['volume_id']
             if (volume_id is None or bdm['no_device']):
                 continue

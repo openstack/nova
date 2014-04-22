@@ -2548,8 +2548,8 @@ class CloudTestCase(test.TestCase):
                           no_reboot=True)
 
     @staticmethod
-    def _fake_bdm_get(ctxt, id):
-            return [{'volume_id': 87654321,
+    def _fake_bdm_get(ctxt, id, use_slave=False):
+        blockdms = [{'volume_id': 87654321,
                      'source_type': 'volume',
                      'destination_type': 'volume',
                      'snapshot_id': None,
@@ -2602,6 +2602,28 @@ class CloudTestCase(test.TestCase):
                      'delete_on_termination': None,
                      'device_name': '/dev/sd3'},
                     ]
+
+        extra = {
+            'created_at': None,
+            'updated_at': None,
+            'deleted_at': None,
+            'deleted': 0,
+            'id': 0,
+            'destination_type': 0,
+            'device_type': None,
+            'disk_bus': None,
+            'instance_uuid': '',
+            'image_id': None,
+            'volume_size': None,
+            'connection_info': None,
+            'boot_index': None,
+            'guest_format': None,
+        }
+
+        for bdm in blockdms:
+            bdm.update(extra)
+
+        return blockdms
 
     def test_describe_instance_attribute(self):
         # Make sure that describe_instance_attribute works.
