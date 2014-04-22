@@ -77,7 +77,6 @@ class ErrorUtilTestCase(test.NoDBTestCase):
                           "bad", ValueError("argument"))
 
     def test_vim_fault_exception(self):
-        vfe = error_util.VimFaultException([ValueError("example")],
-                                           ValueError("cause"))
+        vfe = error_util.VimFaultException([ValueError("example")], "cause")
         string = str(vfe)
         self.assertEqual("cause", string)
