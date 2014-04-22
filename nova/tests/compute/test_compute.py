@@ -4084,7 +4084,8 @@ class ComputeTestCase(BaseTestCase):
             return connection_info
         self.stubs.Set(cinder.API, "initialize_connection", fake_init_conn)
 
-        def fake_attach(self, context, volume_id, instance_uuid, device_name):
+        def fake_attach(self, context, volume_id, instance_uuid, device_name,
+                        mode='rw'):
             volume['instance_uuid'] = instance_uuid
             volume['device_name'] = device_name
         self.stubs.Set(cinder.API, "attach", fake_attach)

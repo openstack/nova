@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from cinderclient import exceptions as cinder_exception
 
 from nova import context
@@ -169,14 +171,27 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.api.roll_detaching(self.ctx, 'id1')
 
-    def test_attach(self):
-        cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
-        self.mox.StubOutWithMock(self.cinderclient.volumes,
-                                 'attach')
-        self.cinderclient.volumes.attach('id1', 'uuid', 'point')
-        self.mox.ReplayAll()
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attach(self, mock_cinderclient):
+        mock_volumes = mock.MagicMock()
+        mock_cinderclient.return_value = mock.MagicMock(volumes=mock_volumes)
 
         self.api.attach(self.ctx, 'id1', 'uuid', 'point')
+
+        mock_cinderclient.assert_called_once_with(self.ctx)
+        mock_volumes.attach.assert_called_once_with('id1', 'uuid', 'point',
+                                                    mode='rw')
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attach_with_mode(self, mock_cinderclient):
+        mock_volumes = mock.MagicMock()
+        mock_cinderclient.return_value = mock.MagicMock(volumes=mock_volumes)
+
+        self.api.attach(self.ctx, 'id1', 'uuid', 'point', mode='ro')
+
+        mock_cinderclient.assert_called_once_with(self.ctx)
+        mock_volumes.attach.assert_called_once_with('id1', 'uuid', 'point',
+                                                    mode='ro')
 
     def test_detach(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)
