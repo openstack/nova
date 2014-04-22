@@ -19,8 +19,10 @@ Classes for making VMware VI SOAP calls.
 """
 
 import httplib
+import time
 import urllib2
 
+import decorator
 from oslo.config import cfg
 import suds
 
@@ -39,6 +41,21 @@ vmwareapi_wsdl_loc_opt = cfg.StrOpt('wsdl_location',
 
 CONF = cfg.CONF
 CONF.register_opt(vmwareapi_wsdl_loc_opt, 'vmware')
+
+
+@decorator.decorator
+def retry_if_task_in_progress(f, *args, **kwargs):
+    retries = max(CONF.vmware.api_retry_count, 1)
+    delay = 1
+    for attempt in range(1, retries + 1):
+        if attempt != 1:
+            time.sleep(delay)
+            delay = min(2 * delay, 60)
+        try:
+            f(*args, **kwargs)
+            return
+        except error_util.TaskInProgress:
+            pass
 
 
 def get_moref(value, type):
