@@ -44,6 +44,7 @@ from nova.network.security_group import neutron_driver
 from nova.objects import base as obj_base
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
+from nova.objects import service as service_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -277,20 +278,19 @@ class CloudController(object):
             availability_zones.get_availability_zones(ctxt)
 
         # Available services
-        enabled_services = db.service_get_all(context, False)
-        enabled_services = availability_zones.set_availability_zones(context,
-                enabled_services)
+        enabled_services = service_obj.ServiceList.get_all(context,
+                disabled=False, set_zones=True)
         zone_hosts = {}
         host_services = {}
         for service in enabled_services:
-            zone_hosts.setdefault(service['availability_zone'], [])
-            if service['host'] not in zone_hosts[service['availability_zone']]:
-                zone_hosts[service['availability_zone']].append(
-                    service['host'])
+            zone_hosts.setdefault(service.availability_zone, [])
+            if service.host not in zone_hosts[service.availability_zone]:
+                zone_hosts[service.availability_zone].append(
+                    service.host)
 
-            host_services.setdefault(service['availability_zone'] +
-                    service['host'], [])
-            host_services[service['availability_zone'] + service['host']].\
+            host_services.setdefault(service.availability_zone +
+                    service.host, [])
+            host_services[service.availability_zone + service.host].\
                     append(service)
 
         result = []
@@ -305,12 +305,12 @@ class CloudController(object):
                     alive = self.servicegroup_api.service_is_up(service)
                     art = (alive and ":-)") or "XXX"
                     active = 'enabled'
-                    if service['disabled']:
+                    if service.disabled:
                         active = 'disabled'
-                    result.append({'zoneName': '| |- %s' % service['binary'],
+                    result.append({'zoneName': '| |- %s' % service.binary,
                                    'zoneState': ('%s %s %s'
                                                  % (active, art,
-                                                    service['updated_at']))})
+                                                    service.updated_at))})
 
         for zone in not_available_zones:
             result.append({'zoneName': zone,
