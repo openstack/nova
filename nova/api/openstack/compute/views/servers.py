@@ -115,18 +115,28 @@ class ViewBuilder(common.ViewBuilder):
 
     def index(self, request, instances):
         """Show a list of servers without many details."""
-        return self._list_view(self.basic, request, instances)
+        coll_name = self._collection_name
+        return self._list_view(self.basic, request, instances, coll_name)
 
     def detail(self, request, instances):
         """Detailed view of a list of instance."""
-        return self._list_view(self.show, request, instances)
+        coll_name = self._collection_name + '/detail'
+        return self._list_view(self.show, request, instances, coll_name)
 
-    def _list_view(self, func, request, servers):
-        """Provide a view for a list of servers."""
+    def _list_view(self, func, request, servers, coll_name):
+        """Provide a view for a list of servers.
+
+        :param func: Function used to format the server data
+        :param request: API request
+        :param servers: List of servers in dictionary format
+        :param coll_name: Name of collection, used to generate the next link
+                          for a pagination query
+        :returns: Server data in dictionary format
+        """
         server_list = [func(request, server)["server"] for server in servers]
         servers_links = self._get_collection_links(request,
                                                    servers,
-                                                   self._collection_name)
+                                                   coll_name)
         servers_dict = dict(servers=server_list)
 
         if servers_links:
