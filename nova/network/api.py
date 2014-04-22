@@ -25,6 +25,7 @@ from nova.network import floating_ips
 from nova.network import model as network_model
 from nova.network import rpcapi as network_rpcapi
 from nova.objects import fixed_ip as fixed_ip_obj
+from nova.objects import floating_ip as floating_ip_obj
 from nova.objects import instance as instance_obj
 from nova.objects import network as network_obj
 from nova.openstack.common.gettextutils import _
@@ -470,9 +471,8 @@ class API(base_api.NetworkAPI):
         return network.multi_host
 
     def _get_floating_ip_addresses(self, context, instance):
-        floating_ips = self.db.instance_floating_address_get_all(context,
-                                                            instance['uuid'])
-        return floating_ips
+        return floating_ip_obj.FloatingIP.get_addresses_by_instance(
+            context, instance)
 
     @wrap_check_policy
     def migrate_instance_start(self, context, instance, migration):
