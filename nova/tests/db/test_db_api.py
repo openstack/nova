@@ -24,6 +24,7 @@ import iso8601
 import types
 import uuid as stdlib_uuid
 
+import eventlet
 import mox
 import netaddr
 from oslo.config import cfg
@@ -44,6 +45,7 @@ from nova.db.sqlalchemy import api as sqlalchemy_api
 from nova.db.sqlalchemy import models
 from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
+from nova.openstack.common.db import api as db_api
 from nova.openstack.common.db import exception as db_exc
 from nova.openstack.common.db.sqlalchemy import utils as sqlalchemyutils
 from nova.openstack.common import jsonutils
@@ -7180,3 +7182,24 @@ class RetryOnDeadlockTestCase(test.TestCase):
                 raise db_exc.DBDeadlock("fake exception")
             return True
         self.assertTrue(call_api())
+
+
+class NovaDBAPITestCase(test.TestCase):
+    def test_nova_db_api_common(self):
+        nova_db_api = db.api.NovaDBAPI()
+
+        # get access to some db-api method
+        nova_db_api.instance_group_get
+        # CONF.database.use_tpool is False, so we have no proxy in this case
+        self.assertIsInstance(nova_db_api._db_api, db_api.DBAPI)
+
+    def test_nova_db_api_config_change(self):
+        nova_db_api = db.api.NovaDBAPI()
+
+        CONF.set_override('use_tpool', True, group='database')
+        self.addCleanup(CONF.reset)
+
+        # get access to some db-api method
+        nova_db_api.instance_group_get
+        # CONF.database.use_tpool is True, so we get tpool proxy in this case
+        self.assertIsInstance(nova_db_api._db_api, eventlet.tpool.Proxy)
