@@ -180,6 +180,15 @@ class _TestFloatingIPObject(object):
         self._compare(floatingips[0], fake_floating_ip)
         get.assert_called_with(self.context, 123)
 
+    @mock.patch('nova.db.instance_floating_address_get_all')
+    def test_get_addresses_by_instance(self, get_all):
+        expected = ['1.2.3.4', '4.5.6.7']
+        get_all.return_value = list(expected)
+        ips = floating_ip.FloatingIP.get_addresses_by_instance(
+            self.context, {'uuid': '1234'})
+        self.assertEqual(expected, ips)
+        get_all.assert_called_once_with(self.context, '1234')
+
 
 class TestFloatingIPObject(test_objects._LocalTest,
                            _TestFloatingIPObject):

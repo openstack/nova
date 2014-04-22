@@ -22,6 +22,9 @@ FLOATING_IP_OPTIONAL_ATTRS = ['fixed_ip']
 
 
 class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: Added _get_addresses_by_instance_uuid()
+    VERSION = '1.1'
     fields = {
         'id': fields.IntegerField(),
         'address': fields.IPAddressField(),
@@ -118,6 +121,14 @@ class FloatingIP(obj_base.NovaPersistentObject, obj_base.NovaObject):
                 expected_attrs=['network']))
         return floating
 
+    @obj_base.remotable_classmethod
+    def _get_addresses_by_instance_uuid(cls, context, instance_uuid):
+        return db.instance_floating_address_get_all(context, instance_uuid)
+
+    @classmethod
+    def get_addresses_by_instance(cls, context, instance):
+        return cls._get_addresses_by_instance_uuid(context, instance['uuid'])
+
     @obj_base.remotable
     def save(self, context):
         updates = self.obj_get_changes()
@@ -135,7 +146,9 @@ class FloatingIPList(obj_base.ObjectListBase, obj_base.NovaObject):
         }
     child_versions = {
         '1.0': '1.0',
+        '1.1': '1.1',
         }
+    VERSION = '1.1'
 
     @obj_base.remotable_classmethod
     def get_all(cls, context):
