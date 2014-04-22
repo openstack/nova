@@ -3504,24 +3504,39 @@ class ComputeTestCase(BaseTestCase):
         self.compute.run_instance(self.context, instance, {}, {}, None, None,
                 None, True, None, False)
 
-    def test_run_instance_reschedules_on_anti_affinity_violation(self):
+    def _create_server_group(self):
         group_instance = self._create_fake_instance_obj(
                 params=dict(host=self.compute.host))
 
         instance_group = instance_group_obj.InstanceGroup(self.context)
+        instance_group.user_id = self.user_id
+        instance_group.project_id = self.project_id
+        instance_group.name = 'messi'
         instance_group.uuid = str(uuid.uuid4())
         instance_group.members = [group_instance.uuid]
         instance_group.policies = ['anti-affinity']
         instance_group.create()
+        return instance_group
 
+    def _run_instance_reschedules_on_anti_affinity_violation(self, group,
+                                                             hint):
         instance = jsonutils.to_primitive(self._create_fake_instance())
-
-        filter_properties = {'scheduler_hints': {'group': instance_group.uuid}}
+        filter_properties = {'scheduler_hints': {'group': hint}}
         self.assertRaises(exception.RescheduledException,
                           self.compute._build_instance,
                           self.context, {}, filter_properties,
                           [], None, None, True, None, instance,
                           None, False)
+
+    def test_run_instance_reschedules_on_anti_affinity_violation_by_name(self):
+        group = self._create_server_group()
+        self._run_instance_reschedules_on_anti_affinity_violation(group,
+                group.name)
+
+    def test_run_instance_reschedules_on_anti_affinity_violation_by_uuid(self):
+        group = self._create_server_group()
+        self._run_instance_reschedules_on_anti_affinity_violation(group,
+                group.uuid)
 
     def test_instance_set_to_error_on_uncaught_exception(self):
         # Test that instance is set to error state when exception is raised.

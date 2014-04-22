@@ -1263,14 +1263,14 @@ class ComputeManager(manager.Manager):
         # make sure that starting the instance here doesn't violate the policy.
 
         scheduler_hints = filter_properties.get('scheduler_hints') or {}
-        group_uuid = scheduler_hints.get('group')
-        if not group_uuid:
+        group_hint = scheduler_hints.get('group')
+        if not group_hint:
             return
 
-        @utils.synchronized(group_uuid)
-        def _do_validation(context, instance, group_uuid):
-            group = instance_group_obj.InstanceGroup.get_by_uuid(context,
-                                                                 group_uuid)
+        @utils.synchronized(group_hint)
+        def _do_validation(context, instance, group_hint):
+            group = instance_group_obj.InstanceGroup.get_by_hint(
+                        context, group_hint)
             if 'anti-affinity' not in group.policies:
                 return
 
@@ -1281,7 +1281,7 @@ class ComputeManager(manager.Manager):
                         instance_uuid=instance['uuid'],
                         reason=msg)
 
-        _do_validation(context, instance, group_uuid)
+        _do_validation(context, instance, group_hint)
 
     def _build_instance(self, context, request_spec, filter_properties,
             requested_networks, injected_files, admin_password, is_first_time,
