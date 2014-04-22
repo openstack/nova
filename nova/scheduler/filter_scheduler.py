@@ -66,11 +66,10 @@ class FilterScheduler(driver.Scheduler):
                               admin_password, injected_files,
                               requested_networks, is_first_time,
                               filter_properties, legacy_bdm_in_spec):
-        """This method is called from nova.compute.api to provision
-        an instance.  We first create a build plan (a list of WeightedHosts)
-        and then provision.
+        """Provisions instances that needs to be scheduled
 
-        Returns a list of the instances created.
+        Applies filters and weighters on request properties to get a list of
+        compute hosts and calls them to spawn instance(s).
         """
         payload = dict(request_spec=request_spec)
         self.notifier.info(context, 'scheduler.run_instance.start', payload)
