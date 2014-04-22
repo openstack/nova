@@ -4363,9 +4363,10 @@ class ComputeManager(manager.Manager):
         try:
             bdm = block_device_obj.BlockDeviceMapping.get_by_volume_id(
                     context, volume_id)
-            self._detach_volume(context,
-                                instance_obj.Instance._from_db_object(
-                                    context, instance, bdm))
+            inst_obj = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(),
+                instance)
+            self._detach_volume(context, inst_obj, bdm)
             connector = self.driver.get_volume_connector(instance)
             self.volume_api.terminate_connection(context, volume_id, connector)
         except exception.NotFound:
