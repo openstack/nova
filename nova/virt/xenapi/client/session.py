@@ -14,6 +14,8 @@
 
 import contextlib
 import cPickle as pickle
+import errno
+import socket
 import time
 import xmlrpclib
 
@@ -230,6 +232,13 @@ class XenAPISession(object):
                 if self._is_retryable_exception(exc, fn):
                     LOG.warn(_('%(plugin)s.%(fn)s failed. Retrying call.')
                              % {'plugin': plugin, 'fn': fn})
+                else:
+                    raise
+            except socket.error as exc:
+                if exc.errno == errno.ECONNRESET:
+                    LOG.warn(_('Lost connection to XenAPI during call to '
+                               '%(plugin)s.%(fn)s.  Retrying call.') %
+                               {'plugin': plugin, 'fn': fn})
                 else:
                     raise
 
