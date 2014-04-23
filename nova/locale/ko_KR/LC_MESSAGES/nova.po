@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version:  nova\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2014-04-20 06:11+0000\n"
-"PO-Revision-Date: 2014-04-19 23:54+0000\n"
+"POT-Creation-Date: 2014-04-23 06:11+0000\n"
+"PO-Revision-Date: 2014-04-23 00:06+0000\n"
 "Last-Translator: openstackjenkins <jenkins@openstack.org>\n"
 "Language-Team: Korean (Korea) "
 "(http://www.transifex.com/projects/p/openstack/language/ko_KR/)\n"
@@ -2068,170 +2068,170 @@ msgstr ""
 msgid "Unsupported API request: controller = %(controller)s, action = %(action)s"
 msgstr "지원되지 않는 API 요청: 제어기 = %(controller)s, 조치 = %(action)s"
 
-#: nova/api/ec2/cloud.py:393
+#: nova/api/ec2/cloud.py:395
 #, python-format
 msgid "Create snapshot of volume %s"
 msgstr "%s 볼륨의 스냅샷 작성"
 
-#: nova/api/ec2/cloud.py:418
+#: nova/api/ec2/cloud.py:420
 #, python-format
 msgid "Could not find key pair(s): %s"
 msgstr "키 쌍을 찾을 수 없음: %s"
 
-#: nova/api/ec2/cloud.py:434
+#: nova/api/ec2/cloud.py:436
 #, python-format
 msgid "Create key pair %s"
 msgstr "%s 키 쌍 작성"
 
-#: nova/api/ec2/cloud.py:446
+#: nova/api/ec2/cloud.py:448
 #, python-format
 msgid "Import key %s"
 msgstr "%s 키 가져오기"
 
-#: nova/api/ec2/cloud.py:459
+#: nova/api/ec2/cloud.py:461
 #, python-format
 msgid "Delete key pair %s"
 msgstr "%s 키 쌍 삭제"
 
-#: nova/api/ec2/cloud.py:601 nova/api/ec2/cloud.py:731
+#: nova/api/ec2/cloud.py:603 nova/api/ec2/cloud.py:733
 msgid "need group_name or group_id"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:606
+#: nova/api/ec2/cloud.py:608
 msgid "can't build a valid rule"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:614
+#: nova/api/ec2/cloud.py:616
 #, python-format
 msgid "Invalid IP protocol %(protocol)s"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:648 nova/api/ec2/cloud.py:684
+#: nova/api/ec2/cloud.py:650 nova/api/ec2/cloud.py:686
 msgid "No rule for the specified parameters."
 msgstr "지정된 매개변수에 대한 규칙이 없습니다. "
 
-#: nova/api/ec2/cloud.py:762
+#: nova/api/ec2/cloud.py:764
 #, python-format
 msgid "Get console output for instance %s"
 msgstr "%s 인스턴스에 대한 콘솔 출력 가져오십시오. "
 
-#: nova/api/ec2/cloud.py:834
+#: nova/api/ec2/cloud.py:836
 #, python-format
 msgid "Create volume from snapshot %s"
 msgstr "%s 스냅샷에서 볼륨 작성"
 
-#: nova/api/ec2/cloud.py:838 nova/api/openstack/compute/contrib/volumes.py:243
+#: nova/api/ec2/cloud.py:840 nova/api/openstack/compute/contrib/volumes.py:243
 #, python-format
 msgid "Create volume of %s GB"
 msgstr "%s GB의 볼륨 작성"
 
-#: nova/api/ec2/cloud.py:875
+#: nova/api/ec2/cloud.py:877
 #, python-format
 msgid "Attach volume %(volume_id)s to instance %(instance_id)s at %(device)s"
 msgstr "%(volume_id)s 볼륨을 %(device)s에 있는 %(instance_id)s 인스턴스에 첨부"
 
-#: nova/api/ec2/cloud.py:904 nova/api/openstack/compute/contrib/volumes.py:505
+#: nova/api/ec2/cloud.py:906 nova/api/openstack/compute/contrib/volumes.py:505
 #, python-format
 msgid "Detach volume %s"
 msgstr "%s 볼륨 분리"
 
-#: nova/api/ec2/cloud.py:1065
+#: nova/api/ec2/cloud.py:1066
 #, python-format
 msgid "vol = %s\n"
 msgstr "vol = %s\n"
 
-#: nova/api/ec2/cloud.py:1231
+#: nova/api/ec2/cloud.py:1237
 msgid "Allocate address"
 msgstr "주소 할당"
 
-#: nova/api/ec2/cloud.py:1236
+#: nova/api/ec2/cloud.py:1242
 #, python-format
 msgid "Release address %s"
 msgstr "주소 릴리즈 %s"
 
-#: nova/api/ec2/cloud.py:1241
+#: nova/api/ec2/cloud.py:1247
 #, python-format
 msgid "Associate address %(public_ip)s to instance %(instance_id)s"
 msgstr "%(public_ip)s 주소를 %(instance_id)s 인스턴스에 연관"
 
-#: nova/api/ec2/cloud.py:1251
+#: nova/api/ec2/cloud.py:1257
 msgid "Unable to associate IP Address, no fixed_ips."
 msgstr "IP 주소를 연관시킬 수 없습니다. fixed_ips가 없습니다. "
 
-#: nova/api/ec2/cloud.py:1259
+#: nova/api/ec2/cloud.py:1265
 #: nova/api/openstack/compute/contrib/floating_ips.py:247
 #, python-format
 msgid "multiple fixed_ips exist, using the first: %s"
 msgstr "다중 fixed_ips가 존재합니다. 첫 번째 사용: %s"
 
-#: nova/api/ec2/cloud.py:1272
+#: nova/api/ec2/cloud.py:1278
 #, python-format
 msgid "Disassociate address %s"
 msgstr "%s 주소 연관 해제"
 
-#: nova/api/ec2/cloud.py:1289 nova/api/openstack/compute/servers.py:919
+#: nova/api/ec2/cloud.py:1295 nova/api/openstack/compute/servers.py:919
 #: nova/api/openstack/compute/plugins/v3/multiple_create.py:64
 msgid "min_count must be <= max_count"
 msgstr "min_count는 max_count 이하여야 함"
 
-#: nova/api/ec2/cloud.py:1321
+#: nova/api/ec2/cloud.py:1327
 msgid "Image must be available"
 msgstr "이미지가 사용 가능해야 함"
 
-#: nova/api/ec2/cloud.py:1410
+#: nova/api/ec2/cloud.py:1418
 msgid "Going to start terminating instances"
 msgstr "종료 인스턴스를 시작할 예정임"
 
-#: nova/api/ec2/cloud.py:1421
+#: nova/api/ec2/cloud.py:1429
 #, python-format
 msgid "Reboot instance %r"
 msgstr "%r 인스턴스 다시 부팅"
 
-#: nova/api/ec2/cloud.py:1431
+#: nova/api/ec2/cloud.py:1439
 msgid "Going to stop instances"
 msgstr "인스턴스를 중지할 예정임"
 
-#: nova/api/ec2/cloud.py:1442
+#: nova/api/ec2/cloud.py:1450
 msgid "Going to start instances"
 msgstr "인스턴스를 시작할 예정임"
 
-#: nova/api/ec2/cloud.py:1534
+#: nova/api/ec2/cloud.py:1542
 #, python-format
 msgid "De-registering image %s"
 msgstr "%s 이미지 등록 취소"
 
-#: nova/api/ec2/cloud.py:1550
+#: nova/api/ec2/cloud.py:1558
 msgid "imageLocation is required"
 msgstr "imageLocation 필요"
 
-#: nova/api/ec2/cloud.py:1570
+#: nova/api/ec2/cloud.py:1578
 #, python-format
 msgid "Registered image %(image_location)s with id %(image_id)s"
 msgstr "ID가 %(image_id)s인 %(image_location)s 이미지를 등록했음"
 
-#: nova/api/ec2/cloud.py:1631
+#: nova/api/ec2/cloud.py:1639
 msgid "user or group not specified"
 msgstr "사용자 또는 그룹이 지정되지 않음"
 
-#: nova/api/ec2/cloud.py:1634
+#: nova/api/ec2/cloud.py:1642
 msgid "only group \"all\" is supported"
 msgstr "\"all\" 그룹만 지원됨"
 
-#: nova/api/ec2/cloud.py:1637
+#: nova/api/ec2/cloud.py:1645
 msgid "operation_type must be add or remove"
 msgstr "operation_type이 추가 또는 제거여야 함"
 
-#: nova/api/ec2/cloud.py:1639
+#: nova/api/ec2/cloud.py:1647
 #, python-format
 msgid "Updating image %s publicity"
 msgstr "이미지 %s 공개 업데이트"
 
-#: nova/api/ec2/cloud.py:1652
+#: nova/api/ec2/cloud.py:1660
 #, python-format
 msgid "Not allowed to modify attributes for image %s"
 msgstr "%s 이미지의 속성을 수정하도록 허용하지 않음"
 
-#: nova/api/ec2/cloud.py:1678
+#: nova/api/ec2/cloud.py:1686
 #, python-format
 msgid ""
 "Invalid value '%(ec2_instance_id)s' for instanceId. Instance does not "
@@ -2240,46 +2240,46 @@ msgstr ""
 "instanceId에 대한 올바르지 않은 값 '%(ec2_instance_id)s'입니다. 루트(%(root)s)에 첨부된 볼륨이 "
 "인스턴스에 없습니다."
 
-#: nova/api/ec2/cloud.py:1709
+#: nova/api/ec2/cloud.py:1717
 #, python-format
 msgid "Couldn't stop instance within %d sec"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1728
+#: nova/api/ec2/cloud.py:1736
 #, python-format
 msgid "image of %(instance)s at %(now)s"
 msgstr "%(now)s에 %(instance)s의 이미지"
 
-#: nova/api/ec2/cloud.py:1753 nova/api/ec2/cloud.py:1803
+#: nova/api/ec2/cloud.py:1761 nova/api/ec2/cloud.py:1811
 msgid "resource_id and tag are required"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1757 nova/api/ec2/cloud.py:1807
+#: nova/api/ec2/cloud.py:1765 nova/api/ec2/cloud.py:1815
 msgid "Expecting a list of resources"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1762 nova/api/ec2/cloud.py:1812
-#: nova/api/ec2/cloud.py:1870
+#: nova/api/ec2/cloud.py:1770 nova/api/ec2/cloud.py:1820
+#: nova/api/ec2/cloud.py:1878
 msgid "Only instances implemented"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1766 nova/api/ec2/cloud.py:1816
+#: nova/api/ec2/cloud.py:1774 nova/api/ec2/cloud.py:1824
 msgid "Expecting a list of tagSets"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1772 nova/api/ec2/cloud.py:1825
+#: nova/api/ec2/cloud.py:1780 nova/api/ec2/cloud.py:1833
 msgid "Expecting tagSet to be key/value pairs"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1779
+#: nova/api/ec2/cloud.py:1787
 msgid "Expecting both key and value to be set"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1830
+#: nova/api/ec2/cloud.py:1838
 msgid "Expecting key to be set"
 msgstr ""
 
-#: nova/api/ec2/cloud.py:1904
+#: nova/api/ec2/cloud.py:1912
 msgid "Invalid CIDR"
 msgstr "올바르지 않은 CIDR"
 
@@ -2296,7 +2296,7 @@ msgstr "시간소인이 올바르지 않습니다. "
 msgid "EC2 error response: %(code)s: %(message)s"
 msgstr ""
 
-#: nova/api/metadata/base.py:407
+#: nova/api/metadata/base.py:409
 #, python-format
 msgid "future versions %s hidden in version list"
 msgstr ""
@@ -4218,7 +4218,7 @@ msgstr ""
 msgid "Disabled reason contains invalid characters or is too long"
 msgstr ""
 
-#: nova/api/openstack/compute/views/servers.py:187
+#: nova/api/openstack/compute/views/servers.py:197
 msgid "Instance has had its instance_type removed from the DB"
 msgstr "인스턴스가 DB에서 제거된 instance_type을 가졌음"
 
@@ -5124,99 +5124,103 @@ msgstr ""
 msgid "This aggregate contains hosts in an existing availability zone"
 msgstr ""
 
-#: nova/compute/api.py:3382
+#: nova/compute/api.py:3364
+msgid "Host aggregate is not empty"
+msgstr ""
+
+#: nova/compute/api.py:3383
 #, python-format
 msgid "Host already in availability zone %s"
 msgstr ""
 
-#: nova/compute/api.py:3472 nova/tests/compute/test_keypairs.py:135
+#: nova/compute/api.py:3473 nova/tests/compute/test_keypairs.py:135
 msgid "Keypair name contains unsafe characters"
 msgstr "키 쌍 이름에 안전하지 않은 문자가 들어있음"
 
-#: nova/compute/api.py:3476 nova/tests/compute/test_keypairs.py:127
+#: nova/compute/api.py:3477 nova/tests/compute/test_keypairs.py:127
 #: nova/tests/compute/test_keypairs.py:131
 msgid "Keypair name must be between 1 and 255 characters long"
 msgstr "키 쌍 이름은 길이가 1 - 255자 범위에 있어야 함"
 
-#: nova/compute/api.py:3564
+#: nova/compute/api.py:3565
 #, python-format
 msgid "Security group %s is not a string or unicode"
 msgstr "%s 보안 그룹이 문자열 또는 Unicode가 아님"
 
-#: nova/compute/api.py:3567
+#: nova/compute/api.py:3568
 #, python-format
 msgid "Security group %s cannot be empty."
 msgstr "%s 보안 그룹은 공백일 수 없습니다. "
 
-#: nova/compute/api.py:3575
+#: nova/compute/api.py:3576
 #, python-format
 msgid ""
 "Value (%(value)s) for parameter Group%(property)s is invalid. Content "
 "limited to '%(allowed)s'."
 msgstr ""
 
-#: nova/compute/api.py:3581
+#: nova/compute/api.py:3582
 #, python-format
 msgid "Security group %s should not be greater than 255 characters."
 msgstr "%s 보안 그룹은 255자를 넘지 않아야 합니다. "
 
-#: nova/compute/api.py:3599
+#: nova/compute/api.py:3600
 msgid "Quota exceeded, too many security groups."
 msgstr "할당량 초과. 보안 그룹이 너무 많습니다. "
 
-#: nova/compute/api.py:3602
+#: nova/compute/api.py:3603
 #, python-format
 msgid "Create Security Group %s"
 msgstr "%s 보안 그룹 작성"
 
-#: nova/compute/api.py:3614
+#: nova/compute/api.py:3615
 #, python-format
 msgid "Security group %s already exists"
 msgstr "%s 보안 그룹이 이미 존재함"
 
-#: nova/compute/api.py:3627
+#: nova/compute/api.py:3628
 #, python-format
 msgid "Unable to update system group '%s'"
 msgstr ""
 
-#: nova/compute/api.py:3689
+#: nova/compute/api.py:3690
 #, python-format
 msgid "Unable to delete system group '%s'"
 msgstr "시스템 그룹 '%s'을(를) 삭제할 수 없음"
 
-#: nova/compute/api.py:3694
+#: nova/compute/api.py:3695
 msgid "Security group is still in use"
 msgstr "보안 그룹이 아직 사용 중임"
 
-#: nova/compute/api.py:3704
+#: nova/compute/api.py:3705
 msgid "Failed to update usages deallocating security group"
 msgstr "사용량 할당 해제 보안 그룹을 업데이트하지 못했음"
 
-#: nova/compute/api.py:3707
+#: nova/compute/api.py:3708
 #, python-format
 msgid "Delete security group %s"
 msgstr "%s 보안 그룹 삭제"
 
-#: nova/compute/api.py:3783 nova/compute/api.py:3857
+#: nova/compute/api.py:3784 nova/compute/api.py:3858
 #, python-format
 msgid "Rule (%s) not found"
 msgstr "규칙(%s)을 찾을 수 없음"
 
-#: nova/compute/api.py:3799
+#: nova/compute/api.py:3800
 msgid "Quota exceeded, too many security group rules."
 msgstr "할당량 초과. 보안 그룹 규칙이 너무 많습니다. "
 
-#: nova/compute/api.py:3802
+#: nova/compute/api.py:3803
 #, python-format
 msgid "Authorize security group ingress %s"
 msgstr "보안 그룹 진입 %s 권한 부여"
 
-#: nova/compute/api.py:3811
+#: nova/compute/api.py:3812
 #, python-format
 msgid "Revoke security group ingress %s"
 msgstr "보안 그룹 진입 %s 권한 취소"
 
-#: nova/compute/api.py:3864
+#: nova/compute/api.py:3865
 msgid "Security group id should be integer"
 msgstr "보안 그룹 ID는 정수여야 함"
 
@@ -5669,7 +5673,7 @@ msgid "Instance disappeared during terminate"
 msgstr ""
 
 #: nova/compute/manager.py:2276 nova/compute/manager.py:3589
-#: nova/compute/manager.py:5597
+#: nova/compute/manager.py:5598
 msgid "Setting instance vm_state to ERROR"
 msgstr ""
 
@@ -5985,7 +5989,7 @@ msgstr ""
 msgid "Port %s is not attached"
 msgstr ""
 
-#: nova/compute/manager.py:4417 nova/tests/compute/test_compute.py:10481
+#: nova/compute/manager.py:4417 nova/tests/compute/test_compute.py:10497
 #, python-format
 msgid "Host %s not found"
 msgstr ""
@@ -6086,11 +6090,11 @@ msgstr "%(vm_state)s/%(task_state)s 상태에 있음, RESIZED/None이 아님"
 msgid "Error auto-confirming resize: %s. Will retry later."
 msgstr ""
 
-#: nova/compute/manager.py:5027
+#: nova/compute/manager.py:5028
 msgid "Periodic task failed to offload instance."
 msgstr ""
 
-#: nova/compute/manager.py:5047
+#: nova/compute/manager.py:5048
 #, python-format
 msgid ""
 "Running instance usage audit for host %(host)s from %(begin_time)s to "
@@ -6099,173 +6103,173 @@ msgstr ""
 "%(begin_time)s에서 %(end_time)s. %(number_instances)s 인스턴스까지 %(host)s 호스트에 "
 "대한 인스턴스 사용 감사를 실행하는 중입니다. "
 
-#: nova/compute/manager.py:5067
+#: nova/compute/manager.py:5068
 #, python-format
 msgid "Failed to generate usage audit for instance on host %s"
 msgstr "%s 호스트의 인스턴스에 대한 사용 감사를 생성하지 못했음"
 
-#: nova/compute/manager.py:5095
+#: nova/compute/manager.py:5096
 msgid "Updating bandwidth usage cache"
 msgstr "대역폭 사용 캐시 업데이트"
 
-#: nova/compute/manager.py:5117
+#: nova/compute/manager.py:5118
 msgid "Bandwidth usage not supported by hypervisor."
 msgstr ""
 
-#: nova/compute/manager.py:5212
+#: nova/compute/manager.py:5213
 msgid "Updating volume usage cache"
 msgstr "볼륨 사용 캐시 업데이트"
 
-#: nova/compute/manager.py:5240
+#: nova/compute/manager.py:5241
 #, python-format
 msgid ""
 "Found %(num_db_instances)s in the database and %(num_vm_instances)s on "
 "the hypervisor."
 msgstr "데이터베이스에서 %(num_db_instances)s개를 찾고 하이퍼바이저에서 %(num_vm_instances)s개를 찾았습니다."
 
-#: nova/compute/manager.py:5247 nova/compute/manager.py:5308
+#: nova/compute/manager.py:5248 nova/compute/manager.py:5309
 msgid "During sync_power_state the instance has a pending task. Skip."
 msgstr "sync_power_state 동안 인스턴스가 보류 중 태스크를 갖습니다. 건너뛰십시오. "
 
-#: nova/compute/manager.py:5269
+#: nova/compute/manager.py:5270
 msgid "Periodic sync_power_state task had an error while processing an instance."
 msgstr ""
 
-#: nova/compute/manager.py:5295
+#: nova/compute/manager.py:5296
 #, python-format
 msgid ""
 "During the sync_power process the instance has moved from host %(src)s to"
 " host %(dst)s"
 msgstr "sync_power 프로세스 중에 %(src)s 호스트에서 %(dst)s 호스트로 인스턴스가 이동되었습니다."
 
-#: nova/compute/manager.py:5331
+#: nova/compute/manager.py:5332
 msgid "Instance shutdown by itself. Calling the stop API."
 msgstr "인스턴스가 스스로 시스템 종료합니다. 중지 API를 호출 중입니다. "
 
-#: nova/compute/manager.py:5343 nova/compute/manager.py:5352
-#: nova/compute/manager.py:5383 nova/compute/manager.py:5394
+#: nova/compute/manager.py:5344 nova/compute/manager.py:5353
+#: nova/compute/manager.py:5384 nova/compute/manager.py:5395
 msgid "error during stop() in sync_power_state."
 msgstr "sync_power_state에서 stop() 중에 오류 발생"
 
-#: nova/compute/manager.py:5347
+#: nova/compute/manager.py:5348
 msgid "Instance is suspended unexpectedly. Calling the stop API."
 msgstr "인스턴스가 예기치 않게 일시중단됩니다. 중지 API를 호출 중입니다. "
 
-#: nova/compute/manager.py:5363
+#: nova/compute/manager.py:5364
 msgid "Instance is paused unexpectedly. Ignore."
 msgstr "인스턴스가 예기치 않게 일시정지됩니다. 무시하십시오. "
 
-#: nova/compute/manager.py:5369
+#: nova/compute/manager.py:5370
 msgid "Instance is unexpectedly not found. Ignore."
 msgstr "인스턴스가 예기치 않게 발견되지 않습니다. 무시하십시오. "
 
-#: nova/compute/manager.py:5375
+#: nova/compute/manager.py:5376
 msgid "Instance is not stopped. Calling the stop API."
 msgstr "인스턴스가 중지되지 않습니다. 중지 API를 호출 중입니다. "
 
-#: nova/compute/manager.py:5389
+#: nova/compute/manager.py:5390
 msgid "Paused instance shutdown by itself. Calling the stop API."
 msgstr ""
 
-#: nova/compute/manager.py:5403
+#: nova/compute/manager.py:5404
 msgid "Instance is not (soft-)deleted."
 msgstr "인스턴스가 (소프트)삭제되지 않습니다. "
 
-#: nova/compute/manager.py:5411
+#: nova/compute/manager.py:5412
 msgid "CONF.reclaim_instance_interval <= 0, skipping..."
 msgstr "CONF.reclaim_instance_interval <= 0, 건너뛰는 중..."
 
-#: nova/compute/manager.py:5432
+#: nova/compute/manager.py:5433
 msgid "Reclaiming deleted instance"
 msgstr "재확보가 인스턴스를 삭제했음"
 
-#: nova/compute/manager.py:5436
+#: nova/compute/manager.py:5437
 #, python-format
 msgid "Periodic reclaim failed to delete instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:5461
+#: nova/compute/manager.py:5462
 #, python-format
 msgid "Deleting orphan compute node %s"
 msgstr ""
 
-#: nova/compute/manager.py:5469 nova/compute/resource_tracker.py:392
+#: nova/compute/manager.py:5470 nova/compute/resource_tracker.py:392
 #, python-format
 msgid "No service record for host %s"
 msgstr "%s 호스트에 대한 서비스 레코드가 없음"
 
-#: nova/compute/manager.py:5511
+#: nova/compute/manager.py:5512
 #, python-format
 msgid ""
 "Detected instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:5517
+#: nova/compute/manager.py:5518
 #, python-format
 msgid ""
 "Powering off instance with name label '%s' which is marked as DELETED but"
 " still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:5526
+#: nova/compute/manager.py:5527
 msgid "set_bootable is not implemented for the current driver"
 msgstr ""
 
-#: nova/compute/manager.py:5531
+#: nova/compute/manager.py:5532
 msgid "Failed to power off instance"
 msgstr ""
 
-#: nova/compute/manager.py:5535
+#: nova/compute/manager.py:5536
 #, python-format
 msgid ""
 "Destroying instance with name label '%s' which is marked as DELETED but "
 "still present on host."
 msgstr ""
 
-#: nova/compute/manager.py:5545
+#: nova/compute/manager.py:5546
 #, python-format
 msgid "Periodic cleanup failed to delete instance: %s"
 msgstr ""
 
-#: nova/compute/manager.py:5549
+#: nova/compute/manager.py:5550
 #, python-format
 msgid "Unrecognized value '%s' for CONF.running_deleted_instance_action"
 msgstr ""
 
-#: nova/compute/manager.py:5580
+#: nova/compute/manager.py:5581
 #, python-format
 msgid "Setting instance back to %(state)s after: %(error)s"
 msgstr ""
 
-#: nova/compute/manager.py:5590
+#: nova/compute/manager.py:5591
 #, python-format
 msgid "Setting instance back to ACTIVE after: %s"
 msgstr ""
 
-#: nova/compute/manager.py:5612
+#: nova/compute/manager.py:5613
 msgid "Hypervisor driver does not support add_aggregate_host"
 msgstr ""
 
-#: nova/compute/manager.py:5629
+#: nova/compute/manager.py:5630
 msgid "Hypervisor driver does not support remove_aggregate_host"
 msgstr ""
 
-#: nova/compute/manager.py:5643
+#: nova/compute/manager.py:5644
 #, python-format
 msgid "Processing event %(event)s"
 msgstr ""
 
-#: nova/compute/manager.py:5694
+#: nova/compute/manager.py:5695
 msgid "Cleaning up deleted instances"
 msgstr ""
 
-#: nova/compute/manager.py:5703
+#: nova/compute/manager.py:5704
 #, python-format
 msgid "There are %d instances to clean"
 msgstr ""
 
-#: nova/compute/manager.py:5707
+#: nova/compute/manager.py:5708
 #, python-format
 msgid "Instance has had %(attempts)s of %(max)s cleanup attempts"
 msgstr ""
@@ -6570,19 +6574,19 @@ msgstr ""
 msgid "Checking Token: %(token)s, %(token_valid)s"
 msgstr ""
 
-#: nova/db/api.py:632
+#: nova/db/api.py:669
 msgid "Failed to notify cells of instance destroy"
 msgstr "셀에 인스턴스 영구 삭제를 알리지 못했음"
 
-#: nova/db/api.py:720 nova/db/api.py:748
+#: nova/db/api.py:757 nova/db/api.py:785
 msgid "Failed to notify cells of instance update"
 msgstr "셀에 인스턴스 업데이트를 알리지 못했음"
 
-#: nova/db/api.py:1648
+#: nova/db/api.py:1685
 msgid "Failed to notify cells of bw_usage update"
 msgstr "셀에 bw_usage 업데이트를 알리지 못했음"
 
-#: nova/db/api.py:1793
+#: nova/db/api.py:1830
 msgid "Failed to notify cells of instance fault"
 msgstr "셀에 인스턴스 결함을 알리지 못했음"
 
@@ -6645,7 +6649,7 @@ msgstr "요청의 인스턴스 ID %s이(가) 올바르지 않음"
 msgid "Invalid field name: %s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:3154
+#: nova/db/sqlalchemy/api.py:3140
 #, python-format
 msgid ""
 "quota_usages out of sync, updating. project_id: %(project_id)s, user_id: "
@@ -6653,24 +6657,24 @@ msgid ""
 "usage: %(in_use)s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:3242
+#: nova/db/sqlalchemy/api.py:3228
 #, python-format
 msgid "Change will make usage less than 0 for the following resources: %s"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:4892
+#: nova/db/sqlalchemy/api.py:4880
 #, python-format
 msgid ""
 "Volume(%s) has lower stats then what is in the database. Instance must "
 "have been rebooted or crashed. Updating totals."
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:5249
+#: nova/db/sqlalchemy/api.py:5237
 #, python-format
 msgid "Add metadata failed for aggregate %(id)s after %(retries)s retries"
 msgstr ""
 
-#: nova/db/sqlalchemy/api.py:5629
+#: nova/db/sqlalchemy/api.py:5617
 #, python-format
 msgid "IntegrityError detected when archiving table %s"
 msgstr ""
@@ -6886,7 +6890,7 @@ msgstr ""
 msgid "Not deleting key %s"
 msgstr ""
 
-#: nova/network/api.py:196 nova/network/neutronv2/api.py:735
+#: nova/network/api.py:197 nova/network/neutronv2/api.py:736
 #, python-format
 msgid "re-assign floating IP %(address)s from instance %(instance_id)s"
 msgstr "%(instance_id)s에서 부동 IP %(address)s 재지정"
@@ -7374,58 +7378,58 @@ msgstr ""
 msgid "Failed to delete neutron port %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:474
+#: nova/network/neutronv2/api.py:475
 #, python-format
 msgid "get_instance_nw_info() for %s"
 msgstr "%s에 대한 get_instance_nw_info()"
 
-#: nova/network/neutronv2/api.py:541
+#: nova/network/neutronv2/api.py:542
 #, python-format
 msgid ""
 "Unable to update port %(portid)s on subnet %(subnet_id)s with failure: "
 "%(exception)s"
 msgstr "%(subnet_id)s 서브넷에서 %(portid)s 포트를 업데이트할 수 없음: %(exception)s"
 
-#: nova/network/neutronv2/api.py:570
+#: nova/network/neutronv2/api.py:571
 #, python-format
 msgid "Unable to update port %(portid)s with failure: %(exception)s"
 msgstr "%(portid)s 포트를 업데이트하지 못했음. 실패: %(exception)s"
 
-#: nova/network/neutronv2/api.py:584
+#: nova/network/neutronv2/api.py:585
 #, python-format
 msgid "validate_networks() for %s"
 msgstr "%s에 대한 validate_networks()"
 
-#: nova/network/neutronv2/api.py:597
+#: nova/network/neutronv2/api.py:598
 msgid "Multiple possible networks found, use a Network ID to be more specific."
 msgstr ""
 
-#: nova/network/neutronv2/api.py:615
+#: nova/network/neutronv2/api.py:616
 #, python-format
 msgid "Failed to access port %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:818
+#: nova/network/neutronv2/api.py:819
 #, python-format
 msgid "Unable to access floating IP %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:906
+#: nova/network/neutronv2/api.py:907
 #, python-format
 msgid "Multiple floating IP pools matches found for name '%s'"
 msgstr "'%s' 이름에 대해 다중 부동 IP 풀 일치가 발견됨"
 
-#: nova/network/neutronv2/api.py:950
+#: nova/network/neutronv2/api.py:951
 #, python-format
 msgid "Unable to access floating IP %(fixed_ip)s for port %(port_id)s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:1009
+#: nova/network/neutronv2/api.py:1010
 #, python-format
 msgid "Unable to update host of port %s"
 msgstr ""
 
-#: nova/network/neutronv2/api.py:1045
+#: nova/network/neutronv2/api.py:1046
 #, python-format
 msgid ""
 "Network %(id)s not matched with the tenants network! The ports tenant "
@@ -7916,52 +7920,37 @@ msgstr "드라이버가 schedule_run_instance를 구현해야 함"
 msgid "Driver must implement select_destinations"
 msgstr ""
 
-#: nova/scheduler/filter_scheduler.py:79
+#: nova/scheduler/filter_scheduler.py:78
 #, python-format
 msgid ""
 "Attempting to build %(num_instances)d instance(s) uuids: "
 "%(instance_uuids)s"
 msgstr ""
 
-#: nova/scheduler/filter_scheduler.py:83
-#, python-format
-msgid "Request Spec: %s"
-msgstr ""
-
-#: nova/scheduler/filter_scheduler.py:103
+#: nova/scheduler/filter_scheduler.py:102
 #, python-format
 msgid "Choosing host %(weighed_host)s for instance %(instance_uuid)s"
 msgstr ""
 
-#: nova/scheduler/filter_scheduler.py:165
+#: nova/scheduler/filter_scheduler.py:164
 msgid "Instance disappeared during scheduling"
 msgstr ""
 
-#: nova/scheduler/filter_scheduler.py:204
+#: nova/scheduler/filter_scheduler.py:203
 msgid "Invalid value for 'scheduler_max_attempts', must be >= 1"
 msgstr "'scheduler_max_attempts'에 대한 올바르지 않은 값, >= 1이어야 함"
 
-#: nova/scheduler/filter_scheduler.py:221
+#: nova/scheduler/filter_scheduler.py:220
 #, python-format
 msgid "Error from last host: %(last_host)s (node %(last_node)s): %(exc)s"
 msgstr "마지막 호스트에서 오류 발생: %(last_host)s (노드 %(last_node)s): %(exc)s"
 
-#: nova/scheduler/filter_scheduler.py:255
+#: nova/scheduler/filter_scheduler.py:254
 #, python-format
 msgid ""
 "Exceeded max scheduling attempts %(max_attempts)d for instance "
 "%(instance_uuid)s"
 msgstr "%(instance_uuid)s 인스턴스에 대한 최대 스케줄링 시도 %(max_attempts)d을(를) 초과함"
-
-#: nova/scheduler/filter_scheduler.py:332
-#, python-format
-msgid "Filtered %(hosts)s"
-msgstr "필터링된 %(hosts)s"
-
-#: nova/scheduler/filter_scheduler.py:337
-#, python-format
-msgid "Weighed %(hosts)s"
-msgstr ""
 
 #: nova/scheduler/host_manager.py:179
 #, python-format
@@ -8031,57 +8020,6 @@ msgstr ""
 msgid "Ignoring the invalid elements of the option %(name)s: %(options)s"
 msgstr ""
 
-#: nova/scheduler/filters/affinity_filter.py:117
-#, python-format
-msgid "Group anti affinity: check if %(host)s not in %(configured)s"
-msgstr ""
-
-#: nova/scheduler/filters/affinity_filter.py:153
-#, python-format
-msgid "Group affinity: check if %(host)s in %(configured)s"
-msgstr ""
-
-#: nova/scheduler/filters/aggregate_image_properties_isolation.py:61
-#, python-format
-msgid ""
-"%(host_state)s fails image aggregate properties requirements. Property "
-"%(prop)s does not match %(options)s."
-msgstr ""
-
-#: nova/scheduler/filters/aggregate_instance_extra_specs.py:59
-#, python-format
-msgid ""
-"%(host_state)s fails instance_type extra_specs requirements. Extra_spec "
-"%(key)s is not in aggregate."
-msgstr ""
-
-#: nova/scheduler/filters/aggregate_instance_extra_specs.py:67
-#, python-format
-msgid ""
-"%(host_state)s fails instance_type extra_specs requirements. "
-"'%(aggregate_vals)s' do not match '%(req)s'"
-msgstr ""
-
-#: nova/scheduler/filters/aggregate_multitenancy_isolation.py:48
-#, python-format
-msgid "%s fails tenant id on aggregate"
-msgstr ""
-
-#: nova/scheduler/filters/compute_capabilities_filter.py:62
-#, python-format
-msgid "extra_spec requirement '%(req)s' does not match '%(cap)s'"
-msgstr ""
-
-#: nova/scheduler/filters/compute_capabilities_filter.py:72
-#, python-format
-msgid "%(host_state)s fails instance_type extra_specs requirements"
-msgstr "%(host_state)s이(가) instance_type extra_specs 요구사항을 실패함"
-
-#: nova/scheduler/filters/compute_filter.py:41
-#, python-format
-msgid "%(host_state)s is disabled, reason: %(reason)s"
-msgstr ""
-
 #: nova/scheduler/filters/compute_filter.py:47
 #, python-format
 msgid "%(host_state)s has not been heard from in a while"
@@ -8104,77 +8042,9 @@ msgstr ""
 msgid "Could not decode cpu_allocation_ratio: '%s'"
 msgstr ""
 
-#: nova/scheduler/filters/disk_filter.py:49
-#, python-format
-msgid ""
-"%(host_state)s does not have %(requested_disk)s MB usable disk, it only "
-"has %(usable_disk_mb)s MB usable disk."
-msgstr ""
-"%(host_state)s에 %(requested_disk)sMB의 가용 디스크가 없습니다. %(usable_disk_mb)sMB의"
-" 가용 디스크만 있습니다."
-
-#: nova/scheduler/filters/image_props_filter.py:58
-#, python-format
-msgid ""
-"Instance contains properties %(image_props)s, but no corresponding "
-"supported_instances are advertised by the compute node"
-msgstr ""
-
-#: nova/scheduler/filters/image_props_filter.py:84
-#, python-format
-msgid ""
-"Instance contains properties %(image_props)s that are not provided by the"
-" compute node supported_instances %(supp_instances)s or hypervisor "
-"version %(hypervisor_version)s do not match"
-msgstr ""
-
-#: nova/scheduler/filters/image_props_filter.py:104
-#, python-format
-msgid "%(host_state)s does not support requested instance_properties"
-msgstr "%(host_state)s이(가) 요청된 instance_properties를 지원하지 않음"
-
-#: nova/scheduler/filters/io_ops_filter.py:43
-#, python-format
-msgid ""
-"%(host_state)s fails I/O ops check: Max IOs per host is set to "
-"%(max_io_ops)s"
-msgstr "%(host_state)s에서 I/O ops 검사에 실패함: 호스트당 최대 IO가 %(max_io_ops)s(으)로 설정되어 있음"
-
-#: nova/scheduler/filters/metrics_filter.py:50
-#, python-format
-msgid "%(host_state)s does not have the following metrics: %(metrics)s"
-msgstr ""
-
-#: nova/scheduler/filters/num_instances_filter.py:40
-#, python-format
-msgid ""
-"%(host_state)s fails num_instances check: Max instances per host is set "
-"to %(max_instances)s"
-msgstr ""
-"%(host_state)s에서 num_instances 검사에 실패함: 호스트당 최대 인스턴스가 "
-"%(max_instances)s(으)로 설정되어 있음"
-
-#: nova/scheduler/filters/ram_filter.py:56
-#, python-format
-msgid ""
-"%(host_state)s does not have %(requested_ram)s MB usable ram, it only has"
-" %(usable_ram)s MB usable ram."
-msgstr ""
-"%(host_state)s에 %(requested_ram)sMB의 RAM이 없습니다. %(usable_ram)sMB의 가용 RAM만"
-" 있습니다."
-
 #: nova/scheduler/filters/ram_filter.py:103
 #, python-format
 msgid "Could not decode ram_allocation_ratio: '%s'"
-msgstr ""
-
-#: nova/scheduler/filters/retry_filter.py:33
-msgid "Re-scheduling is disabled"
-msgstr ""
-
-#: nova/scheduler/filters/retry_filter.py:42
-#, python-format
-msgid "Host %(host)s fails.  Previously tried hosts: %(hosts)s"
 msgstr ""
 
 #: nova/servicegroup/api.py:64
@@ -8386,7 +8256,7 @@ msgstr "코어 할당량 초과: 2 코어를 요청했지만 이미 10중 9 코�
 #: nova/tests/compute/test_compute.py:1649
 #: nova/tests/compute/test_compute.py:1727
 #: nova/tests/compute/test_compute.py:1767
-#: nova/tests/compute/test_compute.py:5456
+#: nova/tests/compute/test_compute.py:5471
 #, python-format
 msgid "Running instances: %s"
 msgstr "실행 중 인스턴스: %s"
@@ -8402,16 +8272,16 @@ msgstr "인스턴스 종료 후: %s"
 msgid "Internal error"
 msgstr "내부 오류"
 
-#: nova/tests/compute/test_compute.py:5467
+#: nova/tests/compute/test_compute.py:5482
 #, python-format
 msgid "After force-killing instances: %s"
 msgstr "인스턴스 강제 종료 후: %s"
 
-#: nova/tests/compute/test_compute.py:6097
+#: nova/tests/compute/test_compute.py:6112
 msgid "wrong host/node"
 msgstr "잘못된 호스트/노드"
 
-#: nova/tests/compute/test_compute.py:10689
+#: nova/tests/compute/test_compute.py:10705
 msgid "spawn error"
 msgstr ""
 
@@ -11426,7 +11296,7 @@ msgstr ""
 msgid "Session %s is inactive!"
 msgstr ""
 
-#: nova/virt/vmwareapi/driver.py:905
+#: nova/virt/vmwareapi/driver.py:906
 #, python-format
 msgid ""
 "_call_method(session=%(key)s) failed. Module: %(module)s. Method: "
@@ -11434,22 +11304,22 @@ msgid ""
 "Exception: %(ex)s. "
 msgstr ""
 
-#: nova/virt/vmwareapi/driver.py:926
+#: nova/virt/vmwareapi/driver.py:927
 #, python-format
 msgid "In vmwareapi: _call_method (session=%s)"
 msgstr ""
 
-#: nova/virt/vmwareapi/driver.py:966
+#: nova/virt/vmwareapi/driver.py:967
 #, python-format
 msgid "Task [%(task_name)s] %(task_ref)s status: success"
 msgstr "태스크 [%(task_name)s] %(task_ref)s 상태: success"
 
-#: nova/virt/vmwareapi/driver.py:972
+#: nova/virt/vmwareapi/driver.py:973
 #, python-format
 msgid "Task [%(task_name)s] %(task_ref)s status: error %(error_info)s"
 msgstr "태스크 [%(task_name)s] %(task_ref)s 상태: error %(error_info)s"
 
-#: nova/virt/vmwareapi/driver.py:982
+#: nova/virt/vmwareapi/driver.py:983
 #, python-format
 msgid "In vmwareapi:_poll_task, Got this error %s"
 msgstr "vmwareapi:_poll_task에서 %s 오류 발생"
@@ -11482,61 +11352,73 @@ msgstr "경로 %s을(를) 갖는 디렉토리 작성 중"
 msgid "Created directory with path %s"
 msgstr "경로 %s을(를) 갖는 디렉토리를 작성했음"
 
-#: nova/virt/vmwareapi/error_util.py:113
+#: nova/virt/vmwareapi/error_util.py:45
+msgid "exception_summary must not be a list"
+msgstr ""
+
+#: nova/virt/vmwareapi/error_util.py:75
+msgid "fault_list must be a list"
+msgstr ""
+
+#: nova/virt/vmwareapi/error_util.py:121
 #, python-format
 msgid "Error(s) %s occurred in the call to RetrievePropertiesEx"
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:127
+#: nova/virt/vmwareapi/error_util.py:135
 msgid "VMware Driver fault."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:133
+#: nova/virt/vmwareapi/error_util.py:141
 msgid "VMware Driver configuration fault."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:137
+#: nova/virt/vmwareapi/error_util.py:145
 msgid "No default value for use_linked_clone found."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:141
+#: nova/virt/vmwareapi/error_util.py:149
 #, python-format
 msgid "Missing parameter : %(param)s"
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:145
+#: nova/virt/vmwareapi/error_util.py:153
 msgid "Resource already exists."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:150
+#: nova/virt/vmwareapi/error_util.py:158
 msgid "Cannot delete file."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:155
+#: nova/virt/vmwareapi/error_util.py:163
 msgid "File already exists."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:160
+#: nova/virt/vmwareapi/error_util.py:168
 msgid "File fault."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:165
+#: nova/virt/vmwareapi/error_util.py:173
 msgid "File locked."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:170
+#: nova/virt/vmwareapi/error_util.py:178
 msgid "File not found."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:175
+#: nova/virt/vmwareapi/error_util.py:183
 msgid "Invalid property."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:180
+#: nova/virt/vmwareapi/error_util.py:188
+msgid "No Permission."
+msgstr ""
+
+#: nova/virt/vmwareapi/error_util.py:193
 msgid "Not Authenticated."
 msgstr ""
 
-#: nova/virt/vmwareapi/error_util.py:203
+#: nova/virt/vmwareapi/error_util.py:217
 #, python-format
 msgid "Fault %s not matched."
 msgstr ""
@@ -11677,32 +11559,32 @@ msgstr ""
 msgid "Unable to import suds."
 msgstr "suds를 가져올 수 없습니다. "
 
-#: nova/virt/vmwareapi/vim.py:198
+#: nova/virt/vmwareapi/vim.py:204
 #, python-format
 msgid "No such SOAP method '%s' provided by VI SDK"
 msgstr "VI SDK가 제공한 SOAP 메소드 '%s'이(가) 없음"
 
-#: nova/virt/vmwareapi/vim.py:203
+#: nova/virt/vmwareapi/vim.py:209
 #, python-format
 msgid "httplib error in %s: "
 msgstr "%s의 httplib 오류: "
 
-#: nova/virt/vmwareapi/vim.py:207
+#: nova/virt/vmwareapi/vim.py:213
 #, python-format
 msgid "urllib2 error in  %s: "
 msgstr ""
 
-#: nova/virt/vmwareapi/vim.py:214
+#: nova/virt/vmwareapi/vim.py:220
 #, python-format
 msgid "Socket error in %s: "
 msgstr "%s의 소켓 오류: "
 
-#: nova/virt/vmwareapi/vim.py:219
+#: nova/virt/vmwareapi/vim.py:225
 #, python-format
 msgid "Type error in  %s: "
 msgstr "%s의 유형 오류: "
 
-#: nova/virt/vmwareapi/vim.py:223
+#: nova/virt/vmwareapi/vim.py:229
 #, python-format
 msgid "Exception in %s "
 msgstr "%s에서 예외 발생 "
