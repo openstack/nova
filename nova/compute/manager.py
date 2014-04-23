@@ -1348,7 +1348,6 @@ class ComputeManager(manager.Manager):
                 exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the spawn
             # Make sure the async call finishes
-            msg = _("Instance disappeared during build")
             if network_info is not None:
                 network_info.wait(do_raise=False)
             try:
@@ -1359,7 +1358,7 @@ class ComputeManager(manager.Manager):
                 LOG.exception(msg, instance=instance)
             raise exception.BuildAbortException(
                 instance_uuid=instance['uuid'],
-                reason=msg)
+                reason=_("Instance disappeared during build"))
         except (exception.UnexpectedTaskStateError,
                 exception.VirtualInterfaceCreateException) as e:
             # Don't try to reschedule, just log and reraise.
