@@ -796,7 +796,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.HypervisorUnavailable(host=CONF.host)
 
     def get_num_instances(self):
-        """Efficient override of base instance_exists method."""
+        """Efficient override of base get_num_instances method."""
         return self._conn.numOfDomains()
 
     def instance_exists(self, instance_name):
