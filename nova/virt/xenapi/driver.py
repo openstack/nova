@@ -462,6 +462,7 @@ class XenAPIDriver(driver.ComputeDriver):
         free_ram_mb = host_stats['host_memory_free_computed'] / units.Mi
         total_disk_gb = host_stats['disk_total'] / units.Gi
         used_disk_gb = host_stats['disk_used'] / units.Gi
+        allocated_disk_gb = host_stats['disk_allocated'] / units.Gi
         hyper_ver = utils.convert_version_to_int(self._session.product_version)
         dic = {'vcpus': host_stats['host_cpu_info']['cpu_count'],
                'memory_mb': total_ram_mb,
@@ -475,6 +476,7 @@ class XenAPIDriver(driver.ComputeDriver):
                # Todo(bobba) cpu_info may be in a format not supported by
                # arch_filter.py - see libvirt/driver.py get_cpu_info
                'cpu_info': jsonutils.dumps(host_stats['host_cpu_info']),
+               'disk_available_least': total_disk_gb - allocated_disk_gb,
                'supported_instances': jsonutils.dumps(
                    host_stats['supported_instances']),
                'pci_passthrough_devices': jsonutils.dumps(

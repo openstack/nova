@@ -28,8 +28,9 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
     def host_stats(self, refresh=True):
         return {'host_memory_total': 3 * units.Mi,
                 'host_memory_free_computed': 2 * units.Mi,
-                'disk_total': 4 * units.Gi,
-                'disk_used': 5 * units.Gi,
+                'disk_total': 5 * units.Gi,
+                'disk_used': 2 * units.Gi,
+                'disk_allocated': 4 * units.Gi,
                 'host_hostname': 'somename',
                 'supported_instances': 'x86_64',
                 'host_cpu_info': {'cpu_count': 50},
@@ -50,12 +51,13 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         self.assertEqual(6008002, resources['hypervisor_version'])
         self.assertEqual(50, resources['vcpus'])
         self.assertEqual(3, resources['memory_mb'])
-        self.assertEqual(4, resources['local_gb'])
+        self.assertEqual(5, resources['local_gb'])
         self.assertEqual(10, resources['vcpus_used'])
         self.assertEqual(3 - 2, resources['memory_mb_used'])
-        self.assertEqual(5, resources['local_gb_used'])
+        self.assertEqual(2, resources['local_gb_used'])
         self.assertEqual('xen', resources['hypervisor_type'])
         self.assertEqual('somename', resources['hypervisor_hostname'])
+        self.assertEqual(1, resources['disk_available_least'])
 
     def test_overhead(self):
         self.flags(connection_url='test_url',
