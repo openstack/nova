@@ -4962,6 +4962,25 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.info(_("Instance running successfully."), instance=instance)
             raise loopingcall.LoopingCallDone()
 
+    @staticmethod
+    def _disk_size_from_instance(instance, info):
+        """Determines the disk size from instance properties
+
+        Returns the disk size by using the disk name to determine whether it
+        is a root or an ephemeral disk, then by checking properties of the
+        instance returns the size converted to bytes.
+
+        Returns 0 if the disk name not match (disk, disk.local).
+        """
+        fname = os.path.basename(info['path'])
+        if fname == 'disk':
+            size = instance['root_gb']
+        elif fname == 'disk.local':
+            size = instance['ephemeral_gb']
+        else:
+            size = 0
+        return size * units.Gi
+
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
                          block_device_info=None, power_on=True):
@@ -4970,14 +4989,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # resize disks. only "disk" and "disk.local" are necessary.
         disk_info = jsonutils.loads(disk_info)
         for info in disk_info:
-            fname = os.path.basename(info['path'])
-            if fname == 'disk':
-                size = instance['root_gb']
-            elif fname == 'disk.local':
-                size = instance['ephemeral_gb']
-            else:
-                size = 0
-            size *= units.Gi
+            size = self._disk_size_from_instance(instance, info)
 
             # If we have a non partitioned image that we can extend
             # then ensure we're in 'raw' format so we can extend file system.
