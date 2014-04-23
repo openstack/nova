@@ -53,18 +53,7 @@ from nova.virt.vmwareapi import vm_util
 from nova.virt.vmwareapi import vmware_images
 
 
-vmware_vif_opts = [
-    cfg.StrOpt('integration_bridge',
-               default='br-int',
-               help='Name of Integration Bridge'),
-    ]
-
-vmware_group = cfg.OptGroup(name='vmware',
-                            title='VMware Options')
-
 CONF = cfg.CONF
-CONF.register_group(vmware_group)
-CONF.register_opts(vmware_vif_opts, vmware_group)
 CONF.import_opt('image_cache_subdirectory_name', 'nova.virt.imagecache')
 CONF.import_opt('remove_unused_base_images', 'nova.virt.imagecache')
 CONF.import_opt('vnc_enabled', 'nova.vnc')
@@ -263,27 +252,9 @@ class VMwareVMOps(object):
         res_pool_ref = vm_util.get_res_pool_ref(self._session,
                                                 self._cluster, node_mo_id)
 
-        def _get_vif_infos():
-            vif_infos = []
-            if network_info is None:
-                return vif_infos
-            for vif in network_info:
-                mac_address = vif['address']
-                network_name = vif['network']['bridge'] or \
-                               CONF.vmware.integration_bridge
-                network_ref = vmwarevif.get_network_ref(self._session,
-                                                        self._cluster,
-                                                        vif,
-                                                        utils.is_neutron())
-                vif_infos.append({'network_name': network_name,
-                                  'mac_address': mac_address,
-                                  'network_ref': network_ref,
-                                  'iface_id': vif['id'],
-                                  'vif_model': vif_model
-                                 })
-            return vif_infos
-
-        vif_infos = _get_vif_infos()
+        vif_infos = vmwarevif.get_vif_info(self._session, self._cluster,
+                                           utils.is_neutron(), vif_model,
+                                           network_info)
 
         # Get the instance name. In some cases this may differ from the 'uuid',
         # for example when the spawn of a rescue instance takes place.
