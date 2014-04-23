@@ -17,7 +17,6 @@
 from distutils import versionpredicate
 
 from nova.compute import vm_mode
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova import utils
@@ -55,9 +54,9 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
         # Not supported if an instance property is requested but nothing
         # advertised by the host.
         if not supp_instances:
-            LOG.debug(_("Instance contains properties %(image_props)s, "
+            LOG.debug("Instance contains properties %(image_props)s, "
                         "but no corresponding supported_instances are "
-                        "advertised by the compute node"),
+                        "advertised by the compute node",
                       {'image_props': image_props})
             return False
 
@@ -81,10 +80,10 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
                 if _compare_product_version(hypervisor_version, image_props):
                     return True
 
-        LOG.debug(_("Instance contains properties %(image_props)s "
+        LOG.debug("Instance contains properties %(image_props)s "
                     "that are not provided by the compute node "
                     "supported_instances %(supp_instances)s or "
-                    "hypervisor version %(hypervisor_version)s do not match"),
+                    "hypervisor version %(hypervisor_version)s do not match",
                   {'image_props': image_props,
                    'supp_instances': supp_instances,
                    'hypervisor_version': hypervisor_version})
@@ -101,7 +100,7 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
 
         if not self._instance_supported(host_state, image_props,
                                         host_state.hypervisor_version):
-            LOG.debug(_("%(host_state)s does not support requested "
-                        "instance_properties"), {'host_state': host_state})
+            LOG.debug("%(host_state)s does not support requested "
+                        "instance_properties", {'host_state': host_state})
             return False
         return True

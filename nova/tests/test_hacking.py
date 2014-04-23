@@ -80,3 +80,13 @@ class HackingTestCase(test.NoDBTestCase):
 
         self.assertEqual(
             len(list(checks.assert_equal_none("self.assertIsNone()"))), 0)
+
+    def test_no_translate_debug_logs(self):
+        self.assertEqual(len(list(checks.no_translate_debug_logs(
+            "LOG.debug(_('foo'))", "nova/scheduler/foo.py"))), 1)
+
+        self.assertEqual(len(list(checks.no_translate_debug_logs(
+            "LOG.debug('foo')", "nova/scheduler/foo.py"))), 0)
+
+        self.assertEqual(len(list(checks.no_translate_debug_logs(
+            "LOG.info(_('foo'))", "nova/scheduler/foo.py"))), 0)

@@ -38,7 +38,7 @@ class ComputeFilter(filters.BaseHostFilter):
         """Returns True for only active compute nodes."""
         service = host_state.service
         if service['disabled']:
-            LOG.debug(_("%(host_state)s is disabled, reason: %(reason)s"),
+            LOG.debug("%(host_state)s is disabled, reason: %(reason)s",
                       {'host_state': host_state,
                        'reason': service.get('disabled_reason')})
             return False

@@ -15,7 +15,6 @@
 #    under the License.
 
 from nova import db
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.scheduler import filters
 from nova.scheduler.filters import extra_specs_ops
@@ -56,17 +55,17 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
             key = scope[0]
             aggregate_vals = metadata.get(key, None)
             if not aggregate_vals:
-                LOG.debug(_("%(host_state)s fails instance_type extra_specs "
-                    "requirements. Extra_spec %(key)s is not in aggregate."),
+                LOG.debug("%(host_state)s fails instance_type extra_specs "
+                    "requirements. Extra_spec %(key)s is not in aggregate.",
                     {'host_state': host_state, 'key': key})
                 return False
             for aggregate_val in aggregate_vals:
                 if extra_specs_ops.match(aggregate_val, req):
                     break
             else:
-                LOG.debug(_("%(host_state)s fails instance_type extra_specs "
+                LOG.debug("%(host_state)s fails instance_type extra_specs "
                             "requirements. '%(aggregate_vals)s' do not "
-                            "match '%(req)s'"),
+                            "match '%(req)s'",
                           {'host_state': host_state, 'req': req,
                            'aggregate_vals': aggregate_vals})
                 return False
