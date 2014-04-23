@@ -366,6 +366,10 @@ class VMwareESXDriver(driver.ComputeDriver):
         """Manage the local cache of images."""
         self._vmops.manage_image_cache(context, all_instances)
 
+    def instance_exists(self, instance):
+        """Efficient override of base instance_exists method."""
+        return self._vmops.instance_exists(instance)
+
 
 class VMwareVCDriver(VMwareESXDriver):
     """The VC host connection object."""
@@ -777,6 +781,11 @@ class VMwareVCDriver(VMwareESXDriver):
             instances = cluster_instances.get(resource, [])
             _vmops = self._get_vmops_for_compute_node(resource)
             _vmops.manage_image_cache(context, instances)
+
+    def instance_exists(self, instance):
+        """Efficient override of base instance_exists method."""
+        _vmops = self._get_vmops_for_compute_node(instance['node'])
+        return _vmops.instance_exists(instance)
 
 
 class VMwareAPISession(object):
