@@ -332,7 +332,7 @@ def wrap_instance_event(function):
 
         event_name = 'compute_{0}'.format(function.func_name)
         with compute_utils.EventReporter(context, event_name, instance_uuid):
-            function(self, context, *args, **kwargs)
+            return function(self, context, *args, **kwargs)
 
     return decorated_function
 
