@@ -2513,8 +2513,7 @@ class ComputeManager(manager.Manager):
                 self.network_api.setup_networks_on_host(
                         context, instance, self.host)
 
-            network_info = self._get_instance_nw_info(context, instance)
-
+            network_info = compute_utils.get_nw_info_for_instance(instance)
             if bdms is None:
                 bdms = (block_device_obj.BlockDeviceMappingList.
                         get_by_instance_uuid(context, instance.uuid))
