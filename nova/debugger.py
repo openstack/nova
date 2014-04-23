@@ -68,7 +68,10 @@ def init():
               {'host': CONF.remote_debug.host,
                'port': CONF.remote_debug.port})
 
-    from pydev import pydevd
+    try:
+        from pydev import pydevd
+    except ImportError:
+        import pydevd
     pydevd.settrace(host=CONF.remote_debug.host,
                     port=CONF.remote_debug.port,
                     stdoutToServer=False,
