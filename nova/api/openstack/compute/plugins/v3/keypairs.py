@@ -102,8 +102,8 @@ class KeypairController(object):
         authorize(context, action='delete')
         try:
             self.api.delete_key_pair(context, context.user_id, id)
-        except exception.KeypairNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.KeypairNotFound as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
 
     @extensions.expected_errors(404)
     def show(self, req, id):
@@ -113,8 +113,8 @@ class KeypairController(object):
 
         try:
             keypair = self.api.get_key_pair(context, context.user_id, id)
-        except exception.KeypairNotFound:
-            raise webob.exc.HTTPNotFound()
+        except exception.KeypairNotFound as exc:
+            raise webob.exc.HTTPNotFound(explanation=exc.format_message())
         return {'keypair': self._filter_keypair(keypair)}
 
     @extensions.expected_errors(())
