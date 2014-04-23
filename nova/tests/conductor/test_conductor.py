@@ -425,13 +425,6 @@ class _BaseTestCase(object):
         result = self.conductor.get_ec2_ids(self.context, inst)
         self.assertEqual(result, expected)
 
-    def test_compute_unrescue(self):
-        self.mox.StubOutWithMock(self.conductor_manager.compute_api,
-                                 'unrescue')
-        self.conductor_manager.compute_api.unrescue(self.context, 'instance')
-        self.mox.ReplayAll()
-        self.conductor.compute_unrescue(self.context, 'instance')
-
 
 class ConductorTestCase(_BaseTestCase, test.TestCase):
     """Conductor Manager Tests."""
@@ -917,6 +910,13 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         result = self.conductor.instance_destroy(self.context,
                                                  {'uuid': 'fake-uuid'})
         self.assertEqual(result, 'fake-result')
+
+    def test_compute_unrescue(self):
+        self.mox.StubOutWithMock(self.conductor_manager.compute_api,
+                                 'unrescue')
+        self.conductor_manager.compute_api.unrescue(self.context, 'instance')
+        self.mox.ReplayAll()
+        self.conductor.compute_unrescue(self.context, 'instance')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
