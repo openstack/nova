@@ -141,6 +141,7 @@ class ConductorAPI(object):
         ... Icehouse supports message version 2.0.  So, any changes to
         existing methods in 2.x after that point should be done such that they
         can handle the version_cap being set to 2.0.
+    ...  - Remove instance_destroy()
     """
 
     VERSION_ALIASES = {
@@ -239,11 +240,6 @@ class ConductorAPI(object):
         return cctxt.call(context, 'instance_get_active_by_window_joined',
                           begin=begin, end=end, project_id=project_id,
                           host=host)
-
-    def instance_destroy(self, context, instance):
-        instance_p = jsonutils.to_primitive(instance)
-        cctxt = self.client.prepare()
-        return cctxt.call(context, 'instance_destroy', instance=instance_p)
 
     def instance_info_cache_delete(self, context, instance):
         instance_p = jsonutils.to_primitive(instance)
