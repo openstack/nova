@@ -43,6 +43,7 @@ from nova import network
 from nova.network.security_group import neutron_driver
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
+from nova.objects import ec2 as ec2_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
 from nova.objects import security_group as sec_group_obj
@@ -852,7 +853,10 @@ class CloudController(object):
                                         kwargs.get('description'),
                                         **create_kwargs)
 
-        db.ec2_volume_create(context, volume['id'])
+        vmap = ec2_obj.VolumeMapping()
+        vmap.uuid = volume['id']
+        vmap.create(context)
+
         # TODO(vish): Instance should be None at db layer instead of
         #             trying to lazy load, but for now we turn it into
         #             a dict to avoid an error.

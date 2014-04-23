@@ -22,6 +22,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
+from nova.objects import ec2 as ec2_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
@@ -291,7 +292,10 @@ def get_int_id_from_volume_uuid(context, volume_uuid):
     try:
         return db.get_ec2_volume_id_by_uuid(context, volume_uuid)
     except exception.NotFound:
-        return db.ec2_volume_create(context, volume_uuid)['id']
+        vmap = ec2_obj.VolumeMapping()
+        vmap.uuid = volume_uuid
+        vmap.create(context)
+        return vmap.id
 
 
 @memoize
