@@ -483,11 +483,15 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
     def _call_tune2fs_add_journal(self, path):
         utils.execute("tune2fs", "-j", path, run_as_root=True)
 
-    def _call_parted(self, path, start, end):
+    def _call_parted_mkpart(self, path, start, end):
         utils.execute('parted', '--script', path, 'rm', '1',
             run_as_root=True)
         utils.execute('parted', '--script', path, 'mkpart',
             'primary', '%ds' % start, '%ds' % end, run_as_root=True)
+
+    def _call_parted_boot_flag(sef, path):
+        utils.execute('parted', '--script', path, 'set', '1',
+            'boot', 'on', run_as_root=True)
 
     def test_resize_part_and_fs_down_succeeds(self):
         self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
@@ -498,12 +502,13 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         vm_utils._repair_filesystem(partition_path)
         self._call_tune2fs_remove_journal(partition_path)
         utils.execute("resize2fs", partition_path, "10s", run_as_root=True)
-        self._call_parted(dev_path, 0, 9)
+        self._call_parted_mkpart(dev_path, 0, 9)
+        self._call_parted_boot_flag(dev_path)
         self._call_tune2fs_add_journal(partition_path)
 
         self.mox.ReplayAll()
 
-        vm_utils._resize_part_and_fs("fake", 0, 20, 10)
+        vm_utils._resize_part_and_fs("fake", 0, 20, 10, "boot")
 
     def test_log_progress_if_required(self):
         self.mox.StubOutWithMock(vm_utils.LOG, "debug")
@@ -541,7 +546,8 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         mobj.AndRaise(processutils.ProcessExecutionError)
         self.mox.ReplayAll()
         self.assertRaises(exception.ResizeError,
-                          vm_utils._resize_part_and_fs, "fake", 0, 20, 10)
+                          vm_utils._resize_part_and_fs,
+                          "fake", 0, 20, 10, "boot")
 
     def test_resize_part_and_fs_up_succeeds(self):
         self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
@@ -551,13 +557,13 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         partition_path = "%s1" % dev_path
         vm_utils._repair_filesystem(partition_path)
         self._call_tune2fs_remove_journal(partition_path)
-        self._call_parted(dev_path, 0, 29)
+        self._call_parted_mkpart(dev_path, 0, 29)
         utils.execute("resize2fs", partition_path, run_as_root=True)
         self._call_tune2fs_add_journal(partition_path)
 
         self.mox.ReplayAll()
 
-        vm_utils._resize_part_and_fs("fake", 0, 20, 30)
+        vm_utils._resize_part_and_fs("fake", 0, 20, 30, "")
 
     def test_resize_disk_throws_on_zero_size(self):
         self.assertRaises(exception.ResizeError,
@@ -577,8 +583,8 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         partitions = vm_utils._get_partitions("abc")
 
         self.assertEqual(2, len(partitions))
-        self.assertEqual(('1', 2, 10, "ext3"), partitions[0])
-        self.assertEqual(('2', 20, 10, ""), partitions[1])
+        self.assertEqual((1, 2, 10, "ext3", "", "boot"), partitions[0])
+        self.assertEqual((2, 20, 10, "", "bob", ""), partitions[1])
 
 
 class CheckVDISizeTestCase(VMUtilsTestBase):

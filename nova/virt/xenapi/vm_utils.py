@@ -1025,14 +1025,18 @@ def _auto_configure_disk(session, vdi_ref, new_gb):
             reason = _('Disk must have only one partition.')
             raise exception.CannotResizeDisk(reason=reason)
 
-        _num, start, old_sectors, ptype = partitions[0]
-        if ptype in ('ext3', 'ext4'):
-            new_sectors = new_gb * units.Gi / SECTOR_SIZE
-            _resize_part_and_fs(dev, start, old_sectors, new_sectors)
-        else:
+        num, start, old_sectors, fstype, name, flags = partitions[0]
+        if fstype not in ('ext3', 'ext4'):
             reason = _('Disk contains a filesystem '
                        'we are unable to resize: %s')
-            raise exception.CannotResizeDisk(reason=(reason % ptype))
+            raise exception.CannotResizeDisk(reason=(reason % fstype))
+
+        if num != 1:
+            reason = _('The only partition should be partition 1.')
+            raise exception.CannotResizeDisk(reason=reason)
+
+        new_sectors = new_gb * units.Gi / SECTOR_SIZE
+        _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags)
 
 
 def try_auto_configure_disk(session, vdi_ref, new_gb):
@@ -2256,13 +2260,15 @@ def _get_partitions(dev):
 
     LOG.debug(_("Partitions:"))
     for line in lines[2:]:
-        num, start, end, size, ptype = line.split(':')[:5]
+        line = line.rstrip(';')
+        num, start, end, size, fstype, name, flags = line.split(':')
+        num = int(num)
         start = int(start.rstrip('s'))
         end = int(end.rstrip('s'))
         size = int(size.rstrip('s'))
-        LOG.debug(_("  %(num)s: %(ptype)s %(size)d sectors"),
-                  {'num': num, 'ptype': ptype, 'size': size})
-        partitions.append((num, start, size, ptype))
+        LOG.debug(_("  %(num)s: %(fstype)s %(size)d sectors"),
+                  {'num': num, 'fstype': fstype, 'size': size})
+        partitions.append((num, start, size, fstype, name, flags))
 
     return partitions
 
@@ -2305,7 +2311,7 @@ def _repair_filesystem(partition_path):
         check_exit_code=[0, 1, 2])
 
 
-def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
+def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     """Resize partition and fileystem.
 
     This assumes we are dealing with a single primary partition and using
@@ -2343,6 +2349,10 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors):
                   '%ds' % start,
                   '%ds' % end,
                   run_as_root=True)
+    if "boot" in flags.lower():
+        utils.execute('parted', '--script', dev_path,
+                      'set', '1', 'boot', 'on',
+                      run_as_root=True)
 
     if new_sectors > old_sectors:
         # Resizing up, resize filesystem after partition resize
