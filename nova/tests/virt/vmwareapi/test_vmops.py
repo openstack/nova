@@ -523,6 +523,26 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_finish_revert_migration_power_off(self):
         self._test_finish_revert_migration(power_on=False)
 
+    @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
+    @mock.patch.object(vmops.VMwareVMOps, '_create_config_drive')
+    def test_configure_config_drive(self,
+                                    mock_create_config_drive,
+                                    mock_attach_cdrom_to_vm):
+        injected_files = mock.Mock()
+        admin_password = mock.Mock()
+        vm_ref = mock.Mock()
+        mock_create_config_drive.return_value = "fake_iso_path"
+        self._vmops._configure_config_drive(
+                self._instance, vm_ref, self._dc_info, self._ds,
+                injected_files, admin_password)
+
+        upload_iso_path = self._ds.build_path("fake_iso_path")
+        mock_create_config_drive.assert_called_once_with(self._instance,
+                injected_files, admin_password, self._ds.name,
+                self._dc_info.name, self._instance.uuid, "Fake-CookieJar")
+        mock_attach_cdrom_to_vm.assert_called_once_with(
+                vm_ref, self._instance, self._ds.ref, str(upload_iso_path))
+
     @mock.patch.object(vmops.LOG, 'debug')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps'
                 '.attach_root_volume')

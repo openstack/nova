@@ -159,6 +159,24 @@ class VMwareVMOps(object):
             self._extend_virtual_disk(instance, size_in_kb,
                                       root_vmdk_path, dc_info.ref)
 
+    def _configure_config_drive(self, instance, vm_ref, dc_info, datastore,
+                                injected_files, admin_password):
+        session_vim = self._session._get_vim()
+        cookies = session_vim.client.options.transport.cookiejar
+
+        uploaded_iso_path = self._create_config_drive(instance,
+                                                      injected_files,
+                                                      admin_password,
+                                                      datastore.name,
+                                                      dc_info.name,
+                                                      instance['uuid'],
+                                                      cookies)
+        uploaded_iso_path = datastore.build_path(uploaded_iso_path)
+        self._attach_cdrom_to_vm(
+            vm_ref, instance,
+            datastore.ref,
+            str(uploaded_iso_path))
+
     def build_virtual_machine(self, instance, instance_name, image_info,
                               dc_info, datastore, network_info):
         node_mo_id = vm_util.get_mo_id_from_instance(instance)
@@ -531,19 +549,9 @@ class VMwareVMOps(object):
                     uploaded_file_path)
 
             if configdrive.required_by(instance):
-                uploaded_iso_path = self._create_config_drive(instance,
-                                                              injected_files,
-                                                              admin_password,
-                                                              datastore.name,
-                                                              dc_info.name,
-                                                              instance.uuid,
-                                                              cookies)
-                uploaded_iso_path = ds_util.DatastorePath(datastore.name,
-                                                          uploaded_iso_path)
-                self._attach_cdrom_to_vm(
-                    vm_ref, instance,
-                    datastore.ref,
-                    str(uploaded_iso_path))
+                self._configure_config_drive(
+                        instance, vm_ref, dc_info, datastore, injected_files,
+                        admin_password)
 
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)
