@@ -73,6 +73,43 @@ DcInfo = collections.namedtuple('DcInfo',
                                 ['ref', 'name', 'vmFolder'])
 
 
+class VirtualMachineInstanceConfigInfo(object):
+    """Parameters needed to create and configure a new instance."""
+
+    def __init__(self, instance, instance_name, image_info,
+                 datastore, dc_info, image_cache):
+
+        # Some methods called during spawn take the instance parameter purely
+        # for logging purposes.
+        # TODO(vui) Clean them up, so we no longer need to keep this variable
+        self.instance = instance
+
+        # Get the instance name. In some cases this may differ from the 'uuid',
+        # for example when the spawn of a rescue instance takes place.
+        self.instance_name = instance_name or instance.uuid
+
+        self.ii = image_info
+        self.root_gb = instance.root_gb
+        self.datastore = datastore
+        self.dc_info = dc_info
+        self._image_cache = image_cache
+
+    @property
+    def cache_image_folder(self):
+        if self.ii.image_id is None:
+            return
+        return self._image_cache.get_image_cache_folder(
+                   self.datastore, self.ii.image_id)
+
+    @property
+    def cache_image_path(self):
+        if self.ii.image_id is None:
+            return
+        cached_image_file_name = "%s.%s" % (self.ii.image_id,
+                                            self.ii.file_type)
+        return self.cache_image_folder.join(cached_image_file_name)
+
+
 class VMwareVMOps(object):
     """Management class for VM-related tasks."""
 
@@ -220,60 +257,47 @@ class VMwareVMOps(object):
                 allocations[key] = type(value)
         return allocations
 
-    def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info, block_device_info=None,
-              instance_name=None, power_on=True):
-        """Creates a VM instance.
+    def _get_vm_config_info(self, instance, image_info, instance_name=None):
+        """Captures all relevant information from the spawn parameters."""
 
-        Steps followed are:
-
-        #. Create a VM with no disk and the specifics in the instance object
-           like RAM size.
-        #. For flat disk
-
-          #. Create a dummy vmdk of the size of the disk file that is to be
-             uploaded. This is required just to create the metadata file.
-          #. Delete the -flat.vmdk file created in the above step and retain
-             the metadata .vmdk file.
-          #. Upload the disk file.
-
-        #. For sparse disk
-
-          #. Upload the disk file to a -sparse.vmdk file.
-          #. Copy/Clone the -sparse.vmdk file to a thin vmdk.
-          #. Delete the -sparse.vmdk file.
-
-        #. Attach the disk to the VM by reconfiguring the same.
-        #. Power on the VM.
-
-        """
-
-        # NOTE(hartsocks): some of the logic below relies on instance_name
-        # even when it is not set by the caller.
-        if instance_name is None:
-            instance_name = instance.uuid
-
-        client_factory = self._session._get_vim().client.factory
-        datastore = ds_util.get_datastore(
-                self._session, self._cluster,
-                datastore_regex=self._datastore_regex)
-        dc_info = self.get_datacenter_ref_and_name(datastore.ref)
-
-        image_info = vmware_images.VMwareImage.from_image(instance.image_ref,
-                                                          image_meta)
         if (instance.root_gb != 0 and
                 image_info.file_size_in_gb > instance.root_gb):
             reason = _("Image disk size greater than requested disk size")
             raise exception.InstanceUnacceptable(instance_id=instance.uuid,
                                                  reason=reason)
+        datastore = ds_util.get_datastore(
+                self._session, self._cluster, None, self._datastore_regex)
+        dc_info = self.get_datacenter_ref_and_name(datastore.ref)
+
+        return VirtualMachineInstanceConfigInfo(instance,
+                                                instance_name,
+                                                image_info,
+                                                datastore,
+                                                dc_info,
+                                                self._imagecache)
+
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info, block_device_info=None,
+              instance_name=None, power_on=True):
+
+        client_factory = self._session._get_vim().client.factory
+        image_info = vmware_images.VMwareImage.from_image(instance.image_ref,
+                                                          image_meta)
+        vi = self._get_vm_config_info(instance, image_info, instance_name)
+
+        # NOTE(vui): temporarily retaining some local variables until
+        # the spawn refactoring is complete.
+        instance_name = vi.instance_name
+        datastore = vi.datastore
+        dc_info = vi.dc_info
 
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
-                                            instance_name,
+                                            vi.instance_name,
                                             image_info,
-                                            dc_info,
-                                            datastore,
+                                            vi.dc_info,
+                                            vi.datastore,
                                             network_info)
 
         # Cache the vm_ref. This saves a remote call to the VC. This uses the
@@ -569,8 +593,8 @@ class VMwareVMOps(object):
 
             if configdrive.required_by(instance):
                 self._configure_config_drive(
-                        instance, vm_ref, dc_info, datastore, injected_files,
-                        admin_password)
+                        instance, vm_ref, vi.dc_info, vi.datastore,
+                        injected_files, admin_password)
 
         if power_on:
             vm_util.power_on_instance(self._session, instance, vm_ref=vm_ref)

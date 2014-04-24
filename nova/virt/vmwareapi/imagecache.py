@@ -179,3 +179,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
             images = self._list_datastore_images(ds_path, datastore)
             self.originals = images['originals']
             self._age_cached_images(context, datastore, dc_info, ds_path)
+
+    def get_image_cache_folder(self, datastore, image_id):
+        """Returns datastore path of folder containing the image."""
+        return datastore.build_path(self._base_folder, image_id)
