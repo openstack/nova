@@ -565,6 +565,155 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             self.assertIs(ds_browser, ret)
             self.assertIs(ds_browser, cache.get(moref.value))
 
+    @mock.patch.object(
+            vmops.VMwareVMOps, '_sized_image_exists', return_value=False)
+    @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
+    @mock.patch.object(vm_util, 'copy_virtual_disk')
+    def _test_use_disk_image_as_linked_clone(self,
+                                             mock_copy_virtual_disk,
+                                             mock_extend_virtual_disk,
+                                             mock_sized_image_exists,
+                                             flavor_fits_image=False):
+        file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
+        image_info = vmware_images.VMwareImage(
+                image_id=self._image_id,
+                file_size=file_size,
+                linked_clone=False)
+
+        cache_root_folder = self._ds.build_path("vmware_base", self._image_id)
+        mock_imagecache = mock.Mock()
+        mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
+        vi = vmops.VirtualMachineInstanceConfigInfo(
+                self._instance, "fake_uuid", image_info,
+                self._ds, self._dc_info, mock_imagecache)
+
+        sized_cached_image_ds_loc = cache_root_folder.join(
+                "%s.%s.vmdk" % (self._image_id, vi.root_gb))
+
+        copy_spec = None
+
+        self._vmops._volumeops = mock.Mock()
+        mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
+
+        self._vmops._use_disk_image_as_linked_clone("fake_vm_ref", vi)
+
+        mock_copy_virtual_disk.assert_called_once_with(
+                self._session, self._dc_info.ref,
+                str(vi.cache_image_path),
+                str(sized_cached_image_ds_loc),
+                copy_spec)
+
+        if not flavor_fits_image:
+            mock_extend_virtual_disk.assert_called_once_with(
+                    self._instance, vi.root_gb * units.Mi,
+                    str(sized_cached_image_ds_loc),
+                    self._dc_info.ref)
+
+        mock_attach_disk_to_vm.assert_called_once_with(
+                "fake_vm_ref", self._instance, vi.ii.adapter_type,
+                vi.ii.disk_type,
+                str(sized_cached_image_ds_loc),
+                vi.root_gb * units.Mi, False)
+
+    def test_use_disk_image_as_linked_clone(self):
+        self._test_use_disk_image_as_linked_clone()
+
+    def test_use_disk_image_as_linked_clone_flavor_fits_image(self):
+        self._test_use_disk_image_as_linked_clone(flavor_fits_image=True)
+
+    @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
+    @mock.patch.object(vm_util, 'copy_virtual_disk')
+    def _test_use_disk_image_as_full_clone(self,
+                                          mock_copy_virtual_disk,
+                                          mock_extend_virtual_disk,
+                                          flavor_fits_image=False):
+        file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
+        image_info = vmware_images.VMwareImage(
+                image_id=self._image_id,
+                file_size=file_size,
+                linked_clone=False)
+
+        cache_root_folder = self._ds.build_path("vmware_base", self._image_id)
+        mock_imagecache = mock.Mock()
+        mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
+        vi = vmops.VirtualMachineInstanceConfigInfo(
+                self._instance, "fake_uuid", image_info,
+                self._ds, self._dc_info, mock_imagecache)
+
+        copy_spec = None
+
+        self._vmops._volumeops = mock.Mock()
+        mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
+
+        self._vmops._use_disk_image_as_full_clone("fake_vm_ref", vi)
+
+        mock_copy_virtual_disk.assert_called_once_with(
+                self._session, self._dc_info.ref,
+                str(vi.cache_image_path),
+                '[fake_ds] fake_uuid/fake_uuid.vmdk', copy_spec)
+
+        if not flavor_fits_image:
+            mock_extend_virtual_disk.assert_called_once_with(
+                    self._instance, vi.root_gb * units.Mi,
+                    '[fake_ds] fake_uuid/fake_uuid.vmdk', self._dc_info.ref)
+
+        mock_attach_disk_to_vm.assert_called_once_with(
+                "fake_vm_ref", self._instance, vi.ii.adapter_type,
+                vi.ii.disk_type, '[fake_ds] fake_uuid/fake_uuid.vmdk',
+                vi.root_gb * units.Mi, False)
+
+    def test_use_disk_image_as_full_clone(self):
+        self._test_use_disk_image_as_full_clone()
+
+    def test_use_disk_image_as_full_clone_image_too_big(self):
+        self._test_use_disk_image_as_full_clone(flavor_fits_image=True)
+
+    @mock.patch.object(vmops.VMwareVMOps, '_attach_cdrom_to_vm')
+    @mock.patch.object(vm_util, 'create_virtual_disk')
+    def _test_use_iso_image(self,
+                            mock_create_virtual_disk,
+                            mock_attach_cdrom,
+                            with_root_disk):
+        image_info = vmware_images.VMwareImage(
+                image_id=self._image_id,
+                file_size=10 * units.Mi,
+                linked_clone=True)
+
+        cache_root_folder = self._ds.build_path("vmware_base", self._image_id)
+        mock_imagecache = mock.Mock()
+        mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
+        vi = vmops.VirtualMachineInstanceConfigInfo(
+                self._instance, "fake_uuid", image_info,
+                self._ds, self._dc_info, mock_imagecache)
+
+        self._vmops._volumeops = mock.Mock()
+        mock_attach_disk_to_vm = self._vmops._volumeops.attach_disk_to_vm
+
+        self._vmops._use_iso_image("fake_vm_ref", vi)
+
+        mock_attach_cdrom.assert_called_once_with(
+                "fake_vm_ref", self._instance, self._ds.ref,
+                str(vi.cache_image_path))
+
+        if with_root_disk:
+            mock_create_virtual_disk.assert_called_once_with(
+                    self._session, self._dc_info.ref,
+                    vi.ii.adapter_type, vi.ii.disk_type,
+                    '[fake_ds] fake_uuid/fake_uuid.vmdk',
+                    vi.root_gb * units.Mi)
+            linked_clone = False
+            mock_attach_disk_to_vm.assert_called_once_with(
+                    "fake_vm_ref", self._instance,
+                    vi.ii.adapter_type, vi.ii.disk_type,
+                    '[fake_ds] fake_uuid/fake_uuid.vmdk',
+                    vi.root_gb * units.Mi, linked_clone)
+
+    def test_use_iso_image_with_root_disk(self):
+        self._test_use_iso_image(with_root_disk=True)
+
+    def test_use_iso_image_without_root_disk(self):
+        self._test_use_iso_image(with_root_disk=False)
+
     def _verify_spawn_method_calls(self, mock_call_method):
         # TODO(vui): More explicit assertions of spawn() behavior
         # are waiting on additional refactoring pertaining to image
@@ -654,7 +803,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
             mock_is_neutron.assert_called_once_with()
 
-            expected_mkdir_calls = 3
+            expected_mkdir_calls = 2
             if block_device_info and len(block_device_info.get(
                     'block_device_mapping', [])) > 0:
                 # if block_device_info contains key 'block_device_mapping'
