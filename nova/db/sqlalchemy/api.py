@@ -3358,12 +3358,6 @@ def ec2_volume_get_by_uuid(context, volume_uuid):
 
 
 @require_context
-def get_ec2_volume_id_by_uuid(context, volume_id):
-    result = ec2_volume_get_by_uuid(context, volume_id)
-    return result['id']
-
-
-@require_context
 def ec2_volume_get_by_id(context, volume_id):
     result = _ec2_volume_get_query(context).\
                     filter_by(id=volume_id).\
@@ -3373,12 +3367,6 @@ def ec2_volume_get_by_id(context, volume_id):
         raise exception.VolumeNotFound(volume_id=volume_id)
 
     return result
-
-
-@require_context
-def get_volume_uuid_by_ec2_id(context, ec2_id):
-    result = ec2_volume_get_by_id(context, ec2_id)
-    return result['uuid']
 
 
 @require_context
