@@ -797,11 +797,6 @@ class ComputeTaskManager(base.Base):
                 filter_properties=filter_properties,
                 legacy_bdm_in_spec=legacy_bdm)
 
-    def _get_image(self, context, image_id):
-        if not image_id:
-            return None
-        return self.image_service.show(context, image_id)
-
     def _delete_image(self, context, image_id):
         (image_service, image_id) = glance.get_remote_image_service(context,
                 image_id)
@@ -819,6 +814,10 @@ class ComputeTaskManager(base.Base):
     def unshelve_instance(self, context, instance):
         sys_meta = instance.system_metadata
 
+        def safe_image_show(ctx, image_id):
+            if image_id:
+                return self.image_service.show(ctx, image_id)
+
         if instance.vm_state == vm_states.SHELVED:
             instance.task_state = task_states.POWERING_ON
             instance.save(expected_task_state=task_states.UNSHELVING)
@@ -827,17 +826,19 @@ class ComputeTaskManager(base.Base):
             if snapshot_id:
                 self._delete_image(context, snapshot_id)
         elif instance.vm_state == vm_states.SHELVED_OFFLOADED:
-            try:
-                with compute_utils.EventReporter(context, self.db,
-                        'get_image_info', instance.uuid):
-                    image = self._get_image(context,
-                            sys_meta['shelved_image_id'])
-            except exception.ImageNotFound:
-                with excutils.save_and_reraise_exception():
-                    LOG.error(_('Unshelve cannot find the image with id %s'),
-                              sys_meta['shelved_image_id'], instance=instance)
+            image_id = sys_meta.get('shelved_image_id')
+            with compute_utils.EventReporter(
+                context, self.db, 'get_image_info', instance.uuid):
+                try:
+                    image = safe_image_show(context, image_id)
+                except exception.ImageNotFound:
                     instance.vm_state = vm_states.ERROR
                     instance.save()
+                    reason = _('Unshelve attempted but the image %s '
+                               'cannot be found.') % image_id
+                    LOG.error(reason, instance=instance)
+                    raise exception.UnshelveException(
+                        instance_id=instance.uuid, reason=reason)
 
             try:
                 with compute_utils.EventReporter(context, self.db,

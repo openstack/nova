@@ -1551,3 +1551,7 @@ class InvalidWatchdogAction(Invalid):
 class NoBlockMigrationForConfigDriveInLibVirt(NovaException):
     msg_fmt = _("Block migration of instances with config drives is not "
                 "supported in libvirt.")
+
+
+class UnshelveException(NovaException):
+    msg_fmt = _("Error during unshelve instance %(instance_id)s: %(reason)s")

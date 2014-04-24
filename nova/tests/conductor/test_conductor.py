@@ -1410,6 +1410,36 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_host'] = 'fake-mini'
         self.conductor_manager.unshelve_instance(self.context, instance)
 
+    def test_unshelve_offloaded_instance_glance_image_not_found(self):
+        shelved_image_id = "image_not_found"
+
+        db_instance = jsonutils.to_primitive(self._create_fake_instance())
+        instance = instance_obj.Instance.get_by_uuid(
+            self.context,
+            db_instance['uuid'],
+            expected_attrs=['system_metadata'])
+        instance.vm_state = vm_states.SHELVED_OFFLOADED
+        instance.task_state = task_states.UNSHELVING
+        instance.save()
+        system_metadata = instance.system_metadata
+
+        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
+
+        e = exc.ImageNotFound(image_id=shelved_image_id)
+        self.conductor_manager.image_service.show(
+            self.context, shelved_image_id).AndRaise(e)
+        self.mox.ReplayAll()
+
+        system_metadata['shelved_at'] = timeutils.utcnow()
+        system_metadata['shelved_host'] = 'fake-mini'
+        system_metadata['shelved_image_id'] = shelved_image_id
+
+        self.assertRaises(
+            exc.UnshelveException,
+            self.conductor_manager.unshelve_instance,
+            self.context, instance)
+        self.assertEqual(instance.vm_state, vm_states.ERROR)
+
     def test_unshelve_instance_schedule_and_rebuild(self):
         db_instance = jsonutils.to_primitive(self._create_fake_instance())
         instance = instance_obj.Instance.get_by_uuid(self.context,
@@ -1419,12 +1449,12 @@ class _BaseTaskTestCase(object):
         filter_properties = {}
         system_metadata = instance.system_metadata
 
-        self.mox.StubOutWithMock(self.conductor_manager, '_get_image')
+        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
-        self.conductor_manager._get_image(self.context,
+        self.conductor_manager.image_service.show(self.context,
                 'fake_image_id').AndReturn('fake_image')
         self.conductor_manager._schedule_instances(self.context,
                 'fake_image', filter_properties, instance).AndReturn(
@@ -1454,7 +1484,7 @@ class _BaseTaskTestCase(object):
             raise exc.NoValidHost(reason='')
 
         with contextlib.nested(
-            mock.patch.object(self.conductor_manager, '_get_image',
+            mock.patch.object(self.conductor_manager.image_service, 'show',
                               return_value='fake_image'),
             mock.patch.object(self.conductor_manager, '_schedule_instances',
                               fake_schedule_instances)
@@ -1476,12 +1506,12 @@ class _BaseTaskTestCase(object):
         filter_properties = {}
         system_metadata = instance.system_metadata
 
-        self.mox.StubOutWithMock(self.conductor_manager, '_get_image')
+        self.mox.StubOutWithMock(self.conductor_manager.image_service, 'show')
         self.mox.StubOutWithMock(self.conductor_manager, '_schedule_instances')
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
-        self.conductor_manager._get_image(self.context,
+        self.conductor_manager.image_service.show(self.context,
                 'fake_image_id').AndReturn(None)
         self.conductor_manager._schedule_instances(self.context,
                 None, filter_properties, instance).AndReturn(
