@@ -873,6 +873,7 @@ object_data = {
     'ComputeNodeList': '1.2-3275ea285c786fbc755b4472772a9528',
     'DNSDomain': '1.0-54455ffc071515a2052a70a37d674435',
     'DNSDomainList': '1.0-7d1165619956062314f5f2c4d1bb61ba',
+    'EC2InstanceMapping': '1.0-c9ebf3e641800d1f453ef9f19b159971',
     'FixedIP': '1.1-70b8c86daf93913c7bb11afc901dda76',
     'FixedIPList': '1.1-cbe7d8ff7eea9d3aecb7d537e1007742',
     'Flavor': '1.0-2956744a9d1edd729bf8bf0dcc98c235',
