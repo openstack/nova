@@ -202,7 +202,8 @@ def ec2_inst_id_to_uuid(context, ec2_id):
 
 @memoize
 def get_instance_uuid_from_int_id(context, int_id):
-    return db.get_instance_uuid_by_ec2_id(context, int_id)
+    imap = ec2_obj.EC2InstanceMapping.get_by_id(context, int_id)
+    return imap.uuid
 
 
 def id_to_ec2_snap_id(snapshot_id):
@@ -300,9 +301,13 @@ def get_int_id_from_instance_uuid(context, instance_uuid):
     if instance_uuid is None:
         return
     try:
-        return db.get_ec2_instance_id_by_uuid(context, instance_uuid)
+        imap = ec2_obj.EC2InstanceMapping.get_by_uuid(context, instance_uuid)
+        return imap.id
     except exception.NotFound:
-        return db.ec2_instance_create(context, instance_uuid)['id']
+        imap = ec2_obj.EC2InstanceMapping(context)
+        imap.uuid = instance_uuid
+        imap.create()
+        return imap.id
 
 
 @memoize
