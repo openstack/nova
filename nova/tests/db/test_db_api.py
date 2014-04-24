@@ -6255,6 +6255,16 @@ class Ec2TestCase(test.TestCase):
         vol_uuid = db.get_volume_uuid_by_ec2_id(self.ctxt, vol['id'])
         self.assertEqual(vol_uuid, 'fake-uuid')
 
+    def test_ec2_volume_get_by_id(self):
+        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
+        vol2 = db.ec2_volume_get_by_id(self.ctxt, vol['id'])
+        self.assertEqual(vol2['uuid'], vol['uuid'])
+
+    def test_ec2_volume_get_by_uuid(self):
+        vol = db.ec2_volume_create(self.ctxt, 'fake-uuid')
+        vol2 = db.ec2_volume_get_by_uuid(self.ctxt, vol['uuid'])
+        self.assertEqual(vol2['id'], vol['id'])
+
     def test_get_ec2_volume_id_by_uuid_not_found(self):
         self.assertRaises(exception.VolumeNotFound,
                           db.get_ec2_volume_id_by_uuid,
