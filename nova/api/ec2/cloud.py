@@ -1051,25 +1051,24 @@ class CloudController(object):
         """Format InstanceBlockDeviceMappingResponseItemType."""
         root_device_type = 'instance-store'
         mapping = []
-        get = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid
-        for bdm in block_device.legacy_mapping(get(context, instance_uuid)):
-            volume_id = bdm['volume_id']
-            if (volume_id is None or bdm['no_device']):
+        bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance_uuid)
+        for bdm in bdms:
+            volume_id = bdm.volume_id
+            if volume_id is None or bdm.no_device:
                 continue
 
-            if (bdm['device_name'] == root_device_name and
-                    (bdm['snapshot_id'] or bdm['volume_id'])):
-                assert not bdm['virtual_name']
+            if bdm.device_name == root_device_name and bdm.is_volume:
                 root_device_type = 'ebs'
 
             vol = self.volume_api.get(context, volume_id)
             LOG.debug(_("vol = %s\n"), vol)
             # TODO(yamahata): volume attach time
             ebs = {'volumeId': ec2utils.id_to_ec2_vol_id(volume_id),
-                   'deleteOnTermination': bdm['delete_on_termination'],
+                   'deleteOnTermination': bdm.delete_on_termination,
                    'attachTime': vol['attach_time'] or '',
                    'status': vol['attach_status'], }
-            res = {'deviceName': bdm['device_name'],
+            res = {'deviceName': bdm.device_name,
                    'ebs': ebs, }
             mapping.append(res)
 
