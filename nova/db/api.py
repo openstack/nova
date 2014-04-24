@@ -207,7 +207,7 @@ def compute_node_get_by_service_id(context, service_id):
     """Get a compute node by its associated service id.
 
     :param context: The security context
-    :param compute_id: ID of the associated service
+    :param service_id: ID of the associated service
 
     :returns: Dictionary-like object containing properties of the compute node,
               including its corresponding service and statistics
@@ -769,7 +769,7 @@ def instance_update_and_get_original(context, instance_uuid, values,
     updated one.
 
     :param context: = request context object
-    :param instance_id: = instance id or uuid
+    :param instance_uuid: = instance id or uuid
     :param values: = dict containing column values
 
     :returns: a tuple of the form (old_instance_ref, new_instance_ref)
