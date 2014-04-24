@@ -98,11 +98,15 @@ class GlanceWriteThread(object):
             """Function to do the image data transfer through an update
             and thereon checks if the state is 'active'.
             """
-            self.image_service.update(self.context,
-                                      self.image_id,
-                                      self.image_meta,
-                                      data=self.input)
-            self._running = True
+            try:
+                self.image_service.update(self.context,
+                                          self.image_id,
+                                          self.image_meta,
+                                          data=self.input)
+                self._running = True
+            except exception.ImageNotAuthorized as exc:
+                self.done.send_exception(exc)
+
             while self._running:
                 try:
                     image_meta = self.image_service.show(self.context,
