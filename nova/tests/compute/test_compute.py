@@ -2903,6 +2903,30 @@ class ComputeTestCase(BaseTestCase):
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    def test_console_output_instance_not_found(self):
+        def fake_not_found(*args, **kwargs):
+            raise exception.InstanceNotFound(instance_id='fake-instance')
+
+        self.stubs.Set(self.compute.driver, 'get_console_output',
+                       fake_not_found)
+
+        instance = self._create_fake_instance_obj()
+        self.compute.run_instance(self.context,
+            jsonutils.to_primitive(instance), {}, {}, [], None,
+            None, True, None, False)
+
+        self.assertRaises(messaging.ExpectedException,
+                          self.compute.get_console_output, self.context,
+                          instance, 0)
+
+        self.compute = utils.ExceptionHelper(self.compute)
+
+        self.assertRaises(exception.InstanceNotFound,
+                          self.compute.get_console_output, self.context,
+                          instance, 0)
+
+        self.compute.terminate_instance(self.context, instance, [], [])
+
     def test_novnc_vnc_console(self):
         # Make sure we can a vnc console for an instance.
         self.flags(vnc_enabled=True)

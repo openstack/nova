@@ -3955,7 +3955,8 @@ class ComputeManager(manager.Manager):
         network_info = self._get_instance_nw_info(context, instance)
         self._inject_network_info(context, instance, network_info)
 
-    @messaging.expected_exceptions(NotImplementedError)
+    @messaging.expected_exceptions(NotImplementedError,
+                                   exception.InstanceNotFound)
     @wrap_exception()
     @wrap_instance_fault
     def get_console_output(self, context, instance, tail_length):
