@@ -268,7 +268,7 @@ class IptablesTable(object):
 
         rule_obj = IptablesRule(chain, rule, wrap, top)
         if rule_obj in self.rules:
-            LOG.debug(_("Skipping duplicate iptables rule addition"))
+            LOG.debug("Skipping duplicate iptables rule addition")
         else:
             self.rules.append(IptablesRule(chain, rule, wrap, top))
             self.dirty = True
@@ -427,7 +427,7 @@ class IptablesManager(object):
         if self.dirty():
             self._apply()
         else:
-            LOG.debug(_("Skipping apply due to lack of new rules"))
+            LOG.debug("Skipping apply due to lack of new rules")
 
     @utils.synchronized('iptables', external=True)
     def _apply(self):
@@ -455,7 +455,7 @@ class IptablesManager(object):
             self.execute('%s-restore' % (cmd,), '-c', run_as_root=True,
                          process_input='\n'.join(all_lines),
                          attempts=5)
-        LOG.debug(_("IPTablesManager.apply completed with success"))
+        LOG.debug("IPTablesManager.apply completed with success")
 
     def _find_table(self, lines, table_name):
         if len(lines) < 3:
@@ -710,7 +710,7 @@ def send_arp_for_ip(ip, device, count):
                         run_as_root=True, check_exit_code=False)
 
     if err:
-        LOG.debug(_('arping error for ip %s'), ip)
+        LOG.debug('arping error for ip %s', ip)
 
 
 def bind_floating_ip(floating_ip, device):
@@ -1019,7 +1019,7 @@ def kill_dhcp(dev):
         if conffile.split('/')[-1] in out:
             _execute('kill', '-9', pid, run_as_root=True)
         else:
-            LOG.debug(_('Pid %d is stale, skip killing dnsmasq'), pid)
+            LOG.debug('Pid %d is stale, skip killing dnsmasq', pid)
     _remove_dnsmasq_accept_rules(dev)
     _remove_dhcp_mangle_rule(dev)
 
@@ -1065,7 +1065,7 @@ def restart_dhcp(context, dev, network_ref):
             except Exception as exc:  # pylint: disable=W0703
                 LOG.error(_('Hupping dnsmasq threw %s'), exc)
         else:
-            LOG.debug(_('Pid %d is stale, relaunching dnsmasq'), pid)
+            LOG.debug('Pid %d is stale, relaunching dnsmasq', pid)
 
     cmd = ['env',
            'CONFIG_FILE=%s' % jsonutils.dumps(CONF.dhcpbridge_flagfile),
@@ -1147,7 +1147,7 @@ interface %s
             except Exception as exc:  # pylint: disable=W0703
                 LOG.error(_('killing radvd threw %s'), exc)
         else:
-            LOG.debug(_('Pid %d is stale, relaunching radvd'), pid)
+            LOG.debug('Pid %d is stale, relaunching radvd', pid)
 
     cmd = ['radvd',
            '-C', '%s' % _ra_file(dev, 'conf'),
@@ -1352,7 +1352,7 @@ def delete_net_dev(dev):
         try:
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
                           check_exit_code=[0, 2, 254])
-            LOG.debug(_("Net device removed: '%s'"), dev)
+            LOG.debug("Net device removed: '%s'", dev)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
                 LOG.error(_("Failed removing net device: '%s'"), dev)
@@ -1472,7 +1472,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """Create a vlan unless it already exists."""
         interface = 'vlan%s' % vlan_num
         if not device_exists(interface):
-            LOG.debug(_('Starting VLAN interface %s'), interface)
+            LOG.debug('Starting VLAN interface %s', interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,
                      'name', interface, 'type', 'vlan',
                      'id', vlan_num, run_as_root=True,
@@ -1515,7 +1515,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
         """
         if not device_exists(bridge):
-            LOG.debug(_('Starting Bridge %s'), bridge)
+            LOG.debug('Starting Bridge %s', bridge)
             _execute('brctl', 'addbr', bridge, run_as_root=True)
             _execute('brctl', 'setfd', bridge, 0, run_as_root=True)
             # _execute('brctl setageing %s 10' % bridge, run_as_root=True)
@@ -1797,7 +1797,7 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         create_tap_dev(dev, mac_address)
 
         if not device_exists(bridge):
-            LOG.debug(_("Starting bridge %s "), bridge)
+            LOG.debug("Starting bridge %s ", bridge)
             utils.execute('brctl', 'addbr', bridge, run_as_root=True)
             utils.execute('brctl', 'setfd', bridge, str(0), run_as_root=True)
             utils.execute('brctl', 'stp', bridge, 'off', run_as_root=True)
@@ -1805,7 +1805,7 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                           run_as_root=True, check_exit_code=[0, 2, 254])
             utils.execute('ip', 'link', 'set', bridge, 'up', run_as_root=True,
                           check_exit_code=[0, 2, 254])
-            LOG.debug(_("Done starting bridge %s"), bridge)
+            LOG.debug("Done starting bridge %s", bridge)
 
             full_ip = '%s/%s' % (network['dhcp_server'],
                                  network['cidr'].rpartition('/')[2])

@@ -34,7 +34,7 @@ def update_instance_cache_with_nw_info(impl, context, instance,
             nw_info = None
         if nw_info is None:
             nw_info = impl._get_instance_nw_info(context, instance)
-        LOG.debug(_('Updating cache with info: %s'), nw_info)
+        LOG.debug('Updating cache with info: %s', nw_info)
         # NOTE(comstud): The save() method actually handles updating or
         # creating the instance.  We don't need to retrieve the object
         # from the DB first.

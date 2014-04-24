@@ -45,7 +45,7 @@ class MiniDNS(dns_driver.DNSDriver):
         else:
             self.tempdir = tempfile.mkdtemp()
             self.filename = os.path.join(self.tempdir, "dnstest.txt")
-        LOG.debug(_('minidns file is |%s|'), self.filename)
+        LOG.debug('minidns file is |%s|', self.filename)
 
         if not os.path.exists(self.filename):
             f = open(self.filename, "w+")
