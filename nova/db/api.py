@@ -1862,6 +1862,14 @@ def ec2_instance_create(context, instance_uuid, id=None):
     return IMPL.ec2_instance_create(context, instance_uuid, id)
 
 
+def ec2_instance_get_by_uuid(context, instance_uuid):
+    return IMPL.ec2_instance_get_by_uuid(context, instance_uuid)
+
+
+def ec2_instance_get_by_id(context, instance_id):
+    return IMPL.ec2_instance_get_by_id(context, instance_id)
+
+
 ####################
 
 

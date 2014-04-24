@@ -5396,26 +5396,38 @@ def ec2_instance_create(context, instance_uuid, id=None):
 
 
 @require_context
-def get_ec2_instance_id_by_uuid(context, instance_id):
+def ec2_instance_get_by_uuid(context, instance_uuid):
     result = _ec2_instance_get_query(context).\
-                    filter_by(uuid=instance_id).\
+                    filter_by(uuid=instance_uuid).\
+                    first()
+
+    if not result:
+        raise exception.InstanceNotFound(instance_id=instance_uuid)
+
+    return result
+
+
+@require_context
+def get_ec2_instance_id_by_uuid(context, instance_id):
+    result = ec2_instance_get_by_uuid(context, instance_id)
+    return result['id']
+
+
+@require_context
+def ec2_instance_get_by_id(context, instance_id):
+    result = _ec2_instance_get_query(context).\
+                    filter_by(id=instance_id).\
                     first()
 
     if not result:
         raise exception.InstanceNotFound(instance_id=instance_id)
 
-    return result['id']
+    return result
 
 
 @require_context
 def get_instance_uuid_by_ec2_id(context, ec2_id):
-    result = _ec2_instance_get_query(context).\
-                    filter_by(id=ec2_id).\
-                    first()
-
-    if not result:
-        raise exception.InstanceNotFound(instance_id=ec2_id)
-
+    result = ec2_instance_get_by_id(context, ec2_id)
     return result['uuid']
 
 
