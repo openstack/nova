@@ -205,7 +205,7 @@ def get_next_device_name(instance, device_name_list,
         prefix = '/dev/xvd'
 
     if req_prefix != prefix:
-        LOG.debug(_("Using %(prefix)s instead of %(req_prefix)s"),
+        LOG.debug("Using %(prefix)s instead of %(req_prefix)s",
                   {'prefix': prefix, 'req_prefix': req_prefix})
 
     used_letters = set()
@@ -354,8 +354,8 @@ def notify_about_aggregate_update(context, event_suffix, aggregate_payload):
     if not aggregate_identifier:
         aggregate_identifier = aggregate_payload.get('name', None)
         if not aggregate_identifier:
-            LOG.debug(_("No aggregate id or name specified for this "
-                        "notification and it will be ignored"))
+            LOG.debug("No aggregate id or name specified for this "
+                      "notification and it will be ignored")
             return
 
     notifier = rpc.get_notifier(service='aggregate',

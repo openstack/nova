@@ -110,7 +110,7 @@ class Claim(NopClaim):
         """Compute operation requiring claimed resources has failed or
         been aborted.
         """
-        LOG.debug(_("Aborting claim: %s") % self, instance=self.instance)
+        LOG.debug("Aborting claim: %s" % self, instance=self.instance)
         self.tracker.abort_instance_claim(self.instance)
 
     def _claim_test(self, resources, limits=None):
@@ -252,5 +252,5 @@ class ResizeClaim(Claim):
         """Compute operation requiring claimed resources has failed or
         been aborted.
         """
-        LOG.debug(_("Aborting claim: %s") % self, instance=self.instance)
+        LOG.debug("Aborting claim: %s" % self, instance=self.instance)
         self.tracker.drop_resize_claim(self.instance, self.instance_type)
