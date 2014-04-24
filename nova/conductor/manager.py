@@ -661,10 +661,13 @@ class ComputeTaskManager(base.Base):
     @messaging.expected_exceptions(exception.NoValidHost,
                                    exception.ComputeServiceUnavailable,
                                    exception.InvalidHypervisorType,
+                                   exception.InvalidCPUInfo,
                                    exception.UnableToMigrateToSelf,
                                    exception.DestinationHypervisorTooOld,
                                    exception.InvalidLocalStorage,
                                    exception.InvalidSharedStorage,
+                                   exception.HypervisorUnavailable,
+                                   exception.InstanceNotRunning,
                                    exception.MigrationPreCheckError)
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None):
@@ -764,6 +767,7 @@ class ComputeTaskManager(base.Base):
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
+                exception.InstanceNotRunning,
                 exception.MigrationPreCheckError) as ex:
             with excutils.save_and_reraise_exception():
                 #TODO(johngarbutt) - eventually need instance actions here

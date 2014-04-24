@@ -336,13 +336,16 @@ class AdminActionsController(wsgi.Controller):
             instance = self.compute_api.get(context, id, want_objects=True)
             self.compute_api.live_migrate(context, instance, block_migration,
                                           disk_over_commit, host)
-        except (exception.ComputeServiceUnavailable,
+        except (exception.NoValidHost,
+                exception.ComputeServiceUnavailable,
                 exception.InvalidHypervisorType,
+                exception.InvalidCPUInfo,
                 exception.UnableToMigrateToSelf,
                 exception.DestinationHypervisorTooOld,
-                exception.NoValidHost,
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
+                exception.HypervisorUnavailable,
+                exception.InstanceNotRunning,
                 exception.MigrationPreCheckError) as ex:
             raise exc.HTTPBadRequest(explanation=ex.format_message())
         except exception.InstanceNotFound as e:
