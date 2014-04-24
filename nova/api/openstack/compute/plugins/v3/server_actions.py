@@ -21,7 +21,7 @@ from nova.api.openstack import wsgi
 from nova import compute
 from nova.openstack.common.gettextutils import _
 
-ALIAS = "os-instance-actions"
+ALIAS = "os-server-actions"
 authorize_actions = extensions.extension_authorizer('compute',
                                                     'v3:' + ALIAS)
 authorize_events = extensions.soft_extension_authorizer('compute',
@@ -32,17 +32,20 @@ ACTION_KEYS = ['action', 'instance_uuid', 'request_id', 'user_id',
 EVENT_KEYS = ['event', 'start_time', 'finish_time', 'result', 'traceback']
 
 
-class InstanceActionsController(wsgi.Controller):
+class ServerActionsController(wsgi.Controller):
 
     def __init__(self):
-        super(InstanceActionsController, self).__init__()
+        super(ServerActionsController, self).__init__()
         self.compute_api = compute.API()
         self.action_api = compute.InstanceActionAPI()
 
     def _format_action(self, action_raw):
         action = {}
         for key in ACTION_KEYS:
-            action[key] = action_raw.get(key)
+            if key == 'instance_uuid':
+                action['server_uuid'] = action_raw.get(key)
+            else:
+                action[key] = action_raw.get(key)
         return action
 
     def _format_event(self, event_raw):
@@ -59,7 +62,7 @@ class InstanceActionsController(wsgi.Controller):
         authorize_actions(context, target=instance)
         actions_raw = self.action_api.actions_get(context, instance)
         actions = [self._format_action(action) for action in actions_raw]
-        return {'instance_actions': actions}
+        return {'server_actions': actions}
 
     @extensions.expected_errors(404)
     def show(self, req, server_id, id):
@@ -79,19 +82,19 @@ class InstanceActionsController(wsgi.Controller):
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
             action['events'] = [self._format_event(evt) for evt in events_raw]
-        return {'instance_action': action}
+        return {'server_action': action}
 
 
-class InstanceActions(extensions.V3APIExtensionBase):
+class ServerActions(extensions.V3APIExtensionBase):
     """View a log of actions and events taken on an instance."""
 
-    name = "InstanceActions"
+    name = "ServerActions"
     alias = ALIAS
     version = 1
 
     def get_resources(self):
-        ext = extensions.ResourceExtension('os-instance-actions',
-                                           InstanceActionsController(),
+        ext = extensions.ResourceExtension('os-server-actions',
+                                           ServerActionsController(),
                                            parent=dict(
                                                member_name='server',
                                                collection_name='servers'))

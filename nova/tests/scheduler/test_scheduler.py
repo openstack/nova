@@ -40,7 +40,7 @@ from nova.scheduler import manager
 from nova import servicegroup
 from nova import test
 from nova.tests import fake_instance
-from nova.tests import fake_instance_actions
+from nova.tests import fake_server_actions
 from nova.tests.image import fake as fake_image
 from nova.tests import matchers
 from nova.tests.scheduler import fakes
@@ -65,7 +65,7 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         self.topic = 'fake_topic'
         self.fake_args = (1, 2, 3)
         self.fake_kwargs = {'cat': 'meow', 'dog': 'woof'}
-        fake_instance_actions.stub_out_action_events(self.stubs)
+        fake_server_actions.stub_out_action_events(self.stubs)
 
     def test_1_correct_init(self):
         # Correct scheduler driver

@@ -57,9 +57,9 @@ from nova.tests.api.openstack.compute.contrib import test_services
 from nova.tests.api.openstack import fakes
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
-from nova.tests import fake_instance_actions
 from nova.tests import fake_network
 from nova.tests import fake_network_cache_model
+from nova.tests import fake_server_actions
 from nova.tests import fake_utils
 from nova.tests.image import fake
 from nova.tests.integrated import api_samples_test_base
@@ -3269,18 +3269,18 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
 
     def setUp(self):
         super(InstanceActionsSampleJsonTest, self).setUp()
-        self.actions = fake_instance_actions.FAKE_ACTIONS
-        self.events = fake_instance_actions.FAKE_EVENTS
+        self.actions = fake_server_actions.FAKE_ACTIONS
+        self.events = fake_server_actions.FAKE_EVENTS
         self.instance = test_utils.get_test_instance()
 
-        def fake_instance_action_get_by_request_id(context, uuid, request_id):
+        def fake_server_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
 
-        def fake_instance_actions_get(context, uuid):
+        def fake_server_actions_get(context, uuid):
             return [copy.deepcopy(value) for value in
                     self.actions[uuid].itervalues()]
 
-        def fake_instance_action_events_get(context, action_id):
+        def fake_server_action_events_get(context, action_id):
             return copy.deepcopy(self.events[action_id])
 
         def fake_instance_get_by_uuid(context, instance_id):
@@ -3291,16 +3291,16 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
             return {'uuid': instance_uuid}
 
         self.stubs.Set(db, 'action_get_by_request_id',
-                       fake_instance_action_get_by_request_id)
-        self.stubs.Set(db, 'actions_get', fake_instance_actions_get)
+                       fake_server_action_get_by_request_id)
+        self.stubs.Set(db, 'actions_get', fake_server_actions_get)
         self.stubs.Set(db, 'action_events_get',
-                       fake_instance_action_events_get)
+                       fake_server_action_events_get)
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         self.stubs.Set(compute_api.API, 'get', fake_get)
 
     def test_instance_action_get(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
-        fake_request_id = fake_instance_actions.FAKE_REQUEST_ID1
+        fake_uuid = fake_server_actions.FAKE_UUID
+        fake_request_id = fake_server_actions.FAKE_REQUEST_ID1
         fake_action = self.actions[fake_uuid][fake_request_id]
 
         response = self._do_get('servers/%s/os-instance-actions/%s' %
@@ -3316,7 +3316,7 @@ class InstanceActionsSampleJsonTest(ApiSampleTestBaseV2):
         self._verify_response('instance-action-get-resp', subs, response, 200)
 
     def test_instance_actions_list(self):
-        fake_uuid = fake_instance_actions.FAKE_UUID
+        fake_uuid = fake_server_actions.FAKE_UUID
         response = self._do_get('servers/%s/os-instance-actions' % (fake_uuid))
         subs = self._get_regexes()
         subs['action'] = '(reboot)|(resize)'
