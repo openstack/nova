@@ -147,6 +147,36 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                               'unexplained_images': []},
                              images)
 
+    @mock.patch.object(imagecache.ImageCacheManager, 'timestamp_folder_get')
+    @mock.patch.object(imagecache.ImageCacheManager, 'timestamp_cleanup')
+    @mock.patch.object(imagecache.ImageCacheManager, '_get_ds_browser')
+    def test_enlist_image(self,
+                          mock_get_ds_browser,
+                          mock_timestamp_cleanup,
+                          mock_timestamp_folder_get):
+        image_id = "fake_image_id"
+        dc_ref = "fake_dc_ref"
+        fake_ds_ref = mock.Mock()
+        ds = ds_util.Datastore(
+                ref=fake_ds_ref, name='fake_ds',
+                capacity=1,
+                freespace=1)
+
+        ds_browser = mock.Mock()
+        mock_get_ds_browser.return_value = ds_browser
+        timestamp_folder_path = mock.Mock()
+        mock_timestamp_folder_get.return_value = timestamp_folder_path
+
+        self._imagecache.enlist_image(image_id, ds, dc_ref)
+
+        cache_root_folder = ds.build_path("fake-base-folder")
+        mock_get_ds_browser.assert_called_once_with(
+                ds.ref)
+        mock_timestamp_folder_get.assert_called_once_with(
+                cache_root_folder, "fake_image_id")
+        mock_timestamp_cleanup.assert_called_once_with(
+                dc_ref, ds_browser, timestamp_folder_path)
+
     def test_age_cached_images(self):
         def fake_get_ds_browser(ds_ref):
             return 'fake-ds-browser'

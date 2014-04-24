@@ -721,7 +721,6 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         # sequence of VIM operations invoked.
         expected_methods = ['get_dynamic_property',
                             'SearchDatastore_Task',
-                            'SearchDatastore_Task',
                             'CreateVirtualDisk_Task',
                             'DeleteDatastoreFile_Task',
                             'MoveDatastoreFile_Task',
@@ -750,6 +749,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 return_value='fake_vm_ref')
     @mock.patch('nova.virt.vmwareapi.ds_util.mkdir')
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._set_machine_id')
+    @mock.patch(
+        'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
     @mock.patch('nova.virt.vmwareapi.vm_util.get_vnc_port', return_value=5900)
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._set_vnc_config')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
@@ -761,6 +762,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_power_on_instance,
                    mock_set_vnc_config,
                    mock_get_vnc_port,
+                   mock_enlist_image,
                    mock_set_machine_id,
                    mock_mkdir,
                    mock_create_vm,
@@ -860,6 +862,9 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 self.assertFalse(_fetch_image.called)
                 self.assertFalse(_call_method.called)
             else:
+                mock_enlist_image.assert_called_once_with(
+                        self._image_id, self._ds, self._dc_info.ref)
+
                 upload_file_name = 'vmware_temp/tmp-uuid/%s/%s-flat.vmdk' % (
                         self._image_id, self._image_id)
                 _fetch_image.assert_called_once_with(
