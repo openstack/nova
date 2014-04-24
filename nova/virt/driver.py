@@ -186,10 +186,10 @@ class ComputeDriver(object):
         """
         return len(self.list_instances())
 
-    def instance_exists(self, instance_id):
+    def instance_exists(self, instance):
         """Checks existence of an instance on the host.
 
-        :param instance_id: The ID / name of the instance to lookup
+        :param instance: The instance to lookup
 
         Returns True if an instance with the supplied ID exists on
         the host, False otherwise.
@@ -201,7 +201,10 @@ class ComputeDriver(object):
             encouraged to override this method with something more
             efficient.
         """
-        return instance_id in self.list_instances()
+        try:
+            return instance['uuid'] in self.list_instance_uuids()
+        except NotImplementedError:
+            return instance['name'] in self.list_instances()
 
     def estimate_instance_overhead(self, instance_info):
         """Estimate the virtualization overhead required to build an instance

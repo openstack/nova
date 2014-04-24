@@ -5308,14 +5308,14 @@ class LibvirtConnTestCase(test.TestCase):
         called = {'count': 0}
         instance = {'name': 'test'}
 
-        def fake_instance_exists(name):
-            return False
+        def fake_lookup_by_name(instance_name):
+            raise exception.InstanceNotFound(instance_id='fake')
 
         def fake_hard_reboot(*args):
             called['count'] += 1
 
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(conn, 'instance_exists', fake_instance_exists)
+        self.stubs.Set(conn, '_lookup_by_name', fake_lookup_by_name)
         self.stubs.Set(conn, '_hard_reboot', fake_hard_reboot)
         conn.resume_state_on_host_boot(self.context, instance, network_info=[],
                                        block_device_info=None)
