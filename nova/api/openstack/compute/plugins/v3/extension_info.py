@@ -15,7 +15,6 @@
 import webob.exc
 
 from nova.api.openstack import extensions
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 
@@ -45,7 +44,7 @@ class ExtensionInfoController(object):
             if authorize(context, action='discoverable'):
                 discoverable_extensions[alias] = ext
             else:
-                LOG.debug(_("Filter out extension %s from discover list"),
+                LOG.debug("Filter out extension %s from discover list",
                           alias)
         return discoverable_extensions
 

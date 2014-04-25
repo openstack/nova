@@ -16,7 +16,6 @@ import webob.exc
 
 import nova.api.ec2
 from nova import context
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -26,8 +25,8 @@ LOG = logging.getLogger(__name__)
 
 def ec2_error_response(request_id, code, message, status=500):
     """Helper to construct an EC2 compatible error response."""
-    LOG.debug(_('EC2 error response: %(code)s: %(message)s') %
-                {'code': code, 'message': message})
+    LOG.debug('EC2 error response: %(code)s: %(message)s',
+              {'code': code, 'message': message})
     resp = webob.Response()
     resp.status = status
     resp.headers['Content-Type'] = 'text/xml'

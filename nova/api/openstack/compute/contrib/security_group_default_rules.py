@@ -149,7 +149,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase):
 
         id = self.security_group_api.validate_id(id)
 
-        LOG.debug(_("Showing security_group_default_rule with id %s") % id)
+        LOG.debug("Showing security_group_default_rule with id %s", id)
         try:
             rule = self.security_group_api.get_default_rule(context, id)
         except exception.SecurityGroupDefaultRuleNotFound:

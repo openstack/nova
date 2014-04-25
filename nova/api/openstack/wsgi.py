@@ -812,7 +812,7 @@ class Resource(wsgi.Application):
         try:
             content_type = request.get_content_type()
         except exception.InvalidContentType:
-            LOG.debug(_("Unrecognized Content-Type provided in request"))
+            LOG.debug("Unrecognized Content-Type provided in request")
             return None, ''
 
         return content_type, request.body
@@ -938,8 +938,8 @@ class Resource(wsgi.Application):
                     "%(body)s") % {'action': action,
                                    'body': unicode(body, 'utf-8')}
             LOG.debug(logging.mask_password(msg))
-        LOG.debug(_("Calling method '%(meth)s' (Content-type='%(ctype)s', "
-                    "Accept='%(accept)s')"),
+        LOG.debug("Calling method '%(meth)s' (Content-type='%(ctype)s', "
+                  "Accept='%(accept)s')",
                   {'meth': str(meth),
                    'ctype': content_type,
                    'accept': accept})
@@ -1211,7 +1211,7 @@ class Fault(webob.exc.HTTPException):
         code = self.wrapped_exc.status_int
         fault_name = self._fault_names.get(code, "computeFault")
         explanation = self.wrapped_exc.explanation
-        LOG.debug(_("Returning %(code)s to user: %(explanation)s"),
+        LOG.debug("Returning %(code)s to user: %(explanation)s",
                   {'code': code, 'explanation': explanation})
 
         explanation = gettextutils.translate(explanation,
