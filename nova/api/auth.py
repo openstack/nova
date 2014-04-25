@@ -34,7 +34,7 @@ auth_opts = [
                       'This option is only used by v2 api. Rate limiting '
                       'is removed from v3 api.')),
     cfg.StrOpt('auth_strategy',
-               default='noauth',
+               default='keystone',
                help='The strategy to use for auth: noauth or keystone.'),
     cfg.BoolOpt('use_forwarded_for',
                 default=False,
