@@ -134,7 +134,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
-                LOG.debug(_("Neutron security group %s not found"), name)
+                LOG.debug("Neutron security group %s not found", name)
                 self.raise_not_found(unicode(e))
             else:
                 LOG.error(_("Neutron Error: %s"), e)
@@ -276,7 +276,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
         except n_exc.NeutronClientException as e:
             exc_info = sys.exc_info()
             if e.status_code == 404:
-                LOG.debug(_("Neutron security group rule %s not found"), id)
+                LOG.debug("Neutron security group rule %s not found", id)
                 self.raise_not_found(unicode(e))
             else:
                 LOG.error(_("Neutron Error: %s"), e)

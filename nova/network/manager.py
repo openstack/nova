@@ -363,14 +363,14 @@ class NetworkManager(manager.Manager):
                                                                    self.host,
                                                                    time)
             if num:
-                LOG.debug(_('Disassociated %s stale fixed ip(s)'), num)
+                LOG.debug('Disassociated %s stale fixed ip(s)', num)
 
     def set_network_host(self, context, network_ref):
         """Safely sets the host of the network."""
         if not isinstance(network_ref, network_obj.Network):
             network_ref = network_obj.Network._from_db_object(
                 context, network_obj.Network(), network_ref)
-        LOG.debug(_('setting network host'), context=context)
+        LOG.debug('setting network host', context=context)
         network_ref.host = self.host
         network_ref.save()
         return self.host
@@ -490,14 +490,14 @@ class NetworkManager(manager.Manager):
         vpn = kwargs['vpn']
         macs = kwargs['macs']
         admin_context = context.elevated()
-        LOG.debug(_("network allocations"), instance_uuid=instance_uuid,
+        LOG.debug("network allocations", instance_uuid=instance_uuid,
                   context=context)
         networks = self._get_networks_for_instance(admin_context,
                                         instance_uuid, project_id,
                                         requested_networks=requested_networks)
         networks_list = [self._get_network_dict(network)
                                  for network in networks]
-        LOG.debug(_('networks retrieved for instance: |%s|'),
+        LOG.debug('networks retrieved for instance: |%s|',
                   networks_list, context=context, instance_uuid=instance_uuid)
 
         try:
@@ -555,7 +555,7 @@ class NetworkManager(manager.Manager):
                     read_deleted_context, instance_uuid)
         except exception.FixedIpNotFoundForInstance:
             fixed_ips = []
-        LOG.debug(_("network deallocation for instance"),
+        LOG.debug("network deallocation for instance",
                   context=context, instance_uuid=instance_uuid)
         # deallocate fixed ips
         for fixed_ip in fixed_ips:
@@ -984,7 +984,7 @@ class NetworkManager(manager.Manager):
 
     def lease_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is leased."""
-        LOG.debug(_('Leased IP |%s|'), address, context=context)
+        LOG.debug('Leased IP |%s|', address, context=context)
         fixed_ip = fixed_ip_obj.FixedIP.get_by_address(context, address)
 
         if fixed_ip.instance_uuid is None:
@@ -999,7 +999,7 @@ class NetworkManager(manager.Manager):
 
     def release_fixed_ip(self, context, address):
         """Called by dhcp-bridge when ip is released."""
-        LOG.debug(_('Released IP |%s|'), address, context=context)
+        LOG.debug('Released IP |%s|', address, context=context)
         fixed_ip = fixed_ip_obj.FixedIP.get_by_address(context, address)
 
         if fixed_ip.instance_uuid is None:
@@ -1913,7 +1913,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 network['multi_host'] and vpn_address != CONF.vpn_ip and
                 not network_obj.Network.in_use_on_host(context, network['id'],
                                                        self.host)):
-                LOG.debug(_("Remove unused gateway %s"), network['bridge'])
+                LOG.debug("Remove unused gateway %s", network['bridge'])
                 self.driver.kill_dhcp(dev)
                 self.l3driver.remove_gateway(network)
                 if not CONF.share_dhcp_address:

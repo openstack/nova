@@ -206,7 +206,9 @@ def no_translate_debug_logs(logical_line, filename):
 
     N319
     """
-    dirs = ["nova/scheduler"]
+    dirs = ["nova/scheduler",
+            "nova/network",
+           ]
     if max([name in filename for name in dirs]):
         if logical_line.startswith("LOG.debug(_("):
             yield(0, "N319 Don't translate debug level logs")

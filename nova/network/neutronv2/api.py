@@ -176,7 +176,7 @@ class API(base_api.NetworkAPI):
             if dhcp_opts is not None:
                 port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
             port_id = port_client.create_port(port_req_body)['port']['id']
-            LOG.debug(_('Successfully created port: %s') % port_id,
+            LOG.debug('Successfully created port: %s', port_id,
                       instance=instance)
             return port_id
         except neutron_client_exc.NeutronClientException as e:
@@ -216,7 +216,7 @@ class API(base_api.NetworkAPI):
             # pre-allocated port we also remove it from this set.
             available_macs = set(hypervisor_macs)
         neutron = neutronv2.get_client(context)
-        LOG.debug(_('allocate_for_instance() for %s'),
+        LOG.debug('allocate_for_instance() for %s',
                   instance['display_name'])
         if not instance['project_id']:
             msg = _('empty project id for instance %s')
@@ -398,7 +398,7 @@ class API(base_api.NetworkAPI):
 
     def deallocate_for_instance(self, context, instance, **kwargs):
         """Deallocate all network resources related to the instance."""
-        LOG.debug(_('deallocate_for_instance() for %s'),
+        LOG.debug('deallocate_for_instance() for %s',
                   instance['display_name'])
         search_opts = {'device_id': instance['uuid']}
         neutron = neutronv2.get_client(context)
@@ -472,7 +472,7 @@ class API(base_api.NetworkAPI):
                               port_ids=None):
         # keep this caching-free version of the get_instance_nw_info method
         # because it is used by the caching logic itself.
-        LOG.debug(_('get_instance_nw_info() for %s'), instance['display_name'])
+        LOG.debug('get_instance_nw_info() for %s', instance['display_name'])
         nw_info = self._build_network_info_model(context, instance, networks,
                                                  port_ids)
         return network_model.NetworkInfo.hydrate(nw_info)
@@ -582,7 +582,7 @@ class API(base_api.NetworkAPI):
         Return the number of instances than can be successfully allocated
         with the requested network configuration.
         """
-        LOG.debug(_('validate_networks() for %s'),
+        LOG.debug('validate_networks() for %s',
                   requested_networks)
 
         neutron = neutronv2.get_client(context)

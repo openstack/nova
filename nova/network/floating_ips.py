@@ -97,7 +97,7 @@ class FloatingIP(object):
                                                   interface,
                                                   fixed_ip.network)
                 except processutils.ProcessExecutionError:
-                    LOG.debug(_('Interface %s not found'), interface)
+                    LOG.debug('Interface %s not found', interface)
                     raise exception.NoFloatingIpInterface(interface=interface)
 
     def allocate_for_instance(self, context, **kwargs):
@@ -121,9 +121,9 @@ class FloatingIP(object):
             # allocate a floating ip
             floating_address = self.allocate_floating_ip(context, project_id,
                 True)
-            LOG.debug(_("floating IP allocation for instance "
-                        "|%s|"), floating_address,
-                        instance_uuid=instance_uuid, context=context)
+            LOG.debug("floating IP allocation for instance "
+                      "|%s|", floating_address,
+                      instance_uuid=instance_uuid, context=context)
 
             # get the first fixed address belonging to the instance
             fixed_ips = nw_info.fixed_ips()
