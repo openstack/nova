@@ -294,12 +294,13 @@ def get_disk_backing_file(path, basename=True):
     return backing_file
 
 
-def copy_image(src, dest, host=None):
+def copy_image(src, dest, host=None, receive=False):
     """Copy a disk image to an existing directory
 
     :param src: Source image
     :param dest: Destination path
     :param host: Remote host
+    :param receive: Reverse the rsync direction
     """
 
     if not host:
@@ -309,7 +310,10 @@ def copy_image(src, dest, host=None):
         # coreutils 8.11, holes can be read efficiently too.
         execute('cp', src, dest)
     else:
-        dest = "%s:%s" % (utils.safe_ip_format(host), dest)
+        if receive:
+            src = "%s:%s" % (utils.safe_ip_format(host), src)
+        else:
+            dest = "%s:%s" % (utils.safe_ip_format(host), dest)
         # Try rsync first as that can compress and create sparse dest files.
         # Note however that rsync currently doesn't read sparse files
         # efficiently: https://bugzilla.samba.org/show_bug.cgi?id=8918

@@ -522,6 +522,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
             'user_id': '838a72b0-0d54-4827-8fd6-fb1227633ceb',
             'ephemeral_key_uuid': None,
             'vcpu_model': None,
+            'host': 'fake-host',
         }
 
         self.device_xml_tmpl = """
@@ -7182,7 +7183,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         libvirt_driver.libvirt_utils.create_image(
             disk_info['type'], mox.IgnoreArg(), disk_info['virt_disk_size'])
-        drvr._fetch_instance_kernel_ramdisk(self.context, self.test_instance)
+        drvr._fetch_instance_kernel_ramdisk(self.context, self.test_instance,
+                                            fallback_from_host=None)
         self.mox.ReplayAll()
 
         self.stubs.Set(os.path, 'exists', lambda *args: False)
@@ -7194,6 +7196,89 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
     def test_create_images_and_backing_raw(self):
         self._do_test_create_images_and_backing('raw')
+
+    def test_create_images_and_backing_images_not_exist_no_fallback(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info_json = jsonutils.dumps(
+            [{u'backing_file': u'fake_image_backing_file',
+              u'disk_size': 10747904,
+              u'path': u'disk_path',
+              u'type': u'qcow2',
+              u'virt_disk_size': 25165824}])
+
+        self.test_instance.update({'user_id': 'fake-user',
+                                   'os_type': None,
+                                   'project_id': 'fake-project'})
+        instance = objects.Instance(**self.test_instance)
+
+        with mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
+                               side_effect=exception.ImageNotFound(
+                                   image_id="fake_id")):
+            self.assertRaises(exception.ImageNotFound,
+                              conn._create_images_and_backing,
+                              self.context, instance,
+                              "/fake/instance/dir",
+                              disk_info_json)
+
+    def test_create_images_and_backing_images_not_exist_fallback(self):
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        disk_info_json = jsonutils.dumps(
+            [{u'backing_file': u'fake_image_backing_file',
+              u'disk_size': 10747904,
+              u'path': u'disk_path',
+              u'type': u'qcow2',
+              u'virt_disk_size': 25165824}])
+
+        base_dir = os.path.join(CONF.instances_path,
+                                CONF.image_cache_subdirectory_name)
+        self.test_instance.update({'user_id': 'fake-user',
+                                   'os_type': None,
+                                   'kernel_id': 'fake_kernel_id',
+                                   'ramdisk_id': 'fake_ramdisk_id',
+                                   'project_id': 'fake-project'})
+        instance = objects.Instance(**self.test_instance)
+
+        with contextlib.nested(
+            mock.patch.object(libvirt_driver.libvirt_utils, 'copy_image'),
+            mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image',
+                              side_effect=exception.ImageNotFound(
+                                  image_id="fake_id")),
+        ) as (copy_image_mock, fetch_image_mock):
+            conn._create_images_and_backing(self.context, instance,
+                                            "/fake/instance/dir",
+                                            disk_info_json,
+                                            fallback_from_host="fake_host")
+            backfile_path = os.path.join(base_dir, 'fake_image_backing_file')
+            kernel_path = os.path.join(CONF.instances_path,
+                                       self.test_instance['uuid'],
+                                       'kernel')
+            ramdisk_path = os.path.join(CONF.instances_path,
+                                        self.test_instance['uuid'],
+                                        'ramdisk')
+            copy_image_mock.assert_has_calls([
+                mock.call(dest=backfile_path, src=backfile_path,
+                          host='fake_host', receive=True),
+                mock.call(dest=kernel_path, src=kernel_path,
+                          host='fake_host', receive=True),
+                mock.call(dest=ramdisk_path, src=ramdisk_path,
+                          host='fake_host', receive=True)
+            ])
+            fetch_image_mock.assert_has_calls([
+                mock.call(context=self.context,
+                          target=backfile_path,
+                          image_id=self.test_instance['image_ref'],
+                          user_id=self.test_instance['user_id'],
+                          project_id=self.test_instance['project_id'],
+                          max_size=25165824),
+                mock.call(self.context, kernel_path,
+                          self.test_instance['kernel_id'],
+                          self.test_instance['user_id'],
+                          self.test_instance['project_id']),
+                mock.call(self.context, ramdisk_path,
+                          self.test_instance['ramdisk_id'],
+                          self.test_instance['user_id'],
+                          self.test_instance['project_id']),
+            ])
 
     def test_create_images_and_backing_ephemeral_gets_created(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -7237,7 +7322,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.mox.StubOutWithMock(drvr, '_fetch_instance_kernel_ramdisk')
 
-        drvr._fetch_instance_kernel_ramdisk(self.context, self.test_instance)
+        drvr._fetch_instance_kernel_ramdisk(self.context, self.test_instance,
+                                            fallback_from_host=None)
         self.mox.ReplayAll()
 
         drvr._create_images_and_backing(self.context, self.test_instance,
@@ -7468,7 +7554,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         instance = objects.Instance(**self.test_instance)
 
         def check_instance_dir(context, instance,
-                               instance_dir, disk_info):
+                               instance_dir, disk_info,
+                               fallback_from_host=False):
             self.assertTrue(instance_dir)
         # creating mocks
         with contextlib.nested(
