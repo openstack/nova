@@ -28,6 +28,7 @@ from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import rpc
 from nova import test
+from nova.tests import fake_notifier
 
 
 class MyObj(base.NovaPersistentObject, base.NovaObject):
@@ -256,6 +257,8 @@ class _BaseTestCase(test.TestCase):
         super(_BaseTestCase, self).setUp()
         self.remote_object_calls = list()
         self.context = context.RequestContext('fake-user', 'fake-project')
+        fake_notifier.stub_notifier(self.stubs)
+        self.addCleanup(fake_notifier.reset)
 
     def compare_obj(self, obj, db_obj, subs=None, allow_missing=None,
                     comparators=None):
