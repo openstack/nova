@@ -118,6 +118,9 @@ Nova Floating IPs
 Nova Flavor
 ~~~~~~~~~~~
 
+**DEPRECATED** Use the nova flavor-* commands from python-novaclient instead.
+The flavor subcommand will be removed in the 2015.1 release.
+
 ``nova-manage flavor list``
 
     Outputs a list of all active flavors to the screen.
