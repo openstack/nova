@@ -6903,6 +6903,25 @@ class LibvirtConnTestCase(test.TestCase):
                                         block_device_info=block_device_info)
         self.assertTrue('fake' in self.resultXML)
 
+    def test_create_propogates_exceptions(self):
+        self.flags(virt_type='lxc', group='libvirt')
+
+        conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = instance_obj.Instance(id=1, uuid='fake-uuid')
+
+        with contextlib.nested(
+              mock.patch.object(conn, 'plug_vifs'),
+              mock.patch.object(conn, 'firewall_driver'),
+              mock.patch.object(conn, '_create_domain',
+                                side_effect=exception.NovaException),
+              mock.patch.object(conn, 'cleanup')) as (
+              cleanup, firewall_driver, create, plug_vifs):
+            self.assertRaises(exception.NovaException,
+                              conn._create_domain_and_network,
+                              self.context,
+                              'xml',
+                              instance, None)
+
     def test_create_without_pause(self):
         self.flags(virt_type='lxc', group='libvirt')
 
