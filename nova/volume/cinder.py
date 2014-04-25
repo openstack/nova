@@ -90,7 +90,7 @@ def cinderclient(context):
                          service_name=service_name,
                          endpoint_type=endpoint_type)
 
-    LOG.debug(_('Cinderclient connection created using URL: %s') % url)
+    LOG.debug('Cinderclient connection created using URL: %s', url)
 
     c = cinder_client.Client(context.user_id,
                              context.auth_token,

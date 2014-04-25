@@ -16,7 +16,6 @@
 
 import os
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 from nova.volume.encryptors import base
@@ -51,7 +50,7 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
 
         :param passphrase: the passphrase used to access the volume
         """
-        LOG.debug(_("opening encrypted volume %s"), self.dev_path)
+        LOG.debug("opening encrypted volume %s", self.dev_path)
 
         # NOTE(joel-coffman): cryptsetup will strip trailing newlines from
         # input specified on stdin unless --key-file=- is specified.
@@ -92,7 +91,7 @@ class CryptsetupEncryptor(base.VolumeEncryptor):
 
     def _close_volume(self, **kwargs):
         """Closes the device (effectively removes the dm-crypt mapping)."""
-        LOG.debug(_("closing encrypted volume %s"), self.dev_path)
+        LOG.debug("closing encrypted volume %s", self.dev_path)
         utils.execute('cryptsetup', 'remove', self.dev_name,
                       run_as_root=True, check_exit_code=True)
 
