@@ -216,7 +216,6 @@ class API(object):
         return rval
 
     def check_attached(self, context, volume):
-        """Raise exception if volume in use."""
         if volume['status'] != "in-use":
             msg = _("status must be 'in-use'")
             raise exception.InvalidVolume(reason=msg)
