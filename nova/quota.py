@@ -153,16 +153,6 @@ class DbQuotaDriver(object):
                         quota_class=None, defaults=True, usages=None,
                         remains=False):
         modified_quotas = {}
-        # Get the quotas for the appropriate class.  If the project ID
-        # matches the one in the context, we use the quota_class from
-        # the context, otherwise, we use the provided quota_class (if
-        # any)
-        if project_id == context.project_id:
-            quota_class = context.quota_class
-        if quota_class:
-            class_quotas = db.quota_class_get_all_by_name(context, quota_class)
-        else:
-            class_quotas = {}
 
         default_quotas = self.get_defaults(context, resources)
 
@@ -171,8 +161,7 @@ class DbQuotaDriver(object):
             if not defaults and resource.name not in quotas:
                 continue
 
-            limit = quotas.get(resource.name, class_quotas.get(
-                        resource.name, default_quotas[resource.name]))
+            limit = quotas.get(resource.name, default_quotas[resource.name])
             modified_quotas[resource.name] = dict(limit=limit)
 
             # Include usages if desired.  This is optional because one
@@ -378,13 +367,13 @@ class DbQuotaDriver(object):
             # Grab and return the quotas (without usages)
             quotas = self.get_user_quotas(context, sub_resources,
                                           project_id, user_id,
-                                          context.quota_class, usages=False,
+                                          None, usages=False,
                                           project_quotas=project_quotas)
         else:
             # Grab and return the quotas (without usages)
             quotas = self.get_project_quotas(context, sub_resources,
                                              project_id,
-                                             context.quota_class,
+                                             None,
                                              usages=False,
                                              project_quotas=project_quotas)
 
@@ -963,7 +952,7 @@ class BaseResource(object):
         project_id = kwargs.get('project_id', context.project_id)
 
         # Ditto for the quota class
-        quota_class = kwargs.get('quota_class', context.quota_class)
+        quota_class = kwargs.get('quota_class', None)
 
         # Look up the quota for the project
         if project_id:
