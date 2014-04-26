@@ -125,7 +125,7 @@ class DriverBlockDevice(dict):
     def attach(self, **kwargs):
         """Make the device available to be used by VMs.
 
-        To be overriden in subclasses with the connecting logic for
+        To be overridden in subclasses with the connecting logic for
         the type of device the subclass represents.
         """
         raise NotImplementedError()

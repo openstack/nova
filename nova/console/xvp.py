@@ -182,7 +182,7 @@ class XVPConsoleProxy(object):
             - password: the password to encode, max 8 char for vm passwords,
                         and 16 chars for pool passwords. passwords will
                         be trimmed to max len before encoding.
-            - is_pool_password: True if this this is the XenServer api password
+            - is_pool_password: True if this is the XenServer api password
                                 False if it's a VM console password
               (xvp uses different keys and max lengths for pool passwords)
 

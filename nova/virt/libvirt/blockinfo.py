@@ -544,7 +544,7 @@ def get_disk_mapping(virt_type, instance,
     # NOTE (ndipanov): This implicitly relies on image->local BDMs not
     #                  being considered in the driver layer - so missing
     #                  bdm with boot_index 0 means - use image, unless it was
-    #                  overriden. This can happen when using legacy syntax and
+    #                  overridden. This can happen when using legacy syntax and
     #                  no root_device_name is set on the instance.
     if not root_bdm and not block_device.volume_in_mapping(root_info['dev'],
                                                            block_device_info):

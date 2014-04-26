@@ -196,7 +196,7 @@ class VirtualPowerManager(base.PowerManager):
             err_msg = _('Node "%(name)s" with MAC address %(mac)s not found.')
             LOG.error(err_msg, {'name': self._node_name,
                                 'mac': self._mac_addresses})
-            # in our case the _node_name is the the node_id
+            # in our case the _node_name is the node_id
             raise exception.NodeNotFound(node_id=self._node_name)
 
         cmd = self._vp_cmd.list_running_cmd

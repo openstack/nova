@@ -54,7 +54,7 @@ class DifferentHostFilter(AffinityFilter):
 
 class SameHostFilter(AffinityFilter):
     '''Schedule the instance on the same host as another instance in a set of
-    of instances.
+    instances.
     '''
 
     # The hosts the instances are running on doesn't change within a request

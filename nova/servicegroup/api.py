@@ -142,7 +142,7 @@ class ServiceGroupDriver(object):
     """Base class for ServiceGroup drivers."""
 
     def join(self, member_id, group_id, service=None):
-        """Join the given service with it's group."""
+        """Join the given service with its group."""
         raise NotImplementedError()
 
     def is_up(self, member):

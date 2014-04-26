@@ -438,7 +438,7 @@ class TestCollectionLinks(test.NoDBTestCase):
             {"uuid": "123"}
         ]
         req = mock.MagicMock()
-        # Given limit is greater then default max, only return default max
+        # Given limit is greater than default max, only return default max
         params = mock.PropertyMock(return_value=dict(limit=2))
         type(req).params = params
         self.flags(osapi_max_limit=1)

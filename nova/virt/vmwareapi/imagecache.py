@@ -26,7 +26,7 @@ At each aging iteration we check if the image can be aged.
 This is done by comparing the current nova compute time to the time embedded
 in the timestamp. If the time exceeds the configured aging time then
 the parent folder, that is the image ID folder, will be deleted.
-That effectivly ages the cached image.
+That effectively ages the cached image.
 If an image is used then the timestamps will be deleted.
 
 When accessing a timestamp we make use of locking. This ensure that aging

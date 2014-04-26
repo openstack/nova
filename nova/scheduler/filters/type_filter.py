@@ -19,7 +19,7 @@ from nova.scheduler import filters
 
 
 class TypeAffinityFilter(filters.BaseHostFilter):
-    """TypeAffinityFilter doesn't allow more then one VM type per host.
+    """TypeAffinityFilter doesn't allow more than one VM type per host.
 
     Note: this works best with ram_weight_multiplier
     (spread) set to 1 (default).

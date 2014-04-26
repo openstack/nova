@@ -180,7 +180,7 @@ class InstanceMetadata():
                 'content_path': "/%s/%s" % (CONTENT_DIR, key)}
 
         # 'content' is passed in from the configdrive code in
-        # nova/virt/libvirt/driver.py.  Thats how we get the injected files
+        # nova/virt/libvirt/driver.py.  That's how we get the injected files
         # (personalities) in. AFAIK they're not stored in the db at all,
         # so are not available later (web service metadata time).
         for (path, contents) in content:

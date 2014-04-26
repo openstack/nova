@@ -193,7 +193,7 @@ def apply_ovs_ipv6_flows(ovs, bridge, params):
     ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=135,actions=drop")
     ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=136,actions=drop")
 
-    # do not allow sending specifc ICMPv6 types
+    # do not allow sending specific ICMPv6 types
     # Router Advertisement
     ovs.add("priority=5,in_port=%(OF_PORT)s,icmp6,icmp_type=134,actions=drop")
     # Redirect Gateway

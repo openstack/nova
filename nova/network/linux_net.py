@@ -609,7 +609,7 @@ class IptablesManager(object):
             return True
 
         # We filter duplicates, letting the *last* occurrence take
-        # precendence.  We also filter out anything in the "remove"
+        # precedence.  We also filter out anything in the "remove"
         # lists.
         new_filter.reverse()
         new_filter = filter(_weed_out_duplicates, new_filter)
@@ -1388,7 +1388,7 @@ def get_dev(network):
 
 class LinuxNetInterfaceDriver(object):
     """Abstract class that defines generic network host API
-    for for all Linux interface drivers.
+    for all Linux interface drivers.
     """
 
     def plug(self, network, mac_address):

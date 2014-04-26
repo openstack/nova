@@ -38,7 +38,7 @@ class DbDriver(api.ServiceGroupDriver):
         self.service_down_time = CONF.service_down_time
 
     def join(self, member_id, group_id, service=None):
-        """Join the given service with it's group."""
+        """Join the given service with its group."""
 
         msg = _('DB_Driver: join new ServiceGroup member %(member_id)s to '
                     'the %(group_id)s group, service = %(service)s')

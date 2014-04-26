@@ -1758,7 +1758,7 @@ def preconfigure_instance(session, instance, vdi_ref, network_info):
     """Makes alterations to the image before launching as part of spawn.
     """
 
-    # As mounting the image VDI is expensive, we only want do do it once,
+    # As mounting the image VDI is expensive, we only want do it once,
     # if at all, so determine whether it's required first, and then do
     # everything
     mount_required = False

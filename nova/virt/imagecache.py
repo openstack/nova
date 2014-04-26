@@ -118,7 +118,7 @@ class ImageCacheManager(object):
                 'originals': []}
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
-        """Ages and verfies cached images."""
+        """Ages and verifies cached images."""
 
         raise NotImplementedError()
 

@@ -56,7 +56,7 @@ class MultiprocessWSGITest(integrated_helpers._IntegratedTestBase):
             # processes running the same tests (and possibly forking more
             # processes that end up in the same situation). So we need
             # to catch all exceptions and make sure nothing leaks out, in
-            # particlar SystemExit, which is raised by sys.exit(). We use
+            # particular SystemExit, which is raised by sys.exit(). We use
             # os._exit() which doesn't have this problem.
             status = 0
             try:
