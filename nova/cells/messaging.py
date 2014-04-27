@@ -696,8 +696,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
 
     def update_capabilities(self, message, cell_name, capabilities):
         """A child cell told us about their capabilities."""
-        LOG.debug(_("Received capabilities from child cell "
-                    "%(cell_name)s: %(capabilities)s"),
+        LOG.debug("Received capabilities from child cell "
+                  "%(cell_name)s: %(capabilities)s",
                   {'cell_name': cell_name, 'capabilities': capabilities})
         self.state_manager.update_cell_capabilities(cell_name,
                 capabilities)
@@ -706,8 +706,8 @@ class _TargetedMessageMethods(_BaseMessageMethods):
 
     def update_capacities(self, message, cell_name, capacities):
         """A child cell told us about their capacity."""
-        LOG.debug(_("Received capacities from child cell "
-                    "%(cell_name)s: %(capacities)s"),
+        LOG.debug("Received capacities from child cell "
+                  "%(cell_name)s: %(capacities)s",
                   {'cell_name': cell_name, 'capacities': capacities})
         self.state_manager.update_cell_capacities(cell_name,
                 capacities)
@@ -1031,7 +1031,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
             # instance_update.
             instance['system_metadata'] = utils.instance_sys_meta(instance)
 
-        LOG.debug(_("Got update for instance: %(instance)s"),
+        LOG.debug("Got update for instance: %(instance)s",
                   {'instance': instance}, instance_uuid=instance_uuid)
 
         self._apply_expected_states(instance)
@@ -1067,7 +1067,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         if not self._at_the_top():
             return
         instance_uuid = instance['uuid']
-        LOG.debug(_("Got update to delete instance"),
+        LOG.debug("Got update to delete instance",
                   instance_uuid=instance_uuid)
         try:
             self.db.instance_destroy(message.ctxt, instance_uuid,
@@ -1082,7 +1082,7 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         belongs to but the instance was requested to be deleted or
         soft-deleted.  So, we'll run it everywhere.
         """
-        LOG.debug(_("Got broadcast to %(delete_type)s delete instance"),
+        LOG.debug("Got broadcast to %(delete_type)s delete instance",
                   {'delete_type': delete_type}, instance=instance)
         if delete_type == 'soft':
             self.compute_api.soft_delete(message.ctxt, instance)
@@ -1380,7 +1380,7 @@ class MessageRunner(object):
             return
         my_cell_info = self.state_manager.get_my_state()
         capabs = self.state_manager.get_our_capabilities()
-        LOG.debug(_("Updating parents with our capabilities: %(capabs)s"),
+        LOG.debug("Updating parents with our capabilities: %(capabs)s",
                   {'capabs': capabs})
         # We have to turn the sets into lists so they can potentially
         # be json encoded when the raw message is sent.
@@ -1400,7 +1400,7 @@ class MessageRunner(object):
             return
         my_cell_info = self.state_manager.get_my_state()
         capacities = self.state_manager.get_our_capacities()
-        LOG.debug(_("Updating parents with our capacities: %(capacities)s"),
+        LOG.debug("Updating parents with our capacities: %(capacities)s",
                   {'capacities': capacities})
         method_kwargs = {'cell_name': my_cell_info.name,
                          'capacities': capacities}

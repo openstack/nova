@@ -428,7 +428,7 @@ class CellStateManagerDB(CellStateManager):
                       of whether it's time to do so.
         """
         if force or self._time_to_sync():
-            LOG.debug(_("Updating cell cache from db."))
+            LOG.debug("Updating cell cache from db.")
             self.last_cell_db_check = timeutils.utcnow()
             ctxt = context.get_admin_context()
             db_cells = self.db.cell_get_all(ctxt)
@@ -465,7 +465,7 @@ class CellStateManagerFile(CellStateManager):
                                                     force_reload=force)
 
         if reloaded:
-            LOG.debug(_("Updating cell cache from config file."))
+            LOG.debug("Updating cell cache from config file.")
             self.cells_config_data = jsonutils.loads(data)
             self._refresh_cells_from_dict(self.cells_config_data)
 
