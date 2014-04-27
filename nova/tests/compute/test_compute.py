@@ -5763,7 +5763,8 @@ class ComputeTestCase(BaseTestCase):
             if instance_uuid not in instance_map:
                 raise exception.InstanceNotFound(instance_id=instance_uuid)
             call_info['get_by_uuid'] += 1
-            self.assertEqual(['system_metadata'], columns_to_join)
+            self.assertEqual(['system_metadata', 'info_cache'],
+                             columns_to_join)
             return instance_map[instance_uuid]
 
         # NOTE(comstud): Override the stub in setUp()
