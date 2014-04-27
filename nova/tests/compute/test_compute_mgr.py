@@ -287,7 +287,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'resume_state_on_host_boot')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute,
                                  '_set_instance_error_state')
         self.compute._get_power_state(mox.IgnoreArg(),
@@ -297,7 +297,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.compute._get_power_state(mox.IgnoreArg(),
                 instance).AndReturn(power_state.SHUTDOWN)
         self.compute.driver.plug_vifs(instance, mox.IgnoreArg())
-        self.compute._get_instance_volume_block_device_info(mox.IgnoreArg(),
+        self.compute._get_instance_block_device_info(mox.IgnoreArg(),
                 instance).AndReturn('fake-bdm')
         self.compute.driver.resume_state_on_host_boot(mox.IgnoreArg(),
                 instance, mox.IgnoreArg(),
@@ -351,7 +351,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.mox.StubOutWithMock(self.compute.driver,
                                  'finish_revert_migration')
         self.mox.StubOutWithMock(self.compute,
-                                 '_get_instance_volume_block_device_info')
+                                 '_get_instance_block_device_info')
         self.mox.StubOutWithMock(self.compute.driver, 'get_info')
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute, '_retry_reboot')
@@ -361,7 +361,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         compute_utils.get_nw_info_for_instance(instance).AndReturn(
             network_model.NetworkInfo())
         self.compute.driver.plug_vifs(instance, [])
-        self.compute._get_instance_volume_block_device_info(
+        self.compute._get_instance_block_device_info(
             self.context, instance).AndReturn([])
         self.compute.driver.finish_revert_migration(self.context, instance,
                                                     [], [], power_on)
@@ -1161,13 +1161,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_instance_nw_info',
                                return_value=None),
             mock.patch.object(self.compute,
-                              '_get_instance_volume_block_device_info',
+                              '_get_instance_block_device_info',
                                return_value={}),
             mock.patch.object(self.compute, '_is_instance_storage_shared',
                                return_value=False),
             mock.patch.object(self.compute.driver, 'destroy')
         ) as (_get_instances_on_driver, _get_instance_nw_info,
-              _get_instance_volume_block_device_info,
+              _get_instance_block_device_info,
               _is_instance_storage_shared, destroy):
             self.compute._destroy_evacuated_instances(self.context)
             destroy.assert_called_once_with(self.context, instance_2, None,
@@ -1899,7 +1899,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.instance, 'save'),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
             mock.patch.object(self.compute,
-                              '_get_instance_volume_block_device_info',
+                              '_get_instance_block_device_info',
                               return_value=None),
             mock.patch.object(block_device_obj.BlockDeviceMappingList,
                               'get_by_instance_uuid',
