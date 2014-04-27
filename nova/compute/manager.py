@@ -697,8 +697,8 @@ class ComputeManager(manager.Manager):
                 try:
                     network_info = self._get_instance_nw_info(context,
                                                               instance)
-                    bdi = self._get_instance_volume_block_device_info(context,
-                                                                      instance)
+                    bdi = self._get_instance_block_device_info(context,
+                                                               instance)
                     destroy_disks = not (self._is_instance_storage_shared(
                                                             context, instance))
                 except exception.InstanceNotFound:
@@ -928,8 +928,8 @@ class ComputeManager(manager.Manager):
                 power_on = (instance.system_metadata.get('old_vm_state') !=
                             vm_states.STOPPED)
 
-                block_dev_info = self._get_instance_volume_block_device_info(
-                            context, instance)
+                block_dev_info = self._get_instance_block_device_info(context,
+                                                                      instance)
 
                 self.driver.finish_revert_migration(context,
                     instance, net_info, block_dev_info, power_on)
@@ -959,8 +959,7 @@ class ComputeManager(manager.Manager):
                      instance=instance)
 
             block_device_info = \
-                self._get_instance_volume_block_device_info(
-                    context, instance)
+                self._get_instance_block_device_info(context, instance)
 
             try:
                 self.driver.resume_state_on_host_boot(
@@ -1808,14 +1807,16 @@ class ComputeManager(manager.Manager):
         self.network_api.deallocate_for_instance(
             context, instance, requested_networks=requested_networks)
 
-    def _get_instance_volume_block_device_info(self, context, instance,
-                                               refresh_conn_info=False,
-                                               bdms=None):
+    def _get_instance_block_device_info(self, context, instance,
+                                        refresh_conn_info=False,
+                                        bdms=None):
         """Transform volumes to the driver block_device format."""
 
         if not bdms:
             bdms = (block_device_obj.BlockDeviceMappingList.
                     get_by_instance_uuid(context, instance['uuid']))
+        swap = driver_block_device.convert_swap(bdms)
+        ephemerals = driver_block_device.convert_ephemerals(bdms)
         block_device_mapping = (
             driver_block_device.convert_volumes(bdms) +
             driver_block_device.convert_snapshots(bdms) +
@@ -1833,9 +1834,17 @@ class ComputeManager(manager.Manager):
                 self.driver)
 
         if self.use_legacy_block_device_info:
+            swap = driver_block_device.legacy_block_devices(swap)
+            ephemerals = driver_block_device.legacy_block_devices(ephemerals)
             block_device_mapping = driver_block_device.legacy_block_devices(
                 block_device_mapping)
-        return {'block_device_mapping': block_device_mapping}
+
+        # Get swap out of the list
+        swap = driver_block_device.get_swap(swap)
+
+        return {'swap': swap,
+                'ephemerals': ephemerals,
+                'block_device_mapping': block_device_mapping}
 
     # NOTE(mikal): No object_compat wrapper on this method because its
     # callers all pass objects already
@@ -2134,7 +2143,7 @@ class ComputeManager(manager.Manager):
 
         # NOTE(vish) get bdms before destroying the instance
         vol_bdms = [bdm for bdm in bdms if bdm.is_volume]
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
             context, instance, bdms=bdms)
 
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
@@ -2298,8 +2307,8 @@ class ComputeManager(manager.Manager):
 
     def _power_on(self, context, instance):
         network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance)
+        block_device_info = self._get_instance_block_device_info(context,
+                                                                 instance)
         self.driver.power_on(context, instance,
                              network_info,
                              block_device_info)
@@ -2518,7 +2527,7 @@ class ComputeManager(manager.Manager):
                         get_by_instance_uuid(context, instance.uuid))
 
             block_device_info = \
-                self._get_instance_volume_block_device_info(
+                self._get_instance_block_device_info(
                         context, instance, bdms=bdms)
 
             def detach_block_devices(context, bdms):
@@ -2612,8 +2621,8 @@ class ComputeManager(manager.Manager):
         context = context.elevated()
         LOG.audit(_("Rebooting instance"), context=context, instance=instance)
 
-        block_device_info = self._get_instance_volume_block_device_info(
-                                context, instance)
+        block_device_info = self._get_instance_block_device_info(context,
+                                                                 instance)
 
         network_info = self._get_instance_nw_info(context, instance)
 
@@ -3198,7 +3207,7 @@ class ComputeManager(manager.Manager):
             network_info = self._get_instance_nw_info(context, instance)
             bdms = (block_device_obj.BlockDeviceMappingList.
                     get_by_instance_uuid(context, instance.uuid))
-            block_device_info = self._get_instance_volume_block_device_info(
+            block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
             self.driver.destroy(context, instance, network_info,
@@ -3260,7 +3269,7 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_networks_on_host(context, instance,
                                             migration['source_compute'])
 
-            block_device_info = self._get_instance_volume_block_device_info(
+            block_device_info = self._get_instance_block_device_info(
                     context, instance, refresh_conn_info=True)
 
             power_on = old_vm_state != vm_states.STOPPED
@@ -3453,7 +3462,7 @@ class ComputeManager(manager.Manager):
 
             bdms = (block_device_obj.BlockDeviceMappingList.
                     get_by_instance_uuid(context, instance.uuid))
-            block_device_info = self._get_instance_volume_block_device_info(
+            block_device_info = self._get_instance_block_device_info(
                                 context, instance, bdms=bdms)
 
             disk_info = self.driver.migrate_disk_and_power_off(
@@ -3539,7 +3548,7 @@ class ComputeManager(manager.Manager):
             context, instance, "finish_resize.start",
             network_info=network_info)
 
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
 
         # NOTE(mriedem): If the original vm_state was STOPPED, we don't
@@ -3748,7 +3757,7 @@ class ComputeManager(manager.Manager):
         LOG.audit(_('Resuming'), context=context, instance=instance)
 
         network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance)
 
         self.driver.resume(context, instance, network_info,
@@ -3834,8 +3843,8 @@ class ComputeManager(manager.Manager):
         current_power_state = self._get_power_state(context, instance)
 
         network_info = self._get_instance_nw_info(context, instance)
-        block_device_info = self._get_instance_volume_block_device_info(
-                context, instance)
+        block_device_info = self._get_instance_block_device_info(context,
+                                                                 instance)
         self.driver.destroy(context, instance, network_info,
                 block_device_info)
 
@@ -4495,7 +4504,7 @@ class ComputeManager(manager.Manager):
         required for live migration without shared storage.
 
         """
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             context, instance, refresh_conn_info=True)
 
         network_info = self._get_instance_nw_info(context, instance)
@@ -4594,7 +4603,7 @@ class ComputeManager(manager.Manager):
                 ctxt, instance['uuid'])
 
         # Cleanup source host post live-migration
-        block_device_info = self._get_instance_volume_block_device_info(
+        block_device_info = self._get_instance_block_device_info(
                             ctxt, instance, bdms)
         self.driver.post_live_migration(ctxt, instance, block_device_info,
                                         migrate_data)
@@ -4706,8 +4715,8 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.post.dest.start",
                      network_info=network_info)
-        block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance)
+        block_device_info = self._get_instance_block_device_info(context,
+                                                                 instance)
 
         self.driver.post_live_migration_at_destination(context, instance,
                                             network_info,
@@ -4804,8 +4813,8 @@ class ComputeManager(manager.Manager):
 
         # NOTE(vish): The mapping is passed in so the driver can disconnect
         #             from remote volumes if necessary
-        block_device_info = self._get_instance_volume_block_device_info(
-                            context, instance)
+        block_device_info = self._get_instance_block_device_info(context,
+                                                                 instance)
         self.driver.rollback_live_migration_at_destination(context, instance,
                         network_info, block_device_info)
         self._notify_about_instance_usage(
