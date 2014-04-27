@@ -2318,3 +2318,7 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
                               self.network_info,
                               None, self.destroy_disks)
             self.assertFalse(mock_destroy.called)
+
+    def test_get_host_uptime(self):
+        self.assertRaises(NotImplementedError,
+                          self.conn.get_host_uptime, 'host')

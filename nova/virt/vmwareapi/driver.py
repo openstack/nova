@@ -748,6 +748,14 @@ class VMwareVCDriver(VMwareESXDriver):
         """
         raise NotImplementedError()
 
+    def get_host_uptime(self, host):
+        """Host uptime operation not supported by VC driver."""
+
+        msg = _("Multiple hosts may be managed by the VMWare "
+                "vCenter driver; therefore we do not return "
+                "uptime for just one host.")
+        raise NotImplementedError(msg)
+
     def inject_network_info(self, instance, network_info):
         """inject network info for specified instance."""
         _vmops = self._get_vmops_for_compute_node(instance['node'])
