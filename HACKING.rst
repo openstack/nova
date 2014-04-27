@@ -30,6 +30,7 @@ Nova Specific Commandments
   assertIsInstance(A, B)
 - [N318] Change assertEqual(A, None) or assertEqual(None, A) by optimal assert like
   assertIsNone(A)
+- [N319] Validate that debug level logs are not translated.
 
 Creating Unit Tests
 -------------------
