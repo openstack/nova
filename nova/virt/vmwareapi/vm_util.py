@@ -1391,6 +1391,39 @@ def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
     return task_info.result
 
 
+def create_virtual_disk(session, dc_ref, adapter_type, disk_type,
+                        virtual_disk_path, size_in_kb):
+    # Create a Virtual Disk of the size of the flat vmdk file. This is
+    # done just to generate the meta-data file whose specifics
+    # depend on the size of the disk, thin/thick provisioning and the
+    # storage adapter type.
+    LOG.debug("Creating Virtual Disk of size  "
+              "%(vmdk_file_size_in_kb)s KB and adapter type "
+              "%(adapter_type)s on the data store",
+              {"vmdk_file_size_in_kb": size_in_kb,
+               "adapter_type": adapter_type})
+
+    vmdk_create_spec = get_vmdk_create_spec(
+            session._get_vim().client.factory,
+            size_in_kb,
+            adapter_type,
+            disk_type)
+
+    vmdk_create_task = session._call_method(
+            session._get_vim(),
+            "CreateVirtualDisk_Task",
+            session._get_vim().get_service_content().virtualDiskManager,
+            name=virtual_disk_path,
+            datacenter=dc_ref,
+            spec=vmdk_create_spec)
+
+    session._wait_for_task(vmdk_create_task)
+    LOG.debug("Created Virtual Disk of size %(vmdk_file_size_in_kb)s"
+              " KB and type %(disk_type)s",
+              {"vmdk_file_size_in_kb": size_in_kb,
+               "disk_type": disk_type})
+
+
 def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
                                 vmfolder_ref):
     """Clone VM and link the cloned VM to the instance.

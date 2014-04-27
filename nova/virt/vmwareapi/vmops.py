@@ -278,41 +278,6 @@ class VMwareVMOps(object):
             vnc_port = vm_util.get_vnc_port(self._session)
             self._set_vnc_config(client_factory, instance, vnc_port)
 
-        def _create_virtual_disk(virtual_disk_path, file_size_in_kb):
-            """Create a virtual disk of the size of flat vmdk file."""
-            # Create a Virtual Disk of the size of the flat vmdk file. This is
-            # done just to generate the meta-data file whose specifics
-            # depend on the size of the disk, thin/thick provisioning and the
-            # storage adapter type.
-            # Here we assume thick provisioning and lsiLogic for the adapter
-            # type
-            LOG.debug(_("Creating Virtual Disk of size  "
-                      "%(vmdk_file_size_in_kb)s KB and adapter type "
-                      "%(adapter_type)s on the ESX host local store "
-                      "%(data_store_name)s"),
-                       {"vmdk_file_size_in_kb": file_size_in_kb,
-                        "adapter_type": adapter_type,
-                        "data_store_name": data_store_name},
-                      instance=instance)
-            vmdk_create_spec = vm_util.get_vmdk_create_spec(client_factory,
-                                    file_size_in_kb, adapter_type,
-                                    disk_type)
-            vmdk_create_task = self._session._call_method(
-                self._session._get_vim(),
-                "CreateVirtualDisk_Task",
-                service_content.virtualDiskManager,
-                name=virtual_disk_path,
-                datacenter=dc_info.ref,
-                spec=vmdk_create_spec)
-            self._session._wait_for_task(vmdk_create_task)
-            LOG.debug(_("Created Virtual Disk of size %(vmdk_file_size_in_kb)s"
-                        " KB and type %(disk_type)s on "
-                        "the ESX host local store %(data_store_name)s") %
-                        {"vmdk_file_size_in_kb": vmdk_file_size_in_kb,
-                         "disk_type": disk_type,
-                         "data_store_name": data_store_name},
-                      instance=instance)
-
         def _fetch_image_on_datastore(upload_name):
             """Fetch image from Glance to datastore."""
             LOG.debug(_("Downloading image file data %(image_ref)s to the "
@@ -449,8 +414,16 @@ class VMwareVMOps(object):
                                       ds_util.build_datastore_path(
                                           data_store_name, upload_folder),
                                       dc_info.ref)
-                        _create_virtual_disk(upload_path,
-                                             vmdk_file_size_in_kb)
+                        LOG.debug("Create virtual disk on %s",
+                                  data_store_name, instance=instance)
+                        vm_util.create_virtual_disk(self._session,
+                                                    dc_info.ref,
+                                                    adapter_type,
+                                                    disk_type,
+                                                    upload_path,
+                                                    vmdk_file_size_in_kb)
+                        LOG.debug("Virtual disk created on %s.",
+                                  data_store_name, instance=instance)
                         self._delete_datastore_file(instance,
                                                     flat_uploaded_vmdk_path,
                                                     dc_info.ref)
@@ -497,7 +470,16 @@ class VMwareVMOps(object):
                     dest_vmdk_path = self._get_vmdk_path(data_store_name,
                             instance['uuid'], instance_name)
                     # Create the blank virtual disk for the VM
-                    _create_virtual_disk(dest_vmdk_path, root_gb_in_kb)
+                    LOG.debug(_("Create blank virtual disk on %s"),
+                              data_store_name, instance=instance)
+                    vm_util.create_virtual_disk(self._session,
+                                                dc_info.ref,
+                                                adapter_type,
+                                                disk_type,
+                                                dest_vmdk_path,
+                                                root_gb_in_kb)
+                    LOG.debug(_("Blank virtual disk created on %s."),
+                              data_store_name, instance=instance)
                     root_vmdk_path = dest_vmdk_path
                 else:
                     root_vmdk_path = None

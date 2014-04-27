@@ -758,3 +758,29 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                                                      "PowerOnVM_Task",
                                                      'fake-vm-ref')
             fake_wait_for_task.assert_called_once_with('fake-task')
+
+    def test_create_virtual_disk(self):
+        session = fake_session()
+        dm = session._get_vim().get_service_content().virtualDiskManager
+        with contextlib.nested(
+            mock.patch.object(vm_util, "get_vmdk_create_spec",
+                              return_value='fake-spec'),
+            mock.patch.object(session, "_call_method",
+                              return_value='fake-task'),
+            mock.patch.object(session, "_wait_for_task"),
+        ) as (fake_get_spec, fake_call_method, fake_wait_for_task):
+            vm_util.create_virtual_disk(session, 'fake-dc-ref',
+                                        'fake-adapter-type', 'fake-disk-type',
+                                        'fake-path', 7)
+            fake_get_spec.assert_called_once_with(
+                    session._get_vim().client.factory, 7,
+                    'fake-adapter-type',
+                    'fake-disk-type')
+            fake_call_method.assert_called_once_with(
+                    session._get_vim(),
+                    "CreateVirtualDisk_Task",
+                    dm,
+                    name='fake-path',
+                    datacenter='fake-dc-ref',
+                    spec='fake-spec')
+            fake_wait_for_task.assert_called_once_with('fake-task')
