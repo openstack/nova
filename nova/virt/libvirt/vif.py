@@ -534,11 +534,12 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).plug(instance, vif)
 
-        network = vif['network']
         vnic_mac = vif['address']
         device_id = instance['uuid']
-        fabric = network['meta']['physical_network']
-
+        fabric = vif.get_physical_network()
+        if not fabric:
+            raise exception.NetworkMissingPhysicalNetwork(
+                network_uuid=vif['network']['id'])
         dev_name = self.get_vif_devname_with_prefix(vif, DEV_PREFIX_ETH)
         try:
             utils.execute('ebrctl', 'add-port', vnic_mac, device_id, fabric,
@@ -723,9 +724,11 @@ class LibvirtGenericVIFDriver(LibvirtBaseVIFDriver):
         super(LibvirtGenericVIFDriver,
               self).unplug(instance, vif)
 
-        network = vif['network']
         vnic_mac = vif['address']
-        fabric = network['meta']['physical_network']
+        fabric = vif.get_physical_network()
+        if not fabric:
+            raise exception.NetworkMissingPhysicalNetwork(
+                network_uuid=vif['network']['id'])
         try:
             utils.execute('ebrctl', 'del-port', fabric,
                           vnic_mac, run_as_root=True)

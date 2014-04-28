@@ -195,6 +195,14 @@ class LibvirtVifTestCase(test.TestCase):
                                  type=network_model.VIF_TYPE_MLNX_DIRECT,
                                  devname='tap-xxx-yyy-zzz')
 
+    vif_mlnx_net = network_model.VIF(id='vif-xxx-yyy-zzz',
+                                     address='ca:fe:de:ad:be:ef',
+                                     network=network_mlnx,
+                                     type=network_model.VIF_TYPE_MLNX_DIRECT,
+                                     details={'physical_network':
+                                              'fake_phy_network'},
+                                     devname='tap-xxx-yyy-zzz')
+
     vif_midonet = network_model.VIF(id='vif-xxx-yyy-zzz',
                                     address='ca:fe:de:ad:be:ef',
                                     network=network_midonet,
@@ -664,6 +672,37 @@ class LibvirtVifTestCase(test.TestCase):
                 'project_id': 'myproject'
             }
             d.plug_iovisor(instance, self.vif_ivs)
+
+    def test_unplug_mlnx_with_details(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(utils, 'execute') as execute:
+            execute.side_effect = processutils.ProcessExecutionError
+            d.unplug_mlnx_direct(None, self.vif_mlnx_net)
+            execute.assert_called_once_with('ebrctl', 'del-port',
+                                            'fake_phy_network',
+                                            'ca:fe:de:ad:be:ef',
+                                             run_as_root=True)
+
+    def test_plug_mlnx_with_details(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(utils, 'execute') as execute:
+            d.plug_mlnx_direct(self.instance, self.vif_mlnx_net)
+            execute.assert_called_once_with('ebrctl', 'add-port',
+                                            'ca:fe:de:ad:be:ef',
+                                            'instance-uuid',
+                                            'fake_phy_network',
+                                            'mlnx_direct',
+                                            'eth-xxx-yyy-zzz',
+                                            run_as_root=True)
+
+    def test_plug_mlnx_no_physical_network(self):
+        d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
+        with mock.patch.object(utils, 'execute') as execute:
+            self.assertRaises(exception.NovaException,
+                              d.plug_mlnx_direct,
+                              self.instance,
+                              self.vif_mlnx)
+            self.assertEqual(0, execute.call_count)
 
     def test_ivs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver(self._get_conn(ver=9010))
