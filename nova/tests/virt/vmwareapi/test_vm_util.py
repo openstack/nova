@@ -42,7 +42,7 @@ class fake_session(object):
         self.ind = (self.ind + 1) % len(self.ret)
         return self.ret[self.ind - 1]
 
-    def _wait_for_task(self):
+    def _wait_for_task(self, task_ref):
         pass
 
     def _get_vim(self):
@@ -842,3 +842,16 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         self.assertEqual('guestToolsRunning',
                          query['summary.guest.toolsRunningStatus'])
         self.assertEqual('toolsOk', query['summary.guest.toolsStatus'])
+
+    def test_reconfigure_vm(self):
+        session = fake_session()
+        with contextlib.nested(
+            mock.patch.object(session, '_call_method',
+                              return_value='fake_reconfigure_task'),
+            mock.patch.object(session, '_wait_for_task')
+        ) as (_call_method, _wait_for_task):
+            vm_util.reconfigure_vm(session, 'fake-ref', 'fake-spec')
+            _call_method.assert_called_once_with(mock.ANY,
+                'ReconfigVM_Task', 'fake-ref', spec='fake-spec')
+            _wait_for_task.assert_called_once_with(
+                'fake_reconfigure_task')

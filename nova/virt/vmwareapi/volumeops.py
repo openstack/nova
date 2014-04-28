@@ -68,11 +68,7 @@ class VMwareVolumeOps(object):
                   {'instance_name': instance_name, 'vmdk_path': vmdk_path,
                    'device_name': device_name, 'disk_type': disk_type},
                   instance=instance)
-        reconfig_task = self._session._call_method(
-                                        self._session._get_vim(),
-                                        "ReconfigVM_Task", vm_ref,
-                                        spec=vmdk_attach_config_spec)
-        self._session._wait_for_task(reconfig_task)
+        vm_util.reconfigure_vm(self._session, vm_ref, vmdk_attach_config_spec)
         LOG.debug("Reconfigured VM instance %(instance_name)s to attach "
                   "disk %(vmdk_path)s or device %(device_name)s with type "
                   "%(disk_type)s",
@@ -94,12 +90,7 @@ class VMwareVolumeOps(object):
         client_factory = self._session._get_vim().client.factory
         extra_config_specs = vm_util.get_vm_extra_config_spec(
                                     client_factory, extra_opts)
-
-        reconfig_task = self._session._call_method(
-                                        self._session._get_vim(),
-                                        "ReconfigVM_Task", vm_ref,
-                                        spec=extra_config_specs)
-        self._session._wait_for_task(reconfig_task)
+        vm_util.reconfigure_vm(self._session, vm_ref, extra_config_specs)
 
     def _get_volume_uuid(self, vm_ref, volume_uuid):
         prop = 'config.extraConfig["volume-%s"]' % volume_uuid
@@ -122,11 +113,7 @@ class VMwareVolumeOps(object):
                   "disk %(disk_key)s",
                   {'instance_name': instance_name, 'disk_key': disk_key},
                   instance=instance)
-        reconfig_task = self._session._call_method(
-                                        self._session._get_vim(),
-                                        "ReconfigVM_Task", vm_ref,
-                                        spec=vmdk_detach_config_spec)
-        self._session._wait_for_task(reconfig_task)
+        vm_util.reconfigure_vm(self._session, vm_ref, vmdk_detach_config_spec)
         LOG.debug("Reconfigured VM instance %(instance_name)s to detach "
                   "disk %(disk_key)s",
                   {'instance_name': instance_name, 'disk_key': disk_key},
