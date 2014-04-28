@@ -366,7 +366,7 @@ class ComputeRpcAPITestCase(test.TestCase):
         self._test_compute_api('live_migration', 'cast',
                 instance=self.fake_instance, dest='dest',
                 block_migration='blockity_block', host='tsoh',
-                migrate_data={})
+                migrate_data={}, version='3.26')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')
@@ -625,7 +625,8 @@ class ComputeRpcAPITestCase(test.TestCase):
 
     def test_rollback_live_migration_at_destination(self):
         self._test_compute_api('rollback_live_migration_at_destination',
-                'cast', instance=self.fake_instance, host='host')
+                'cast', instance=self.fake_instance, host='host',
+                version='3.26')
 
         # NOTE(russellb) Havana compat
         self.flags(compute='havana', group='upgrade_levels')

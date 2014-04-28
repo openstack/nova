@@ -5104,8 +5104,9 @@ class ComputeTestCase(BaseTestCase):
         c = context.get_admin_context()
 
         src_host = 'fake-src-host'
-        instance = dict(uuid='fake_instance', host=src_host,
-                        name='fake-name')
+        instance = self._create_fake_instance_obj(
+            {'host': 'src_host',
+             'task_state': task_states.MIGRATING})
         updated_instance = self._create_fake_instance_obj(
                                                {'host': 'fake-dest-host'})
         dest_host = updated_instance['host']
@@ -5125,7 +5126,6 @@ class ComputeTestCase(BaseTestCase):
                                  'get_instance_disk_info')
         self.mox.StubOutWithMock(self.compute.compute_rpcapi,
                                  'pre_live_migration')
-        self.mox.StubOutWithMock(self.compute, '_instance_update')
         self.mox.StubOutWithMock(block_device_obj.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute.network_api,
@@ -5136,26 +5136,21 @@ class ComputeTestCase(BaseTestCase):
                                  'rollback_live_migration_at_destination')
 
         self.compute.driver.get_instance_disk_info(
-                instance['name']).AndReturn('fake_disk')
+                instance.name).AndReturn('fake_disk')
         self.compute.compute_rpcapi.pre_live_migration(c,
                 instance, True, 'fake_disk', dest_host,
                 {}).AndRaise(test.TestingException())
 
-        self.compute._instance_update(c, instance['uuid'],
-                host=src_host, vm_state=vm_states.ACTIVE,
-                task_state=None,
-                expected_task_state=task_states.MIGRATING).AndReturn(
-                        updated_instance)
         self.compute.network_api.setup_networks_on_host(c,
-                updated_instance, self.compute.host)
+                instance, self.compute.host)
         block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(c,
-                updated_instance['uuid']).AndReturn(fake_bdms)
+                instance.uuid).AndReturn(fake_bdms)
         self.compute.compute_rpcapi.remove_volume_connection(
-                c, updated_instance, 'vol1-id', dest_host)
+                c, instance, 'vol1-id', dest_host)
         self.compute.compute_rpcapi.remove_volume_connection(
-                c, updated_instance, 'vol2-id', dest_host)
+                c, instance, 'vol2-id', dest_host)
         self.compute.compute_rpcapi.rollback_live_migration_at_destination(
-                c, updated_instance, dest_host)
+                c, instance, dest_host)
 
         # start test
         self.mox.ReplayAll()
@@ -5163,6 +5158,10 @@ class ComputeTestCase(BaseTestCase):
                           self.compute.live_migration,
                           c, dest=dest_host, block_migration=True,
                           instance=instance, migrate_data={})
+        instance.refresh()
+        self.assertEqual('src_host', instance.host)
+        self.assertEqual(vm_states.ACTIVE, instance.vm_state)
+        self.assertIsNone(instance.task_state)
 
     def test_live_migration_works_correctly(self):
         # Confirm live_migration() works as expected correctly.
@@ -5451,11 +5450,8 @@ class ComputeTestCase(BaseTestCase):
     def test_rollback_live_migration_at_destination_correctly(self):
         # creating instance testdata
         c = context.get_admin_context()
-        instance_ref = self._create_fake_instance({'host': 'dummy'})
-        inst_uuid = instance_ref['uuid']
-        inst_id = instance_ref['id']
+        instance = self._create_fake_instance_obj({'host': 'dummy'})
 
-        instance = jsonutils.to_primitive(db.instance_get(c, inst_id))
         fake_notifier.NOTIFICATIONS = []
 
         self.mox.StubOutWithMock(self.compute.network_api,
@@ -5482,7 +5478,7 @@ class ComputeTestCase(BaseTestCase):
                         'compute.instance.live_migration.rollback.dest.end')
 
         # cleanup
-        db.instance_destroy(c, inst_uuid)
+        db.instance_destroy(c, instance.uuid)
 
     def test_run_kill_vm(self):
         # Detect when a vm is terminated behind the scenes.

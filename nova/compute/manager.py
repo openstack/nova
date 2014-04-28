@@ -567,7 +567,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='3.25')
+    target = messaging.Target(version='3.26')
 
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
@@ -4536,17 +4536,28 @@ class ComputeManager(manager.Manager):
         """Executing live migration.
 
         :param context: security context
-        :param instance: instance dict
+        :param instance: a nova.objects.instance.Instance object
         :param dest: destination host
         :param block_migration: if true, prepare for block migration
         :param migrate_data: implementation specific params
 
         """
+
+        # NOTE(danms): since instance is not the first parameter, we can't
+        # use @object_compat on this method. Since this is the only example,
+        # we do this manually instead of complicating the decorator
+        if not isinstance(instance, instance_obj.Instance):
+            expected = ['metadata', 'system_metadata',
+                        'security_groups', 'info_cache']
+            instance = instance_obj.Instance._from_db_object(
+                context, instance_obj.Instance(), instance,
+                expected_attrs=expected)
+
         # Create a local copy since we'll be modifying the dictionary
         migrate_data = dict(migrate_data or {})
         try:
             if block_migration:
-                disk = self.driver.get_instance_disk_info(instance['name'])
+                disk = self.driver.get_instance_disk_info(instance.name)
             else:
                 disk = None
 
@@ -4750,10 +4761,9 @@ class ComputeManager(manager.Manager):
             if not none, contains implementation specific data.
 
         """
-        host = instance['host']
-        instance = self._instance_update(context, instance['uuid'],
-                host=host, vm_state=vm_states.ACTIVE,
-                task_state=None, expected_task_state=task_states.MIGRATING)
+        instance.vm_state = vm_states.ACTIVE
+        instance.task_state = None
+        instance.save(expected_task_state=[task_states.MIGRATING])
 
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
         self.network_api.setup_networks_on_host(context, instance, self.host)
@@ -4785,6 +4795,7 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")
 
+    @object_compat
     @wrap_exception()
     @wrap_instance_fault
     def rollback_live_migration_at_destination(self, context, instance):
