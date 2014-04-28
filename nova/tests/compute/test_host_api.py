@@ -464,7 +464,7 @@ class ComputeHostAPICellsTestCase(ComputeHostAPITestCase):
         self.assertEqual('fake-response', result)
 
     def test_get_host_uptime_service_down(self):
-        # The corresponing Compute test case depends on the
+        # The corresponding Compute test case depends on the
         # _assert_host_exists which is a no-op in the cells api
         pass
 

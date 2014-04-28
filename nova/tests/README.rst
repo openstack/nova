@@ -34,7 +34,7 @@ verify and clean up during the tearDown step.
 
 If using test.TestCase, calling the super class setUp is required and
 calling the super class tearDown is required to be last if tearDown
-is overriden.
+is overridden.
 
 Writing Functional Tests
 ------------------------

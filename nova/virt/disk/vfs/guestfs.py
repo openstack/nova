@@ -109,7 +109,7 @@ class VFSGuestFS(vfs.VFS):
         except TypeError as e:
             if 'close_on_exit' in str(e):
                 # NOTE(russellb) In case we're not using a version of
-                # libguestfs new enough to support the close_on_exit paramater,
+                # libguestfs new enough to support the close_on_exit parameter,
                 # which was added in libguestfs 1.20.
                 self.handle = tpool.Proxy(guestfs.GuestFS())
             else:

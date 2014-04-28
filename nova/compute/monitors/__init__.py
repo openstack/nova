@@ -196,6 +196,6 @@ def all_monitors():
     """Return a list of monitor classes found in this directory.
 
     This method is used as the default for available monitors
-    and should return a list of all monitor classes avaiable.
+    and should return a list of all monitor classes available.
     """
     return ResourceMonitorHandler().get_all_classes()

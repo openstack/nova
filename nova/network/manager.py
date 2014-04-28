@@ -386,7 +386,7 @@ class NetworkManager(manager.Manager):
         try:
             # NOTE(vish): We need to make sure the instance info cache has been
             #             updated with new ip info before we trigger the
-            #             security group refresh. This is somewhat ineffecient
+            #             security group refresh. This is somewhat inefficient
             #             but avoids doing some dangerous refactoring for a
             #             bug fix.
             nw_info = self.get_instance_nw_info(admin_context, instance_id,
@@ -1484,7 +1484,7 @@ class FlatManager(NetworkManager):
 
     The idea is to create a single network for the host with a command like:
     nova-manage network create 192.168.0.0/24 1 256. Creating multiple
-    networks for for one manager is currently not supported, but could be
+    networks for one manager is currently not supported, but could be
     added by modifying allocate_fixed_ip and get_network to get the network
     with new logic. Arbitrary lists of addresses in a single network can
     be accomplished with manual db editing.

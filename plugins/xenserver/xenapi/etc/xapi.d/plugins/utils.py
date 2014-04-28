@@ -221,7 +221,7 @@ def _validate_vhd(vdi_path):
     may pick up other errors also.
 
     This check ensures that the timestamps listed in the VHD footer aren't in
-    the future.  This can occur during a migration if the clocks on the the two
+    the future.  This can occur during a migration if the clocks on the two
     Dom0's are out-of-sync. This would corrupt the SR if it were imported, so
     generate an exception to bail.
     """

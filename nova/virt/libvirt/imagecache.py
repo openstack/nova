@@ -332,7 +332,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         Yields the name of the base file, a boolean which is True if the image
         is "small", and a boolean which indicates if this is a resized image.
-        Note that is is possible for more than one yield to result from this
+        Note that it is possible for more than one yield to result from this
         check.
 
         If no base file is found, then nothing is yielded.

@@ -397,7 +397,7 @@ class ComputeCellsAPI(compute_api.API):
 
     @check_instance_cell
     def get_console_output(self, context, instance, *args, **kwargs):
-        """Get console output for an an instance."""
+        """Get console output for an instance."""
         # NOTE(comstud): Calling super() just to get policy check
         super(ComputeCellsAPI, self).get_console_output(context, instance,
                 *args, **kwargs)

@@ -188,7 +188,7 @@ def bm_node_update(context, bm_node_id, values):
 def bm_node_associate_and_update(context, node_uuid, values):
     """Associate an instance to a node safely
 
-    Associate an instance to a node only if that node is not yet assocated.
+    Associate an instance to a node only if that node is not yet associated.
     Allow the caller to set any other fields they require in the same
     operation. For example, this is used to set the node's task_state to
     BUILDING at the beginning of driver.spawn().

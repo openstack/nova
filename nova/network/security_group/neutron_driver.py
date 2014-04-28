@@ -190,7 +190,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
     def add_rules(self, context, id, name, vals):
         """Add security group rule(s) to security group.
 
-        Note: the Nova security group API doesn't support adding muliple
+        Note: the Nova security group API doesn't support adding multiple
         security group rules at once but the EC2 one does. Therefore,
         this function is written to support both. Multiple rules are
         installed to a security group in neutron using bulk support.
@@ -504,7 +504,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             self.raise_not_found(msg)
 
     def populate_security_groups(self, instance, security_groups):
-        # Setting to emply list since we do not want to populate this field
+        # Setting to empty list since we do not want to populate this field
         # in the nova database if using the neutron driver
         instance['security_groups'] = security_group.SecurityGroupList()
         instance['security_groups'].objects = []

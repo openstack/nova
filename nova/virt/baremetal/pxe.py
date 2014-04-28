@@ -310,7 +310,7 @@ class PXE(base.NodeDriver):
         if injected_files is None:
             injected_files = []
         else:
-            # NOTE(deva): copy so we dont modify the original
+            # NOTE(deva): copy so we don't modify the original
             injected_files = list(injected_files)
 
         net_config = build_network_config(network_info)

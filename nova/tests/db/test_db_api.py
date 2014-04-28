@@ -3798,7 +3798,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
         def create_ips(i, j):
             return [{'address': '1.1.%s.%s' % (i, k)} for k in range(1, j + 1)]
 
-        # NOTE(boris-42): Create more then 256 ip to check that
+        # NOTE(boris-42): Create more than 256 ip to check that
         #                 _ip_range_splitter works properly.
         for i in range(1, 3):
             ips_for_delete.extend(create_ips(i, 255))
@@ -4315,7 +4315,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                             user_id='fake-user-uuid1')
 
         # Instance rebooted or crashed. block device stats were reset and are
-        # less then the previous values
+        # less than the previous values
         db.vol_usage_update(ctxt, u'1',
                             rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,
@@ -4369,7 +4369,7 @@ class VolumeUsageDBApiTestCase(test.TestCase):
                             user_id='fake-user-uuid1')
 
         # Instance rebooted or crashed. block device stats were reset and are
-        # less then the previous values
+        # less than the previous values
         db.vol_usage_update(ctxt, u'1',
                             rd_req=100, rd_bytes=200,
                             wr_req=300, wr_bytes=400,

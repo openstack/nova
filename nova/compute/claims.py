@@ -90,7 +90,7 @@ class Claim(NopClaim):
 
         self.overhead = overhead
 
-        # Check claim at constuctor to avoid mess code
+        # Check claim at constructor to avoid mess code
         # Raise exception ComputeResourcesUnavailable if claim failed
         self._claim_test(resources, limits)
 
