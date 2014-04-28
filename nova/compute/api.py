@@ -3800,19 +3800,30 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
             msg = _("Quota exceeded, too many security group rules.")
             self.raise_over_quota(msg)
 
-        msg = _("Authorize security group ingress %s")
-        LOG.audit(msg, name, context=context)
-
-        rules = [self.db.security_group_rule_create(context, v) for v in vals]
+        msg = _("Security group %(name)s added %(protocol)s ingress "
+                "(%(from_port)s:%(to_port)s)")
+        rules = []
+        for v in vals:
+            rule = self.db.security_group_rule_create(context, v)
+            rules.append(rule)
+            LOG.audit(msg, {'name': name,
+                            'protocol': rule.protocol,
+                            'from_port': rule.from_port,
+                            'to_port': rule.to_port})
 
         self.trigger_rules_refresh(context, id=id)
         return rules
 
     def remove_rules(self, context, security_group, rule_ids):
-        msg = _("Revoke security group ingress %s")
-        LOG.audit(msg, security_group['name'], context=context)
-
+        msg = _("Security group %(name)s removed %(protocol)s ingress "
+                "(%(from_port)s:%(to_port)s)")
         for rule_id in rule_ids:
+            rule = self.get_rule(context, rule_id)
+            LOG.audit(msg, {'name': security_group['name'],
+                            'protocol': rule.protocol,
+                            'from_port': rule.from_port,
+                            'to_port': rule.to_port})
+
             self.db.security_group_rule_destroy(context, rule_id)
 
         # NOTE(vish): we removed some rules, so refresh
