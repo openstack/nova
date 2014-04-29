@@ -2,18 +2,18 @@
 <limits xmlns:os-used-limits="http://docs.openstack.org/compute/ext/used_limits/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/common/api/v1.0">
   <rates>
     <rate regex=".*" uri="*">
-      <limit next-available="%(timestamp)s" unit="MINUTE" verb="POST" remaining="120" value="120"/>
-      <limit next-available="%(timestamp)s" unit="MINUTE" verb="PUT" remaining="120" value="120"/>
-      <limit next-available="%(timestamp)s" unit="MINUTE" verb="DELETE" remaining="120" value="120"/>
+      <limit next-available="%(isotime)s" unit="MINUTE" verb="POST" remaining="120" value="120"/>
+      <limit next-available="%(isotime)s" unit="MINUTE" verb="PUT" remaining="120" value="120"/>
+      <limit next-available="%(isotime)s" unit="MINUTE" verb="DELETE" remaining="120" value="120"/>
     </rate>
     <rate regex="^/servers" uri="*/servers">
-      <limit next-available="%(timestamp)s" unit="MINUTE" verb="POST" remaining="120" value="120"/>
+      <limit next-available="%(isotime)s" unit="MINUTE" verb="POST" remaining="120" value="120"/>
     </rate>
     <rate regex=".*changes-since.*" uri="*changes-since*">
-      <limit next-available="%(timestamp)s" unit="MINUTE" verb="GET" remaining="120" value="120"/>
+      <limit next-available="%(isotime)s" unit="MINUTE" verb="GET" remaining="120" value="120"/>
     </rate>
     <rate regex="^/os-fping" uri="*/os-fping">
-      <limit next-available="%(timestamp)s" unit="MINUTE" verb="GET" remaining="12" value="12"/>
+      <limit next-available="%(isotime)s" unit="MINUTE" verb="GET" remaining="12" value="12"/>
     </rate>
   </rates>
   <absolute>

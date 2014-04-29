@@ -22,21 +22,21 @@
             {
                 "limit": [
                     {
-                        "next-available": "%(timestamp)s",
+                        "next-available": "%(isotime)s",
                         "remaining": 120,
                         "unit": "MINUTE",
                         "value": 120,
                         "verb": "POST"
                     },
                     {
-                        "next-available": "%(timestamp)s",
+                        "next-available": "%(isotime)s",
                         "remaining": 120,
                         "unit": "MINUTE",
                         "value": 120,
                         "verb": "PUT"
                     },
                     {
-                        "next-available": "%(timestamp)s",
+                        "next-available": "%(isotime)s",
                         "remaining": 120,
                         "unit": "MINUTE",
                         "value": 120,
@@ -49,7 +49,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "%(timestamp)s",
+                        "next-available": "%(isotime)s",
                         "remaining": 120,
                         "unit": "MINUTE",
                         "value": 120,
@@ -62,7 +62,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "%(timestamp)s",
+                        "next-available": "%(isotime)s",
                         "remaining": 120,
                         "unit": "MINUTE",
                         "value": 120,
@@ -75,7 +75,7 @@
             {
                 "limit": [
                     {
-                        "next-available": "%(timestamp)s",
+                        "next-available": "%(isotime)s",
                         "remaining": 12,
                         "unit": "MINUTE",
                         "value": 12,
