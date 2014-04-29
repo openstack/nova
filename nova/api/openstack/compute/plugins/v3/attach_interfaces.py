@@ -106,6 +106,7 @@ class InterfaceAttachmentController(object):
             vif = self.compute_api.attach_interface(context,
                 instance, network_id, port_id, req_ip)
         except (exception.PortNotFound,
+                exception.FixedIpAlreadyInUse,
                 exception.PortInUse,
                 exception.NetworkDuplicated,
                 exception.NetworkAmbiguous,

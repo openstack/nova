@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 from oslo.config import cfg
 
 from nova.api.openstack.compute.contrib import attach_interfaces
@@ -113,7 +114,7 @@ def fake_detach_interface(self, context, instance, port_id):
     raise exception.PortNotFound(port_id=port_id)
 
 
-def fake_get_instance(self, context, intance_id, want_objects=False):
+def fake_get_instance(self, *args, **kwargs):
     return {}
 
 
@@ -280,3 +281,33 @@ class InterfaceAttachTests(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest,
                           attachments.create, req, FAKE_UUID1,
                           jsonutils.loads(req.body))
+
+
+class InterfaceAttachTestsWithMock(test.NoDBTestCase):
+    def setUp(self):
+        super(InterfaceAttachTestsWithMock, self).setUp()
+        self.flags(neutron_auth_strategy=None)
+        self.flags(neutron_url='http://anyhost/')
+        self.flags(neutron_url_timeout=30)
+        self.context = context.get_admin_context()
+
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch.object(compute_api.API, 'attach_interface')
+    def test_attach_interface_fixed_ip_already_in_use(self,
+                                                      attach_mock,
+                                                      get_mock):
+        get_mock.side_effect = fake_get_instance
+        attach_mock.side_effect = exception.FixedIpAlreadyInUse(
+            address='10.0.2.2', instance_uuid=FAKE_UUID1)
+        attachments = attach_interfaces.InterfaceAttachmentController()
+        req = webob.Request.blank('/v2/fake/os-interfaces/attach')
+        req.method = 'POST'
+        req.body = jsonutils.dumps({})
+        req.headers['content-type'] = 'application/json'
+        req.environ['nova.context'] = self.context
+        self.assertRaises(exc.HTTPBadRequest,
+                          attachments.create, req, FAKE_UUID1,
+                          jsonutils.loads(req.body))
+        attach_mock.assert_called_once_with(self.context, {}, None, None, None)
+        get_mock.assert_called_once_with(self.context, FAKE_UUID1,
+                                         want_objects=True)
