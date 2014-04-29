@@ -4,8 +4,8 @@
             "os-extended-server-attributes:host": "%(compute_host)s",
             "os-extended-server-attributes:hypervisor_hostname": "%(hypervisor_hostname)s",
             "os-extended-server-attributes:instance_name": "%(instance_name)s",
-            "updated": "%(timestamp)s",
-            "created": "%(timestamp)s",
+            "updated": "%(isotime)s",
+            "created": "%(isotime)s",
             "addresses": {
                 "private": [
                     {

@@ -1,8 +1,8 @@
 {
     "servers": [
     {
-            "updated": "%(timestamp)s",
-            "created": "%(timestamp)s",
+            "updated": "%(isotime)s",
+            "created": "%(isotime)s",
             "addresses": {
                 "private": [
                     {

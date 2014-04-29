@@ -4,8 +4,8 @@
         "os-extended-status:vm_state": "active",
         "os-extended-status:power_state": 1,
         "os-extended-status:locked_by": null,
-        "updated": "%(timestamp)s",
-        "created": "%(timestamp)s",
+        "updated": "%(isotime)s",
+        "created": "%(isotime)s",
         "addresses": {
             "private": [
                 {

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<server xmlns:OS-SRV-USG="http://docs.openstack.org/compute/ext/server_usage/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="%(timestamp)s" hostId="%(hostid)s" name="new-server-test" created="%(timestamp)s" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="%(id)s" OS-SRV-USG:terminated_at="None" OS-SRV-USG:launched_at="%(timestamp)s">
+<server xmlns:OS-SRV-USG="http://docs.openstack.org/compute/ext/server_usage/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="%(isotime)s" hostId="%(hostid)s" name="new-server-test" created="%(isotime)s" userId="fake" tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="%(id)s" OS-SRV-USG:terminated_at="None" OS-SRV-USG:launched_at="%(timestamp)s">
   <image id="%(uuid)s">
     <atom:link href="%(host)s/openstack/images/%(uuid)s" rel="bookmark"/>
   </image>

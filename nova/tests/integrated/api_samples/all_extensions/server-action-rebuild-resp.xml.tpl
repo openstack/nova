@@ -7,8 +7,8 @@
         name="%(name)s"
         hostId="%(hostid)s" progress="0"
         status="ACTIVE" adminPass="%(password)s"
-        created="%(timestamp)s"
-        updated="%(timestamp)s"
+        created="%(isotime)s"
+        updated="%(isotime)s"
         accessIPv4="%(ip)s"
         accessIPv6="%(ip6)s"
         OS-DCF:diskConfig="AUTO">

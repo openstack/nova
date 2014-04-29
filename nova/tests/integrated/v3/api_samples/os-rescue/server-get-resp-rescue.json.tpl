@@ -10,7 +10,7 @@
                 }
             ]
         },
-        "created": "%(timestamp)s",
+        "created": "%(isotime)s",
         "flavor": {
             "id": "1",
             "links": [
@@ -47,7 +47,7 @@
         "name": "new-server-test",
         "status": "%(status)s",
         "tenant_id": "openstack",
-        "updated": "%(timestamp)s",
+        "updated": "%(isotime)s",
         "user_id": "fake",
         "key_name": null
     }
