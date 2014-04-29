@@ -1176,7 +1176,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         called = {}
 
         def fake_add_instance_fault(*args, **kwargs):
-            called["fake_add_instance_fault"] = args[3]
+            called["fake_add_instance_fault"] = args[2]
 
         self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
                        fake_add_instance_fault)

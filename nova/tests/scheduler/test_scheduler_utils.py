@@ -21,7 +21,6 @@ from oslo.config import cfg
 
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
-from nova.conductor import api as conductor_api
 from nova import db
 from nova import notifications
 from nova import rpc
@@ -81,7 +80,6 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(rpc, 'get_notifier')
         notifier = self.mox.CreateMockAnything()
-        rpc.get_notifier('conductor', CONF.host).AndReturn(notifier)
         rpc.get_notifier(service).AndReturn(notifier)
 
         old_ref = 'old_ref'
@@ -94,7 +92,6 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                       service=service)
             compute_utils.add_instance_fault_from_exc(
                     self.context,
-                    mox.IsA(conductor_api.LocalAPI),
                     new_ref, exc_info, mox.IsA(tuple))
 
             payload = dict(request_spec=request_spec,

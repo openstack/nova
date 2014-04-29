@@ -29,6 +29,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova import notifications
 from nova.objects import instance as instance_obj
+from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log
 from nova.openstack.common import timeutils
@@ -82,22 +83,16 @@ def _get_fault_details(exc_info, error_code):
     return unicode(details)
 
 
-def add_instance_fault_from_exc(context, conductor,
-                                instance, fault, exc_info=None):
+def add_instance_fault_from_exc(context, instance, fault, exc_info=None):
     """Adds the specified fault to the database."""
 
-    fault_dict = exception_to_dict(fault)
-    code = fault_dict["code"]
-    details = _get_fault_details(exc_info, code)
-
-    values = {
-        'instance_uuid': instance['uuid'],
-        'code': code,
-        'message': fault_dict["message"],
-        'details': details,
-        'host': CONF.host
-    }
-    conductor.instance_fault_create(context, values)
+    fault_obj = instance_fault_obj.InstanceFault(context=context)
+    fault_obj.host = CONF.host
+    fault_obj.instance_uuid = instance['uuid']
+    fault_obj.update(exception_to_dict(fault))
+    code = fault_obj.code
+    fault_obj.details = _get_fault_details(exc_info, code)
+    fault_obj.create()
 
 
 def pack_action_start(context, instance_uuid, action_name):

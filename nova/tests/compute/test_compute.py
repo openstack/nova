@@ -5506,6 +5506,16 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual(len(instances), 1)
         self.assertIsNone(instances[0]['task_state'])
 
+    def _fill_fault(self, values):
+        extra = dict([(x, None) for x in ['created_at',
+                                          'deleted_at',
+                                          'updated_at',
+                                          'deleted']])
+        extra['id'] = 1
+        extra['details'] = ''
+        extra.update(values)
+        return extra
+
     def test_add_instance_fault(self):
         instance = self._create_fake_instance()
         exc_info = None
@@ -5521,6 +5531,7 @@ class ComputeTestCase(BaseTestCase):
                 'host': self.compute.host
             }
             self.assertEqual(expected, values)
+            return self._fill_fault(expected)
 
         try:
             raise NotImplementedError('test')
@@ -5531,7 +5542,6 @@ class ComputeTestCase(BaseTestCase):
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
-                                                  self.compute.conductor_api,
                                                   instance,
                                                   NotImplementedError('test'),
                                                   exc_info)
@@ -5552,6 +5562,7 @@ class ComputeTestCase(BaseTestCase):
                 'host': self.compute.host
             }
             self.assertEqual(expected, values)
+            return self._fill_fault(expected)
 
         try:
             raise messaging.RemoteError('test', 'My Test Message')
@@ -5562,7 +5573,7 @@ class ComputeTestCase(BaseTestCase):
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
-            self.compute.conductor_api, instance, exc, exc_info)
+            instance, exc, exc_info)
 
     def test_add_instance_fault_user_error(self):
         instance = self._create_fake_instance()
@@ -5578,6 +5589,7 @@ class ComputeTestCase(BaseTestCase):
                 'host': self.compute.host
             }
             self.assertEqual(expected, values)
+            return self._fill_fault(expected)
 
         user_exc = exception.Invalid('fake details', code=400)
 
@@ -5590,7 +5602,7 @@ class ComputeTestCase(BaseTestCase):
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
-            self.compute.conductor_api, instance, user_exc, exc_info)
+            instance, user_exc, exc_info)
 
     def test_add_instance_fault_no_exc_info(self):
         instance = self._create_fake_instance()
@@ -5604,12 +5616,12 @@ class ComputeTestCase(BaseTestCase):
                 'host': self.compute.host
             }
             self.assertEqual(expected, values)
+            return self._fill_fault(expected)
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
-                                                  self.compute.conductor_api,
                                                   instance,
                                                   NotImplementedError('test'))
 
@@ -5627,12 +5639,12 @@ class ComputeTestCase(BaseTestCase):
                 'host': self.compute.host
             }
             self.assertEqual(expected, values)
+            return self._fill_fault(expected)
 
         self.stubs.Set(nova.db, 'instance_fault_create', fake_db_fault_create)
 
         ctxt = context.get_admin_context()
         compute_utils.add_instance_fault_from_exc(ctxt,
-                                                  self.compute.conductor_api,
                                                   instance,
                                                   NotImplementedError(message))
 
@@ -10111,7 +10123,6 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
             compute_utils.add_instance_fault_from_exc(self.context,
-                    self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._shutdown_instance(self.context, self.instance,
                     mox.IgnoreArg(),
@@ -10199,7 +10210,6 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
         except test.TestingException:
             exc_info = sys.exc_info()
             compute_utils.add_instance_fault_from_exc(self.context,
-                    self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
 
             self.compute._shutdown_instance(self.context, self.instance,
@@ -10232,7 +10242,6 @@ class ComputeRescheduleOrErrorTestCase(BaseTestCase):
             exc_info = sys.exc_info()
 
             compute_utils.add_instance_fault_from_exc(self.context,
-                    self.compute.conductor_api,
                     self.instance, exc_info[0], exc_info=exc_info)
             self.compute._shutdown_instance(self.context, self.instance,
                                             mox.IgnoreArg(),

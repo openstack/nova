@@ -24,7 +24,6 @@ import mox
 
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-from nova.conductor import api as conductor_api
 from nova import context
 from nova import db
 from nova import exception
@@ -88,8 +87,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         old_ref, new_ref = db.instance_update_and_get_original(fake_context,
                 uuid, {'vm_state': vm_states.ERROR, 'task_state':
                     None}).AndReturn(({}, {}))
-        compute_utils.add_instance_fault_from_exc(fake_context,
-                mox.IsA(conductor_api.LocalAPI), new_ref,
+        compute_utils.add_instance_fault_from_exc(fake_context, new_ref,
                 mox.IsA(exception.NoValidHost), mox.IgnoreArg())
 
         self.mox.StubOutWithMock(db, 'compute_node_get_all')
@@ -124,8 +122,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         old_ref, new_ref = db.instance_update_and_get_original(fake_context,
                 uuid, {'vm_state': vm_states.ERROR, 'task_state':
                     None}).AndReturn(({}, {}))
-        compute_utils.add_instance_fault_from_exc(fake_context,
-                mox.IsA(conductor_api.LocalAPI), new_ref,
+        compute_utils.add_instance_fault_from_exc(fake_context, new_ref,
                 mox.IsA(exception.NoValidHost), mox.IgnoreArg())
         self.mox.ReplayAll()
         sched.schedule_run_instance(

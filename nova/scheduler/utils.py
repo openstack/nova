@@ -72,8 +72,6 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
     #             be removed along with the 'if instance_uuid:' if we can
     #             verify that uuid is always set.
     uuids = [properties.get('uuid')]
-    from nova.conductor import api as conductor_api
-    conductor = conductor_api.LocalAPI()
     notifier = rpc.get_notifier(service)
     for instance_uuid in request_spec.get('instance_uuids') or uuids:
         if instance_uuid:
@@ -87,7 +85,6 @@ def set_vm_state_and_notify(context, service, method, updates, ex,
             notifications.send_update(context, old_ref, new_ref,
                     service=service)
             compute_utils.add_instance_fault_from_exc(context,
-                    conductor,
                     new_ref, ex, sys.exc_info())
 
         payload = dict(request_spec=request_spec,
