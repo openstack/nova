@@ -759,11 +759,6 @@ class ComputeManager(manager.Manager):
 
     def _complete_deletion(self, context, instance, bdms,
                            quotas, system_meta):
-        # FIXME(comstud): See bug 1296414. Quotas here should only be
-        # committed if the instance is not SOFT_DELETED. If there were
-        # some sort of race and the instance was SOFT_DELETED, we should
-        # not commit quotas, as they would have already been done in
-        # soft_delete().
         if quotas:
             quotas.commit()
 
