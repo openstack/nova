@@ -616,50 +616,58 @@ class API(base.Base):
             if int(image.get('min_disk') or 0) > root_gb:
                     raise exception.FlavorDiskTooSmall()
 
-    def _check_and_transform_bdm(self, base_options, image_meta, min_count,
-                                 max_count, block_device_mapping, legacy_bdm):
+    def _get_image_defined_bdms(self, base_options, instance_type, image_meta,
+                                root_device_name):
+        image_properties = image_meta.get('properties', {})
+
+        # Get the block device mappings defined by the image.
+        image_defined_bdms = image_properties.get('block_device_mapping', [])
+        legacy_image_defined = not image_properties.get('bdm_v2', False)
+
+        image_mapping = image_properties.get('mappings', [])
+
+        if legacy_image_defined:
+            image_defined_bdms = block_device.from_legacy_mapping(
+                image_defined_bdms, None, root_device_name)
+        else:
+            image_defined_bdms = map(block_device.BlockDeviceDict,
+                                     image_defined_bdms)
+
+        if image_mapping:
+            image_defined_bdms += self._prepare_image_mapping(
+                instance_type, image_mapping)
+
+        return image_defined_bdms
+
+    def _check_and_transform_bdm(self, base_options, instance_type, image_meta,
+                                 min_count, max_count, block_device_mapping,
+                                 legacy_bdm):
         # NOTE (ndipanov): Assume root dev name is 'vda' if not supplied.
         #                  It's needed for legacy conversion to work.
         root_device_name = (base_options.get('root_device_name') or 'vda')
         image_ref = base_options.get('image_ref', '')
 
-        # Get the block device mappings defined by the image.
-        image_defined_bdms = \
-            image_meta.get('properties', {}).get('block_device_mapping', [])
-        legacy_image_defined = not image_meta.get(
-                'properties', {}).get('bdm_v2', False)
-
-        if not legacy_image_defined:
-            image_defined_bdms = map(block_device.BlockDeviceDict,
-                                     image_defined_bdms)
+        image_defined_bdms = self._get_image_defined_bdms(
+            base_options, instance_type, image_meta, root_device_name)
+        root_in_image_bdms = (
+            block_device.get_root_bdm(image_defined_bdms) is not None)
 
         if legacy_bdm:
-            if legacy_image_defined:
-                block_device_mapping += image_defined_bdms
-                block_device_mapping = block_device.from_legacy_mapping(
-                     block_device_mapping, image_ref, root_device_name)
-            else:
-                root_in_image_bdms = block_device.get_root_bdm(
-                        image_defined_bdms) is not None
-                block_device_mapping = block_device.from_legacy_mapping(
-                     block_device_mapping, image_ref, root_device_name,
-                     no_root=root_in_image_bdms) + image_defined_bdms
-        else:
+            block_device_mapping = block_device.from_legacy_mapping(
+                block_device_mapping, image_ref, root_device_name,
+                no_root=root_in_image_bdms)
+        elif image_ref and root_in_image_bdms:
             # NOTE (ndipanov): client will insert an image mapping into the v2
             # block_device_mapping, but if there is a bootable device in image
             # mappings - we need to get rid of the inserted image.
-            if legacy_image_defined:
-                image_defined_bdms = block_device.from_legacy_mapping(
-                    image_defined_bdms, None, root_device_name)
-            root_in_image_bdms = block_device.get_root_bdm(
-                    image_defined_bdms) is not None
-            if image_ref and root_in_image_bdms:
-                block_device_mapping = [bdm for bdm in block_device_mapping
-                                        if not (
-                                            bdm.get('source_type') == 'image'
-                                            and bdm.get('boot_index') == 0)]
+            def not_image_and_root_bdm(bdm):
+                return not (bdm.get('boot_index') == 0 and
+                            bdm.get('source_type') == 'image')
 
-            block_device_mapping += image_defined_bdms
+            block_device_mapping = (
+                filter(not_image_and_root_bdm, block_device_mapping))
+
+        block_device_mapping += image_defined_bdms
 
         if min_count > 1 or max_count > 1:
             if any(map(lambda bdm: bdm['source_type'] == 'volume',
@@ -980,7 +988,7 @@ class API(base.Base):
             max_count = max_net_count
 
         block_device_mapping = self._check_and_transform_bdm(
-            base_options, boot_meta, min_count, max_count,
+            base_options, instance_type, boot_meta, min_count, max_count,
             block_device_mapping, legacy_bdm)
 
         instances = self._provision_instances(context, instance_type,
@@ -1018,13 +1026,13 @@ class API(base.Base):
                 size = instance_type.get('ephemeral_gb', 0)
         return size
 
-    def _prepare_image_mapping(self, instance_type, instance_uuid, mappings):
+    def _prepare_image_mapping(self, instance_type, mappings):
         """Extract and format blank devices from image mappings."""
 
         prepared_mappings = []
 
         for bdm in block_device.mappings_prepend_dev(mappings):
-            LOG.debug(_("Image bdm %s"), bdm, instance_uuid=instance_uuid)
+            LOG.debug(_("Image bdm %s"), bdm)
 
             virtual_name = bdm['virtual']
             if virtual_name == 'ami' or virtual_name == 'root':
@@ -1147,25 +1155,6 @@ class API(base.Base):
             if num_local > max_local:
                 raise exception.InvalidBDMLocalsLimit()
 
-    def _populate_instance_for_bdm(self, context, instance, instance_type,
-            image, block_device_mapping):
-        """Populate instance block device mapping information."""
-        instance_uuid = instance['uuid']
-        image_properties = image.get('properties', {})
-        image_mapping = image_properties.get('mappings', [])
-        if image_mapping:
-            image_mapping = self._prepare_image_mapping(instance_type,
-                                                instance_uuid, image_mapping)
-
-        self._validate_bdm(context, instance, instance_type,
-                           block_device_mapping + image_mapping)
-
-        for mapping in (image_mapping, block_device_mapping):
-            if not mapping:
-                continue
-            self._update_block_device_mapping(context,
-                    instance_type, instance_uuid, mapping)
-
     def _populate_instance_shutdown_terminate(self, instance, image,
                                               block_device_mapping):
         """Populate instance shutdown_terminate information."""
@@ -1271,11 +1260,14 @@ class API(base.Base):
         #                  has been created, so delete it and re-raise so
         #                  that other cleanup can happen.
         try:
-            self._populate_instance_for_bdm(context, instance,
-                    instance_type, image, block_device_mapping)
+            self._validate_bdm(
+                context, instance, instance_type, block_device_mapping)
         except exception.InvalidBDM:
             with excutils.save_and_reraise_exception():
                 instance.destroy(context)
+
+        self._update_block_device_mapping(
+            context, instance_type, instance['uuid'], block_device_mapping)
 
         return instance
 
