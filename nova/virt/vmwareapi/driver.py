@@ -158,7 +158,6 @@ class VMwareESXDriver(driver.ComputeDriver):
             vim.client.service.Logout(session_manager)
         except suds.WebFault:
             LOG.debug(_("No vSphere session was open during cleanup_host."))
-            pass
 
     def list_instances(self):
         """List VM instances."""
@@ -961,8 +960,6 @@ class VMwareAPISession(object):
         loop.start(CONF.vmware.task_poll_interval)
         try:
             ret_val = done.wait()
-        except Exception:
-            raise
         finally:
             self._stop_loop(loop)
         return ret_val
