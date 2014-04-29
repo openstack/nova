@@ -5,7 +5,7 @@
         "fingerprint": "%(fingerprint)s",
         "user_id": "fake",
         "deleted": false,
-        "created_at": "%(timestamp)s",
+        "created_at": "%(strtime)s",
         "updated_at": null,
         "deleted_at": null,
         "id": 1

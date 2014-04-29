@@ -10,7 +10,7 @@
     <item>%(hostid)s</item>
   </hosts_not_run>
   <overall_status>0 of 1 hosts done. 0 errors.</overall_status>
-  <period_ending>%(timestamp)s</period_ending>
-  <period_beginning>%(timestamp)s</period_beginning>
+  <period_ending>%(xmltime)s</period_ending>
+  <period_beginning>%(xmltime)s</period_beginning>
   <num_hosts>1</num_hosts>
 </instance_usage_audit_log>

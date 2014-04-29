@@ -4,7 +4,7 @@
     <vpn_public_port>1000</vpn_public_port>
     <dhcp_start>%(ip)s</dhcp_start>
     <bridge_interface>eth0</bridge_interface>
-    <updated_at>%(timestamp)s</updated_at>
+    <updated_at>%(xmltime)s</updated_at>
     <id>%(id)s</id>
     <cidr_v6>None</cidr_v6>
     <deleted_at>None</deleted_at>
@@ -23,7 +23,7 @@
     <vpn_public_address>%(ip)s</vpn_public_address>
     <multi_host>False</multi_host>
     <dns2>None</dns2>
-    <created_at>%(timestamp)s</created_at>
+    <created_at>%(xmltime)s</created_at>
     <host>nsokolov-desktop</host>
     <gateway_v6>None</gateway_v6>
     <netmask_v6>None</netmask_v6>

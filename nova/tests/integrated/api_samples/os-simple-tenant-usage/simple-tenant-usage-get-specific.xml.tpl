@@ -5,8 +5,8 @@
   <total_vcpus_usage>1.0</total_vcpus_usage>
   <total_memory_mb_usage>512.0</total_memory_mb_usage>
   <total_hours>1.0</total_hours>
-  <start>%(timestamp)s</start>
-  <stop>%(timestamp)s</stop>
+  <start>%(xmltime)s</start>
+  <stop>%(xmltime)s</stop>
   <server_usages>
     <server_usage>
       <instance_id>%(uuid)s</instance_id>
@@ -17,7 +17,7 @@
       <vcpus>1</vcpus>
       <tenant_id>openstack</tenant_id>
       <flavor>m1.tiny</flavor>
-      <started_at>%(timestamp)s</started_at>
+      <started_at>%(xmltime)s</started_at>
       <ended_at>None</ended_at>
       <state>active</state>
       <uptime>3600</uptime>

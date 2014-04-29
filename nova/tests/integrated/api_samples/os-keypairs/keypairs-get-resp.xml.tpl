@@ -6,7 +6,7 @@
     <fingerprint>%(fingerprint)s</fingerprint>
     <user_id>fake</user_id>
     <deleted>False</deleted>
-    <created_at>%(timestamp)s</created_at>
+    <created_at>%(xmltime)s</created_at>
     <updated_at>None</updated_at>
     <deleted_at>None</deleted_at>
     <id>1</id>
