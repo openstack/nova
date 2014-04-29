@@ -1194,6 +1194,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertFalse(allow_reboot)
             self.assertEqual(reboot_type, 'HARD')
 
+    @mock.patch('nova.objects.block_device.BlockDeviceMapping.'
+                'get_by_volume_id')
+    @mock.patch('nova.compute.manager.ComputeManager._detach_volume')
+    @mock.patch('nova.objects.instance.Instance._from_db_object')
+    def test_remove_volume_connection(self, inst_from_db, detach, bdm_get):
+        bdm = mock.sentinel.bdm
+        inst_obj = mock.sentinel.inst_obj
+        bdm_get.return_value = bdm
+        inst_from_db.return_value = inst_obj
+        with mock.patch.object(self.compute, 'volume_api'):
+            self.compute.remove_volume_connection(self.context, 'vol',
+                                                  {'uuid': 'fake-inst'})
+        detach.assert_called_once_with(self.context, inst_obj, bdm)
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
