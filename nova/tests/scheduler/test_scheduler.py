@@ -568,17 +568,30 @@ class SchedulerV3PassthroughTestCase(test.TestCase):
         with mock.patch.object(self.manager, 'select_destinations'
                 ) as select_destinations:
             self.proxy.select_destinations(None, None, None)
-            select_destinations.assert_called_once()
+            select_destinations.assert_called_once_with(None,
+                                                        filter_properties=None,
+                                                        request_spec=None)
 
     def test_run_instance(self):
         with mock.patch.object(self.manager, 'run_instance'
                 ) as run_instance:
             self.proxy.run_instance(None, None, None, None, None, None, None,
                     None)
-            run_instance.assert_called_once()
+            run_instance.assert_called_once_with(None, legacy_bdm_in_spec=None,
+                                                 request_spec=None,
+                                                 is_first_time=None,
+                                                 filter_properties=None,
+                                                 admin_password=None,
+                                                 injected_files=None,
+                                                 requested_networks=None)
 
     def test_prep_resize(self):
         with mock.patch.object(self.manager, 'prep_resize'
                 ) as prep_resize:
             self.proxy.prep_resize(None, None, None, None, None, None, None)
-            prep_resize.assert_called_once()
+            prep_resize.assert_called_once_with(None, request_spec=None,
+                                                instance_type=None,
+                                                reservations=None,
+                                                image=None,
+                                                filter_properties=None,
+                                                instance=None)

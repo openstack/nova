@@ -1880,4 +1880,4 @@ class ConductorV2ManagerProxyTestCase(test.NoDBTestCase):
                 args.append(None)
             with mock.patch.object(manager, method) as mock_method:
                 getattr(proxy, method)(ctxt, *args)
-                mock_method.assert_called_once()
+                mock_method.assert_called_once_with(mock.ANY, *args)
