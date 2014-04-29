@@ -122,7 +122,7 @@ class CloudPipe(object):
         return encoded
 
     def launch_vpn_instance(self, context):
-        LOG.debug(_("Launching VPN for %s") % (context.project_id))
+        LOG.debug("Launching VPN for %s", context.project_id)
         key_name = self.setup_key_pair(context)
         group_name = self.setup_security_group(context)
         flavor = flavors.get_flavor_by_name(CONF.vpn_flavor)
