@@ -96,7 +96,7 @@ class XVPConsoleProxy(object):
         return self._xvp_encrypt(password)
 
     def _rebuild_xvp_conf(self, context):
-        LOG.debug(_('Rebuilding xvp conf'))
+        LOG.debug('Rebuilding xvp conf')
         pools = [pool for pool in
                  db.console_pool_get_all_by_host_type(context, self.host,
                                                        self.console_type)
@@ -116,7 +116,7 @@ class XVPConsoleProxy(object):
 
     def _write_conf(self, config):
         try:
-            LOG.debug(_('Re-wrote %s') % CONF.console_xvp_conf)
+            LOG.debug('Re-wrote %s', CONF.console_xvp_conf)
             with open(CONF.console_xvp_conf, 'w') as cfile:
                 cfile.write(config)
         except IOError:
@@ -124,7 +124,7 @@ class XVPConsoleProxy(object):
                 LOG.exception(_("Failed to write configuration file"))
 
     def _xvp_stop(self):
-        LOG.debug(_('Stopping xvp'))
+        LOG.debug('Stopping xvp')
         pid = self._xvp_pid()
         if not pid:
             return
@@ -137,7 +137,7 @@ class XVPConsoleProxy(object):
     def _xvp_start(self):
         if self._xvp_check_running():
             return
-        LOG.debug(_('Starting xvp'))
+        LOG.debug('Starting xvp')
         try:
             utils.execute('xvp',
                           '-p', CONF.console_xvp_pid,
@@ -147,9 +147,9 @@ class XVPConsoleProxy(object):
             LOG.error(_('Error starting xvp: %s') % err)
 
     def _xvp_restart(self):
-        LOG.debug(_('Restarting xvp'))
+        LOG.debug('Restarting xvp')
         if not self._xvp_check_running():
-            LOG.debug(_('xvp not running...'))
+            LOG.debug('xvp not running...')
             self._xvp_start()
         else:
             pid = self._xvp_pid()

@@ -20,7 +20,6 @@ from oslo.config import cfg
 from nova.compute import rpcapi as compute_rpcapi
 from nova import exception
 from nova import manager
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import driver as vmwareapi_conn
@@ -59,7 +58,7 @@ class ConsoleVMRCManager(manager.Manager):
 
     def _generate_console(self, context, pool, name, instance_id, instance):
         """Sets up console for the instance."""
-        LOG.debug(_('Adding console'))
+        LOG.debug('Adding console')
 
         password = self.driver.generate_password(
                         self._get_vim_session(pool),
@@ -109,11 +108,11 @@ class ConsoleVMRCManager(manager.Manager):
         try:
             console = self.db.console_get(context, console_id)
         except exception.NotFound:
-            LOG.debug(_('Tried to remove non-existent console '
-                        '%(console_id)s.') % {'console_id': console_id})
+            LOG.debug('Tried to remove non-existent console '
+                      '%(console_id)s.', {'console_id': console_id})
             return
-        LOG.debug(_('Removing console '
-                    '%(console_id)s.') % {'console_id': console_id})
+        LOG.debug('Removing console '
+                  '%(console_id)s.', {'console_id': console_id})
         self.db.console_delete(context, console_id)
         self.driver.teardown_console(context, console)
 
