@@ -19,5 +19,4 @@
 .. automodule:: nova.api.metadata
    :platform: Unix
    :synopsis: Metadata Server for Nova
-.. moduleauthor:: Vishvananda Ishaya <vishvananda@gmail.com>
 """
