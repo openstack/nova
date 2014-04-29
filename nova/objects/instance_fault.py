@@ -15,6 +15,7 @@
 import itertools
 
 from nova import db
+from nova import exception
 from nova.objects import base
 from nova.objects import fields
 
@@ -22,7 +23,8 @@ from nova.objects import fields
 class InstanceFault(base.NovaPersistentObject, base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: String attributes updated to support unicode
-    VERSION = '1.1'
+    # Version 1.2: Added create()
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -50,11 +52,28 @@ class InstanceFault(base.NovaPersistentObject, base.NovaObject):
             return cls._from_db_object(context, cls(),
                                        db_faults[instance_uuid][0])
 
+    @base.remotable
+    def create(self, context):
+        if self.obj_attr_is_set('id'):
+            raise exception.ObjectActionError(action='create',
+                                              reason='already created')
+        values = {
+            'instance_uuid': self.instance_uuid,
+            'code': self.code,
+            'message': self.message,
+            'details': self.details,
+            'host': self.host,
+            }
+        db_fault = db.instance_fault_create(context, values)
+        self._from_db_object(context, self, db_fault)
+        self.obj_reset_changes()
+
 
 class InstanceFaultList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
     #              InstanceFault <= version 1.1
-    VERSION = '1.0'
+    # Version 1.1: InstanceFault version 1.2
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('InstanceFault'),
@@ -62,6 +81,7 @@ class InstanceFaultList(base.ObjectListBase, base.NovaObject):
     child_versions = {
         '1.0': '1.1',
         # NOTE(danms): InstanceFault was at 1.1 before we added this
+        '1.1': '1.2',
         }
 
     @base.remotable_classmethod
