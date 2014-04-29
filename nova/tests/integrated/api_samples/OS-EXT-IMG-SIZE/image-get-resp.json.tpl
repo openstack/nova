@@ -29,6 +29,6 @@
         "OS-EXT-IMG-SIZE:size": %(int)s,
         "progress": 100,
         "status": "ACTIVE",
-        "updated": "%(timestamp)s"
+        "updated": "2011-01-01T01:02:03Z"
     }
 }
