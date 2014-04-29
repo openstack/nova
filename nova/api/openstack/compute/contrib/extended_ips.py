@@ -76,7 +76,7 @@ class Extended_ips(extensions.ExtensionDescriptor):
     alias = "OS-EXT-IPS"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_ips/api/v1.1")
-    updated = "2013-01-06T00:00:00+00:00"
+    updated = "2013-01-06T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedIpsController()

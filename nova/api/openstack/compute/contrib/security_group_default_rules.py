@@ -201,7 +201,7 @@ class Security_group_default_rules(extensions.ExtensionDescriptor):
     alias = "os-security-group-default-rules"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "securitygroupdefaultrules/api/v1.1")
-    updated = "2013-02-05T00:00:00+00:00"
+    updated = "2013-02-05T00:00:00Z"
 
     def get_resources(self):
         resources = [

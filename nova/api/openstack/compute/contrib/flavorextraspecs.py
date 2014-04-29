@@ -145,7 +145,7 @@ class Flavorextraspecs(extensions.ExtensionDescriptor):
     alias = "os-flavor-extra-specs"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_extra_specs/api/v1.1")
-    updated = "2011-06-23T00:00:00+00:00"
+    updated = "2011-06-23T00:00:00Z"
 
     def get_resources(self):
         resources = []

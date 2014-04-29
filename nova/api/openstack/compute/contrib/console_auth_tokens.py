@@ -59,7 +59,7 @@ class Console_auth_tokens(extensions.ExtensionDescriptor):
     alias = "os-console-auth-tokens"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "consoles-auth-tokens/api/v2")
-    updated = "2013-08-13T00:00:00+00:00"
+    updated = "2013-08-13T00:00:00Z"
 
     def get_resources(self):
         controller = ConsoleAuthTokensController()

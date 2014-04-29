@@ -74,7 +74,7 @@ class Deferred_delete(extensions.ExtensionDescriptor):
     alias = "os-deferred-delete"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "deferred-delete/api/v1.1")
-    updated = "2011-09-01T00:00:00+00:00"
+    updated = "2011-09-01T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = DeferredDeleteController()

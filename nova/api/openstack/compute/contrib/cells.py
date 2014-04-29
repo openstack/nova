@@ -434,7 +434,7 @@ class Cells(extensions.ExtensionDescriptor):
     name = "Cells"
     alias = "os-cells"
     namespace = "http://docs.openstack.org/compute/ext/cells/api/v1.1"
-    updated = "2013-05-14T00:00:00+00:00"
+    updated = "2013-05-14T00:00:00Z"
 
     def get_resources(self):
         coll_actions = {

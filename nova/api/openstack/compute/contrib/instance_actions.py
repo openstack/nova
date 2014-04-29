@@ -118,7 +118,7 @@ class Instance_actions(extensions.ExtensionDescriptor):
     alias = "os-instance-actions"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "instance-actions/api/v1.1")
-    updated = "2013-02-08T00:00:00+00:00"
+    updated = "2013-02-08T00:00:00Z"
 
     def get_resources(self):
         ext = extensions.ResourceExtension('os-instance-actions',

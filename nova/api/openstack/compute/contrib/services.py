@@ -216,7 +216,7 @@ class Services(extensions.ExtensionDescriptor):
     name = "Services"
     alias = "os-services"
     namespace = "http://docs.openstack.org/compute/ext/services/api/v2"
-    updated = "2012-10-28T00:00:00-00:00"
+    updated = "2012-10-28T00:00:00Z"
 
     def get_resources(self):
         resources = []

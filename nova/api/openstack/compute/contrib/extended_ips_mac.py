@@ -74,7 +74,7 @@ class Extended_ips_mac(extensions.ExtensionDescriptor):
     alias = "OS-EXT-IPS-MAC"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_ips_mac/api/v1.1")
-    updated = "2013-03-07T00:00:00+00:00"
+    updated = "2013-03-07T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedIpsMacController()

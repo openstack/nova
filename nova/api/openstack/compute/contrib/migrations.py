@@ -79,7 +79,7 @@ class Migrations(extensions.ExtensionDescriptor):
     name = "Migrations"
     alias = ALIAS
     namespace = XMLNS
-    updated = "2013-05-30T00:00:00+00:00"
+    updated = "2013-05-30T00:00:00Z"
 
     def get_resources(self):
         resources = []

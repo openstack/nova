@@ -78,7 +78,7 @@ class Floating_ip_pools(extensions.ExtensionDescriptor):
     alias = "os-floating-ip-pools"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "floating_ip_pools/api/v1.1")
-    updated = "2012-01-04T00:00:00+00:00"
+    updated = "2012-01-04T00:00:00Z"
 
     def get_resources(self):
         resources = []

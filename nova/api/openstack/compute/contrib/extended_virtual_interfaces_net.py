@@ -63,7 +63,7 @@ class Extended_virtual_interfaces_net(extensions.ExtensionDescriptor):
     alias = "OS-EXT-VIF-NET"
     namespace = ("http://docs.openstack.org/compute/ext/"
                 "extended-virtual-interfaces-net/api/v1.1")
-    updated = "2013-03-07T00:00:00+00:00"
+    updated = "2013-03-07T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedServerVIFNetController()

@@ -189,7 +189,7 @@ class Attach_interfaces(extensions.ExtensionDescriptor):
     name = "AttachInterfaces"
     alias = "os-attach-interfaces"
     namespace = "http://docs.openstack.org/compute/ext/interfaces/api/v1.1"
-    updated = "2012-07-22T00:00:00+00:00"
+    updated = "2012-07-22T00:00:00Z"
 
     def get_resources(self):
         resources = []

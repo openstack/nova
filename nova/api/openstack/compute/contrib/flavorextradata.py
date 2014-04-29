@@ -67,7 +67,7 @@ class Flavorextradata(extensions.ExtensionDescriptor):
     alias = "OS-FLV-EXT-DATA"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_extra_data/api/v1.1")
-    updated = "2011-09-14T00:00:00+00:00"
+    updated = "2011-09-14T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = FlavorextradataController()

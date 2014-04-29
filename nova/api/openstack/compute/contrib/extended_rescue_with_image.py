@@ -22,4 +22,4 @@ class Extended_rescue_with_image(exts.ExtensionDescriptor):
     alias = "os-extended-rescue-with-image"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_rescue_with_image/api/v2")
-    updated = "2014-01-04T00:00:00+00:00"
+    updated = "2014-01-04T00:00:00Z"

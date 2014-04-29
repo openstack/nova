@@ -260,7 +260,7 @@ class Hypervisors(extensions.ExtensionDescriptor):
     name = "Hypervisors"
     alias = "os-hypervisors"
     namespace = "http://docs.openstack.org/compute/ext/hypervisors/api/v1.1"
-    updated = "2012-06-21T00:00:00+00:00"
+    updated = "2012-06-21T00:00:00Z"
 
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hypervisors',

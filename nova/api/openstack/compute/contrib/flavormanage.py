@@ -88,7 +88,7 @@ class Flavormanage(extensions.ExtensionDescriptor):
     alias = "os-flavor-manage"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_manage/api/v1.1")
-    updated = "2012-01-19T00:00:00+00:00"
+    updated = "2012-01-19T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = FlavorManageController()

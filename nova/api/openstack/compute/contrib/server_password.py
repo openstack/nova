@@ -73,7 +73,7 @@ class Server_password(extensions.ExtensionDescriptor):
     alias = "os-server-password"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "server-password/api/v2")
-    updated = "2012-11-29T00:00:00+00:00"
+    updated = "2012-11-29T00:00:00Z"
 
     def get_resources(self):
         resources = []

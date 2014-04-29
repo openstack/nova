@@ -22,4 +22,4 @@ class Extended_hypervisors(extensions.ExtensionDescriptor):
     alias = "os-extended-hypervisors"
     namespace = ("http://docs.openstack.org/compute/ext/"
                 "extended_hypervisors/api/v1.1")
-    updated = "2014-01-04T00:00:00-00:00"
+    updated = "2014-01-04T00:00:00Z"

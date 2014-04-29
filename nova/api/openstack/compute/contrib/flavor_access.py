@@ -205,7 +205,7 @@ class Flavor_access(extensions.ExtensionDescriptor):
     alias = "os-flavor-access"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_access/api/v2")
-    updated = "2012-08-01T00:00:00+00:00"
+    updated = "2012-08-01T00:00:00Z"
 
     def get_resources(self):
         resources = []

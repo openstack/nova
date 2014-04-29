@@ -62,7 +62,7 @@ class Extended_availability_zone(extensions.ExtensionDescriptor):
     alias = "OS-EXT-AZ"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_availability_zone/api/v2")
-    updated = "2013-01-30T00:00:00+00:00"
+    updated = "2013-01-30T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedAZController()

@@ -22,7 +22,7 @@ class Createserverext(extensions.ExtensionDescriptor):
     alias = "os-create-server-ext"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "createserverext/api/v1.1")
-    updated = "2011-07-19T00:00:00+00:00"
+    updated = "2011-07-19T00:00:00Z"
 
     def get_resources(self):
         res = extensions.ResourceExtension('os-create-server-ext',

@@ -196,7 +196,7 @@ class Keypairs(extensions.ExtensionDescriptor):
     name = "Keypairs"
     alias = "os-keypairs"
     namespace = "http://docs.openstack.org/compute/ext/keypairs/api/v1.1"
-    updated = "2011-08-08T00:00:00+00:00"
+    updated = "2011-08-08T00:00:00Z"
 
     def get_resources(self):
         resources = []

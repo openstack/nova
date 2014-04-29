@@ -20,4 +20,4 @@ class Block_device_mapping_v2_boot(extensions.ExtensionDescriptor):
     alias = "os-block-device-mapping-v2-boot"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "block_device_mapping_v2_boot/api/v2")
-    updated = "2013-07-08T00:00:00+00:00"
+    updated = "2013-07-08T00:00:00Z"

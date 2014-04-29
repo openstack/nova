@@ -75,7 +75,7 @@ class Server_start_stop(extensions.ExtensionDescriptor):
     name = "ServerStartStop"
     alias = "os-server-start-stop"
     namespace = "http://docs.openstack.org/compute/ext/servers/api/v1.1"
-    updated = "2012-01-23T00:00:00+00:00"
+    updated = "2012-01-23T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ServerStartStopActionController()

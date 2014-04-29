@@ -119,7 +119,7 @@ class Consoles(extensions.ExtensionDescriptor):
     name = "Consoles"
     alias = "os-consoles"
     namespace = "http://docs.openstack.org/compute/ext/os-consoles/api/v2"
-    updated = "2011-12-23T00:00:00+00:00"
+    updated = "2011-12-23T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ConsolesController()

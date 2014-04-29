@@ -23,4 +23,4 @@ class Volume_attachment_update(extensions.ExtensionDescriptor):
     alias = "os-volume-attachment-update"
     namespace = ("http://docs.openstack.org/compute/ext/"
                 "os-volume-attachment-update/api/v2")
-    updated = "2013-06-20T00:00:00-00:00"
+    updated = "2013-06-20T00:00:00Z"

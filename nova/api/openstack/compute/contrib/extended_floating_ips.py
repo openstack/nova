@@ -22,4 +22,4 @@ class Extended_floating_ips(extensions.ExtensionDescriptor):
     alias = "os-extended-floating-ips"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_floating_ips/api/v2")
-    updated = "2013-04-19T00:00:00+00:00"
+    updated = "2013-04-19T00:00:00Z"

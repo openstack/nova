@@ -6,7 +6,7 @@
             "links": [],
             "name": "Multinic",
             "namespace": "http://docs.openstack.org/compute/ext/multinic/api/v1.1",
-            "updated": "2011-06-09T00:00:00+00:00"
+            "updated": "2011-06-09T00:00:00Z"
         },
         {
             "alias": "OS-DCF",
@@ -14,7 +14,7 @@
             "links": [],
             "name": "DiskConfig",
             "namespace": "http://docs.openstack.org/compute/ext/disk_config/api/v1.1",
-            "updated": "2011-09-27T00:00:00+00:00"
+            "updated": "2011-09-27T00:00:00Z"
         },
         {
             "alias": "OS-EXT-AZ",
@@ -22,7 +22,7 @@
             "links": [],
             "name": "ExtendedAvailabilityZone",
             "namespace": "http://docs.openstack.org/compute/ext/extended_availability_zone/api/v2",
-            "updated": "2013-01-30T00:00:00+00:00"
+            "updated": "2013-01-30T00:00:00Z"
         },
         {
             "alias": "OS-EXT-IMG-SIZE",
@@ -30,7 +30,7 @@
             "links": [],
             "name": "ImageSize",
             "namespace": "http://docs.openstack.org/compute/ext/image_size/api/v1.1",
-            "updated": "2013-02-19T00:00:00+00:00"
+            "updated": "2013-02-19T00:00:00Z"
         },
         {
             "alias": "OS-EXT-IPS",
@@ -38,7 +38,7 @@
             "links": [],
             "name": "ExtendedIps",
             "namespace": "http://docs.openstack.org/compute/ext/extended_ips/api/v1.1",
-            "updated": "2013-01-06T00:00:00+00:00"
+            "updated": "2013-01-06T00:00:00Z"
         },
         {
             "alias": "OS-EXT-IPS-MAC",
@@ -46,7 +46,7 @@
             "links": [],
             "name": "ExtendedIpsMac",
             "namespace": "http://docs.openstack.org/compute/ext/extended_ips_mac/api/v1.1",
-            "updated": "2013-03-07T00:00:00+00:00"
+            "updated": "2013-03-07T00:00:00Z"
         },
         {
             "alias": "OS-EXT-SRV-ATTR",
@@ -54,7 +54,7 @@
             "links": [],
             "name": "ExtendedServerAttributes",
             "namespace": "http://docs.openstack.org/compute/ext/extended_status/api/v1.1",
-            "updated": "2011-11-03T00:00:00+00:00"
+            "updated": "2011-11-03T00:00:00Z"
         },
         {
             "alias": "OS-EXT-STS",
@@ -62,7 +62,7 @@
             "links": [],
             "name": "ExtendedStatus",
             "namespace": "http://docs.openstack.org/compute/ext/extended_status/api/v1.1",
-            "updated": "2011-11-03T00:00:00+00:00"
+            "updated": "2011-11-03T00:00:00Z"
         },
         {
             "alias": "OS-EXT-VIF-NET",
@@ -70,7 +70,7 @@
             "links": [],
             "name": "ExtendedVIFNet",
             "namespace": "http://docs.openstack.org/compute/ext/extended-virtual-interfaces-net/api/v1.1",
-            "updated": "2013-03-07T00:00:00+00:00"
+            "updated": "2013-03-07T00:00:00Z"
         },
         {
             "alias": "OS-FLV-DISABLED",
@@ -78,7 +78,7 @@
             "links": [],
             "name": "FlavorDisabled",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_disabled/api/v1.1",
-            "updated": "2012-08-29T00:00:00+00:00"
+            "updated": "2012-08-29T00:00:00Z"
         },
         {
             "alias": "OS-FLV-EXT-DATA",
@@ -86,7 +86,7 @@
             "links": [],
             "name": "FlavorExtraData",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_extra_data/api/v1.1",
-            "updated": "2011-09-14T00:00:00+00:00"
+            "updated": "2011-09-14T00:00:00Z"
         },
         {
             "alias": "OS-SCH-HNT",
@@ -94,7 +94,7 @@
             "links": [],
             "name": "SchedulerHints",
             "namespace": "http://docs.openstack.org/compute/ext/scheduler-hints/api/v2",
-            "updated": "2011-07-19T00:00:00+00:00"
+            "updated": "2011-07-19T00:00:00Z"
         },
         {
             "alias": "OS-SRV-USG",
@@ -102,7 +102,7 @@
             "links": [],
             "name": "ServerUsage",
             "namespace": "http://docs.openstack.org/compute/ext/server_usage/api/v1.1",
-            "updated": "2013-04-29T00:00:00+00:00"
+            "updated": "2013-04-29T00:00:00Z"
         },
         {
             "alias": "os-admin-actions",
@@ -110,7 +110,7 @@
             "links": [],
             "name": "AdminActions",
             "namespace": "http://docs.openstack.org/compute/ext/admin-actions/api/v1.1",
-            "updated": "2011-09-20T00:00:00+00:00"
+            "updated": "2011-09-20T00:00:00Z"
         },
         {
             "alias": "os-agents",
@@ -118,7 +118,7 @@
             "links": [],
             "name": "Agents",
             "namespace": "http://docs.openstack.org/compute/ext/agents/api/v2",
-            "updated": "2012-10-28T00:00:00-00:00"
+            "updated": "2012-10-28T00:00:00Z"
         },
         {
             "alias": "os-aggregates",
@@ -126,7 +126,7 @@
             "links": [],
             "name": "Aggregates",
             "namespace": "http://docs.openstack.org/compute/ext/aggregates/api/v1.1",
-            "updated": "2012-01-12T00:00:00+00:00"
+            "updated": "2012-01-12T00:00:00Z"
         },
         {
             "alias": "os-assisted-volume-snapshots",
@@ -134,7 +134,7 @@
             "links": [],
             "name": "AssistedVolumeSnapshots",
             "namespace": "http://docs.openstack.org/compute/ext/assisted-volume-snapshots/api/v2",
-            "updated": "2013-08-29T00:00:00-00:00"
+            "updated": "2013-08-29T00:00:00Z"
         },
         {
             "alias": "os-attach-interfaces",
@@ -142,7 +142,7 @@
             "links": [],
             "name": "AttachInterfaces",
             "namespace": "http://docs.openstack.org/compute/ext/interfaces/api/v1.1",
-            "updated": "2012-07-22T00:00:00+00:00"
+            "updated": "2012-07-22T00:00:00Z"
         },
         {
             "alias": "os-availability-zone",
@@ -150,7 +150,7 @@
             "links": [],
             "name": "AvailabilityZone",
             "namespace": "http://docs.openstack.org/compute/ext/availabilityzone/api/v1.1",
-            "updated": "2012-12-21T00:00:00+00:00"
+            "updated": "2012-12-21T00:00:00Z"
         },
         {
             "alias": "os-baremetal-ext-status",
@@ -158,7 +158,7 @@
             "links": [],
             "name": "BareMetalExtStatus",
             "namespace": "http://docs.openstack.org/compute/ext/baremetal_ext_status/api/v2",
-            "updated": "2013-08-27T00:00:00+00:00"
+            "updated": "2013-08-27T00:00:00Z"
         },
         {
             "alias": "os-baremetal-nodes",
@@ -166,7 +166,7 @@
             "links": [],
             "name": "BareMetalNodes",
             "namespace": "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2",
-            "updated": "2013-01-04T00:00:00+00:00"
+            "updated": "2013-01-04T00:00:00Z"
         },
         {
             "alias": "os-block-device-mapping-v2-boot",
@@ -174,7 +174,7 @@
             "links": [],
             "name": "BlockDeviceMappingV2Boot",
             "namespace": "http://docs.openstack.org/compute/ext/block_device_mapping_v2_boot/api/v2",
-            "updated": "2013-07-08T00:00:00+00:00"
+            "updated": "2013-07-08T00:00:00Z"
         },
         {
             "alias": "os-cell-capacities",
@@ -182,7 +182,7 @@
             "links": [],
             "name": "CellCapacities",
             "namespace": "http://docs.openstack.org/compute/ext/cell_capacities/api/v1.1",
-            "updated": "2013-05-27T00:00:00+00:00"
+            "updated": "2013-05-27T00:00:00Z"
         },
         {
             "alias": "os-cells",
@@ -190,7 +190,7 @@
             "links": [],
             "name": "Cells",
             "namespace": "http://docs.openstack.org/compute/ext/cells/api/v1.1",
-            "updated": "2013-05-14T00:00:00+00:00"
+            "updated": "2013-05-14T00:00:00Z"
         },
         {
             "alias": "os-certificates",
@@ -198,7 +198,7 @@
             "links": [],
             "name": "Certificates",
             "namespace": "http://docs.openstack.org/compute/ext/certificates/api/v1.1",
-            "updated": "2012-01-19T00:00:00+00:00"
+            "updated": "2012-01-19T00:00:00Z"
         },
         {
             "alias": "os-cloudpipe",
@@ -206,7 +206,7 @@
             "links": [],
             "name": "Cloudpipe",
             "namespace": "http://docs.openstack.org/compute/ext/cloudpipe/api/v1.1",
-            "updated": "2011-12-16T00:00:00+00:00"
+            "updated": "2011-12-16T00:00:00Z"
         },
         {
             "alias": "os-cloudpipe-update",
@@ -214,7 +214,7 @@
             "links": [],
             "name": "CloudpipeUpdate",
             "namespace": "http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2",
-            "updated": "2012-11-14T00:00:00+00:00"
+            "updated": "2012-11-14T00:00:00Z"
         },
         {
             "alias": "os-config-drive",
@@ -222,7 +222,7 @@
             "links": [],
             "name": "ConfigDrive",
             "namespace": "http://docs.openstack.org/compute/ext/config_drive/api/v1.1",
-            "updated": "2012-07-16T00:00:00+00:00"
+            "updated": "2012-07-16T00:00:00Z"
         },
         {
             "alias": "os-console-auth-tokens",
@@ -230,7 +230,7 @@
             "links": [],
             "name": "ConsoleAuthTokens",
             "namespace": "http://docs.openstack.org/compute/ext/consoles-auth-tokens/api/v2",
-            "updated": "2013-08-13T00:00:00+00:00"
+            "updated": "2013-08-13T00:00:00Z"
         },
         {
             "alias": "os-console-output",
@@ -238,7 +238,7 @@
             "links": [],
             "name": "ConsoleOutput",
             "namespace": "http://docs.openstack.org/compute/ext/os-console-output/api/v2",
-            "updated": "2011-12-08T00:00:00+00:00"
+            "updated": "2011-12-08T00:00:00Z"
         },
         {
             "alias": "os-consoles",
@@ -246,7 +246,7 @@
             "links": [],
             "name": "Consoles",
             "namespace": "http://docs.openstack.org/compute/ext/os-consoles/api/v2",
-            "updated": "2011-12-23T00:00:00+00:00"
+            "updated": "2011-12-23T00:00:00Z"
         },
         {
             "alias": "os-create-server-ext",
@@ -254,7 +254,7 @@
             "links": [],
             "name": "Createserverext",
             "namespace": "http://docs.openstack.org/compute/ext/createserverext/api/v1.1",
-            "updated": "2011-07-19T00:00:00+00:00"
+            "updated": "2011-07-19T00:00:00Z"
         },
         {
             "alias": "os-deferred-delete",
@@ -262,7 +262,7 @@
             "links": [],
             "name": "DeferredDelete",
             "namespace": "http://docs.openstack.org/compute/ext/deferred-delete/api/v1.1",
-            "updated": "2011-09-01T00:00:00+00:00"
+            "updated": "2011-09-01T00:00:00Z"
         },
         {
             "alias": "os-evacuate",
@@ -270,7 +270,7 @@
             "links": [],
             "name": "Evacuate",
             "namespace": "http://docs.openstack.org/compute/ext/evacuate/api/v2",
-            "updated": "2013-01-06T00:00:00+00:00"
+            "updated": "2013-01-06T00:00:00Z"
         },
         {
             "alias": "os-extended-floating-ips",
@@ -278,7 +278,7 @@
             "links": [],
             "name": "ExtendedFloatingIps",
             "namespace": "http://docs.openstack.org/compute/ext/extended_floating_ips/api/v2",
-            "updated": "2013-04-19T00:00:00+00:00"
+            "updated": "2013-04-19T00:00:00Z"
         },
         {
             "alias": "os-extended-hypervisors",
@@ -286,7 +286,7 @@
             "links": [],
             "name": "ExtendedHypervisors",
             "namespace": "http://docs.openstack.org/compute/ext/extended_hypervisors/api/v1.1",
-            "updated": "2014-01-04T00:00:00-00:00"
+            "updated": "2014-01-04T00:00:00Z"
         },
         {
             "alias": "os-extended-quotas",
@@ -294,7 +294,7 @@
             "links": [],
             "name": "ExtendedQuotas",
             "namespace": "http://docs.openstack.org/compute/ext/extended_quotas/api/v1.1",
-            "updated": "2013-06-09T00:00:00+00:00"
+            "updated": "2013-06-09T00:00:00Z"
         },
         {
             "alias": "os-extended-rescue-with-image",
@@ -302,7 +302,7 @@
             "links": [],
             "name": "ExtendedRescueWithImage",
             "namespace": "http://docs.openstack.org/compute/ext/extended_rescue_with_image/api/v2",
-            "updated": "2014-01-04T00:00:00+00:00"
+            "updated": "2014-01-04T00:00:00Z"
         },
         {
             "alias": "os-extended-services",
@@ -310,7 +310,7 @@
             "links": [],
             "name": "ExtendedServices",
             "namespace": "http://docs.openstack.org/compute/ext/extended_services/api/v2",
-            "updated": "2013-05-17T00:00:00-00:00"
+            "updated": "2013-05-17T00:00:00Z"
         },
         {
             "alias": "os-extended-services-delete",
@@ -318,7 +318,7 @@
             "links": [],
             "name": "ExtendedServicesDelete",
             "namespace": "http://docs.openstack.org/compute/ext/extended_services_delete/api/v2",
-            "updated": "2013-12-10T00:00:00"
+            "updated": "2013-12-10T00:00:00Z"
         },
         {
             "alias": "os-extended-volumes",
@@ -326,7 +326,7 @@
             "links": [],
             "name": "ExtendedVolumes",
             "namespace": "http://docs.openstack.org/compute/ext/extended_volumes/api/v1.1",
-            "updated": "2013-06-07T00:00:00+00:00"
+            "updated": "2013-06-07T00:00:00Z"
         },
         {
             "alias": "os-fixed-ips",
@@ -334,7 +334,7 @@
             "links": [],
             "name": "FixedIPs",
             "namespace": "http://docs.openstack.org/compute/ext/fixed_ips/api/v2",
-            "updated": "2012-10-18T13:25:27-06:00"
+            "updated": "2012-10-18T19:25:27Z"
         },
         {
             "alias": "os-flavor-access",
@@ -342,7 +342,7 @@
             "links": [],
             "name": "FlavorAccess",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_access/api/v2",
-            "updated": "2012-08-01T00:00:00+00:00"
+            "updated": "2012-08-01T00:00:00Z"
         },
         {
             "alias": "os-flavor-extra-specs",
@@ -350,7 +350,7 @@
             "links": [],
             "name": "FlavorExtraSpecs",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_extra_specs/api/v1.1",
-            "updated": "2011-06-23T00:00:00+00:00"
+            "updated": "2011-06-23T00:00:00Z"
         },
         {
             "alias": "os-flavor-manage",
@@ -358,7 +358,7 @@
             "links": [],
             "name": "FlavorManage",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_manage/api/v1.1",
-            "updated": "2012-01-19T00:00:00+00:00"
+            "updated": "2012-01-19T00:00:00Z"
         },
         {
             "alias": "os-flavor-rxtx",
@@ -366,7 +366,7 @@
             "links": [],
             "name": "FlavorRxtx",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_rxtx/api/v1.1",
-            "updated": "2012-08-29T00:00:00+00:00"
+            "updated": "2012-08-29T00:00:00Z"
         },
         {
             "alias": "os-flavor-swap",
@@ -374,7 +374,7 @@
             "links": [],
             "name": "FlavorSwap",
             "namespace": "http://docs.openstack.org/compute/ext/flavor_swap/api/v1.1",
-            "updated": "2012-08-29T00:00:00+00:00"
+            "updated": "2012-08-29T00:00:00Z"
         },
         {
             "alias": "os-floating-ip-dns",
@@ -382,7 +382,7 @@
             "links": [],
             "name": "FloatingIpDns",
             "namespace": "http://docs.openstack.org/ext/floating_ip_dns/api/v1.1",
-            "updated": "2011-12-23T00:00:00+00:00"
+            "updated": "2011-12-23T00:00:00Z"
         },
         {
             "alias": "os-floating-ip-pools",
@@ -390,7 +390,7 @@
             "links": [],
             "name": "FloatingIpPools",
             "namespace": "http://docs.openstack.org/compute/ext/floating_ip_pools/api/v1.1",
-            "updated": "2012-01-04T00:00:00+00:00"
+            "updated": "2012-01-04T00:00:00Z"
         },
         {
             "alias": "os-floating-ips",
@@ -398,7 +398,7 @@
             "links": [],
             "name": "FloatingIps",
             "namespace": "http://docs.openstack.org/compute/ext/floating_ips/api/v1.1",
-            "updated": "2011-06-16T00:00:00+00:00"
+            "updated": "2011-06-16T00:00:00Z"
         },
         {
             "alias": "os-floating-ips-bulk",
@@ -406,7 +406,7 @@
             "links": [],
             "name": "FloatingIpsBulk",
             "namespace": "http://docs.openstack.org/compute/ext/floating_ips_bulk/api/v2",
-            "updated": "2012-10-29T13:25:27-06:00"
+            "updated": "2012-10-29T19:25:27Z"
         },
         {
             "alias": "os-fping",
@@ -414,7 +414,7 @@
             "links": [],
             "name": "Fping",
             "namespace": "http://docs.openstack.org/compute/ext/fping/api/v1.1",
-            "updated": "2012-07-06T00:00:00+00:00"
+            "updated": "2012-07-06T00:00:00Z"
         },
         {
             "alias": "os-hide-server-addresses",
@@ -422,7 +422,7 @@
             "links": [],
             "name": "HideServerAddresses",
             "namespace": "http://docs.openstack.org/compute/ext/hide_server_addresses/api/v1.1",
-            "updated": "2012-12-11T00:00:00+00:00"
+            "updated": "2012-12-11T00:00:00Z"
         },
         {
             "alias": "os-hosts",
@@ -430,7 +430,7 @@
             "links": [],
             "name": "Hosts",
             "namespace": "http://docs.openstack.org/compute/ext/hosts/api/v1.1",
-            "updated": "2011-06-29T00:00:00+00:00"
+            "updated": "2011-06-29T00:00:00Z"
         },
         {
             "alias": "os-hypervisors",
@@ -438,7 +438,7 @@
             "links": [],
             "name": "Hypervisors",
             "namespace": "http://docs.openstack.org/compute/ext/hypervisors/api/v1.1",
-            "updated": "2012-06-21T00:00:00+00:00"
+            "updated": "2012-06-21T00:00:00Z"
         },
         {
             "alias": "os-instance-actions",
@@ -446,7 +446,7 @@
             "links": [],
             "name": "InstanceActions",
             "namespace": "http://docs.openstack.org/compute/ext/instance-actions/api/v1.1",
-            "updated": "2013-02-08T00:00:00+00:00"
+            "updated": "2013-02-08T00:00:00Z"
         },
         {
             "alias": "os-instance_usage_audit_log",
@@ -454,7 +454,7 @@
             "links": [],
             "name": "OSInstanceUsageAuditLog",
             "namespace": "http://docs.openstack.org/ext/services/api/v1.1",
-            "updated": "2012-07-06T01:00:00+00:00"
+            "updated": "2012-07-06T01:00:00Z"
         },
         {
             "alias": "os-keypairs",
@@ -462,7 +462,7 @@
             "links": [],
             "name": "Keypairs",
             "namespace": "http://docs.openstack.org/compute/ext/keypairs/api/v1.1",
-            "updated": "2011-08-08T00:00:00+00:00"
+            "updated": "2011-08-08T00:00:00Z"
         },
         {
             "alias": "os-migrations",
@@ -470,7 +470,7 @@
             "links": [],
             "name": "Migrations",
             "namespace": "http://docs.openstack.org/compute/ext/migrations/api/v2.0",
-            "updated": "2013-05-30T00:00:00+00:00"
+            "updated": "2013-05-30T00:00:00Z"
         },
         {
             "alias": "os-multiple-create",
@@ -478,7 +478,7 @@
             "links": [],
             "name": "MultipleCreate",
             "namespace": "http://docs.openstack.org/compute/ext/multiplecreate/api/v1.1",
-            "updated": "2012-08-07T00:00:00+00:00"
+            "updated": "2012-08-07T00:00:00Z"
         },
         {
             "alias": "os-networks",
@@ -486,7 +486,7 @@
             "links": [],
             "name": "Networks",
             "namespace": "http://docs.openstack.org/compute/ext/os-networks/api/v1.1",
-            "updated": "2011-12-23T00:00:00+00:00"
+            "updated": "2011-12-23T00:00:00Z"
         },
         {
             "alias": "os-networks-associate",
@@ -494,7 +494,7 @@
             "links": [],
             "name": "NetworkAssociationSupport",
             "namespace": "http://docs.openstack.org/compute/ext/networks_associate/api/v2",
-            "updated": "2012-11-19T00:00:00+00:00"
+            "updated": "2012-11-19T00:00:00Z"
         },
         {
             "alias": "os-preserve-ephemeral-rebuild",
@@ -502,7 +502,7 @@
             "links": [],
             "name": "PreserveEphemeralOnRebuild",
             "namespace": "http://docs.openstack.org/compute/ext/preserve_ephemeral_rebuild/api/v2",
-            "updated": "2013-12-17T00:00:00+00:00"
+            "updated": "2013-12-17T00:00:00Z"
         },
         {
             "alias": "os-quota-sets",
@@ -510,7 +510,7 @@
             "links": [],
             "name": "Quotas",
             "namespace": "http://docs.openstack.org/compute/ext/quotas-sets/api/v1.1",
-            "updated": "2011-08-08T00:00:00+00:00"
+            "updated": "2011-08-08T00:00:00Z"
         },
         {
             "alias": "os-rescue",
@@ -518,7 +518,7 @@
             "links": [],
             "name": "Rescue",
             "namespace": "http://docs.openstack.org/compute/ext/rescue/api/v1.1",
-            "updated": "2011-08-18T00:00:00+00:00"
+            "updated": "2011-08-18T00:00:00Z"
         },
         {
             "alias": "os-security-group-default-rules",
@@ -526,7 +526,7 @@
             "links": [],
             "name": "SecurityGroupDefaultRules",
             "namespace": "http://docs.openstack.org/compute/ext/securitygroupdefaultrules/api/v1.1",
-            "updated": "2013-02-05T00:00:00+00:00"
+            "updated": "2013-02-05T00:00:00Z"
         },
         {
             "alias": "os-security-groups",
@@ -534,7 +534,7 @@
             "links": [],
             "name": "SecurityGroups",
             "namespace": "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1",
-            "updated": "2013-05-28T00:00:00+00:00"
+            "updated": "2013-05-28T00:00:00Z"
         },
         {
             "alias": "os-server-diagnostics",
@@ -542,7 +542,7 @@
             "links": [],
             "name": "ServerDiagnostics",
             "namespace": "http://docs.openstack.org/compute/ext/server-diagnostics/api/v1.1",
-            "updated": "2011-12-21T00:00:00+00:00"
+            "updated": "2011-12-21T00:00:00Z"
         },
         {
             "alias": "os-server-external-events",
@@ -550,7 +550,7 @@
             "links": [],
             "name": "ServerExternalEvents",
             "namespace": "http://docs.openstack.org/compute/ext/server-external-events/api/v2",
-            "updated": "2014-02-18T00:00:00-00:00"
+            "updated": "2014-02-18T00:00:00Z"
         },
         {
             "alias": "os-server-groups",
@@ -558,7 +558,7 @@
             "links": [],
             "name": "ServerGroups",
             "namespace": "http://docs.openstack.org/compute/ext/servergroups/api/v2",
-            "updated": "2013-06-20T00:00:00+00:00"
+            "updated": "2013-06-20T00:00:00Z"
         },
         {
             "alias": "os-server-password",
@@ -566,7 +566,7 @@
             "links": [],
             "name": "ServerPassword",
             "namespace": "http://docs.openstack.org/compute/ext/server-password/api/v2",
-            "updated": "2012-11-29T00:00:00+00:00"
+            "updated": "2012-11-29T00:00:00Z"
         },
         {
             "alias": "os-server-start-stop",
@@ -574,7 +574,7 @@
             "links": [],
             "name": "ServerStartStop",
             "namespace": "http://docs.openstack.org/compute/ext/servers/api/v1.1",
-            "updated": "2012-01-23T00:00:00+00:00"
+            "updated": "2012-01-23T00:00:00Z"
         },
         {
             "alias": "os-services",
@@ -582,7 +582,7 @@
             "links": [],
             "name": "Services",
             "namespace": "http://docs.openstack.org/compute/ext/services/api/v2",
-            "updated": "2012-10-28T00:00:00-00:00"
+            "updated": "2012-10-28T00:00:00Z"
         },
         {
             "alias": "os-shelve",
@@ -590,7 +590,7 @@
             "links": [],
             "name": "Shelve",
             "namespace": "http://docs.openstack.org/compute/ext/shelve/api/v1.1",
-            "updated": "2013-04-06T00:00:00+00:00"
+            "updated": "2013-04-06T00:00:00Z"
         },
         {
             "alias": "os-simple-tenant-usage",
@@ -598,7 +598,7 @@
             "links": [],
             "name": "SimpleTenantUsage",
             "namespace": "http://docs.openstack.org/compute/ext/os-simple-tenant-usage/api/v1.1",
-            "updated": "2011-08-19T00:00:00+00:00"
+            "updated": "2011-08-19T00:00:00Z"
         },
         {
             "alias": "os-tenant-networks",
@@ -606,7 +606,7 @@
             "links": [],
             "name": "OSTenantNetworks",
             "namespace": "http://docs.openstack.org/compute/ext/os-tenant-networks/api/v2",
-            "updated": "2012-03-07T09:46:43-05:00"
+            "updated": "2012-03-07T14:46:43Z"
         },
         {
             "alias": "os-used-limits",
@@ -614,7 +614,7 @@
             "links": [],
             "name": "UsedLimits",
             "namespace": "http://docs.openstack.org/compute/ext/used_limits/api/v1.1",
-            "updated": "2012-07-13T00:00:00+00:00"
+            "updated": "2012-07-13T00:00:00Z"
         },
         {
             "alias": "os-used-limits-for-admin",
@@ -622,7 +622,7 @@
             "links": [],
             "name": "UsedLimitsForAdmin",
             "namespace": "http://docs.openstack.org/compute/ext/used_limits_for_admin/api/v1.1",
-            "updated": "2013-05-02T00:00:00+00:00"
+            "updated": "2013-05-02T00:00:00Z"
         },
         {
             "alias": "os-user-data",
@@ -630,7 +630,7 @@
             "links": [],
             "name": "UserData",
             "namespace": "http://docs.openstack.org/compute/ext/userdata/api/v1.1",
-            "updated": "2012-08-07T00:00:00+00:00"
+            "updated": "2012-08-07T00:00:00Z"
         },
         {
             "alias": "os-user-quotas",
@@ -638,7 +638,7 @@
             "links": [],
             "name": "UserQuotas",
             "namespace": "http://docs.openstack.org/compute/ext/user_quotas/api/v1.1",
-            "updated": "2013-07-18T00:00:00+00:00"
+            "updated": "2013-07-18T00:00:00Z"
         },
         {
             "alias": "os-virtual-interfaces",
@@ -646,7 +646,7 @@
             "links": [],
             "name": "VirtualInterfaces",
             "namespace": "http://docs.openstack.org/compute/ext/virtual_interfaces/api/v1.1",
-            "updated": "2011-08-17T00:00:00+00:00"
+            "updated": "2011-08-17T00:00:00Z"
         },
         {
             "alias": "os-volume-attachment-update",
@@ -654,7 +654,7 @@
             "links": [],
             "name": "VolumeAttachmentUpdate",
             "namespace": "http://docs.openstack.org/compute/ext/os-volume-attachment-update/api/v2",
-            "updated": "2013-06-20T00:00:00-00:00"
+            "updated": "2013-06-20T00:00:00Z"
         },
         {
             "alias": "os-volumes",
@@ -662,7 +662,7 @@
             "links": [],
             "name": "Volumes",
             "namespace": "http://docs.openstack.org/compute/ext/volumes/api/v1.1",
-            "updated": "2011-03-25T00:00:00+00:00"
+            "updated": "2011-03-25T00:00:00Z"
         }
     ]
 }

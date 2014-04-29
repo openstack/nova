@@ -144,7 +144,7 @@ class Server_external_events(extensions.ExtensionDescriptor):
     alias = "os-server-external-events"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "server-external-events/api/v2")
-    updated = "2014-02-18T00:00:00-00:00"
+    updated = "2014-02-18T00:00:00Z"
 
     def get_resources(self):
         resource = extensions.ResourceExtension('os-server-external-events',

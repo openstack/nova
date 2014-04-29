@@ -70,7 +70,7 @@ class Server_usage(extensions.ExtensionDescriptor):
     alias = "OS-SRV-USG"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "server_usage/api/v1.1")
-    updated = "2013-04-29T00:00:00+00:00"
+    updated = "2013-04-29T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ServerUsageController()

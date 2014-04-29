@@ -55,7 +55,7 @@ class ExtensionDescriptor(object):
     namespace = None
 
     # The timestamp when the extension was last updated, e.g.,
-    # '2011-01-22T13:25:27-06:00'
+    # '2011-01-22T19:25:27Z'
     updated = None
 
     def __init__(self, ext_mgr):
