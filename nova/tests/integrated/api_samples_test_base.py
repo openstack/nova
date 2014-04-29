@@ -267,6 +267,7 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
         else:
             text = r'[^<]*'
         isotime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}Z'
+        strtime_re = '\d{4}-[0,1]\d-[0-3]\dT\d{2}:\d{2}:\d{2}\.\d{6}'
         # NOTE(treinish): Could result in a false positive, but it
         # shouldn't be an issue for this case.
         timestamp_re = ('\d{4}-[0,1]\d-[0-3]\d[ ,T]'
@@ -274,8 +275,9 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                         '(Z|(\+|-)\d{2}:\d{2}|\.\d{6}|)')
         return {
             'isotime': isotime_re,
+            'strtime': strtime_re,
+            'strtime_or_none': r'None|%s' % strtime_re,
             'timestamp': timestamp_re,
-            'timestamp_or_none': r'None|%s' % timestamp_re,
             'password': '[0-9a-zA-Z]{1,12}',
             'ip': '[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}',
             'ip6': '([0-9a-zA-Z]{1,4}:){1,7}:?[0-9a-zA-Z]{1,4}',

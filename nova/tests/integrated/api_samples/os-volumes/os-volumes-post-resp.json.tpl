@@ -15,7 +15,7 @@
      "snapshotId": null,
      "metadata": {},
      "id": "%(uuid)s",
-     "createdAt":  "%(timestamp)s",
+     "createdAt":  "%(strtime)s",
      "size": 100
     }
 }

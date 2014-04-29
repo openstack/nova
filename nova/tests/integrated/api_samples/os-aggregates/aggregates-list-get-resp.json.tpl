@@ -2,7 +2,7 @@
     "aggregates": [
         {
             "availability_zone": "nova",
-            "created_at": "%(timestamp)s",
+            "created_at": "%(strtime)s",
             "deleted": false,
             "deleted_at": null,
             "hosts": [],

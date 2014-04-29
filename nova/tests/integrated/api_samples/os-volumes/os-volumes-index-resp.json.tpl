@@ -10,7 +10,7 @@
                 }
             ],
             "availabilityZone": "zone1:host1",
-            "createdAt": "%(timestamp)s",
+            "createdAt": "%(strtime)s",
             "displayDescription": "%(volume_desc)s",
             "displayName": "%(volume_name)s",
             "id": "%(uuid)s",

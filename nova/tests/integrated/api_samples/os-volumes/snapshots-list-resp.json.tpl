@@ -1,7 +1,7 @@
 {
     "snapshots": [
         {
-            "createdAt": "%(timestamp)s",
+            "createdAt": "%(strtime)s",
             "displayDescription": "%(text)s",
             "displayName": "%(text)s",
             "id": 100,
@@ -10,7 +10,7 @@
             "volumeId": 12
         },
         {
-            "createdAt": "%(timestamp)s",
+            "createdAt": "%(strtime)s",
             "displayDescription": "%(text)s",
             "displayName": "%(text)s",
             "id": 101,
@@ -19,7 +19,7 @@
             "volumeId": 12
         },
         {
-            "createdAt": "%(timestamp)s",
+            "createdAt": "%(strtime)s",
             "displayDescription": "%(text)s",
             "displayName": "%(text)s",
             "id": 102,

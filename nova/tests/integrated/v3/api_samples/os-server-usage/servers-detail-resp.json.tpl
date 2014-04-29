@@ -3,7 +3,7 @@
     {
             "status": "ACTIVE",
             "created": "%(isotime)s",
-            "os-server-usage:launched_at": "%(timestamp)s",
+            "os-server-usage:launched_at": "%(strtime)s",
             "user_id": "fake",
             "addresses": {
                 "private": [

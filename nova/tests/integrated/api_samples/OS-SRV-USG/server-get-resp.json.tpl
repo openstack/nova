@@ -1,6 +1,6 @@
 {
     "server": {
-        "OS-SRV-USG:launched_at": "%(timestamp)s",
+        "OS-SRV-USG:launched_at": "%(strtime)s",
         "OS-SRV-USG:terminated_at": null,
         "accessIPv4": "",
         "accessIPv6": "",

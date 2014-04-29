@@ -6,7 +6,7 @@
             "disabled_reason": "test1",
             "state": "up",
             "status": "disabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "internal"
         },
         {
@@ -15,7 +15,7 @@
             "disabled_reason": "test2",
             "state": "up",
             "status": "disabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "nova"
         },
         {
@@ -24,7 +24,7 @@
             "disabled_reason": "",
             "state": "down",
             "status": "enabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "internal"
         },
         {
@@ -33,7 +33,7 @@
             "disabled_reason": "test4",
             "state": "down",
             "status": "disabled",
-            "updated_at": "%(timestamp)s",
+            "updated_at": "%(strtime)s",
             "zone": "nova"
         }
     ]
