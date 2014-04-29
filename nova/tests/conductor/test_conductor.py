@@ -296,15 +296,6 @@ class _BaseTestCase(object):
         result = self.conductor.compute_node_delete(self.context, node)
         self.assertIsNone(result)
 
-    def test_instance_fault_create(self):
-        self.mox.StubOutWithMock(db, 'instance_fault_create')
-        db.instance_fault_create(self.context, 'fake-values').AndReturn(
-            'fake-result')
-        self.mox.ReplayAll()
-        result = self.conductor.instance_fault_create(self.context,
-                                                      'fake-values')
-        self.assertEqual(result, 'fake-result')
-
     def test_task_log_get(self):
         self.mox.StubOutWithMock(db, 'task_log_get')
         db.task_log_get(self.context, 'task', 'begin', 'end', 'host',
@@ -917,6 +908,15 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         self.mox.ReplayAll()
         self.conductor.instance_get_active_by_window_joined(
             self.context, 'fake-begin', 'fake-end', 'fake-proj', 'fake-host')
+
+    def test_instance_fault_create(self):
+        self.mox.StubOutWithMock(db, 'instance_fault_create')
+        db.instance_fault_create(self.context, 'fake-values').AndReturn(
+            'fake-result')
+        self.mox.ReplayAll()
+        result = self.conductor.instance_fault_create(self.context,
+                                                      'fake-values')
+        self.assertEqual(result, 'fake-result')
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):

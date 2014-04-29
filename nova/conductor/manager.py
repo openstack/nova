@@ -964,6 +964,7 @@ class _ConductorManagerV2Proxy(object):
         return self.manager.instance_get_all_by_host(context, host, node,
                 columns_to_join)
 
+    # TODO(danms): This can be removed in version 3.0 of the RPC API
     def instance_fault_create(self, context, values):
         return self.manager.instance_fault_create(context, values)
 
