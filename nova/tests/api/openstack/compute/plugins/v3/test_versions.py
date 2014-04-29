@@ -28,16 +28,10 @@ NS = {
 
 EXP_LINKS = {
    'v2.0': {
-       'pdf': 'http://docs.openstack.org/'
-               'api/openstack-compute/2/os-compute-devguide-2.pdf',
-       'wadl': 'http://docs.openstack.org/'
-               'api/openstack-compute/2/wadl/os-compute-2.wadl'
+       'html': 'http://docs.openstack.org/'
     },
    'v3.0': {
-       'pdf': 'http://docs.openstack.org/'
-               'api/openstack-compute/3/os-compute-devguide-3.pdf',
-       'wadl': 'http://docs.openstack.org/'
-               'api/openstack-compute/3/wadl/os-compute-3.wadl'
+       'html': 'http://docs.openstack.org/'
     },
 }
 
@@ -54,13 +48,8 @@ EXP_VERSIONS = {
             },
             {
                 "rel": "describedby",
-                "type": "application/pdf",
-                "href": EXP_LINKS['v2.0']['pdf'],
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": EXP_LINKS['v2.0']['wadl'],
+                "type": "text/html",
+                "href": EXP_LINKS['v2.0']['html'],
             },
         ],
         "media-types": [
@@ -85,13 +74,8 @@ EXP_VERSIONS = {
             },
             {
                 "rel": "describedby",
-                "type": "application/pdf",
-                "href": EXP_LINKS['v3.0']['pdf'],
-            },
-            {
-                "rel": "describedby",
-                "type": "application/vnd.sun.wadl+xml",
-                "href": EXP_LINKS['v3.0']['wadl'],
+                "type": "text/html",
+                "href": EXP_LINKS['v3.0']['html'],
             },
         ],
         "media-types": [
