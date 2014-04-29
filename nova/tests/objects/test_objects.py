@@ -14,10 +14,8 @@
 
 import contextlib
 import datetime
-import iso8601
 
 import mock
-import netaddr
 import six
 from testtools import matchers
 
@@ -26,7 +24,6 @@ from nova import context
 from nova import exception
 from nova.objects import base
 from nova.objects import fields
-from nova.objects import utils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova import rpc
@@ -142,102 +139,7 @@ class TestMetaclass(test.TestCase):
         self.assertEqual(expected, Test2._obj_classes)
 
 
-class TestUtils(test.TestCase):
-    def test_datetime_or_none(self):
-        naive_dt = timeutils.utcnow()
-        dt = timeutils.parse_isotime(timeutils.isotime(naive_dt))
-        self.assertEqual(utils.datetime_or_none(dt), dt)
-        self.assertEqual(utils.datetime_or_none(dt),
-                         naive_dt.replace(tzinfo=iso8601.iso8601.Utc(),
-                                          microsecond=0))
-        self.assertIsNone(utils.datetime_or_none(None))
-        self.assertRaises(ValueError, utils.datetime_or_none, 'foo')
-
-    def test_datetime_or_str_or_none(self):
-        dts = timeutils.isotime()
-        dt = timeutils.parse_isotime(dts)
-        self.assertEqual(utils.datetime_or_str_or_none(dt), dt)
-        self.assertIsNone(utils.datetime_or_str_or_none(None))
-        self.assertEqual(utils.datetime_or_str_or_none(dts), dt)
-        self.assertRaises(ValueError, utils.datetime_or_str_or_none, 'foo')
-
-    def test_int_or_none(self):
-        self.assertEqual(utils.int_or_none(1), 1)
-        self.assertEqual(utils.int_or_none('1'), 1)
-        self.assertIsNone(utils.int_or_none(None))
-        self.assertRaises(ValueError, utils.int_or_none, 'foo')
-
-    def test_str_or_none(self):
-        class Obj(object):
-            pass
-        self.assertEqual(utils.str_or_none('foo'), 'foo')
-        self.assertEqual(utils.str_or_none(1), '1')
-        self.assertIsNone(utils.str_or_none(None))
-        self.assertIsInstance(utils.str_or_none('foo'), unicode)
-
-    def test_str_value(self):
-        self.assertEqual('foo', utils.str_value('foo'))
-        self.assertEqual('1', utils.str_value(1))
-        self.assertRaises(ValueError, utils.str_value, None)
-        self.assertIsInstance(utils.str_value('foo'), unicode)
-
-    def test_cstring(self):
-        self.assertEqual('foo', utils.cstring('foo'))
-        self.assertEqual('1', utils.cstring(1))
-        self.assertRaises(ValueError, utils.cstring, None)
-
-    def test_ip_or_none(self):
-        ip4 = netaddr.IPAddress('1.2.3.4', 4)
-        ip6 = netaddr.IPAddress('1::2', 6)
-        self.assertEqual(utils.ip_or_none(4)('1.2.3.4'), ip4)
-        self.assertEqual(utils.ip_or_none(6)('1::2'), ip6)
-        self.assertIsNone(utils.ip_or_none(4)(None))
-        self.assertIsNone(utils.ip_or_none(6)(None))
-        self.assertRaises(netaddr.AddrFormatError, utils.ip_or_none(4), 'foo')
-        self.assertRaises(netaddr.AddrFormatError, utils.ip_or_none(6), 'foo')
-
-    def test_list_of_strings_or_none(self):
-        self.assertIsNone(utils.list_of_strings_or_none(None))
-        self.assertEqual(utils.list_of_strings_or_none(['1', '2']),
-                         ['1', '2'])
-        self.assertRaises(ValueError,
-                          utils.list_of_strings_or_none, 'foo')
-        self.assertRaises(ValueError,
-                          utils.list_of_strings_or_none, [1, 2])
-        self.assertRaises(ValueError,
-                          utils.list_of_strings_or_none, ['1', 2])
-
-    def test_dict_of_strings_or_none(self):
-        self.assertIsNone(utils.dict_of_strings_or_none(None))
-        self.assertEqual(utils.dict_of_strings_or_none({'1': '2'}),
-                         {'1': '2'})
-        self.assertRaises(ValueError,
-                          utils.dict_of_strings_or_none, {'1': '2', '3': 4})
-        self.assertRaises(ValueError,
-                          utils.dict_of_strings_or_none, {'1': '2', 3: '4'})
-        self.assertRaises(ValueError,
-                          utils.dict_of_strings_or_none, {'1': '2', 3: '4'})
-        self.assertRaises(ValueError,
-                          utils.dict_of_strings_or_none, 'foo')
-
-    def test_dt_serializer(self):
-        class Obj(object):
-            foo = utils.dt_serializer('bar')
-
-        obj = Obj()
-        obj.bar = timeutils.parse_isotime('1955-11-05T00:00:00Z')
-        self.assertEqual(obj.foo(), '1955-11-05T00:00:00Z')
-        obj.bar = None
-        self.assertIsNone(obj.foo())
-        obj.bar = 'foo'
-        self.assertRaises(AttributeError, obj.foo)
-
-    def test_dt_deserializer(self):
-        dt = timeutils.parse_isotime('1955-11-05T00:00:00Z')
-        self.assertEqual(utils.dt_deserializer(None, timeutils.isotime(dt)),
-                         dt)
-        self.assertIsNone(utils.dt_deserializer(None, None))
-        self.assertRaises(ValueError, utils.dt_deserializer, None, 'foo')
+class TestObjToPrimitive(test.TestCase):
 
     def test_obj_to_primitive_list(self):
         class MyObjElement(base.NovaObject):
@@ -278,6 +180,9 @@ class TestUtils(test.TestCase):
         obj = TestObject(addr='1.2.3.4', cidr='1.1.1.1/16')
         self.assertEqual({'addr': '1.2.3.4', 'cidr': '1.1.1.1/16'},
                          base.obj_to_primitive(obj))
+
+
+class TestObjMakeList(test.TestCase):
 
     def test_obj_make_list(self):
         class MyList(base.ObjectListBase, base.NovaObject):
