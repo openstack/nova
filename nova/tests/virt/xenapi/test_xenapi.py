@@ -40,7 +40,6 @@ from nova import db
 from nova import exception
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import instance as instance_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
 from nova.openstack.common import log as logging
@@ -948,7 +947,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
 
             # mount point will be the last item of the command list
             self._tmpdir = cmd[len(cmd) - 1]
-            LOG.debug(_('Creating files in %s to simulate guest agent'),
+            LOG.debug('Creating files in %s to simulate guest agent',
                       self._tmpdir)
             os.makedirs(os.path.join(self._tmpdir, 'usr', 'sbin'))
             # Touch the file using open
@@ -959,7 +958,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         def _umount_handler(cmd, *ignore_args, **ignore_kwargs):
             # Umount would normall make files in the m,ounted filesystem
             # disappear, so do that here
-            LOG.debug(_('Removing simulated guest agent files in %s'),
+            LOG.debug('Removing simulated guest agent files in %s',
                       self._tmpdir)
             os.remove(os.path.join(self._tmpdir, 'usr', 'sbin',
                 'xe-update-networking'))

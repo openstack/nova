@@ -19,7 +19,6 @@ import re
 from eventlet import greenthread
 import six
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import processutils
 
@@ -68,7 +67,7 @@ def fake_execute(*cmd_parts, **kwargs):
     run_as_root = kwargs.get('run_as_root', False)
     cmd_str = ' '.join(str(part) for part in cmd_parts)
 
-    LOG.debug(_("Faking execution of cmd (subprocess): %s"), cmd_str)
+    LOG.debug("Faking execution of cmd (subprocess): %s", cmd_str)
     _fake_execute_log.append(cmd_str)
 
     reply_handler = fake_execute_default_reply_handler
@@ -76,7 +75,7 @@ def fake_execute(*cmd_parts, **kwargs):
     for fake_replier in _fake_execute_repliers:
         if re.match(fake_replier[0], cmd_str):
             reply_handler = fake_replier[1]
-            LOG.debug(_('Faked command matched %s') % fake_replier[0])
+            LOG.debug('Faked command matched %s', fake_replier[0])
             break
 
     if isinstance(reply_handler, six.string_types):
@@ -92,11 +91,11 @@ def fake_execute(*cmd_parts, **kwargs):
                                   run_as_root=run_as_root,
                                   check_exit_code=check_exit_code)
         except processutils.ProcessExecutionError as e:
-            LOG.debug(_('Faked command raised an exception %s'), e)
+            LOG.debug('Faked command raised an exception %s', e)
             raise
 
-    LOG.debug(_("Reply to faked command is stdout='%(stdout)s' "
-        "stderr='%(stderr)s'") % {'stdout': reply[0], 'stderr': reply[1]})
+    LOG.debug("Reply to faked command is stdout='%(stdout)s' "
+        "stderr='%(stderr)s'", {'stdout': reply[0], 'stderr': reply[1]})
 
     # Replicate the sleep call in the real function
     greenthread.sleep(0)
