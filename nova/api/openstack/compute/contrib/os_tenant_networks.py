@@ -199,7 +199,7 @@ class Os_tenant_networks(extensions.ExtensionDescriptor):
     alias = "os-tenant-networks"
     namespace = ("http://docs.openstack.org/compute/"
                  "ext/os-tenant-networks/api/v2")
-    updated = "2012-03-07T09:46:43-05:00"
+    updated = "2012-03-07T14:46:43Z"
 
     def get_resources(self):
         ext = extensions.ResourceExtension('os-tenant-networks',

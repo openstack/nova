@@ -20,4 +20,4 @@ class Extended_services_delete(extensions.ExtensionDescriptor):
     alias = "os-extended-services-delete"
     namespace = ("http://docs.openstack.org/compute/ext/"
                 "extended_services_delete/api/v2")
-    updated = "2013-12-10T00:00:00"
+    updated = "2013-12-10T00:00:00Z"

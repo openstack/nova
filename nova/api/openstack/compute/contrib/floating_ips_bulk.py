@@ -161,7 +161,7 @@ class Floating_ips_bulk(extensions.ExtensionDescriptor):
     alias = "os-floating-ips-bulk"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "floating_ips_bulk/api/v2")
-    updated = "2012-10-29T13:25:27-06:00"
+    updated = "2012-10-29T19:25:27Z"
 
     def get_resources(self):
         resources = []

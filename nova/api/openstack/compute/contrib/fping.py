@@ -147,7 +147,7 @@ class Fping(extensions.ExtensionDescriptor):
     name = "Fping"
     alias = "os-fping"
     namespace = "http://docs.openstack.org/compute/ext/fping/api/v1.1"
-    updated = "2012-07-06T00:00:00+00:00"
+    updated = "2012-07-06T00:00:00Z"
 
     def get_resources(self):
         res = extensions.ResourceExtension(

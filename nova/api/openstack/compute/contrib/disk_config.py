@@ -174,7 +174,7 @@ class Disk_config(extensions.ExtensionDescriptor):
     name = "DiskConfig"
     alias = ALIAS
     namespace = XMLNS_DCF
-    updated = "2011-09-27T00:00:00+00:00"
+    updated = "2011-09-27T00:00:00Z"
 
     def get_controller_extensions(self):
         servers_extension = extensions.ControllerExtension(

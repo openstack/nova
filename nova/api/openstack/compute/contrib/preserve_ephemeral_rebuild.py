@@ -20,4 +20,4 @@ class Preserve_ephemeral_rebuild(extensions.ExtensionDescriptor):
     alias = "os-preserve-ephemeral-rebuild"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "preserve_ephemeral_rebuild/api/v2")
-    updated = "2013-12-17T00:00:00+00:00"
+    updated = "2013-12-17T00:00:00Z"

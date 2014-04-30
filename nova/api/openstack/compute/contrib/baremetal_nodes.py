@@ -242,7 +242,7 @@ class Baremetal_nodes(extensions.ExtensionDescriptor):
     name = "BareMetalNodes"
     alias = "os-baremetal-nodes"
     namespace = "http://docs.openstack.org/compute/ext/baremetal_nodes/api/v2"
-    updated = "2013-01-04T00:00:00+00:00"
+    updated = "2013-01-04T00:00:00Z"
 
     def get_resources(self):
         resources = []

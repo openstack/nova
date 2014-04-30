@@ -99,7 +99,7 @@ class Shelve(exts.ExtensionDescriptor):
     name = "Shelve"
     alias = "os-shelve"
     namespace = "http://docs.openstack.org/compute/ext/shelve/api/v1.1"
-    updated = "2013-04-06T00:00:00+00:00"
+    updated = "2013-04-06T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ShelveController()

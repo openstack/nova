@@ -63,7 +63,7 @@ class Cloudpipe_update(extensions.ExtensionDescriptor):
     name = "CloudpipeUpdate"
     alias = "os-cloudpipe-update"
     namespace = "http://docs.openstack.org/compute/ext/cloudpipe-update/api/v2"
-    updated = "2012-11-14T00:00:00+00:00"
+    updated = "2012-11-14T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = CloudpipeUpdateController()

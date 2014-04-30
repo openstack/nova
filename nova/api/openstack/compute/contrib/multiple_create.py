@@ -22,4 +22,4 @@ class Multiple_create(extensions.ExtensionDescriptor):
     alias = "os-multiple-create"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "multiplecreate/api/v1.1")
-    updated = "2012-08-07T00:00:00+00:00"
+    updated = "2012-08-07T00:00:00Z"

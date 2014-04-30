@@ -59,7 +59,7 @@ class Flavor_swap(extensions.ExtensionDescriptor):
     alias = "os-flavor-swap"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_swap/api/v1.1")
-    updated = "2012-08-29T00:00:00+00:00"
+    updated = "2012-08-29T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = FlavorSwapController()

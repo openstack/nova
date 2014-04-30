@@ -59,7 +59,7 @@ class Flavor_rxtx(extensions.ExtensionDescriptor):
     alias = "os-flavor-rxtx"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "flavor_rxtx/api/v1.1")
-    updated = "2012-08-29T00:00:00+00:00"
+    updated = "2012-08-29T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = FlavorRxtxController()

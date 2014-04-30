@@ -88,7 +88,7 @@ class Networks_associate(extensions.ExtensionDescriptor):
     alias = "os-networks-associate"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "networks_associate/api/v2")
-    updated = "2012-11-19T00:00:00+00:00"
+    updated = "2012-11-19T00:00:00Z"
 
     def get_controller_extensions(self):
         extension = extensions.ControllerExtension(

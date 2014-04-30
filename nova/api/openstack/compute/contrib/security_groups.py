@@ -610,7 +610,7 @@ class Security_groups(extensions.ExtensionDescriptor):
     name = "SecurityGroups"
     alias = "os-security-groups"
     namespace = "http://docs.openstack.org/compute/ext/securitygroups/api/v1.1"
-    updated = "2013-05-28T00:00:00+00:00"
+    updated = "2013-05-28T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = SecurityGroupActionController()

@@ -355,7 +355,7 @@ class Hosts(extensions.ExtensionDescriptor):
     name = "Hosts"
     alias = "os-hosts"
     namespace = "http://docs.openstack.org/compute/ext/hosts/api/v1.1"
-    updated = "2011-06-29T00:00:00+00:00"
+    updated = "2011-06-29T00:00:00Z"
 
     def get_resources(self):
         resources = [extensions.ResourceExtension('os-hosts',

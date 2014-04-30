@@ -22,4 +22,4 @@ class Used_limits_for_admin(extensions.ExtensionDescriptor):
     alias = "os-used-limits-for-admin"
     namespace = ("http://docs.openstack.org/compute/ext/used_limits_for_admin"
                 "/api/v1.1")
-    updated = "2013-05-02T00:00:00+00:00"
+    updated = "2013-05-02T00:00:00Z"

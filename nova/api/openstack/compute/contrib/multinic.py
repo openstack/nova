@@ -92,7 +92,7 @@ class Multinic(extensions.ExtensionDescriptor):
     name = "Multinic"
     alias = "NMN"
     namespace = "http://docs.openstack.org/compute/ext/multinic/api/v1.1"
-    updated = "2011-06-09T00:00:00+00:00"
+    updated = "2011-06-09T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = MultinicController()

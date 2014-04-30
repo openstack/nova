@@ -69,7 +69,7 @@ class Extended_server_attributes(extensions.ExtensionDescriptor):
     alias = "OS-EXT-SRV-ATTR"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_status/api/v1.1")
-    updated = "2011-11-03T00:00:00+00:00"
+    updated = "2011-11-03T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedServerAttributesController()

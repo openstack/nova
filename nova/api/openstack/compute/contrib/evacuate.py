@@ -93,7 +93,7 @@ class Evacuate(extensions.ExtensionDescriptor):
     name = "Evacuate"
     alias = "os-evacuate"
     namespace = "http://docs.openstack.org/compute/ext/evacuate/api/v2"
-    updated = "2013-01-06T00:00:00+00:00"
+    updated = "2013-01-06T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = Controller()

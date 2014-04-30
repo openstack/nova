@@ -55,7 +55,7 @@ class Scheduler_hints(extensions.ExtensionDescriptor):
     alias = "OS-SCH-HNT"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "scheduler-hints/api/v2")
-    updated = "2011-07-19T00:00:00+00:00"
+    updated = "2011-07-19T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = SchedulerHintsController()

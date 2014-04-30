@@ -284,7 +284,7 @@ class Server_groups(extensions.ExtensionDescriptor):
     alias = "os-server-groups"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "servergroups/api/v2")
-    updated = "2013-06-20T00:00:00+00:00"
+    updated = "2013-06-20T00:00:00Z"
 
     def get_resources(self):
         resources = []

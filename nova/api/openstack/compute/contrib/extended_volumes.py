@@ -68,7 +68,7 @@ class Extended_volumes(extensions.ExtensionDescriptor):
     alias = "os-extended-volumes"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "extended_volumes/api/v1.1")
-    updated = "2013-06-07T00:00:00+00:00"
+    updated = "2013-06-07T00:00:00Z"
 
     def get_controller_extensions(self):
         controller = ExtendedVolumesController()

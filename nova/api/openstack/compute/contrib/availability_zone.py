@@ -165,7 +165,7 @@ class Availability_zone(extensions.ExtensionDescriptor):
     alias = "os-availability-zone"
     namespace = ("http://docs.openstack.org/compute/ext/"
                  "availabilityzone/api/v1.1")
-    updated = "2012-12-21T00:00:00+00:00"
+    updated = "2012-12-21T00:00:00Z"
 
     def get_resources(self):
         resources = []
