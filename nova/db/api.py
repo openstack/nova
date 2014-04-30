@@ -1188,6 +1188,14 @@ def ec2_volume_create(context, volume_id, forced_id=None):
     return IMPL.ec2_volume_create(context, volume_id, forced_id)
 
 
+def ec2_volume_get_by_id(context, volume_id):
+    return IMPL.ec2_volume_get_by_id(context, volume_id)
+
+
+def ec2_volume_get_by_uuid(context, volume_uuid):
+    return IMPL.ec2_volume_get_by_uuid(context, volume_uuid)
+
+
 def get_snapshot_uuid_by_ec2_id(context, ec2_id):
     return IMPL.get_snapshot_uuid_by_ec2_id(context, ec2_id)
 

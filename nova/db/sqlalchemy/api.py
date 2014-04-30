@@ -3397,26 +3397,38 @@ def ec2_volume_create(context, volume_uuid, id=None):
 
 
 @require_context
-def get_ec2_volume_id_by_uuid(context, volume_id):
+def ec2_volume_get_by_uuid(context, volume_uuid):
     result = _ec2_volume_get_query(context).\
-                    filter_by(uuid=volume_id).\
+                    filter_by(uuid=volume_uuid).\
+                    first()
+
+    if not result:
+        raise exception.VolumeNotFound(volume_id=volume_uuid)
+
+    return result
+
+
+@require_context
+def get_ec2_volume_id_by_uuid(context, volume_id):
+    result = ec2_volume_get_by_uuid(context, volume_id)
+    return result['id']
+
+
+@require_context
+def ec2_volume_get_by_id(context, volume_id):
+    result = _ec2_volume_get_query(context).\
+                    filter_by(id=volume_id).\
                     first()
 
     if not result:
         raise exception.VolumeNotFound(volume_id=volume_id)
 
-    return result['id']
+    return result
 
 
 @require_context
 def get_volume_uuid_by_ec2_id(context, ec2_id):
-    result = _ec2_volume_get_query(context).\
-                    filter_by(id=ec2_id).\
-                    first()
-
-    if not result:
-        raise exception.VolumeNotFound(volume_id=ec2_id)
-
+    result = ec2_volume_get_by_id(context, ec2_id)
     return result['uuid']
 
 
