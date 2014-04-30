@@ -18,7 +18,6 @@ import re
 
 import six
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 
@@ -128,8 +127,8 @@ def validate(args, validator):
         assert callable(f)
 
         if not f(args[key]):
-            LOG.debug(_("%(key)s with value %(value)s failed"
-                        " validator %(name)s"),
+            LOG.debug("%(key)s with value %(value)s failed"
+                      " validator %(name)s",
                       {'key': key, 'value': args[key], 'name': f.__name__})
             return False
     return True

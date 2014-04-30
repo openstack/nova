@@ -115,14 +115,14 @@ class ServersController(wsgi.Controller):
                     # to implement multiple server (and other) entry
                     # points if hasattr(ext.obj, 'server_create'):
                     if hasattr(ext.obj, required_function):
-                        LOG.debug(_('extension %(ext_alias)s detected by '
-                                    'servers extension for function %(func)s'),
-                                    {'ext_alias': ext.obj.alias,
-                                     'func': required_function})
+                        LOG.debug('extension %(ext_alias)s detected by '
+                                  'servers extension for function %(func)s',
+                                  {'ext_alias': ext.obj.alias,
+                                   'func': required_function})
                         return check_whiteblack_lists(ext)
                     else:
                         LOG.debug(
-                            _('extension %(ext_alias)s is missing %(func)s'),
+                            'extension %(ext_alias)s is missing %(func)s',
                             {'ext_alias': ext.obj.alias,
                             'func': required_function})
                         return False
@@ -143,7 +143,7 @@ class ServersController(wsgi.Controller):
               invoke_kwds={"extension_info": self.extension_info},
               propagate_map_exceptions=True)
         if not list(self.create_extension_manager):
-            LOG.debug(_("Did not find any server create extensions"))
+            LOG.debug("Did not find any server create extensions")
 
         # Look for implementation of extension point of server rebuild
         self.rebuild_extension_manager = \
@@ -154,7 +154,7 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if not list(self.rebuild_extension_manager):
-            LOG.debug(_("Did not find any server rebuild extensions"))
+            LOG.debug("Did not find any server rebuild extensions")
 
         # Look for implementation of extension point of server update
         self.update_extension_manager = \
@@ -165,7 +165,7 @@ class ServersController(wsgi.Controller):
                 invoke_kwds={"extension_info": self.extension_info},
                 propagate_map_exceptions=True)
         if not list(self.update_extension_manager):
-            LOG.debug(_("Did not find any server update extensions"))
+            LOG.debug("Did not find any server update extensions")
 
     def index(self, req):
         """Returns a list of server names and ids for a given user."""
@@ -545,25 +545,25 @@ class ServersController(wsgi.Controller):
 
     def _create_extension_point(self, ext, server_dict, create_kwargs):
         handler = ext.obj
-        LOG.debug(_("Running _create_extension_point for %s"), ext.obj)
+        LOG.debug("Running _create_extension_point for %s", ext.obj)
 
         handler.server_create(server_dict, create_kwargs)
 
     def _rebuild_extension_point(self, ext, rebuild_dict, rebuild_kwargs):
         handler = ext.obj
-        LOG.debug(_("Running _rebuild_extension_point for %s"), ext.obj)
+        LOG.debug("Running _rebuild_extension_point for %s", ext.obj)
 
         handler.server_rebuild(rebuild_dict, rebuild_kwargs)
 
     def _resize_extension_point(self, ext, resize_dict, resize_kwargs):
         handler = ext.obj
-        LOG.debug(_("Running _resize_extension_point for %s"), ext.obj)
+        LOG.debug("Running _resize_extension_point for %s", ext.obj)
 
         handler.server_resize(resize_dict, resize_kwargs)
 
     def _update_extension_point(self, ext, update_dict, update_kwargs):
         handler = ext.obj
-        LOG.debug(_("Running _update_extension_point for %s"), ext.obj)
+        LOG.debug("Running _update_extension_point for %s", ext.obj)
         handler.server_update(update_dict, update_kwargs)
 
     def _delete(self, context, req, instance_uuid):
@@ -972,7 +972,7 @@ class ServersController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         authorizer(context, instance, 'start')
-        LOG.debug(_('start instance'), instance=instance)
+        LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked,
@@ -987,7 +987,7 @@ class ServersController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         authorizer(context, instance, 'stop')
-        LOG.debug(_('stop instance'), instance=instance)
+        LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked,
@@ -1004,7 +1004,7 @@ def remove_invalid_options(context, search_options, allowed_search_options):
     # Otherwise, strip out all unknown options
     unknown_options = [opt for opt in search_options
                         if opt not in allowed_search_options]
-    LOG.debug(_("Removing options '%s' from query"),
+    LOG.debug("Removing options '%s' from query",
               ", ".join(unknown_options))
     for opt in unknown_options:
         search_options.pop(opt, None)

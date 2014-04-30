@@ -70,7 +70,7 @@ class NetworkController(wsgi.Controller):
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug(_("Disassociating network with id %s"), id)
+        LOG.debug("Disassociating network with id %s", id)
 
         try:
             self.network_api.associate(context, id, host=None, project=None)
@@ -86,7 +86,7 @@ class NetworkController(wsgi.Controller):
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize_view(context)
-        LOG.debug(_("Showing network with id %s") % id)
+        LOG.debug("Showing network with id %s", id)
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:
@@ -123,7 +123,7 @@ class NetworkController(wsgi.Controller):
         if not cidr:
             raise bad(_("Network cidr or cidr_v6 is required"))
 
-        LOG.debug(_("Creating network with label %s") % params["label"])
+        LOG.debug("Creating network with label %s", params["label"])
 
         params["num_networks"] = 1
         params["network_size"] = netaddr.IPNetwork(cidr).size
@@ -139,8 +139,8 @@ class NetworkController(wsgi.Controller):
 
         network_id = body.get('id', None)
         project_id = context.project_id
-        LOG.debug(_("Associating network %(network)s"
-                    " with project %(project)s") %
+        LOG.debug("Associating network %(network)s"
+                  " with project %(project)s",
                   {"network": network_id or "",
                    "project": project_id})
         try:

@@ -1062,7 +1062,7 @@ class CloudController(object):
                 root_device_type = 'ebs'
 
             vol = self.volume_api.get(context, volume_id)
-            LOG.debug(_("vol = %s\n"), vol)
+            LOG.debug("vol = %s\n", vol)
             # TODO(yamahata): volume attach time
             ebs = {'volumeId': ec2utils.id_to_ec2_vol_id(volume_id),
                    'deleteOnTermination': bdm.delete_on_termination,
@@ -1414,7 +1414,7 @@ class CloudController(object):
         previous_states = self._ec2_ids_to_instances(context, instance_id,
                                                      objects=True)
         self._remove_client_token(context, instance_id)
-        LOG.debug(_("Going to start terminating instances"))
+        LOG.debug("Going to start terminating instances")
         for instance in previous_states:
             self.compute_api.delete(context, instance)
         return self._format_terminate_instances(context,
@@ -1435,7 +1435,7 @@ class CloudController(object):
         Here instance_id is a list of instance ids
         """
         instances = self._ec2_ids_to_instances(context, instance_id, True)
-        LOG.debug(_("Going to stop instances"))
+        LOG.debug("Going to stop instances")
         for instance in instances:
             extensions.check_compute_policy(context, 'stop', instance)
             self.compute_api.stop(context, instance)
@@ -1446,7 +1446,7 @@ class CloudController(object):
         Here instance_id is a list of instance ids
         """
         instances = self._ec2_ids_to_instances(context, instance_id, True)
-        LOG.debug(_("Going to start instances"))
+        LOG.debug("Going to start instances")
         for instance in instances:
             extensions.check_compute_policy(context, 'start', instance)
             self.compute_api.start(context, instance)

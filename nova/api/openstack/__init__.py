@@ -198,7 +198,7 @@ class APIRouter(base_wsgi.Router):
 
     def _setup_ext_routes(self, mapper, ext_mgr, init_only):
         for resource in ext_mgr.get_resources():
-            LOG.debug(_('Extending resource: %s'),
+            LOG.debug('Extending resource: %s',
                       resource.collection)
 
             if init_only is not None and resource.collection not in init_only:
@@ -238,8 +238,8 @@ class APIRouter(base_wsgi.Router):
                             msg_format_dict)
                 continue
 
-            LOG.debug(_('Extension %(ext_name)s extended resource: '
-                        '%(collection)s'),
+            LOG.debug('Extension %(ext_name)s extended resource: '
+                      '%(collection)s',
                       msg_format_dict)
 
             resource = self.resources[collection]
@@ -296,9 +296,9 @@ class APIRouterV3(base_wsgi.Router):
             return
 
         self.init_only = init_only
-        LOG.debug(_("v3 API Extension Blacklist: %s"),
+        LOG.debug("v3 API Extension Blacklist: %s",
                   CONF.osapi_v3.extensions_blacklist)
-        LOG.debug(_("v3 API Extension Whitelist: %s"),
+        LOG.debug("v3 API Extension Whitelist: %s",
                   CONF.osapi_v3.extensions_whitelist)
 
         in_blacklist_and_whitelist = set(
@@ -357,10 +357,10 @@ class APIRouterV3(base_wsgi.Router):
         """
 
         handler = ext.obj
-        LOG.debug(_("Running _register_resources on %s"), ext.obj)
+        LOG.debug("Running _register_resources on %s", ext.obj)
 
         for resource in handler.get_resources():
-            LOG.debug(_('Extended resource: %s'), resource.collection)
+            LOG.debug('Extended resource: %s', resource.collection)
 
             inherits = None
             if resource.inherits:
@@ -399,7 +399,7 @@ class APIRouterV3(base_wsgi.Router):
         """
 
         handler = ext.obj
-        LOG.debug(_("Running _register_controllers on %s"), ext.obj)
+        LOG.debug("Running _register_controllers on %s", ext.obj)
 
         for extension in handler.get_controller_extensions():
             ext_name = extension.extension.name
@@ -412,8 +412,8 @@ class APIRouterV3(base_wsgi.Router):
                               {'ext_name': ext_name, 'collection': collection})
                 continue
 
-            LOG.debug(_('Extension %(ext_name)s extending resource: '
-                      '%(collection)s'),
+            LOG.debug('Extension %(ext_name)s extending resource: '
+                      '%(collection)s',
                       {'ext_name': ext_name, 'collection': collection})
 
             resource = self.resources[collection]

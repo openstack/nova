@@ -320,9 +320,9 @@ class Requestify(wsgi.Middleware):
         except exception.InvalidRequest as err:
             raise webob.exc.HTTPBadRequest(explanation=unicode(err))
 
-        LOG.debug(_('action: %s'), action)
+        LOG.debug('action: %s', action)
         for key, value in args.items():
-            LOG.debug(_('arg: %(key)s\t\tval: %(value)s'),
+            LOG.debug('arg: %(key)s\t\tval: %(value)s',
                       {'key': key, 'value': value})
 
         # Success!

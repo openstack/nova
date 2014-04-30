@@ -33,7 +33,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _disassociate_host_only(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug(_("Disassociating host with network with id %s"), id)
+        LOG.debug("Disassociating host with network with id %s", id)
         try:
             self.network_api.associate(context, id, host=None)
         except exception.NetworkNotFound:
@@ -49,7 +49,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     def _disassociate_project_only(self, req, id, body):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug(_("Disassociating project with network with id %s"), id)
+        LOG.debug("Disassociating project with network with id %s", id)
         try:
             self.network_api.associate(context, id, project=None)
         except exception.NetworkNotFound:

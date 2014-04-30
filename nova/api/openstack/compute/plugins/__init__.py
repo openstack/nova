@@ -42,11 +42,11 @@ class LoadedExtensionInfo(object):
     def _check_extension(self, extension):
         """Checks for required methods in extension objects."""
         try:
-            LOG.debug(_('Ext name: %s'), extension.name)
-            LOG.debug(_('Ext alias: %s'), extension.alias)
-            LOG.debug(_('Ext description: %s'),
+            LOG.debug('Ext name: %s', extension.name)
+            LOG.debug('Ext alias: %s', extension.alias)
+            LOG.debug('Ext description: %s',
                       ' '.join(extension.__doc__.strip().split()))
-            LOG.debug(_('Ext version: %i'), extension.version)
+            LOG.debug('Ext version: %i', extension.version)
         except AttributeError as ex:
             LOG.exception(_("Exception loading extension: %s"), unicode(ex))
             return False

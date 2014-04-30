@@ -46,7 +46,7 @@ class ServerStartStopActionController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         extensions.check_compute_policy(context, 'start', instance)
-        LOG.debug(_('start instance'), instance=instance)
+        LOG.debug('start instance', instance=instance)
         try:
             self.compute_api.start(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked,
@@ -60,7 +60,7 @@ class ServerStartStopActionController(wsgi.Controller):
         context = req.environ['nova.context']
         instance = self._get_instance(context, id)
         extensions.check_compute_policy(context, 'stop', instance)
-        LOG.debug(_('stop instance'), instance=instance)
+        LOG.debug('stop instance', instance=instance)
         try:
             self.compute_api.stop(context, instance)
         except (exception.InstanceNotReady, exception.InstanceIsLocked,

@@ -34,7 +34,6 @@ from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.objects import security_group as secgroup_obj
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
 from nova.openstack.common import log as logging
 from nova.openstack.common import timeutils
@@ -406,7 +405,7 @@ class InstanceMetadata():
                 today = timeutils.utcnow().strftime("%Y-%m-%d")
                 versions = [v for v in OPENSTACK_VERSIONS if v <= today]
                 if OPENSTACK_VERSIONS != versions:
-                    LOG.debug(_("future versions %s hidden in version list"),
+                    LOG.debug("future versions %s hidden in version list",
                               [v for v in OPENSTACK_VERSIONS
                                if v not in versions])
                 versions += ["latest"]

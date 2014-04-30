@@ -156,7 +156,7 @@ class QuotaSetsController(wsgi.Controller):
                     raise webob.exc.HTTPBadRequest(
                         explanation=e.format_message())
 
-        LOG.debug(_("force update quotas: %s") % force_update)
+        LOG.debug("force update quotas: %s", force_update)
 
         if len(bad_keys) > 0:
             msg = _("Bad key(s) %s in quota_set") % ",".join(bad_keys)
@@ -180,8 +180,8 @@ class QuotaSetsController(wsgi.Controller):
                 if quota_value and quota_value['limit'] >= 0:
                     quota_used = (quota_value['in_use'] +
                                   quota_value['reserved'])
-                    LOG.debug(_("Quota %(key)s used: %(quota_used)s, "
-                                "value: %(value)s."),
+                    LOG.debug("Quota %(key)s used: %(quota_used)s, "
+                              "value: %(value)s.",
                               {'key': key, 'quota_used': quota_used,
                                'value': value})
                     if quota_used > value:

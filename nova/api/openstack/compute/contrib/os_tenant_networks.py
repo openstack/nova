@@ -103,7 +103,7 @@ class NetworkController(object):
     def show(self, req, id):
         context = req.environ['nova.context']
         authorize(context)
-        LOG.debug(_("Showing network with id %s") % id)
+        LOG.debug("Showing network with id %s", id)
         try:
             network = self.network_api.get(context, id)
         except exception.NetworkNotFound:

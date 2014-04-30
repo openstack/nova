@@ -359,7 +359,7 @@ class VolumeAttachmentController(wsgi.Controller):
                 context, instance['uuid'])
 
         if not bdms:
-            LOG.debug(_("Instance %s is not attached."), server_id)
+            LOG.debug("Instance %s is not attached.", server_id)
             raise exc.HTTPNotFound()
 
         assigned_mountpoint = None
@@ -515,7 +515,7 @@ class VolumeAttachmentController(wsgi.Controller):
         bdms = block_device_obj.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance['uuid'])
         if not bdms:
-            LOG.debug(_("Instance %s is not attached."), server_id)
+            LOG.debug("Instance %s is not attached.", server_id)
             raise exc.HTTPNotFound()
 
         found = False
