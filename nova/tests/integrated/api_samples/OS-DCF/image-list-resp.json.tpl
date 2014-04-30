@@ -2,7 +2,7 @@
     "images": [
         {
             "OS-DCF:diskConfig": "AUTO",
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(id)s",
             "links": [
                 {
@@ -30,10 +30,10 @@
             "name": "fakeimage7",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(id)s",
             "links": [
                 {
@@ -60,10 +60,10 @@
             "name": "fakeimage123456",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(uuid)s",
             "links": [
                 {
@@ -89,11 +89,11 @@
             "name": "fakeimage123456",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         },
         {
             "OS-DCF:diskConfig": "MANUAL",
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(uuid)s",
             "links": [
                 {
@@ -121,10 +121,10 @@
             "name": "fakeimage6",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(id)s",
             "links": [
                 {
@@ -150,10 +150,10 @@
             "name": "fakeimage123456",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(id)s",
             "links": [
                 {
@@ -179,10 +179,10 @@
             "name": "fakeimage123456",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         },
         {
-            "created": "%(timestamp)s",
+            "created": "2011-01-01T01:02:03Z",
             "id": "%(id)s",
             "links": [
                 {
@@ -208,7 +208,7 @@
             "name": "fakeimage123456",
             "progress": 100,
             "status": "ACTIVE",
-            "updated": "%(timestamp)s"
+            "updated": "2011-01-01T01:02:03Z"
         }
     ]
 }

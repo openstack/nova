@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <images xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1" xmlns:atom="http://www.w3.org/2005/Atom" xmlns="http://docs.openstack.org/compute/api/v1.1">
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage7" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s" OS-DCF:diskConfig="AUTO">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage7" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s" OS-DCF:diskConfig="AUTO">
     <metadata>
       <meta key="kernel_id">nokernel</meta>
       <meta key="auto_disk_config">True</meta>
@@ -11,7 +11,7 @@
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
     <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage123456" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
       <meta key="kernel_id">nokernel</meta>
       <meta key="ramdisk_id">nokernel</meta>
@@ -21,7 +21,7 @@
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
     <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage123456" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
       <meta key="kernel_id">nokernel</meta>
       <meta key="ramdisk_id">nokernel</meta>
@@ -30,7 +30,7 @@
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
     <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage6" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s" OS-DCF:diskConfig="MANUAL">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage6" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s" OS-DCF:diskConfig="MANUAL">
     <metadata>
       <meta key="kernel_id">nokernel</meta>
       <meta key="auto_disk_config">False</meta>
@@ -41,7 +41,7 @@
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
     <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage123456" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
       <meta key="kernel_id">%(id)s</meta>
       <meta key="ramdisk_id">None</meta>
@@ -50,7 +50,7 @@
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
     <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage123456" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
       <meta key="kernel_id">nokernel</meta>
       <meta key="ramdisk_id">nokernel</meta>
@@ -59,7 +59,7 @@
     <atom:link href="%(host)s/openstack/images/%(id)s" rel="bookmark"/>
     <atom:link href="%(glance_host)s/openstack/images/%(id)s" type="application/vnd.openstack.image" rel="alternate"/>
   </image>
-  <image status="ACTIVE" updated="%(timestamp)s" name="fakeimage123456" created="%(timestamp)s" minDisk="0" progress="100" minRam="0" id="%(id)s">
+  <image status="ACTIVE" updated="2011-01-01T01:02:03Z" name="fakeimage123456" created="2011-01-01T01:02:03Z" minDisk="0" progress="100" minRam="0" id="%(id)s">
     <metadata>
       <meta key="kernel_id">nokernel</meta>
       <meta key="ramdisk_id">nokernel</meta>
