@@ -169,7 +169,7 @@ def read_stored_info(target, field=None, timestamped=False):
 
         @utils.synchronized(lock_name, external=True, lock_path=lock_path)
         def read_file(info_file):
-            LOG.debug(_('Reading image info file: %s'), info_file)
+            LOG.debug('Reading image info file: %s', info_file)
             with open(info_file, 'r') as f:
                 return f.read().rstrip()
 
@@ -289,23 +289,23 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         inuse_images = []
         for ent in os.listdir(CONF.instances_path):
             if ent in self.instance_names:
-                LOG.debug(_('%s is a valid instance name'), ent)
+                LOG.debug('%s is a valid instance name', ent)
                 disk_path = os.path.join(CONF.instances_path, ent, 'disk')
                 if os.path.exists(disk_path):
-                    LOG.debug(_('%s has a disk file'), ent)
+                    LOG.debug('%s has a disk file', ent)
                     try:
                         backing_file = virtutils.get_disk_backing_file(
                             disk_path)
                     except processutils.ProcessExecutionError:
                         # (for bug 1261442)
                         if not os.path.exists(disk_path):
-                            LOG.debug(_('Failed to get disk backing file: %s'),
+                            LOG.debug('Failed to get disk backing file: %s',
                                       disk_path)
                             continue
                         else:
                             raise
-                    LOG.debug(_('Instance %(instance)s is backed by '
-                                '%(backing)s'),
+                    LOG.debug('Instance %(instance)s is backed by '
+                              '%(backing)s',
                               {'instance': ent,
                                'backing': backing_file})
 
@@ -425,8 +425,8 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         Returns nothing.
         """
         if not os.path.exists(base_file):
-            LOG.debug(_('Cannot remove %s, it does not exist'),
-                    base_file)
+            LOG.debug('Cannot remove %s, it does not exist',
+                      base_file)
             return
 
         mtime = os.path.getmtime(base_file)
@@ -506,15 +506,15 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         if base_file:
             if not image_in_use:
-                LOG.debug(_('image %(id)s at (%(base_file)s): image is not in '
-                            'use'),
+                LOG.debug('image %(id)s at (%(base_file)s): image is not in '
+                          'use',
                           {'id': img_id,
                            'base_file': base_file})
                 self.removable_base_files.append(base_file)
 
             else:
-                LOG.debug(_('image %(id)s at (%(base_file)s): image is in '
-                            'use'),
+                LOG.debug('image %(id)s at (%(base_file)s): image is in '
+                          'use',
                           {'id': img_id,
                            'base_file': base_file})
                 if os.path.exists(base_file):
@@ -522,11 +522,11 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     os.utime(base_file, None)
 
     def _age_and_verify_cached_images(self, context, all_instances, base_dir):
-        LOG.debug(_('Verify base images'))
+        LOG.debug('Verify base images')
         # Determine what images are on disk because they're in use
         for img in self.used_images:
             fingerprint = hashlib.sha1(img).hexdigest()
-            LOG.debug(_('Image id %(id)s yields fingerprint %(fingerprint)s'),
+            LOG.debug('Image id %(id)s yields fingerprint %(fingerprint)s',
                       {'id': img,
                        'fingerprint': fingerprint})
             for result in self._find_base_file(base_dir, fingerprint):
@@ -564,7 +564,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
                     self._remove_base_file(base_file)
 
         # That's it
-        LOG.debug(_('Verification complete'))
+        LOG.debug('Verification complete')
 
     def _get_base(self):
 
@@ -581,7 +581,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
         if not os.path.exists(base_dir):
-            LOG.debug(_('Skipping verification, no base directory at %s'),
+            LOG.debug('Skipping verification, no base directory at %s',
                       base_dir)
             return
         return base_dir

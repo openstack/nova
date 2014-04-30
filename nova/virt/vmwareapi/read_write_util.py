@@ -26,7 +26,6 @@ import urllib2
 
 import six.moves.urllib.parse as urlparse
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova import utils
 
@@ -142,8 +141,8 @@ class VMwareHTTPWriteFile(VMwareHTTPFile):
         try:
             self.conn.getresponse()
         except Exception as excep:
-            LOG.debug(_("Exception during HTTP connection close in "
-                      "VMwareHTTPWrite. Exception is %s") % excep)
+            LOG.debug("Exception during HTTP connection close in "
+                      "VMwareHTTPWrite. Exception is %s", excep)
         super(VMwareHTTPWriteFile, self).close()
 
 

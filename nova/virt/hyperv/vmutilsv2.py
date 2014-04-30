@@ -26,7 +26,6 @@ if sys.platform == 'win32':
 
 from oslo.config import cfg
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.hyperv import constants
 from nova.virt.hyperv import vmutils
@@ -241,7 +240,7 @@ class VMUtilsV2(vmutils.VMUtils):
         for metric_name in metric_names:
             metric_def = self._conn.CIM_BaseMetricDefinition(Name=metric_name)
             if not metric_def:
-                LOG.debug(_("Metric not found: %s") % metric_name)
+                LOG.debug("Metric not found: %s", metric_name)
             else:
                 self._enable_metrics(metric_svc, vm, metric_def[0].path_())
 

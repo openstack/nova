@@ -74,7 +74,7 @@ class LiveMigrationUtils(object):
         return vms[0]
 
     def _destroy_planned_vm(self, conn_v2_remote, planned_vm):
-        LOG.debug(_("Destroying existing remote planned VM: %s"),
+        LOG.debug("Destroying existing remote planned VM: %s",
                   planned_vm.ElementName)
         vs_man_svc = conn_v2_remote.Msvm_VirtualSystemManagementService()[0]
         (job_path, ret_val) = vs_man_svc.DestroySystem(planned_vm.path_())
@@ -96,7 +96,7 @@ class LiveMigrationUtils(object):
         vsmsd.DestinationIPAddressList = rmt_ip_addr_list
         migration_setting_data = vsmsd.GetText_(1)
 
-        LOG.debug(_("Creating remote planned VM for VM: %s"),
+        LOG.debug("Creating remote planned VM for VM: %s",
                   vm.ElementName)
         migr_svc = conn_v2_local.Msvm_VirtualSystemMigrationService()[0]
         (job_path, ret_val) = migr_svc.MigrateVirtualSystemToHost(
@@ -153,16 +153,16 @@ class LiveMigrationUtils(object):
                 old_disk_path = sasd.HostResource[0]
                 new_disk_path = disk_paths_remote.pop(sasd.path().RelPath)
 
-                LOG.debug(_("Replacing host resource "
-                            "%(old_disk_path)s with "
-                            "%(new_disk_path)s on planned VM %(vm_name)s"),
+                LOG.debug("Replacing host resource "
+                          "%(old_disk_path)s with "
+                          "%(new_disk_path)s on planned VM %(vm_name)s",
                           {'old_disk_path': old_disk_path,
                            'new_disk_path': new_disk_path,
                            'vm_name': vm_name})
                 sasd.HostResource = [new_disk_path]
                 updated_resource_setting_data.append(sasd.GetText_(1))
 
-        LOG.debug(_("Updating remote planned VM disk paths for VM: %s"),
+        LOG.debug("Updating remote planned VM disk paths for VM: %s",
                   vm_name)
         vsmsvc = conn_v2_remote.Msvm_VirtualSystemManagementService()[0]
         (res_settings, job_path, ret_val) = vsmsvc.ModifyResourceSettings(
@@ -198,7 +198,7 @@ class LiveMigrationUtils(object):
 
         migr_svc = conn_v2_local.Msvm_VirtualSystemMigrationService()[0]
 
-        LOG.debug(_("Starting live migration for VM: %s"), vm.ElementName)
+        LOG.debug("Starting live migration for VM: %s", vm.ElementName)
         (job_path, ret_val) = migr_svc.MigrateVirtualSystemToHost(
             ComputerSystem=vm.path_(),
             DestinationHost=dest_host,
@@ -207,7 +207,7 @@ class LiveMigrationUtils(object):
         self._vmutils.check_ret_val(ret_val, job_path)
 
     def _get_remote_ip_address_list(self, conn_v2_remote, dest_host):
-        LOG.debug(_("Getting live migration networks for remote host: %s"),
+        LOG.debug("Getting live migration networks for remote host: %s",
                   dest_host)
         migr_svc_rmt = conn_v2_remote.Msvm_VirtualSystemMigrationService()[0]
         return migr_svc_rmt.MigrationServiceListenerIPAddressList

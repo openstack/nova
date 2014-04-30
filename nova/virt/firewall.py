@@ -183,9 +183,9 @@ class IptablesFirewallDriver(FirewallDriver):
         self.network_infos[instance['id']] = network_info
         ipv4_rules, ipv6_rules = self.instance_rules(instance, network_info)
         self.add_filters_for_instance(instance, ipv4_rules, ipv6_rules)
-        LOG.debug(_('Filters added to instance'), instance=instance)
+        LOG.debug('Filters added to instance', instance=instance)
         self.refresh_provider_fw_rules()
-        LOG.debug(_('Provider Firewall Rules refreshed'), instance=instance)
+        LOG.debug('Provider Firewall Rules refreshed', instance=instance)
         # Ensure that DHCP request rule is updated if necessary
         if (self.dhcp_create and not self.dhcp_created):
             self.iptables.ipv4['filter'].add_rule(
@@ -367,7 +367,7 @@ class IptablesFirewallDriver(FirewallDriver):
             rules = rules_cls.get_by_security_group(ctxt, security_group)
 
             for rule in rules:
-                LOG.debug(_('Adding security group rule: %r'), rule,
+                LOG.debug('Adding security group rule: %r', rule,
                           instance=instance)
 
                 if not rule['cidr']:
@@ -498,7 +498,7 @@ class IptablesFirewallDriver(FirewallDriver):
         ipv6_rules = []
         rules = self._virtapi.provider_fw_rule_get_all(ctxt)
         for rule in rules:
-            LOG.debug(_('Adding provider rule: %s'), rule['cidr'])
+            LOG.debug('Adding provider rule: %s', rule['cidr'])
             version = netutils.get_ip_version(rule['cidr'])
             if version == 4:
                 fw_rules = ipv4_rules

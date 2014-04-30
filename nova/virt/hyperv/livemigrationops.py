@@ -59,7 +59,7 @@ class LiveMigrationOps(object):
     def live_migration(self, context, instance_ref, dest, post_method,
                        recover_method, block_migration=False,
                        migrate_data=None):
-        LOG.debug(_("live_migration called"), instance=instance_ref)
+        LOG.debug("live_migration called", instance=instance_ref)
         instance_name = instance_ref["name"]
 
         try:
@@ -69,18 +69,18 @@ class LiveMigrationOps(object):
                 self._volumeops.logout_storage_target(target_iqn)
         except Exception:
             with excutils.save_and_reraise_exception():
-                LOG.debug(_("Calling live migration recover_method "
-                            "for instance: %s"), instance_name)
+                LOG.debug("Calling live migration recover_method "
+                          "for instance: %s", instance_name)
                 recover_method(context, instance_ref, dest, block_migration)
 
-        LOG.debug(_("Calling live migration post_method for instance: %s"),
+        LOG.debug("Calling live migration post_method for instance: %s",
                   instance_name)
         post_method(context, instance_ref, dest, block_migration)
 
     @check_os_version_requirement
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info):
-        LOG.debug(_("pre_live_migration called"), instance=instance)
+        LOG.debug("pre_live_migration called", instance=instance)
         self._livemigrutils.check_live_migration_config()
 
         if CONF.use_cow_images:
@@ -94,7 +94,7 @@ class LiveMigrationOps(object):
     @check_os_version_requirement
     def post_live_migration_at_destination(self, ctxt, instance_ref,
                                            network_info, block_migration):
-        LOG.debug(_("post_live_migration_at_destination called"),
+        LOG.debug("post_live_migration_at_destination called",
                   instance=instance_ref)
 
     @check_os_version_requirement
@@ -102,16 +102,16 @@ class LiveMigrationOps(object):
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
-        LOG.debug(_("check_can_live_migrate_destination called"), instance_ref)
+        LOG.debug("check_can_live_migrate_destination called", instance_ref)
         return {}
 
     @check_os_version_requirement
     def check_can_live_migrate_destination_cleanup(self, ctxt,
                                                    dest_check_data):
-        LOG.debug(_("check_can_live_migrate_destination_cleanup called"))
+        LOG.debug("check_can_live_migrate_destination_cleanup called")
 
     @check_os_version_requirement
     def check_can_live_migrate_source(self, ctxt, instance_ref,
                                       dest_check_data):
-        LOG.debug(_("check_can_live_migrate_source called"), instance_ref)
+        LOG.debug("check_can_live_migrate_source called", instance_ref)
         return dest_check_data

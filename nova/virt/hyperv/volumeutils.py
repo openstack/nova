@@ -94,9 +94,9 @@ class VolumeUtils(basevolumeutils.BaseVolumeUtils):
                 else:
                     return
             except vmutils.HyperVException as exc:
-                LOG.debug(_("Attempt %(attempt)d to connect to target  "
-                            "%(target_iqn)s failed. Retrying. "
-                            "Exceptipn: %(exc)s ") %
+                LOG.debug("Attempt %(attempt)d to connect to target  "
+                          "%(target_iqn)s failed. Retrying. "
+                          "Exceptipn: %(exc)s ",
                           {'target_iqn': target_iqn,
                            'exc': exc,
                            'attempt': attempt})

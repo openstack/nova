@@ -88,7 +88,7 @@ class BaseVolumeUtils(object):
             for ephemeral in
             driver.block_device_info_get_ephemerals(block_device_info)]
 
-        LOG.debug(_("block_device_list %s"), block_device_list)
+        LOG.debug("block_device_list %s", block_device_list)
         return block_device.strip_dev(mount_device) in block_device_list
 
     def _get_drive_number_from_disk_path(self, disk_path):

@@ -63,12 +63,12 @@ class VFSLocalFS(vfs.VFS):
         self.imgdir = tempfile.mkdtemp(prefix="openstack-vfs-localfs")
         try:
             if self.imgfmt == "raw":
-                LOG.debug(_("Using LoopMount"))
+                LOG.debug("Using LoopMount")
                 mount = loop.LoopMount(self.imgfile,
                                        self.imgdir,
                                        self.partition)
             else:
-                LOG.debug(_("Using NbdMount"))
+                LOG.debug("Using NbdMount")
                 mount = nbd.NbdMount(self.imgfile,
                                      self.imgdir,
                                      self.partition)
@@ -77,7 +77,7 @@ class VFSLocalFS(vfs.VFS):
             self.mount = mount
         except Exception as e:
             with excutils.save_and_reraise_exception():
-                LOG.debug(_("Failed to mount image %(ex)s)"), {'ex': str(e)})
+                LOG.debug("Failed to mount image %(ex)s)", {'ex': str(e)})
                 self.teardown()
 
     def teardown(self):
@@ -85,24 +85,24 @@ class VFSLocalFS(vfs.VFS):
             if self.mount:
                 self.mount.do_teardown()
         except Exception as e:
-            LOG.debug(_("Failed to unmount %(imgdir)s: %(ex)s") %
+            LOG.debug("Failed to unmount %(imgdir)s: %(ex)s",
                       {'imgdir': self.imgdir, 'ex': str(e)})
         try:
             if self.imgdir:
                 os.rmdir(self.imgdir)
         except Exception as e:
-            LOG.debug(_("Failed to remove %(imgdir)s: %(ex)s") %
+            LOG.debug("Failed to remove %(imgdir)s: %(ex)s",
                       {'imgdir': self.imgdir, 'ex': str(e)})
         self.imgdir = None
         self.mount = None
 
     def make_path(self, path):
-        LOG.debug(_("Make directory path=%s"), path)
+        LOG.debug("Make directory path=%s", path)
         canonpath = self._canonical_path(path)
         utils.execute('mkdir', '-p', canonpath, run_as_root=True)
 
     def append_file(self, path, content):
-        LOG.debug(_("Append file path=%s"), path)
+        LOG.debug("Append file path=%s", path)
         canonpath = self._canonical_path(path)
 
         args = ["-a", canonpath]
@@ -111,7 +111,7 @@ class VFSLocalFS(vfs.VFS):
         utils.execute('tee', *args, **kwargs)
 
     def replace_file(self, path, content):
-        LOG.debug(_("Replace file path=%s"), path)
+        LOG.debug("Replace file path=%s", path)
         canonpath = self._canonical_path(path)
 
         args = [canonpath]
@@ -120,13 +120,13 @@ class VFSLocalFS(vfs.VFS):
         utils.execute('tee', *args, **kwargs)
 
     def read_file(self, path):
-        LOG.debug(_("Read file path=%s"), path)
+        LOG.debug("Read file path=%s", path)
         canonpath = self._canonical_path(path)
 
         return utils.read_file_as_root(canonpath)
 
     def has_file(self, path):
-        LOG.debug(_("Has file path=%s"), path)
+        LOG.debug("Has file path=%s", path)
         canonpath = self._canonical_path(path)
         exists, _err = utils.trycmd('readlink', '-e',
                                     canonpath,
@@ -134,14 +134,14 @@ class VFSLocalFS(vfs.VFS):
         return exists
 
     def set_permissions(self, path, mode):
-        LOG.debug(_("Set permissions path=%(path)s mode=%(mode)o"),
+        LOG.debug("Set permissions path=%(path)s mode=%(mode)o",
                   {'path': path, 'mode': mode})
         canonpath = self._canonical_path(path)
         utils.execute('chmod', "%o" % mode, canonpath, run_as_root=True)
 
     def set_ownership(self, path, user, group):
-        LOG.debug(_("Set permissions path=%(path)s "
-                    "user=%(user)s group=%(group)s"),
+        LOG.debug("Set permissions path=%(path)s "
+                  "user=%(user)s group=%(group)s",
                   {'path': path, 'user': user, 'group': group})
         canonpath = self._canonical_path(path)
         owner = None

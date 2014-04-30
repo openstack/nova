@@ -24,7 +24,6 @@ helpers for populating up config object instances.
 """
 
 from nova import exception
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.openstack.common import units
 
@@ -68,7 +67,7 @@ class LibvirtConfigObject(object):
     def to_xml(self, pretty_print=True):
         root = self.format_dom()
         xml_str = etree.tostring(root, pretty_print=pretty_print)
-        LOG.debug(_("Generated XML %s "), (xml_str,))
+        LOG.debug("Generated XML %s ", (xml_str,))
         return xml_str
 
 

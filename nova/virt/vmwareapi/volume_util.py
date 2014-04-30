@@ -17,7 +17,6 @@ Helper methods for operations related to the management of volumes,
 and storage repositories
 """
 
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -152,10 +151,10 @@ def rescan_iscsi_hba(session, cluster=None, target_portal=None):
             break
     else:
         return
-    LOG.debug(_("Rescanning HBA %s") % hba_device)
+    LOG.debug("Rescanning HBA %s", hba_device)
     session._call_method(session._get_vim(), "RescanHba", storage_system_mor,
                          hbaDevice=hba_device)
-    LOG.debug(_("Rescanned HBA %s ") % hba_device)
+    LOG.debug("Rescanned HBA %s ", hba_device)
 
 
 def _add_iscsi_send_target_host(session, storage_system_mor, hba_device,
@@ -164,7 +163,7 @@ def _add_iscsi_send_target_host(session, storage_system_mor, hba_device,
     client_factory = session._get_vim().client.factory
     send_tgt = client_factory.create('ns0:HostInternetScsiHbaSendTarget')
     (send_tgt.address, send_tgt.port) = target_portal.split(':')
-    LOG.debug(_("Adding iSCSI host %s to send targets"), send_tgt.address)
+    LOG.debug("Adding iSCSI host %s to send targets", send_tgt.address)
     session._call_method(
         session._get_vim(), "AddInternetScsiSendTargets", storage_system_mor,
         iScsiHbaDevice=hba_device, targets=[send_tgt])

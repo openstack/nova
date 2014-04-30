@@ -93,7 +93,7 @@ class ConfigDriveBuilder(object):
     def add_instance_metadata(self, instance_md):
         for (path, value) in instance_md.metadata_for_config_drive():
             self._add_file(path, value)
-            LOG.debug(_('Added %(filepath)s to config drive'),
+            LOG.debug('Added %(filepath)s to config drive',
                       {'filepath': path})
 
     def _make_iso9660(self, path):

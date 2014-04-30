@@ -48,7 +48,7 @@ class VFSGuestFS(vfs.VFS):
             self.setup_os_static()
 
     def setup_os_static(self):
-        LOG.debug(_("Mount guest OS image %(imgfile)s partition %(part)s"),
+        LOG.debug("Mount guest OS image %(imgfile)s partition %(part)s",
                   {'imgfile': self.imgfile, 'part': str(self.partition)})
 
         if self.partition:
@@ -57,7 +57,7 @@ class VFSGuestFS(vfs.VFS):
             self.handle.mount_options("", "/dev/sda", "/")
 
     def setup_os_inspect(self):
-        LOG.debug(_("Inspecting guest OS image %s"), self.imgfile)
+        LOG.debug("Inspecting guest OS image %s", self.imgfile)
         roots = self.handle.inspect_os()
 
         if len(roots) == 0:
@@ -65,7 +65,7 @@ class VFSGuestFS(vfs.VFS):
                                           % self.imgfile)
 
         if len(roots) != 1:
-            LOG.debug(_("Multi-boot OS %(roots)s") % {'roots': str(roots)})
+            LOG.debug("Multi-boot OS %(roots)s", {'roots': str(roots)})
             raise exception.NovaException(
                 _("Multi-boot operating system found in %s") %
                 self.imgfile)
@@ -73,7 +73,7 @@ class VFSGuestFS(vfs.VFS):
         self.setup_os_root(roots[0])
 
     def setup_os_root(self, root):
-        LOG.debug(_("Inspecting guest OS root filesystem %s"), root)
+        LOG.debug("Inspecting guest OS root filesystem %s", root)
         mounts = self.handle.inspect_get_mountpoints(root)
 
         if len(mounts) == 0:
@@ -86,7 +86,7 @@ class VFSGuestFS(vfs.VFS):
 
         root_mounted = False
         for mount in mounts:
-            LOG.debug(_("Mounting %(dev)s at %(dir)s") %
+            LOG.debug("Mounting %(dev)s at %(dir)s",
                       {'dev': mount[1], 'dir': mount[0]})
             try:
                 self.handle.mount_options("", mount[1], mount[0])
@@ -102,7 +102,7 @@ class VFSGuestFS(vfs.VFS):
                     raise exception.NovaException(msg)
 
     def setup(self):
-        LOG.debug(_("Setting up appliance for %(imgfile)s %(imgfmt)s") %
+        LOG.debug("Setting up appliance for %(imgfile)s %(imgfmt)s",
                   {'imgfile': self.imgfile, 'imgfmt': self.imgfmt})
         try:
             self.handle = tpool.Proxy(guestfs.GuestFS(close_on_exit=False))
@@ -138,7 +138,7 @@ class VFSGuestFS(vfs.VFS):
             raise
 
     def teardown(self):
-        LOG.debug(_("Tearing down appliance"))
+        LOG.debug("Tearing down appliance")
 
         try:
             try:
@@ -172,27 +172,27 @@ class VFSGuestFS(vfs.VFS):
         return path
 
     def make_path(self, path):
-        LOG.debug(_("Make directory path=%s"), path)
+        LOG.debug("Make directory path=%s", path)
         path = self._canonicalize_path(path)
         self.handle.mkdir_p(path)
 
     def append_file(self, path, content):
-        LOG.debug(_("Append file path=%s"), path)
+        LOG.debug("Append file path=%s", path)
         path = self._canonicalize_path(path)
         self.handle.write_append(path, content)
 
     def replace_file(self, path, content):
-        LOG.debug(_("Replace file path=%s"), path)
+        LOG.debug("Replace file path=%s", path)
         path = self._canonicalize_path(path)
         self.handle.write(path, content)
 
     def read_file(self, path):
-        LOG.debug(_("Read file path=%s"), path)
+        LOG.debug("Read file path=%s", path)
         path = self._canonicalize_path(path)
         return self.handle.read_file(path)
 
     def has_file(self, path):
-        LOG.debug(_("Has file path=%s"), path)
+        LOG.debug("Has file path=%s", path)
         path = self._canonicalize_path(path)
         try:
             self.handle.stat(path)
@@ -201,14 +201,14 @@ class VFSGuestFS(vfs.VFS):
             return False
 
     def set_permissions(self, path, mode):
-        LOG.debug(_("Set permissions path=%(path)s mode=%(mode)s"),
+        LOG.debug("Set permissions path=%(path)s mode=%(mode)s",
                   {'path': path, 'mode': mode})
         path = self._canonicalize_path(path)
         self.handle.chmod(mode, path)
 
     def set_ownership(self, path, user, group):
-        LOG.debug(_("Set ownership path=%(path)s "
-                    "user=%(user)s group=%(group)s"),
+        LOG.debug("Set ownership path=%(path)s "
+                  "user=%(user)s group=%(group)s",
                   {'path': path, 'user': user, 'group': group})
         path = self._canonicalize_path(path)
         uid = -1
@@ -221,6 +221,6 @@ class VFSGuestFS(vfs.VFS):
             gid = int(self.handle.aug_get(
                     "/files/etc/group/" + group + "/gid"))
 
-        LOG.debug(_("chown uid=%(uid)d gid=%(gid)s"),
+        LOG.debug("chown uid=%(uid)d gid=%(gid)s",
                   {'uid': uid, 'gid': gid})
         self.handle.chown(uid, gid, path)

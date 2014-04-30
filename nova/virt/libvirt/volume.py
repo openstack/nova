@@ -244,7 +244,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                    '-p', iscsi_properties['target_portal'],
                                    *iscsi_command, run_as_root=True,
                                    check_exit_code=check_exit_code)
-        LOG.debug(_("iscsiadm %(command)s: stdout=%(out)s stderr=%(err)s"),
+        LOG.debug("iscsiadm %(command)s: stdout=%(out)s stderr=%(err)s",
                   {'command': iscsi_command, 'out': out, 'err': err})
         return (out, err)
 
@@ -317,8 +317,8 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                 time.sleep(tries ** 2)
 
         if tries != 0:
-            LOG.debug(_("Found iSCSI node %(disk_dev)s "
-                        "(after %(tries)s rescans)"),
+            LOG.debug("Found iSCSI node %(disk_dev)s "
+                      "(after %(tries)s rescans)",
                       {'disk_dev': disk_dev,
                        'tries': tries})
 
@@ -577,7 +577,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                    *iscsi_command,
                                    run_as_root=True,
                                    check_exit_code=check_exit_code)
-        LOG.debug(_("iscsiadm %(command)s: stdout=%(out)s stderr=%(err)s"),
+        LOG.debug("iscsiadm %(command)s: stdout=%(out)s stderr=%(err)s",
                   {'command': iscsi_command, 'out': out, 'err': err})
         return (out, err)
 
@@ -587,7 +587,7 @@ class LibvirtISCSIVolumeDriver(LibvirtBaseVolumeDriver):
                                    *multipath_command,
                                    run_as_root=True,
                                    check_exit_code=check_exit_code)
-        LOG.debug(_("multipath %(command)s: stdout=%(out)s stderr=%(err)s"),
+        LOG.debug("multipath %(command)s: stdout=%(out)s stderr=%(err)s",
                   {'command': multipath_command, 'out': out, 'err': err})
         return (out, err)
 
@@ -675,7 +675,7 @@ class LibvirtNFSVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute('umount', mount_path, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if 'target is busy' in exc.message:
-                LOG.debug(_("The NFS share %s is still in use."), export)
+                LOG.debug("The NFS share %s is still in use.", export)
             else:
                 LOG.exception(_("Couldn't unmount the NFS share %s"), export)
 
@@ -765,8 +765,8 @@ class LibvirtAOEVolumeDriver(LibvirtBaseVolumeDriver):
 
         tries = self.tries
         if tries != 0:
-            LOG.debug(_("Found AoE device %(aoedevpath)s "
-                        "(after %(tries)s rediscover)"),
+            LOG.debug("Found AoE device %(aoedevpath)s "
+                      "(after %(tries)s rediscover)",
                       {'aoedevpath': aoedevpath,
                        'tries': tries})
 
@@ -825,7 +825,7 @@ class LibvirtGlusterfsVolumeDriver(LibvirtBaseVolumeDriver):
             utils.execute('umount', mount_path, run_as_root=True)
         except processutils.ProcessExecutionError as exc:
             if 'target is busy' in exc.message:
-                LOG.debug(_("The GlusterFS share %s is still in use."), export)
+                LOG.debug("The GlusterFS share %s is still in use.", export)
             else:
                 LOG.exception(_("Couldn't unmount the GlusterFS share %s"),
                               export)
@@ -930,7 +930,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         def _wait_for_device_discovery(host_devices, mount_device):
             tries = self.tries
             for device in host_devices:
-                LOG.debug(_("Looking for Fibre Channel dev %(device)s"),
+                LOG.debug("Looking for Fibre Channel dev %(device)s",
                           {'device': device})
                 if os.path.exists(device):
                     self.host_device = device
@@ -960,8 +960,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
 
         tries = self.tries
         if self.host_device is not None and self.device_name is not None:
-            LOG.debug(_("Found Fibre Channel volume %(mount_device)s "
-                        "(after %(tries)s rescans)"),
+            LOG.debug("Found Fibre Channel volume %(mount_device)s "
+                      "(after %(tries)s rescans)",
                       {'mount_device': mount_device,
                        'tries': tries})
 
@@ -969,8 +969,8 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
         # device.  If so, we'll use the multipath device.
         mdev_info = linuxscsi.find_multipath_device(self.device_name)
         if mdev_info is not None:
-            LOG.debug(_("Multipath device discovered %(device)s")
-                      % {'device': mdev_info['device']})
+            LOG.debug("Multipath device discovered %(device)s",
+                      {'device': mdev_info['device']})
             device_path = mdev_info['device']
             connection_info['data']['devices'] = mdev_info['devices']
             connection_info['data']['multipath_id'] = mdev_info['id']
@@ -1002,7 +1002,7 @@ class LibvirtFibreChannelVolumeDriver(LibvirtBaseVolumeDriver):
             multipath_id = connection_info['data']['multipath_id']
             mdev_info = linuxscsi.find_multipath_device(multipath_id)
             devices = mdev_info['devices']
-            LOG.debug(_("devices to remove = %s"), devices)
+            LOG.debug("devices to remove = %s", devices)
 
         # There may have been more than 1 device mounted
         # by the kernel for this volume.  We have to remove

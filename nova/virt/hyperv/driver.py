@@ -171,11 +171,11 @@ class HyperVDriver(driver.ComputeDriver):
         raise NotImplementedError(msg)
 
     def ensure_filtering_rules_for_instance(self, instance_ref, network_info):
-        LOG.debug(_("ensure_filtering_rules_for_instance called"),
+        LOG.debug("ensure_filtering_rules_for_instance called",
                   instance=instance_ref)
 
     def unfilter_instance(self, instance, network_info):
-        LOG.debug(_("unfilter_instance called"), instance=instance)
+        LOG.debug("unfilter_instance called", instance=instance)
 
     def migrate_disk_and_power_off(self, context, instance, dest,
                                    flavor, network_info,

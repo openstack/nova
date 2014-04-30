@@ -238,6 +238,7 @@ def no_translate_debug_logs(logical_line, filename):
             "nova/storage",
             "nova/tests",
             "nova/vnc",
+            "nova/virt",
            ]
     if max([name in filename for name in dirs]):
         if logical_line.startswith("LOG.debug(_("):

@@ -84,7 +84,7 @@ class VirtualPowerManager(base.PowerManager):
         global _cmds
 
         if _cmds is None:
-            LOG.debug(_("Setting up %s commands."),
+            LOG.debug("Setting up %s commands.",
                       CONF.baremetal.virtual_power_type)
             _vpc = 'nova.virt.baremetal.virtual_power_driver_settings.%s' % \
                     CONF.baremetal.virtual_power_type
@@ -132,13 +132,13 @@ class VirtualPowerManager(base.PowerManager):
             self._connection = connection.ssh_connect(self.connection_data)
 
     def _get_full_node_list(self):
-        LOG.debug(_("Getting full node list."))
+        LOG.debug("Getting full node list.")
         cmd = self._vp_cmd.list_cmd
         full_list = self._run_command(cmd)
         return full_list
 
     def _check_for_node(self):
-        LOG.debug(_("Looking up Name for Mac address %s."),
+        LOG.debug("Looking up Name for Mac address %s.",
                   self._mac_addresses)
         self._matched_name = ''
         full_node_list = self._get_full_node_list()
@@ -190,7 +190,7 @@ class VirtualPowerManager(base.PowerManager):
         return self.state
 
     def is_power_on(self):
-        LOG.debug(_("Checking if %s is running"), self._node_name)
+        LOG.debug("Checking if %s is running", self._node_name)
 
         if not self._check_for_node():
             err_msg = _('Node "%(name)s" with MAC address %(mac)s not found.')
@@ -227,7 +227,7 @@ class VirtualPowerManager(base.PowerManager):
             stdout, stderr = processutils.ssh_execute(
                 self._connection, cmd, check_exit_code=check_exit_code)
             result = stdout.strip().splitlines()
-            LOG.debug(_('Result for run_command: %s'), result)
+            LOG.debug('Result for run_command: %s', result)
         except processutils.ProcessExecutionError:
             result = []
             LOG.exception(_("Error running command: %s"), cmd)
