@@ -16,6 +16,7 @@
 
 from nova.api.openstack import common
 from nova.image import glance
+from nova.openstack.common import timeutils
 
 
 class ViewBuilder(common.ViewBuilder):
@@ -122,10 +123,10 @@ class ViewBuilder(common.ViewBuilder):
                          str(identifier)])
 
     @staticmethod
-    def _format_date(date_string):
-        """Return standard format for given date."""
-        if date_string is not None:
-            return date_string.strftime('%Y-%m-%dT%H:%M:%SZ')
+    def _format_date(dt):
+        """Return standard format for a given datetime object."""
+        if dt is not None:
+            return timeutils.isotime(dt)
 
     @staticmethod
     def _get_status(image):
