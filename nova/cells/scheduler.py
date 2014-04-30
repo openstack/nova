@@ -150,7 +150,7 @@ class CellsScheduler(base.Base):
 
         weighted_cells = self.weight_handler.get_weighed_objects(
                 self.weigher_classes, cells, filter_properties)
-        LOG.debug(_("Weighted cells: %(weighted_cells)s"),
+        LOG.debug("Weighted cells: %(weighted_cells)s",
                   {'weighted_cells': weighted_cells})
         target_cells = [cell.obj for cell in weighted_cells]
         return target_cells
@@ -166,7 +166,7 @@ class CellsScheduler(base.Base):
         security_groups = request_spec['security_group']
         block_device_mapping = request_spec['block_device_mapping']
 
-        LOG.debug(_("Scheduling with routing_path=%(routing_path)s"),
+        LOG.debug("Scheduling with routing_path=%(routing_path)s",
                   {'routing_path': message.routing_path})
 
         for target_cell in target_cells:
@@ -206,7 +206,7 @@ class CellsScheduler(base.Base):
         security_groups = build_inst_kwargs['security_groups']
         block_device_mapping = build_inst_kwargs['block_device_mapping']
 
-        LOG.debug(_("Building instances with routing_path=%(routing_path)s"),
+        LOG.debug("Building instances with routing_path=%(routing_path)s",
                   {'routing_path': message.routing_path})
 
         for target_cell in target_cells:
