@@ -2440,15 +2440,17 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         action_values = self._create_action_values(uuid1)
         db.action_start(self.ctxt, action_values)
+        request_id = action_values['request_id']
+
+        # NOTE(rpodolyaka): ensure we use a different req id for the 2nd req
         action_values['action'] = 'resize'
+        action_values['request_id'] = 'req-00000000-7522-4d99-7ff-111111111111'
         db.action_start(self.ctxt, action_values)
 
         action_values = self._create_action_values(uuid2, 'reboot', ctxt2)
         db.action_start(ctxt2, action_values)
         db.action_start(ctxt2, action_values)
 
-        actions = db.actions_get(self.ctxt, uuid1)
-        request_id = actions[0]['request_id']
         action = db.action_get_by_request_id(self.ctxt, uuid1, request_id)
         self.assertEqual('run_instance', action['action'])
         self.assertEqual(self.ctxt.request_id, action['request_id'])
