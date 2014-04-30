@@ -77,9 +77,9 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
 
     def join(self, member_id, group, service=None):
         """Join the given service with its group."""
-        LOG.debug(_('ZooKeeperDriver: join new member %(id)s to the '
-                    '%(gr)s group, service=%(sr)s'),
-                    {'id': member_id, 'gr': group, 'sr': service})
+        LOG.debug('ZooKeeperDriver: join new member %(id)s to the '
+                  '%(gr)s group, service=%(sr)s',
+                  {'id': member_id, 'gr': group, 'sr': service})
         member = self._memberships.get((group, member_id), None)
         if member is None:
             # the first time to join. Generate a new object
@@ -98,7 +98,7 @@ class ZooKeeperDriver(api.ServiceGroupDriver):
 
     def leave(self, member_id, group):
         """Remove the given member from the service group."""
-        LOG.debug(_('ZooKeeperDriver.leave: %(member)s from group %(group)s'),
+        LOG.debug('ZooKeeperDriver.leave: %(member)s from group %(group)s',
                   {'member': member_id, 'group': group})
         try:
             key = (group, member_id)

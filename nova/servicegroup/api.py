@@ -61,7 +61,7 @@ class API(object):
         '''
 
         if not cls._driver:
-            LOG.debug(_('ServiceGroup driver defined as an instance of %s'),
+            LOG.debug('ServiceGroup driver defined as an instance of %s',
                       str(CONF.servicegroup_driver))
             driver_name = CONF.servicegroup_driver
             try:
@@ -126,15 +126,15 @@ class API(object):
 
     def get_all(self, group_id):
         """Returns ALL members of the given group."""
-        LOG.debug(_('Returns ALL members of the [%s] '
-                    'ServiceGroup'), group_id)
+        LOG.debug('Returns ALL members of the [%s] '
+                  'ServiceGroup', group_id)
         return self._driver.get_all(group_id)
 
     def get_one(self, group_id):
         """Returns one member of the given group. The strategy to select
         the member is decided by the driver (e.g. random or round-robin).
         """
-        LOG.debug(_('Returns one member of the [%s] group'), group_id)
+        LOG.debug('Returns one member of the [%s] group', group_id)
         return self._driver.get_one(group_id)
 
 

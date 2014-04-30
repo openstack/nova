@@ -78,7 +78,7 @@ class DbDriver(api.ServiceGroupDriver):
     def get_all(self, group_id):
         """Returns ALL members of the given group
         """
-        LOG.debug(_('DB_Driver: get_all members of the %s group') % group_id)
+        LOG.debug('DB_Driver: get_all members of the %s group', group_id)
         rs = []
         ctxt = context.get_admin_context()
         services = self.conductor_api.service_get_all_by_topic(ctxt, group_id)
