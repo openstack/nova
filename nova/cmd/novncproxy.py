@@ -27,6 +27,7 @@ from oslo.config import cfg
 
 from nova import config
 from nova.console import websocketproxy
+from nova.openstack.common import log as logging
 from nova.openstack.common.report import guru_meditation_report as gmr
 from nova import version
 
@@ -65,24 +66,23 @@ def main():
         print("Can not find novnc html/js/css files at %s." % CONF.web)
         return(-1)
 
+    logging.setup("nova")
+
     gmr.TextGuruMeditation.setup_autorun(version)
 
     # Create and start the NovaWebSockets proxy
     server = websocketproxy.NovaWebSocketProxy(
-                                   listen_host=CONF.novncproxy_host,
-                                   listen_port=CONF.novncproxy_port,
-                                   source_is_ipv6=CONF.source_is_ipv6,
-                                   verbose=CONF.verbose,
-                                   cert=CONF.cert,
-                                   key=CONF.key,
-                                   ssl_only=CONF.ssl_only,
-                                   daemon=CONF.daemon,
-                                   record=CONF.record,
-                                   web=CONF.web,
-                                   file_only=True,
-                                   no_parent=True,
-                                   target_host='ignore',
-                                   target_port='ignore',
-                                   wrap_mode='exit',
-                                   wrap_cmd=None)
+                listen_host=CONF.novncproxy_host,
+                listen_port=CONF.novncproxy_port,
+                source_is_ipv6=CONF.source_is_ipv6,
+                verbose=CONF.verbose,
+                cert=CONF.cert,
+                key=CONF.key,
+                ssl_only=CONF.ssl_only,
+                daemon=CONF.daemon,
+                record=CONF.record,
+                traffic=CONF.verbose and not CONF.daemon,
+                web=CONF.web,
+                file_only=True,
+                RequestHandlerClass=websocketproxy.NovaProxyRequestHandler)
     server.start_server()
