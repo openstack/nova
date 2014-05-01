@@ -2,7 +2,7 @@
 <cloudpipes>
   <cloudpipe>
     <public_ip>%(ip)s</public_ip>
-    <created_at>%(timestamp)s</created_at>
+    <created_at>%(isotime)s</created_at>
     <public_port>22</public_port>
     <state>down</state>
     <instance_id>%(uuid)s</instance_id>
