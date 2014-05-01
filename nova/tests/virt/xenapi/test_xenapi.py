@@ -307,8 +307,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.flags(connection_url='test_url',
                    connection_password='test_pass',
                    group='xenserver')
-        # Disable conductor so we don't wait on a reply that will never come
-        self.flags(use_local=True, group='conductor')
         db_fakes.stub_out_db_instance_api(self.stubs)
         xenapi_fake.create_network('fake', 'fake_br1')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -1118,7 +1116,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
     def test_spawn_agent_upgrade(self):
         self.flags(use_agent_default=True,
                    group='xenserver')
-        actual_injected_files = []
 
         def fake_agent_build(_self, *args):
             return {"version": "1.1.0", "architecture": "x86-64",
@@ -1132,10 +1129,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
 
     def test_spawn_agent_upgrade_fails_silently(self):
-        self.flags(use_agent_default=True,
-                   group='xenserver')
-        actual_injected_files = []
-
         def fake_agent_build(_self, *args):
             return {"version": "1.1.0", "architecture": "x86-64",
                     "hypervisor": "xen", "os": "windows",
@@ -1144,14 +1137,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
         self.stubs.Set(self.conn.virtapi, 'agent_build_get_by_triple',
                        fake_agent_build)
 
-        def fake_agent_update(self, method, args):
-            raise xenapi_fake.Failure(["fake_error"])
-
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_agentupdate', fake_agent_update)
-
-        self._test_spawn(IMAGE_VHD, None, None,
-                         os_type="linux", architecture="x86-64")
+        self._test_spawn_fails_silently_with(exception.AgentError,
+                method="_plugin_agent_agentupdate", failure="fake_error")
 
     def test_spawn_with_resetnetwork_alternative_returncode(self):
         self.flags(use_agent_default=True,
@@ -1170,69 +1157,51 @@ class XenAPIVMTestCase(stubs.XenAPITestBase):
                          os_type="linux", architecture="x86-64")
         self.assertTrue(fake_resetnetwork.called)
 
-    def _test_spawn_fails_silently_with(self, trigger, expected_exception):
+    def _test_spawn_fails_silently_with(self, expected_exception_cls,
+                                        method="_plugin_agent_version",
+                                        failure=None, value=None):
         self.flags(use_agent_default=True,
                    agent_version_timeout=0,
                    group='xenserver')
-        actual_injected_files = []
 
-        def fake_agent_version(self, method, args):
-            raise xenapi_fake.Failure([trigger])
+        def fake_agent_call(self, method, args):
+            if failure:
+                raise xenapi_fake.Failure([failure])
+            else:
+                return value
 
         self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_version', fake_agent_version)
+                       method, fake_agent_call)
+
+        called = {}
 
         def fake_add_instance_fault(*args, **kwargs):
-            self.assertEqual(expected_exception, args[3])
+            called["fake_add_instance_fault"] = args[3]
 
         self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
                        fake_add_instance_fault)
 
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64")
+        actual_exception = called["fake_add_instance_fault"]
+        self.assertIsInstance(actual_exception, expected_exception_cls)
 
-    def test_spawn_fails_with_agent_timeout(self):
-        self._test_spawn_fails_silently_with("TIMEOUT:fake",
-                                             exception.AgentTimeout)
+    def test_spawn_fails_silently_with_agent_timeout(self):
+        self._test_spawn_fails_silently_with(exception.AgentTimeout,
+                                             failure="TIMEOUT:fake")
 
-    def test_spawn_fails_with_agent_not_implemented(self):
-        self._test_spawn_fails_silently_with("NOT IMPLEMENTED:fake",
-                                             exception.AgentNotImplemented)
+    def test_spawn_fails_silently_with_agent_not_implemented(self):
+        self._test_spawn_fails_silently_with(exception.AgentNotImplemented,
+                                             failure="NOT IMPLEMENTED:fake")
 
-    def test_spawn_fails_with_agent_error(self):
-        self._test_spawn_fails_silently_with("fake_error",
-                                             exception.AgentError)
+    def test_spawn_fails_silently_with_agent_error(self):
+        self._test_spawn_fails_silently_with(exception.AgentError,
+                                             failure="fake_error")
 
-    def test_spawn_fails_with_agent_bad_return(self):
-        self.flags(use_agent_default=True,
-                   agent_version_timeout=0,
-                   group='xenserver')
-        actual_injected_files = []
-
-        def fake_agent_version(self, method, args):
-            return xenapi_fake.as_json(returncode='-1', message='fake')
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_version', fake_agent_version)
-
-        exception.AgentError
-        self._test_spawn(IMAGE_VHD, None, None,
-                         os_type="linux", architecture="x86-64")
-
-    def test_spawn_fails_agent_not_implemented(self):
-        # Test spawning with injected_files.
-        self.flags(use_agent_default=True,
-                   agent_version_timeout=0,
-                   group='xenserver')
-        actual_injected_files = []
-
-        def fake_agent_version(self, method, args):
-            raise xenapi_fake.Failure(["NOT IMPLEMENTED:fake"])
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_version', fake_agent_version)
-
-        exception.AgentNotImplemented
-        self._test_spawn(IMAGE_VHD, None, None,
-                         os_type="linux", architecture="x86-64")
+    def test_spawn_fails_silently_with_agent_bad_return(self):
+        error = jsonutils.dumps({'returncode': -1, 'message': 'fake'})
+        self._test_spawn_fails_silently_with(exception.AgentError,
+                                             value=error)
 
     def test_rescue(self):
         instance = self._create_instance(spawn=False)
