@@ -35,6 +35,7 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import instance as instance_obj
 from nova.openstack.common import importutils
 from nova.openstack.common import jsonutils
+from nova.openstack.common import periodic_task
 from nova import rpc
 from nova import test
 from nova.tests import fake_block_device
@@ -748,3 +749,60 @@ class ComputeUtilsGetRebootTypes(test.TestCase):
     def test_get_reboot_not_running_hard(self):
         reboot_type = compute_utils.get_reboot_type('foo', 'bar')
         self.assertEqual(reboot_type, 'HARD')
+
+
+class ComputeUtilsPeriodicTaskSpacingWarning(test.NoDBTestCase):
+
+    @mock.patch.object(compute_utils, 'LOG')
+    def test_periodic_task_spacing_warning_no_op(self, mock_log):
+
+        @compute_utils.periodic_task_spacing_warn("config_value")
+        def not_a_periodic_task():
+            return "something"
+
+        self.assertEqual("something", not_a_periodic_task())
+        mock_log.warning.assert_not_called()
+
+    @mock.patch.object(compute_utils, 'LOG')
+    def test_periodic_task_spacing_warning_nonzero_spacing(self, mock_log):
+
+        @compute_utils.periodic_task_spacing_warn("config_value")
+        @periodic_task.periodic_task(spacing=10)
+        def a_periodic_task():
+            return "something"
+
+        self.assertEqual("something", a_periodic_task())
+        mock_log.warning.assert_not_called()
+
+    @mock.patch.object(compute_utils, 'LOG')
+    def test_periodic_task_spacing_warning_zero_spacing(self, mock_log):
+
+        @compute_utils.periodic_task_spacing_warn("config_value")
+        @periodic_task.periodic_task(spacing=0)
+        def zero_spacing_periodic_task():
+            return "something"
+
+        self.assertEqual("something", zero_spacing_periodic_task())
+        mock_log.warning.assert_called_with(mock.ANY, "config_value")
+
+    @mock.patch.object(compute_utils, 'LOG')
+    def test_periodic_task_spacing_warning_none_spacing(self, mock_log):
+
+        @compute_utils.periodic_task_spacing_warn("config_value")
+        @periodic_task.periodic_task(spacing=None)
+        def none_spacing_periodic_task():
+            return "something"
+
+        self.assertEqual("something", none_spacing_periodic_task())
+        mock_log.warning.assert_called_with(mock.ANY, "config_value")
+
+    @mock.patch.object(compute_utils, 'LOG')
+    def test_periodic_task_spacing_warning_default_spacing(self, mock_log):
+
+        @compute_utils.periodic_task_spacing_warn("config_value")
+        @periodic_task.periodic_task
+        def default_spacing_periodic_task():
+            return "something"
+
+        self.assertEqual("something", default_spacing_periodic_task())
+        mock_log.warning.assert_called_with(mock.ANY, "config_value")

@@ -128,11 +128,17 @@ interval_opts = [
     cfg.IntOpt('bandwidth_poll_interval',
                default=600,
                help='Interval to pull network bandwidth usage info. Not '
-                    'supported on all hypervisors. Set to 0 to disable.'),
+                    'supported on all hypervisors. Set to -1 to disable. '
+                    'Setting this to 0 will disable, but this will change in '
+                    'the K release to mean "run at the default rate".'),
+    # TODO(gilliard): Clean the above message after the K release
     cfg.IntOpt('sync_power_state_interval',
                default=600,
-               help='Interval to sync power states between '
-                    'the database and the hypervisor'),
+               help='Interval to sync power states between the database and '
+                    'the hypervisor. Set to -1 to disable. '
+                    'Setting this to 0 will disable, but this will change in '
+                    'Juno to mean "run at the default rate".'),
+    # TODO(gilliard): Clean the above message after the K release
     cfg.IntOpt("heal_instance_info_cache_interval",
                default=60,
                help="Number of seconds between instance info_cache self "
@@ -146,7 +152,10 @@ interval_opts = [
     cfg.IntOpt('shelved_poll_interval',
                default=3600,
                help='Interval in seconds for polling shelved instances to '
-                    'offload'),
+                    'offload. Set to -1 to disable.'
+                    'Setting this to 0 will disable, but this will change in '
+                    'Juno to mean "run at the default rate".'),
+    # TODO(gilliard): Clean the above message after the K release
     cfg.IntOpt('shelved_offload_time',
                default=0,
                help='Time in seconds before a shelved instance is eligible '
@@ -4996,6 +5005,7 @@ class ComputeManager(manager.Manager):
                            "Will retry later."),
                          e, instance=instance)
 
+    @compute_utils.periodic_task_spacing_warn("shelved_poll_interval")
     @periodic_task.periodic_task(spacing=CONF.shelved_poll_interval)
     def _poll_shelved_instances(self, context):
         if CONF.shelved_offload_time <= 0:
@@ -5076,6 +5086,7 @@ class ComputeManager(manager.Manager):
                                       num_instances,
                                       time.time() - start_time))
 
+    @compute_utils.periodic_task_spacing_warn("bandwidth_poll_interval")
     @periodic_task.periodic_task(spacing=CONF.bandwidth_poll_interval)
     def _poll_bandwidth_usage(self, context):
 
@@ -5214,6 +5225,7 @@ class ComputeManager(manager.Manager):
 
         self._update_volume_usage_cache(context, vol_usages)
 
+    @compute_utils.periodic_task_spacing_warn("sync_power_state_interval")
     @periodic_task.periodic_task(spacing=CONF.sync_power_state_interval,
                                  run_immediately=True)
     def _sync_power_states(self, context):
@@ -5654,6 +5666,7 @@ class ComputeManager(manager.Manager):
             else:
                 self._process_instance_event(instance, event)
 
+    @compute_utils.periodic_task_spacing_warn("image_cache_manager_interval")
     @periodic_task.periodic_task(spacing=CONF.image_cache_manager_interval,
                                  external_process_ok=True)
     def _run_image_cache_manager_pass(self, context):
