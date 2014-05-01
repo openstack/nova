@@ -1,7 +1,7 @@
 {
     "server": {
-        "updated": "%(timestamp)s",
-        "created": "%(timestamp)s",
+        "updated": "%(isotime)s",
+        "created": "%(isotime)s",
         "OS-EXT-AZ:availability_zone": "nova",
         "accessIPv4": "",
         "accessIPv6": "",

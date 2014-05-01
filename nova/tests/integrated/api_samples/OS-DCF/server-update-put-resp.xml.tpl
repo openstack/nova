@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <server xmlns:OS-DCF="http://docs.openstack.org/compute/ext/disk_config/api/v1.1"
         xmlns:atom="http://www.w3.org/2005/Atom"
-        xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="%(timestamp)s"
-        hostId="%(hostid)s" name="new-server-test" created="%(timestamp)s" userId="fake"
+        xmlns="http://docs.openstack.org/compute/api/v1.1" status="ACTIVE" updated="%(isotime)s"
+        hostId="%(hostid)s" name="new-server-test" created="%(isotime)s" userId="fake"
         tenantId="openstack" accessIPv4="" accessIPv6="" progress="0" id="%(id)s"
         OS-DCF:diskConfig="AUTO">
   <image id="%(uuid)s">

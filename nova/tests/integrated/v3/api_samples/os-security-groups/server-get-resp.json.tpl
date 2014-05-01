@@ -10,7 +10,7 @@
                 }
             ]
         },
-        "created": "%(timestamp)s",
+        "created": "%(isotime)s",
         "flavor": {
             "id": "1",
             "links": [
@@ -48,7 +48,7 @@
         "progress": 0,
         "status": "ACTIVE",
         "tenant_id": "openstack",
-        "updated": "%(timestamp)s",
+        "updated": "%(isotime)s",
         "user_id": "fake",
         "os-security-groups:security_groups": [{"name": "test"}],
         "key_name": null

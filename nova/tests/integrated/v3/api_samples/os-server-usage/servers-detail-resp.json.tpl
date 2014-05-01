@@ -2,7 +2,7 @@
     "servers": [
     {
             "status": "ACTIVE",
-            "updated": "%(timestamp)s",
+            "created": "%(isotime)s",
             "os-server-usage:launched_at": "%(timestamp)s",
             "user_id": "fake",
             "addresses": {
@@ -26,7 +26,7 @@
                     "rel": "bookmark"
                 }
             ],
-            "created": "%(timestamp)s",
+            "updated": "%(isotime)s",
             "name": "new-server-test",
             "image": {
                 "id": "%(uuid)s",
