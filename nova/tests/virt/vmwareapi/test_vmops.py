@@ -32,6 +32,8 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         super(VMwareVMOpsTestCase, self).setUp()
         vmwareapi_fake.reset()
         stubs.set_stubs(self.stubs)
+        self.flags(image_cache_subdirectory_name='vmware_base',
+                   my_ip='')
         self._session = driver.VMwareAPISession()
 
         self._vmops = vmops.VMwareVMOps(self._session, None, None)
@@ -166,17 +168,23 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                                                        mock_exists):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         ops._create_folder_if_missing = mock.Mock()
-        ops._check_if_folder_file_exists(mock.Mock(), mock.Mock(), "datastore",
+        mock_ds_ref = mock.Mock()
+        ops._check_if_folder_file_exists(mock.Mock(), mock_ds_ref, "datastore",
                                          "folder", "some_file")
-        ops._create_folder_if_missing.assert_called_once()
+        ops._create_folder_if_missing.assert_called_once_with('datastore',
+                                                              mock_ds_ref,
+                                                              'vmware_base')
 
     @mock.patch.object(ds_util, 'file_exists', return_value=False)
     def test_check_if_folder_file_exists_no_existing(self, mock_exists):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())
         ops._create_folder_if_missing = mock.Mock()
-        ops._check_if_folder_file_exists(mock.Mock(), mock.Mock(), "datastore",
+        mock_ds_ref = mock.Mock()
+        ops._check_if_folder_file_exists(mock.Mock(), mock_ds_ref, "datastore",
                                          "folder", "some_file")
-        ops._create_folder_if_missing.assert_called_once()
+        ops._create_folder_if_missing.assert_called_once_with('datastore',
+                                                              mock_ds_ref,
+                                                              'vmware_base')
 
     def test_get_valid_vms_from_retrieve_result(self):
         ops = vmops.VMwareVMOps(mock.Mock(), mock.Mock(), mock.Mock())

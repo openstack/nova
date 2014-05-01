@@ -1954,23 +1954,29 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
 
         vcdriver = driver.VMwareVCDriver(None, False)
         vcdriver._session = mock.Mock()
+        vcdriver._session.vim = None
+
+        def side_effect():
+            vcdriver._session.vim = mock.Mock()
+        vcdriver._session._create_session.side_effect = side_effect
         return vcdriver
 
     @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.__init__')
     def test_init_host_and_cleanup_host(self, mock_init):
         vcdriver = self._setup_mocks_for_session(mock_init)
         vcdriver.init_host("foo")
-        vcdriver._session._create_session.assert_called_once()
+        vcdriver._session._create_session.assert_called_once_with()
 
         vcdriver.cleanup_host("foo")
-        vcdriver._session.vim.client.service.Logout.assert_called_once()
+        vcdriver._session.vim.client.service.Logout.assert_called_once_with(
+            mock.ANY)
 
     @mock.patch('nova.virt.vmwareapi.driver.LOG')
     @mock.patch('nova.virt.vmwareapi.driver.VMwareVCDriver.__init__')
     def test_cleanup_host_with_no_login(self, mock_init, mock_logger):
         vcdriver = self._setup_mocks_for_session(mock_init)
         vcdriver.init_host("foo")
-        vcdriver._session._create_session.assert_called_once()
+        vcdriver._session._create_session.assert_called_once_with()
 
         # Not logged in...
         # observe that no exceptions were thrown
@@ -1981,8 +1987,9 @@ class VMwareAPIVCDriverTestCase(VMwareAPIVMTestCase):
         vcdriver.cleanup_host("foo")
 
         # assert that the mock Logout method was never called
-        vcdriver._session.vim.client.service.Logout.assert_called_once()
-        mock_logger.debug.assert_called_once()
+        vcdriver._session.vim.client.service.Logout.assert_called_once_with(
+            mock.ANY)
+        mock_logger.debug.assert_called_once_with(mock.ANY)
 
     def test_host_power_action(self):
         self.assertRaises(NotImplementedError,

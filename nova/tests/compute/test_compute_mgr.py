@@ -222,10 +222,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self.compute, 'driver') as mock_driver:
             self.compute.init_host()
-            mock_driver.init_host.assert_called_once()
+            mock_driver.init_host.assert_called_once_with(host='fake-mini')
 
             self.compute.cleanup_host()
-            mock_driver.cleanup_host.assert_called_once()
+            mock_driver.cleanup_host.assert_called_once_with(host='fake-mini')
 
     def test_init_host_with_deleted_migration(self):
         our_host = self.compute.host
