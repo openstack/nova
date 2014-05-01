@@ -97,7 +97,6 @@ class VMwareVMOps(object):
         self._default_root_device = 'vda'
         self._rescue_suffix = '-rescue'
         self._migrate_suffix = '-orig'
-        self._poll_rescue_last_ran = None
         self._datastore_dc_mapping = {}
         self._datastore_browser_mapping = {}
         self._imagecache = imagecache.ImageCacheManager(self._session,
