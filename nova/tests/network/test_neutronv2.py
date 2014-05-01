@@ -2441,6 +2441,7 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
         self.flags(url_timeout=30, group='neutron')
         if use_id:
             self.flags(admin_tenant_id='admin_tenant_id', group='neutron')
+            self.flags(admin_user_id='admin_user_id', group='neutron')
 
         if admin_context:
             my_context = context.get_admin_context()
@@ -2451,7 +2452,6 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
         kwargs = {
             'auth_url': CONF.neutron.admin_auth_url,
             'password': CONF.neutron.admin_password,
-            'username': CONF.neutron.admin_username,
             'endpoint_url': CONF.neutron.url,
             'auth_strategy': None,
             'timeout': CONF.neutron.url_timeout,
@@ -2460,8 +2460,10 @@ class TestNeutronClientForAdminScenarios(test.TestCase):
             'token': None}
         if use_id:
             kwargs['tenant_id'] = CONF.neutron.admin_tenant_id
+            kwargs['user_id'] = CONF.neutron.admin_user_id
         else:
             kwargs['tenant_name'] = CONF.neutron.admin_tenant_name
+            kwargs['username'] = CONF.neutron.admin_username
         client.Client.__init__(**kwargs).WithSideEffects(client_mock)
         self.mox.ReplayAll()
 

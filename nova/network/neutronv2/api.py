@@ -45,6 +45,8 @@ neutron_opts = [
                help='Timeout value for connecting to neutron in seconds',
                deprecated_group='DEFAULT',
                deprecated_name='neutron_url_timeout'),
+    cfg.StrOpt('admin_user_id',
+               help='User id for connecting to neutron in admin context'),
     cfg.StrOpt('admin_username',
                help='Username for connecting to neutron in admin context',
                deprecated_group='DEFAULT',
@@ -60,9 +62,9 @@ neutron_opts = [
                deprecated_name='neutron_admin_tenant_id'),
     cfg.StrOpt('admin_tenant_name',
                help='Tenant name for connecting to neutron in admin context. '
-                    'This option is mutually exclusive with '
-                    'admin_tenant_id. Note that with Keystone V3 '
-                    'tenant names are only unique within a domain.',
+                    'This option will be ignored if neutron_admin_tenant_id '
+                    'is set. Note that with Keystone V3 tenant names are '
+                    'only unique within a domain.',
                deprecated_group='DEFAULT',
                deprecated_name='neutron_admin_tenant_name'),
     cfg.StrOpt('region_name',
