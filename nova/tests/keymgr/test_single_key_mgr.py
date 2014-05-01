@@ -51,7 +51,7 @@ class SingleKeyManagerTestCase(test_mock_key_mgr.MockKeyManagerTestCase):
         pass
 
     def test_store_null_context(self):
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.key_mgr.store_key, None, self.key)
 
     def test_copy_key(self):

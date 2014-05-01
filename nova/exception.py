@@ -161,17 +161,17 @@ class GlanceConnectionFailed(NovaException):
         "%(reason)s")
 
 
-class NotAuthorized(NovaException):
+class Forbidden(NovaException):
     ec2_code = 'AuthFailure'
     msg_fmt = _("Not authorized.")
     code = 403
 
 
-class AdminRequired(NotAuthorized):
+class AdminRequired(Forbidden):
     msg_fmt = _("User does not have admin privileges")
 
 
-class PolicyNotAuthorized(NotAuthorized):
+class PolicyNotAuthorized(Forbidden):
     msg_fmt = _("Policy doesn't allow %(action)s to be performed.")
 
 
@@ -625,7 +625,7 @@ class NetworkRequiresSubnet(Invalid):
                 " instances on.")
 
 
-class ExternalNetworkAttachForbidden(NotAuthorized):
+class ExternalNetworkAttachForbidden(Forbidden):
     msg_fmt = _("It is not allowed to create an interface on "
                 "external network %(network_uuid)s")
 

@@ -3545,7 +3545,7 @@ class FixedIPTestCase(BaseInstanceTypeTestCase):
         fixed_ip_id = db.fixed_ip_create(self.ctxt, param)
 
         self.ctxt.is_admin = False
-        self.assertRaises(exception.NotAuthorized, db.fixed_ip_get,
+        self.assertRaises(exception.Forbidden, db.fixed_ip_get,
                           self.ctxt, fixed_ip_id)
 
     def test_fixed_ip_get_success(self):
@@ -3765,7 +3765,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_floating_ip_allocate_not_authorized(self):
         ctxt = context.RequestContext(user_id='a', project_id='abc',
                                       is_admin=False)
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           db.floating_ip_allocate_address,
                           ctxt, 'other_project_id', 'any_pool')
 
@@ -4011,7 +4011,7 @@ class FloatingIpTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_floating_ip_get_all_by_project_not_authorized(self):
         ctxt = context.RequestContext(user_id='a', project_id='abc',
                                       is_admin=False)
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           db.floating_ip_get_all_by_project,
                           ctxt, 'other_project')
 

@@ -196,35 +196,35 @@ def require_admin_context(ctxt):
 
 
 def require_context(ctxt):
-    """Raise exception.NotAuthorized() if context is not a user or an
+    """Raise exception.Forbidden() if context is not a user or an
     admin context.
     """
     if not ctxt.is_admin and not is_user_context(ctxt):
-        raise exception.NotAuthorized()
+        raise exception.Forbidden()
 
 
 def authorize_project_context(context, project_id):
     """Ensures a request has permission to access the given project."""
     if is_user_context(context):
         if not context.project_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         elif context.project_id != project_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
 
 def authorize_user_context(context, user_id):
     """Ensures a request has permission to access the given user."""
     if is_user_context(context):
         if not context.user_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         elif context.user_id != user_id:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
 
 
 def authorize_quota_class_context(context, class_name):
     """Ensures a request has permission to access the given quota class."""
     if is_user_context(context):
         if not context.quota_class:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()
         elif context.quota_class != class_name:
-            raise exception.NotAuthorized()
+            raise exception.Forbidden()

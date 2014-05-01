@@ -89,7 +89,7 @@ class ServerActionsPolicyTest(test.NoDBTestCase):
 
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequestV3.blank('/servers/12/os-server-actions')
-        self.assertRaises(exception.NotAuthorized, self.controller.index, req,
+        self.assertRaises(exception.Forbidden, self.controller.index, req,
                           str(uuid.uuid4()))
 
     def test_get_action_restricted_by_project(self):
@@ -107,7 +107,7 @@ class ServerActionsPolicyTest(test.NoDBTestCase):
         self.stubs.Set(db, 'instance_get_by_uuid', fake_instance_get_by_uuid)
         req = fakes.HTTPRequestV3.blank(
                                     '/servers/12/os-server-actions/1')
-        self.assertRaises(exception.NotAuthorized, self.controller.show, req,
+        self.assertRaises(exception.Forbidden, self.controller.show, req,
                           str(uuid.uuid4()), '1')
 
 

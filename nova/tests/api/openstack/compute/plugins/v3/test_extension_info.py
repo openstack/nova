@@ -41,7 +41,7 @@ def fake_policy_enforce(context, action, target, do_raise=True):
 
 def fake_policy_enforce_selective(context, action, target, do_raise=True):
     if action == 'compute_extension:v3:ext1-alias:discoverable':
-        raise exception.NotAuthorized
+        raise exception.Forbidden
     else:
         return True
 

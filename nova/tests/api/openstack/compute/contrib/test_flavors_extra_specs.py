@@ -111,7 +111,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs' +
                                       '/key5')
-        self.assertRaises(exception.NotAuthorized, self.controller.delete,
+        self.assertRaises(exception.Forbidden, self.controller.delete,
                           req, 1, 'key 5')
 
     def test_delete_spec_not_found(self):
@@ -139,7 +139,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
         body = {"extra_specs": {"key1": "value1"}}
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs')
-        self.assertRaises(exception.NotAuthorized, self.controller.create,
+        self.assertRaises(exception.Forbidden, self.controller.create,
                           req, 1, body)
 
     def _test_create_bad_request(self, body):
@@ -216,7 +216,7 @@ class FlavorsExtraSpecsTest(test.TestCase):
 
         req = fakes.HTTPRequest.blank('/v2/fake/flavors/1/os-extra_specs' +
                                       '/key1')
-        self.assertRaises(exception.NotAuthorized, self.controller.update,
+        self.assertRaises(exception.Forbidden, self.controller.update,
                           req, 1, 'key1', body)
 
     def _test_update_item_bad_request(self, body):

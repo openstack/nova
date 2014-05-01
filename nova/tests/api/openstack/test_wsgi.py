@@ -441,7 +441,7 @@ class ResourceTest(test.NoDBTestCase):
     def test_resource_not_authorized(self):
         class Controller(object):
             def index(self, req):
-                raise exception.NotAuthorized()
+                raise exception.Forbidden()
 
         req = webob.Request.blank('/tests')
         app = fakes.TestRouter(Controller())

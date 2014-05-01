@@ -49,7 +49,7 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
             self.assertEqual(length / 8, len(key.get_encoded()))
 
     def test_create_null_context(self):
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.key_mgr.create_key, None)
 
     def test_store_key(self):
@@ -61,7 +61,7 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         self.assertEqual(_key, actual_key)
 
     def test_store_null_context(self):
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.key_mgr.store_key, None, None)
 
     def test_copy_key(self):
@@ -75,14 +75,14 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         self.assertEqual(key, copied_key)
 
     def test_copy_null_context(self):
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.key_mgr.copy_key, None, None)
 
     def test_get_key(self):
         pass
 
     def test_get_null_context(self):
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.key_mgr.get_key, None, None)
 
     def test_get_unknown_key(self):
@@ -95,7 +95,7 @@ class MockKeyManagerTestCase(test_key_mgr.KeyManagerTestCase):
         self.assertRaises(KeyError, self.key_mgr.get_key, self.ctxt, key_id)
 
     def test_delete_null_context(self):
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.key_mgr.delete_key, None, None)
 
     def test_delete_unknown_key(self):

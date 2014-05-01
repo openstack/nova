@@ -384,7 +384,7 @@ class KeypairPolicyTest(test.TestCase):
                              policy.parse_rule('role:admin')})
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.KeyPairController.index,
                           req)
 
@@ -401,7 +401,7 @@ class KeypairPolicyTest(test.TestCase):
                              policy.parse_rule('role:admin')})
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.KeyPairController.show,
                           req, 'FAKE')
 
@@ -419,7 +419,7 @@ class KeypairPolicyTest(test.TestCase):
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs')
         req.method = 'POST'
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.KeyPairController.create,
                           req, {})
 
@@ -439,7 +439,7 @@ class KeypairPolicyTest(test.TestCase):
         policy.set_rules(rules)
         req = fakes.HTTPRequest.blank('/v2/fake/os-keypairs/FAKE')
         req.method = 'DELETE'
-        self.assertRaises(exception.NotAuthorized,
+        self.assertRaises(exception.Forbidden,
                           self.KeyPairController.delete,
                           req, 'FAKE')
 

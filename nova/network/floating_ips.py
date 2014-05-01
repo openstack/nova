@@ -199,13 +199,13 @@ class FloatingIP(object):
             if floating_ip.project_id is None:
                 LOG.warn(_('Address |%(address)s| is not allocated'),
                            {'address': floating_ip.address})
-                raise exception.NotAuthorized()
+                raise exception.Forbidden()
             else:
                 LOG.warn(_('Address |%(address)s| is not allocated to your '
                            'project |%(project)s|'),
                            {'address': floating_ip.address,
                            'project': context.project_id})
-                raise exception.NotAuthorized()
+                raise exception.Forbidden()
 
     def allocate_floating_ip(self, context, project_id, auto_assigned=False,
                              pool=None):
@@ -532,7 +532,7 @@ class FloatingIP(object):
     def _is_stale_floating_ip_address(self, context, floating_ip):
         try:
             self._floating_ip_owned_by_project(context, floating_ip)
-        except exception.NotAuthorized:
+        except exception.Forbidden:
             return True
         return False if floating_ip.get('fixed_ip_id') else True
 
