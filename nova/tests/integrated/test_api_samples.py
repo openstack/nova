@@ -3986,7 +3986,7 @@ class VolumesSampleJsonTest(ServersSampleBase):
                   'name': 'vol name',
                   'display_name': displayname,
                   'display_description': displaydesc,
-                  'created_at': "2008-12-01T11:01:55",
+                  'created_at': datetime.datetime(2008, 12, 1, 11, 1, 55),
                   'snapshot_id': None,
                   'volume_type_id': 'fakevoltype',
                   'volume_metadata': [],
