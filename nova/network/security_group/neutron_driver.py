@@ -33,9 +33,6 @@ from nova.openstack.common import uuidutils
 from nova import utils
 
 
-wrap_check_security_groups_policy = compute_api.policy_decorator(
-    scope='compute:security_groups')
-
 CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
@@ -389,7 +386,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             return port_security_enabled
         return False
 
-    @wrap_check_security_groups_policy
+    @compute_api.wrap_check_security_groups_policy
     def add_to_instance(self, context, instance, security_group_name):
         """Add security group to the instance."""
 
@@ -443,7 +440,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_("Neutron Error:"))
 
-    @wrap_check_security_groups_policy
+    @compute_api.wrap_check_security_groups_policy
     def remove_from_instance(self, context, instance, security_group_name):
         """Remove the security group associated with the instance."""
         neutron = neutronv2.get_client(context)
