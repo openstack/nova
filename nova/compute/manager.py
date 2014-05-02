@@ -310,8 +310,7 @@ def wrap_instance_fault(function):
 
             with excutils.save_and_reraise_exception():
                 compute_utils.add_instance_fault_from_exc(context,
-                        self.conductor_api, kwargs['instance'],
-                        e, sys.exc_info())
+                        kwargs['instance'], e, sys.exc_info())
 
     return decorated_function
 
@@ -1418,7 +1417,7 @@ class ComputeManager(manager.Manager):
         instance_uuid = instance['uuid']
         rescheduled = False
 
-        compute_utils.add_instance_fault_from_exc(context, self.conductor_api,
+        compute_utils.add_instance_fault_from_exc(context,
                 instance, exc_info[1], exc_info=exc_info)
         self._notify_about_instance_usage(context, instance,
                 'instance.create.error', fault=exc_info[1])
@@ -2670,7 +2669,7 @@ class ComputeManager(manager.Manager):
                     LOG.warning(_('Reboot failed but instance is running'),
                                 context=context, instance=instance)
                     compute_utils.add_instance_fault_from_exc(context,
-                            self.conductor_api, instance, error, exc_info)
+                            instance, error, exc_info)
                     self._notify_about_instance_usage(context, instance,
                             'reboot.error', fault=error)
                     ctxt.reraise = False
@@ -3409,7 +3408,7 @@ class ComputeManager(manager.Manager):
             LOG.exception(_("Error trying to reschedule"),
                           instance_uuid=instance_uuid)
             compute_utils.add_instance_fault_from_exc(context,
-                    self.conductor_api, instance, error,
+                    instance, error,
                     exc_info=sys.exc_info())
             self._notify_about_instance_usage(context, instance,
                     'resize.error', fault=error)
@@ -3417,8 +3416,7 @@ class ComputeManager(manager.Manager):
         if rescheduled:
             self._log_original_error(exc_info, instance_uuid)
             compute_utils.add_instance_fault_from_exc(context,
-                    self.conductor_api, instance, exc_info[1],
-                    exc_info=exc_info)
+                    instance, exc_info[1], exc_info=exc_info)
             self._notify_about_instance_usage(context, instance,
                     'resize.error', fault=exc_info[1])
         else:

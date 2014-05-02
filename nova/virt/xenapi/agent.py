@@ -25,7 +25,6 @@ from oslo.config import cfg
 
 from nova.api.metadata import password
 from nova.compute import utils as compute_utils
-from nova import conductor
 from nova import context
 from nova import crypto
 from nova import exception
@@ -186,9 +185,8 @@ class XenAPIBasedAgent(object):
                     instance=self.instance, exc_info=True)
         try:
             ctxt = context.get_admin_context()
-            capi = conductor.API()
             compute_utils.add_instance_fault_from_exc(
-                    ctxt, capi, self.instance, error, exc_info=exc_info)
+                    ctxt, self.instance, error, exc_info=exc_info)
         except Exception:
             LOG.debug(_("Error setting instance fault."), exc_info=True)
 

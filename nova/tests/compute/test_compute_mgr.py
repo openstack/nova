@@ -40,6 +40,7 @@ from nova import test
 from nova.tests.compute import fake_resource_tracker
 from nova.tests import fake_block_device
 from nova.tests import fake_instance
+from nova.tests.objects import test_instance_fault
 from nova.tests.objects import test_instance_info_cache
 
 
@@ -936,9 +937,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                       fake_vol_migrate_volume_completion)
         self.stubs.Set(db, 'block_device_mapping_update',
                        lambda *a, **k: fake_bdm)
-        self.stubs.Set(self.compute.conductor_api,
+        self.stubs.Set(db,
                        'instance_fault_create',
-                       lambda x, y: None)
+                       lambda x, y:
+                           test_instance_fault.fake_faults['fake-uuid'][0])
 
         # Good path
         self.compute.swap_volume(self.context, old_volume_id, new_volume_id,
@@ -1033,10 +1035,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, dest_check_data)
         if do_raise:
             mock_meth.AndRaise(test.TestingException())
-            self.mox.StubOutWithMock(self.compute.conductor_api,
-                    'instance_fault_create')
-            self.compute.conductor_api.instance_fault_create(self.context,
-                    mox.IgnoreArg())
+            self.mox.StubOutWithMock(db, 'instance_fault_create')
+            db.instance_fault_create(
+                self.context, mox.IgnoreArg()).AndReturn(
+                    test_instance_fault.fake_faults['fake-uuid'][0])
         else:
             mock_meth.AndReturn(mig_data)
         self.compute.driver.check_can_live_migrate_destination_cleanup(
@@ -1866,14 +1868,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               'action_event_start'),
             mock.patch.object(self.compute.conductor_api,
                               'action_event_finish'),
-            mock.patch.object(self.compute.conductor_api,
-                              'instance_fault_create'),
+            mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.context, 'elevated',
                               return_value=elevated_context)
         ) as (meth, event_start, event_finish, fault_create, instance_update,
               migration_save, context_elevated):
+            fault_create.return_value = (
+                test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
                 exception.ResizeError, self.compute.finish_resize,
                 context=self.context, disk_info=[], image=self.image,
@@ -1894,8 +1897,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               'action_event_start'),
             mock.patch.object(self.compute.conductor_api,
                               'action_event_finish'),
-            mock.patch.object(self.compute.conductor_api,
-                              'instance_fault_create'),
+            mock.patch.object(db, 'instance_fault_create'),
             mock.patch.object(self.compute, '_instance_update'),
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.context, 'elevated',
@@ -1913,6 +1915,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         ) as (meth, event_start, event_finish, fault_create, instance_update,
               migration_save, context_elevated, nw_info, save_inst, notify,
               vol_block_info, bdm):
+            fault_create.return_value = (
+                test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
                 exception.ResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
