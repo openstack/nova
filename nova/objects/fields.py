@@ -246,11 +246,16 @@ class DateTime(FieldType):
     @staticmethod
     def coerce(obj, attr, value):
         if isinstance(value, six.string_types):
+            # NOTE(danms): Being tolerant of isotime strings here will help us
+            # during our objects transition
             value = timeutils.parse_isotime(value)
         elif not isinstance(value, datetime.datetime):
             raise ValueError(_('A datetime.datetime is required here'))
 
         if value.utcoffset() is None:
+            # NOTE(danms): Legacy objects from sqlalchemy are stored in UTC,
+            # but are returned without a timezone attached.
+            # As a transitional aid, assume a tz-naive object is in UTC.
             value = value.replace(tzinfo=iso8601.iso8601.Utc())
         return value
 
