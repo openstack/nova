@@ -1379,6 +1379,18 @@ def get_vmdk_adapter_type(adapter_type):
     return vmdk_adapter_type
 
 
+def create_vm(session, instance, vm_folder, config_spec, res_pool_ref):
+    """Create VM on ESX host."""
+    LOG.debug(_("Creating VM on the ESX host"), instance=instance)
+    vm_create_task = session._call_method(
+        session._get_vim(),
+        "CreateVM_Task", vm_folder,
+        config=config_spec, pool=res_pool_ref)
+    task_info = session._wait_for_task(vm_create_task)
+    LOG.debug(_("Created VM on the ESX host"), instance=instance)
+    return task_info.result
+
+
 def clone_vmref_for_instance(session, instance, vm_ref, host_ref, ds_ref,
                                 vmfolder_ref):
     """Clone VM and link the cloned VM to the instance.

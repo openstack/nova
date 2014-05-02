@@ -259,33 +259,14 @@ class VMwareVMOps(object):
         # for example when the spawn of a rescue instance takes place.
         if not instance_name:
             instance_name = instance['uuid']
-        # Get the create vm config spec
+
+        # Create the VM
         config_spec = vm_util.get_vm_create_spec(
                             client_factory, instance, instance_name,
                             data_store_name, vif_infos, os_type)
 
-        def _execute_create_vm():
-            """Create VM on ESX host."""
-            LOG.debug(_("Creating VM on the ESX host"), instance=instance)
-            # Create the VM on the ESX host
-            vm_create_task = self._session._call_method(
-                                    self._session._get_vim(),
-                                    "CreateVM_Task", dc_info.vmFolder,
-                                    config=config_spec, pool=res_pool_ref)
-            self._session._wait_for_task(vm_create_task)
-
-            LOG.debug(_("Created VM on the ESX host"), instance=instance)
-
-        _execute_create_vm()
-
-        # In the case of a rescue disk the instance_name is not the same as
-        # instance UUID. In this case the VM reference is accessed via the
-        # instance name.
-        if instance_name != instance['uuid']:
-            vm_ref = vm_util.get_vm_ref_from_name(self._session,
-                                                  instance_name)
-        else:
-            vm_ref = vm_util.get_vm_ref(self._session, instance)
+        vm_ref = vm_util.create_vm(self._session, instance, dc_info.vmFolder,
+                                   config_spec, res_pool_ref)
 
         # Set the machine.id parameter of the instance to inject
         # the NIC configuration inside the VM
