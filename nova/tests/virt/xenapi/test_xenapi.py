@@ -19,7 +19,6 @@ import base64
 import contextlib
 import copy
 import functools
-import mox
 import os
 import re
 
