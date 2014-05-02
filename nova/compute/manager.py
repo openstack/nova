@@ -5246,7 +5246,9 @@ class ComputeManager(manager.Manager):
         for db_instance in db_instances:
             if db_instance['task_state'] is not None:
                 LOG.info(_("During sync_power_state the instance has a "
-                           "pending task. Skip."), instance=db_instance)
+                           "pending task (%(task)s). Skip."),
+                         {'task': db_instance['task_state']},
+                         instance=db_instance)
                 continue
             # No pending tasks. Now try to figure out the real vm_power_state.
             try:
@@ -5307,7 +5309,9 @@ class ComputeManager(manager.Manager):
             # yet. In this case, let's allow the loop to continue
             # and run the state sync in a later round
             LOG.info(_("During sync_power_state the instance has a "
-                       "pending task. Skip."), instance=db_instance)
+                       "pending task (%(task)s). Skip."),
+                     {'task': db_instance.task_state},
+                     instance=db_instance)
             return
 
         if vm_power_state != db_power_state:
