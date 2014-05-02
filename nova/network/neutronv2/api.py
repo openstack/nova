@@ -1204,7 +1204,13 @@ class API(base_api.NetworkAPI):
                 subnet_object.add_dns(
                     network_model.IP(address=dns, type='dns'))
 
-            # TODO(gongysh) get the routes for this subnet
+            for route in subnet.get('host_routes', []):
+                subnet_object.add_route(
+                    network_model.Route(cidr=route['destination'],
+                                        gateway=network_model.IP(
+                                            address=route['nexthop'],
+                                            type='gateway')))
+
             subnets.append(subnet_object)
         return subnets
 
