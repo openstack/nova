@@ -1828,15 +1828,9 @@ def aggregate_host_delete(context, aggregate_id, host):
 ####################
 
 
-def instance_fault_create(context, values, update_cells=True):
+def instance_fault_create(context, values):
     """Create a new Instance Fault."""
-    rv = IMPL.instance_fault_create(context, values)
-    if update_cells:
-        try:
-            cells_rpcapi.CellsAPI().instance_fault_create_at_top(context, rv)
-        except Exception:
-            LOG.exception(_("Failed to notify cells of instance fault"))
-    return rv
+    return IMPL.instance_fault_create(context, values)
 
 
 def instance_fault_get_by_instance_uuids(context, instance_uuids):

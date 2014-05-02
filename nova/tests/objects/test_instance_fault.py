@@ -73,8 +73,9 @@ class _TestInstanceFault(object):
             self.context, ['fake-uuid'])
         self.assertEqual(0, len(faults))
 
+    @mock.patch('nova.cells.rpcapi.CellsAPI.instance_fault_create_at_top')
     @mock.patch('nova.db.instance_fault_create')
-    def test_create(self, mock_create):
+    def _test_create(self, update_cells, mock_create, cells_fault_create):
         mock_create.return_value = fake_faults['fake-uuid'][1]
         fault = instance_fault.InstanceFault()
         fault.instance_uuid = 'fake-uuid'
@@ -90,6 +91,23 @@ class _TestInstanceFault(object):
                                              'message': 'foo',
                                              'details': 'you screwed up',
                                              'host': 'myhost'})
+        if update_cells:
+            cells_fault_create.assert_called_once_with(
+                    self.context, fake_faults['fake-uuid'][1])
+        else:
+            self.assertFalse(cells_fault_create.called)
+
+    def test_create_no_cells(self):
+        self.flags(enable=False, group='cells')
+        self._test_create(False)
+
+    def test_create_api_cell(self):
+        self.flags(cell_type='api', enable=True, group='cells')
+        self._test_create(False)
+
+    def test_create_compute_cell(self):
+        self.flags(cell_type='compute', enable=True, group='cells')
+        self._test_create(True)
 
     def test_create_already_created(self):
         fault = instance_fault.InstanceFault()
