@@ -3,13 +3,13 @@
         {
             "alias": "extensions",
             "description": "Extension information.",
-            "name": "extensions",
+            "name": "Extensions",
             "version": 1
         },
         {
             "alias": "flavors",
             "description": "Flavors Extension.",
-            "name": "flavors",
+            "name": "Flavors",
             "version": 1
         }
     ]

@@ -66,7 +66,7 @@ class IPsController(wsgi.Controller):
 class IPs(extensions.V3APIExtensionBase):
     """Server addresses."""
 
-    name = "ips"
+    name = "Ips"
     alias = "ips"
     version = 1
 

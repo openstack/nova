@@ -115,7 +115,7 @@ class FlavorsController(wsgi.Controller):
 
 class Flavors(extensions.V3APIExtensionBase):
     """Flavors Extension."""
-    name = "flavors"
+    name = "Flavors"
     alias = "flavors"
     version = 1
 

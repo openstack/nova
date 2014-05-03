@@ -133,7 +133,7 @@ class PciController(object):
 
 class Pci(extensions.V3APIExtensionBase):
     """Pci access support."""
-    name = "PCIAccess"
+    name = "PciAccess"
     alias = ALIAS
     version = 1
 

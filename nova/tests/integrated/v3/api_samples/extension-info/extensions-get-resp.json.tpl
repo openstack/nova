@@ -2,7 +2,7 @@
     "extension": {
         "alias": "flavors",
         "description": "Flavors Extension.",
-        "name": "flavors",
+        "name": "Flavors",
         "version": 1
     }
 }
