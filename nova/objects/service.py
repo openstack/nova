@@ -18,7 +18,6 @@ from nova import exception
 from nova.objects import base
 from nova.objects import compute_node
 from nova.objects import fields
-from nova.openstack.common.gettextutils import _
 from nova.openstack.common import log as logging
 
 
@@ -73,7 +72,7 @@ class Service(base.NovaPersistentObject, base.NovaObject):
         if not self._context:
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
-        LOG.debug(_("Lazy-loading `%(attr)s' on %(name)s id %(id)s"),
+        LOG.debug("Lazy-loading `%(attr)s' on %(name)s id %(id)s",
                   {'attr': attrname,
                    'name': self.obj_name(),
                    'id': self.id,
