@@ -21,7 +21,6 @@ import copy
 import datetime
 import functools
 import iso8601
-import mock
 import os
 import string
 import tempfile
