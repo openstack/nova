@@ -761,7 +761,8 @@ class ComputeUtilsPeriodicTaskSpacingWarning(test.NoDBTestCase):
             return "something"
 
         self.assertEqual("something", not_a_periodic_task())
-        mock_log.warning.assert_not_called()
+        self.assertFalse(mock_log.warning.called)
+        self.assertFalse(mock_log.warn.called)
 
     @mock.patch.object(compute_utils, 'LOG')
     def test_periodic_task_spacing_warning_nonzero_spacing(self, mock_log):
@@ -772,7 +773,8 @@ class ComputeUtilsPeriodicTaskSpacingWarning(test.NoDBTestCase):
             return "something"
 
         self.assertEqual("something", a_periodic_task())
-        mock_log.warning.assert_not_called()
+        self.assertFalse(mock_log.warning.called)
+        self.assertFalse(mock_log.warn.called)
 
     @mock.patch.object(compute_utils, 'LOG')
     def test_periodic_task_spacing_warning_zero_spacing(self, mock_log):

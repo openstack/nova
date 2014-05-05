@@ -392,7 +392,7 @@ class TestCollectionLinks(test.NoDBTestCase):
         builder = common.ViewBuilder()
         results = builder._get_collection_links(req, items, "ignored", "uuid")
 
-        href_link_mock.assert_not_called()
+        self.assertFalse(href_link_mock.called)
         self.assertThat(results, matchers.HasLength(0))
 
     @mock.patch('nova.api.openstack.common.ViewBuilder._get_next_link')
