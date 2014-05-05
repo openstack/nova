@@ -817,7 +817,7 @@ class API(base.Base):
         # Reserve quotas
         num_instances, quota_reservations = self._check_num_instances_quota(
                 context, instance_type, min_count, max_count)
-        LOG.debug(_("Going to run %s instances...") % num_instances)
+        LOG.debug("Going to run %s instances..." % num_instances)
         instances = []
         try:
             for i in xrange(num_instances):
@@ -981,10 +981,10 @@ class API(base.Base):
         if max_net_count == 0:
             raise exception.PortLimitExceeded()
         elif max_net_count < max_count:
-            LOG.debug(_("max count reduced from %(max_count)d to "
-                        "%(max_net_count)d due to network port quota"),
-                       {'max_count': max_count,
-                        'max_net_count': max_net_count})
+            LOG.debug("max count reduced from %(max_count)d to "
+                      "%(max_net_count)d due to network port quota",
+                      {'max_count': max_count,
+                       'max_net_count': max_net_count})
             max_count = max_net_count
 
         block_device_mapping = self._check_and_transform_bdm(
@@ -1032,7 +1032,7 @@ class API(base.Base):
         prepared_mappings = []
 
         for bdm in block_device.mappings_prepend_dev(mappings):
-            LOG.debug(_("Image bdm %s"), bdm)
+            LOG.debug("Image bdm %s", bdm)
 
             virtual_name = bdm['virtual']
             if virtual_name == 'ami' or virtual_name == 'root':
@@ -1071,7 +1071,7 @@ class API(base.Base):
         """tell vm driver to attach volume at boot time by updating
         BlockDeviceMapping
         """
-        LOG.debug(_("block_device_mapping %s"), block_device_mapping,
+        LOG.debug("block_device_mapping %s", block_device_mapping,
                   instance_uuid=instance_uuid)
         for bdm in block_device_mapping:
             bdm['volume_size'] = self._volume_size(instance_type, bdm)
@@ -1601,7 +1601,7 @@ class API(base.Base):
                     vram_mb = int(old_inst_type['extra_specs']
                                                             .get(VIDEO_RAM, 0))
                     instance_memory_mb = (old_inst_type['memory_mb'] + vram_mb)
-                    LOG.debug(_("going to delete a resizing instance"))
+                    LOG.debug("going to delete a resizing instance")
 
         reservations = QUOTAS.reserve(context,
                                       project_id=project_id,
@@ -1679,7 +1679,7 @@ class API(base.Base):
                           must_have_launched=True)
     def soft_delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_('Going to try to soft delete instance'),
+        LOG.debug('Going to try to soft delete instance',
                   instance=instance)
 
         self._delete(context, instance, 'soft_delete', self._do_soft_delete,
@@ -1697,7 +1697,7 @@ class API(base.Base):
                           must_have_launched=False)
     def delete(self, context, instance):
         """Terminate an instance."""
-        LOG.debug(_("Going to try to terminate instance"), instance=instance)
+        LOG.debug("Going to try to terminate instance", instance=instance)
         self._delete_instance(context, instance)
 
     @wrap_check_policy
@@ -1738,7 +1738,7 @@ class API(base.Base):
         self._delete_instance(context, instance)
 
     def force_stop(self, context, instance, do_cast=True):
-        LOG.debug(_("Going to try to stop instance"), instance=instance)
+        LOG.debug("Going to try to stop instance", instance=instance)
 
         instance.task_state = task_states.POWERING_OFF
         instance.progress = 0
@@ -1764,7 +1764,7 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.STOPPED])
     def start(self, context, instance):
         """Start an instance."""
-        LOG.debug(_("Going to try to start instance"), instance=instance)
+        LOG.debug("Going to try to start instance", instance=instance)
 
         instance.task_state = task_states.POWERING_ON
         instance.save(expected_task_state=[None])
@@ -1828,7 +1828,7 @@ class API(base.Base):
         if search_opts is None:
             search_opts = {}
 
-        LOG.debug(_("Searching by: %s") % str(search_opts))
+        LOG.debug("Searching by: %s" % str(search_opts))
 
         # Fixups for the DB call
         filters = {}
@@ -2366,7 +2366,7 @@ class API(base.Base):
 
         # If flavor_id is not provided, only migrate the instance.
         if not flavor_id:
-            LOG.debug(_("flavor_id is None. Assuming migration."),
+            LOG.debug("flavor_id is None. Assuming migration.",
                       instance=instance)
             new_instance_type = current_instance_type
         else:
@@ -2375,8 +2375,8 @@ class API(base.Base):
 
         current_instance_type_name = current_instance_type['name']
         new_instance_type_name = new_instance_type['name']
-        LOG.debug(_("Old instance type %(current_instance_type_name)s, "
-                    " new instance type %(new_instance_type_name)s"),
+        LOG.debug("Old instance type %(current_instance_type_name)s, "
+                  " new instance type %(new_instance_type_name)s",
                   {'current_instance_type_name': current_instance_type_name,
                    'new_instance_type_name': new_instance_type_name},
                   instance=instance)
@@ -2696,7 +2696,7 @@ class API(base.Base):
             return
 
         context = context.elevated()
-        LOG.debug(_('Locking'), context=context, instance=instance)
+        LOG.debug('Locking', context=context, instance=instance)
         instance.locked = True
         instance.locked_by = 'owner' if is_owner else 'admin'
         instance.save()
@@ -2713,7 +2713,7 @@ class API(base.Base):
             check_policy(context, 'unlock_override', instance)
 
         context = context.elevated()
-        LOG.debug(_('Unlocking'), context=context, instance=instance)
+        LOG.debug('Unlocking', context=context, instance=instance)
         instance.locked = False
         instance.locked_by = None
         instance.save()
@@ -3002,7 +3002,7 @@ class API(base.Base):
     def live_migrate(self, context, instance, block_migration,
                      disk_over_commit, host_name):
         """Migrate a server lively to a new host."""
-        LOG.debug(_("Going to try to live migrate instance to %s"),
+        LOG.debug("Going to try to live migrate instance to %s",
                   host_name or "another host", instance=instance)
 
         instance.task_state = task_states.MIGRATING
@@ -3021,7 +3021,7 @@ class API(base.Base):
         Checking vm compute host state, if the host not in expected_state,
         raising an exception.
         """
-        LOG.debug(_('vm evacuation scheduled'))
+        LOG.debug('vm evacuation scheduled')
         inst_host = instance['host']
         service = service_obj.Service.get_by_compute_host(context, inst_host)
         if self.servicegroup_api.service_is_up(service):
