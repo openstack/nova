@@ -14,6 +14,7 @@
 #    under the License.
 
 from cinderclient import exceptions as cinder_exception
+import mock
 
 from nova import context
 from nova import exception
@@ -83,6 +84,17 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.assertRaises(exception.InvalidInput,
                           self.api.create, self.ctx, 1, '', '')
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_create_over_quota_failed(self, mock_cinderclient):
+        mock_cinderclient.return_value.volumes.create.side_effect = (
+            cinder_exception.OverLimit(413))
+        self.assertRaises(exception.OverQuota, self.api.create, self.ctx,
+                          1, '', '')
+        mock_cinderclient.return_value.volumes.create.assert_called_once_with(
+            1, user_id=None, imageRef=None, availability_zone=None,
+            volume_type=None, display_description='', snapshot_id=None,
+            display_name='', project_id=None, metadata=None)
 
     def test_get_all(self):
         cinder.cinderclient(self.ctx).AndReturn(self.cinderclient)

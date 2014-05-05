@@ -1034,6 +1034,27 @@ class ComputeVolumeTestCase(BaseTestCase):
                 self.compute.volume_snapshot_delete, self.context,
                 self.instance_object, 'fake_id', 'fake_id2', {})
 
+    @mock.patch.object(cinder.API, 'create',
+                       side_effect=exception.OverQuota(overs='volumes'))
+    def test_prep_block_device_over_quota_failure(self, mock_create):
+        instance = self._create_fake_instance()
+        bdms = [
+            block_device.BlockDeviceDict({
+                'boot_index': 0,
+                'guest_format': None,
+                'connection_info': None,
+                'device_type': u'disk',
+                'source_type': 'image',
+                'destination_type': 'volume',
+                'volume_size': 1,
+                'image_id': 1,
+                'device_name': '/dev/vdb',
+            })]
+        self.assertRaises(exception.InvalidBDM,
+                          compute_manager.ComputeManager()._prep_block_device,
+                          self.context, instance, bdms)
+        mock_create.assert_called_once()
+
 
 class ComputeTestCase(BaseTestCase):
     def test_wrap_instance_fault(self):
@@ -1511,6 +1532,30 @@ class ComputeTestCase(BaseTestCase):
         self.compute.periodic_tasks(context.get_admin_context())
         self._assert_state({'vm_state': vm_states.ERROR,
                             'task_state': None})
+
+    @mock.patch('nova.compute.manager.ComputeManager._prep_block_device',
+                side_effect=exception.OverQuota(overs='volumes'))
+    def test_setup_block_device_over_quota_fail(self, mock_prep_block_dev):
+        """block device mapping over quota failure test.
+
+        Make sure when we're over volume quota according to Cinder client, the
+        appropriate exception is raised and the instances to ERROR state, keep
+        the task state.
+        """
+        instance = self._create_fake_instance()
+        self.assertRaises(exception.OverQuota, self.compute.run_instance,
+                          self.context, instance=instance, request_spec={},
+                          filter_properties={}, requested_networks=[],
+                          injected_files=None, admin_password=None,
+                          is_first_time=True, node=None,
+                          legacy_bdm_in_spec=False)
+        #check state is failed even after the periodic poll
+        self._assert_state({'vm_state': vm_states.ERROR,
+                            'task_state': None})
+        self.compute.periodic_tasks(context.get_admin_context())
+        self._assert_state({'vm_state': vm_states.ERROR,
+                            'task_state': None})
+        mock_prep_block_dev.assert_called_once()
 
     def test_run_instance_spawn_fail(self):
         """spawn failure test.
