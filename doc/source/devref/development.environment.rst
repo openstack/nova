@@ -101,47 +101,9 @@ Grab the code from GitHub::
 
 Running unit tests
 ------------------
-The unit tests will run by default inside a virtualenv in the ``.venv``
-directory. Run the unit tests by doing::
 
-    ./run_tests.sh
+See :doc:`unit_tests` for details.
 
-The first time you run them, you will be asked if you want to create a virtual
-environment (hit "y")::
-
-    No virtual environment found...create one? (Y/n)
-
-See :doc:`unit_tests` for more details.
-
-.. _virtualenv:
-
-Manually installing and using the virtualenv
---------------------------------------------
-
-You can manually install the virtual environment instead of having
-``run_tests.sh`` do it for you::
-
-  python tools/install_venv.py
-
-This will install all of the Python packages listed in the
-``requirements.txt`` file and also those listed in the
-``test-requirements.txt`` file into your virtualenv. There will
-also be some additional packages (pip, setuptools, greenlet) that are
-installed by the ``tools/install_venv.py`` file into the virutalenv.
-
-If all goes well, you should get a message something like this::
-
-  Nova development environment setup is complete.
-
-To activate the Nova virtualenv for the extent of your current shell session
-you can run::
-
-     $ source .venv/bin/activate
-
-Or, if you prefer, you can run commands in the virtualenv on a case by case
-basis by running::
-
-     $ tools/with_venv.sh <your command>
 
 Using a remote debugger
 -----------------------
