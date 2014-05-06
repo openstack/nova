@@ -3308,6 +3308,16 @@ class LibvirtConnTestCase(test.TestCase):
         os.unlink(3)
 
     def test_supports_direct_io(self):
+        # O_DIRECT is not supported on all Python runtimes, so on platforms
+        # where it's not supported (e.g. Mac), we can still test the code-path
+        # by stubbing out the value.
+        if not hasattr(os, 'O_DIRECT'):
+            # `mock` seems to have trouble stubbing an attr that doesn't
+            # originally exist, so falling back to stubbing out the attribute
+            # directly.
+            os.O_DIRECT = 16384
+            self.addCleanup(delattr, os, 'O_DIRECT')
+
         einval = OSError()
         einval.errno = errno.EINVAL
         self.mox.StubOutWithMock(os, 'open')
