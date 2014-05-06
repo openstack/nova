@@ -17,6 +17,7 @@
 Tests For Cells Messaging module
 """
 
+import mock
 import mox
 from oslo.config import cfg
 from oslo import messaging as oslo_messaging
@@ -32,6 +33,7 @@ from nova.network import model as network_model
 from nova.objects import base as objects_base
 from nova.objects import fields as objects_fields
 from nova.objects import instance as instance_obj
+from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common import jsonutils
 from nova.openstack.common import timeutils
 from nova.openstack.common import uuidutils
@@ -1608,22 +1610,27 @@ class CellsBroadcastMethodsTestCase(test.TestCase):
 
     def test_instance_fault_create_at_top(self):
         fake_instance_fault = {'id': 1,
-                               'other stuff': 2,
-                               'more stuff': 3}
-        expected_instance_fault = {'other stuff': 2,
-                                   'more stuff': 3}
+                               'message': 'fake-message',
+                               'details': 'fake-details'}
 
-        # Shouldn't be called for these 2 cells
-        self.mox.StubOutWithMock(self.src_db_inst, 'instance_fault_create')
-        self.mox.StubOutWithMock(self.mid_db_inst, 'instance_fault_create')
+        if_mock = mock.Mock(spec_set=instance_fault_obj.InstanceFault)
 
-        self.mox.StubOutWithMock(self.tgt_db_inst, 'instance_fault_create')
-        self.tgt_db_inst.instance_fault_create(self.ctxt,
-                                               expected_instance_fault)
-        self.mox.ReplayAll()
+        def _check_create():
+            self.assertEqual('fake-message', if_mock.message)
+            self.assertEqual('fake-details', if_mock.details)
+            # Should not be set
+            self.assertNotEqual(1, if_mock.id)
 
-        self.src_msg_runner.instance_fault_create_at_top(self.ctxt,
-                fake_instance_fault)
+        if_mock.create.side_effect = _check_create
+
+        with mock.patch.object(instance_fault_obj,
+                               'InstanceFault') as if_obj_mock:
+            if_obj_mock.return_value = if_mock
+            self.src_msg_runner.instance_fault_create_at_top(
+                    self.ctxt, fake_instance_fault)
+
+        if_obj_mock.assert_called_once_with(context=self.ctxt)
+        if_mock.create.assert_called_once_with()
 
     def test_bw_usage_update_at_top(self):
         fake_bw_update_info = {'uuid': 'fake_uuid',

@@ -47,6 +47,7 @@ from nova import exception
 from nova.network import model as network_model
 from nova.objects import base as objects_base
 from nova.objects import instance as instance_obj
+from nova.objects import instance_fault as instance_fault_obj
 from nova.openstack.common import excutils
 from nova.openstack.common.gettextutils import _
 from nova.openstack.common import importutils
@@ -1099,7 +1100,9 @@ class _BroadcastMessageMethods(_BaseMessageMethods):
         log_str = _("Got message to create instance fault: "
                     "%(instance_fault)s")
         LOG.debug(log_str, {'instance_fault': instance_fault})
-        self.db.instance_fault_create(message.ctxt, instance_fault)
+        fault = instance_fault_obj.InstanceFault(context=message.ctxt)
+        fault.update(instance_fault)
+        fault.create()
 
     def bw_usage_update_at_top(self, message, bw_update_info, **kwargs):
         """Update Bandwidth usage in the DB if we're a top level cell."""
