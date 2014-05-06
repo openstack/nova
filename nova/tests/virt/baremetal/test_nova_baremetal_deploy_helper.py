@@ -336,7 +336,7 @@ class WorkOnDiskTestCase(test.NoDBTestCase):
                           self.dev, self.root_mb, self.swap_mb,
                           self.ephemeral_mb, self.image_path, False)
         self.m_ibd.assert_called_once_with(self.dev)
-        self.m_mp.assert_not_called()
+        self.assertFalse(self.m_mp.called)
 
     def test_no_root_partition(self):
         self.m_ibd.side_effect = [True, False]

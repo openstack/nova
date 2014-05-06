@@ -545,7 +545,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
 
         res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
-        img.assert_not_called()
+        self.assertFalse(img.called)
 
     def test_admin_override(self):
         ctx = mock.MagicMock(auth_token=False, is_admin=True)
@@ -553,7 +553,7 @@ class TestIsImageAvailable(test.NoDBTestCase):
 
         res = glance._is_image_available(ctx, img)
         self.assertTrue(res)
-        img.assert_not_called()
+        self.assertFalse(img.called)
 
     def test_v2_visibility(self):
         ctx = mock.MagicMock(auth_token=False, is_admin=False)
@@ -687,7 +687,7 @@ class TestShow(test.NoDBTestCase):
         client.call.assert_called_once_with(ctx, 1, 'get',
                                             mock.sentinel.image_id)
         is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
-        trans_from_mock.assert_not_called()
+        self.assertFalse(trans_from_mock.called)
 
     @mock.patch('nova.image.glance._reraise_translated_image_exception')
     @mock.patch('nova.image.glance._translate_from_glance')
@@ -705,8 +705,8 @@ class TestShow(test.NoDBTestCase):
             service.show(ctx, mock.sentinel.image_id)
             client.call.assert_called_once_with(ctx, 1, 'get',
                                                 mock.sentinel.image_id)
-            is_avail_mock.assert_not_called()
-            trans_from_mock.assert_not_called()
+            self.assertFalse(is_avail_mock.called)
+            self.assertFalse(trans_from_mock.called)
             reraise_mock.assert_called_once_with(mock.sentinel.image_id)
 
 
@@ -751,7 +751,7 @@ class TestDetail(test.NoDBTestCase):
 
         client.call.assert_called_once_with(ctx, 1, 'list')
         is_avail_mock.assert_called_once_with(ctx, mock.sentinel.images_0)
-        trans_from_mock.assert_not_called()
+        self.assertFalse(trans_from_mock.called)
         self.assertEqual([], images)
 
     @mock.patch('nova.image.glance._extract_query_params')
@@ -788,8 +788,8 @@ class TestDetail(test.NoDBTestCase):
             service.detail(ctx, **params)
 
         client.call.assert_called_once_with(ctx, 1, 'list')
-        is_avail_mock.assert_not_called()
-        trans_from_mock.assert_not_called()
+        self.assertFalse(is_avail_mock.called)
+        self.assertFalse(trans_from_mock.called)
         reraise_mock.assert_called_once_with()
 
 
@@ -845,7 +845,7 @@ class TestCreate(test.NoDBTestCase):
 
         self.assertRaises(exception.Invalid, service.create, ctx, image_mock)
         trans_to_mock.assert_called_once_with(image_mock)
-        trans_from_mock.assert_not_called()
+        self.assertFalse(trans_from_mock.called)
 
 
 class TestUpdate(test.NoDBTestCase):
@@ -917,7 +917,7 @@ class TestUpdate(test.NoDBTestCase):
                                             mock.sentinel.image_id,
                                             purge_props=True,
                                             name=mock.sentinel.name)
-        trans_from_mock.assert_not_called()
+        self.assertFalse(trans_from_mock.called)
         reraise_mock.assert_called_once_with(mock.sentinel.image_id)
 
 
