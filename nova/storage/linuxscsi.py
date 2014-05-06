@@ -67,8 +67,8 @@ def get_device_info(device):
 
 def _wait_for_remove(device, tries):
     tries = tries + 1
-    LOG.debug(_("Trying (%(tries)s) to remove device %(device)s")
-              % {'tries': tries, 'device': device["device"]})
+    LOG.debug("Trying (%(tries)s) to remove device %(device)s",
+              {'tries': tries, 'device': device["device"]})
 
     path = "/sys/bus/scsi/drivers/sd/%s:%s:%s:%s/delete"
     echo_scsi_command(path % (device["host"], device["channel"],
@@ -121,7 +121,7 @@ def find_multipath_device(device):
                 LOG.warn(_("Couldn't find multipath device %s"), line)
                 return None
 
-            LOG.debug(_("Found multipath device = %s"), mdev)
+            LOG.debug("Found multipath device = %s", mdev)
             device_lines = lines[3:]
             for dev_line in device_lines:
                 if dev_line.find("policy") != -1:
