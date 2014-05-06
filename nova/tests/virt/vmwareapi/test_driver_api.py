@@ -268,6 +268,7 @@ class VMwareAPIConfTestCase(test.NoDBTestCase):
         self.assertEqual("https://www.example.com/sdk", url)
 
 
+@mock.patch.object(driver, 'TIME_BETWEEN_API_CALL_RETRIES', 0)
 class VMwareAPIVMTestCase(test.NoDBTestCase):
     """Unit tests for Vmware API connection calls."""
 
