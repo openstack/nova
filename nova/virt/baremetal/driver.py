@@ -222,10 +222,8 @@ class BareMetalDriver(driver.ComputeDriver):
     def _set_default_ephemeral_device(self, instance):
         flavor = flavors.extract_flavor(instance)
         if flavor['ephemeral_gb']:
-            self.virtapi.instance_update(
-                nova_context.get_admin_context(), instance['uuid'],
-                {'default_ephemeral_device':
-                    '/dev/sda1'})
+            instance.default_ephemeral_device = '/dev/sda1'
+            instance.save()
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None):
