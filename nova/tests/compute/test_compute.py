@@ -547,7 +547,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.test_boot_volume_metadata(metadata=False)
 
     def test_boot_image_metadata(self, metadata=True):
-        def image_api_show(*args, **kwargs):
+        def image_api_get(*args, **kwargs):
             if metadata:
                 return {
                     'properties': {'img_test_key': 'img_test_value'}
@@ -555,7 +555,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             else:
                 return {}
 
-        self.stubs.Set(self.compute_api.image_service, 'show', image_api_show)
+        self.stubs.Set(self.compute_api.image_api, 'get', image_api_get)
 
         block_device_mapping = [{
             'boot_index': 0,
@@ -2007,10 +2007,9 @@ class ComputeTestCase(BaseTestCase):
         self.assertEqual('some_random_state', inst_obj['vm_state'])
 
     @mock.patch.object(nova.compute.utils, "get_image_metadata")
-    @mock.patch.object(nova.image.glance, "get_remote_image_service")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_image_specified(self, mock_rescue,
-            mock_get_remote_image_service, mock_get_image_metadata):
+                                         mock_get_image_metadata):
 
         image_ref = "image-ref"
         rescue_image_meta = {}
@@ -2023,16 +2022,12 @@ class ComputeTestCase(BaseTestCase):
         mock_context.elevated.return_value = ctxt
 
         mock_get_image_metadata.return_value = rescue_image_meta
-        mock_image_service = "image_service"
-        mock_get_remote_image_service.return_value = (mock_image_service, "id")
 
         self.compute.rescue_instance(mock_context, instance=instance,
             rescue_password="password", rescue_image_ref=image_ref)
 
-        mock_get_remote_image_service.assert_called_with(ctxt,
-                                                         image_ref)
         mock_get_image_metadata.assert_called_with(ctxt,
-                                                   mock_image_service,
+                                                   self.compute.image_api,
                                                    image_ref, instance)
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        rescue_image_meta, 'password')
@@ -2040,11 +2035,9 @@ class ComputeTestCase(BaseTestCase):
                                         self._objectify(instance), [], [])
 
     @mock.patch.object(nova.compute.utils, "get_image_metadata")
-    @mock.patch.object(nova.image.glance, "get_remote_image_service")
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_base_image_when_image_not_specified(self,
-            mock_rescue, mock_get_remote_image_service,
-            mock_get_image_metadata):
+            mock_rescue, mock_get_image_metadata):
 
         image_ref = "image-ref"
         system_meta = {"image_base_image_ref": image_ref}
@@ -2059,16 +2052,12 @@ class ComputeTestCase(BaseTestCase):
         mock_context.elevated.return_value = ctxt
 
         mock_get_image_metadata.return_value = rescue_image_meta
-        mock_image_service = "image_service"
-        mock_get_remote_image_service.return_value = (mock_image_service, "id")
 
         self.compute.rescue_instance(mock_context, instance=instance,
                                      rescue_password="password")
 
-        mock_get_remote_image_service.assert_called_with(ctxt,
-                                                         image_ref)
         mock_get_image_metadata.assert_called_with(ctxt,
-                                                   mock_image_service,
+                                                   self.compute.image_api,
                                                    image_ref, instance)
         mock_rescue.assert_called_with(ctxt, instance, [],
                                        rescue_image_meta, 'password')

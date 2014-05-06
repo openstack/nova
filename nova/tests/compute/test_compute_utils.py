@@ -627,8 +627,8 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
             "properties": {},
         }
 
-        self.image_service = nova.tests.image.fake._FakeImageService()
-        self.stubs.Set(self.image_service, 'show', self._fake_show)
+        self.mock_image_api = mock.Mock()
+        self.mock_image_api.get.return_value = self.image
 
         self.ctx = context.RequestContext('fake', 'fake')
 
@@ -659,24 +659,19 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
             self.ctx, instance_obj.Instance(), self.instance,
             expected_attrs=instance_obj.INSTANCE_DEFAULT_FIELDS)
 
-    def _fake_show(self, ctx, image_id):
-        return self.image
-
     def test_get_image_meta(self):
         image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
         self.image['properties'] = 'DONTCARE'
         self.assertThat(self.image, matchers.DictMatches(image_meta))
 
     def test_get_image_meta_no_image(self):
-        def fake_show(ctx, image_id):
-            raise exception.ImageNotFound(image_id='fake-image')
-
-        self.stubs.Set(self.image_service, 'show', fake_show)
+        e = exception.ImageNotFound(image_id='fake-image')
+        self.mock_image_api.get.side_effect = e
 
         image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
         self.image['properties'] = 'DONTCARE'
         # NOTE(danms): The trip through system_metadata will stringify things
@@ -690,23 +685,21 @@ class ComputeGetImageMetadataTestCase(test.TestCase):
                 del self.instance['system_metadata'][k]
 
         image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
         self.image['properties'] = 'DONTCARE'
         self.assertThat(self.image, matchers.DictMatches(image_meta))
 
     def test_get_image_meta_no_image_no_image_system_meta(self):
-        def fake_show(ctx, image_id):
-            raise exception.ImageNotFound(image_id='fake-image')
-
-        self.stubs.Set(self.image_service, 'show', fake_show)
+        e = exception.ImageNotFound(image_id='fake-image')
+        self.mock_image_api.get.side_effect = e
 
         for k in self.instance['system_metadata'].keys():
             if k.startswith('image_'):
                 del self.instance['system_metadata'][k]
 
         image_meta = compute_utils.get_image_metadata(
-            self.ctx, self.image_service, 'fake-image', self.instance_obj)
+            self.ctx, self.mock_image_api, 'fake-image', self.instance_obj)
 
         expected = {'properties': 'DONTCARE'}
         self.assertThat(expected, matchers.DictMatches(image_meta))

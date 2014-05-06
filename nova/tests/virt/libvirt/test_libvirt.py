@@ -461,7 +461,8 @@ class LibvirtConnTestCase(test.TestCase):
         flavor = db.flavor_get(self.context, 5)
         sys_meta = flavors.save_flavor_info({}, flavor)
 
-        nova.tests.image.fake.stub_out_image_service(self.stubs)
+        self.image_service = nova.tests.image.fake.stub_out_image_service(
+                self.stubs)
         self.test_instance = {
                 'uuid': '32dfcb37-5af1-552b-357c-be8c3aa38310',
                 'memory_kb': '1024000',
@@ -2666,9 +2667,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.flags(snapshots_directory='./', group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign different image_ref from nova/images/fakes for testing ami
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["image_ref"] = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -2682,7 +2680,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -2696,7 +2694,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -2718,9 +2716,6 @@ class LibvirtConnTestCase(test.TestCase):
                    virt_type='lxc',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign different image_ref from nova/images/fakes for testing ami
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["image_ref"] = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -2734,7 +2729,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -2748,7 +2743,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -2768,9 +2763,6 @@ class LibvirtConnTestCase(test.TestCase):
 
         self.flags(snapshots_directory='./', group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
         properties = {'instance_id': instance_ref['id'],
@@ -2780,7 +2772,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -2799,7 +2791,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -2821,9 +2813,6 @@ class LibvirtConnTestCase(test.TestCase):
                    virt_type='lxc',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
         properties = {'instance_id': instance_ref['id'],
@@ -2833,7 +2822,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -2852,7 +2841,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -2874,9 +2863,6 @@ class LibvirtConnTestCase(test.TestCase):
                    snapshots_directory='./',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
         properties = {'instance_id': instance_ref['id'],
@@ -2886,7 +2872,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -2900,7 +2886,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -2923,9 +2909,6 @@ class LibvirtConnTestCase(test.TestCase):
                    virt_type='lxc',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assuming that base image already exists in image_service
         instance_ref = db.instance_create(self.context, self.test_instance)
         properties = {'instance_id': instance_ref['id'],
@@ -2935,7 +2918,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -2949,7 +2932,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -2970,9 +2953,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(snapshots_directory='./',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign different image_ref from nova/images/fakes for
         # testing different base image
         test_instance = copy.deepcopy(self.test_instance)
@@ -2987,7 +2967,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -3000,7 +2980,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -3021,9 +3001,6 @@ class LibvirtConnTestCase(test.TestCase):
                    virt_type='lxc',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign different image_ref from nova/images/fakes for
         # testing different base image
         test_instance = copy.deepcopy(self.test_instance)
@@ -3038,7 +3015,7 @@ class LibvirtConnTestCase(test.TestCase):
                      'status': 'creating', 'properties': properties}
         # Create new image. It will be updated in snapshot method
         # To work with it from snapshot, the single image_service is needed
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -3051,7 +3028,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -3071,9 +3048,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(snapshots_directory='./',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign a non-existent image
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["image_ref"] = '661122aa-1234-dede-fefe-babababababa'
@@ -3084,7 +3058,7 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot_name = 'test-snap'
         sent_meta = {'name': snapshot_name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -3097,7 +3071,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -3118,9 +3092,6 @@ class LibvirtConnTestCase(test.TestCase):
                    virt_type='lxc',
                    group='libvirt')
 
-        # Start test
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign a non-existent image
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["image_ref"] = '661122aa-1234-dede-fefe-babababababa'
@@ -3131,7 +3102,7 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot_name = 'test-snap'
         sent_meta = {'name': snapshot_name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -3144,7 +3115,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['status'], 'active')
@@ -3164,8 +3135,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(snapshots_directory='./',
                    group='libvirt')
 
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign an image with an architecture defined (x86_64)
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["image_ref"] = 'a440c04b-79fa-479c-bed1-0b816eaec379'
@@ -3179,7 +3148,7 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot_name = 'test-snap'
         sent_meta = {'name': snapshot_name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -3192,7 +3161,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['properties']['architecture'], 'fake_arch')
@@ -3215,8 +3184,6 @@ class LibvirtConnTestCase(test.TestCase):
         self.flags(snapshots_directory='./',
                    group='libvirt')
 
-        image_service = nova.tests.image.fake.FakeImageService()
-
         # Assign a non-existent image
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["image_ref"] = '661122aa-1234-dede-fefe-babababababa'
@@ -3229,7 +3196,7 @@ class LibvirtConnTestCase(test.TestCase):
         snapshot_name = 'test-snap'
         sent_meta = {'name': snapshot_name, 'is_public': False,
                      'status': 'creating', 'properties': properties}
-        recv_meta = image_service.create(context, sent_meta)
+        recv_meta = self.image_service.create(context, sent_meta)
 
         self.mox.StubOutWithMock(libvirt_driver.LibvirtDriver, '_conn')
         libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
@@ -3242,7 +3209,7 @@ class LibvirtConnTestCase(test.TestCase):
         conn.snapshot(self.context, instance_ref, recv_meta['id'],
                       func_call_matcher.call)
 
-        snapshot = image_service.show(context, recv_meta['id'])
+        snapshot = self.image_service.show(context, recv_meta['id'])
         self.assertIsNone(func_call_matcher.match())
         self.assertEqual(snapshot['properties']['image_state'], 'available')
         self.assertEqual(snapshot['properties']['os_type'],

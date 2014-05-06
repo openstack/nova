@@ -69,7 +69,7 @@ from nova.compute import utils as compute_utils
 from nova.compute import vm_mode
 from nova import context as nova_context
 from nova import exception
-from nova.image import glance
+from nova import image
 from nova.objects import block_device as block_device_obj
 from nova.objects import flavor as flavor_obj
 from nova.objects import instance as instance_obj
@@ -415,6 +415,7 @@ class LibvirtDriver(driver.ComputeDriver):
             self.disk_cachemodes[disk_type] = cache_mode
 
         self._volume_api = volume.API()
+        self._image_api = image.API()
 
     @property
     def disk_cachemode(self):
@@ -1478,15 +1479,12 @@ class LibvirtDriver(driver.ComputeDriver):
         except exception.InstanceNotFound:
             raise exception.InstanceNotRunning(instance_id=instance['uuid'])
 
-        (image_service, image_id) = glance.get_remote_image_service(
-            context, instance['image_ref'])
+        base_image_ref = instance['image_ref']
 
         base = compute_utils.get_image_metadata(
-            context, image_service, image_id, instance)
+            context, self._image_api, base_image_ref, instance)
 
-        _image_service = glance.get_remote_image_service(context, image_href)
-        snapshot_image_service, snapshot_image_id = _image_service
-        snapshot = snapshot_image_service.show(context, snapshot_image_id)
+        snapshot = self._image_api.get(context, image_href)
 
         disk_path = libvirt_utils.find_disk(virt_dom)
         source_format = libvirt_utils.get_disk_type(disk_path)
@@ -1586,10 +1584,10 @@ class LibvirtDriver(driver.ComputeDriver):
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                      expected_state=task_states.IMAGE_PENDING_UPLOAD)
             with libvirt_utils.file_open(out_path) as image_file:
-                image_service.update(context,
-                                     image_href,
-                                     metadata,
-                                     image_file)
+                self._image_api.update(context,
+                                       image_href,
+                                       metadata,
+                                       image_file)
                 LOG.info(_("Snapshot image upload complete"),
                          instance=instance)
 
@@ -2083,11 +2081,9 @@ class LibvirtDriver(driver.ComputeDriver):
         image_meta = utils.get_image_from_system_metadata(system_meta)
         if not image_meta:
             image_ref = instance.get('image_ref')
-            service, image_id = glance.get_remote_image_service(context,
-                                                                image_ref)
             image_meta = compute_utils.get_image_metadata(context,
-                                                          service,
-                                                          image_id,
+                                                          self._image_api,
+                                                          image_ref,
                                                           instance)
 
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
@@ -3451,10 +3447,9 @@ class LibvirtDriver(driver.ComputeDriver):
                block_device_info=None, write_to_disk=False):
         # We should get image metadata every time for generating xml
         if image_meta is None:
-            (image_service, image_id) = glance.get_remote_image_service(
-                                            context, instance['image_ref'])
+            image_ref = instance['image_ref']
             image_meta = compute_utils.get_image_metadata(
-                                context, image_service, image_id, instance)
+                                context, self._image_api, image_ref, instance)
         # NOTE(danms): Stringifying a NetworkInfo will take a lock. Do
         # this ahead of time so that we don't acquire it while also
         # holding the logging lock.

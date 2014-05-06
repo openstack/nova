@@ -56,6 +56,7 @@ from nova import consoleauth
 import nova.context
 from nova import exception
 from nova import hooks
+from nova import image
 from nova.image import glance
 from nova import manager
 from nova import network
@@ -354,8 +355,7 @@ def delete_image_on_error(function):
                 LOG.debug("Cleaning up image %s" % image_id,
                           exc_info=True, instance=instance)
                 try:
-                    image_service = glance.get_default_image_service()
-                    image_service.delete(context, image_id)
+                    self.image_api.delete(context, image_id)
                 except Exception:
                     LOG.exception(_("Error while trying to clean up image %s")
                                   % image_id, instance=instance)
@@ -417,12 +417,6 @@ def aggregate_object_compat(function):
             kwargs['aggregate'] = aggregate
         return function(self, context, *args, **kwargs)
     return decorated_function
-
-
-def _get_image_meta(context, image_ref):
-    image_service, image_id = glance.get_remote_image_service(context,
-                                                              image_ref)
-    return image_service.show(context, image_id)
 
 
 class InstanceEvents(object):
@@ -575,6 +569,7 @@ class ComputeManager(manager.Manager):
         self.virtapi = ComputeVirtAPI(self)
         self.network_api = network.API()
         self.volume_api = volume.API()
+        self.image_api = image.API()
         self._last_host_check = 0
         self._last_bw_usage_poll = 0
         self._bw_usage_supported = True
@@ -2496,13 +2491,14 @@ class ComputeManager(manager.Manager):
                     instance.save()
 
             if image_ref:
-                image_meta = _get_image_meta(context, image_ref)
+                image_meta = self.image_api.get(context, image_ref)
             else:
                 image_meta = {}
 
             # This instance.exists message should contain the original
             # image_ref, not the new one.  Since the DB has been updated
             # to point to the new one... we have to override it.
+            #TODO(jaypipes): Move generate_image_url() into the nova.image.api
             orig_image_ref_url = glance.generate_image_url(orig_image_ref)
             extra_usage_info = {'image_ref_url': orig_image_ref_url}
             self.conductor_api.notify_usage_exists(context,
@@ -2831,13 +2827,12 @@ class ComputeManager(manager.Manager):
         :param rotation: int representing how many backups to keep around;
             None if rotation shouldn't be used (as in the case of snapshots)
         """
-        image_service = glance.get_default_image_service()
         filters = {'property-image_type': 'backup',
                    'property-backup_type': backup_type,
                    'property-instance_uuid': instance.uuid}
 
-        images = image_service.detail(context, filters=filters,
-                                      sort_key='created_at', sort_dir='desc')
+        images = self.image_api.get_all(context, filters=filters,
+                                        sort_key='created_at', sort_dir='desc')
         num_images = len(images)
         LOG.debug("Found %(num_images)d images (rotation: %(rotation)d)",
                   {'num_images': num_images, 'rotation': rotation},
@@ -2854,7 +2849,7 @@ class ComputeManager(manager.Manager):
                 image_id = image['id']
                 LOG.debug("Deleting image %s", image_id,
                           instance=instance)
-                image_service.delete(context, image_id)
+                self.image_api.delete(context, image_id)
 
     @object_compat
     @wrap_exception()
@@ -2954,9 +2949,7 @@ class ComputeManager(manager.Manager):
                        ' using instance\'s current image'))
             rescue_image_ref = instance['image_ref']
 
-        image_service, image_id = glance.get_remote_image_service(
-            context, rescue_image_ref)
-        image_meta = compute_utils.get_image_metadata(context, image_service,
+        image_meta = compute_utils.get_image_metadata(context, self.image_api,
                                                       rescue_image_ref,
                                                       instance)
         # NOTE(belliott) bug #1227350 - xenapi needs the actual image id
@@ -3934,8 +3927,7 @@ class ComputeManager(manager.Manager):
 
         if image:
             instance.image_ref = shelved_image_ref
-            image_service = glance.get_default_image_service()
-            image_service.delete(context, image['id'])
+            self.image_api.delete(context, image['id'])
 
         self._unshelve_instance_key_restore(instance, scrubbed_keys)
         instance.power_state = self._get_power_state(context, instance)
@@ -4393,10 +4385,8 @@ class ComputeManager(manager.Manager):
                       % dict(ports=len(network_info)))
             raise exception.InterfaceAttachFailed(instance=instance)
         image_ref = instance.get('image_ref')
-        image_service, image_id = glance.get_remote_image_service(
-            context, image_ref)
         image_meta = compute_utils.get_image_metadata(
-            context, image_service, image_ref, instance)
+            context, self.image_api, image_ref, instance)
 
         self.driver.attach_interface(instance, image_meta, network_info[0])
         return network_info[0]

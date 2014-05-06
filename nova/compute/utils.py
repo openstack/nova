@@ -199,13 +199,14 @@ def _get_unused_letter(used_letters):
     return letters[0]
 
 
-def get_image_metadata(context, image_service, image_id, instance):
+def get_image_metadata(context, image_api, image_id_or_uri, instance):
     # If the base image is still available, get its metadata
     try:
-        image = image_service.show(context, image_id)
+        image = image_api.get(context, image_id_or_uri)
     except Exception as e:
         LOG.warning(_("Can't access image %(image_id)s: %(error)s"),
-                    {"image_id": image_id, "error": e}, instance=instance)
+                    {"image_id": image_id_or_uri, "error": e},
+                    instance=instance)
         image_system_meta = {}
     else:
         flavor = flavors.extract_flavor(instance)

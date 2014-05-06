@@ -43,7 +43,7 @@ from nova import crypto
 from nova.db import base
 from nova import exception
 from nova import hooks
-from nova.image import glance
+from nova import image
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
@@ -240,11 +240,9 @@ def _diff_dict(orig, new):
 class API(base.Base):
     """API for interacting with the compute manager."""
 
-    def __init__(self, image_service=None, network_api=None, volume_api=None,
+    def __init__(self, image_api=None, network_api=None, volume_api=None,
                  security_group_api=None, **kwargs):
-        self.image_service = (image_service or
-                              glance.get_default_image_service())
-
+        self.image_api = image_api or image.API()
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or volume.API()
         self.security_group_api = (security_group_api or
@@ -462,8 +460,8 @@ class API(base.Base):
         return self.network_api.validate_networks(context, requested_networks,
                                                   max_count)
 
-    @staticmethod
-    def _handle_kernel_and_ramdisk(context, kernel_id, ramdisk_id, image):
+    def _handle_kernel_and_ramdisk(self, context, kernel_id, ramdisk_id,
+                                   image):
         """Choose kernel and ramdisk appropriate for the instance.
 
         The kernel and ramdisk can be chosen in one of three ways:
@@ -490,14 +488,19 @@ class API(base.Base):
 
         # Verify kernel and ramdisk exist (fail-fast)
         if kernel_id is not None:
-            image_service, kernel_id = glance.get_remote_image_service(
-                context, kernel_id)
-            image_service.show(context, kernel_id)
+            kernel_image = self.image_api.get(context, kernel_id)
+            # kernel_id could have been a URI, not a UUID, so to keep behaviour
+            # from before, which leaked that implementation detail out to the
+            # caller, we return the image UUID of the kernel image and ramdisk
+            # image (below) and not any image URIs that might have been
+            # supplied.
+            # TODO(jaypipes): Get rid of this silliness once we move to a real
+            # Image object and hide all of that stuff within nova.image.api.
+            kernel_id = kernel_image['id']
 
         if ramdisk_id is not None:
-            image_service, ramdisk_id = glance.get_remote_image_service(
-                context, ramdisk_id)
-            image_service.show(context, ramdisk_id)
+            ramdisk_image = self.image_api.get(context, ramdisk_id)
+            ramdisk_id = ramdisk_image['id']
 
         return kernel_id, ramdisk_id
 
@@ -682,10 +685,8 @@ class API(base.Base):
         if not image_href:
             return None, {}
 
-        (image_service, image_id) = glance.get_remote_image_service(
-                context, image_href)
-        image = image_service.show(context, image_id)
-        return image_id, image
+        image = self.image_api.get(context, image_href)
+        return image['id'], image
 
     def _checks_for_create_and_rebuild(self, context, image_id, image,
                                        instance_type, metadata,
@@ -869,7 +870,7 @@ class API(base.Base):
             if bdm.get('image_id'):
                 try:
                     image_id = bdm['image_id']
-                    image_meta = self.image_service.show(context, image_id)
+                    image_meta = self.image_api.get(context, image_id)
                     return image_meta.get('properties', {})
                 except Exception:
                     raise exception.InvalidBDMImage(id=image_id)
@@ -1410,7 +1411,7 @@ class API(base.Base):
                        "from shelved instance..."),
                      snapshot_id, instance=instance)
             try:
-                self.image_service.delete(context, snapshot_id)
+                self.image_api.delete(context, snapshot_id)
             except (exception.ImageNotFound,
                     exception.ImageNotAuthorized) as exc:
                 LOG.warning(_("Failed to delete snapshot "
@@ -1990,7 +1991,7 @@ class API(base.Base):
         }
         image_ref = instance.image_ref
         sent_meta = compute_utils.get_image_metadata(
-            context, self.image_service, image_ref, instance)
+            context, self.image_api, image_ref, instance)
 
         sent_meta['name'] = name
         sent_meta['is_public'] = False
@@ -1999,7 +2000,7 @@ class API(base.Base):
         properties.update(extra_properties or {})
         sent_meta['properties'].update(properties)
 
-        return self.image_service.create(context, sent_meta)
+        return self.image_api.create(context, sent_meta)
 
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.STOPPED])
     def snapshot_volume_backed(self, context, instance, image_meta, name,
@@ -2064,7 +2065,7 @@ class API(base.Base):
         # hence the zero size
         image_meta['size'] = 0
 
-        return self.image_service.create(context, image_meta, data='')
+        return self.image_api.create(context, image_meta)
 
     @wrap_check_policy
     @check_instance_lock

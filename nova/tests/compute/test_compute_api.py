@@ -436,20 +436,20 @@ class _ComputeAPIUnitTestMixIn(object):
             migration['source_compute'], fake_quotas.reservations, cast=False)
 
     def _test_delete_shelved_part(self, inst):
-        image_service = self.compute_api.image_service
-        self.mox.StubOutWithMock(image_service, 'delete')
+        image_api = self.compute_api.image_api
+        self.mox.StubOutWithMock(image_api, 'delete')
 
         snapshot_id = inst.system_metadata.get('shelved_image_id')
         if snapshot_id == SHELVED_IMAGE:
-            image_service.delete(self.context, snapshot_id).AndReturn(True)
+            image_api.delete(self.context, snapshot_id).AndReturn(True)
         elif snapshot_id == SHELVED_IMAGE_NOT_FOUND:
-            image_service.delete(self.context, snapshot_id).AndRaise(
+            image_api.delete(self.context, snapshot_id).AndRaise(
                 exception.ImageNotFound(image_id=snapshot_id))
         elif snapshot_id == SHELVED_IMAGE_NOT_AUTHORIZED:
-            image_service.delete(self.context, snapshot_id).AndRaise(
+            image_api.delete(self.context, snapshot_id).AndRaise(
                 exception.ImageNotAuthorized(image_id=snapshot_id))
         elif snapshot_id == SHELVED_IMAGE_EXCEPTION:
-            image_service.delete(self.context, snapshot_id).AndRaise(
+            image_api.delete(self.context, snapshot_id).AndRaise(
                 test.TestingException("Unexpected error"))
 
     def _test_downed_host_part(self, inst, updates, delete_time, delete_type):
@@ -1363,7 +1363,7 @@ class _ComputeAPIUnitTestMixIn(object):
         extra_props = dict(cow='moo', cat='meow')
 
         self.mox.StubOutWithMock(compute_utils, 'get_image_metadata')
-        self.mox.StubOutWithMock(self.compute_api.image_service,
+        self.mox.StubOutWithMock(self.compute_api.image_api,
                                  'create')
         self.mox.StubOutWithMock(instance, 'save')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
@@ -1399,11 +1399,11 @@ class _ComputeAPIUnitTestMixIn(object):
             expected_props['backup_type'] = 'fake-backup-type'
 
         compute_utils.get_image_metadata(
-            self.context, self.compute_api.image_service,
+            self.context, self.compute_api.image_api,
             FAKE_IMAGE_REF, instance).AndReturn(expected_meta)
 
         fake_image = dict(id='fake-image-id')
-        mock_method = self.compute_api.image_service.create(
+        mock_method = self.compute_api.image_api.create(
                 self.context, expected_meta)
         if create_fails:
             mock_method.AndRaise(test.TestingException())
@@ -1534,7 +1534,7 @@ class _ComputeAPIUnitTestMixIn(object):
         def fake_get_all_by_instance(context, instance, use_slave=False):
             return copy.deepcopy(instance_bdms)
 
-        def fake_image_create(context, image_meta, data):
+        def fake_image_create(context, image_meta, data=None):
             self.assertThat(image_meta, matchers.DictMatches(expect_meta))
 
         def fake_volume_get(context, volume_id):
@@ -1545,7 +1545,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.stubs.Set(db, 'block_device_mapping_get_all_by_instance',
                        fake_get_all_by_instance)
-        self.stubs.Set(self.compute_api.image_service, 'create',
+        self.stubs.Set(self.compute_api.image_api, 'create',
                        fake_image_create)
         self.stubs.Set(self.compute_api.volume_api, 'get',
                        fake_volume_get)
