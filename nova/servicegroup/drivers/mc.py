@@ -72,7 +72,7 @@ class MemcachedDriver(api.ServiceGroupDriver):
     def get_all(self, group_id):
         """Returns ALL members of the given group
         """
-        LOG.debug(_('Memcached_Driver: get_all members of the %s group') %
+        LOG.debug('Memcached_Driver: get_all members of the %s group',
                   group_id)
         rs = []
         ctxt = context.get_admin_context()
